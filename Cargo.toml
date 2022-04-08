@@ -3,6 +3,15 @@ name = "nouveau"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+strip = "debuginfo"
+
+[lib]
+name = "nouveau_lib"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+[dev-dependencies]
+test-case = "2.0.2"
