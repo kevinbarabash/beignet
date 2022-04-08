@@ -8,16 +8,16 @@ pub struct Constraint {
 
 type Unifier = (Subst, Vec<Constraint>);
 
-pub fn run_solve(cs: &Vec<Constraint>, ctx: &Context) -> Subst {
+pub fn run_solve(cs: &[Constraint], ctx: &Context) -> Subst {
     let empty_subst = Subst::new();
 
-    solver((empty_subst, cs.clone()), ctx)
+    solver((empty_subst, cs.to_vec()), ctx)
 }
 
 fn solver(u: Unifier, ctx: &Context) -> Subst {
     let (su, cs) = u;
 
-    if cs.len() == 0 {
+    if cs.is_empty() {
         return su;
     }
 
@@ -37,7 +37,7 @@ fn solver(u: Unifier, ctx: &Context) -> Subst {
 }
 fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
     s2.iter()
-        .map(|(id, tv)| (id.clone(), tv.apply(s1)))
+        .map(|(id, tv)| (*id, tv.apply(s1)))
         .collect()
 }
 
@@ -109,21 +109,13 @@ fn bind(tv: &TVar, ty: &Type, _: &Context) -> Subst {
     // TODO: Handle Type::Mem once it's added
     // NOTE: This will require the use of the &Context
 
-    if let Type::Var(TVar { id, .. }) = ty {
-        if id == &tv.id {
-            return Subst::new();
-        } else if ty.ftv().contains(tv) {
-            panic!("type var appears in type");
-        } else {
+    match ty {
+        Type::Var(TVar {id, ..}) if id == &tv.id => Subst::new(),
+        ty if ty.ftv().contains(tv) => panic!("type var appears in type"),
+        ty => {
             let mut subst = Subst::new();
             subst.insert(tv.id, ty.clone());
-            return subst;
+            subst
         }
-    } else if ty.ftv().contains(tv) {
-        panic!("type var appears in type");
-    } else {
-        let mut subst = Subst::new();
-        subst.insert(tv.id, ty.clone());
-        return subst;
     }
 }

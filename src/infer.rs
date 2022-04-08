@@ -12,7 +12,7 @@ use std::iter::Iterator;
 impl Substitutable<Constraint> for Constraint {
     fn apply(&self, sub: &Subst) -> Constraint {
         Constraint {
-            types: (self.types.0.apply(&sub), self.types.1.apply(&sub)),
+            types: (self.types.0.apply(sub), self.types.1.apply(sub)),
         }
     }
     fn ftv(&self) -> HashSet<TVar> {
@@ -108,7 +108,7 @@ use crate::syntax::{BindingIdent, Expr};
 
 pub fn infer_expr(env: Env, expr: &Expr) -> Scheme {
     let init_ctx = Context::from(env);
-    let (ty, cs) = infer(&expr, &init_ctx);
+    let (ty, cs) = infer(expr, &init_ctx);
     let subs = run_solve(&cs, &init_ctx);
 
     close_over(&ty.apply(&subs))
@@ -121,12 +121,10 @@ fn close_over(ty: &Type) -> Scheme {
 
 fn generalize(env: &Env, ty: &Type) -> Scheme {
     let quals: HashSet<_> = ty.ftv().difference(&env.ftv()).cloned().collect();
-    let scheme = Scheme {
+    Scheme {
         qualifiers: quals.into_iter().collect(),
         ty: ty.clone(),
-    };
-
-    scheme
+    }
 }
 
 type InferResult = (Type, Vec<Constraint>);
@@ -161,7 +159,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             // Creates a new type variable for each arg
             let arg_tvs: Vec<_> = args.iter().map(|_| Type::Var(ctx.fresh())).collect();
             let mut new_ctx = ctx.clone();
-            for (arg, tv) in args.into_iter().zip(arg_tvs.clone().into_iter()) {
+            for (arg, tv) in args.iter().zip(arg_tvs.clone().into_iter()) {
                 let scheme = Scheme {
                     qualifiers: vec![],
                     ty: tv.clone(),
@@ -183,7 +181,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
     }
 }
 
-fn infer_many(exprs: &Vec<Expr>, ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
+fn infer_many(exprs: &[Expr], ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
     let mut ts: Vec<Type> = Vec::new();
     let mut all_cs: Vec<Constraint> = Vec::new();
 

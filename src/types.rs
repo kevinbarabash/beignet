@@ -44,11 +44,18 @@ impl From<&Literal> for Type {
 //     ty: Type,
 // }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct TVar {
     pub id: i32,
     pub name: String,
 }
+
+impl PartialEq for TVar {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+impl Eq for TVar {}
 
 impl Hash for TVar {
     fn hash<H: Hasher>(&self, state: &mut H) {
