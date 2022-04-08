@@ -32,11 +32,8 @@ impl Context {
         self.instantiate(scheme)
     }
     fn instantiate(&self, scheme: &Scheme) -> Type {
-        let fresh_quals = scheme
-            .qualifiers
-            .iter()
-            .map(|_| Type::from(self.fresh()));
-          
+        let fresh_quals = scheme.qualifiers.iter().map(|_| Type::from(self.fresh()));
+
         let ids = scheme.qualifiers.iter().map(|qual| qual.id);
         // The iterator returned by into_iter may yield any of T, &T or &mut T,
         // depending on the context.

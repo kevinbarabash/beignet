@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use nouveau_lib::types; 
 use nouveau_lib::syntax::{BindingIdent, Expr};
+use nouveau_lib::types;
 use nouveau_lib::types::*;
 
 fn main() {

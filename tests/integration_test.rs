@@ -27,10 +27,7 @@ fn infer_func() {
     );
     let result = infer_expr(env, &expr);
 
-    assert_eq!(
-        format!("{:?}", result),
-        "Scheme { qualifiers: [TVar { id: 1, name: \"a\" }], ty: Fun(TFun { args: [Var(TVar { id: 1, name: \"a\" })], ret: Var(TVar { id: 1, name: \"a\" }) }) }"
-    );
+    assert_eq!(format!("{}", result), "<a1>(a1) => a1");
 }
 
 #[test]
@@ -41,8 +38,5 @@ fn type_debug_trait() {
         ret: Box::new(Type::Prim(Primitive::Num)),
     });
 
-    assert_eq!(
-        format!("{:?}", t),
-        "Fun(TFun { args: [Prim(Num)], ret: Prim(Num) })"
-    );
+    assert_eq!(format!("{}", t), "(number) => number");
 }

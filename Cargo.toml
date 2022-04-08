@@ -12,6 +12,7 @@ name = "nouveau_lib"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+itertools = "0.10.3"
 
 [dev-dependencies]
 test-case = "2.0.2"

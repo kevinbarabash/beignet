@@ -36,9 +36,7 @@ fn solver(u: Unifier, ctx: &Context) -> Subst {
     }
 }
 fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
-    s2.iter()
-        .map(|(id, tv)| (*id, tv.apply(s1)))
-        .collect()
+    s2.iter().map(|(id, tv)| (*id, tv.apply(s1))).collect()
 }
 
 fn unifies(c: &Constraint, ctx: &Context) -> Subst {
@@ -56,7 +54,7 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
 }
 
 fn unify_funcs(t1: &TFun, t2: &TFun, ctx: &Context) -> Subst {
-    // TODO: 
+    // TODO:
     // - varargs
     // - subtyping
 
@@ -77,19 +75,24 @@ fn unify_funcs(t1: &TFun, t2: &TFun, ctx: &Context) -> Subst {
                 types: (a.clone(), b.clone()),
             })
             .collect();
-        cs.push(Constraint {types: (*t1.ret.clone(), *t2_partial.ret)});
+        cs.push(Constraint {
+            types: (*t1.ret.clone(), *t2_partial.ret),
+        });
         unify_many(&cs, ctx)
     } else if t1.args.len() != t2.args.len() {
         panic!("Unification mismatch: arity mismatch");
     } else {
-        let mut cs: Vec<_> = t1.args
+        let mut cs: Vec<_> = t1
+            .args
             .iter()
             .zip(&t2.args)
-            .map(|(a, b)| Constraint{
+            .map(|(a, b)| Constraint {
                 types: (a.clone(), b.clone()),
             })
             .collect();
-        cs.push(Constraint {types: (*t1.ret.clone(), *t2.ret.clone())});
+        cs.push(Constraint {
+            types: (*t1.ret.clone(), *t2.ret.clone()),
+        });
         unify_many(&cs, ctx)
     }
 }
@@ -110,7 +113,7 @@ fn bind(tv: &TVar, ty: &Type, _: &Context) -> Subst {
     // NOTE: This will require the use of the &Context
 
     match ty {
-        Type::Var(TVar {id, ..}) if id == &tv.id => Subst::new(),
+        Type::Var(TVar { id, .. }) if id == &tv.id => Subst::new(),
         ty if ty.ftv().contains(tv) => panic!("type var appears in type"),
         ty => {
             let mut subst = Subst::new();
