@@ -1,18 +1,19 @@
 use std::collections::HashMap;
 
+use nouveau_lib::literal::Literal;
+use nouveau_lib::substitutable::*;
 use nouveau_lib::syntax::{BindingIdent, Expr};
-use nouveau_lib::types;
 use nouveau_lib::types::*;
 
 fn main() {
     println!("Hello, world!");
 
-    let t = Type::Lam(types::TLam {
+    let t = Type::Lam(TLam {
         args: vec![Type::Prim(Primitive::Num)],
         ret: Box::new(Type::Prim(Primitive::Num)),
     });
 
-    if let Type::Lam(types::TLam { args, .. }) = &t {
+    if let Type::Lam(TLam { args, .. }) = &t {
         println!("t is a lambad and it takes {} args", args.len());
     }
 

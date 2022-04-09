@@ -2,6 +2,8 @@ use itertools::join;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
+use super::literal::Literal;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Primitive {
     Num,
@@ -25,65 +27,6 @@ impl fmt::Display for Primitive {
             Primitive::Str => write!(f, "string"),
             Primitive::Null => write!(f, "null"),
             Primitive::Undefined => write!(f, "undefined"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Literal {
-    // We store all of the values as strings since f64 doesn't
-    // support the Eq trait because NaN and 0.1 + 0.2 != 0.3.
-    Num(String),
-    Bool(String),
-    Str(String),
-    Null,
-    Undefined,
-}
-
-impl From<&str> for Literal {
-    fn from(s: &str) -> Self {
-        Literal::Str(s.to_owned())
-    }
-}
-
-impl From<String> for Literal {
-    fn from(s: String) -> Self {
-        Literal::Str(s)
-    }
-}
-
-impl From<&bool> for Literal {
-    fn from(b: &bool) -> Self {
-        Literal::Bool(b.to_string())
-    }
-}
-
-impl From<bool> for Literal {
-    fn from(b: bool) -> Self {
-        Literal::Bool(b.to_string())
-    }
-}
-
-impl From<Literal> for Type {
-    fn from(lit: Literal) -> Self {
-        Type::Lit(lit)
-    }
-}
-
-impl From<&Literal> for Type {
-    fn from(lit: &Literal) -> Self {
-        Type::Lit(lit.clone())
-    }
-}
-
-impl fmt::Display for Literal {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Literal::Num(val) => write!(f, "{}", val),
-            Literal::Bool(val) => write!(f, "{}", val),
-            Literal::Str(val) => write!(f, "\"{}\"", val),
-            Literal::Null => write!(f, "null"),
-            Literal::Undefined => write!(f, "undefined"),
         }
     }
 }
@@ -176,6 +119,18 @@ impl fmt::Display for Type {
     }
 }
 
+impl From<Literal> for Type {
+    fn from(lit: Literal) -> Self {
+        Type::Lit(lit)
+    }
+}
+
+impl From<&Literal> for Type {
+    fn from(lit: &Literal) -> Self {
+        Type::Lit(lit.clone())
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Scheme {
     pub qualifiers: Vec<TVar>,
@@ -192,16 +147,6 @@ impl fmt::Display for Scheme {
             write!(f, "<{}>{}", join(qualifiers, ", "), ty)
         }
     }
-}
-
-use std::collections::HashMap;
-use std::collections::HashSet;
-
-pub type Subst = HashMap<i32, Type>;
-
-pub trait Substitutable {
-    fn apply(&self, subs: &Subst) -> Self;
-    fn ftv(&self) -> HashSet<TVar>;
 }
 
 #[cfg(test)]

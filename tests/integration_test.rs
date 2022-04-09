@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use nouveau_lib::context::*;
 use nouveau_lib::infer::infer_expr;
+use nouveau_lib::literal::Literal;
 use nouveau_lib::syntax::*;
 use nouveau_lib::types::*;
 

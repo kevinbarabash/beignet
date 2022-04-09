@@ -1,4 +1,5 @@
 use super::constraint_solver::{run_solve, Constraint};
+use super::substitutable::*;
 use super::types::*;
 
 use std::collections::HashSet;
