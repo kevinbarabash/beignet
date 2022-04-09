@@ -11,10 +11,7 @@ fn infer_number_literal() {
     let expr: Expr = Expr::Lit(Literal::Num(String::from("5.0")));
     let result = infer_expr(env, &expr);
 
-    assert_eq!(
-        format!("{:?}", result),
-        "Scheme { qualifiers: [], ty: Lit(Num(\"5.0\")) }"
-    );
+    assert_eq!(format!("{}", result), "5.0");
 }
 
 #[test]

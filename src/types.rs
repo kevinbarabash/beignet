@@ -199,8 +199,8 @@ use std::collections::HashSet;
 
 pub type Subst = HashMap<i32, Type>;
 
-pub trait Substitutable<A> {
-    fn apply(&self, subs: &Subst) -> A;
+pub trait Substitutable {
+    fn apply(&self, subs: &Subst) -> Self;
     fn ftv(&self) -> HashSet<TVar>;
 }
 

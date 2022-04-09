@@ -7,9 +7,7 @@ use std::iter::Iterator;
 // TODO: adopt immutable collections: https://github.com/bodil/im-rs
 // this will save on copying data when cloning of collections is required
 
-// TODO: make an autoconvert trait to convert TVar to Type when need be
-
-impl Substitutable<Constraint> for Constraint {
+impl Substitutable for Constraint {
     fn apply(&self, sub: &Subst) -> Constraint {
         Constraint {
             types: (self.types.0.apply(sub), self.types.1.apply(sub)),
@@ -23,20 +21,7 @@ impl Substitutable<Constraint> for Constraint {
     }
 }
 
-impl Substitutable<Vec<Constraint>> for Vec<Constraint> {
-    fn apply(&self, sub: &Subst) -> Vec<Constraint> {
-        self.iter().map(|c| c.apply(sub)).collect()
-    }
-    fn ftv(&self) -> HashSet<TVar> {
-        let mut result = HashSet::new();
-        for c in self {
-            result.extend(c.ftv());
-        }
-        result
-    }
-}
-
-impl Substitutable<Type> for Type {
+impl Substitutable for Type {
     fn apply(&self, sub: &Subst) -> Type {
         // TODO: sub.get(self.id) ?? self.clone();
         match self {
@@ -53,10 +38,8 @@ impl Substitutable<Type> for Type {
         match self {
             Type::Var(tv) => HashSet::from([tv.clone()]),
             Type::Fun(TFun { args, ret }) => {
-                let mut result = ret.ftv();
-                for arg in args {
-                    result.extend(arg.ftv());
-                }
+                let mut result: HashSet<_> = args.iter().flat_map(|a| a.ftv()).collect();
+                result.extend(ret.ftv());
                 result
             }
             Type::Prim(_) => HashSet::new(),
@@ -65,20 +48,7 @@ impl Substitutable<Type> for Type {
     }
 }
 
-impl Substitutable<Vec<Type>> for Vec<Type> {
-    fn apply(&self, sub: &Subst) -> Vec<Type> {
-        self.iter().map(|c| c.apply(sub)).collect()
-    }
-    fn ftv(&self) -> HashSet<TVar> {
-        let mut result = HashSet::new();
-        for c in self {
-            result.extend(c.ftv());
-        }
-        result
-    }
-}
-
-impl Substitutable<Scheme> for Scheme {
+impl Substitutable for Scheme {
     fn apply(&self, sub: &Subst) -> Scheme {
         Scheme {
             qualifiers: self.qualifiers.clone(),
@@ -91,7 +61,7 @@ impl Substitutable<Scheme> for Scheme {
     }
 }
 
-impl Substitutable<Env> for Env {
+impl Substitutable for Env {
     fn apply(&self, sub: &Subst) -> Env {
         self.iter()
             .map(|(a, b)| (a.clone(), b.apply(sub)))
@@ -100,6 +70,18 @@ impl Substitutable<Env> for Env {
     fn ftv(&self) -> HashSet<TVar> {
         // we can't use iter_values() here because it's a consuming iterator
         self.iter().flat_map(|(_, b)| b.ftv()).collect()
+    }
+}
+
+impl<I> Substitutable for Vec<I>
+where
+    I: Substitutable,
+{
+    fn apply(&self, sub: &Subst) -> Vec<I> {
+        self.iter().map(|c| c.apply(sub)).collect()
+    }
+    fn ftv(&self) -> HashSet<TVar> {
+        self.iter().flat_map(|c| c.ftv()).collect()
     }
 }
 
@@ -120,9 +102,8 @@ fn close_over(ty: &Type) -> Scheme {
 }
 
 fn generalize(env: &Env, ty: &Type) -> Scheme {
-    let quals: HashSet<_> = ty.ftv().difference(&env.ftv()).cloned().collect();
     Scheme {
-        qualifiers: quals.into_iter().collect(),
+        qualifiers: ty.ftv().difference(&env.ftv()).cloned().collect(),
         ty: ty.clone(),
     }
 }
