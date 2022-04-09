@@ -26,7 +26,7 @@ impl Substitutable for Type {
         // TODO: sub.get(self.id) ?? self.clone();
         match self {
             Type::Var(TVar { .. }) => self.clone(),
-            Type::Fun(TFun { args, ret }) => Type::Fun(TFun {
+            Type::Lam(TLam { args, ret }) => Type::Lam(TLam {
                 args: args.iter().map(|arg| arg.apply(sub)).collect(),
                 ret: Box::from(ret.apply(sub)),
             }),
@@ -37,7 +37,7 @@ impl Substitutable for Type {
     fn ftv(&self) -> HashSet<TVar> {
         match self {
             Type::Var(tv) => HashSet::from([tv.clone()]),
-            Type::Fun(TFun { args, ret }) => {
+            Type::Lam(TLam { args, ret }) => {
                 let mut result: HashSet<_> = args.iter().flat_map(|a| a.ftv()).collect();
                 result.extend(ret.ftv());
                 result
@@ -116,8 +116,8 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             let ty = ctx.lookup_env(name);
             (ty, vec![])
         }
-        Expr::App(func, args) => {
-            let (t_fn, cs_fn) = infer(func, ctx);
+        Expr::App(lam, args) => {
+            let (t_fn, cs_fn) = infer(lam, ctx);
             let (t_args, cs_args) = infer_many(args, ctx);
             let tv = ctx.fresh();
 
@@ -126,7 +126,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             constraints.extend(cs_args);
             constraints.push(Constraint {
                 types: (
-                    Type::from(TFun {
+                    Type::from(TLam {
                         args: t_args,
                         ret: Box::new(Type::from(tv.clone())),
                     }),
@@ -151,12 +151,12 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 };
             }
             let (ret_ty, cs) = infer(body, &new_ctx);
-            let fun_ty = Type::Fun(TFun {
+            let lam_ty = Type::Lam(TLam {
                 args: arg_tvs,
                 ret: Box::new(ret_ty),
             });
 
-            (fun_ty, cs)
+            (lam_ty, cs)
         }
         Expr::Lit(lit) => (Type::from(lit), vec![]),
     }

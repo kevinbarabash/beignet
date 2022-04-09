@@ -133,34 +133,34 @@ impl From<&TVar> for Type {
 }
 
 #[derive(Clone, Debug)]
-pub struct TFun {
+pub struct TLam {
     pub args: Vec<Type>,
     pub ret: Box<Type>,
 }
 
-impl fmt::Display for TFun {
+impl fmt::Display for TLam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { args, ret } = self;
         write!(f, "({}) => {}", join(args, ", "), ret)
     }
 }
 
-impl From<TFun> for Type {
-    fn from(tfun: TFun) -> Self {
-        Type::Fun(tfun)
+impl From<TLam> for Type {
+    fn from(tlam: TLam) -> Self {
+        Type::Lam(tlam)
     }
 }
 
-impl From<&TFun> for Type {
-    fn from(tfun: &TFun) -> Self {
-        Type::Fun(tfun.clone())
+impl From<&TLam> for Type {
+    fn from(tlam: &TLam) -> Self {
+        Type::Lam(tlam.clone())
     }
 }
 
 #[derive(Clone, Debug)]
 pub enum Type {
     Var(TVar),
-    Fun(TFun),
+    Lam(TLam),
     Prim(Primitive),
     Lit(Literal),
 }
@@ -169,7 +169,7 @@ impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Type::Var(tv) => write!(f, "{}", tv),
-            Type::Fun(tfun) => write!(f, "{}", tfun),
+            Type::Lam(tlam) => write!(f, "{}", tlam),
             Type::Prim(prim) => write!(f, "{}", prim),
             Type::Lit(lit) => write!(f, "{}", lit),
         }
@@ -229,7 +229,7 @@ mod tests {
             String::from("\"hello\""),
         );
 
-        let ty = Type::Fun(TFun {
+        let ty = Type::Lam(TLam {
             args: vec![Type::from(Primitive::Num), Type::from(Primitive::Bool)],
             ret: Box::new(Type::from(Primitive::Num)),
         });

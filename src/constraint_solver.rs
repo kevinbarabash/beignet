@@ -47,22 +47,22 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
         (ty, Type::Var(tv)) => bind(&tv, &ty, ctx),
         (Type::Prim(prim1), Type::Prim(prim2)) if prim1 == prim2 => Subst::new(),
         (Type::Lit(lit1), Type::Lit(lit2)) if lit1 == lit2 => Subst::new(),
-        (Type::Fun(fun1), Type::Fun(fun2)) => unify_funcs(&fun1, &fun2, ctx),
+        (Type::Lam(lam1), Type::Lam(lam2)) => unify_lams(&lam1, &lam2, ctx),
 
         _ => panic!("unification failed"),
     }
 }
 
-fn unify_funcs(t1: &TFun, t2: &TFun, ctx: &Context) -> Subst {
+fn unify_lams(t1: &TLam, t2: &TLam, ctx: &Context) -> Subst {
     // TODO:
     // - varargs
     // - subtyping
 
     // Partial application
     if t1.args.len() < t2.args.len() {
-        let t2_partial = TFun {
+        let t2_partial = TLam {
             args: t2.args[..t1.args.len()].to_vec(),
-            ret: Box::from(Type::from(TFun {
+            ret: Box::from(Type::from(TLam {
                 args: t2.args[t1.args.len()..].to_vec(),
                 ret: t2.ret.clone(),
             })),

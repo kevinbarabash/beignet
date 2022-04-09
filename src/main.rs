@@ -7,13 +7,13 @@ use nouveau_lib::types::*;
 fn main() {
     println!("Hello, world!");
 
-    let t = Type::Fun(types::TFun {
+    let t = Type::Lam(types::TLam {
         args: vec![Type::Prim(Primitive::Num)],
         ret: Box::new(Type::Prim(Primitive::Num)),
     });
 
-    if let Type::Fun(types::TFun { args, .. }) = &t {
-        println!("t is a function and it takes {} args", args.len());
+    if let Type::Lam(types::TLam { args, .. }) = &t {
+        println!("t is a lambad and it takes {} args", args.len());
     }
 
     println!("t = {:?}", &t);

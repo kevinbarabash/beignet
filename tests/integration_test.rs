@@ -15,7 +15,7 @@ fn infer_number_literal() {
 }
 
 #[test]
-fn infer_func() {
+fn infer_lam() {
     let env: Env = HashMap::new();
     let expr: Expr = Expr::Lam(
         vec![BindingIdent::Ident(String::from("x"))],
@@ -29,7 +29,7 @@ fn infer_func() {
 
 #[test]
 fn type_debug_trait() {
-    let t = Type::from(TFun {
+    let t = Type::from(TLam {
         // TODO: add From trait impls to go from Primitive to Type
         args: vec![Type::Prim(Primitive::Num)],
         ret: Box::new(Type::Prim(Primitive::Num)),
