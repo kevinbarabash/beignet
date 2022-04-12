@@ -1,28 +1,24 @@
+use chumsky::prelude::*;
 use std::collections::HashMap;
 
-use nouveau_lib::context::*;
+use nouveau_lib::context::Env;
 use nouveau_lib::infer::infer_expr;
-use nouveau_lib::literal::Literal;
-use nouveau_lib::syntax::*;
+use nouveau_lib::parser::parser;
 use nouveau_lib::types::*;
 
 #[test]
 fn infer_number_literal() {
     let env: Env = HashMap::new();
-    let expr: Expr = Expr::Lit(Literal::Num(String::from("5.0")));
+    let expr = parser().parse("5").unwrap();
     let result = infer_expr(env, &expr);
 
-    assert_eq!(format!("{}", result), "5.0");
+    assert_eq!(format!("{}", result), "5");
 }
 
 #[test]
 fn infer_lam() {
     let env: Env = HashMap::new();
-    let expr: Expr = Expr::Lam(
-        vec![BindingIdent::Ident(String::from("x"))],
-        Box::from(Expr::Ident(String::from("x"))),
-        false,
-    );
+    let expr = parser().parse("(x) => x").unwrap();
     let result = infer_expr(env, &expr);
 
     assert_eq!(format!("{}", result), "<a1>(a1) => a1");
