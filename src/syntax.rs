@@ -23,5 +23,5 @@ pub enum Expr {
     Lam(Vec<BindingIdent>, Box<Expr>, bool),
     Let(String, Box<Expr>, Box<Expr>),
     Lit(Literal),
-    Op(BinOp, Box<Expr>, Box<Expr>)
+    Op(BinOp, Box<Expr>, Box<Expr>),
 }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use super::types::{Type, TVar};
+use super::types::{TVar, Type};
 
 pub type Subst = HashMap<i32, Type>;
 

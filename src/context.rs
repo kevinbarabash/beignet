@@ -1,5 +1,5 @@
-use super::types::{self, Scheme, Type};
 use super::substitutable::*;
+use super::types::{self, Scheme, Type};
 
 use std::cell::Cell;
 use std::collections::HashMap;
