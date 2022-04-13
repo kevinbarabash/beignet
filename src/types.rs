@@ -100,6 +100,7 @@ impl From<&TLam> for Type {
     }
 }
 
+// TODO: add `id` to each of these (maybe we could make having an `id` a trait)
 #[derive(Clone, Debug)]
 pub enum Type {
     Var(TVar),

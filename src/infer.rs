@@ -24,9 +24,9 @@ impl Substitutable for Constraint {
 
 impl Substitutable for Type {
     fn apply(&self, sub: &Subst) -> Type {
-        // TODO: sub.get(self.id) ?? self.clone();
+        // TODO: lookup the `id` of the rest of the types in `sub`
         match self {
-            Type::Var(TVar { .. }) => self.clone(),
+            Type::Var(TVar { id, .. }) => sub.get(id).unwrap_or(self).clone(),
             Type::Lam(TLam { args, ret }) => Type::Lam(TLam {
                 args: args.iter().map(|arg| arg.apply(sub)).collect(),
                 ret: Box::from(ret.apply(sub)),
@@ -87,7 +87,7 @@ where
 }
 
 use crate::context::{Context, Env};
-use crate::syntax::{BindingIdent, Expr};
+use crate::syntax::{BindingIdent, Expr, Pattern};
 
 pub fn infer_expr(env: Env, expr: &Expr) -> Scheme {
     let init_ctx = Context::from(env);
@@ -159,12 +159,60 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (lam_ty, cs)
         }
-        Expr::Let(_name, _value, _body) => {
-            panic!("TODO: handle Let");
+        Expr::Let(pat, value, body) => {
+            let (t1, cs1) = infer(&value, &ctx);
+            let subs = run_solve(&cs1, &ctx);
+            let (new_ctx, new_cs) = infer_pattern(pat, &t1, &subs, ctx);
+            let (t2, cs2) = infer(body, &new_ctx);
+
+            let mut cs: Vec<Constraint> = Vec::new();
+            cs.extend(cs1);
+            cs.extend(new_cs);
+            cs.extend(cs2.apply(&subs));
+
+            (t2.apply(&subs), vec![])
         }
         Expr::Lit(lit) => (Type::from(lit), vec![]),
-        Expr::Op(_binop, _left, _right) => {
-            panic!("TODO: handle Op");
+        Expr::Op(_binop, left, right) => {
+            let left = Box::as_ref(left);
+            let right = Box::as_ref(right);
+            let (ts, cs) = infer_many(&[left.clone(), right.clone()], ctx);
+            let tv = Type::from(ctx.fresh());
+
+            let mut cs = cs;
+            let c = Constraint {
+                types: (
+                    Type::Lam(TLam {
+                        args: ts,
+                        ret: Box::from(tv.clone()),
+                    }),
+                    Type::Lam(TLam {
+                        args: vec![Type::from(Primitive::Num), Type::from(Primitive::Num)],
+                        ret: Box::from(Type::from(Primitive::Num)),
+                    }),
+                )
+            };
+            cs.push(c);
+
+            (tv, cs)
+        }
+    }
+}
+
+fn infer_pattern(
+    pattern: &Pattern,
+    ty: &Type,
+    subs: &Subst,
+    ctx: &Context,
+) -> (Context, Vec<Constraint>) {
+    let scheme = generalize(&ctx.env.apply(subs), &ty.apply(subs));
+
+    match pattern {
+        Pattern::Ident(name) => {
+            let mut new_ctx = ctx.clone();
+            new_ctx.env.insert(name.to_owned(), scheme);
+
+            (new_ctx, vec![])
         }
     }
 }

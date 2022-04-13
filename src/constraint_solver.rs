@@ -1,8 +1,9 @@
 use super::context::Context;
+use super::literal::Literal;
 use super::substitutable::*;
 use super::types::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Constraint {
     pub types: (Type, Type),
 }
@@ -37,20 +38,29 @@ fn solver(u: Unifier, ctx: &Context) -> Subst {
     }
 }
 fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
-    s2.iter().map(|(id, tv)| (*id, tv.apply(s1))).collect()
+    let mut result: Subst = s2.iter().map(|(id, tv)| (*id, tv.apply(s1))).collect();
+    result.extend(s1.to_owned());
+    result
 }
 
 fn unifies(c: &Constraint, ctx: &Context) -> Subst {
     let (t1, t2) = c.types.clone();
 
-    match (t1, t2) {
+    // TODO: use references for t1 and t2 here
+    match (t1.clone(), t2.clone()) {
         (Type::Var(tv), ty) => bind(&tv, &ty, ctx),
         (ty, Type::Var(tv)) => bind(&tv, &ty, ctx),
         (Type::Prim(prim1), Type::Prim(prim2)) if prim1 == prim2 => Subst::new(),
         (Type::Lit(lit1), Type::Lit(lit2)) if lit1 == lit2 => Subst::new(),
         (Type::Lam(lam1), Type::Lam(lam2)) => unify_lams(&lam1, &lam2, ctx),
 
-        _ => panic!("unification failed"),
+        _ => {
+            if is_subtype(&t1, &t2) {
+                return Subst::new()
+            }
+
+            panic!("unification failed")   
+        },
     }
 }
 
@@ -106,6 +116,15 @@ fn unify_many(cs: &[Constraint], ctx: &Context) -> Subst {
             compose_subs(&su_2, &su_1)
         }
         _ => Subst::new(),
+    }
+}
+
+fn is_subtype(t1: &Type, t2: &Type) -> bool {
+    match (t1, t2) {
+        (Type::Lit(Literal::Num(_)), Type::Prim(Primitive::Num)) => true,
+        (Type::Lit(Literal::Str(_)), Type::Prim(Primitive::Str)) => true,
+        (Type::Lit(Literal::Bool(_)), Type::Prim(Primitive::Bool)) => true,
+        _ => false
     }
 }
 
