@@ -193,7 +193,7 @@ mod tests {
     fn specifying_operator_precedence_with_parens() {
         assert_eq!(
             parse("(a + b) * c"),
-            "Op(Add, Op(Mul, Ident(\"a\"), Ident(\"b\")), Ident(\"c\"))",
+            "Op(Mul, Op(Add, Ident(\"a\"), Ident(\"b\")), Ident(\"c\"))",
         );
     }
 }
