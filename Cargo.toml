@@ -14,6 +14,7 @@ name = "nouveau_lib"
 [dependencies]
 chumsky = "0.8.0"
 itertools = "0.10.3"
+partial_application = "0.2.1"
 
 [dev-dependencies]
 test-case = "2.0.2"

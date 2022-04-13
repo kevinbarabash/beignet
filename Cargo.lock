@@ -98,8 +98,15 @@ version = "0.1.0"
 dependencies = [
  "chumsky",
  "itertools",
+ "partial_application",
  "test-case",
 ]
+
+[[package]]
+name = "partial_application"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f926567968c32d22274b8eb721210363e54dcd8d2c960dd8533aa3be78143081"
 
 [[package]]
 name = "proc-macro-error"

@@ -1,8 +1,7 @@
 use chumsky::prelude::*;
 
-use crate::literal::Literal;
-
-use super::syntax::{BindingIdent, Expr};
+use super::literal::Literal;
+use super::syntax::{BinOp, BindingIdent, Expr};
 
 pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
     let ident = text::ident().padded();
@@ -25,7 +24,36 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .or(ident.map(Expr::Ident))
             .or(lit);
 
-        let app = atom.clone()
+        let product = atom
+            .clone()
+            .then(
+                just("*")
+                    .padded()
+                    .to(partial!(Expr::Op => BinOp::Mul, _, _) as fn(_, _) -> _)
+                    .or(just("/")
+                        .padded()
+                        .to(partial!(Expr::Op => BinOp::Div, _, _) as fn(_, _) -> _))
+                    .then(atom.clone())
+                    .repeated(),
+            )
+            .foldl(|lhs, (op_con, rhs)| op_con(Box::new(lhs), Box::new(rhs)));
+
+        let sum = product
+            .clone()
+            .then(
+                just("+")
+                    .padded()
+                    .to(partial!(Expr::Op => BinOp::Add, _, _) as fn(_, _) -> _)
+                    .or(just("-")
+                        .padded()
+                        .to(partial!(Expr::Op => BinOp::Sub, _, _) as fn(_, _) -> _))
+                    .then(product.clone())
+                    .repeated(),
+            )
+            .foldl(|lhs, (op_con, rhs)| op_con(Box::new(lhs), Box::new(rhs)));
+
+        let app = atom
+            .clone()
             .then(
                 expr.clone()
                     .padded()
@@ -47,7 +75,15 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .then(expr.clone())
             .map(|(args, body)| Expr::Lam(args, Box::new(body), false));
 
-        app.or(lam).or(ident.map(Expr::Ident)).or(atom)
+        let r#let = just("let")
+            .ignore_then(ident)
+            .then_ignore(just("=").padded())
+            .then(expr.clone())
+            .then_ignore(just("in").padded())
+            .then(expr.clone())
+            .map(|((name, value), body)| Expr::Let(name, Box::new(value), Box::new(body)));
+
+        app.or(lam).or(r#let).or(sum)
     });
 
     expr.then_ignore(end())
@@ -89,13 +125,18 @@ mod tests {
 
     #[test]
     fn app_with_multiple_args() {
-        assert_eq!(parse("foo(a, b)"), "App(Ident(\"foo\"), [Ident(\"a\"), Ident(\"b\")])");
+        assert_eq!(
+            parse("foo(a, b)"),
+            "App(Ident(\"foo\"), [Ident(\"a\"), Ident(\"b\")])"
+        );
     }
 
     #[test]
     fn app_with_multiple_lit_args() {
-        assert_eq!(parse("foo(10, \"hello\")"),
-        "App(Ident(\"foo\"), [Lit(Num(\"10\")), Lit(Str(\"hello\"))])");
+        assert_eq!(
+            parse("foo(10, \"hello\")"),
+            "App(Ident(\"foo\"), [Lit(Num(\"10\")), Lit(Str(\"hello\"))])"
+        );
     }
 
     #[test]
@@ -106,5 +147,53 @@ mod tests {
     #[test]
     fn atom_string() {
         assert_eq!(parse("\"hello\""), "Lit(Str(\"hello\"))");
+    }
+
+    #[test]
+    fn simple_let() {
+        assert_eq!(
+            parse("let x = 5 in x"),
+            "Let(\"x\", Lit(Num(\"5\")), Ident(\"x\"))"
+        );
+    }
+
+    #[test]
+    fn nested_let() {
+        assert_eq!(
+            parse("let x = 5 in let y = 10 in z"),
+            "Let(\"x\", Lit(Num(\"5\")), Let(\"y\", Lit(Num(\"10\")), Ident(\"z\")))",
+        );
+    }
+
+    #[test]
+    fn add_sub_operations() {
+        assert_eq!(
+            parse("1 + 2 - 3"),
+            "Op(Sub, Op(Add, Lit(Num(\"1\")), Lit(Num(\"2\"))), Lit(Num(\"3\")))",
+        );
+    }
+
+    #[test]
+    fn mul_div_operations() {
+        assert_eq!(
+            parse("x * y / z"),
+            "Op(Div, Op(Mul, Ident(\"x\"), Ident(\"y\")), Ident(\"z\"))",
+        );
+    }
+
+    #[test]
+    fn operator_precedence() {
+        assert_eq!(
+            parse("a + b * c"),
+            "Op(Add, Ident(\"a\"), Op(Mul, Ident(\"b\"), Ident(\"c\")))",
+        );
+    }
+
+    #[test]
+    fn specifying_operator_precedence_with_parens() {
+        assert_eq!(
+            parse("(a + b) * c"),
+            "Op(Mul, Op(Add, Ident(\"a\"), Ident(\"b\")), Ident(\"c\"))",
+        );
     }
 }

@@ -137,7 +137,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (Type::from(tv), constraints)
         }
-        Expr::Lam(args, body, _ /* isAsync */) => {
+        Expr::Lam(args, body, _is_async) => {
             // Creates a new type variable for each arg
             let arg_tvs: Vec<_> = args.iter().map(|_| Type::Var(ctx.fresh())).collect();
             let mut new_ctx = ctx.clone();
@@ -159,7 +159,13 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (lam_ty, cs)
         }
+        Expr::Let(_name, _value, _body) => {
+            panic!("TODO: handle Let");
+        }
         Expr::Lit(lit) => (Type::from(lit), vec![]),
+        Expr::Op(_binop, _left, _right) => {
+            panic!("TODO: handle Op");
+        }
     }
 }
 
