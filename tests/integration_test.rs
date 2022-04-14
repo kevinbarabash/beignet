@@ -25,6 +25,24 @@ fn infer_lam() {
 }
 
 #[test]
+fn infer_let() {
+    let env: Env = HashMap::new();
+    let expr = parser().parse("let x = 5 in x").unwrap();
+    let result = infer_expr(env, &expr);
+
+    assert_eq!(format!("{}", result), "5");
+}
+
+#[test]
+fn infer_op() {
+    let env: Env = HashMap::new();
+    let expr = parser().parse("5 + 10").unwrap();
+    let result = infer_expr(env, &expr);
+
+    assert_eq!(format!("{}", result), "number");
+}
+
+#[test]
 fn type_debug_trait() {
     let t = Type::from(TLam {
         // TODO: add From trait impls to go from Primitive to Type

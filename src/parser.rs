@@ -1,7 +1,7 @@
 use chumsky::prelude::*;
 
 use super::literal::Literal;
-use super::syntax::{BinOp, BindingIdent, Expr};
+use super::syntax::{BinOp, BindingIdent, Expr, Pattern};
 
 pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
     let ident = text::ident().padded();
@@ -81,7 +81,9 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .then(expr.clone())
             .then_ignore(just("in").padded())
             .then(expr.clone())
-            .map(|((name, value), body)| Expr::Let(name, Box::new(value), Box::new(body)));
+            .map(|((name, value), body)| {
+                Expr::Let(Pattern::Ident(name), Box::new(value), Box::new(body))
+            });
 
         app.or(lam).or(r#let).or(sum)
     });
@@ -153,7 +155,7 @@ mod tests {
     fn simple_let() {
         assert_eq!(
             parse("let x = 5 in x"),
-            "Let(\"x\", Lit(Num(\"5\")), Ident(\"x\"))"
+            "Let(Ident(\"x\"), Lit(Num(\"5\")), Ident(\"x\"))"
         );
     }
 
@@ -161,7 +163,7 @@ mod tests {
     fn nested_let() {
         assert_eq!(
             parse("let x = 5 in let y = 10 in z"),
-            "Let(\"x\", Lit(Num(\"5\")), Let(\"y\", Lit(Num(\"10\")), Ident(\"z\")))",
+            "Let(Ident(\"x\"), Lit(Num(\"5\")), Let(Ident(\"y\"), Lit(Num(\"10\")), Ident(\"z\")))",
         );
     }
 
