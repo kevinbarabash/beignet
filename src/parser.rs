@@ -6,7 +6,7 @@ use super::syntax::{BinOp, BindingIdent, Expr, ExprWithSpan, Pattern};
 pub type Span = std::ops::Range<usize>;
 
 pub fn parser() -> impl Parser<char, ExprWithSpan, Error = Simple<char>> {
-    let ident = text::ident().padded();
+    let ident = text::ident();
 
     let num = text::int(10)
         .map_with_span(|s, span: Span| {
@@ -19,7 +19,7 @@ pub fn parser() -> impl Parser<char, ExprWithSpan, Error = Simple<char>> {
         })
         .padded();
 
-    let str_ = just("\"")
+    let r#str = just("\"")
         .ignore_then(filter(|c| *c != '"').repeated())
         .then_ignore(just('"'))
         .collect::<String>()
@@ -32,13 +32,18 @@ pub fn parser() -> impl Parser<char, ExprWithSpan, Error = Simple<char>> {
             )
         });
 
-    let lit = num.or(str_);
+    let lit = choice((
+        num,
+        r#str,
+    ));
 
     let expr = recursive(|expr| {
-        let atom = num
-            .or(expr.clone().delimited_by(just("("), just(")")))
-            .or(ident.map_with_span(|name, span| (Expr::Ident { name }, span)))
-            .or(lit);
+        let atom = choice((
+            num,
+            expr.clone().delimited_by(just("("), just(")")),
+            ident.map_with_span(|name, span| (Expr::Ident { name }, span)),
+            lit,
+        )).padded();
 
         let product = atom
             .clone()
@@ -92,7 +97,6 @@ pub fn parser() -> impl Parser<char, ExprWithSpan, Error = Simple<char>> {
             .clone()
             .then(
                 expr.clone()
-                    .padded()
                     .separated_by(just(","))
                     .allow_trailing()
                     .delimited_by(just("("), just(")")),
@@ -105,7 +109,8 @@ pub fn parser() -> impl Parser<char, ExprWithSpan, Error = Simple<char>> {
                     },
                     span,
                 )
-            });
+            })
+            .padded();
 
         let param_list = ident
             .map_with_span(|name, span| (BindingIdent::Ident { name }, span))
@@ -129,7 +134,11 @@ pub fn parser() -> impl Parser<char, ExprWithSpan, Error = Simple<char>> {
             });
 
         let r#let = just("let")
-            .ignore_then(ident.map_with_span(|name, span| (Pattern::Ident { name }, span)))
+            .ignore_then(
+                ident
+                    .map_with_span(|name, span| (Pattern::Ident { name }, span))
+                    .padded(),
+            )
             .then_ignore(just("=").padded())
             .then(expr.clone())
             .then_ignore(just("in").padded())
@@ -145,7 +154,12 @@ pub fn parser() -> impl Parser<char, ExprWithSpan, Error = Simple<char>> {
                 )
             });
 
-        app.or(lam).or(r#let).or(sum)
+        choice((
+            app,
+            lam,
+            r#let,
+            sum,
+        ))
     });
 
     expr.then_ignore(end())
@@ -350,7 +364,6 @@ mod tests {
 
     #[test]
     fn simple_let() {
-        // TODO: don't include whitespace and the '=' in the span for 'x'
         insta::assert_debug_snapshot!(parser().parse("let x = 5 in x").unwrap(), @r###"
         (
             Let {
@@ -358,7 +371,7 @@ mod tests {
                     Ident {
                         name: "x",
                     },
-                    3..6,
+                    4..5,
                 ),
                 value: (
                     Lit {
@@ -382,7 +395,6 @@ mod tests {
 
     #[test]
     fn nested_let() {
-        // TODO: don't include whitespace and the '=' in the span of the patterns
         insta::assert_debug_snapshot!(parser().parse("let x = 5 in let y = 10 in x + y").unwrap(), @r###"
         (
             Let {
@@ -390,7 +402,7 @@ mod tests {
                     Ident {
                         name: "x",
                     },
-                    3..6,
+                    4..5,
                 ),
                 value: (
                     Lit {
@@ -406,7 +418,7 @@ mod tests {
                             Ident {
                                 name: "y",
                             },
-                            16..19,
+                            17..18,
                         ),
                         value: (
                             Lit {
@@ -423,7 +435,7 @@ mod tests {
                                     Ident {
                                         name: "x",
                                     },
-                                    27..29,
+                                    27..28,
                                 ),
                                 right: (
                                     Ident {
@@ -487,7 +499,6 @@ mod tests {
 
     #[test]
     fn mul_div_operations() {
-        // TODO: don't include trailing whitespace in identifiers
         insta::assert_debug_snapshot!(parser().parse("x * y / z").unwrap(), @r###"
         (
             Op {
@@ -499,16 +510,16 @@ mod tests {
                             Ident {
                                 name: "x",
                             },
-                            0..2,
+                            0..1,
                         ),
                         right: (
                             Ident {
                                 name: "y",
                             },
-                            4..6,
+                            4..5,
                         ),
                     },
-                    0..6,
+                    0..5,
                 ),
                 right: (
                     Ident {
@@ -524,7 +535,6 @@ mod tests {
 
     #[test]
     fn operator_precedence() {
-        // TODO: don't include trailing whitespace in identifiers
         insta::assert_debug_snapshot!(parser().parse("a + b * c").unwrap(), @r###"
         (
             Op {
@@ -533,7 +543,7 @@ mod tests {
                     Ident {
                         name: "a",
                     },
-                    0..2,
+                    0..1,
                 ),
                 right: (
                     Op {
@@ -542,7 +552,7 @@ mod tests {
                             Ident {
                                 name: "b",
                             },
-                            4..6,
+                            4..5,
                         ),
                         right: (
                             Ident {
@@ -561,7 +571,6 @@ mod tests {
 
     #[test]
     fn specifying_operator_precedence_with_parens() {
-        // TODO: don't include trailing whitespace in identifiers
         insta::assert_debug_snapshot!(parser().parse("(a + b) * c").unwrap(), @r###"
         (
             Op {
@@ -573,7 +582,7 @@ mod tests {
                             Ident {
                                 name: "a",
                             },
-                            1..3,
+                            1..2,
                         ),
                         right: (
                             Ident {
