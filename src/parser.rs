@@ -7,50 +7,58 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
     let ident = text::ident().padded();
 
     let num = text::int(10)
-        .map(|s: String| Expr::Lit(Literal::Num(s)))
+        .map_with_span(|s, _| Expr::Lit {
+            literal: Literal::Num(s),
+        })
         .padded();
 
     let str_ = just("\"")
         .ignore_then(filter(|c| *c != '"').repeated())
         .then_ignore(just('"'))
         .collect::<String>()
-        .map(|s: String| Expr::Lit(Literal::Str(s)));
+        .map_with_span(|s, _| Expr::Lit {
+            literal: Literal::Str(s),
+        });
 
     let lit = num.or(str_);
 
     let expr = recursive(|expr| {
         let atom = num
             .or(expr.clone().delimited_by(just("("), just(")")))
-            .or(ident.map(Expr::Ident))
+            .or(ident.map_with_span(|name, _| Expr::Ident { name }))
             .or(lit);
 
         let product = atom
             .clone()
             .then(
-                just("*")
-                    .padded()
-                    .to(partial!(Expr::Op => BinOp::Mul, _, _) as fn(_, _) -> _)
-                    .or(just("/")
-                        .padded()
-                        .to(partial!(Expr::Op => BinOp::Div, _, _) as fn(_, _) -> _))
-                    .then(atom.clone())
-                    .repeated(),
+                choice((
+                    just("*").padded().to(BinOp::Mul),
+                    just("/").padded().to(BinOp::Div),
+                ))
+                .then(atom.clone())
+                .repeated(),
             )
-            .foldl(|lhs, (op_con, rhs)| op_con(Box::new(lhs), Box::new(rhs)));
+            .foldl(|left, (op, right)| Expr::Op {
+                op,
+                left: Box::from(left),
+                right: Box::from(right),
+            });
 
         let sum = product
             .clone()
             .then(
-                just("+")
-                    .padded()
-                    .to(partial!(Expr::Op => BinOp::Add, _, _) as fn(_, _) -> _)
-                    .or(just("-")
-                        .padded()
-                        .to(partial!(Expr::Op => BinOp::Sub, _, _) as fn(_, _) -> _))
-                    .then(product.clone())
-                    .repeated(),
+                choice((
+                    just("+").padded().to(BinOp::Add),
+                    just("-").padded().to(BinOp::Sub),
+                ))
+                .then(product.clone())
+                .repeated(),
             )
-            .foldl(|lhs, (op_con, rhs)| op_con(Box::new(lhs), Box::new(rhs)));
+            .foldl(|left, (op, right)| Expr::Op {
+                op,
+                left: Box::from(left),
+                right: Box::from(right),
+            });
 
         let app = atom
             .clone()
@@ -61,10 +69,13 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
                     .allow_trailing()
                     .delimited_by(just("("), just(")")),
             )
-            .map(|(func, args)| Expr::App(Box::new(func), args));
+            .map_with_span(|(func, args), _| Expr::App {
+                lam: Box::new(func),
+                args,
+            });
 
         let param_list = ident
-            .map(BindingIdent::Ident)
+            .map_with_span(|name, _| BindingIdent::Ident { name })
             .padded()
             .separated_by(just(","))
             .allow_trailing()
@@ -73,7 +84,11 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
         let lam = param_list
             .then_ignore(just("=>").padded())
             .then(expr.clone())
-            .map(|(args, body)| Expr::Lam(args, Box::new(body), false));
+            .map_with_span(|(args, body), _| Expr::Lam {
+                args,
+                body: Box::new(body),
+                is_async: false,
+            });
 
         let r#let = just("let")
             .ignore_then(ident)
@@ -81,8 +96,10 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .then(expr.clone())
             .then_ignore(just("in").padded())
             .then(expr.clone())
-            .map(|((name, value), body)| {
-                Expr::Let(Pattern::Ident(name), Box::new(value), Box::new(body))
+            .map_with_span(|((name, value), body), _| Expr::Let {
+                pattern: Pattern::Ident { name },
+                value: Box::new(value),
+                body: Box::new(body),
             });
 
         app.or(lam).or(r#let).or(sum)
@@ -95,107 +112,277 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
 mod tests {
     use super::*;
 
-    fn parse(s: &str) -> String {
-        format!("{:?}", parser().parse(s).unwrap())
-    }
-
     #[test]
     fn fn_with_multiple_params() {
-        assert_eq!(
-            parse("(a, b) => c"),
-            "Lam([Ident(\"a\"), Ident(\"b\")], Ident(\"c\"), false)"
-        );
+        insta::assert_debug_snapshot!(parser().parse("(a, b) => c").unwrap(), @r###"
+        Lam {
+            args: [
+                Ident {
+                    name: "a",
+                },
+                Ident {
+                    name: "b",
+                },
+            ],
+            body: Ident {
+                name: "c",
+            },
+            is_async: false,
+        }
+        "###);
     }
 
     #[test]
     fn fn_returning_num_literal() {
-        assert_eq!(parse("() => 10"), "Lam([], Lit(Num(\"10\")), false)");
+        insta::assert_debug_snapshot!(parser().parse("() => 10").unwrap(), @r###"
+        Lam {
+            args: [],
+            body: Lit {
+                literal: Num(
+                    "10",
+                ),
+            },
+            is_async: false,
+        }
+        "###);
     }
 
     #[test]
     fn fn_returning_str_literal() {
-        assert_eq!(
-            parse("(a) => \"hello\""),
-            "Lam([Ident(\"a\")], Lit(Str(\"hello\")), false)"
-        );
+        insta::assert_debug_snapshot!(parser().parse("(a) => \"hello\"").unwrap(), @r###"
+        Lam {
+            args: [
+                Ident {
+                    name: "a",
+                },
+            ],
+            body: Lit {
+                literal: Str(
+                    "hello",
+                ),
+            },
+            is_async: false,
+        }
+        "###);
     }
 
     #[test]
     fn app_with_no_args() {
-        assert_eq!(parse("foo()"), "App(Ident(\"foo\"), [])");
+        insta::assert_debug_snapshot!(parser().parse("foo()").unwrap(), @r###"
+        App {
+            lam: Ident {
+                name: "foo",
+            },
+            args: [],
+        }
+        "###);
     }
 
     #[test]
     fn app_with_multiple_args() {
-        assert_eq!(
-            parse("foo(a, b)"),
-            "App(Ident(\"foo\"), [Ident(\"a\"), Ident(\"b\")])"
-        );
+        insta::assert_debug_snapshot!(parser().parse("foo(a, b)").unwrap(), @r###"
+        App {
+            lam: Ident {
+                name: "foo",
+            },
+            args: [
+                Ident {
+                    name: "a",
+                },
+                Ident {
+                    name: "b",
+                },
+            ],
+        }
+        "###);
     }
 
     #[test]
     fn app_with_multiple_lit_args() {
-        assert_eq!(
-            parse("foo(10, \"hello\")"),
-            "App(Ident(\"foo\"), [Lit(Num(\"10\")), Lit(Str(\"hello\"))])"
-        );
+        insta::assert_debug_snapshot!(parser().parse("foo(10, \"hello\")").unwrap(), @r###"
+        App {
+            lam: Ident {
+                name: "foo",
+            },
+            args: [
+                Lit {
+                    literal: Num(
+                        "10",
+                    ),
+                },
+                Lit {
+                    literal: Str(
+                        "hello",
+                    ),
+                },
+            ],
+        }
+        "###);
     }
 
     #[test]
     fn atom_number() {
-        assert_eq!(parse("10"), "Lit(Num(\"10\"))");
+        insta::assert_debug_snapshot!(parser().parse("10").unwrap(), @r###"
+        Lit {
+            literal: Num(
+                "10",
+            ),
+        }
+        "###);
     }
 
     #[test]
     fn atom_string() {
-        assert_eq!(parse("\"hello\""), "Lit(Str(\"hello\"))");
+        insta::assert_debug_snapshot!(parser().parse("\"hello\"").unwrap(), @r###"
+        Lit {
+            literal: Str(
+                "hello",
+            ),
+        }
+        "###);
     }
 
     #[test]
     fn simple_let() {
-        assert_eq!(
-            parse("let x = 5 in x"),
-            "Let(Ident(\"x\"), Lit(Num(\"5\")), Ident(\"x\"))"
-        );
+        insta::assert_debug_snapshot!(parser().parse("let x = 5 in x").unwrap(), @r###"
+        Let {
+            pattern: Ident {
+                name: "x",
+            },
+            value: Lit {
+                literal: Num(
+                    "5",
+                ),
+            },
+            body: Ident {
+                name: "x",
+            },
+        }
+        "###);
     }
 
     #[test]
     fn nested_let() {
-        assert_eq!(
-            parse("let x = 5 in let y = 10 in z"),
-            "Let(Ident(\"x\"), Lit(Num(\"5\")), Let(Ident(\"y\"), Lit(Num(\"10\")), Ident(\"z\")))",
-        );
+        insta::assert_debug_snapshot!(parser().parse("let x = 5 in let y = 10 in x + y").unwrap(), @r###"
+        Let {
+            pattern: Ident {
+                name: "x",
+            },
+            value: Lit {
+                literal: Num(
+                    "5",
+                ),
+            },
+            body: Let {
+                pattern: Ident {
+                    name: "y",
+                },
+                value: Lit {
+                    literal: Num(
+                        "10",
+                    ),
+                },
+                body: Op {
+                    op: Add,
+                    left: Ident {
+                        name: "x",
+                    },
+                    right: Ident {
+                        name: "y",
+                    },
+                },
+            },
+        }
+        "###);
     }
 
     #[test]
     fn add_sub_operations() {
-        assert_eq!(
-            parse("1 + 2 - 3"),
-            "Op(Sub, Op(Add, Lit(Num(\"1\")), Lit(Num(\"2\"))), Lit(Num(\"3\")))",
-        );
+        insta::assert_debug_snapshot!(parser().parse("1 + 2 - 3").unwrap(), @r###"
+        Op {
+            op: Sub,
+            left: Op {
+                op: Add,
+                left: Lit {
+                    literal: Num(
+                        "1",
+                    ),
+                },
+                right: Lit {
+                    literal: Num(
+                        "2",
+                    ),
+                },
+            },
+            right: Lit {
+                literal: Num(
+                    "3",
+                ),
+            },
+        }
+        "###);
     }
 
     #[test]
     fn mul_div_operations() {
-        assert_eq!(
-            parse("x * y / z"),
-            "Op(Div, Op(Mul, Ident(\"x\"), Ident(\"y\")), Ident(\"z\"))",
-        );
+        insta::assert_debug_snapshot!(parser().parse("x * y / z").unwrap(), @r###"
+        Op {
+            op: Div,
+            left: Op {
+                op: Mul,
+                left: Ident {
+                    name: "x",
+                },
+                right: Ident {
+                    name: "y",
+                },
+            },
+            right: Ident {
+                name: "z",
+            },
+        }
+        "###);
     }
 
     #[test]
     fn operator_precedence() {
-        assert_eq!(
-            parse("a + b * c"),
-            "Op(Add, Ident(\"a\"), Op(Mul, Ident(\"b\"), Ident(\"c\")))",
-        );
+        insta::assert_debug_snapshot!(parser().parse("a + b * c").unwrap(), @r###"
+        Op {
+            op: Add,
+            left: Ident {
+                name: "a",
+            },
+            right: Op {
+                op: Mul,
+                left: Ident {
+                    name: "b",
+                },
+                right: Ident {
+                    name: "c",
+                },
+            },
+        }
+        "###);
     }
 
     #[test]
     fn specifying_operator_precedence_with_parens() {
-        assert_eq!(
-            parse("(a + b) * c"),
-            "Op(Mul, Op(Add, Ident(\"a\"), Ident(\"b\")), Ident(\"c\"))",
-        );
+        insta::assert_debug_snapshot!(parser().parse("(a + b) * c").unwrap(), @r###"
+        Op {
+            op: Mul,
+            left: Op {
+                op: Add,
+                left: Ident {
+                    name: "a",
+                },
+                right: Ident {
+                    name: "b",
+                },
+            },
+            right: Ident {
+                name: "c",
+            },
+        }
+        "###);
     }
 }
