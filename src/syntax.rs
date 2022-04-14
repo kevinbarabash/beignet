@@ -4,8 +4,8 @@ use super::literal::Literal;
 // let bindings
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindingIdent {
-    Ident(String),
-    Rest(String),
+    Ident { name: String },
+    Rest { name: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -47,6 +47,6 @@ pub enum Expr {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern {
-    Ident(String),
+    Ident { name: String },
     // TODO: add more patterns later
 }

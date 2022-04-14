@@ -75,7 +75,7 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             });
 
         let param_list = ident
-            .map_with_span(|name, _| BindingIdent::Ident(name))
+            .map_with_span(|name, _| BindingIdent::Ident { name })
             .padded()
             .separated_by(just(","))
             .allow_trailing()
@@ -97,7 +97,7 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .then_ignore(just("in").padded())
             .then(expr.clone())
             .map_with_span(|((name, value), body), _| Expr::Let {
-                pattern: Pattern::Ident(name),
+                pattern: Pattern::Ident { name },
                 value: Box::new(value),
                 body: Box::new(body),
             });
@@ -117,12 +117,12 @@ mod tests {
         insta::assert_debug_snapshot!(parser().parse("(a, b) => c").unwrap(), @r###"
         Lam {
             args: [
-                Ident(
-                    "a",
-                ),
-                Ident(
-                    "b",
-                ),
+                Ident {
+                    name: "a",
+                },
+                Ident {
+                    name: "b",
+                },
             ],
             body: Ident {
                 name: "c",
@@ -152,9 +152,9 @@ mod tests {
         insta::assert_debug_snapshot!(parser().parse("(a) => \"hello\"").unwrap(), @r###"
         Lam {
             args: [
-                Ident(
-                    "a",
-                ),
+                Ident {
+                    name: "a",
+                },
             ],
             body: Lit {
                 literal: Str(
@@ -246,9 +246,9 @@ mod tests {
     fn simple_let() {
         insta::assert_debug_snapshot!(parser().parse("let x = 5 in x").unwrap(), @r###"
         Let {
-            pattern: Ident(
-                "x",
-            ),
+            pattern: Ident {
+                name: "x",
+            },
             value: Lit {
                 literal: Num(
                     "5",
@@ -265,18 +265,18 @@ mod tests {
     fn nested_let() {
         insta::assert_debug_snapshot!(parser().parse("let x = 5 in let y = 10 in x + y").unwrap(), @r###"
         Let {
-            pattern: Ident(
-                "x",
-            ),
+            pattern: Ident {
+                name: "x",
+            },
             value: Lit {
                 literal: Num(
                     "5",
                 ),
             },
             body: Let {
-                pattern: Ident(
-                    "y",
-                ),
+                pattern: Ident {
+                    name: "y",
+                },
                 value: Lit {
                     literal: Num(
                         "10",
