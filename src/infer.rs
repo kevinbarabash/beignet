@@ -87,9 +87,9 @@ where
 }
 
 use crate::context::{Context, Env};
-use crate::syntax::{BindingIdent, Expr, Pattern};
+use crate::syntax::{BindingIdent, Expr, ExprWithSpan, Pattern, PatternWithSpan};
 
-pub fn infer_expr(env: Env, expr: &Expr) -> Scheme {
+pub fn infer_expr(env: Env, expr: &ExprWithSpan) -> Scheme {
     let init_ctx = Context::from(env);
     let (ty, cs) = infer(expr, &init_ctx);
     let subs = run_solve(&cs, &init_ctx);
@@ -111,13 +111,13 @@ fn generalize(env: &Env, ty: &Type) -> Scheme {
 
 type InferResult = (Type, Vec<Constraint>);
 
-fn infer(expr: &Expr, ctx: &Context) -> InferResult {
+fn infer(expr: &ExprWithSpan, ctx: &Context) -> InferResult {
     match expr {
-        Expr::Ident { name } => {
+        (Expr::Ident { name }, _) => {
             let ty = ctx.lookup_env(name);
             (ty, vec![])
         }
-        Expr::App { lam, args } => {
+        (Expr::App { lam, args }, _) => {
             let (t_fn, cs_fn) = infer(lam, ctx);
             let (t_args, cs_args) = infer_many(args, ctx);
             let tv = ctx.fresh();
@@ -137,7 +137,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (Type::from(tv), constraints)
         }
-        Expr::Lam { args, body, .. } => {
+        (Expr::Lam { args, body, .. }, _) => {
             // Creates a new type variable for each arg
             let arg_tvs: Vec<_> = args.iter().map(|_| Type::Var(ctx.fresh())).collect();
             let mut new_ctx = ctx.clone();
@@ -147,8 +147,12 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                     ty: tv.clone(),
                 };
                 match arg {
-                    BindingIdent::Ident { name } => new_ctx.env.insert(name.to_string(), scheme),
-                    BindingIdent::Rest { name } => new_ctx.env.insert(name.to_string(), scheme),
+                    (BindingIdent::Ident { name }, _) => {
+                        new_ctx.env.insert(name.to_string(), scheme)
+                    }
+                    (BindingIdent::Rest { name }, _) => {
+                        new_ctx.env.insert(name.to_string(), scheme)
+                    }
                 };
             }
             let (ret_ty, cs) = infer(body, &new_ctx);
@@ -159,11 +163,14 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (lam_ty, cs)
         }
-        Expr::Let {
-            pattern,
-            value,
-            body,
-        } => {
+        (
+            Expr::Let {
+                pattern,
+                value,
+                body,
+            },
+            _,
+        ) => {
             let (t1, cs1) = infer(&value, &ctx);
             let subs = run_solve(&cs1, &ctx);
             let (new_ctx, new_cs) = infer_pattern(pattern, &t1, &subs, ctx);
@@ -176,9 +183,9 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (t2.apply(&subs), vec![])
         }
-        Expr::Lit { literal } => (Type::from(literal), vec![]),
+        (Expr::Lit { literal }, _) => (Type::from(literal), vec![]),
         // TODO: check the `op` field when we introduce comparison operators
-        Expr::Op { left, right, .. } => {
+        (Expr::Op { left, right, .. }, _) => {
             let left = Box::as_ref(left);
             let right = Box::as_ref(right);
             let (ts, cs) = infer_many(&[left.clone(), right.clone()], ctx);
@@ -205,7 +212,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 }
 
 fn infer_pattern(
-    pattern: &Pattern,
+    pattern: &PatternWithSpan,
     ty: &Type,
     subs: &Subst,
     ctx: &Context,
@@ -213,7 +220,7 @@ fn infer_pattern(
     let scheme = generalize(&ctx.env.apply(subs), &ty.apply(subs));
 
     match pattern {
-        Pattern::Ident { name } => {
+        (Pattern::Ident { name }, _) => {
             let mut new_ctx = ctx.clone();
             new_ctx.env.insert(name.to_owned(), scheme);
 
@@ -222,7 +229,7 @@ fn infer_pattern(
     }
 }
 
-fn infer_many(exprs: &[Expr], ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
+fn infer_many(exprs: &[ExprWithSpan], ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
     let mut ts: Vec<Type> = Vec::new();
     let mut all_cs: Vec<Constraint> = Vec::new();
 
