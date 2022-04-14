@@ -6,6 +6,3 @@ pub mod parser;
 pub mod substitutable;
 pub mod syntax;
 pub mod types;
-
-#[macro_use]
-extern crate partial_application;

@@ -18,12 +18,31 @@ pub enum BinOp {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
-    App(Box<Expr>, Vec<Expr>),
-    Ident(String),
-    Lam(Vec<BindingIdent>, Box<Expr>, bool),
-    Let(Pattern, Box<Expr>, Box<Expr>),
-    Lit(Literal),
-    Op(BinOp, Box<Expr>, Box<Expr>),
+    App {
+        lam: Box<Expr>,
+        args: Vec<Expr>,
+    },
+    Ident {
+        name: String,
+    },
+    Lam {
+        args: Vec<BindingIdent>,
+        body: Box<Expr>,
+        is_async: bool,
+    },
+    Let {
+        pattern: Pattern,
+        value: Box<Expr>,
+        body: Box<Expr>,
+    },
+    Lit {
+        literal: Literal,
+    },
+    Op {
+        op: BinOp,
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
