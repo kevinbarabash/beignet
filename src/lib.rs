@@ -1,3 +1,4 @@
+pub mod codegen;
 pub mod constraint_solver;
 pub mod context;
 pub mod infer;
