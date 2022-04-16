@@ -87,9 +87,16 @@ where
 }
 
 use crate::context::{Context, Env};
-use crate::syntax::{BindingIdent, Expr, ExprWithSpan, Pattern, PatternWithSpan};
+use crate::syntax::{BindingIdent, Expr, WithSpan, Pattern, Statement};
 
-pub fn infer_expr(env: Env, expr: &ExprWithSpan) -> Scheme {
+pub fn infer_stmt(env: Env, stmt: &WithSpan<Statement>) -> Scheme {
+    match stmt {
+        (Statement::Expr(e), _) => infer_expr(env, e),
+        _ => panic!("We can't infer decls yet"),
+    }
+}
+
+pub fn infer_expr(env: Env, expr: &WithSpan<Expr>) -> Scheme {
     let init_ctx = Context::from(env);
     let (ty, cs) = infer(expr, &init_ctx);
     let subs = run_solve(&cs, &init_ctx);
@@ -111,7 +118,7 @@ fn generalize(env: &Env, ty: &Type) -> Scheme {
 
 type InferResult = (Type, Vec<Constraint>);
 
-fn infer(expr: &ExprWithSpan, ctx: &Context) -> InferResult {
+fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
     match expr {
         (Expr::Ident { name }, _) => {
             let ty = ctx.lookup_env(name);
@@ -212,7 +219,7 @@ fn infer(expr: &ExprWithSpan, ctx: &Context) -> InferResult {
 }
 
 fn infer_pattern(
-    pattern: &PatternWithSpan,
+    pattern: &WithSpan<Pattern>,
     ty: &Type,
     subs: &Subst,
     ctx: &Context,
@@ -229,7 +236,7 @@ fn infer_pattern(
     }
 }
 
-fn infer_many(exprs: &[ExprWithSpan], ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
+fn infer_many(exprs: &[WithSpan<Expr>], ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
     let mut ts: Vec<Type> = Vec::new();
     let mut all_cs: Vec<Constraint> = Vec::new();
 

@@ -9,8 +9,9 @@ fn main() {
     println!("Hello, world!");
 
     let env: Env = HashMap::new();
-    let expr = parser().parse("5 + 10").unwrap();
-    let result = infer_expr(env, &expr);
+    let prog = parser().parse("5 + 10").unwrap();
+    let stmt = prog.body.get(0).unwrap();
+    let result = infer_stmt(env, &stmt);
 
     assert_eq!(format!("{}", result), "number");
 

@@ -5,7 +5,26 @@ use super::syntax::*;
 // TODO: refactor this to use an io writer
 
 #[allow(unstable_name_collisions)] // intersperse
-pub fn codegen_expr(expr: &ExprWithSpan) -> String {
+pub fn codegen_prog(prog: &Program) -> String {
+    prog.body
+        .iter()
+        .map(|child| match child {
+            (Statement::Decl { pattern, value }, _) => {
+                let pattern_output = codegen_pattern(pattern);
+                let value_output = codegen_expr(value);
+                match value {
+                    (Expr::Let {..}, _) => format!("var {} = {{\n{}\n}}", pattern_output, value_output),
+                    _ => format!("var {} = {}", pattern_output, value_output),
+                }
+            }
+            (Statement::Expr(expr), _) => codegen_expr(expr),
+        })
+        .intersperse(String::from("\n"))
+        .collect()
+}
+
+#[allow(unstable_name_collisions)] // intersperse
+pub fn codegen_expr(expr: &WithSpan<Expr>) -> String {
     match expr {
         (Expr::App { lam, args }, _) => {
             let lam = codegen_expr(lam);
@@ -43,9 +62,16 @@ pub fn codegen_expr(expr: &ExprWithSpan) -> String {
             // unique identifiers.
             let pattern = codegen_pattern(pattern);
             let value = codegen_expr(value);
-            let body = codegen_expr(body);
+            let body_output = codegen_expr(body);
 
-            format!("var {} = {};\n{}", pattern, value, body)
+            // TODO: introduce a JavaScript AST that we can use as an intermediary step before
+            // outputting a string.
+            // NOTE: let-in is essentially a linked list so we could have a helper function that
+            // converts that to a vector first.
+            match body.as_ref() {
+                (Expr::Let { .. }, _) => format!("var {} = {};\n{}", pattern, value, body_output),
+                _ => format!("var {} = {};\nreturn {};", pattern, value, body_output),
+            }
         }
         (Expr::Lit { literal }, _) => {
             format!("{}", literal)
@@ -95,7 +121,7 @@ pub fn codegen_expr(expr: &ExprWithSpan) -> String {
     }
 }
 
-fn codegen_pattern(pattern: &PatternWithSpan) -> String {
+fn codegen_pattern(pattern: &WithSpan<Pattern>) -> String {
     match pattern {
         (Pattern::Ident { name }, _) => name.to_owned(),
     }
