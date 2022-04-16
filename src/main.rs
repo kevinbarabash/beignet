@@ -2,6 +2,7 @@ use chumsky::prelude::*;
 use std::collections::HashMap;
 
 use nouveau_lib::parser::*;
+use nouveau_lib::lexer::*;
 use nouveau_lib::context::Env;
 use nouveau_lib::infer::*;
 
@@ -9,12 +10,18 @@ fn main() {
     println!("Hello, world!");
 
     let env: Env = HashMap::new();
-    let prog = parser().parse("5 + 10").unwrap();
+    let result = lexer().parse("5 + 10").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = infer_stmt(env, &stmt);
 
     assert_eq!(format!("{}", result), "number");
 
-    let ast = parser().parse("let x = 5 in x").unwrap();
+    let result = lexer().parse("let x = 5 in x").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let ast = token_parser(&spans).parse(tokens).unwrap();
     println!("ast = {:?}", ast);
 }

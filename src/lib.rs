@@ -2,6 +2,7 @@ pub mod codegen;
 pub mod constraint_solver;
 pub mod context;
 pub mod infer;
+pub mod lexer;
 pub mod literal;
 pub mod parser;
 pub mod substitutable;

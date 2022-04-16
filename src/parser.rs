@@ -1,5 +1,6 @@
 use chumsky::prelude::*;
 
+use super::lexer::Token;
 use super::literal::Literal;
 use super::syntax::{BinOp, BindingIdent, Expr, Pattern, Program, Statement};
 
@@ -7,57 +8,46 @@ pub type Span = std::ops::Range<usize>;
 
 // TODO: add lexing layer so that it's easier to separate keywords and identifiers
 
-pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
-    let ident = text::ident();
+pub fn token_parser(
+    source_spans: &[Span],
+) -> impl Parser<Token, Program, Error = Simple<Token>> + '_ {
+    let ident = select! { Token::Ident(name) => Expr::Ident { name } };
+    let binding_ident = select! { Token::Ident(name) => BindingIdent::Ident { name } };
+    let pattern = select! { Token::Ident(name) => Pattern::Ident { name } };
+    let num = select! { Token::Num(value) => Expr::Lit { literal: Literal::Num(value) } };
+    let r#str = select! { Token::Str(value) => Expr::Lit { literal: Literal::Str(value) } };
 
-    let num = text::int(10)
-        .map_with_span(|s, span: Span| {
-            (
-                Expr::Lit {
-                    literal: Literal::Num(s),
-                },
-                span,
-            )
-        })
-        .padded();
+    let add_span_info = |node: Expr, token_span: Span| {
+        let start = source_spans.get(token_span.start).unwrap().start;
+        let end = source_spans.get(token_span.end - 1).unwrap().end;
+        (node, start..end)
+    };
 
-    let r#str = just("\"")
-        .ignore_then(filter(|c| *c != '"').repeated())
-        .then_ignore(just('"'))
-        .collect::<String>()
-        .map_with_span(|s, span| {
-            (
-                Expr::Lit {
-                    literal: Literal::Str(s),
-                },
-                span,
-            )
-        });
-
-    let lit = choice((num, r#str));
-
-    // TODO: dedupe with expr, maybe we can have a function that returns
-    // different variants of this parser
     let expr = recursive(|expr| {
+        let num = num.map_with_span(add_span_info);
+        let r#str = r#str.map_with_span(add_span_info);
+        let ident = ident.map_with_span(add_span_info);
+
         let atom = choice((
             num,
-            expr.clone().delimited_by(just("("), just(")")),
-            ident.map_with_span(|name, span| (Expr::Ident { name }, span)),
-            lit,
-        ))
-        .padded();
+            r#str,
+            ident,
+            expr.clone()
+                .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
+        ));
 
         let product = atom
             .clone()
             .then(
                 choice((
-                    just("*").padded().to(BinOp::Mul),
-                    just("/").padded().to(BinOp::Div),
+                    just(Token::Times).to(BinOp::Mul),
+                    just(Token::Div).to(BinOp::Div),
                 ))
                 .then(atom.clone())
                 .repeated(),
             )
             .foldl(|left, (op, right)| {
+                // atoms are already using source spans since they're WithSpan<Expr>
                 let span = left.1.start..right.1.end;
                 {
                     (
@@ -75,13 +65,14 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             .clone()
             .then(
                 choice((
-                    just("+").padded().to(BinOp::Add),
-                    just("-").padded().to(BinOp::Sub),
+                    just(Token::Plus).to(BinOp::Add),
+                    just(Token::Minus).to(BinOp::Sub),
                 ))
                 .then(product.clone())
                 .repeated(),
             )
             .foldl(|left, (op, right)| {
+                // products are already using source spans since they're WithSpan<Expr>
                 let span = left.1.start..right.1.end;
                 {
                     (
@@ -99,53 +90,61 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             .clone()
             .then(
                 expr.clone()
-                    .separated_by(just(","))
+                    .separated_by(just(Token::Comma))
                     .allow_trailing()
-                    .delimited_by(just("("), just(")")),
+                    .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
             )
-            .map_with_span(|(func, args), span| {
+            .map_with_span(|(func, args), token_span: Span| {
+                let start = source_spans.get(token_span.start).unwrap().start;
+                let end = source_spans.get(token_span.end - 1).unwrap().end;
                 (
                     Expr::App {
                         lam: Box::new(func),
                         args,
                     },
-                    span,
+                    start..end,
                 )
-            })
-            .padded();
+            });
 
-        let param_list = ident
-            .map_with_span(|name, span| (BindingIdent::Ident { name }, span))
-            .padded()
-            .separated_by(just(","))
+        let param_list = binding_ident
+            .map_with_span(|node, token_span: Span| {
+                let start = source_spans.get(token_span.start).unwrap().start;
+                let end = source_spans.get(token_span.end - 1).unwrap().end;
+                (node, start..end)
+            })
+            .separated_by(just(Token::Comma))
             .allow_trailing()
-            .delimited_by(just("("), just(")"));
+            .delimited_by(just(Token::OpenParen), just(Token::CloseParen));
 
         let lam = param_list
-            .then_ignore(just("=>").padded())
+            .then_ignore(just(Token::FatArrow))
             .then(expr.clone())
-            .map_with_span(|(args, body), span| {
+            .map_with_span(|(args, body), token_span: Span| {
+                let start = source_spans.get(token_span.start).unwrap().start;
+                let end = source_spans.get(token_span.end - 1).unwrap().end;
                 (
                     Expr::Lam {
                         args,
                         body: Box::new(body),
                         is_async: false,
                     },
-                    span,
+                    start..end,
                 )
             });
 
-        let r#let = just("let")
-            .ignore_then(
-                ident
-                    .map_with_span(|name, span| (Pattern::Ident { name }, span))
-                    .padded(),
-            )
-            .then_ignore(just("=").padded())
+        let r#let = just(Token::Let)
+            .ignore_then(pattern.map_with_span(|node, token_span: Span| {
+                let start = source_spans.get(token_span.start).unwrap().start;
+                let end = source_spans.get(token_span.end - 1).unwrap().end;
+                (node, start..end)
+            }))
+            .then_ignore(just(Token::Eq))
             .then(expr.clone())
-            .then_ignore(just("in").padded())
+            .then_ignore(just(Token::In))
             .then(expr.clone())
-            .map_with_span(|((pattern, value), body), span| {
+            .map_with_span(|((pattern, value), body), token_span: Span| {
+                let start = source_spans.get(token_span.start).unwrap().start;
+                let span = start..body.1.end;
                 (
                     Expr::Let {
                         pattern,
@@ -159,26 +158,28 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
         choice((app, lam, r#let, sum))
     });
 
-    let decl = just("let")
-        .ignore_then(
-            ident
-                .map_with_span(|name, span| (Pattern::Ident { name }, span))
-                .padded(),
-        )
-        .then_ignore(just("=").padded())
+    let decl = just(Token::Let)
+        .ignore_then(pattern.map_with_span(|node, token_span: Span| {
+            let start = source_spans.get(token_span.start).unwrap().start;
+            let end = source_spans.get(token_span.end - 1).unwrap().end;
+            (node, start..end)
+        })) 
+        .then_ignore(just(Token::Eq))
         .then(expr.clone())
-        .map_with_span(|(pattern, value), span: Span| {
+        .map_with_span(|(pattern, value), token_span: Span| {
             // excludes whitespace from end of span
-            let span = span.start..value.1.end.clone();
+            let start = source_spans.get(token_span.start).unwrap().start;
+            let span = start..value.1.end.clone();
             (Statement::Decl { pattern, value }, span)
         });
 
     let program = choice((
         decl,
-        expr.map_with_span(|e, span: Span| {
+        expr.map_with_span(|e, token_span: Span| {
             // excludes whitespace from end of span
-            let span = span.start..e.1.end.clone();
-            (Statement::Expr(e), span)
+            let start = source_spans.get(token_span.start).unwrap().start;
+            let end = source_spans.get(token_span.end - 1).unwrap().end;
+            (Statement::Expr(e), start..end)
         }),
     ))
     .repeated()
@@ -191,9 +192,14 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
 mod tests {
     use super::*;
 
+    use super::super::lexer::lexer;
+
     #[test]
     fn fn_with_multiple_params() {
-        insta::assert_debug_snapshot!(parser().parse("(a, b) => c").unwrap(), @r###"
+        let result = lexer().parse("(a, b) => c").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -234,7 +240,10 @@ mod tests {
 
     #[test]
     fn fn_returning_num_literal() {
-        insta::assert_debug_snapshot!(parser().parse("() => 10").unwrap(), @r###"
+        let result = lexer().parse("() => 10").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -264,7 +273,10 @@ mod tests {
 
     #[test]
     fn fn_returning_str_literal() {
-        insta::assert_debug_snapshot!(parser().parse("(a) => \"hello\"").unwrap(), @r###"
+        let result = lexer().parse("(a) => \"hello\"").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -301,7 +313,10 @@ mod tests {
 
     #[test]
     fn app_with_no_args() {
-        insta::assert_debug_snapshot!(parser().parse("foo()").unwrap(), @r###"
+        let result = lexer().parse("foo()").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -328,7 +343,10 @@ mod tests {
 
     #[test]
     fn app_with_multiple_args() {
-        insta::assert_debug_snapshot!(parser().parse("foo(a, b)").unwrap(), @r###"
+        let result = lexer().parse("foo(a, b)").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -368,7 +386,10 @@ mod tests {
 
     #[test]
     fn app_with_multiple_lit_args() {
-        insta::assert_debug_snapshot!(parser().parse("foo(10, \"hello\")").unwrap(), @r###"
+        let result = lexer().parse("foo(10, \"hello\")").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -412,7 +433,10 @@ mod tests {
 
     #[test]
     fn atom_number() {
-        insta::assert_debug_snapshot!(parser().parse("10").unwrap(), @r###"
+        let result = lexer().parse("10").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -435,7 +459,10 @@ mod tests {
 
     #[test]
     fn atom_string() {
-        insta::assert_debug_snapshot!(parser().parse("\"hello\"").unwrap(), @r###"
+        let result = lexer().parse("\"hello\"").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -555,7 +582,10 @@ mod tests {
 
     #[test]
     fn add_sub_operations() {
-        insta::assert_debug_snapshot!(parser().parse("1 + 2 - 3").unwrap(), @r###"
+        let result = lexer().parse("1 + 2 - 3").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -606,7 +636,10 @@ mod tests {
 
     #[test]
     fn mul_div_operations() {
-        insta::assert_debug_snapshot!(parser().parse("x * y / z").unwrap(), @r###"
+        let result = lexer().parse("x * y / z").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -651,7 +684,10 @@ mod tests {
 
     #[test]
     fn operator_precedence() {
-        insta::assert_debug_snapshot!(parser().parse("a + b * c").unwrap(), @r###"
+        let result = lexer().parse("a + b * c").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -696,7 +732,10 @@ mod tests {
 
     #[test]
     fn specifying_operator_precedence_with_parens() {
-        insta::assert_debug_snapshot!(parser().parse("(a + b) * c").unwrap(), @r###"
+        let result = lexer().parse("(a + b) * c").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -741,7 +780,10 @@ mod tests {
 
     #[test]
     fn single_decl() {
-        insta::assert_debug_snapshot!(parser().parse("let x = 5").unwrap(), @r###"
+        let result = lexer().parse("let x = 5").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -770,7 +812,10 @@ mod tests {
 
     #[test]
     fn single_lambda_decl() {
-        insta::assert_debug_snapshot!(parser().parse("let x = (a, b) => a + b").unwrap(), @r###"
+        let result = lexer().parse("let x = (a, b) => a + b").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -829,7 +874,10 @@ mod tests {
 
     #[test]
     fn multiple_decls() {
-        insta::assert_debug_snapshot!(parser().parse("let x = 5\nlet y = \"hello\"").unwrap(), @r###"
+        let result = lexer().parse("let x = 5\nlet y = \"hello\"").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -877,7 +925,10 @@ mod tests {
 
     #[test]
     fn top_level_expr() {
-        insta::assert_debug_snapshot!(parser().parse("a + b").unwrap(), @r###"
+        let result = lexer().parse("a + b").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -910,7 +961,10 @@ mod tests {
 
     #[test]
     fn multiple_top_level_expressions() {
-        insta::assert_debug_snapshot!(parser().parse("123\n\"hello\"").unwrap(), @r###"
+        let result = lexer().parse("123\n\"hello\"").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
@@ -946,7 +1000,10 @@ mod tests {
 
     #[test]
     fn simple_let_inside_decl() {
-        insta::assert_debug_snapshot!(parser().parse("let foo = let x = 5 in x").unwrap(), @r###"
+        let result = lexer().parse("let foo = let x = 5 in x").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
         Program {
             body: [
                 (
