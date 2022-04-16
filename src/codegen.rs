@@ -5,7 +5,7 @@ use super::syntax::*;
 // TODO: refactor this to use an io writer
 
 #[allow(unstable_name_collisions)] // intersperse
-pub fn codegen_expr(expr: &ExprWithSpan) -> String {
+pub fn codegen_expr(expr: &WithSpan<Expr>) -> String {
     match expr {
         (Expr::App { lam, args }, _) => {
             let lam = codegen_expr(lam);
@@ -95,7 +95,7 @@ pub fn codegen_expr(expr: &ExprWithSpan) -> String {
     }
 }
 
-fn codegen_pattern(pattern: &PatternWithSpan) -> String {
+fn codegen_pattern(pattern: &WithSpan<Pattern>) -> String {
     match pattern {
         (Pattern::Ident { name }, _) => name.to_owned(),
     }

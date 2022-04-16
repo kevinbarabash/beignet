@@ -1,11 +1,11 @@
 use chumsky::prelude::*;
 
 use super::literal::Literal;
-use super::syntax::{BinOp, BindingIdent, Expr, ExprWithSpan, Pattern};
+use super::syntax::{BinOp, BindingIdent, Expr, Pattern, Program, Statement, WithSpan};
 
 pub type Span = std::ops::Range<usize>;
 
-pub fn parser() -> impl Parser<char, ExprWithSpan, Error = Simple<char>> {
+pub fn parser() -> impl Parser<char, WithSpan<Expr>, Error = Simple<char>> {
     let ident = text::ident();
 
     let num = text::int(10)
@@ -32,10 +32,7 @@ pub fn parser() -> impl Parser<char, ExprWithSpan, Error = Simple<char>> {
             )
         });
 
-    let lit = choice((
-        num,
-        r#str,
-    ));
+    let lit = choice((num, r#str));
 
     let expr = recursive(|expr| {
         let atom = choice((
@@ -43,7 +40,8 @@ pub fn parser() -> impl Parser<char, ExprWithSpan, Error = Simple<char>> {
             expr.clone().delimited_by(just("("), just(")")),
             ident.map_with_span(|name, span| (Expr::Ident { name }, span)),
             lit,
-        )).padded();
+        ))
+        .padded();
 
         let product = atom
             .clone()
@@ -154,15 +152,180 @@ pub fn parser() -> impl Parser<char, ExprWithSpan, Error = Simple<char>> {
                 )
             });
 
-        choice((
-            app,
-            lam,
-            r#let,
-            sum,
-        ))
+        choice((app, lam, r#let, sum))
     });
 
-    expr.then_ignore(end())
+    expr
+}
+
+pub fn program_parser() -> impl Parser<char, Program, Error = Simple<char>> {
+    let ident = text::ident();
+
+    let num = text::int(10)
+        .map_with_span(|s, span: Span| {
+            (
+                Expr::Lit {
+                    literal: Literal::Num(s),
+                },
+                span,
+            )
+        })
+        .padded();
+
+    let r#str = just("\"")
+        .ignore_then(filter(|c| *c != '"').repeated())
+        .then_ignore(just('"'))
+        .collect::<String>()
+        .map_with_span(|s, span| {
+            (
+                Expr::Lit {
+                    literal: Literal::Str(s),
+                },
+                span,
+            )
+        });
+
+    let lit = choice((num, r#str));
+
+    // TODO: dedupe with expr, maybe we can have a function that returns
+    // different variants of this parser
+    let expr = recursive(|expr| {
+        let atom = choice((
+            num,
+            expr.clone().delimited_by(just("("), just(")")),
+            ident.map_with_span(|name, span| (Expr::Ident { name }, span)),
+            lit,
+        ))
+        .padded();
+
+        let product = atom
+            .clone()
+            .then(
+                choice((
+                    just("*").padded().to(BinOp::Mul),
+                    just("/").padded().to(BinOp::Div),
+                ))
+                .then(atom.clone())
+                .repeated(),
+            )
+            .foldl(|left, (op, right)| {
+                let span = left.1.start..right.1.end;
+                {
+                    (
+                        Expr::Op {
+                            op,
+                            left: Box::from(left),
+                            right: Box::from(right),
+                        },
+                        span,
+                    )
+                }
+            });
+
+        let sum = product
+            .clone()
+            .then(
+                choice((
+                    just("+").padded().to(BinOp::Add),
+                    just("-").padded().to(BinOp::Sub),
+                ))
+                .then(product.clone())
+                .repeated(),
+            )
+            .foldl(|left, (op, right)| {
+                let span = left.1.start..right.1.end;
+                {
+                    (
+                        Expr::Op {
+                            op,
+                            left: Box::from(left),
+                            right: Box::from(right),
+                        },
+                        span,
+                    )
+                }
+            });
+
+        let app = atom
+            .clone()
+            .then(
+                expr.clone()
+                    .separated_by(just(","))
+                    .allow_trailing()
+                    .delimited_by(just("("), just(")")),
+            )
+            .map_with_span(|(func, args), span| {
+                (
+                    Expr::App {
+                        lam: Box::new(func),
+                        args,
+                    },
+                    span,
+                )
+            })
+            .padded();
+
+        let param_list = ident
+            .map_with_span(|name, span| (BindingIdent::Ident { name }, span))
+            .padded()
+            .separated_by(just(","))
+            .allow_trailing()
+            .delimited_by(just("("), just(")"));
+
+        let lam = param_list
+            .then_ignore(just("=>").padded())
+            .then(expr.clone())
+            .map_with_span(|(args, body), span| {
+                (
+                    Expr::Lam {
+                        args,
+                        body: Box::new(body),
+                        is_async: false,
+                    },
+                    span,
+                )
+            });
+
+        let r#let = just("let")
+            .ignore_then(
+                ident
+                    .map_with_span(|name, span| (Pattern::Ident { name }, span))
+                    .padded(),
+            )
+            .then_ignore(just("=").padded())
+            .then(expr.clone())
+            .then_ignore(just("in").padded())
+            .then(expr.clone())
+            .map_with_span(|((pattern, value), body), span| {
+                (
+                    Expr::Let {
+                        pattern,
+                        value: Box::new(value),
+                        body: Box::new(body),
+                    },
+                    span,
+                )
+            });
+
+        choice((app, lam, r#let, sum))
+    });
+
+    let decl = just("let")
+        .ignore_then(
+            ident
+                .map_with_span(|name, span| (Pattern::Ident { name }, span))
+                .padded(),
+        )
+        .then_ignore(just("=").padded())
+        .then(expr.clone())
+        .map_with_span(|(pattern, value), span| (Statement::Decl { pattern, value }, span));
+
+    let program = choice((
+        decl,
+        expr.map_with_span(|e, span| (Statement::Expr(e), span)),
+    )).repeated().map(|body| Program { body });
+    
+    program.then_ignore(end())
 }
 
 #[cfg(test)]
@@ -602,6 +765,175 @@ mod tests {
             },
             1..11,
         )
+        "###);
+    }
+
+    #[test]
+    fn single_decl() {
+        insta::assert_debug_snapshot!(program_parser().parse("let x = 5").unwrap(), @r###"
+        Program {
+            body: [
+                (
+                    Decl {
+                        pattern: (
+                            Ident {
+                                name: "x",
+                            },
+                            4..5,
+                        ),
+                        value: (
+                            Lit {
+                                literal: Num(
+                                    "5",
+                                ),
+                            },
+                            8..9,
+                        ),
+                    },
+                    0..9,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn single_lambda_decl() {
+        insta::assert_debug_snapshot!(program_parser().parse("let x = (a, b) => a + b").unwrap(), @r###"
+        Program {
+            body: [
+                (
+                    Decl {
+                        pattern: (
+                            Ident {
+                                name: "x",
+                            },
+                            4..5,
+                        ),
+                        value: (
+                            Lam {
+                                args: [
+                                    (
+                                        Ident {
+                                            name: "a",
+                                        },
+                                        9..10,
+                                    ),
+                                    (
+                                        Ident {
+                                            name: "b",
+                                        },
+                                        12..13,
+                                    ),
+                                ],
+                                body: (
+                                    Op {
+                                        op: Add,
+                                        left: (
+                                            Ident {
+                                                name: "a",
+                                            },
+                                            18..19,
+                                        ),
+                                        right: (
+                                            Ident {
+                                                name: "b",
+                                            },
+                                            22..23,
+                                        ),
+                                    },
+                                    18..23,
+                                ),
+                                is_async: false,
+                            },
+                            8..23,
+                        ),
+                    },
+                    0..23,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn multiple_decls() {
+        insta::assert_debug_snapshot!(program_parser().parse("let x = 5\nlet y = \"hello\"").unwrap(), @r###"
+        Program {
+            body: [
+                (
+                    Decl {
+                        pattern: (
+                            Ident {
+                                name: "x",
+                            },
+                            4..5,
+                        ),
+                        value: (
+                            Lit {
+                                literal: Num(
+                                    "5",
+                                ),
+                            },
+                            8..9,
+                        ),
+                    },
+                    0..10,
+                ),
+                (
+                    Decl {
+                        pattern: (
+                            Ident {
+                                name: "y",
+                            },
+                            14..15,
+                        ),
+                        value: (
+                            Lit {
+                                literal: Str(
+                                    "hello",
+                                ),
+                            },
+                            18..25,
+                        ),
+                    },
+                    10..25,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn top_level_expr() {
+        insta::assert_debug_snapshot!(program_parser().parse("a + b").unwrap(), @r###"
+        Program {
+            body: [
+                (
+                    Expr(
+                        (
+                            Op {
+                                op: Add,
+                                left: (
+                                    Ident {
+                                        name: "a",
+                                    },
+                                    0..1,
+                                ),
+                                right: (
+                                    Ident {
+                                        name: "b",
+                                    },
+                                    4..5,
+                                ),
+                            },
+                            0..5,
+                        ),
+                    ),
+                    0..5,
+                ),
+            ],
+        }
         "###);
     }
 }

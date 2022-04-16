@@ -21,7 +21,7 @@ use nouveau_lib::parser::parser;
 #[test_case("a - (b - c)", "a - (b - c)"; "subtraction with parens")]
 fn parse_then_codegen(input: &str, output: &str) {
     let expr = parser().parse(input).unwrap();
-    let result = codegen_expr(&expr);
+    let result: String = codegen_expr(&expr);
 
     assert_eq!(result, output);
 }
