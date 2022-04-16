@@ -318,13 +318,23 @@ pub fn program_parser() -> impl Parser<char, Program, Error = Simple<char>> {
         )
         .then_ignore(just("=").padded())
         .then(expr.clone())
-        .map_with_span(|(pattern, value), span| (Statement::Decl { pattern, value }, span));
+        .map_with_span(|(pattern, value), span: Span| {
+            // excludes whitespace from end of span
+            let span = span.start..value.1.end.clone();
+            (Statement::Decl { pattern, value }, span)
+        });
 
     let program = choice((
         decl,
-        expr.map_with_span(|e, span| (Statement::Expr(e), span)),
-    )).repeated().map(|body| Program { body });
-    
+        expr.map_with_span(|e, span: Span| {
+            // excludes whitespace from end of span
+            let span = span.start..e.1.end.clone();
+            (Statement::Expr(e), span)
+        }),
+    ))
+    .repeated()
+    .map(|body| Program { body });
+
     program.then_ignore(end())
 }
 
@@ -878,7 +888,7 @@ mod tests {
                             8..9,
                         ),
                     },
-                    0..10,
+                    0..9,
                 ),
                 (
                     Decl {
@@ -931,6 +941,42 @@ mod tests {
                         ),
                     ),
                     0..5,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn multiple_top_level_expressions() {
+        insta::assert_debug_snapshot!(program_parser().parse("123\n\"hello\"").unwrap(), @r###"
+        Program {
+            body: [
+                (
+                    Expr(
+                        (
+                            Lit {
+                                literal: Num(
+                                    "123",
+                                ),
+                            },
+                            0..3,
+                        ),
+                    ),
+                    0..3,
+                ),
+                (
+                    Expr(
+                        (
+                            Lit {
+                                literal: Str(
+                                    "hello",
+                                ),
+                            },
+                            4..11,
+                        ),
+                    ),
+                    4..11,
                 ),
             ],
         }
