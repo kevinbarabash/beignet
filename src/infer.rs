@@ -87,7 +87,14 @@ where
 }
 
 use crate::context::{Context, Env};
-use crate::syntax::{BindingIdent, Expr, WithSpan, Pattern};
+use crate::syntax::{BindingIdent, Expr, WithSpan, Pattern, Statement};
+
+pub fn infer_stmt(env: Env, stmt: &WithSpan<Statement>) -> Scheme {
+    match stmt {
+        (Statement::Expr(e), _) => infer_expr(env, e),
+        _ => panic!("We can't infer decls yet"),
+    }
+}
 
 pub fn infer_expr(env: Env, expr: &WithSpan<Expr>) -> Scheme {
     let init_ctx = Context::from(env);

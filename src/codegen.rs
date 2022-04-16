@@ -5,6 +5,20 @@ use super::syntax::*;
 // TODO: refactor this to use an io writer
 
 #[allow(unstable_name_collisions)] // intersperse
+pub fn codegen_prog(prog: &Program) -> String {
+    prog.body
+        .iter()
+        .map(|child| match child {
+            (Statement::Decl { pattern, value }, _) => {
+                format!("let {} = {}", codegen_pattern(pattern), codegen_expr(value))
+            }
+            (Statement::Expr(expr), _) => codegen_expr(expr),
+        })
+        .intersperse(String::from("\n"))
+        .collect()
+}
+
+#[allow(unstable_name_collisions)] // intersperse
 pub fn codegen_expr(expr: &WithSpan<Expr>) -> String {
     match expr {
         (Expr::App { lam, args }, _) => {

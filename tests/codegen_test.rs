@@ -1,7 +1,7 @@
 use chumsky::prelude::*;
 use test_case::test_case;
 
-use nouveau_lib::codegen::codegen_expr;
+use nouveau_lib::codegen::codegen_prog;
 use nouveau_lib::parser::parser;
 
 #[test_case("\"hello\"", "\"hello\""; "string literal")]
@@ -20,8 +20,8 @@ use nouveau_lib::parser::parser;
 #[test_case("a - b - c", "a - b - c"; "subtraction without parens")]
 #[test_case("a - (b - c)", "a - (b - c)"; "subtraction with parens")]
 fn parse_then_codegen(input: &str, output: &str) {
-    let expr = parser().parse(input).unwrap();
-    let result: String = codegen_expr(&expr);
+    let prog = parser().parse(input).unwrap();
+    let result: String = codegen_prog(&prog);
 
     assert_eq!(result, output);
 }
