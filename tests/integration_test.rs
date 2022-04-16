@@ -27,13 +27,13 @@ fn infer_lam() {
 }
 
 #[test]
-fn infer_let() {
+fn infer_let_inside_function() {
     let env: Env = HashMap::new();
-    let prog = parser().parse("let x = 5 in x").unwrap();
+    let prog = parser().parse("() => let x = 5 in x").unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = infer_stmt(env, &stmt);
 
-    assert_eq!(format!("{}", result), "5");
+    assert_eq!(format!("{}", result), "() => 5");
 }
 
 #[test]

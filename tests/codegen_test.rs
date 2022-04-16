@@ -19,6 +19,11 @@ use nouveau_lib::parser::parser;
 #[test_case("a / (b / c)", "a / (b / c)"; "division with parens")]
 #[test_case("a - b - c", "a - b - c"; "subtraction without parens")]
 #[test_case("a - (b - c)", "a - (b - c)"; "subtraction with parens")]
+#[test_case("let add = (a, b) => a + b", "var add = (a, b) => a + b"; "function declaration")]
+#[test_case("let five = 5", "var five = 5"; "variable declaration with literal value")]
+#[test_case("let foo = let x = 5 in x", "var foo = {\nvar x = 5;\nreturn x;\n}"; "let-in expression inside declaration")]
+#[test_case("let foo = let x = 5 in let y = 10 in x + y", "var foo = {\nvar x = 5;\nvar y = 10;\nreturn x + y;\n}"; "nested let-in expressions inside declaration")]
+// TODO: add a test case with multiple declarations
 fn parse_then_codegen(input: &str, output: &str) {
     let prog = parser().parse(input).unwrap();
     let result: String = codegen_prog(&prog);

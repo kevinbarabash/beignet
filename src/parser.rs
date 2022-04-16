@@ -943,4 +943,50 @@ mod tests {
         }
         "###);
     }
+
+    #[test]
+    fn simple_let_inside_decl() {
+        insta::assert_debug_snapshot!(parser().parse("let foo = let x = 5 in x").unwrap(), @r###"
+        Program {
+            body: [
+                (
+                    Decl {
+                        pattern: (
+                            Ident {
+                                name: "foo",
+                            },
+                            4..7,
+                        ),
+                        value: (
+                            Let {
+                                pattern: (
+                                    Ident {
+                                        name: "x",
+                                    },
+                                    14..15,
+                                ),
+                                value: (
+                                    Lit {
+                                        literal: Num(
+                                            "5",
+                                        ),
+                                    },
+                                    18..19,
+                                ),
+                                body: (
+                                    Ident {
+                                        name: "x",
+                                    },
+                                    23..24,
+                                ),
+                            },
+                            10..24,
+                        ),
+                    },
+                    0..24,
+                ),
+            ],
+        }
+        "###);
+    }
 }
