@@ -192,12 +192,17 @@ mod tests {
 
     use super::super::lexer::lexer;
 
-    #[test]
-    fn fn_with_multiple_params() {
-        let result = lexer().parse("(a, b) => c").unwrap();
+    fn parse(input: &str) -> Program {
+        let result = lexer().parse(input).unwrap();
         let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
         let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        let program = token_parser(&spans).parse(tokens).unwrap();
+        program
+    }
+
+    #[test]
+    fn fn_with_multiple_params() {
+        insta::assert_debug_snapshot!(parse("(a, b) => c"), @r###"
         Program {
             body: [
                 (
@@ -238,10 +243,7 @@ mod tests {
 
     #[test]
     fn fn_returning_num_literal() {
-        let result = lexer().parse("() => 10").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("() => 10"), @r###"
         Program {
             body: [
                 (
@@ -271,10 +273,7 @@ mod tests {
 
     #[test]
     fn fn_returning_str_literal() {
-        let result = lexer().parse("(a) => \"hello\"").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("(a) => \"hello\""), @r###"
         Program {
             body: [
                 (
@@ -311,10 +310,7 @@ mod tests {
 
     #[test]
     fn app_with_no_args() {
-        let result = lexer().parse("foo()").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("foo()"), @r###"
         Program {
             body: [
                 (
@@ -341,10 +337,7 @@ mod tests {
 
     #[test]
     fn app_with_multiple_args() {
-        let result = lexer().parse("foo(a, b)").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("foo(a, b)"), @r###"
         Program {
             body: [
                 (
@@ -384,10 +377,7 @@ mod tests {
 
     #[test]
     fn app_with_multiple_lit_args() {
-        let result = lexer().parse("foo(10, \"hello\")").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("foo(10, \"hello\")"), @r###"
         Program {
             body: [
                 (
@@ -431,10 +421,7 @@ mod tests {
 
     #[test]
     fn atom_number() {
-        let result = lexer().parse("10").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("10"), @r###"
         Program {
             body: [
                 (
@@ -457,10 +444,7 @@ mod tests {
 
     #[test]
     fn atom_string() {
-        let result = lexer().parse("\"hello\"").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("\"hello\""), @r###"
         Program {
             body: [
                 (
@@ -484,18 +468,12 @@ mod tests {
     #[test]
     #[should_panic]
     fn top_level_let_in_panics() {
-        let result = lexer().parse("let x = 5 in x").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        token_parser(&spans).parse(tokens).unwrap();
+        parse("let x = 5 in x");
     }
 
     #[test]
     fn add_sub_operations() {
-        let result = lexer().parse("1 + 2 - 3").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("1 + 2 - 3"), @r###"
         Program {
             body: [
                 (
@@ -546,10 +524,7 @@ mod tests {
 
     #[test]
     fn mul_div_operations() {
-        let result = lexer().parse("x * y / z").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("x * y / z"), @r###"
         Program {
             body: [
                 (
@@ -594,10 +569,7 @@ mod tests {
 
     #[test]
     fn operator_precedence() {
-        let result = lexer().parse("a + b * c").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("a + b * c"), @r###"
         Program {
             body: [
                 (
@@ -642,10 +614,7 @@ mod tests {
 
     #[test]
     fn specifying_operator_precedence_with_parens() {
-        let result = lexer().parse("(a + b) * c").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("(a + b) * c"), @r###"
         Program {
             body: [
                 (
@@ -690,10 +659,7 @@ mod tests {
 
     #[test]
     fn single_decl() {
-        let result = lexer().parse("let x = 5").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("let x = 5"), @r###"
         Program {
             body: [
                 (
@@ -722,10 +688,7 @@ mod tests {
 
     #[test]
     fn single_lambda_decl() {
-        let result = lexer().parse("let x = (a, b) => a + b").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("let x = (a, b) => a + b"), @r###"
         Program {
             body: [
                 (
@@ -784,10 +747,7 @@ mod tests {
 
     #[test]
     fn multiple_decls() {
-        let result = lexer().parse("let x = 5\nlet y = \"hello\"").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("let x = 5\nlet y = \"hello\""), @r###"
         Program {
             body: [
                 (
@@ -835,10 +795,7 @@ mod tests {
 
     #[test]
     fn top_level_expr() {
-        let result = lexer().parse("a + b").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("a + b"), @r###"
         Program {
             body: [
                 (
@@ -871,10 +828,7 @@ mod tests {
 
     #[test]
     fn multiple_top_level_expressions() {
-        let result = lexer().parse("123\n\"hello\"").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("123\n\"hello\""), @r###"
         Program {
             body: [
                 (
@@ -910,10 +864,7 @@ mod tests {
 
     #[test]
     fn simple_let_inside_decl() {
-        let result = lexer().parse("let foo = let x = 5 in x").unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        insta::assert_debug_snapshot!(token_parser(&spans).parse(tokens).unwrap(), @r###"
+        insta::assert_debug_snapshot!(parse("let foo = let x = 5 in x"), @r###"
         Program {
             body: [
                 (
