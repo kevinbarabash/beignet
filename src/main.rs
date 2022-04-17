@@ -19,9 +19,13 @@ fn main() {
 
     assert_eq!(format!("{}", result), "number");
 
-    let result = lexer().parse("let x = 5 in x").unwrap();
-    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-    let ast = token_parser(&spans).parse(tokens).unwrap();
-    println!("ast = {:?}", ast);
+    // let result = lexer().parse("let x = 5 in x").unwrap();
+    // let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    // let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    // let ast = token_parser(&spans).parse(tokens).unwrap();
+    // println!("ast = {:?}", ast);
+
+    let foo = "var add = (a, b => {\na + b\n};";
+    println!("foo = {}", foo);
+    println!("foo (debug) = {:?}", foo);
 }

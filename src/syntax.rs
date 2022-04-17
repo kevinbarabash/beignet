@@ -47,8 +47,7 @@ pub enum Expr {
     },
 }
 
-// TODO: rename this to something else since we can't use it
-// let bindings
+// TODO: rename this to something else since we can't use it for let bindings
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindingIdent {
     Ident { name: String },

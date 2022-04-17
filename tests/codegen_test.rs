@@ -4,6 +4,8 @@ use test_case::test_case;
 use nouveau_lib::codegen::codegen_prog;
 use nouveau_lib::parser::token_parser;
 use nouveau_lib::lexer::lexer;
+use nouveau_lib::js_builder::build_js;
+use nouveau_lib::js_printer::print_js;
 
 #[test_case("\"hello\"", "\"hello\""; "string literal")]
 #[test_case("123", "123"; "number literal (whole)")]
@@ -33,4 +35,105 @@ fn parse_then_codegen(input: &str, output: &str) {
     let result: String = codegen_prog(&prog);
 
     assert_eq!(result, output);
+}
+
+#[test]
+fn js_print_simple_lambda() {
+    let result = lexer().parse("let add = (a, b) => a + b").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
+    insta::assert_snapshot!(js_output, @"const add = (a, b) => a + b;");
+}
+
+#[test]
+fn js_print_let_in() {
+    let result = lexer().parse("let foo = let x = 5 in let y = 10 in x + y").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
+    insta::assert_snapshot!(js_output, @r###"
+    const foo = (() => {
+        const x = 5;
+        const y = 10;
+        return x + y;
+    })();
+    "###);
+}
+
+#[test]
+fn js_print_variable_shadowing() {
+    let result = lexer().parse("let foo = let x = 5 in let x = 10 in x").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
+    insta::assert_snapshot!(js_output, @r###"
+    const foo = (() => {
+        const x = 5;
+        const x = 10;
+        return x;
+    })();
+    "###);
+}
+
+#[test]
+fn js_print_let_in_inside_lambda() {
+    let result = lexer().parse("let foo = () => let x = 5 in let y = 10 in x + y").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
+    insta::assert_snapshot!(js_output, @r###"
+    const foo = () => {
+        const x = 5;
+        const y = 10;
+        return x + y;
+    };
+    "###);
+}
+
+#[test]
+fn js_print_nested_lambdas() {
+    let result = lexer().parse("let foo = (a) => (b) => a + b").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
+    insta::assert_snapshot!(js_output, @"const foo = (a) => (b) => a + b;");
+}
+
+#[test]
+fn js_print_nested_lambdas_with_multiple_lines() {
+    let result = lexer().parse("let foo = (a) => (b) => let sum = a + b in sum").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
+    insta::assert_snapshot!(js_output, @r###"
+    const foo = (a) => (b) => {
+        const sum = a + b;
+        return sum;
+    };
+    "###);
 }
