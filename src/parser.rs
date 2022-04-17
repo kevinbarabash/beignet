@@ -6,8 +6,6 @@ use super::syntax::{BinOp, BindingIdent, Expr, Pattern, Program, Statement};
 
 pub type Span = std::ops::Range<usize>;
 
-// TODO: add lexing layer so that it's easier to separate keywords and identifiers
-
 pub fn token_parser(
     source_spans: &[Span],
 ) -> impl Parser<Token, Program, Error = Simple<Token>> + '_ {
@@ -483,102 +481,14 @@ mod tests {
         "###);
     }
 
-    // TODO: this test should panic because we don't want to support let-in at the top level
-    // Right now the parser treats `in` as identifier instead of a keyword.
-    // #[test]
-    // fn simple_let() {
-    //     insta::assert_debug_snapshot!(parser().parse("let x = 5 in x").unwrap(), @r###"
-    //     (
-    //         Let {
-    //             pattern: (
-    //                 Ident {
-    //                     name: "x",
-    //                 },
-    //                 4..5,
-    //             ),
-    //             value: (
-    //                 Lit {
-    //                     literal: Num(
-    //                         "5",
-    //                     ),
-    //                 },
-    //                 8..9,
-    //             ),
-    //             body: (
-    //                 Ident {
-    //                     name: "x",
-    //                 },
-    //                 13..14,
-    //             ),
-    //         },
-    //         0..14,
-    //     )
-    //     "###);
-    // }
-
-    // TODO: this test should panic because we don't want to support let-in at the top level
-    // Right now the parser treats `in` as identifier instead of a keyword.
-    // #[test]
-    // fn nested_let() {
-    //     insta::assert_debug_snapshot!(parser().parse("let x = 5 in let y = 10 in x + y").unwrap(), @r###"
-    //     (
-    //         Let {
-    //             pattern: (
-    //                 Ident {
-    //                     name: "x",
-    //                 },
-    //                 4..5,
-    //             ),
-    //             value: (
-    //                 Lit {
-    //                     literal: Num(
-    //                         "5",
-    //                     ),
-    //                 },
-    //                 8..9,
-    //             ),
-    //             body: (
-    //                 Let {
-    //                     pattern: (
-    //                         Ident {
-    //                             name: "y",
-    //                         },
-    //                         17..18,
-    //                     ),
-    //                     value: (
-    //                         Lit {
-    //                             literal: Num(
-    //                                 "10",
-    //                             ),
-    //                         },
-    //                         21..23,
-    //                     ),
-    //                     body: (
-    //                         Op {
-    //                             op: Add,
-    //                             left: (
-    //                                 Ident {
-    //                                     name: "x",
-    //                                 },
-    //                                 27..28,
-    //                             ),
-    //                             right: (
-    //                                 Ident {
-    //                                     name: "y",
-    //                                 },
-    //                                 31..32,
-    //                             ),
-    //                         },
-    //                         27..32,
-    //                     ),
-    //                 },
-    //                 13..32,
-    //             ),
-    //         },
-    //         0..32,
-    //     )
-    //     "###);
-    // }
+    #[test]
+    #[should_panic]
+    fn top_level_let_in_panics() {
+        let result = lexer().parse("let x = 5 in x").unwrap();
+        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+        token_parser(&spans).parse(tokens).unwrap();
+    }
 
     #[test]
     fn add_sub_operations() {

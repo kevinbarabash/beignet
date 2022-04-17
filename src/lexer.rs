@@ -54,14 +54,7 @@ impl fmt::Display for Token {
 pub type Span = std::ops::Range<usize>;
 
 pub fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
-    // TODO: support parsing numbers that start with '.'
-    // let real = text::int(10)
-    //     .chain(just('.'))
-    //     .chain::<char, _, _>(text::digits(10))
-    //     .collect::<String>()
-    //     .map(|s: String| Token::Num(s.parse().unwrap()));
-
-    let int = text::int::<char, Simple<char>>(10).map(|s: String| Token::Num(s.parse().unwrap()));
+    let int = text::int::<char, Simple<char>>(10).map(|s: String| Token::Num(s));
 
     let r#str = just("\"")
         .ignore_then(filter(|c| *c != '"').repeated())
@@ -73,7 +66,7 @@ pub fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
         .chain(just('.'))
         .chain::<char, _, _>(text::digits(10))
         .collect::<String>()
-        .map(|s: String| Token::Num(s.parse().unwrap()));
+        .map(|s: String| Token::Num(s));
 
     let op = choice((
         just("+").to(Token::Plus),
@@ -164,32 +157,29 @@ mod tests {
 
     #[test]
     fn lex_string_literal() {
-        let tokens = lexer().parse("(a) => \"hello\"").unwrap();
+        let tokens = lexer().parse("\"hello\"").unwrap();
         insta::assert_debug_snapshot!(tokens, @r###"
         [
-            (
-                OpenParen,
-                0..1,
-            ),
-            (
-                Ident(
-                    "a",
-                ),
-                1..2,
-            ),
-            (
-                CloseParen,
-                2..3,
-            ),
-            (
-                FatArrow,
-                4..6,
-            ),
             (
                 Str(
                     "hello",
                 ),
-                7..14,
+                0..7,
+            ),
+        ]
+        "###);
+    }
+
+    #[test]
+    fn lex_read_number_literal() {
+        let tokens = lexer().parse("1.23").unwrap();
+        insta::assert_debug_snapshot!(tokens, @r###"
+        [
+            (
+                Num(
+                    "1.23",
+                ),
+                0..4,
             ),
         ]
         "###);
