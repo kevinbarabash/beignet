@@ -4,6 +4,8 @@ use test_case::test_case;
 use nouveau_lib::codegen::codegen_prog;
 use nouveau_lib::parser::token_parser;
 use nouveau_lib::lexer::lexer;
+use nouveau_lib::js_builder::build_js;
+use nouveau_lib::js_printer::print_js;
 
 #[test_case("\"hello\"", "\"hello\""; "string literal")]
 #[test_case("123", "123"; "number literal (whole)")]
@@ -33,4 +35,60 @@ fn parse_then_codegen(input: &str, output: &str) {
     let result: String = codegen_prog(&prog);
 
     assert_eq!(result, output);
+}
+
+#[test]
+fn js_print_simple_lambda() {
+    let result = lexer().parse("let add = (a, b) => a + b").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
+    insta::assert_snapshot!(js_output, @r###"
+    var add = (a, b) => {
+    return a + b;
+    };
+    "###);
+}
+
+#[test]
+fn js_print_let_in() {
+    let result = lexer().parse("let foo = let x = 5 in let y = 10 in x + y").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
+    insta::assert_snapshot!(js_output, @r###"
+    var foo = (() => {
+    var x = 5;
+    var y = 10;
+    return x + y;
+    })();
+    "###);
+}
+
+#[test]
+fn js_print_let_in_inside_lambda() {
+    let result = lexer().parse("let foo = () => let x = 5 in let y = 10 in x + y").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
+    // TODO: check if the body of a lambda is a Let and unwrap the resulting IIFE
+    insta::assert_snapshot!(js_output, @r###"
+    var foo = () => {
+    var x = 5;
+    var y = 10;
+    return x + y;
+    };
+    "###);
 }
