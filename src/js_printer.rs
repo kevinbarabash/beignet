@@ -60,11 +60,18 @@ pub fn print_expr(expr: &Expression, level: &u32) -> String {
         }
         Expression::Function { params, body } => {
             let params = params.iter().map(|param| print_param(param)).join(", ");
+            let wrap = body.len() <= 1;
+            let new_level = if wrap { *level } else { *level + 1 };
             let body = body
                 .iter()
-                .map(|child| print_statement(child, &(level + 1)))
+                .map(|child| print_statement(child, &new_level))
                 .join("\n");
-            format!("({params}) => {{\n{body}\n{}}}", indent(level))
+            if wrap {
+                let body = body.trim_start();
+                format!("({params}) => {body}")
+            } else {
+                format!("({params}) => {{\n{body}\n{}}}", indent(level))
+            }
         }
         Expression::Ident { name } => name.to_owned(),
         Expression::Literal { literal } => format!("{literal}"),

@@ -47,11 +47,7 @@ fn js_print_simple_lambda() {
     let js_tree = build_js(&prog);
     let js_output = print_js(&js_tree);
 
-    insta::assert_snapshot!(js_output, @r###"
-    const add = (a, b) => {
-        return a + b;
-    };
-    "###);
+    insta::assert_snapshot!(js_output, @"const add = (a, b) => a + b;");
 }
 
 #[test]
@@ -102,7 +98,6 @@ fn js_print_let_in_inside_lambda() {
     let js_tree = build_js(&prog);
     let js_output = print_js(&js_tree);
 
-    // TODO: check if the body of a lambda is a Let and unwrap the resulting IIFE
     insta::assert_snapshot!(js_output, @r###"
     const foo = () => {
         const x = 5;
@@ -122,12 +117,23 @@ fn js_print_nested_lambdas() {
     let js_tree = build_js(&prog);
     let js_output = print_js(&js_tree);
 
-    // TODO: check if the body of a lambda is a Let and unwrap the resulting IIFE
+    insta::assert_snapshot!(js_output, @"const foo = (a) => (b) => a + b;");
+}
+
+#[test]
+fn js_print_nested_lambdas_with_multiple_lines() {
+    let result = lexer().parse("let foo = (a) => (b) => let sum = a + b in sum").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
     insta::assert_snapshot!(js_output, @r###"
-    const foo = (a) => {
-        return (b) => {
-            return a + b;
-        };
+    const foo = (a) => (b) => {
+        const sum = a + b;
+        return sum;
     };
     "###);
 }

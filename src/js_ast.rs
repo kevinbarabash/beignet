@@ -1,7 +1,5 @@
 use super::literal::Literal;
 
-// TODO: have separate enums for expressions and statements
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
     pub body: Vec<Statement>,

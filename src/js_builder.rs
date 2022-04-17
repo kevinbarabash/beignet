@@ -66,8 +66,8 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                     params,
                     // The last statement in the body of a function
                     // should always be a `return` statement.
-                    body: vec![Statement::Return {
-                        arg: build_expr(body),
+                    body: vec![Statement::Expression {
+                        expr: build_expr(body),
                     }],
                 },
             }
