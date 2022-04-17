@@ -3,13 +3,17 @@ use std::collections::HashMap;
 
 use nouveau_lib::context::Env;
 use nouveau_lib::infer::infer_stmt;
-use nouveau_lib::parser::parser;
+use nouveau_lib::parser::token_parser;
+use nouveau_lib::lexer::lexer;
 use nouveau_lib::types::*;
 
 #[test]
 fn infer_number_literal() {
     let env: Env = HashMap::new();
-    let prog = parser().parse("5").unwrap();
+    let result = lexer().parse("5").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = infer_stmt(env, &stmt);
 
@@ -19,7 +23,10 @@ fn infer_number_literal() {
 #[test]
 fn infer_lam() {
     let env: Env = HashMap::new();
-    let prog = parser().parse("(x) => x").unwrap();
+    let result = lexer().parse("(x) => x").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = infer_stmt(env, &stmt);
 
@@ -29,7 +36,10 @@ fn infer_lam() {
 #[test]
 fn infer_let_inside_function() {
     let env: Env = HashMap::new();
-    let prog = parser().parse("() => let x = 5 in x").unwrap();
+    let result = lexer().parse("() => let x = 5 in x").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = infer_stmt(env, &stmt);
 
@@ -39,7 +49,10 @@ fn infer_let_inside_function() {
 #[test]
 fn infer_op() {
     let env: Env = HashMap::new();
-    let prog = parser().parse("5 + 10").unwrap();
+    let result = lexer().parse("5 + 10").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = infer_stmt(env, &stmt);
 
