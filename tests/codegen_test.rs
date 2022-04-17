@@ -48,8 +48,8 @@ fn js_print_simple_lambda() {
     let js_output = print_js(&js_tree);
 
     insta::assert_snapshot!(js_output, @r###"
-    var add = (a, b) => {
-    return a + b;
+    const add = (a, b) => {
+        return a + b;
     };
     "###);
 }
@@ -65,10 +65,29 @@ fn js_print_let_in() {
     let js_output = print_js(&js_tree);
 
     insta::assert_snapshot!(js_output, @r###"
-    var foo = (() => {
-    var x = 5;
-    var y = 10;
-    return x + y;
+    const foo = (() => {
+        const x = 5;
+        const y = 10;
+        return x + y;
+    })();
+    "###);
+}
+
+#[test]
+fn js_print_variable_shadowing() {
+    let result = lexer().parse("let foo = let x = 5 in let x = 10 in x").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
+    insta::assert_snapshot!(js_output, @r###"
+    const foo = (() => {
+        const x = 5;
+        const x = 10;
+        return x;
     })();
     "###);
 }
@@ -85,10 +104,30 @@ fn js_print_let_in_inside_lambda() {
 
     // TODO: check if the body of a lambda is a Let and unwrap the resulting IIFE
     insta::assert_snapshot!(js_output, @r###"
-    var foo = () => {
-    var x = 5;
-    var y = 10;
-    return x + y;
+    const foo = () => {
+        const x = 5;
+        const y = 10;
+        return x + y;
+    };
+    "###);
+}
+
+#[test]
+fn js_print_nested_lambdas() {
+    let result = lexer().parse("let foo = (a) => (b) => a + b").unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+
+    let js_tree = build_js(&prog);
+    let js_output = print_js(&js_tree);
+
+    // TODO: check if the body of a lambda is a Let and unwrap the resulting IIFE
+    insta::assert_snapshot!(js_output, @r###"
+    const foo = (a) => {
+        return (b) => {
+            return a + b;
+        };
     };
     "###);
 }

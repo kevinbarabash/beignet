@@ -2,26 +2,35 @@ use itertools::Itertools;
 
 use super::js_ast::*;
 
-// TODO: need a Context object to track indentation
-
 pub fn print_js(prog: &Program) -> String {
     prog.body
         .iter()
-        .map(|child| print_statement(child))
+        .map(|child| print_statement(child, &0))
         .join("\n")
 }
 
-pub fn print_statement(stmt: &Statement) -> String {
+pub fn indent(level: &u32) -> String {
+    let mut result: String = String::from("");
+    for _ in 0..*level {
+        result.push_str("    ");
+    }
+    result
+}
+
+pub fn print_statement(stmt: &Statement, level: &u32) -> String {
     match stmt {
         Statement::Decl { pattern, value } => {
             let pattern = print_pattern(pattern);
-            let value = print_expr(value);
-            format!("var {pattern} = {value};")
+            let value = print_expr(value, level);
+            format!("{}const {pattern} = {value};", indent(level))
         }
-        Statement::Expression { expr } => print_expr(expr),
+        Statement::Expression { expr } => {
+            let expr = print_expr(expr, level);
+            format!("{}{expr}", indent(level))
+        }
         Statement::Return { arg } => {
-            let arg = print_expr(arg);
-            format!("return {arg};")
+            let arg = print_expr(arg, level);
+            format!("{}return {arg};", indent(level))
         }
     }
 }
@@ -32,7 +41,7 @@ pub fn print_pattern(pattern: &Pattern) -> String {
     }
 }
 
-pub fn print_expr(expr: &Expression) -> String {
+pub fn print_expr(expr: &Expression, level: &u32) -> String {
     match expr {
         Expression::Call { func, args } => {
             let wrap_func = match func.as_ref() {
@@ -40,8 +49,8 @@ pub fn print_expr(expr: &Expression) -> String {
                 _ => false,
             };
 
-            let func = print_expr(func);
-            let args = args.iter().map(|arg| print_expr(arg)).join(", ");
+            let func = print_expr(func, level);
+            let args = args.iter().map(|arg| print_expr(arg, level)).join(", ");
 
             if wrap_func {
                 format!("({func})({args})")
@@ -51,9 +60,11 @@ pub fn print_expr(expr: &Expression) -> String {
         }
         Expression::Function { params, body } => {
             let params = params.iter().map(|param| print_param(param)).join(", ");
-            // TODO: indent children
-            let body = body.iter().map(|child| print_statement(child)).join("\n");
-            format!("({params}) => {{\n{body}\n}}")
+            let body = body
+                .iter()
+                .map(|child| print_statement(child, &(level + 1)))
+                .join("\n");
+            format!("({params}) => {{\n{body}\n{}}}", indent(level))
         }
         Expression::Ident { name } => name.to_owned(),
         Expression::Literal { literal } => format!("{literal}"),
@@ -76,21 +87,22 @@ pub fn print_expr(expr: &Expression) -> String {
             };
 
             let wrap_left = match (expr, left.as_ref()) {
-                (Expression::Binary { op: parent_op, .. }, Expression::Binary { op: right_op, .. }) => {
-                    get_precedence(right_op) < get_precedence(parent_op)
-                }
+                (
+                    Expression::Binary { op: parent_op, .. },
+                    Expression::Binary { op: right_op, .. },
+                ) => get_precedence(right_op) < get_precedence(parent_op),
                 _ => false,
             };
 
             let left = if wrap_left {
-                format!("({})", print_expr(left))
+                format!("({})", print_expr(left, level))
             } else {
-                print_expr(left)
+                print_expr(left, level)
             };
             let right = if wrap_right {
-                format!("({})", print_expr(right))
+                format!("({})", print_expr(right, level))
             } else {
-                print_expr(right)
+                print_expr(right, level)
             };
 
             let op = match op {
@@ -109,7 +121,7 @@ pub fn print_expr(expr: &Expression) -> String {
                 UnaryOp::Neg => "=",
                 UnaryOp::Not => "!",
             };
-            let arg = print_expr(arg);
+            let arg = print_expr(arg, level);
             format!("{op}{arg}")
         }
     }

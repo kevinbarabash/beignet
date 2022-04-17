@@ -53,7 +53,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                 })
                 .collect();
             let body = &body.as_ref().0;
-            
+
             match body {
                 // Avoids wrapping in an IIFE when it isn't necessary.
                 syntax::Expr::Let { .. } => {
@@ -61,16 +61,17 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                         params,
                         body: let_to_children(body),
                     }
-                },
+                }
                 _ => Expression::Function {
                     params,
                     // The last statement in the body of a function
                     // should always be a `return` statement.
-                    body: vec![Statement::Return { arg: build_expr(body) }],
+                    body: vec![Statement::Return {
+                        arg: build_expr(body),
+                    }],
                 },
-            }            
+            }
         }
-        // TODO: Let needs to be converted to a Statement::Decl
         syntax::Expr::Let { .. } => {
             let children = let_to_children(expr);
 
@@ -106,7 +107,8 @@ pub fn let_to_children(expr: &syntax::Expr) -> Vec<Statement> {
         pattern,
         value,
         body,
-    } = expr {
+    } = expr
+    {
         // TODO: handle shadowed variables in the same scope by introducing
         // unique identifiers.
         let pattern = build_pattern(&pattern.0);
@@ -115,7 +117,7 @@ pub fn let_to_children(expr: &syntax::Expr) -> Vec<Statement> {
 
         let mut children = vec![decl];
         let mut body = body.0.to_owned();
-    
+
         while let syntax::Expr::Let {
             pattern,
             value,
@@ -128,11 +130,11 @@ pub fn let_to_children(expr: &syntax::Expr) -> Vec<Statement> {
             children.push(decl);
             body = next_body.0.to_owned();
         }
-    
+
         children.push(Statement::Return {
             arg: build_expr(&body),
         });
-    
+
         children
     } else {
         panic!("was expecting an syntax::Expr::Let")
