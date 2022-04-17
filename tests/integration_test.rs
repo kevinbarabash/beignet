@@ -7,56 +7,35 @@ use nouveau_lib::parser::token_parser;
 use nouveau_lib::lexer::lexer;
 use nouveau_lib::types::*;
 
-#[test]
-fn infer_number_literal() {
+fn infer(input: &str) -> String {
     let env: Env = HashMap::new();
-    let result = lexer().parse("5").unwrap();
+    let result = lexer().parse(input).unwrap();
     let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
     let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
     let prog = token_parser(&spans).parse(tokens).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = infer_stmt(env, &stmt);
+    format!("{}", result)
+}
 
-    assert_eq!(format!("{}", result), "5");
+#[test]
+fn infer_number_literal() {
+    assert_eq!(infer("5"), "5");
 }
 
 #[test]
 fn infer_lam() {
-    let env: Env = HashMap::new();
-    let result = lexer().parse("(x) => x").unwrap();
-    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-    let prog = token_parser(&spans).parse(tokens).unwrap();
-    let stmt = prog.body.get(0).unwrap();
-    let result = infer_stmt(env, &stmt);
-
-    assert_eq!(format!("{}", result), "<a1>(a1) => a1");
+    assert_eq!(infer("(x) => x"), "<a1>(a1) => a1");
 }
 
 #[test]
 fn infer_let_inside_function() {
-    let env: Env = HashMap::new();
-    let result = lexer().parse("() => let x = 5 in x").unwrap();
-    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-    let prog = token_parser(&spans).parse(tokens).unwrap();
-    let stmt = prog.body.get(0).unwrap();
-    let result = infer_stmt(env, &stmt);
-
-    assert_eq!(format!("{}", result), "() => 5");
+    assert_eq!(infer("() => let x = 5 in x"), "() => 5");
 }
 
 #[test]
 fn infer_op() {
-    let env: Env = HashMap::new();
-    let result = lexer().parse("5 + 10").unwrap();
-    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-    let prog = token_parser(&spans).parse(tokens).unwrap();
-    let stmt = prog.body.get(0).unwrap();
-    let result = infer_stmt(env, &stmt);
-
-    assert_eq!(format!("{}", result), "number");
+    assert_eq!(infer("5 + 10"), "number");
 }
 
 #[test]
