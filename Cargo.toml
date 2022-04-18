@@ -16,5 +16,4 @@ chumsky = "0.8.0"
 itertools = "0.10.3"
 
 [dev-dependencies]
-test-case = "2.0.2"
 insta = "1.13.0"
