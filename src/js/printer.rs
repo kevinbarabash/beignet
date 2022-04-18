@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use super::js_ast::*;
+use super::ast::*;
 
 pub fn print_js(prog: &Program) -> String {
     // TODO: export top-level declarations using `export {foo, bar, baz$0 as baz}` syntax
