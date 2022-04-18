@@ -1,5 +1,4 @@
 use chumsky::prelude::*;
-use test_case::test_case;
 
 use nouveau_lib::js_builder::build_js;
 use nouveau_lib::js_printer::print_js;
@@ -16,33 +15,138 @@ fn compile(input: &str) -> String {
     print_js(&js_tree)
 }
 
-#[test_case("\"hello\"", "\"hello\""; "string literal")]
-#[test_case("123", "123"; "number literal (whole)")]
-#[test_case("foo(a, b)", "foo(a, b)"; "function call with multiple args")]
-#[test_case("foo(a)", "foo(a)"; "function call with a single arg")]
-#[test_case("foo()", "foo()"; "function call with no args")]
-#[test_case("(a, b) => a + b", "(a, b) => a + b"; "lambda with two args")]
-#[test_case("(a) => a", "(a) => a"; "lambda with one arg")]
-#[test_case("() => 5", "() => 5"; "lambda with no args")]
-#[test_case("a + b * c", "a + b * c"; "mixed operations")]
-#[test_case("(a + b) * c", "(a + b) * c"; "mixed operations requiring parens")]
-#[test_case("(a + b) * (c - d)", "(a + b) * (c - d)"; "mixed operations requiring multiple parens")]
-#[test_case("a / b / c", "a / b / c"; "division without parens")]
-#[test_case("a / (b / c)", "a / (b / c)"; "division with parens")]
-#[test_case("a - b - c", "a - b - c"; "subtraction without parens")]
-#[test_case("a - (b - c)", "a - (b - c)"; "subtraction with parens")]
-#[test_case("let add = (a, b) => a + b", "const add = (a, b) => a + b;"; "function declaration")]
-#[test_case("let five = 5", "const five = 5;"; "variable declaration with literal value")]
-#[test_case("let foo = let x = 5 in x", "const foo = (() => {\n    const x = 5;\n    return x;\n})();"; "let-in expression inside declaration")]
-#[test_case("let foo = let x = 5 in let y = 10 in x + y", "const foo = (() => {\n    const x = 5;\n    const y = 10;\n    return x + y;\n})();"; "nested let-in expressions inside declaration")]
-// TODO: add a test case with multiple declarations
-fn parse_then_codegen(input: &str, expected: &str) {
-    assert_eq!(compile(input), expected);
+#[test]
+fn string_literal() {
+    insta::assert_snapshot!(compile("\"hello\""), @r###""hello";"###);
+}
+
+#[test]
+fn number_literal_whole() {
+    insta::assert_snapshot!(compile("123"), @"123;");
+}
+
+#[test]
+fn number_literal_real() {
+    insta::assert_snapshot!(compile("5.0"), @"5.0;");
+}
+
+#[test]
+fn call_with_multiple_args() {
+    insta::assert_snapshot!(compile("foo(a, b)"), @"foo(a, b);");
+}
+
+#[test]
+fn call_with_single_arg() {
+    insta::assert_snapshot!(compile("foo(a)"), @"foo(a);");
+}
+
+#[test]
+fn call_with_no_args() {
+    insta::assert_snapshot!(compile("foo()"), @"foo();");
+}
+
+#[test]
+fn lambda_with_two_args() {
+    insta::assert_snapshot!(compile("(a, b) => a + b"), @"(a, b) => a + b;");
+}
+
+#[test]
+fn lambda_with_one_arg() {
+    insta::assert_snapshot!(compile("(a) => a"), @"(a) => a;");
+}
+
+#[test]
+fn lambda_with_no_args() {
+    insta::assert_snapshot!(compile("() => 5"), @"() => 5;");
+}
+
+#[test]
+fn mixed_operations() {
+    insta::assert_snapshot!(compile("a + b * c"), @"a + b * c;");
+}
+
+#[test]
+fn mixed_operations_requiring_parens() {
+    insta::assert_snapshot!(compile("(a + b) * c"), @"(a + b) * c;");
+}
+
+#[test]
+fn mixed_operations_requiring_multiple_parens() {
+    insta::assert_snapshot!(compile("(a + b) * (c + d)"), @"(a + b) * (c + d);");
+}
+
+#[test]
+fn division_without_parens() {
+    insta::assert_snapshot!(compile("a / b / c"), @"a / b / c;");
+}
+
+#[test]
+fn division_with_parens() {
+    insta::assert_snapshot!(compile("a / (b / c)"), @"a / (b / c);");
+}
+
+#[test]
+fn subtraction_without_parens() {
+    insta::assert_snapshot!(compile("a - b - c"), @"a - b - c;");
+}
+
+#[test]
+fn subtraction_with_parens() {
+    insta::assert_snapshot!(compile("a - (b - c)"), @"a - (b - c);");
+}
+
+#[test]
+fn function_declaration() {
+    insta::assert_snapshot!(compile("let add = (a, b) => a + b"), @r###"
+    const add = (a, b) => a + b;
+
+    export {add};
+    "###);
+}
+
+#[test]
+fn variable_declaration_with_number_literal() {
+    insta::assert_snapshot!(compile("let five = 5"), @r###"
+    const five = 5;
+
+    export {five};
+    "###);
+}
+
+#[test]
+fn let_in_inside_declaration() {
+    // TODO: only allow `let-in` inside of non-top-level scopes
+    insta::assert_snapshot!(compile("let foo = let x = 5 in x"), @r###"
+    const foo = (() => {
+        const x = 5;
+        return x;
+    })();
+
+    export {foo};
+    "###);
+}
+
+#[test]
+fn nested_let_in_inside_declaration() {
+    // TODO: only allow `let-in` inside of non-top-level scopes
+    insta::assert_snapshot!(compile("let foo = let x = 5 in let y = 10 in x + y"), @r###"
+    const foo = (() => {
+        const x = 5;
+        const y = 10;
+        return x + y;
+    })();
+
+    export {foo};
+    "###);
 }
 
 #[test]
 fn js_print_simple_lambda() {
-    insta::assert_snapshot!(compile("let add = (a, b) => a + b"), @"const add = (a, b) => a + b;");
+    insta::assert_snapshot!(compile("let add = (a, b) => a + b"), @r###"
+    const add = (a, b) => a + b;
+
+    export {add};
+    "###);
 }
 
 #[test]
@@ -54,46 +158,64 @@ fn js_print_let_in() {
         const y = 10;
         return x + y;
     })();
+
+    export {foo};
     "###);
 }
 
 #[test]
 fn js_print_variable_shadowing() {
-    let input = "let foo = let x = 5 in let x = 10 in x";
-    insta::assert_snapshot!(compile(input), @r###"
+    insta::assert_snapshot!(compile("let foo = let x = 5 in let x = 10 in x"), @r###"
     const foo = (() => {
         const x = 5;
         const x = 10;
         return x;
     })();
+
+    export {foo};
     "###);
 }
 
 #[test]
 fn js_print_let_in_inside_lambda() {
-    let input = "let foo = () => let x = 5 in let y = 10 in x + y";
-    insta::assert_snapshot!(compile(input), @r###"
+    insta::assert_snapshot!(compile("let foo = () => let x = 5 in let y = 10 in x + y"), @r###"
     const foo = () => {
         const x = 5;
         const y = 10;
         return x + y;
     };
+
+    export {foo};
     "###);
 }
 
 #[test]
 fn js_print_nested_lambdas() {
-    let input = "let foo = (a) => (b) => a + b";
-    insta::assert_snapshot!(compile(input), @"const foo = (a) => (b) => a + b;");
+    insta::assert_snapshot!(compile("let foo = (a) => (b) => a + b"), @r###"
+    const foo = (a) => (b) => a + b;
+
+    export {foo};
+    "###);
 }
 
 #[test]
 fn js_print_nested_lambdas_with_multiple_lines() {
-    let input = "let foo = (a) => (b) => let sum = a + b in sum";
-    insta::assert_snapshot!(compile(input), @r###"
+    insta::assert_snapshot!(compile("let foo = (a) => (b) => let sum = a + b in sum"), @r###"
     const foo = (a) => (b) => {
         const sum = a + b;
         return sum;
     };
+
+    export {foo};
+    "###);
+}
+
+#[test]
+fn js_print_multiple_decls() {
+    insta::assert_snapshot!(compile("let foo = \"hello\"\nlet bar = \"world\""), @r###"
+    const foo = "hello";
+    const bar = "world";
+
+    export {foo, bar};
     "###);
 }

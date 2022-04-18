@@ -4,10 +4,28 @@ use super::js_ast::*;
 
 pub fn print_js(prog: &Program) -> String {
     // TODO: export top-level declarations using `export {foo, bar, baz$0 as baz}` syntax
-    prog.body
+    let decls: Vec<_> = prog.body.iter().filter_map(|stmt| {
+        if let Statement::Decl { pattern, .. } = stmt {
+            match pattern {
+                Pattern::Ident { name } => Some(name.to_owned()),
+            }
+        } else {
+            None
+        }
+    }).collect();
+
+    let body = prog
+        .body
         .iter()
         .map(|child| print_statement(child, &0))
-        .join("\n")
+        .join("\n");
+
+    if decls.len() > 0 {
+        let export = format!("export {{{}}}", decls.join(", "));
+        format!("{body}\n\n{export};")
+    } else {
+        body
+    }
 }
 
 pub fn indent(level: &u32) -> String {
@@ -23,11 +41,19 @@ pub fn print_statement(stmt: &Statement, level: &u32) -> String {
         Statement::Decl { pattern, value } => {
             let pattern = print_pattern(pattern);
             let value = print_expr(value, level);
-            format!("{}const {pattern} = {value};", indent(level))
+            if value.ends_with(";") {
+                format!("{}const {pattern} = {value}", indent(level))
+            } else {
+                format!("{}const {pattern} = {value};", indent(level))
+            }
         }
         Statement::Expression { expr } => {
             let expr = print_expr(expr, level);
-            format!("{}{expr}", indent(level))
+            if expr.ends_with(";") {
+                format!("{}{expr}", indent(level))
+            } else {
+                format!("{}{expr};", indent(level))
+            }
         }
         Statement::Return { arg } => {
             let arg = print_expr(arg, level);
