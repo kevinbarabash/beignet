@@ -1,4 +1,4 @@
-use super::literal::Literal;
+use super::super::literal::Literal;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {

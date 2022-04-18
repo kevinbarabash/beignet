@@ -1,7 +1,7 @@
 use chumsky::prelude::*;
 
-use nouveau_lib::js_builder::build_js;
-use nouveau_lib::js_printer::print_js;
+use nouveau_lib::js::builder::build_js;
+use nouveau_lib::js::printer::print_js;
 use nouveau_lib::lexer::lexer;
 use nouveau_lib::parser::token_parser;
 

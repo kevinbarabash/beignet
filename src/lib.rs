@@ -1,9 +1,7 @@
 pub mod constraint_solver;
 pub mod context;
 pub mod infer;
-pub mod js_ast;
-pub mod js_builder;
-pub mod js_printer;
+pub mod js;
 pub mod lexer;
 pub mod literal;
 pub mod parser;
