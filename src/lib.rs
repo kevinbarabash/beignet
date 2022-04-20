@@ -7,4 +7,5 @@ pub mod literal;
 pub mod parser;
 pub mod substitutable;
 pub mod syntax;
+pub mod ts;
 pub mod types;
