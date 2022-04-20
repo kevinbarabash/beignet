@@ -2,10 +2,12 @@ use chumsky::prelude::*;
 use std::collections::HashMap;
 
 use nouveau_lib::context::Env;
-use nouveau_lib::infer::infer_stmt;
+use nouveau_lib::infer::{infer_stmt, infer_prog};
 use nouveau_lib::parser::token_parser;
 use nouveau_lib::lexer::lexer;
 use nouveau_lib::types::*;
+use nouveau_lib::ts::convert::{extend_scheme};
+use nouveau_lib::syntax::{Pattern, Program};
 
 fn infer(input: &str) -> String {
     let env: Env = HashMap::new();
@@ -36,6 +38,47 @@ fn infer_let_inside_function() {
 #[test]
 fn infer_op() {
     assert_eq!(infer("5 + 10"), "number");
+}
+
+fn build_d_ts(env: &Env, prog: &Program) -> String {
+    let mut lines: Vec<_> = vec![];
+
+    for (statement, _) in &prog.body {
+        match statement {
+            nouveau_lib::syntax::Statement::Decl { pattern: (pat, _), value: (expr, _) } => {
+                let name = match pat {
+                    Pattern::Ident { name } => name,
+                };
+                let scheme = env.get(name).unwrap();
+                let result = extend_scheme(&scheme, Some(&expr));
+                let line = format!("export declare const {name} = {result};");
+                lines.push(line.to_owned());
+            },
+            _ => ()
+        }
+    };
+
+    lines.join("\n")
+}
+
+#[test]
+fn infer_decl() {
+    let env: Env = HashMap::new();
+    let src = r#"
+    let foo = (a, b) => a + b
+    let bar = "hello"
+    "#;
+    let result = lexer().parse(src).unwrap();
+    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
+    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
+    let prog = token_parser(&spans).parse(tokens).unwrap();
+    let env = infer_prog(env, &prog);
+    let result = build_d_ts(&env, &prog);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const foo = (a: number, b: number) => number;
+    export declare const bar = "hello";
+    "###);
 }
 
 #[test]
