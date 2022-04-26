@@ -34,7 +34,32 @@ pub fn token_parser(
                 .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
         ));
 
-        let product = atom
+        let app = atom
+            .clone()
+            .then(
+                expr.clone()
+                    .separated_by(just(Token::Comma))
+                    .allow_trailing()
+                    .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
+            )
+            .map_with_span(|(func, args), token_span: Span| {
+                let start = source_spans.get(token_span.start).unwrap().start;
+                let end = source_spans.get(token_span.end - 1).unwrap().end;
+                (
+                    Expr::App {
+                        lam: Box::new(func),
+                        args,
+                    },
+                    start..end,
+                )
+            });
+
+        let factor = choice((
+            app,
+            atom.clone(),
+        ));
+
+        let product = factor
             .clone()
             .then(
                 choice((
@@ -82,26 +107,6 @@ pub fn token_parser(
                         span,
                     )
                 }
-            });
-
-        let app = atom
-            .clone()
-            .then(
-                expr.clone()
-                    .separated_by(just(Token::Comma))
-                    .allow_trailing()
-                    .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
-            )
-            .map_with_span(|(func, args), token_span: Span| {
-                let start = source_spans.get(token_span.start).unwrap().start;
-                let end = source_spans.get(token_span.end - 1).unwrap().end;
-                (
-                    Expr::App {
-                        lam: Box::new(func),
-                        args,
-                    },
-                    start..end,
-                )
             });
 
         let param_list = binding_ident
@@ -153,7 +158,7 @@ pub fn token_parser(
                 )
             });
 
-        choice((app, lam, r#let, sum))
+        choice((lam, r#let, sum))
     });
 
     let decl = just(Token::Let)

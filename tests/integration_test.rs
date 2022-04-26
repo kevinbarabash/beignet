@@ -40,6 +40,11 @@ fn infer_op() {
     assert_eq!(infer("5 + 10"), "number");
 }
 
+#[test]
+fn infer_fn_param() {
+    assert_eq!(infer("(f, x) => f(x) + x"), "((number) => number, number) => number");
+}
+
 fn build_d_ts(env: &Env, prog: &Program) -> String {
     let mut lines: Vec<_> = vec![];
 
