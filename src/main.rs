@@ -1,10 +1,10 @@
 use chumsky::prelude::*;
 use std::collections::HashMap;
 
-use nouveau_lib::parser::*;
-use nouveau_lib::lexer::*;
-use nouveau_lib::context::Env;
-use nouveau_lib::infer::*;
+use beignet_lib::parser::*;
+use beignet_lib::lexer::*;
+use beignet_lib::context::Env;
+use beignet_lib::infer::*;
 
 fn main() {
     println!("Hello, world!");

@@ -1,13 +1,13 @@
 use chumsky::prelude::*;
 use std::collections::HashMap;
 
-use nouveau_lib::context::Env;
-use nouveau_lib::infer::{infer_stmt, infer_prog};
-use nouveau_lib::parser::token_parser;
-use nouveau_lib::lexer::lexer;
-use nouveau_lib::types::*;
-use nouveau_lib::ts::convert::{extend_scheme};
-use nouveau_lib::syntax::{Pattern, Program};
+use beignet_lib::context::Env;
+use beignet_lib::infer::{infer_stmt, infer_prog};
+use beignet_lib::parser::token_parser;
+use beignet_lib::lexer::lexer;
+use beignet_lib::types::*;
+use beignet_lib::ts::convert::{extend_scheme};
+use beignet_lib::syntax::{Pattern, Program};
 
 fn infer(input: &str) -> String {
     let env: Env = HashMap::new();
@@ -50,7 +50,7 @@ fn build_d_ts(env: &Env, prog: &Program) -> String {
 
     for (statement, _) in &prog.body {
         match statement {
-            nouveau_lib::syntax::Statement::Decl { pattern: (pat, _), value: (expr, _) } => {
+            beignet_lib::syntax::Statement::Decl { pattern: (pat, _), value: (expr, _) } => {
                 let name = match pat {
                     Pattern::Ident { name } => name,
                 };

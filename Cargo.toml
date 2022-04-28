@@ -1,5 +1,5 @@
 [package]
-name = "nouveau"
+name = "beignet"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,7 @@ edition = "2021"
 strip = "debuginfo"
 
 [lib]
-name = "nouveau_lib"
+name = "beignet_lib"
 crate-type = ["cdylib", "rlib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

@@ -4,7 +4,7 @@ name: CI
 
 jobs:
   build_and_test:
-    name: nouveau
+    name: beignet
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

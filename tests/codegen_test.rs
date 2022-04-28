@@ -1,9 +1,9 @@
 use chumsky::prelude::*;
 
-use nouveau_lib::js::builder::build_js;
-use nouveau_lib::js::printer::print_js;
-use nouveau_lib::lexer::lexer;
-use nouveau_lib::parser::token_parser;
+use beignet_lib::js::builder::build_js;
+use beignet_lib::js::printer::print_js;
+use beignet_lib::lexer::lexer;
+use beignet_lib::parser::token_parser;
 
 fn compile(input: &str) -> String {
     let result = lexer().parse(input).unwrap();
