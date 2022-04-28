@@ -1,14 +1,17 @@
-name: CI
+name: Deploy to GitHub Pages
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  build_and_test:
-    name: CI
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Cache
         uses: actions/cache@v3
@@ -21,7 +24,14 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Test
-        uses: actions-rs/cargo@v1
+      - name: Install Dependencies
+        run: yarn
+
+      - name: Build Demo
+        run: yarn build
+
+      - name: Deploy to GitHub pages
+        uses: JamesIves/github-pages-deploy-action@v4.2.5
         with:
-          command: test
+          branch: gh-pages
+          folder: build
