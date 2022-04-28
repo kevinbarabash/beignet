@@ -42,7 +42,7 @@ export const App = () => {
   // TODO: use CSS Grid for this
   return (
     <div style={styles.app}>
-      <h1>nouveau demo</h1>
+      <h1>beignet demo</h1>
       <div style={{ width: "100%", height: "100%", display: "flex" }}>
         <textarea
           style={styles.textArea}
