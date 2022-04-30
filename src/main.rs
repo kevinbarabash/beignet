@@ -1,10 +1,10 @@
 use chumsky::prelude::*;
 use std::collections::HashMap;
 
-use beignet_lib::parser::*;
-use beignet_lib::lexer::*;
-use beignet_lib::context::Env;
-use beignet_lib::infer::*;
+use cricket::parser::*;
+use cricket::lexer::*;
+use cricket::context::Env;
+use cricket::infer::*;
 
 fn main() {
     println!("Hello, world!");
