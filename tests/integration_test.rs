@@ -1,13 +1,13 @@
 use chumsky::prelude::*;
 use std::collections::HashMap;
 
-use beignet_lib::context::Env;
-use beignet_lib::infer::{infer_stmt, infer_prog};
-use beignet_lib::parser::token_parser;
-use beignet_lib::lexer::lexer;
-use beignet_lib::types::*;
-use beignet_lib::ts::convert::{extend_scheme};
-use beignet_lib::syntax::{Pattern, Program};
+use cricket::context::Env;
+use cricket::infer::{infer_stmt, infer_prog};
+use cricket::parser::token_parser;
+use cricket::lexer::lexer;
+use cricket::types::*;
+use cricket::ts::convert::{extend_scheme};
+use cricket::syntax::{Pattern, Program};
 
 fn infer(input: &str) -> String {
     let env: Env = HashMap::new();
@@ -50,7 +50,7 @@ fn build_d_ts(env: &Env, prog: &Program) -> String {
 
     for (statement, _) in &prog.body {
         match statement {
-            beignet_lib::syntax::Statement::Decl { pattern: (pat, _), value: (expr, _) } => {
+            cricket::syntax::Statement::Decl { pattern: (pat, _), value: (expr, _) } => {
                 let name = match pat {
                     Pattern::Ident { name } => name,
                 };
