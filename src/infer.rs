@@ -92,15 +92,13 @@ use crate::syntax::{BindingIdent, Expr, WithSpan, Pattern, Statement, Program};
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
 pub fn infer_prog(env: Env, prog: &Program) -> Env {
-    let out_env: Env = env.clone();
-    let mut ctx: Context = Context::from(out_env);
+    let mut ctx: Context = Context::from(env);
 
     for (stmt, _span) in &prog.body {
         match stmt {
             Statement::Decl { pattern: (Pattern::Ident { name }, _span), value } => {
                 let scheme = infer_expr(&ctx, value);
                 ctx.env.insert(name.to_owned(), scheme);
-                // out_env.insert(name.to_owned(), scheme);
             },
             Statement::Expr(expr) => {
                 // We ignore the type that was inferred, we only care that
@@ -121,8 +119,6 @@ pub fn infer_stmt(ctx: &Context, stmt: &WithSpan<Statement>) -> Scheme {
 }
 
 pub fn infer_expr(ctx: &Context, expr: &WithSpan<Expr>) -> Scheme {
-    // TODO: don't create a new Context each time
-    // let init_ctx = Context::from(env);
     let (ty, cs) = infer(expr, ctx);
     let subs = run_solve(&cs, ctx);
 
@@ -198,8 +194,6 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
                 };
             }
             let (ret_ty, cs) = infer(body, &new_ctx);
-            // // Update the count
-            // ctx.state.count.set(new_ctx.state.count.get());
             let lam_ty = Type::Lam(TLam {
                 args: arg_tvs,
                 ret: Box::new(ret_ty),
@@ -219,8 +213,6 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
             let subs = run_solve(&cs1, &ctx);
             let (new_ctx, new_cs) = infer_pattern(pattern, &t1, &subs, ctx);
             let (t2, cs2) = infer(body, &new_ctx);
-            // // Update the count
-            // ctx.state.count.set(new_ctx.state.count.get());
             let mut cs: Vec<Constraint> = Vec::new();
             cs.extend(cs1);
             cs.extend(new_cs);
