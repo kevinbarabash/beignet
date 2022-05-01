@@ -1,13 +1,13 @@
 use chumsky::prelude::*;
 use std::collections::HashMap;
 
-use cricket::context::Env;
-use cricket::infer::{infer_stmt, infer_prog};
-use cricket::parser::token_parser;
-use cricket::lexer::lexer;
-use cricket::types::*;
-use cricket::ts::convert::{extend_scheme};
-use cricket::syntax::{Pattern, Program};
+use crochet::context::Env;
+use crochet::infer::{infer_stmt, infer_prog};
+use crochet::parser::token_parser;
+use crochet::lexer::lexer;
+use crochet::types::*;
+use crochet::ts::convert::{extend_scheme};
+use crochet::syntax::{Pattern, Program};
 
 fn infer(input: &str) -> String {
     let env: Env = HashMap::new();
@@ -50,7 +50,7 @@ fn build_d_ts(env: &Env, prog: &Program) -> String {
 
     for (statement, _) in &prog.body {
         match statement {
-            cricket::syntax::Statement::Decl { pattern: (pat, _), value: (expr, _) } => {
+            crochet::syntax::Statement::Decl { pattern: (pat, _), value: (expr, _) } => {
                 let name = match pat {
                     Pattern::Ident { name } => name,
                 };
