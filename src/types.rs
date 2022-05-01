@@ -37,7 +37,7 @@ impl fmt::Display for Primitive {
 //     ty: Type,
 // }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialOrd, Ord)]
 pub struct TVar {
     pub id: i32,
     pub name: String,
@@ -145,7 +145,9 @@ impl fmt::Display for Scheme {
         if qualifiers.is_empty() {
             write!(f, "{}", ty)
         } else {
-            write!(f, "<{}>{}", join(qualifiers, ", "), ty)
+            let mut quals = qualifiers.clone();
+            quals.sort();
+            write!(f, "<{}>{}", join(quals, ", "), ty)
         }
     }
 }

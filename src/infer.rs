@@ -92,18 +92,18 @@ use crate::syntax::{BindingIdent, Expr, WithSpan, Pattern, Statement, Program};
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
 pub fn infer_prog(env: Env, prog: &Program) -> Env {
-    let mut out_env: Env = Env::new();
+    let mut out_env: Env = env.clone();
 
     for (stmt, _span) in &prog.body {
         match stmt {
             Statement::Decl { pattern: (Pattern::Ident { name }, _span), value } => {
-                let scheme = infer_expr(env.clone(), value);
+                let scheme = infer_expr(out_env.clone(), value);
                 out_env.insert(name.to_owned(), scheme);
             },
             Statement::Expr(expr) => {
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
-                infer_expr(env.clone(), expr);
+                infer_expr(out_env.clone(), expr);
             },
         };
     }

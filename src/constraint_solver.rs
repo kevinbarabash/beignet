@@ -19,6 +19,15 @@ pub fn run_solve(cs: &[Constraint], ctx: &Context) -> Subst {
 fn solver(u: Unifier, ctx: &Context) -> Subst {
     let (su, cs) = u;
 
+    // println!("constraints:");
+    // for Constraint { types: (left, right) } in cs.iter() {
+    //     println!("{left} = {right}");
+    // }
+    // println!("subsitutions:");
+    // for (id, ty) in su.iter() {
+    //     println!("{id} -> {ty}");
+    // }
+
     if cs.is_empty() {
         return su;
     }
@@ -31,7 +40,7 @@ fn solver(u: Unifier, ctx: &Context) -> Subst {
             let su1 = unifies(c, ctx);
             // TODO: can we create an impl of Substitutable for slices (or iterators)?
             // TODO: implement ftv() and apply() on Vec<Constraint>
-            let unifier: Unifier = (compose_subs(&su1, &su), Vec::from(rest).apply(&su));
+            let unifier: Unifier = (compose_subs(&su1, &su), Vec::from(rest).apply(&su1));
             solver(unifier, ctx)
         }
         None => su,
@@ -65,6 +74,8 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
 }
 
 fn unify_lams(t1: &TLam, t2: &TLam, ctx: &Context) -> Subst {
+    // println!("unify_lams");
+    // println!("t1 = {t1}, t2 = {t2}");
     // TODO:
     // - varargs
     // - subtyping
@@ -109,6 +120,10 @@ fn unify_lams(t1: &TLam, t2: &TLam, ctx: &Context) -> Subst {
 }
 
 fn unify_many(cs: &[Constraint], ctx: &Context) -> Subst {
+    // println!("rununify_many_solve:");
+    // for Constraint { types: (left, right) } in cs {
+    //     println!("{left} = {right}");
+    // }
     match cs {
         [head, tail @ ..] => {
             let su_1 = unifies(head, ctx);

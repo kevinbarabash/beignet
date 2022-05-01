@@ -40,26 +40,29 @@ pub fn token_parser(
                 expr.clone()
                     .separated_by(just(Token::Comma))
                     .allow_trailing()
-                    .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
+                    .delimited_by(just(Token::OpenParen), just(Token::CloseParen))
+                    .map_with_span(|args, token_span: Span| {
+                        let start = source_spans.get(token_span.start).unwrap().start;
+                        let end = source_spans.get(token_span.end - 1).unwrap().end;
+                        (args, start..end)
+                    })
+                    .repeated()
             )
-            .map_with_span(|(func, args), token_span: Span| {
-                let start = source_spans.get(token_span.start).unwrap().start;
-                let end = source_spans.get(token_span.end - 1).unwrap().end;
+            .foldl(|f, (args, span)| {
+                let start = f.1.start;
+                let end = span.end;
+                let span = start..end;
+
                 (
                     Expr::App {
-                        lam: Box::new(func),
+                        lam: Box::new(f),
                         args,
                     },
-                    start..end,
+                    span,
                 )
             });
 
-        let factor = choice((
-            app,
-            atom.clone(),
-        ));
-
-        let product = factor
+        let product = app
             .clone()
             .then(
                 choice((
@@ -907,6 +910,66 @@ mod tests {
                         ),
                     },
                     0..24,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn multiple_consequtive_apps() {
+        insta::assert_debug_snapshot!(parse("f(x)(g(x))"), @r###"
+        Program {
+            body: [
+                (
+                    Expr(
+                        (
+                            App {
+                                lam: (
+                                    App {
+                                        lam: (
+                                            Ident {
+                                                name: "f",
+                                            },
+                                            0..1,
+                                        ),
+                                        args: [
+                                            (
+                                                Ident {
+                                                    name: "x",
+                                                },
+                                                2..3,
+                                            ),
+                                        ],
+                                    },
+                                    0..4,
+                                ),
+                                args: [
+                                    (
+                                        App {
+                                            lam: (
+                                                Ident {
+                                                    name: "g",
+                                                },
+                                                5..6,
+                                            ),
+                                            args: [
+                                                (
+                                                    Ident {
+                                                        name: "x",
+                                                    },
+                                                    7..8,
+                                                ),
+                                            ],
+                                        },
+                                        5..9,
+                                    ),
+                                ],
+                            },
+                            0..10,
+                        ),
+                    ),
+                    0..10,
                 ),
             ],
         }
