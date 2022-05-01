@@ -1,7 +1,7 @@
 use chumsky::prelude::*;
 use std::collections::HashMap;
 
-use crochet::context::Env;
+use crochet::context::{Context, Env};
 use crochet::infer::infer_stmt;
 use crochet::parser::token_parser;
 use crochet::lexer::lexer;
@@ -11,12 +11,13 @@ use crochet::syntax::{Pattern, Program};
 
 fn infer(input: &str) -> String {
     let env: Env = HashMap::new();
+    let ctx = Context::from(env);
     let result = lexer().parse(input).unwrap();
     let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
     let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
     let prog = token_parser(&spans).parse(tokens).unwrap();
     let stmt = prog.body.get(0).unwrap();
-    let result = infer_stmt(env, &stmt);
+    let result = infer_stmt(&ctx, &stmt);
     format!("{}", result)
 }
 
@@ -127,7 +128,7 @@ fn infer_skk() {
     "#;
     let (_, env) = infer_prog(src);
     let result = format!("{}", env.get("I").unwrap());
-    assert_eq!(result, "<a1>(a1) => a1");
+    assert_eq!(result, "<a5>(a5) => a5");
 }
 
 #[test]

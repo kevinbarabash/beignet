@@ -13,7 +13,6 @@ type Unifier = (Subst, Vec<Constraint>);
 pub fn run_solve(cs: &[Constraint], ctx: &Context) -> Subst {
     let empty_subst = Subst::new();
 
-    // TODO: normalize the result so that type params start at a1
     solver((empty_subst, cs.to_vec()), ctx)
 }
 
@@ -38,6 +37,7 @@ fn solver(u: Unifier, ctx: &Context) -> Subst {
         None => su,
     }
 }
+
 fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
     let mut result: Subst = s2.iter().map(|(id, tv)| (*id, tv.apply(s1))).collect();
     result.extend(s1.to_owned());
