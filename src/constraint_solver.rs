@@ -24,19 +24,20 @@ fn solver(u: Unifier, ctx: &Context) -> Subst {
     }
 
     let rest = &cs[1..]; // const [_ , ...rest] = cs;
-    rest.iter();
 
     match cs.get(0) {
         Some(c) => {
+            // su1 represents new substitutions from unifying the first constraint in cs.
             let su1 = unifies(c, ctx);
-            // TODO: can we create an impl of Substitutable for slices (or iterators)?
-            // TODO: implement ftv() and apply() on Vec<Constraint>
-            let unifier: Unifier = (compose_subs(&su1, &su), Vec::from(rest).apply(&su));
+            // This is applied to the remaining constraints (rest).  compose_subs is used
+            // to apply su1 to the HashMap of subsitutions, su.
+            let unifier: Unifier = (compose_subs(&su1, &su), Vec::from(rest).apply(&su1));
             solver(unifier, ctx)
         }
         None => su,
     }
 }
+
 fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
     let mut result: Subst = s2.iter().map(|(id, tv)| (*id, tv.apply(s1))).collect();
     result.extend(s1.to_owned());
