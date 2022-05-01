@@ -13,33 +13,25 @@ type Unifier = (Subst, Vec<Constraint>);
 pub fn run_solve(cs: &[Constraint], ctx: &Context) -> Subst {
     let empty_subst = Subst::new();
 
+    // TODO: normalize the result so that type params start at a1
     solver((empty_subst, cs.to_vec()), ctx)
 }
 
 fn solver(u: Unifier, ctx: &Context) -> Subst {
     let (su, cs) = u;
 
-    // println!("constraints:");
-    // for Constraint { types: (left, right) } in cs.iter() {
-    //     println!("{left} = {right}");
-    // }
-    // println!("subsitutions:");
-    // for (id, ty) in su.iter() {
-    //     println!("{id} -> {ty}");
-    // }
-
     if cs.is_empty() {
         return su;
     }
 
     let rest = &cs[1..]; // const [_ , ...rest] = cs;
-    rest.iter();
 
     match cs.get(0) {
         Some(c) => {
+            // su1 represents new substitutions from unifying the first constraint in cs.
             let su1 = unifies(c, ctx);
-            // TODO: can we create an impl of Substitutable for slices (or iterators)?
-            // TODO: implement ftv() and apply() on Vec<Constraint>
+            // This is applied to the remaining constraints (rest).  compose_subs is used
+            // to apply su1 to the HashMap of subsitutions, su.
             let unifier: Unifier = (compose_subs(&su1, &su), Vec::from(rest).apply(&su1));
             solver(unifier, ctx)
         }
