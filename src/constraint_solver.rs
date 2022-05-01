@@ -66,8 +66,6 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
 }
 
 fn unify_lams(t1: &TLam, t2: &TLam, ctx: &Context) -> Subst {
-    // println!("unify_lams");
-    // println!("t1 = {t1}, t2 = {t2}");
     // TODO:
     // - varargs
     // - subtyping
@@ -112,10 +110,6 @@ fn unify_lams(t1: &TLam, t2: &TLam, ctx: &Context) -> Subst {
 }
 
 fn unify_many(cs: &[Constraint], ctx: &Context) -> Subst {
-    // println!("rununify_many_solve:");
-    // for Constraint { types: (left, right) } in cs {
-    //     println!("{left} = {right}");
-    // }
     match cs {
         [head, tail @ ..] => {
             let su_1 = unifies(head, ctx);
