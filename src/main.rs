@@ -1,10 +1,10 @@
 use chumsky::prelude::*;
 use std::collections::HashMap;
 
-use cricket::parser::*;
-use cricket::lexer::*;
-use cricket::context::Env;
-use cricket::infer::*;
+use crochet::parser::*;
+use crochet::lexer::*;
+use crochet::context::Env;
+use crochet::infer::*;
 
 fn main() {
     println!("Hello, world!");

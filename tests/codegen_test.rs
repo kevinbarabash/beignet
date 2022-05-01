@@ -1,9 +1,9 @@
 use chumsky::prelude::*;
 
-use cricket::js::builder::build_js;
-use cricket::js::printer::print_js;
-use cricket::lexer::lexer;
-use cricket::parser::token_parser;
+use crochet::js::builder::build_js;
+use crochet::js::printer::print_js;
+use crochet::lexer::lexer;
+use crochet::parser::token_parser;
 
 fn compile(input: &str) -> String {
     let result = lexer().parse(input).unwrap();
