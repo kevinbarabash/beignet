@@ -40,13 +40,12 @@ impl fmt::Display for Primitive {
 #[derive(Clone, Debug, PartialOrd, Ord)]
 pub struct TVar {
     pub id: i32,
-    pub name: String,
 }
 
 impl fmt::Display for TVar {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { name, id } = self;
-        write!(f, "{}{}", name, id)
+        let Self { id, .. } = self;
+        write!(f, "T{}", id)
     }
 }
 
@@ -134,7 +133,7 @@ impl From<&Literal> for Type {
 
 #[derive(Clone, Debug)]
 pub struct Scheme {
-    pub qualifiers: Vec<TVar>,
+    pub qualifiers: Vec<i32>,
     pub ty: Type,
 }
 
@@ -147,7 +146,7 @@ impl fmt::Display for Scheme {
         } else {
             let mut quals = qualifiers.clone();
             quals.sort();
-            write!(f, "<{}>{}", join(quals, ", "), ty)
+            write!(f, "<{}>{}", join(quals.iter().map(|id| format!("T{id}")), ", "), ty)
         }
     }
 }

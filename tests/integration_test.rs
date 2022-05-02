@@ -60,7 +60,7 @@ fn infer_number_literal() {
 
 #[test]
 fn infer_lam() {
-    assert_eq!(infer("(x) => x"), "<a1>(a1) => a1");
+    assert_eq!(infer("(x) => x"), "<T1>(T1) => T1");
 }
 
 #[test]
@@ -80,35 +80,35 @@ fn infer_fn_param() {
 
 #[test]
 fn infer_fn_param_used_with_multiple_other_params() {
-    assert_eq!(infer("(f, x, y) => f(x) + f(y)"), "<a2>((a2) => number, a2, a2) => number");
+    assert_eq!(infer("(f, x, y) => f(x) + f(y)"), "<T2>((T2) => number, T2, T2) => number");
 }
 
 #[test]
 fn infer_i_combinator() {
     let (_, env) = infer_prog("let I = (x) => x");
     let result = format!("{}", env.get("I").unwrap());
-    assert_eq!(result, "<a1>(a1) => a1");
+    assert_eq!(result, "<T1>(T1) => T1");
 }
 
 #[test]
 fn infer_k_combinator_not_curried() {
     let (_, env) = infer_prog("let K = (x, y) => x");
     let result = format!("{}", env.get("K").unwrap());
-    assert_eq!(result, "<a1, a2>(a1, a2) => a1");
+    assert_eq!(result, "<T1, T2>(T1, T2) => T1");
 }
 
 #[test]
 fn infer_s_combinator_not_curried() {
     let (_, env) = infer_prog("let S = (f, g, x) => f(x, g(x))");
     let result = format!("{}", env.get("S").unwrap());
-    assert_eq!(result, "<a3, a4, a5>((a3, a4) => a5, (a3) => a4, a3) => a5");
+    assert_eq!(result, "<T3, T4, T5>((T3, T4) => T5, (T3) => T4, T3) => T5");
 }
 
 #[test]
 fn infer_k_combinator_curried() {
     let (_, env) = infer_prog("let K = (x) => (y) => x");
     let result = format!("{}", env.get("K").unwrap());
-    assert_eq!(result, "<a1, a2>(a1) => (a2) => a1");
+    assert_eq!(result, "<T1, T2>(T1) => (T2) => T1");
 }
 
 #[test]
@@ -116,7 +116,7 @@ fn infer_s_combinator_curried() {
     let (_, env) = infer_prog("let S = (f) => (g) => (x) => f(x)(g(x))");
     let result = format!("{}", env.get("S").unwrap());
     // "<a, b, c>((a) => (b) => c) => ((a) => b) => (a) => c"
-    assert_eq!(result, "<a3, a5, a6>((a3) => (a5) => a6) => ((a3) => a5) => (a3) => a6");
+    assert_eq!(result, "<T3, T5, T6>((T3) => (T5) => T6) => ((T3) => T5) => (T3) => T6");
 }
 
 #[test]
@@ -128,7 +128,7 @@ fn infer_skk() {
     "#;
     let (_, env) = infer_prog(src);
     let result = format!("{}", env.get("I").unwrap());
-    assert_eq!(result, "<a5>(a5) => a5");
+    assert_eq!(result, "<T5>(T5) => T5");
 }
 
 #[test]

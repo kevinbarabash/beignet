@@ -135,7 +135,7 @@ fn bind(tv: &TVar, ty: &Type, _: &Context) -> Subst {
 
     match ty {
         Type::Var(TVar { id, .. }) if id == &tv.id => Subst::new(),
-        ty if ty.ftv().contains(tv) => panic!("type var appears in type"),
+        ty if ty.ftv().contains(&tv.id) => panic!("type var appears in type"),
         ty => {
             let mut subst = Subst::new();
             subst.insert(tv.id, ty.clone());

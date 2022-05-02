@@ -14,7 +14,7 @@ impl Substitutable for Constraint {
             types: (self.types.0.apply(sub), self.types.1.apply(sub)),
         }
     }
-    fn ftv(&self) -> HashSet<TVar> {
+    fn ftv(&self) -> HashSet<i32> {
         let mut result = HashSet::new();
         result.extend(self.types.0.ftv());
         result.extend(self.types.1.ftv());
@@ -35,9 +35,9 @@ impl Substitutable for Type {
             Type::Lit(_) => self.clone(),
         }
     }
-    fn ftv(&self) -> HashSet<TVar> {
+    fn ftv(&self) -> HashSet<i32> {
         match self {
-            Type::Var(tv) => HashSet::from([tv.clone()]),
+            Type::Var(tv) => HashSet::from([tv.id]),
             Type::Lam(TLam { args, ret }) => {
                 let mut result: HashSet<_> = args.iter().flat_map(|a| a.ftv()).collect();
                 result.extend(ret.ftv());
@@ -56,8 +56,8 @@ impl Substitutable for Scheme {
             ty: self.ty.apply(sub),
         }
     }
-    fn ftv(&self) -> HashSet<TVar> {
-        let qualifiers: HashSet<_> = self.qualifiers.iter().cloned().collect();
+    fn ftv(&self) -> HashSet<i32> {
+        let qualifiers: HashSet<_> = self.qualifiers.iter().map(|id| id.to_owned()).collect();
         self.ty.ftv().difference(&qualifiers).cloned().collect()
     }
 }
@@ -68,7 +68,7 @@ impl Substitutable for Env {
             .map(|(a, b)| (a.clone(), b.apply(sub)))
             .collect()
     }
-    fn ftv(&self) -> HashSet<TVar> {
+    fn ftv(&self) -> HashSet<i32> {
         // we can't use iter_values() here because it's a consuming iterator
         self.iter().flat_map(|(_, b)| b.ftv()).collect()
     }
@@ -81,7 +81,7 @@ where
     fn apply(&self, sub: &Subst) -> Vec<I> {
         self.iter().map(|c| c.apply(sub)).collect()
     }
-    fn ftv(&self) -> HashSet<TVar> {
+    fn ftv(&self) -> HashSet<i32> {
         self.iter().flat_map(|c| c.ftv()).collect()
     }
 }
