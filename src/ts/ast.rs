@@ -6,7 +6,7 @@ use super::super::types::{Primitive, TVar};
 
 pub struct TsQualifiedType {
     pub ty: TsType,
-    pub type_params: Vec<TVar>,
+    pub type_params: Vec<i32>,
 }
 
 #[derive(Debug)]
