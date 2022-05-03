@@ -87,7 +87,7 @@ where
 }
 
 use crate::context::{Context, Env};
-use crate::syntax::{BindingIdent, Expr, WithSpan, Pattern, Statement, Program};
+use crate::syntax::{BindingIdent, Expr, Pattern, Program, Statement, WithSpan};
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
@@ -96,15 +96,18 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
 
     for (stmt, _span) in &prog.body {
         match stmt {
-            Statement::Decl { pattern: (Pattern::Ident { name }, _span), value } => {
+            Statement::Decl {
+                pattern: (Pattern::Ident { name }, _span),
+                value,
+            } => {
                 let scheme = infer_expr(&ctx, value);
                 ctx.env.insert(name.to_owned(), scheme);
-            },
+            }
             Statement::Expr(expr) => {
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
                 infer_expr(&ctx, expr);
-            },
+            }
         };
     }
 
@@ -175,6 +178,46 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
 
             (Type::from(tv), constraints)
         }
+        (Expr::Fix { expr }, _) => {
+            let (t, cs) = infer(expr, ctx);
+            let tv = ctx.fresh();
+            let mut constraints = Vec::new();
+            constraints.extend(cs);
+            constraints.push(Constraint {
+                types: (
+                    Type::from(TLam {
+                        args: vec![Type::from(&tv)],
+                        ret: Box::new(Type::from(&tv)),
+                    }),
+                    t,
+                ),
+            });
+
+            (Type::from(tv), constraints)
+        }
+        (
+            Expr::If {
+                cond,
+                consequent,
+                alternate,
+            },
+            _,
+        ) => {
+            let (t1, cs1) = infer(cond, ctx);
+            let (t2, cs2) = infer(consequent, ctx);
+            let (t3, cs3) = infer(alternate, ctx);
+            let bool = Type::from(Primitive::Bool);
+
+            let result_type = t2.clone();
+            let mut constraints = Vec::new();
+            constraints.extend(cs1);
+            constraints.extend(cs2);
+            constraints.extend(cs3);
+            constraints.push(Constraint { types: (t1, bool) });
+            constraints.push(Constraint { types: (t2, t3) });
+            
+            (result_type, constraints)
+        }
         (Expr::Lam { args, body, .. }, _) => {
             // Creates a new type variable for each arg
             let arg_tvs: Vec<_> = args.iter().map(|_| Type::Var(ctx.fresh())).collect();
@@ -194,6 +237,7 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
                 };
             }
             let (ret_ty, cs) = infer(body, &new_ctx);
+            ctx.state.count.set(new_ctx.state.count.get());
             let lam_ty = Type::Lam(TLam {
                 args: arg_tvs,
                 ret: Box::new(ret_ty),
@@ -213,6 +257,7 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
             let subs = run_solve(&cs1, &ctx);
             let (new_ctx, new_cs) = infer_pattern(pattern, &t1, &subs, ctx);
             let (t2, cs2) = infer(body, &new_ctx);
+            ctx.state.count.set(new_ctx.state.count.get());
             let mut cs: Vec<Constraint> = Vec::new();
             cs.extend(cs1);
             cs.extend(new_cs);

@@ -13,6 +13,10 @@ pub fn token_parser(
     let binding_ident = select! { Token::Ident(name) => BindingIdent::Ident { name } };
     let pattern = select! { Token::Ident(name) => Pattern::Ident { name } };
     let num = select! { Token::Num(value) => Expr::Lit { literal: Literal::Num(value) } };
+    let r#true =
+        select! { Token::True => Expr::Lit { literal: Literal::Bool(String::from("true")) } };
+    let r#false =
+        select! { Token::True => Expr::Lit { literal: Literal::Bool(String::from("false")) } };
     let r#str = select! { Token::Str(value) => Expr::Lit { literal: Literal::Str(value) } };
 
     let add_span_info = |node: Expr, token_span: Span| {
@@ -24,11 +28,41 @@ pub fn token_parser(
     let expr = recursive(|expr| {
         let num = num.map_with_span(add_span_info);
         let r#str = r#str.map_with_span(add_span_info);
+        let r#true = r#true.map_with_span(add_span_info);
+        let r#false = r#false.map_with_span(add_span_info);
         let ident = ident.map_with_span(add_span_info);
 
+        // TODO: handle chaining of if-else
+        let if_else = just(Token::If)
+            .ignore_then(just(Token::OpenParen))
+            .ignore_then(expr.clone())
+            .then_ignore(just(Token::CloseParen))
+            .then_ignore(just(Token::OpenBrace))
+            .then(expr.clone())
+            .then_ignore(just(Token::CloseBrace))
+            .then_ignore(just(Token::Else))
+            .then_ignore(just(Token::OpenBrace))
+            .then(expr.clone())
+            .then_ignore(just(Token::CloseBrace))
+            .map_with_span(|((cond, left), right), token_span: Span| {
+                let start = source_spans.get(token_span.start).unwrap().start;
+                let end = source_spans.get(token_span.end - 1).unwrap().end;
+                (
+                    Expr::If {
+                        cond: Box::from(cond),
+                        consequent: Box::from(left),
+                        alternate: Box::from(right),
+                    },
+                    start..end,
+                )
+            });
+
         let atom = choice((
+            if_else,
             num,
             r#str,
+            r#true,
+            r#false,
             ident,
             expr.clone()
                 .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
@@ -46,7 +80,7 @@ pub fn token_parser(
                         let end = source_spans.get(token_span.end - 1).unwrap().end;
                         (args, start..end)
                     })
-                    .repeated()
+                    .repeated(),
             )
             .foldl(|f, (args, span)| {
                 let start = f.1.start;
@@ -139,7 +173,8 @@ pub fn token_parser(
             });
 
         let r#let = just(Token::Let)
-            .ignore_then(pattern.map_with_span(|node, token_span: Span| {
+            .ignore_then(just(Token::Rec).or_not())
+            .then(pattern.map_with_span(|node, token_span: Span| {
                 let start = source_spans.get(token_span.start).unwrap().start;
                 let end = source_spans.get(token_span.end - 1).unwrap().end;
                 (node, start..end)
@@ -148,36 +183,74 @@ pub fn token_parser(
             .then(expr.clone())
             .then_ignore(just(Token::In))
             .then(expr.clone())
-            .map_with_span(|((pattern, value), body), token_span: Span| {
+            .map_with_span(|(((rec, pattern), value), body), token_span: Span| {
                 let start = source_spans.get(token_span.start).unwrap().start;
                 let span = start..body.1.end;
-                (
-                    Expr::Let {
-                        pattern,
-                        value: Box::new(value),
-                        body: Box::new(body),
-                    },
-                    span,
-                )
+                match rec {
+                    Some(_) => todo!(),
+                    None => (
+                        Expr::Let {
+                            pattern,
+                            value: Box::new(value),
+                            body: Box::new(body),
+                        },
+                        span,
+                    ),
+                }
             });
 
         choice((lam, r#let, sum))
     });
 
     let decl = just(Token::Let)
-        .ignore_then(pattern.map_with_span(|node, token_span: Span| {
+        .ignore_then(just(Token::Rec).or_not())
+        .then(pattern.map_with_span(|node, token_span: Span| {
             let start = source_spans.get(token_span.start).unwrap().start;
             let end = source_spans.get(token_span.end - 1).unwrap().end;
             (node, start..end)
-        })) 
+        }))
         .then_ignore(just(Token::Eq))
         .then(expr.clone())
-        .map_with_span(|(pattern, value), token_span: Span| {
-            // excludes whitespace from end of span
-            let start = source_spans.get(token_span.start).unwrap().start;
-            let span = start..value.1.end.clone();
-            (Statement::Decl { pattern, value }, span)
-        });
+        .map_with_span(
+            |((rec, pattern), value), token_span: Span| -> (Statement, std::ops::Range<usize>) {
+                // excludes whitespace from end of span
+                let start = source_spans.get(token_span.start).unwrap().start;
+                let span = start..value.1.end.clone();
+                match rec {
+                    Some(_) => {
+                        let ident = match &pattern.0 {
+                            Pattern::Ident { name } => (
+                                BindingIdent::Ident { name: name.clone() },
+                                pattern.1.clone(),
+                            ),
+                        };
+                        let value_span = value.1.clone();
+                        (
+                            Statement::Decl {
+                                pattern,
+                                // `let fib = fix((fib) => (n) => ...)`
+                                // TODO: Fix always wraps a lambda
+                                value: (
+                                    Expr::Fix {
+                                        expr: Box::from((
+                                            Expr::Lam {
+                                                args: vec![ident],
+                                                body: Box::from(value),
+                                                is_async: false,
+                                            },
+                                            value_span.clone(),
+                                        )),
+                                    },
+                                    value_span.clone(),
+                                ),
+                            },
+                            span,
+                        )
+                    }
+                    None => (Statement::Decl { pattern, value }, span),
+                }
+            },
+        );
 
     let program = choice((
         decl,
@@ -970,6 +1043,109 @@ mod tests {
                         ),
                     ),
                     0..10,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn if_else() {
+        insta::assert_debug_snapshot!(parse("if (true) { 5 } else { 10 }"), @r###"
+        Program {
+            body: [
+                (
+                    Expr(
+                        (
+                            If {
+                                cond: (
+                                    Lit {
+                                        literal: Bool(
+                                            "true",
+                                        ),
+                                    },
+                                    4..8,
+                                ),
+                                consequent: (
+                                    Lit {
+                                        literal: Num(
+                                            "5",
+                                        ),
+                                    },
+                                    12..13,
+                                ),
+                                alternate: (
+                                    Lit {
+                                        literal: Num(
+                                            "10",
+                                        ),
+                                    },
+                                    23..25,
+                                ),
+                            },
+                            0..27,
+                        ),
+                    ),
+                    0..27,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn recursive_decl() {
+        insta::assert_debug_snapshot!(parse("let rec f = () => f()"), @r###"
+        Program {
+            body: [
+                (
+                    Decl {
+                        pattern: (
+                            Ident {
+                                name: "f",
+                            },
+                            8..9,
+                        ),
+                        value: (
+                            Fix {
+                                expr: (
+                                    Lam {
+                                        args: [
+                                            (
+                                                Ident {
+                                                    name: "f",
+                                                },
+                                                8..9,
+                                            ),
+                                        ],
+                                        body: (
+                                            Lam {
+                                                args: [],
+                                                body: (
+                                                    App {
+                                                        lam: (
+                                                            Ident {
+                                                                name: "f",
+                                                            },
+                                                            18..19,
+                                                        ),
+                                                        args: [],
+                                                    },
+                                                    18..21,
+                                                ),
+                                                is_async: false,
+                                            },
+                                            12..21,
+                                        ),
+                                        is_async: false,
+                                    },
+                                    12..21,
+                                ),
+                            },
+                            12..21,
+                        ),
+                    },
+                    0..21,
                 ),
             ],
         }

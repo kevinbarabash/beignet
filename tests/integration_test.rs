@@ -26,7 +26,16 @@ fn infer_prog(src: &str) -> (Program, Env) {
     let result = lexer().parse(src).unwrap();
     let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
     let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-    let prog = token_parser(&spans).parse(tokens).unwrap();
+    let result = token_parser(&spans).parse(tokens);
+    let prog = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        },
+    };
+    // println!("prog = {:#?}", &prog);
+    // let prog = token_parser(&spans).parse(tokens).unwrap();
     let env = crochet::infer::infer_prog(env, &prog);
     
     (prog, env)
@@ -128,7 +137,7 @@ fn infer_skk() {
     "#;
     let (_, env) = infer_prog(src);
     let result = format!("{}", env.get("I").unwrap());
-    assert_eq!(result, "<T5>(T5) => T5");
+    assert_eq!(result, "<T11>(T11) => T11");
 }
 
 #[test]
@@ -167,4 +176,27 @@ fn type_debug_trait() {
     });
 
     assert_eq!(format!("{}", t), "(number) => number");
+}
+
+#[test]
+fn infer_if_else_without_widening() {
+    let (_, env) = infer_prog("let x = if (true) { 5 } else { 5 }");
+    let result = format!("{}", env.get("x").unwrap());
+    assert_eq!(result, "5");
+}
+
+#[test] #[ignore]
+fn infer_if_else_with_widening() {
+    // TODO: implement type widening for number literals
+    let (_, env) = infer_prog("let x = if (true) { 5 } else { 10 }");
+    let result = format!("{}", env.get("x").unwrap());
+    assert_eq!(result, "5");
+}
+
+#[test]
+fn infer_let_rec_until() {
+    let src = "let rec until = (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) }";
+    let (_, env) = infer_prog(src);
+    let result = format!("{}", env.get("until").unwrap());
+    assert_eq!(result, "<T7>((T7) => boolean, (T7) => T7, T7) => T7");
 }

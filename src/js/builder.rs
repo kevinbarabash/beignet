@@ -99,6 +99,12 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
 
             Expression::Binary { op, left, right }
         }
+        syntax::Expr::Fix { expr: _expr } => todo!(),
+        syntax::Expr::If {
+            cond: _cond,
+            consequent: _cons,
+            alternate: _alt,
+        } => todo!(),
     }
 }
 
