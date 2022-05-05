@@ -187,6 +187,7 @@ pub fn token_parser(
                 let start = source_spans.get(token_span.start).unwrap().start;
                 let span = start..body.1.end;
                 match rec {
+                    // TODO: implement parsing of let-rec inside functions
                     Some(_) => todo!(),
                     None => (
                         Expr::Let {
