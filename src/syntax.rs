@@ -24,8 +24,16 @@ pub enum Expr {
         lam: Box<WithSpan<Expr>>,
         args: Vec<WithSpan<Expr>>,
     },
+    Fix {
+        expr: Box<WithSpan<Expr>>,
+    },
     Ident {
         name: String,
+    },
+    If {
+        cond: Box<WithSpan<Expr>>,
+        consequent: Box<WithSpan<Expr>>,
+        alternate: Box<WithSpan<Expr>>,
     },
     Lam {
         args: Vec<WithSpan<BindingIdent>>,

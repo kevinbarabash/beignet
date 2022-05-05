@@ -99,6 +99,27 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
 
             Expression::Binary { op, left, right }
         }
+        syntax::Expr::Fix { expr } => match expr.as_ref() {
+            (syntax::Expr::Lam { body, .. }, _) => {
+                build_expr(&body.0)
+            },
+            _ => panic!("Fix should only wrap a lambda"),
+        },
+        syntax::Expr::If {
+            cond: _cond,
+            consequent: _cons,
+            alternate: _alt,
+        } => {
+            // TODO: convert an if-else expression in crochet to something
+            // that can be represented in JavaScript.  We can use nested ternaries
+            // and sequences together to implement this.  Sequences help, because
+            // in JavaScript, the last item in the sequence is the value of the 
+            // expression.  Sequences aren't quite enough in the situation where
+            // the consequent or alternate are use `let`.  In those situations we
+            // end up having to introduce a variable before the `if-else` and then
+            // set that variable's value at the end of the consequent and alternate.
+            todo!()
+        },
     }
 }
 

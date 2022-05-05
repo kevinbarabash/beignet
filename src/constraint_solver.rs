@@ -25,6 +25,12 @@ fn solver(u: Unifier, ctx: &Context) -> Subst {
 
     let rest = &cs[1..]; // const [_ , ...rest] = cs;
 
+    // println!("-----------");
+    // println!("constraints:");
+    // for Constraint {types: (left, right)} in cs.iter() {
+    //     println!("{left} = {right}")
+    // }
+
     match cs.get(0) {
         Some(c) => {
             // su1 represents new substitutions from unifying the first constraint in cs.

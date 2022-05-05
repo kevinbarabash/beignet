@@ -6,13 +6,17 @@ pub enum Token {
     Ident(String),
 
     // keywords
-    Let,
+    Else,
+    If,
     In,
+    Let,
+    Rec,
 
     // literals
     Num(String), // We use string instead of f64 b/c f64 isn't hashable
     Str(String),
-    // TODO: boolean
+    True,
+    False,
 
     // operators
     Minus,
@@ -24,6 +28,8 @@ pub enum Token {
     // punct
     OpenParen,
     CloseParen,
+    OpenBrace,
+    CloseBrace,
     Comma,
     Semi,
     FatArrow,
@@ -39,7 +45,12 @@ impl fmt::Display for Token {
             Token::Plus => write!(f, "+"),
             Token::Times => write!(f, "*"),
             Token::Div => write!(f, "/"),
+            Token::Else => write!(f, "else"),
+            Token::If => write!(f, "if"),
             Token::Let => write!(f, "let"),
+            Token::Rec => write!(f, "rec"),
+            Token::OpenBrace => write!(f, "{{"),
+            Token::CloseBrace => write!(f, "}}"),
             Token::OpenParen => write!(f, "("),
             Token::CloseParen => write!(f, ")"),
             Token::Eq => write!(f, "="),
@@ -47,6 +58,8 @@ impl fmt::Display for Token {
             Token::Semi => write!(f, ";"),
             Token::FatArrow => write!(f, "=>"),
             Token::In => write!(f, "in"),
+            Token::True => write!(f, "true"),
+            Token::False => write!(f, "false"),
         }
     }
 }
@@ -81,6 +94,8 @@ pub fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
         just("=").to(Token::Eq),
         just("(").to(Token::OpenParen),
         just(")").to(Token::CloseParen),
+        just("{").to(Token::OpenBrace),
+        just("}").to(Token::CloseBrace),
         just(";").to(Token::Semi),
     ));
 
@@ -89,6 +104,11 @@ pub fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
     let word = ident.map(|s: String| match s.as_str() {
         "let" => Token::Let,
         "in" => Token::In,
+        "if" => Token::If,
+        "else" => Token::Else,
+        "rec" => Token::Rec,
+        "true" => Token::True,
+        "false" => Token::False,
         _ => Token::Ident(s.clone()),
     });
 
