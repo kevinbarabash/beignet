@@ -15,9 +15,9 @@ use wasm_bindgen::prelude::*;
 use std::collections::HashMap;
 
 use context::Env;
-use infer::{infer_prog};
+use infer::infer_prog;
 use syntax::{Pattern, Program};
-use ts::convert::{extend_scheme};
+use ts::convert::convert_scheme;
 
 #[wasm_bindgen]
 extern "C" {
@@ -70,7 +70,7 @@ fn build_d_ts(env: &Env, prog: &Program) -> String {
                     Pattern::Ident { name } => name,
                 };
                 let scheme = env.get(name).unwrap();
-                let result = extend_scheme(&scheme, Some(&expr));
+                let result = convert_scheme(&scheme, Some(&expr));
                 let line = format!("export declare const {name} = {result};");
                 lines.push(line.to_owned());
             },

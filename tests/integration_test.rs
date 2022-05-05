@@ -8,7 +8,7 @@ use crochet::js::printer::*;
 use crochet::lexer::lexer;
 use crochet::parser::token_parser;
 use crochet::syntax::{Pattern, Program};
-use crochet::ts::convert::extend_scheme;
+use crochet::ts::convert::convert_scheme;
 use crochet::types::*;
 
 fn infer(input: &str) -> String {
@@ -56,7 +56,7 @@ fn build_d_ts(env: &Env, prog: &Program) -> String {
                     Pattern::Ident { name } => name,
                 };
                 let scheme = env.get(name).unwrap();
-                let result = extend_scheme(&scheme, Some(&expr));
+                let result = convert_scheme(&scheme, Some(&expr));
                 let line = format!("export declare const {name} = {result};");
                 lines.push(line.to_owned());
             }
