@@ -1,4 +1,4 @@
-use itertools::join;
+use itertools::{join};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
@@ -45,7 +45,9 @@ pub struct TVar {
 impl fmt::Display for TVar {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { id, .. } = self;
-        write!(f, "T{}", id)
+        let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
+        let id = chars.get(id.to_owned() as usize).unwrap();
+        write!(f, "{}", id)
     }
 }
 
@@ -140,13 +142,17 @@ pub struct Scheme {
 impl fmt::Display for Scheme {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Scheme { qualifiers, ty } = self;
+        let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
 
         if qualifiers.is_empty() {
             write!(f, "{}", ty)
         } else {
             let mut quals = qualifiers.clone();
             quals.sort();
-            write!(f, "<{}>{}", join(quals.iter().map(|id| format!("T{id}")), ", "), ty)
+            write!(f, "<{}>{}", join(quals.iter().map(|id| {
+                let id = chars.get(id.to_owned() as usize).unwrap();
+                format!("{id}")
+            }), ", "), ty)
         }
     }
 }

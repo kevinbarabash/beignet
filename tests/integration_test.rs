@@ -74,7 +74,7 @@ fn infer_number_literal() {
 
 #[test]
 fn infer_lam() {
-    assert_eq!(infer("(x) => x"), "<T0>(T0) => T0");
+    assert_eq!(infer("(x) => x"), "<A>(A) => A");
 }
 
 #[test]
@@ -99,7 +99,7 @@ fn infer_fn_param() {
 fn infer_fn_param_used_with_multiple_other_params() {
     assert_eq!(
         infer("(f, x, y) => f(x) + f(y)"),
-        "<T0>((T0) => number, T0, T0) => number"
+        "<A>((A) => number, A, A) => number"
     );
 }
 
@@ -107,38 +107,37 @@ fn infer_fn_param_used_with_multiple_other_params() {
 fn infer_i_combinator() {
     let (_, env) = infer_prog("let I = (x) => x");
     let result = format!("{}", env.get("I").unwrap());
-    assert_eq!(result, "<T0>(T0) => T0");
+    assert_eq!(result, "<A>(A) => A");
 }
 
 #[test]
 fn infer_k_combinator_not_curried() {
     let (_, env) = infer_prog("let K = (x, y) => x");
     let result = format!("{}", env.get("K").unwrap());
-    assert_eq!(result, "<T0, T1>(T0, T1) => T0");
+    assert_eq!(result, "<A, B>(A, B) => A");
 }
 
 #[test]
 fn infer_s_combinator_not_curried() {
     let (_, env) = infer_prog("let S = (f, g, x) => f(x, g(x))");
     let result = format!("{}", env.get("S").unwrap());
-    assert_eq!(result, "<T0, T1, T2>((T0, T1) => T2, (T0) => T1, T0) => T2");
+    assert_eq!(result, "<A, B, C>((A, B) => C, (A) => B, A) => C");
 }
 
 #[test]
 fn infer_k_combinator_curried() {
     let (_, env) = infer_prog("let K = (x) => (y) => x");
     let result = format!("{}", env.get("K").unwrap());
-    assert_eq!(result, "<T0, T1>(T0) => (T1) => T0");
+    assert_eq!(result, "<A, B>(A) => (B) => A");
 }
 
 #[test]
 fn infer_s_combinator_curried() {
     let (_, env) = infer_prog("let S = (f) => (g) => (x) => f(x)(g(x))");
     let result = format!("{}", env.get("S").unwrap());
-    // "<a, b, c>((a) => (b) => c) => ((a) => b) => (a) => c"
     assert_eq!(
         result,
-        "<T0, T1, T2>((T0) => (T1) => T2) => ((T0) => T1) => (T0) => T2"
+        "<A, B, C>((A) => (B) => C) => ((A) => B) => (A) => C"
     );
 }
 
@@ -151,7 +150,7 @@ fn infer_skk() {
     "#;
     let (_, env) = infer_prog(src);
     let result = format!("{}", env.get("I").unwrap());
-    assert_eq!(result, "<T0>(T0) => T0");
+    assert_eq!(result, "<A>(A) => A");
 }
 
 #[test]
@@ -213,7 +212,7 @@ fn infer_let_rec_until() {
     let src = "let rec until = (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) }";
     let (_, env) = infer_prog(src);
     let result = format!("{}", env.get("until").unwrap());
-    assert_eq!(result, "<T0>((T0) => boolean, (T0) => T0, T0) => T0");
+    assert_eq!(result, "<A>((A) => boolean, (A) => A, A) => A");
 }
 
 #[test]
@@ -228,7 +227,7 @@ fn codegen_let_rec() {
     export {f};
     "###);
 
-    insta::assert_snapshot!(build_d_ts(&env, &prog), @"export declare const f = <T0>() => T0;");
+    insta::assert_snapshot!(build_d_ts(&env, &prog), @"export declare const f = <A>() => A;");
 }
 
 #[test]
