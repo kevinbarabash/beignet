@@ -22,8 +22,13 @@ pub enum TsType {
 
 impl fmt::Display for TsQualifiedType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
+
         if self.type_params.len() > 0 {
-            let type_params = self.type_params.iter().map(|i| format!("T{i}")).join(", ");
+            let type_params = self.type_params.iter().map(|id| {
+                let id = chars.get(id.to_owned() as usize).unwrap();
+                format!("{id}")
+            }).join(", ");
             write!(f, "<{type_params}>{}", self.ty)
         } else {
             write!(f, "{}", self.ty)
