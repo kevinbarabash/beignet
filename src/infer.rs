@@ -2,7 +2,7 @@ use super::constraint_solver::{run_solve, Constraint};
 use super::substitutable::*;
 use super::types::*;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
 
 // TODO: adopt immutable collections: https://github.com/bodil/im-rs
@@ -130,13 +130,37 @@ pub fn infer_expr(ctx: &Context, expr: &WithSpan<Expr>) -> Scheme {
 
 fn close_over(ty: &Type) -> Scheme {
     let empty_env = Env::new();
-    // TODO: normalize the result so that type params start at a1
     normalize(&generalize(&empty_env, ty))
 }
 
 fn normalize(sc: &Scheme) -> Scheme {
-    // TODO: implement this
-    sc.to_owned()
+    let body = &sc.ty;
+    let keys = body.ftv();
+    let mut keys: Vec<_> = keys.iter().cloned().collect();
+    keys.sort();
+    let mapping: HashMap<i32, Type> = keys
+        .iter()
+        .enumerate()
+        .map(|(index, key)| (key.to_owned(), Type::Var(TVar { id: index as i32 })))
+        .collect();
+
+    fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>) -> Type {
+        match ty {
+            Type::Var(TVar { id }) => mapping.get(&id).unwrap().to_owned(),
+            Type::Lam(TLam { args, ret }) => {
+                let args: Vec<_> = args.iter().map(|arg| norm_type(arg, mapping)).collect();
+                let ret = Box::from(norm_type(ret, mapping));
+                Type::Lam(TLam { args, ret })
+            }
+            Type::Prim(_) => ty.to_owned(),
+            Type::Lit(_) => ty.to_owned(),
+        }
+    }
+
+    Scheme {
+        qualifiers: (0..keys.len()).map(|x| x as i32).collect(),
+        ty: norm_type(body, &mapping),
+    }
 }
 
 fn generalize(env: &Env, ty: &Type) -> Scheme {
@@ -215,7 +239,7 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
             constraints.extend(cs3);
             constraints.push(Constraint { types: (t1, bool) });
             constraints.push(Constraint { types: (t2, t3) });
-            
+
             (result_type, constraints)
         }
         (Expr::Lam { args, body, .. }, _) => {
