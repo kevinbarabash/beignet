@@ -222,7 +222,9 @@ fn codegen_let_rec() {
     let js_tree = build_js(&prog);
 
     insta::assert_snapshot!(print_js(&js_tree), @r###"
-    const f = () => f();
+    const f = () => {
+        return f();
+    };
 
     export {f};
     "###);
