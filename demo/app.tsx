@@ -23,6 +23,13 @@ export const App = () => {
       "let add = (a, b) => a + b",
       "let sub = (a, b) => a - b",
       "let foo = (f, x) => f(x) + x",
+      "",
+      "let baz = if (true) {",
+      "  let z = 5 in",
+      "  z",
+      "} else {",
+      "  5",
+      "}",
     ].join("\n");
   });
 

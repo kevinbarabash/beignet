@@ -4,15 +4,19 @@ use super::ast::*;
 
 pub fn print_js(prog: &Program) -> String {
     // TODO: export top-level declarations using `export {foo, bar, baz$0 as baz}` syntax
-    let decls: Vec<_> = prog.body.iter().filter_map(|stmt| {
-        if let Statement::Decl { pattern, .. } = stmt {
-            match pattern {
-                Pattern::Ident { name } => Some(name.to_owned()),
+    let decls: Vec<_> = prog
+        .body
+        .iter()
+        .filter_map(|stmt| {
+            if let Statement::Decl { pattern, .. } = stmt {
+                match pattern {
+                    Pattern::Ident { name } => Some(name.to_owned()),
+                }
+            } else {
+                None
             }
-        } else {
-            None
-        }
-    }).collect();
+        })
+        .collect();
 
     let body = prog
         .body
@@ -87,7 +91,8 @@ pub fn print_expr(expr: &Expression, level: &u32) -> String {
         }
         Expression::Function { params, body } => {
             let params = params.iter().map(|param| print_param(param)).join(", ");
-            let wrap = body.len() <= 1;
+            // let wrap = body.len() <= 1;
+            let wrap = false;
             let new_level = if wrap { *level } else { *level + 1 };
             let body = body
                 .iter()
@@ -157,6 +162,27 @@ pub fn print_expr(expr: &Expression, level: &u32) -> String {
             };
             let arg = print_expr(arg, level);
             format!("{op}{arg}")
+        }
+        Expression::IfElse {
+            cond,
+            consequent,
+            alternate,
+        } => {
+            let cond = print_expr(&cond.as_ref(), level);
+            let new_level = *level + 1;
+            let consequent = consequent
+                .iter()
+                .map(|child| print_statement(child, &new_level))
+                .join("\n");
+            let alternate = alternate
+                .iter()
+                .map(|child| print_statement(child, &new_level))
+                .join("\n");
+            format!(
+                "if ({cond}) {{\n{consequent}\n{}}} else {{\n{alternate}\n{}}}",
+                indent(level),
+                indent(level)
+            )
         }
     }
 }

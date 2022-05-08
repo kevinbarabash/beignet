@@ -158,7 +158,12 @@ pub fn token_parser(
 
         let lam = param_list
             .then_ignore(just(Token::FatArrow))
-            .then(expr.clone())
+            .then(
+                choice((
+                    expr.clone().delimited_by(just(Token::OpenBrace), just(Token::CloseBrace)),
+                    expr.clone(),
+                )),
+            )
             .map_with_span(|(args, body), token_span: Span| {
                 let start = source_spans.get(token_span.start).unwrap().start;
                 let end = source_spans.get(token_span.end - 1).unwrap().end;
