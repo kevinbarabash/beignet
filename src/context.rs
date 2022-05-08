@@ -1,6 +1,6 @@
 use super::literal::Literal;
 use super::substitutable::*;
-use super::types::{self, Scheme, Type};
+use super::types::{self, Scheme, Type, TypeKind};
 
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -85,6 +85,19 @@ impl Context {
             id: self.fresh_id(),
             frozen: false,
             kind: types::TypeKind::Union(types.to_owned()),
+        }
+    }
+    pub fn obj(&self, properties: &[types::TProp]) -> Type {
+        Type {
+            id: self.fresh_id(),
+            frozen: false,
+            kind: TypeKind::Obj(properties.to_vec()),
+        }
+    }
+    pub fn prop(&self, name: &str, ty: Type) -> types::TProp {
+        types::TProp {
+            name: name.to_owned(),
+            ty,
         }
     }
 }

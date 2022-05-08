@@ -2,7 +2,7 @@ use chumsky::prelude::*;
 
 use super::lexer::Token;
 use super::literal::Literal;
-use super::syntax::{BinOp, BindingIdent, Expr, Pattern, Program, Statement};
+use super::syntax::{BinOp, BindingIdent, Expr, Pattern, Program, Statement, Property};
 
 pub type Span = std::ops::Range<usize>;
 
@@ -18,6 +18,7 @@ pub fn token_parser(
     let r#false =
         select! { Token::False => Expr::Lit { literal: Literal::Bool(String::from("false")) } };
     let r#str = select! { Token::Str(value) => Expr::Lit { literal: Literal::Str(value) } };
+    let prop_name = select! { Token::Ident(name) => name };
 
     let add_span_info = |node: Expr, token_span: Span| {
         let start = source_spans.get(token_span.start).unwrap().start;
@@ -57,6 +58,36 @@ pub fn token_parser(
                 )
             });
 
+        let prop = prop_name
+            .then_ignore(just(Token::Colon))
+            .then(expr.clone())
+            .map_with_span(|(name, value), token_span: Span| {
+                let start = source_spans.get(token_span.start).unwrap().start;
+                let end = source_spans.get(token_span.end - 1).unwrap().end;
+                (
+                    Property {
+                        name,
+                        value,
+                    },
+                    start..end
+                )
+            });
+
+        let obj = prop
+            .separated_by(just(Token::Comma))
+            .allow_trailing()
+            .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace))
+            .map_with_span(|properties, token_span: Span| {
+                let start = source_spans.get(token_span.start).unwrap().start;
+                let end = source_spans.get(token_span.end - 1).unwrap().end;
+                (
+                    Expr::Obj {
+                        properties
+                    },
+                    start..end
+                )
+            });
+
         let atom = choice((
             if_else,
             num,
@@ -64,6 +95,7 @@ pub fn token_parser(
             r#true,
             r#false,
             ident,
+            obj,
             expr.clone()
                 .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
         ));
@@ -158,12 +190,11 @@ pub fn token_parser(
 
         let lam = param_list
             .then_ignore(just(Token::FatArrow))
-            .then(
-                choice((
-                    expr.clone().delimited_by(just(Token::OpenBrace), just(Token::CloseBrace)),
-                    expr.clone(),
-                )),
-            )
+            .then(choice((
+                expr.clone()
+                    .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace)),
+                expr.clone(),
+            )))
             .map_with_span(|(args, body), token_span: Span| {
                 let start = source_spans.get(token_span.start).unwrap().start;
                 let end = source_spans.get(token_span.end - 1).unwrap().end;
@@ -1152,6 +1183,56 @@ mod tests {
                         ),
                     },
                     0..21,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn simple_obj() {
+        insta::assert_debug_snapshot!(parse("{x: 5, y: 10}"), @r###"
+        Program {
+            body: [
+                (
+                    Expr(
+                        (
+                            Obj {
+                                properties: [
+                                    (
+                                        Property {
+                                            name: "x",
+                                            value: (
+                                                Lit {
+                                                    literal: Num(
+                                                        "5",
+                                                    ),
+                                                },
+                                                4..5,
+                                            ),
+                                        },
+                                        1..5,
+                                    ),
+                                    (
+                                        Property {
+                                            name: "y",
+                                            value: (
+                                                Lit {
+                                                    literal: Num(
+                                                        "10",
+                                                    ),
+                                                },
+                                                10..12,
+                                            ),
+                                        },
+                                        7..12,
+                                    ),
+                                ],
+                            },
+                            0..13,
+                        ),
+                    ),
+                    0..13,
                 ),
             ],
         }

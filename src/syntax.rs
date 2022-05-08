@@ -53,6 +53,9 @@ pub enum Expr {
         left: Box<WithSpan<Expr>>,
         right: Box<WithSpan<Expr>>,
     },
+    Obj {
+        properties: Vec<WithSpan<Property>>,
+    },
 }
 
 // TODO: rename this to something else since we can't use it for let bindings
@@ -74,4 +77,10 @@ pub enum BinOp {
     Sub,
     Mul,
     Div,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Property {
+    pub name: String,
+    pub value: WithSpan<Expr>,
 }

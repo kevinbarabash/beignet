@@ -68,6 +68,23 @@ impl Substitutable for Type {
                     kind: TypeKind::Union(types.iter().map(|ty| ty.apply(sub)).collect()),
                 },
             },
+            Type {
+                id,
+                frozen,
+                kind: TypeKind::Obj(props),
+            } => match sub.get(id) {
+                Some(replacement) => replacement.to_owned(),
+                None => Type {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    kind: TypeKind::Obj(props.iter().map(|prop| {
+                        TProp {
+                            name: prop.name.clone(),
+                            ty: prop.ty.apply(sub),
+                        }
+                    }).collect()),
+                }
+            }
         }
     }
     fn ftv(&self) -> HashSet<i32> {
@@ -97,6 +114,10 @@ impl Substitutable for Type {
                 kind: TypeKind::Union(types),
                 ..
             } => types.iter().flat_map(|ty| ty.ftv()).collect(),
+            Type {
+                kind: TypeKind::Obj(props),
+                ..
+            } => props.iter().flat_map(|prop| prop.ty.ftv()).collect(),
         }
     }
 }
@@ -243,6 +264,23 @@ fn normalize(sc: &Scheme) -> Scheme {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     kind: TypeKind::Union(types),
+                }
+            }
+            Type {
+                id,
+                frozen,
+                kind: TypeKind::Obj(props),
+            } => {
+                let props = props.iter().map(|prop| {
+                    TProp {
+                        name: prop.name.clone(),
+                        ty: norm_type(&prop.ty, mapping)
+                    }
+                }).collect();
+                Type {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    kind: TypeKind::Obj(props),
                 }
             }
         }
@@ -404,6 +442,18 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
             cs.push(c);
 
             (tv, cs)
+        }
+        (Expr::Obj { properties }, _) => {
+            let mut all_cs: Vec<Constraint> = Vec::new();
+            let properties: Vec<_> = properties.iter().map(|(p, _)| {
+                let (ty, cs) = infer(&p.value, ctx);
+                all_cs.extend(cs);
+                ctx.prop(&p.name, ty)
+            }).collect();
+
+            let obj_ty = ctx.obj(&properties);
+
+            (obj_ty, all_cs)
         }
     }
 }

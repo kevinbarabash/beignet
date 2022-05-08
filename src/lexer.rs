@@ -32,6 +32,7 @@ pub enum Token {
     CloseBrace,
     Comma,
     Semi,
+    Colon,
     FatArrow,
 }
 
@@ -56,6 +57,7 @@ impl fmt::Display for Token {
             Token::Eq => write!(f, "="),
             Token::Comma => write!(f, ","),
             Token::Semi => write!(f, ";"),
+            Token::Colon => write!(f, ":"),
             Token::FatArrow => write!(f, "=>"),
             Token::In => write!(f, "in"),
             Token::True => write!(f, "true"),
@@ -97,6 +99,7 @@ pub fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
         just("{").to(Token::OpenBrace),
         just("}").to(Token::CloseBrace),
         just(";").to(Token::Semi),
+        just(":").to(Token::Colon),
     ));
 
     let ident = text::ident::<char, Simple<char>>();
