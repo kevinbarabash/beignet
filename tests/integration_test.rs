@@ -9,7 +9,6 @@ use crochet::lexer::lexer;
 use crochet::parser::token_parser;
 use crochet::syntax::{Pattern, Program};
 use crochet::ts::convert::convert_scheme;
-use crochet::types::*;
 
 fn infer(input: &str) -> String {
     let env: Env = HashMap::new();
@@ -178,17 +177,6 @@ fn infer_decl() {
     export declare const foo = (a: number, b: number) => number;
     export declare const bar = "hello";
     "###);
-}
-
-#[test]
-fn type_debug_trait() {
-    let t = Type::from(TLam {
-        // TODO: add From trait impls to go from Primitive to Type
-        args: vec![Type::Prim(Primitive::Num)],
-        ret: Box::new(Type::Prim(Primitive::Num)),
-    });
-
-    assert_eq!(format!("{}", t), "(number) => number");
 }
 
 #[test]

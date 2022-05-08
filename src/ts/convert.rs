@@ -1,5 +1,5 @@
 use super::super::syntax::{BindingIdent, Expr};
-use super::super::types::{Scheme, TLam, Type};
+use super::super::types::{Scheme, TLam, Type, TypeKind};
 use super::ast::{Param, TsQualifiedType, TsType};
 
 /// Converts a Scheme to a TsQualifiedTyepe for eventual export to .d.ts.
@@ -15,13 +15,13 @@ pub fn convert_scheme(scheme: &Scheme, expr: Option<&Expr>) -> TsQualifiedType {
 /// `expr` should be the original expression that `ty` was inferred
 /// from if it exists.
 pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
-    match ty {
-        Type::Var(tvar) => TsType::Var(tvar.to_owned()),
-        Type::Prim(prim) => TsType::Prim(prim.to_owned()),
-        Type::Lit(lit) => TsType::Lit(lit.to_owned()),
+    match &ty.kind {
+        TypeKind::Var(tvar) => TsType::Var(tvar.to_owned()),
+        TypeKind::Prim(prim) => TsType::Prim(prim.to_owned()),
+        TypeKind::Lit(lit) => TsType::Lit(lit.to_owned()),
         // This is used to copy the names of args from the expression
         // over to the lambda's type.
-        Type::Lam(TLam { args, ret }) => {
+        TypeKind::Lam(TLam { args, ret }) => {
             match expr {
                 // TODO: handle is_async
                 Some(Expr::Lam {

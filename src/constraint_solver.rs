@@ -54,20 +54,20 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
     let (t1, t2) = c.types.clone();
 
     // TODO: use references for t1 and t2 here
-    match (t1.clone(), t2.clone()) {
-        (Type::Var(tv), ty) => bind(&tv, &ty, ctx),
-        (ty, Type::Var(tv)) => bind(&tv, &ty, ctx),
-        (Type::Prim(prim1), Type::Prim(prim2)) if prim1 == prim2 => Subst::new(),
-        (Type::Lit(lit1), Type::Lit(lit2)) if lit1 == lit2 => Subst::new(),
-        (Type::Lam(lam1), Type::Lam(lam2)) => unify_lams(&lam1, &lam2, ctx),
+    match (&t1.kind, &t2.kind) {
+        (TypeKind::Var(tv), _) => bind(&tv, &t2, ctx),
+        (_, TypeKind::Var(tv)) => bind(&tv, &t1, ctx),
+        (TypeKind::Prim(prim1), TypeKind::Prim(prim2)) if prim1 == prim2 => Subst::new(),
+        (TypeKind::Lit(lit1), TypeKind::Lit(lit2)) if lit1 == lit2 => Subst::new(),
+        (TypeKind::Lam(lam1), TypeKind::Lam(lam2)) => unify_lams(&lam1, &lam2, ctx),
 
         _ => {
             if is_subtype(&t1, &t2) {
-                return Subst::new()
+                return Subst::new();
             }
 
-            panic!("unification failed")   
-        },
+            panic!("unification failed")
+        }
     }
 }
 
@@ -80,7 +80,7 @@ fn unify_lams(t1: &TLam, t2: &TLam, ctx: &Context) -> Subst {
     if t1.args.len() < t2.args.len() {
         let t2_partial = TLam {
             args: t2.args[..t1.args.len()].to_vec(),
-            ret: Box::from(Type::from(TLam {
+            ret: Box::from(ctx.from_lam(TLam {
                 args: t2.args[t1.args.len()..].to_vec(),
                 ret: t2.ret.clone(),
             })),
@@ -127,11 +127,11 @@ fn unify_many(cs: &[Constraint], ctx: &Context) -> Subst {
 }
 
 fn is_subtype(t1: &Type, t2: &Type) -> bool {
-    match (t1, t2) {
-        (Type::Lit(Literal::Num(_)), Type::Prim(Primitive::Num)) => true,
-        (Type::Lit(Literal::Str(_)), Type::Prim(Primitive::Str)) => true,
-        (Type::Lit(Literal::Bool(_)), Type::Prim(Primitive::Bool)) => true,
-        _ => false
+    match (&t1.kind, &t2.kind) {
+        (TypeKind::Lit(Literal::Num(_)), TypeKind::Prim(Primitive::Num)) => true,
+        (TypeKind::Lit(Literal::Str(_)), TypeKind::Prim(Primitive::Str)) => true,
+        (TypeKind::Lit(Literal::Bool(_)), TypeKind::Prim(Primitive::Bool)) => true,
+        _ => false,
     }
 }
 
@@ -140,7 +140,10 @@ fn bind(tv: &TVar, ty: &Type, _: &Context) -> Subst {
     // NOTE: This will require the use of the &Context
 
     match ty {
-        Type::Var(TVar { id, .. }) if id == &tv.id => Subst::new(),
+        Type {
+            kind: TypeKind::Var(TVar { id, .. }),
+            ..
+        } if id == &tv.id => Subst::new(),
         ty if ty.ftv().contains(&tv.id) => panic!("type var appears in type"),
         ty => {
             let mut subst = Subst::new();
