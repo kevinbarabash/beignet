@@ -24,12 +24,6 @@ impl fmt::Display for Primitive {
     }
 }
 
-// #[derive(Debug)]
-// struct Property {
-//     name: String,
-//     ty: Type,
-// }
-
 #[derive(Clone, Debug)]
 pub struct TLam {
     pub args: Vec<Type>,
@@ -44,12 +38,26 @@ impl fmt::Display for TLam {
 }
 
 #[derive(Clone, Debug)]
+pub struct TProp {
+    pub name: String,
+    pub ty: Type,
+}
+
+impl fmt::Display for TProp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self { name, ty } = self;
+        write!(f, "{name}: {ty}")
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum TypeKind {
     Var,
     Lam(TLam),
     Prim(Primitive),
     Lit(Literal),
     Union(Vec<Type>),
+    Obj(Vec<TProp>),
 }
 
 #[derive(Clone, Debug)]
@@ -71,6 +79,7 @@ impl fmt::Display for Type {
             Type {kind: TypeKind::Prim(prim), ..} => write!(f, "{}", prim),
             Type {kind: TypeKind::Lit(lit), ..} => write!(f, "{}", lit),
             Type {kind: TypeKind::Union(types), ..} => write!(f, "{}", join(types, " | ")),
+            Type {kind: TypeKind::Obj(props), ..} => write!(f, "{{{}}}", join(props, ", ")),
         }
     }
 }

@@ -142,6 +142,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                 args: vec![],
             }
         }
+        syntax::Expr::Obj { properties } => todo!(),
     }
 }
 

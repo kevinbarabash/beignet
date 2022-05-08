@@ -213,6 +213,16 @@ fn infer_let_rec_until() {
 }
 
 #[test]
+fn infer_obj() {
+    let src = r#"
+    let point = {x: 5, y: 10, msg: "Hello, world!"}
+    "#;
+    let (_, env) = infer_prog(src);
+    let result = format!("{}", env.get("point").unwrap());
+    assert_eq!(result, "{x: 5, y: 10, msg: \"Hello, world!\"}");
+}
+
+#[test]
 fn codegen_let_rec() {
     let src = "let rec f = () => f()";
     let (prog, env) = infer_prog(src);

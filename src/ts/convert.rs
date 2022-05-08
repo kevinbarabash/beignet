@@ -83,5 +83,6 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
             }
         }
         TypeKind::Union(types) => TsType::Union(types.iter().map(|ty| convert_type(ty, None)).collect()),
+        TypeKind::Obj(_) => todo!(),
     }
 }
