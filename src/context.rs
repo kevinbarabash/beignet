@@ -1,6 +1,6 @@
+use super::literal::Literal;
 use super::substitutable::*;
 use super::types::{self, Scheme, Type};
-use super::literal::Literal;
 
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -52,25 +52,39 @@ impl Context {
         id
     }
     pub fn fresh_tvar(&self) -> Type {
-        Type { id: self.fresh_id(), kind: types::TypeKind::Var }
+        Type {
+            id: self.fresh_id(),
+            frozen: false,
+            kind: types::TypeKind::Var,
+        }
     }
 
     pub fn from_lam(&self, lam: types::TLam) -> Type {
         types::Type {
             id: self.fresh_id(),
+            frozen: false,
             kind: types::TypeKind::Lam(lam),
         }
     }
     pub fn from_prim(&self, prim: types::Primitive) -> Type {
         types::Type {
             id: self.fresh_id(),
+            frozen: false,
             kind: types::TypeKind::Prim(prim),
         }
     }
     pub fn from_lit(&self, lit: Literal) -> Type {
         types::Type {
             id: self.fresh_id(),
+            frozen: false,
             kind: types::TypeKind::Lit(lit),
+        }
+    }
+    pub fn union(&self, types: &[Type]) -> Type {
+        types::Type {
+            id: self.fresh_id(),
+            frozen: false,
+            kind: types::TypeKind::Union(types.to_owned()),
         }
     }
 }

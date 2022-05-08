@@ -24,30 +24,50 @@ impl Substitutable for Constraint {
 
 impl Substitutable for Type {
     fn apply(&self, sub: &Subst) -> Type {
-        // TODO: lookup the `id` of the rest of the types in `sub`
         match self {
             Type {
                 id,
                 kind: TypeKind::Var,
+                ..
+            } => sub.get(id).unwrap_or(self).clone(),
+            // TODO: handle widening of lambdas
+            Type {
+                id,
+                frozen,
+                kind: TypeKind::Lam(TLam { args, ret }),
+            } => match sub.get(id) {
+                Some(replacement) => replacement.to_owned(),
+                None => Type {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    kind: TypeKind::Lam(TLam {
+                        args: args.iter().map(|arg| arg.apply(sub)).collect(),
+                        ret: Box::from(ret.apply(sub)),
+                    }),
+                },
+            },
+            Type {
+                id,
+                kind: TypeKind::Prim(_),
+                ..
             } => sub.get(id).unwrap_or(self).clone(),
             Type {
                 id,
-                kind: TypeKind::Lam(TLam { args, ret }),
-            } => Type {
-                id: id.to_owned(),
-                kind: TypeKind::Lam(TLam {
-                    args: args.iter().map(|arg| arg.apply(sub)).collect(),
-                    ret: Box::from(ret.apply(sub)),
-                }),
-            },
-            Type {
-                kind: TypeKind::Prim(_),
-                ..
-            } => self.clone(),
-            Type {
                 kind: TypeKind::Lit(_),
                 ..
-            } => self.clone(),
+            } => sub.get(id).unwrap_or(self).clone(),
+            Type {
+                id,
+                frozen,
+                kind: TypeKind::Union(types),
+            } => match sub.get(id) {
+                Some(replacement) => replacement.to_owned(),
+                None => Type {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    kind: TypeKind::Union(types.iter().map(|ty| ty.apply(sub)).collect()),
+                },
+            },
         }
     }
     fn ftv(&self) -> HashSet<i32> {
@@ -55,6 +75,7 @@ impl Substitutable for Type {
             Type {
                 id,
                 kind: TypeKind::Var,
+                ..
             } => HashSet::from([id.to_owned()]),
             Type {
                 kind: TypeKind::Lam(TLam { args, ret }),
@@ -72,6 +93,10 @@ impl Substitutable for Type {
                 kind: TypeKind::Lit(_),
                 ..
             } => HashSet::new(),
+            Type {
+                kind: TypeKind::Union(types),
+                ..
+            } => types.iter().flat_map(|ty| ty.ftv()).collect(),
         }
     }
 }
@@ -174,6 +199,7 @@ fn normalize(sc: &Scheme) -> Scheme {
                 Type {
                     id: index as i32,
                     kind: TypeKind::Var,
+                    frozen: false,
                 },
             )
         })
@@ -184,15 +210,18 @@ fn normalize(sc: &Scheme) -> Scheme {
             Type {
                 id,
                 kind: TypeKind::Var,
+                ..
             } => mapping.get(&id).unwrap().to_owned(),
             Type {
                 id,
+                frozen,
                 kind: TypeKind::Lam(TLam { args, ret }),
             } => {
                 let args: Vec<_> = args.iter().map(|arg| norm_type(arg, mapping)).collect();
                 let ret = Box::from(norm_type(ret, mapping));
                 Type {
                     id: id.to_owned(),
+                    frozen: frozen.to_owned(),
                     kind: TypeKind::Lam(TLam { args, ret }),
                 }
             }
@@ -204,6 +233,18 @@ fn normalize(sc: &Scheme) -> Scheme {
                 kind: TypeKind::Lit(_),
                 ..
             } => ty.to_owned(),
+            Type {
+                id,
+                frozen,
+                kind: TypeKind::Union(types),
+            } => {
+                let types = types.iter().map(|ty| norm_type(ty, mapping)).collect();
+                Type {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    kind: TypeKind::Union(types),
+                }
+            }
         }
     }
 

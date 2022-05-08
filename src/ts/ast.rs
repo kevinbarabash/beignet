@@ -1,4 +1,4 @@
-use itertools::Itertools;
+use itertools::{join, Itertools};
 use std::fmt;
 
 use super::super::literal::Literal;
@@ -18,6 +18,7 @@ pub enum TsType {
         params: Vec<Param>,
         ret: Box<TsType>,
     },
+    Union(Vec<TsType>)
 }
 
 impl fmt::Display for TsQualifiedType {
@@ -51,6 +52,7 @@ impl fmt::Display for TsType {
                     .join(", ");
                 write!(f, "({params}) => {ret}")
             }
+            TsType::Union(types) => write!(f, "{}", join(types, " | ")),
         }
     }
 }
