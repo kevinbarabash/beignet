@@ -91,6 +91,7 @@ pub fn print_expr(expr: &Expression, level: &u32) -> String {
         }
         Expression::Function { params, body } => {
             let params = params.iter().map(|param| print_param(param)).join(", ");
+            // TODO: Support arrow function shorthand
             // let wrap = body.len() <= 1;
             let wrap = false;
             let new_level = if wrap { *level } else { *level + 1 };
