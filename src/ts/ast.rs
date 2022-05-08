@@ -2,7 +2,7 @@ use itertools::Itertools;
 use std::fmt;
 
 use super::super::literal::Literal;
-use super::super::types::{Primitive, TVar};
+use super::super::types::{Primitive};
 
 pub struct TsQualifiedType {
     pub ty: TsType,
@@ -12,7 +12,7 @@ pub struct TsQualifiedType {
 #[derive(Debug)]
 pub enum TsType {
     Prim(Primitive),
-    Var(TVar),
+    Var(String),
     Lit(Literal),
     Func {
         params: Vec<Param>,
@@ -39,7 +39,7 @@ impl fmt::Display for TsQualifiedType {
 impl fmt::Display for TsType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TsType::Var(tv) => write!(f, "{}", tv),
+            TsType::Var(name) => write!(f, "{}", name),
             TsType::Prim(prim) => write!(f, "{}", prim),
             TsType::Lit(lit) => write!(f, "{}", lit),
             TsType::Func { params, ret } => {

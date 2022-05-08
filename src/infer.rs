@@ -26,25 +26,52 @@ impl Substitutable for Type {
     fn apply(&self, sub: &Subst) -> Type {
         // TODO: lookup the `id` of the rest of the types in `sub`
         match self {
-            Type::Var(TVar { id, .. }) => sub.get(id).unwrap_or(self).clone(),
-            Type::Lam(TLam { args, ret }) => Type::Lam(TLam {
-                args: args.iter().map(|arg| arg.apply(sub)).collect(),
-                ret: Box::from(ret.apply(sub)),
-            }),
-            Type::Prim(_) => self.clone(),
-            Type::Lit(_) => self.clone(),
+            Type {
+                id,
+                kind: TypeKind::Var,
+            } => sub.get(id).unwrap_or(self).clone(),
+            Type {
+                id,
+                kind: TypeKind::Lam(TLam { args, ret }),
+            } => Type {
+                id: id.to_owned(),
+                kind: TypeKind::Lam(TLam {
+                    args: args.iter().map(|arg| arg.apply(sub)).collect(),
+                    ret: Box::from(ret.apply(sub)),
+                }),
+            },
+            Type {
+                kind: TypeKind::Prim(_),
+                ..
+            } => self.clone(),
+            Type {
+                kind: TypeKind::Lit(_),
+                ..
+            } => self.clone(),
         }
     }
     fn ftv(&self) -> HashSet<i32> {
         match self {
-            Type::Var(tv) => HashSet::from([tv.id]),
-            Type::Lam(TLam { args, ret }) => {
+            Type {
+                id,
+                kind: TypeKind::Var,
+            } => HashSet::from([id.to_owned()]),
+            Type {
+                kind: TypeKind::Lam(TLam { args, ret }),
+                ..
+            } => {
                 let mut result: HashSet<_> = args.iter().flat_map(|a| a.ftv()).collect();
                 result.extend(ret.ftv());
                 result
             }
-            Type::Prim(_) => HashSet::new(),
-            Type::Lit(_) => HashSet::new(),
+            Type {
+                kind: TypeKind::Prim(_),
+                ..
+            } => HashSet::new(),
+            Type {
+                kind: TypeKind::Lit(_),
+                ..
+            } => HashSet::new(),
         }
     }
 }
@@ -141,19 +168,42 @@ fn normalize(sc: &Scheme) -> Scheme {
     let mapping: HashMap<i32, Type> = keys
         .iter()
         .enumerate()
-        .map(|(index, key)| (key.to_owned(), Type::Var(TVar { id: index as i32 })))
+        .map(|(index, key)| {
+            (
+                key.to_owned(),
+                Type {
+                    id: index as i32,
+                    kind: TypeKind::Var,
+                },
+            )
+        })
         .collect();
 
     fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>) -> Type {
         match ty {
-            Type::Var(TVar { id }) => mapping.get(&id).unwrap().to_owned(),
-            Type::Lam(TLam { args, ret }) => {
+            Type {
+                id,
+                kind: TypeKind::Var,
+            } => mapping.get(&id).unwrap().to_owned(),
+            Type {
+                id,
+                kind: TypeKind::Lam(TLam { args, ret }),
+            } => {
                 let args: Vec<_> = args.iter().map(|arg| norm_type(arg, mapping)).collect();
                 let ret = Box::from(norm_type(ret, mapping));
-                Type::Lam(TLam { args, ret })
+                Type {
+                    id: id.to_owned(),
+                    kind: TypeKind::Lam(TLam { args, ret }),
+                }
             }
-            Type::Prim(_) => ty.to_owned(),
-            Type::Lit(_) => ty.to_owned(),
+            Type {
+                kind: TypeKind::Prim(_),
+                ..
+            } => ty.to_owned(),
+            Type {
+                kind: TypeKind::Lit(_),
+                ..
+            } => ty.to_owned(),
         }
     }
 
@@ -185,39 +235,39 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
         (Expr::App { lam, args }, _) => {
             let (t_fn, cs_fn) = infer(lam, ctx);
             let (t_args, cs_args) = infer_many(args, ctx);
-            let tv = ctx.fresh();
+            let tv = ctx.fresh_tvar();
 
             let mut constraints = Vec::new();
             constraints.extend(cs_fn);
             constraints.extend(cs_args);
             constraints.push(Constraint {
                 types: (
-                    Type::from(TLam {
+                    ctx.from_lam(TLam {
                         args: t_args,
-                        ret: Box::new(Type::from(tv.clone())),
+                        ret: Box::new(tv.clone()),
                     }),
                     t_fn,
                 ),
             });
 
-            (Type::from(tv), constraints)
+            (tv, constraints)
         }
         (Expr::Fix { expr }, _) => {
             let (t, cs) = infer(expr, ctx);
-            let tv = ctx.fresh();
+            let tv = ctx.fresh_tvar();
             let mut constraints = Vec::new();
             constraints.extend(cs);
             constraints.push(Constraint {
                 types: (
-                    Type::from(TLam {
-                        args: vec![Type::from(&tv)],
-                        ret: Box::new(Type::from(&tv)),
+                    ctx.from_lam(TLam {
+                        args: vec![tv.clone()],
+                        ret: Box::new(tv.clone()),
                     }),
                     t,
                 ),
             });
 
-            (Type::from(tv), constraints)
+            (tv, constraints)
         }
         (
             Expr::If {
@@ -230,7 +280,7 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
             let (t1, cs1) = infer(cond, ctx);
             let (t2, cs2) = infer(consequent, ctx);
             let (t3, cs3) = infer(alternate, ctx);
-            let bool = Type::from(Primitive::Bool);
+            let bool = ctx.from_prim(Primitive::Bool);
 
             let result_type = t2.clone();
             let mut constraints = Vec::new();
@@ -244,7 +294,7 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
         }
         (Expr::Lam { args, body, .. }, _) => {
             // Creates a new type variable for each arg
-            let arg_tvs: Vec<_> = args.iter().map(|_| Type::Var(ctx.fresh())).collect();
+            let arg_tvs: Vec<_> = args.iter().map(|_| ctx.fresh_tvar()).collect();
             let mut new_ctx = ctx.clone();
             for (arg, tv) in args.iter().zip(arg_tvs.clone().into_iter()) {
                 let scheme = Scheme {
@@ -262,7 +312,7 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
             }
             let (ret_ty, cs) = infer(body, &new_ctx);
             ctx.state.count.set(new_ctx.state.count.get());
-            let lam_ty = Type::Lam(TLam {
+            let lam_ty = ctx.from_lam(TLam {
                 args: arg_tvs,
                 ret: Box::new(ret_ty),
             });
@@ -289,24 +339,24 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
 
             (t2.apply(&subs), vec![])
         }
-        (Expr::Lit { literal }, _) => (Type::from(literal), vec![]),
+        (Expr::Lit { literal }, _) => (ctx.from_lit(literal.to_owned()), vec![]),
         // TODO: check the `op` field when we introduce comparison operators
         (Expr::Op { left, right, .. }, _) => {
             let left = Box::as_ref(left);
             let right = Box::as_ref(right);
             let (ts, cs) = infer_many(&[left.clone(), right.clone()], ctx);
-            let tv = Type::from(ctx.fresh());
+            let tv = ctx.fresh_tvar();
 
             let mut cs = cs;
             let c = Constraint {
                 types: (
-                    Type::Lam(TLam {
+                    ctx.from_lam(TLam {
                         args: ts,
                         ret: Box::from(tv.clone()),
                     }),
-                    Type::Lam(TLam {
-                        args: vec![Type::from(Primitive::Num), Type::from(Primitive::Num)],
-                        ret: Box::from(Type::from(Primitive::Num)),
+                    ctx.from_lam(TLam {
+                        args: vec![ctx.from_prim(Primitive::Num), ctx.from_prim(Primitive::Num)],
+                        ret: Box::from(ctx.from_prim(Primitive::Num)),
                     }),
                 ),
             };

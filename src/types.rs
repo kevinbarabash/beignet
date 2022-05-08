@@ -1,6 +1,5 @@
-use itertools::{join};
+use itertools::join;
 use std::fmt;
-use std::hash::{Hash, Hasher};
 
 use super::literal::Literal;
 
@@ -11,12 +10,6 @@ pub enum Primitive {
     Str,
     Undefined,
     Null,
-}
-
-impl From<Primitive> for Type {
-    fn from(prim: Primitive) -> Self {
-        Type::Prim(prim)
-    }
 }
 
 impl fmt::Display for Primitive {
@@ -37,45 +30,6 @@ impl fmt::Display for Primitive {
 //     ty: Type,
 // }
 
-#[derive(Clone, Debug, PartialOrd, Ord)]
-pub struct TVar {
-    pub id: i32,
-}
-
-impl fmt::Display for TVar {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { id, .. } = self;
-        let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
-        let id = chars.get(id.to_owned() as usize).unwrap();
-        write!(f, "{}", id)
-    }
-}
-
-impl PartialEq for TVar {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-impl Eq for TVar {}
-
-impl Hash for TVar {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.id.hash(state);
-    }
-}
-
-impl From<TVar> for Type {
-    fn from(tvar: TVar) -> Self {
-        Type::Var(tvar)
-    }
-}
-
-impl From<&TVar> for Type {
-    fn from(tvar: &TVar) -> Self {
-        Type::Var(tvar.clone())
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct TLam {
     pub args: Vec<Type>,
@@ -89,47 +43,32 @@ impl fmt::Display for TLam {
     }
 }
 
-impl From<TLam> for Type {
-    fn from(tlam: TLam) -> Self {
-        Type::Lam(tlam)
-    }
-}
-
-impl From<&TLam> for Type {
-    fn from(tlam: &TLam) -> Self {
-        Type::Lam(tlam.clone())
-    }
-}
-
-// TODO: add `id` to each of these (maybe we could make having an `id` a trait)
 #[derive(Clone, Debug)]
-pub enum Type {
-    Var(TVar),
+pub enum TypeKind {
+    Var,
     Lam(TLam),
     Prim(Primitive),
     Lit(Literal),
 }
 
+#[derive(Clone, Debug)]
+pub struct Type {
+    pub id: i32,
+    pub kind: TypeKind,
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Type::Var(tv) => write!(f, "{}", tv),
-            Type::Lam(tlam) => write!(f, "{}", tlam),
-            Type::Prim(prim) => write!(f, "{}", prim),
-            Type::Lit(lit) => write!(f, "{}", lit),
+            Type {id, kind: TypeKind::Var, ..} => {
+                let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
+                let id = chars.get(id.to_owned() as usize).unwrap();
+                write!(f, "{}", id)
+            },
+            Type {kind: TypeKind::Lam(tlam), ..} => write!(f, "{}", tlam),
+            Type {kind: TypeKind::Prim(prim), ..} => write!(f, "{}", prim),
+            Type {kind: TypeKind::Lit(lit), ..} => write!(f, "{}", lit),
         }
-    }
-}
-
-impl From<Literal> for Type {
-    fn from(lit: Literal) -> Self {
-        Type::Lit(lit)
-    }
-}
-
-impl From<&Literal> for Type {
-    fn from(lit: &Literal) -> Self {
-        Type::Lit(lit.clone())
     }
 }
 
@@ -173,19 +112,5 @@ mod tests {
             String::from("5.0")
         );
         assert_eq!(format!("{}", Literal::from(true)), String::from("true"));
-    }
-
-    #[test]
-    fn test_fmt_type() {
-        assert_eq!(
-            format!("{}", Type::from(Literal::from("hello"))),
-            String::from("\"hello\""),
-        );
-
-        let ty = Type::Lam(TLam {
-            args: vec![Type::from(Primitive::Num), Type::from(Primitive::Bool)],
-            ret: Box::new(Type::from(Primitive::Num)),
-        });
-        assert_eq!(format!("{}", ty), "(number, boolean) => number");
     }
 }
