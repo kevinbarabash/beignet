@@ -187,12 +187,10 @@ fn infer_if_else_without_widening() {
 }
 
 #[test]
-#[ignore]
 fn infer_if_else_with_widening() {
-    // TODO: implement type widening for number literals
     let (_, env) = infer_prog("let x = if (true) { 5 } else { 10 }");
     let result = format!("{}", env.get("x").unwrap());
-    assert_eq!(result, "5");
+    assert_eq!(result, "5 | 10");
 }
 
 #[test]

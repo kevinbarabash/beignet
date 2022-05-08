@@ -49,11 +49,13 @@ pub enum TypeKind {
     Lam(TLam),
     Prim(Primitive),
     Lit(Literal),
+    Union(Vec<Type>),
 }
 
 #[derive(Clone, Debug)]
 pub struct Type {
     pub id: i32,
+    pub frozen: bool,
     pub kind: TypeKind,
 }
 
@@ -68,6 +70,7 @@ impl fmt::Display for Type {
             Type {kind: TypeKind::Lam(tlam), ..} => write!(f, "{}", tlam),
             Type {kind: TypeKind::Prim(prim), ..} => write!(f, "{}", prim),
             Type {kind: TypeKind::Lit(lit), ..} => write!(f, "{}", lit),
+            Type {kind: TypeKind::Union(types), ..} => write!(f, "{}", join(types, " | ")),
         }
     }
 }

@@ -65,6 +65,10 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
                 return Subst::new();
             }
 
+            if !t1.frozen && !t2.frozen {
+                return widen_types(&t1, &t2, ctx);
+            }
+
             panic!("unification failed")
         }
     }
@@ -142,6 +146,7 @@ fn bind(tv_id: &i32, ty: &Type, _: &Context) -> Subst {
         Type {
             id,
             kind: TypeKind::Var,
+            ..
         } if id == tv_id => Subst::new(),
         ty if ty.ftv().contains(tv_id) => panic!("type var appears in type"),
         ty => {
@@ -150,4 +155,14 @@ fn bind(tv_id: &i32, ty: &Type, _: &Context) -> Subst {
             subst
         }
     }
+}
+
+fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Subst {
+    let mut result = Subst::new();
+    let union = ctx.union(&[t1.to_owned(), t2.to_owned()]);
+
+    result.insert(t1.id, union.clone());
+    result.insert(t2.id, union.clone());
+
+    result
 }

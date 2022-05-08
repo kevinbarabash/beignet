@@ -82,5 +82,6 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                 _ => panic!("mismatch"),
             }
         }
+        TypeKind::Union(_) => todo!(),
     }
 }
