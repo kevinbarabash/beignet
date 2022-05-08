@@ -159,7 +159,17 @@ fn bind(tv_id: &i32, ty: &Type, _: &Context) -> Subst {
 
 fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Subst {
     let mut result = Subst::new();
-    let union = ctx.union(&[t1.to_owned(), t2.to_owned()]);
+
+    let mut types: Vec<Type> = vec![];
+    match &t1.kind {
+        TypeKind::Union(t1_types) => types.extend(t1_types.to_owned()),
+        _ => types.push(t1.to_owned())
+    }
+    match &t2.kind {
+        TypeKind::Union(t2_types) => types.extend(t2_types.to_owned()),
+        _ => types.push(t2.to_owned())
+    }
+    let union = ctx.union(&types);
 
     result.insert(t1.id, union.clone());
     result.insert(t2.id, union.clone());

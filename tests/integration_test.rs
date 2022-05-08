@@ -194,6 +194,17 @@ fn infer_if_else_with_widening() {
 }
 
 #[test]
+fn infer_if_else_with_multiple_widenings() {
+    let src = r#"
+    let x = if (true) { 5 } else { 10 }
+    let y = if (false) { x } else { 15 }
+    "#;
+    let (_, env) = infer_prog(src);
+    let result = format!("{}", env.get("y").unwrap());
+    assert_eq!(result, "5 | 10 | 15");
+}
+
+#[test]
 fn infer_let_rec_until() {
     let src = "let rec until = (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) }";
     let (_, env) = infer_prog(src);

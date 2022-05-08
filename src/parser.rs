@@ -16,7 +16,7 @@ pub fn token_parser(
     let r#true =
         select! { Token::True => Expr::Lit { literal: Literal::Bool(String::from("true")) } };
     let r#false =
-        select! { Token::True => Expr::Lit { literal: Literal::Bool(String::from("false")) } };
+        select! { Token::False => Expr::Lit { literal: Literal::Bool(String::from("false")) } };
     let r#str = select! { Token::Str(value) => Expr::Lit { literal: Literal::Str(value) } };
 
     let add_span_info = |node: Expr, token_span: Span| {

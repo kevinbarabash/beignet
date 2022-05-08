@@ -35,13 +35,16 @@ impl Substitutable for Type {
                 id,
                 frozen,
                 kind: TypeKind::Lam(TLam { args, ret }),
-            } => Type {
-                id: id.to_owned(),
-                frozen: frozen.to_owned(),
-                kind: TypeKind::Lam(TLam {
-                    args: args.iter().map(|arg| arg.apply(sub)).collect(),
-                    ret: Box::from(ret.apply(sub)),
-                }),
+            } => match sub.get(id) {
+                Some(replacement) => replacement.to_owned(),
+                None => Type {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    kind: TypeKind::Lam(TLam {
+                        args: args.iter().map(|arg| arg.apply(sub)).collect(),
+                        ret: Box::from(ret.apply(sub)),
+                    }),
+                },
             },
             Type {
                 id,
@@ -53,16 +56,18 @@ impl Substitutable for Type {
                 kind: TypeKind::Lit(_),
                 ..
             } => sub.get(id).unwrap_or(self).clone(),
-            // TODO: handle widening of unions
             Type {
                 id,
                 frozen,
                 kind: TypeKind::Union(types),
-            } => Type {
-                id: id.to_owned(),
-                frozen: frozen.to_owned(),
-                kind: TypeKind::Union(types.iter().map(|ty| ty.apply(sub)).collect())
-            }
+            } => match sub.get(id) {
+                Some(replacement) => replacement.to_owned(),
+                None => Type {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    kind: TypeKind::Union(types.iter().map(|ty| ty.apply(sub)).collect()),
+                },
+            },
         }
     }
     fn ftv(&self) -> HashSet<i32> {
@@ -91,7 +96,7 @@ impl Substitutable for Type {
             Type {
                 kind: TypeKind::Union(types),
                 ..
-            } => types.iter().flat_map(|ty| ty.ftv()).collect()
+            } => types.iter().flat_map(|ty| ty.ftv()).collect(),
         }
     }
 }
