@@ -1,6 +1,5 @@
-use itertools::{join};
+use itertools::join;
 use std::fmt;
-use std::hash::{Hash, Hasher};
 
 use super::literal::Literal;
 
@@ -31,33 +30,6 @@ impl fmt::Display for Primitive {
 //     ty: Type,
 // }
 
-#[derive(Clone, Debug, PartialOrd, Ord)]
-pub struct TVar {
-    pub id: i32,
-}
-
-impl fmt::Display for TVar {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { id, .. } = self;
-        let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
-        let id = chars.get(id.to_owned() as usize).unwrap();
-        write!(f, "{}", id)
-    }
-}
-
-impl PartialEq for TVar {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-impl Eq for TVar {}
-
-impl Hash for TVar {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.id.hash(state);
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct TLam {
     pub args: Vec<Type>,
@@ -73,7 +45,7 @@ impl fmt::Display for TLam {
 
 #[derive(Clone, Debug)]
 pub enum TypeKind {
-    Var(TVar),
+    Var,
     Lam(TLam),
     Prim(Primitive),
     Lit(Literal),
@@ -88,7 +60,11 @@ pub struct Type {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Type {kind: TypeKind::Var(tv), ..} => write!(f, "{}", tv),
+            Type {id, kind: TypeKind::Var, ..} => {
+                let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
+                let id = chars.get(id.to_owned() as usize).unwrap();
+                write!(f, "{}", id)
+            },
             Type {kind: TypeKind::Lam(tlam), ..} => write!(f, "{}", tlam),
             Type {kind: TypeKind::Prim(prim), ..} => write!(f, "{}", prim),
             Type {kind: TypeKind::Lit(lit), ..} => write!(f, "{}", lit),
@@ -137,18 +113,4 @@ mod tests {
         );
         assert_eq!(format!("{}", Literal::from(true)), String::from("true"));
     }
-
-    // #[test]
-    // fn test_fmt_type() {
-    //     assert_eq!(
-    //         format!("{}", Type::from(Literal::from("hello"))),
-    //         String::from("\"hello\""),
-    //     );
-
-    //     let ty = Type::Lam(TLam {
-    //         args: vec![Type::from(Primitive::Num), Type::from(Primitive::Bool)],
-    //         ret: Box::new(Type::from(Primitive::Num)),
-    //     });
-    //     assert_eq!(format!("{}", ty), "(number, boolean) => number");
-    // }
 }

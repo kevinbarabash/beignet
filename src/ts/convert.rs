@@ -16,7 +16,11 @@ pub fn convert_scheme(scheme: &Scheme, expr: Option<&Expr>) -> TsQualifiedType {
 /// from if it exists.
 pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
     match &ty.kind {
-        TypeKind::Var(tvar) => TsType::Var(tvar.to_owned()),
+        TypeKind::Var => {
+            let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
+            let id = chars.get(ty.id.to_owned() as usize).unwrap();
+            TsType::Var(format!("{id}"))
+        },
         TypeKind::Prim(prim) => TsType::Prim(prim.to_owned()),
         TypeKind::Lit(lit) => TsType::Lit(lit.to_owned()),
         // This is used to copy the names of args from the expression

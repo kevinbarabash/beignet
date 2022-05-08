@@ -27,8 +27,8 @@ impl Substitutable for Type {
         // TODO: lookup the `id` of the rest of the types in `sub`
         match self {
             Type {
-                id: _,
-                kind: TypeKind::Var(TVar { id, .. }),
+                id,
+                kind: TypeKind::Var,
             } => sub.get(id).unwrap_or(self).clone(),
             Type {
                 id,
@@ -53,9 +53,9 @@ impl Substitutable for Type {
     fn ftv(&self) -> HashSet<i32> {
         match self {
             Type {
-                id: _,
-                kind: TypeKind::Var(tv),
-            } => HashSet::from([tv.id]),
+                id,
+                kind: TypeKind::Var,
+            } => HashSet::from([id.to_owned()]),
             Type {
                 kind: TypeKind::Lam(TLam { args, ret }),
                 ..
@@ -173,7 +173,7 @@ fn normalize(sc: &Scheme) -> Scheme {
                 key.to_owned(),
                 Type {
                     id: index as i32,
-                    kind: TypeKind::Var(TVar { id: index as i32 }),
+                    kind: TypeKind::Var,
                 },
             )
         })
@@ -182,8 +182,8 @@ fn normalize(sc: &Scheme) -> Scheme {
     fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>) -> Type {
         match ty {
             Type {
-                id: _,
-                kind: TypeKind::Var(TVar { id }),
+                id,
+                kind: TypeKind::Var,
             } => mapping.get(&id).unwrap().to_owned(),
             Type {
                 id,
@@ -294,16 +294,7 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
         }
         (Expr::Lam { args, body, .. }, _) => {
             // Creates a new type variable for each arg
-            let arg_tvs: Vec<_> = args
-                .iter()
-                .map(|_| {
-                    let tvar = ctx.fresh();
-                    Type {
-                        id: tvar.id,
-                        kind: TypeKind::Var(tvar),
-                    }
-                })
-                .collect();
+            let arg_tvs: Vec<_> = args.iter().map(|_| ctx.fresh_tvar()).collect();
             let mut new_ctx = ctx.clone();
             for (arg, tv) in args.iter().zip(arg_tvs.clone().into_iter()) {
                 let scheme = Scheme {

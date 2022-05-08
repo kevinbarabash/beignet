@@ -53,10 +53,9 @@ fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
 fn unifies(c: &Constraint, ctx: &Context) -> Subst {
     let (t1, t2) = c.types.clone();
 
-    // TODO: use references for t1 and t2 here
     match (&t1.kind, &t2.kind) {
-        (TypeKind::Var(tv), _) => bind(&tv, &t2, ctx),
-        (_, TypeKind::Var(tv)) => bind(&tv, &t1, ctx),
+        (TypeKind::Var, _) => bind(&t1.id, &t2, ctx),
+        (_, TypeKind::Var) => bind(&t2.id, &t1, ctx),
         (TypeKind::Prim(prim1), TypeKind::Prim(prim2)) if prim1 == prim2 => Subst::new(),
         (TypeKind::Lit(lit1), TypeKind::Lit(lit2)) if lit1 == lit2 => Subst::new(),
         (TypeKind::Lam(lam1), TypeKind::Lam(lam2)) => unify_lams(&lam1, &lam2, ctx),
@@ -135,19 +134,19 @@ fn is_subtype(t1: &Type, t2: &Type) -> bool {
     }
 }
 
-fn bind(tv: &TVar, ty: &Type, _: &Context) -> Subst {
+fn bind(tv_id: &i32, ty: &Type, _: &Context) -> Subst {
     // TODO: Handle Type::Mem once it's added
     // NOTE: This will require the use of the &Context
 
     match ty {
         Type {
-            kind: TypeKind::Var(TVar { id, .. }),
-            ..
-        } if id == &tv.id => Subst::new(),
-        ty if ty.ftv().contains(&tv.id) => panic!("type var appears in type"),
+            id,
+            kind: TypeKind::Var,
+        } if id == tv_id => Subst::new(),
+        ty if ty.ftv().contains(tv_id) => panic!("type var appears in type"),
         ty => {
             let mut subst = Subst::new();
-            subst.insert(tv.id, ty.clone());
+            subst.insert(tv_id.to_owned(), ty.clone());
             subst
         }
     }

@@ -46,21 +46,13 @@ impl Context {
         scheme.ty.apply(&subs)
     }
 
-    pub fn fresh(&self) -> types::TVar {
-        let id = self.state.count.get() + 1;
-        self.state.count.set(id);
-
-        types::TVar { id }
-    }
-    pub fn fresh_tvar(&self) -> Type {
-        let tvar = self.fresh();
-
-        Type { id: tvar.id, kind: types::TypeKind::Var(tvar) }
-    }
     pub fn fresh_id(&self) -> i32 {
         let id = self.state.count.get() + 1;
         self.state.count.set(id);
         id
+    }
+    pub fn fresh_tvar(&self) -> Type {
+        Type { id: self.fresh_id(), kind: types::TypeKind::Var }
     }
 
     pub fn from_lam(&self, lam: types::TLam) -> Type {
