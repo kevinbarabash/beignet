@@ -1,6 +1,6 @@
 use super::super::syntax::{BindingIdent, Expr};
 use super::super::types::{Scheme, TLam, Type, TypeKind};
-use super::ast::{Param, TsQualifiedType, TsType};
+use super::ast::{Param, TsObjProp, TsQualifiedType, TsType};
 
 /// Converts a Scheme to a TsQualifiedTyepe for eventual export to .d.ts.
 pub fn convert_scheme(scheme: &Scheme, expr: Option<&Expr>) -> TsQualifiedType {
@@ -17,10 +17,12 @@ pub fn convert_scheme(scheme: &Scheme, expr: Option<&Expr>) -> TsQualifiedType {
 pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
     match &ty.kind {
         TypeKind::Var => {
-            let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
+            let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+                .chars()
+                .collect();
             let id = chars.get(ty.id.to_owned() as usize).unwrap();
             TsType::Var(format!("{id}"))
-        },
+        }
         TypeKind::Prim(prim) => TsType::Prim(prim.to_owned()),
         TypeKind::Lit(lit) => TsType::Lit(lit.to_owned()),
         // This is used to copy the names of args from the expression
@@ -54,16 +56,12 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                             ret: Box::new(convert_type(&ret, None)),
                         }
                     }
-                },
+                }
                 // Fix nodes are assumed to wrap a lambda where the body of
                 // the lambda is recursive function.
-                Some(Expr::Fix { expr }) => {
-                    match expr.as_ref() {
-                        (Expr::Lam {body, ..}, _) => {
-                            convert_type(ty, Some(&body.0))
-                        },
-                        _ => panic!("mismatch")
-                    }
+                Some(Expr::Fix { expr }) => match expr.as_ref() {
+                    (Expr::Lam { body, .. }, _) => convert_type(ty, Some(&body.0)),
+                    _ => panic!("mismatch"),
                 },
                 None => {
                     let params: Vec<_> = args
@@ -78,11 +76,22 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                         params,
                         ret: Box::new(convert_type(&ret, None)),
                     }
-                },
+                }
                 _ => panic!("mismatch"),
             }
         }
-        TypeKind::Union(types) => TsType::Union(types.iter().map(|ty| convert_type(ty, None)).collect()),
-        TypeKind::Obj(_) => todo!(),
+        TypeKind::Union(types) => {
+            TsType::Union(types.iter().map(|ty| convert_type(ty, None)).collect())
+        }
+        TypeKind::Obj(props) => {
+            let props: Vec<_> = props
+                .iter()
+                .map(|prop| TsObjProp {
+                    name: prop.name.clone(),
+                    ty: convert_type(&prop.ty, None),
+                })
+                .collect();
+            TsType::Obj(props)
+        }
     }
 }

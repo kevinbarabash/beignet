@@ -2,7 +2,7 @@ use itertools::{join, Itertools};
 use std::fmt;
 
 use super::super::literal::Literal;
-use super::super::types::{Primitive};
+use super::super::types::Primitive;
 
 pub struct TsQualifiedType {
     pub ty: TsType,
@@ -18,18 +18,25 @@ pub enum TsType {
         params: Vec<Param>,
         ret: Box<TsType>,
     },
-    Union(Vec<TsType>)
+    Union(Vec<TsType>),
+    Obj(Vec<TsObjProp>),
 }
 
 impl fmt::Display for TsQualifiedType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
+        let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+            .chars()
+            .collect();
 
         if self.type_params.len() > 0 {
-            let type_params = self.type_params.iter().map(|id| {
-                let id = chars.get(id.to_owned() as usize).unwrap();
-                format!("{id}")
-            }).join(", ");
+            let type_params = self
+                .type_params
+                .iter()
+                .map(|id| {
+                    let id = chars.get(id.to_owned() as usize).unwrap();
+                    format!("{id}")
+                })
+                .join(", ");
             write!(f, "<{type_params}>{}", self.ty)
         } else {
             write!(f, "{}", self.ty)
@@ -53,12 +60,27 @@ impl fmt::Display for TsType {
                 write!(f, "({params}) => {ret}")
             }
             TsType::Union(types) => write!(f, "{}", join(types, " | ")),
+            TsType::Obj(props) => {
+                let props = props
+                    .iter()
+                    .map(|TsObjProp { name, ty }| format!("{name}: {ty}"))
+                    .join(", ");
+
+                // TODO: output multi-line object types
+                write!(f, "{{{props}}}")
+            }
         }
     }
 }
 
 #[derive(Debug)]
 pub struct Param {
+    pub name: String,
+    pub ty: TsType,
+}
+
+#[derive(Debug)]
+pub struct TsObjProp {
     pub name: String,
     pub ty: TsType,
 }

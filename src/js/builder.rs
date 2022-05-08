@@ -142,7 +142,16 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                 args: vec![],
             }
         }
-        syntax::Expr::Obj { properties } => todo!(),
+        syntax::Expr::Obj { properties } => {
+            let properties: Vec<_> = properties.iter().map(|(prop, _)| {
+                Property {
+                    name: prop.name.clone(),
+                    value: build_expr(&prop.value.0),
+                }
+            }).collect();
+
+            Expression::Object { properties }
+        },
     }
 }
 

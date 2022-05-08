@@ -185,6 +185,19 @@ pub fn print_expr(expr: &Expression, level: &u32) -> String {
                 indent(level)
             )
         }
+        Expression::Object { properties } => {
+            let new_level = *level + 1;
+            let properties = properties
+                .iter()
+                .map(|prop| {
+                    let value = print_expr(&prop.value, &new_level);
+                    let name = &prop.name;
+                    format!("{name}: {value}")
+                })
+                .join(", ");
+
+            format!("{{{properties}}}")
+        }
     }
 }
 

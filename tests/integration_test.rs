@@ -180,6 +180,21 @@ fn infer_decl() {
 }
 
 #[test]
+fn infer_with_subtyping() {
+    let src = r#"
+    let foo = (a, b) => a + b
+    let bar = foo(5, 10)
+    "#;
+    let (prog, env) = infer_prog(src);
+    let result = build_d_ts(&env, &prog);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const foo = (a: number, b: number) => number;
+    export declare const bar = number;
+    "###);
+}
+
+#[test]
 fn infer_if_else_without_widening() {
     let (_, env) = infer_prog("let x = if (true) { 5 } else { 5 }");
     let result = format!("{}", env.get("x").unwrap());
@@ -264,5 +279,22 @@ fn codegen_if_else() {
     insta::assert_snapshot!(build_d_ts(&env, &prog), @r###"
     export declare const cond = true;
     export declare const result = 5;
+    "###);
+}
+
+#[test]
+fn codegen_object() {
+    let src = "let point = {x: 5, y: 10}";
+    let (prog, env) = infer_prog(src);
+    let js_tree = build_js(&prog);
+
+    insta::assert_snapshot!(print_js(&js_tree), @r###"
+    const point = {x: 5, y: 10};
+
+    export {point};
+    "###);
+
+    insta::assert_snapshot!(build_d_ts(&env, &prog), @r###"
+    export declare const point = {x: 5, y: 10};
     "###);
 }

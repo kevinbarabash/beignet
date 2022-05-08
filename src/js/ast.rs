@@ -47,6 +47,9 @@ pub enum Expression {
         consequent: Vec<Statement>,
         alternate: Vec<Statement>,
     },
+    Object {
+        properties: Vec<Property>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -59,6 +62,12 @@ pub enum Pattern {
 pub enum Param {
     Ident { name: String },
     Rest { name: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Property {
+    pub name: String,
+    pub value: Expression,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

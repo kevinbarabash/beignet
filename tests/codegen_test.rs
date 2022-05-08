@@ -241,3 +241,12 @@ fn js_print_multiple_decls() {
     export {foo, bar};
     "###);
 }
+
+#[test]
+fn js_print_object() {
+    insta::assert_snapshot!(compile("let point = {x: 5, y: 10}"), @r###"
+    const point = {x: 5, y: 10};
+
+    export {point};
+    "###);
+}
