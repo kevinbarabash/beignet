@@ -30,6 +30,8 @@ export const App = () => {
       "} else {",
       "  10",
       "}",
+      "",
+      "let point = {x: 5, y: 10}",
     ].join("\n");
   });
 
