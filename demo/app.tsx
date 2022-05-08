@@ -28,7 +28,7 @@ export const App = () => {
       "  let z = 5 in",
       "  z",
       "} else {",
-      "  5",
+      "  10",
       "}",
     ].join("\n");
   });
