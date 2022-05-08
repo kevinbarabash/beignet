@@ -29,6 +29,18 @@ pub fn build_pattern(pattern: &syntax::Pattern) -> Pattern {
     }
 }
 
+pub fn build_return_block(body: &syntax::Expr) -> Vec<Statement> {
+    match body {
+        // Avoids wrapping in an IIFE when it isn't necessary.
+        syntax::Expr::Let { .. } => {
+            let_to_children(body)
+        }
+        _ => vec![Statement::Return {
+            arg: build_expr(body),
+        }]
+    }
+}
+
 pub fn build_expr(expr: &syntax::Expr) -> Expression {
     match expr {
         syntax::Expr::App { lam, args } => {
@@ -66,8 +78,8 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                     params,
                     // The last statement in the body of a function
                     // should always be a `return` statement.
-                    body: vec![Statement::Expression {
-                        expr: build_expr(body),
+                    body: vec![Statement::Return {
+                        arg: build_expr(body),
                     }],
                 },
             }
@@ -100,26 +112,36 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
             Expression::Binary { op, left, right }
         }
         syntax::Expr::Fix { expr } => match expr.as_ref() {
-            (syntax::Expr::Lam { body, .. }, _) => {
-                build_expr(&body.0)
-            },
+            (syntax::Expr::Lam { body, .. }, _) => build_expr(&body.0),
             _ => panic!("Fix should only wrap a lambda"),
         },
         syntax::Expr::If {
-            cond: _cond,
-            consequent: _cons,
-            alternate: _alt,
+            cond,
+            consequent,
+            alternate,
         } => {
-            // TODO: convert an if-else expression in crochet to something
-            // that can be represented in JavaScript.  We can use nested ternaries
-            // and sequences together to implement this.  Sequences help, because
-            // in JavaScript, the last item in the sequence is the value of the 
-            // expression.  Sequences aren't quite enough in the situation where
-            // the consequent or alternate are use `let`.  In those situations we
-            // end up having to introduce a variable before the `if-else` and then
-            // set that variable's value at the end of the consequent and alternate.
-            todo!()
-        },
+            // Return an IIFE.
+            // (() => {
+            //    if (cond) {
+            //        return consequent;
+            //    } else {
+            //        return alternate;
+            //    }
+            // })();
+            Expression::Call {
+                func: Box::from(Expression::Function {
+                    params: vec![],
+                    body: vec![Statement::Expression {
+                        expr: Expression::IfElse {
+                            cond: Box::from(build_expr(&cond.as_ref().0)),
+                            consequent: build_return_block(&consequent.as_ref().0),
+                            alternate: build_return_block(&alternate.as_ref().0),
+                        },
+                    }],
+                }),
+                args: vec![],
+            }
+        }
     }
 }
 

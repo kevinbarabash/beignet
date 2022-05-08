@@ -42,6 +42,11 @@ pub enum Expression {
         op: UnaryOp,
         arg: Box<Expression>,
     },
+    IfElse {
+        cond: Box<Expression>,
+        consequent: Vec<Statement>,
+        alternate: Vec<Statement>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

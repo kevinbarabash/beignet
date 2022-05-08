@@ -222,7 +222,9 @@ fn codegen_let_rec() {
     let js_tree = build_js(&prog);
 
     insta::assert_snapshot!(print_js(&js_tree), @r###"
-    const f = () => f();
+    const f = () => {
+        return f();
+    };
 
     export {f};
     "###);
@@ -238,9 +240,19 @@ fn codegen_if_else() {
     "#;
     let (prog, env) = infer_prog(src);
 
-    // TODO: enable this assertion once we can codegen if-else
-    // let js_tree = build_js(&prog);
-    // insta::assert_snapshot!(print_js(&js_tree), @"");
+    let js_tree = build_js(&prog);
+    insta::assert_snapshot!(print_js(&js_tree), @r###"
+    const cond = true;
+    const result = (() => {
+        if (cond) {
+            return 5;
+        } else {
+            return 5;
+        };
+    })();
+
+    export {cond, result};
+    "###);
 
     insta::assert_snapshot!(build_d_ts(&env, &prog), @r###"
     export declare const cond = true;
