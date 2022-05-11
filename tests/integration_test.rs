@@ -238,6 +238,25 @@ fn infer_obj() {
 }
 
 #[test]
+fn infer_async() {
+    let src = "let foo = async () => 10";
+    let (_, env) = infer_prog(src);
+    let result = format!("{}", env.get("foo").unwrap());
+    assert_eq!(result, "() => Promise<10>");
+}
+
+#[test]
+fn infer_async_math() {
+    let src = "let add = async (a, b) => await a() + await b()";
+    let (_, env) = infer_prog(src);
+    let result = format!("{}", env.get("add").unwrap());
+    assert_eq!(
+        result,
+        "(() => Promise<number>, () => Promise<number>) => Promise<number>"
+    );
+}
+
+#[test]
 fn codegen_let_rec() {
     let src = "let rec f = () => f()";
     let (prog, env) = infer_prog(src);
@@ -297,4 +316,22 @@ fn codegen_object() {
     insta::assert_snapshot!(build_d_ts(&env, &prog), @r###"
     export declare const point = {x: 5, y: 10};
     "###);
+}
+
+#[test]
+fn codegen_async_math() {
+    let src = "let add = async (a, b) => await a() + await b()";
+    let (prog, env) = infer_prog(src);
+
+    let js_tree = build_js(&prog);
+
+    insta::assert_snapshot!(print_js(&js_tree), @r###"
+    const add = async (a, b) => {
+        return await a() + await b();
+    };
+
+    export {add};
+    "###);
+
+    insta::assert_snapshot!(build_d_ts(&env, &prog), @"export declare const add = (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;");
 }

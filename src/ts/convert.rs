@@ -93,5 +93,15 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                 .collect();
             TsType::Obj(props)
         }
+        TypeKind::Alias { name, type_params } => {
+            let type_params: Vec<_> = type_params
+                .iter()
+                .map(|ty| convert_type(ty, None))
+                .collect();
+            TsType::Alias {
+                name: name.to_owned(),
+                type_params,
+            }
+        }
     }
 }

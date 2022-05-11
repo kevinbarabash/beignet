@@ -72,6 +72,7 @@ pub fn print_pattern(pattern: &Pattern) -> String {
     }
 }
 
+// TODO: add parens around things so that the precedence is correct
 pub fn print_expr(expr: &Expression, level: &u32) -> String {
     match expr {
         Expression::Call { func, args } => {
@@ -89,7 +90,11 @@ pub fn print_expr(expr: &Expression, level: &u32) -> String {
                 format!("{func}({args})")
             }
         }
-        Expression::Function { params, body } => {
+        Expression::Function {
+            params,
+            body,
+            r#async,
+        } => {
             let params = params.iter().map(|param| print_param(param)).join(", ");
             // TODO: Support arrow function shorthand
             // let wrap = body.len() <= 1;
@@ -99,11 +104,17 @@ pub fn print_expr(expr: &Expression, level: &u32) -> String {
                 .iter()
                 .map(|child| print_statement(child, &new_level))
                 .join("\n");
-            if wrap {
+            let func = if wrap {
                 let body = body.trim_start();
                 format!("({params}) => {body}")
             } else {
                 format!("({params}) => {{\n{body}\n{}}}", indent(level))
+            };
+
+            if *r#async {
+                format!("async {func}")
+            } else {
+                func
             }
         }
         Expression::Ident { name } => name.to_owned(),
@@ -198,6 +209,10 @@ pub fn print_expr(expr: &Expression, level: &u32) -> String {
 
             format!("{{{properties}}}")
         }
+        Expression::Await { expr } => {
+            let expr = print_expr(expr.as_ref(), level);
+            format!("await {expr}")
+        },
     }
 }
 

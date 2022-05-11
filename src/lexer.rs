@@ -6,6 +6,8 @@ pub enum Token {
     Ident(String),
 
     // keywords
+    Async,
+    Await,
     Else,
     If,
     In,
@@ -46,6 +48,8 @@ impl fmt::Display for Token {
             Token::Plus => write!(f, "+"),
             Token::Times => write!(f, "*"),
             Token::Div => write!(f, "/"),
+            Token::Async => write!(f, "async"),
+            Token::Await => write!(f, "await"),
             Token::Else => write!(f, "else"),
             Token::If => write!(f, "if"),
             Token::Let => write!(f, "let"),
@@ -105,6 +109,8 @@ pub fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
     let ident = text::ident::<char, Simple<char>>();
 
     let word = ident.map(|s: String| match s.as_str() {
+        "async" => Token::Async,
+        "await" => Token::Await,
         "let" => Token::Let,
         "in" => Token::In,
         "if" => Token::If,

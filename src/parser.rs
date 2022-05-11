@@ -2,7 +2,7 @@ use chumsky::prelude::*;
 
 use super::lexer::Token;
 use super::literal::Literal;
-use super::syntax::{BinOp, BindingIdent, Expr, Pattern, Program, Statement, Property};
+use super::syntax::{BinOp, BindingIdent, Expr, Pattern, Program, Property, Statement};
 
 pub type Span = std::ops::Range<usize>;
 
@@ -64,13 +64,7 @@ pub fn token_parser(
             .map_with_span(|(name, value), token_span: Span| {
                 let start = source_spans.get(token_span.start).unwrap().start;
                 let end = source_spans.get(token_span.end - 1).unwrap().end;
-                (
-                    Property {
-                        name,
-                        value,
-                    },
-                    start..end
-                )
+                (Property { name, value }, start..end)
             });
 
         let obj = prop
@@ -80,12 +74,7 @@ pub fn token_parser(
             .map_with_span(|properties, token_span: Span| {
                 let start = source_spans.get(token_span.start).unwrap().start;
                 let end = source_spans.get(token_span.end - 1).unwrap().end;
-                (
-                    Expr::Obj {
-                        properties
-                    },
-                    start..end
-                )
+                (Expr::Obj { properties }, start..end)
             });
 
         let atom = choice((
@@ -126,6 +115,24 @@ pub fn token_parser(
                     },
                     span,
                 )
+            });
+
+        // Application is higher precedence than `await`
+        let app = just(Token::Await)
+            .or_not()
+            .then(app.clone())
+            .map_with_span(|(option, app), token_span: Span| {
+                let start = source_spans.get(token_span.start).unwrap().start;
+                let end = source_spans.get(token_span.end - 1).unwrap().end;
+                match option {
+                    Some(_) => (
+                        Expr::Await {
+                            expr: Box::from(app),
+                        },
+                        start..end,
+                    ),
+                    None => app,
+                }
             });
 
         let product = app
@@ -188,21 +195,26 @@ pub fn token_parser(
             .allow_trailing()
             .delimited_by(just(Token::OpenParen), just(Token::CloseParen));
 
-        let lam = param_list
+        let lam = just(Token::Async)
+            .or_not()
+            .then(param_list)
             .then_ignore(just(Token::FatArrow))
             .then(choice((
                 expr.clone()
                     .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace)),
                 expr.clone(),
             )))
-            .map_with_span(|(args, body), token_span: Span| {
+            .map_with_span(|((r#async, args), body), token_span: Span| {
                 let start = source_spans.get(token_span.start).unwrap().start;
                 let end = source_spans.get(token_span.end - 1).unwrap().end;
                 (
                     Expr::Lam {
                         args,
                         body: Box::new(body),
-                        is_async: false,
+                        is_async: match r#async {
+                            Some(_) => true,
+                            None => false,
+                        },
                     },
                     start..end,
                 )
@@ -236,6 +248,8 @@ pub fn token_parser(
                 }
             });
 
+        // NOTE: `let` is an expressionb because it current models
+        // let-in.
         choice((lam, r#let, sum))
     });
 
@@ -387,6 +401,178 @@ mod tests {
             ],
         }
         "###);
+    }
+
+    #[test]
+    fn fn_async() {
+        insta::assert_debug_snapshot!(parse("async () => 10"), @r###"
+        Program {
+            body: [
+                (
+                    Expr(
+                        (
+                            Lam {
+                                args: [],
+                                body: (
+                                    Lit {
+                                        literal: Num(
+                                            "10",
+                                        ),
+                                    },
+                                    12..14,
+                                ),
+                                is_async: true,
+                            },
+                            0..14,
+                        ),
+                    ),
+                    0..14,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn fn_async_with_await() {
+        insta::assert_debug_snapshot!(parse("let foo = async () => { await 10 }"), @r###"
+        Program {
+            body: [
+                (
+                    Decl {
+                        pattern: (
+                            Ident {
+                                name: "foo",
+                            },
+                            4..7,
+                        ),
+                        value: (
+                            Lam {
+                                args: [],
+                                body: (
+                                    Await {
+                                        expr: (
+                                            Lit {
+                                                literal: Num(
+                                                    "10",
+                                                ),
+                                            },
+                                            30..32,
+                                        ),
+                                    },
+                                    24..32,
+                                ),
+                                is_async: true,
+                            },
+                            10..34,
+                        ),
+                    },
+                    0..34,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn fn_await_precedence() {
+        insta::assert_debug_snapshot!(parse("let foo = async () => await a + await b"), @r###"
+        Program {
+            body: [
+                (
+                    Decl {
+                        pattern: (
+                            Ident {
+                                name: "foo",
+                            },
+                            4..7,
+                        ),
+                        value: (
+                            Lam {
+                                args: [],
+                                body: (
+                                    Op {
+                                        op: Add,
+                                        left: (
+                                            Await {
+                                                expr: (
+                                                    Ident {
+                                                        name: "a",
+                                                    },
+                                                    28..29,
+                                                ),
+                                            },
+                                            22..29,
+                                        ),
+                                        right: (
+                                            Await {
+                                                expr: (
+                                                    Ident {
+                                                        name: "b",
+                                                    },
+                                                    38..39,
+                                                ),
+                                            },
+                                            32..39,
+                                        ),
+                                    },
+                                    22..39,
+                                ),
+                                is_async: true,
+                            },
+                            10..39,
+                        ),
+                    },
+                    0..39,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn fn_app_is_higher_precedence_than_await() {
+        insta::assert_debug_snapshot!(parse("let foo = async () => await bar()"), @r###"
+        Program {
+            body: [
+                (
+                    Decl {
+                        pattern: (
+                            Ident {
+                                name: "foo",
+                            },
+                            4..7,
+                        ),
+                        value: (
+                            Lam {
+                                args: [],
+                                body: (
+                                    Await {
+                                        expr: (
+                                            App {
+                                                lam: (
+                                                    Ident {
+                                                        name: "bar",
+                                                    },
+                                                    28..31,
+                                                ),
+                                                args: [],
+                                            },
+                                            28..33,
+                                        ),
+                                    },
+                                    22..33,
+                                ),
+                                is_async: true,
+                            },
+                            10..33,
+                        ),
+                    },
+                    0..33,
+                ),
+            ],
+        }
+        "###)
     }
 
     #[test]

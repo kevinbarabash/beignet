@@ -58,6 +58,10 @@ pub enum TypeKind {
     Lit(Literal),
     Union(Vec<Type>),
     Obj(Vec<TProp>),
+    Alias {
+        name: String,
+        type_params: Vec<Type>,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -69,17 +73,23 @@ pub struct Type {
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Type {id, kind: TypeKind::Var, ..} => {
-                let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
+        let id = self.id;
+        match &self.kind {
+            TypeKind::Var => {
+                let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+                    .chars()
+                    .collect();
                 let id = chars.get(id.to_owned() as usize).unwrap();
                 write!(f, "{}", id)
-            },
-            Type {kind: TypeKind::Lam(tlam), ..} => write!(f, "{}", tlam),
-            Type {kind: TypeKind::Prim(prim), ..} => write!(f, "{}", prim),
-            Type {kind: TypeKind::Lit(lit), ..} => write!(f, "{}", lit),
-            Type {kind: TypeKind::Union(types), ..} => write!(f, "{}", join(types, " | ")),
-            Type {kind: TypeKind::Obj(props), ..} => write!(f, "{{{}}}", join(props, ", ")),
+            }
+            TypeKind::Lam(tlam) => write!(f, "{}", tlam),
+            TypeKind::Prim(prim) => write!(f, "{}", prim),
+            TypeKind::Lit(lit) => write!(f, "{}", lit),
+            TypeKind::Union(types) => write!(f, "{}", join(types, " | ")),
+            TypeKind::Obj(props) => write!(f, "{{{}}}", join(props, ", ")),
+            TypeKind::Alias { name, type_params } => {
+                write!(f, "{name}<{}>", join(type_params, ", "))
+            }
         }
     }
 }
@@ -93,17 +103,27 @@ pub struct Scheme {
 impl fmt::Display for Scheme {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Scheme { qualifiers, ty } = self;
-        let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".chars().collect();
+        let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+            .chars()
+            .collect();
 
         if qualifiers.is_empty() {
             write!(f, "{}", ty)
         } else {
             let mut quals = qualifiers.clone();
             quals.sort();
-            write!(f, "<{}>{}", join(quals.iter().map(|id| {
-                let id = chars.get(id.to_owned() as usize).unwrap();
-                format!("{id}")
-            }), ", "), ty)
+            write!(
+                f,
+                "<{}>{}",
+                join(
+                    quals.iter().map(|id| {
+                        let id = chars.get(id.to_owned() as usize).unwrap();
+                        format!("{id}")
+                    }),
+                    ", "
+                ),
+                ty
+            )
         }
     }
 }

@@ -16,6 +16,7 @@ pub struct State {
 pub struct Context {
     pub env: Env,
     pub state: State,
+    pub r#async: bool,
 }
 
 impl From<Env> for Context {
@@ -25,6 +26,7 @@ impl From<Env> for Context {
             state: State {
                 count: Cell::new(0),
             },
+            r#async: false,
         }
     }
 }
@@ -98,6 +100,16 @@ impl Context {
         types::TProp {
             name: name.to_owned(),
             ty,
+        }
+    }
+    pub fn alias(&self, name: &str, type_params: Vec<Type>) -> Type {
+        types::Type {
+            id: self.fresh_id(),
+            frozen: false,
+            kind: TypeKind::Alias {
+                name: name.to_owned(),
+                type_params: type_params.to_owned(),
+            },
         }
     }
 }

@@ -24,18 +24,12 @@ impl Substitutable for Constraint {
 
 impl Substitutable for Type {
     fn apply(&self, sub: &Subst) -> Type {
-        match self {
-            Type {
-                id,
-                kind: TypeKind::Var,
-                ..
-            } => sub.get(id).unwrap_or(self).clone(),
+        let id = self.id;
+        let frozen = self.frozen;
+        match &self.kind {
+            TypeKind::Var => sub.get(&id).unwrap_or(self).clone(),
             // TODO: handle widening of lambdas
-            Type {
-                id,
-                frozen,
-                kind: TypeKind::Lam(TLam { args, ret }),
-            } => match sub.get(id) {
+            TypeKind::Lam(TLam { args, ret }) => match sub.get(&id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type {
                     id: id.to_owned(),
@@ -46,21 +40,9 @@ impl Substitutable for Type {
                     }),
                 },
             },
-            Type {
-                id,
-                kind: TypeKind::Prim(_),
-                ..
-            } => sub.get(id).unwrap_or(self).clone(),
-            Type {
-                id,
-                kind: TypeKind::Lit(_),
-                ..
-            } => sub.get(id).unwrap_or(self).clone(),
-            Type {
-                id,
-                frozen,
-                kind: TypeKind::Union(types),
-            } => match sub.get(id) {
+            TypeKind::Prim(_) => sub.get(&id).unwrap_or(self).clone(),
+            TypeKind::Lit(_) => sub.get(&id).unwrap_or(self).clone(),
+            TypeKind::Union(types) => match sub.get(&id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type {
                     id: id.to_owned(),
@@ -68,56 +50,51 @@ impl Substitutable for Type {
                     kind: TypeKind::Union(types.iter().map(|ty| ty.apply(sub)).collect()),
                 },
             },
-            Type {
-                id,
-                frozen,
-                kind: TypeKind::Obj(props),
-            } => match sub.get(id) {
+            TypeKind::Obj(props) => match sub.get(&id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
-                    kind: TypeKind::Obj(props.iter().map(|prop| {
-                        TProp {
-                            name: prop.name.clone(),
-                            ty: prop.ty.apply(sub),
-                        }
-                    }).collect()),
-                }
-            }
+                    kind: TypeKind::Obj(
+                        props
+                            .iter()
+                            .map(|prop| TProp {
+                                name: prop.name.clone(),
+                                ty: prop.ty.apply(sub),
+                            })
+                            .collect(),
+                    ),
+                },
+            },
+            TypeKind::Alias { name, type_params } => match sub.get(&id) {
+                Some(replacement) => replacement.to_owned(),
+                None => Type {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    kind: TypeKind::Alias {
+                        name: name.to_owned(),
+                        type_params: type_params.iter().map(|ty| ty.apply(sub)).collect(),
+                    },
+                },
+            },
         }
     }
     fn ftv(&self) -> HashSet<i32> {
-        match self {
-            Type {
-                id,
-                kind: TypeKind::Var,
-                ..
-            } => HashSet::from([id.to_owned()]),
-            Type {
-                kind: TypeKind::Lam(TLam { args, ret }),
-                ..
-            } => {
+        let id = self.id;
+        match &self.kind {
+            TypeKind::Var => HashSet::from([id.to_owned()]),
+            TypeKind::Lam(TLam { args, ret }) => {
                 let mut result: HashSet<_> = args.iter().flat_map(|a| a.ftv()).collect();
                 result.extend(ret.ftv());
                 result
             }
-            Type {
-                kind: TypeKind::Prim(_),
-                ..
-            } => HashSet::new(),
-            Type {
-                kind: TypeKind::Lit(_),
-                ..
-            } => HashSet::new(),
-            Type {
-                kind: TypeKind::Union(types),
-                ..
-            } => types.iter().flat_map(|ty| ty.ftv()).collect(),
-            Type {
-                kind: TypeKind::Obj(props),
-                ..
-            } => props.iter().flat_map(|prop| prop.ty.ftv()).collect(),
+            TypeKind::Prim(_) => HashSet::new(),
+            TypeKind::Lit(_) => HashSet::new(),
+            TypeKind::Union(types) => types.iter().flat_map(|ty| ty.ftv()).collect(),
+            TypeKind::Obj(props) => props.iter().flat_map(|prop| prop.ty.ftv()).collect(),
+            TypeKind::Alias { type_params, .. } => {
+                type_params.iter().flat_map(|ty| ty.ftv()).collect()
+            }
         }
     }
 }
@@ -227,38 +204,22 @@ fn normalize(sc: &Scheme) -> Scheme {
         .collect();
 
     fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>) -> Type {
-        match ty {
-            Type {
-                id,
-                kind: TypeKind::Var,
-                ..
-            } => mapping.get(&id).unwrap().to_owned(),
-            Type {
-                id,
-                frozen,
-                kind: TypeKind::Lam(TLam { args, ret }),
-            } => {
+        let id = ty.id;
+        let frozen = ty.frozen;
+        match &ty.kind {
+            TypeKind::Var => mapping.get(&id).unwrap().to_owned(),
+            TypeKind::Lam(TLam { args, ret }) => {
                 let args: Vec<_> = args.iter().map(|arg| norm_type(arg, mapping)).collect();
-                let ret = Box::from(norm_type(ret, mapping));
+                let ret = Box::from(norm_type(&ret, mapping));
                 Type {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     kind: TypeKind::Lam(TLam { args, ret }),
                 }
             }
-            Type {
-                kind: TypeKind::Prim(_),
-                ..
-            } => ty.to_owned(),
-            Type {
-                kind: TypeKind::Lit(_),
-                ..
-            } => ty.to_owned(),
-            Type {
-                id,
-                frozen,
-                kind: TypeKind::Union(types),
-            } => {
+            TypeKind::Prim(_) => ty.to_owned(),
+            TypeKind::Lit(_) => ty.to_owned(),
+            TypeKind::Union(types) => {
                 let types = types.iter().map(|ty| norm_type(ty, mapping)).collect();
                 Type {
                     id: id.to_owned(),
@@ -266,21 +227,32 @@ fn normalize(sc: &Scheme) -> Scheme {
                     kind: TypeKind::Union(types),
                 }
             }
-            Type {
-                id,
-                frozen,
-                kind: TypeKind::Obj(props),
-            } => {
-                let props = props.iter().map(|prop| {
-                    TProp {
+            TypeKind::Obj(props) => {
+                let props = props
+                    .iter()
+                    .map(|prop| TProp {
                         name: prop.name.clone(),
-                        ty: norm_type(&prop.ty, mapping)
-                    }
-                }).collect();
+                        ty: norm_type(&prop.ty, mapping),
+                    })
+                    .collect();
                 Type {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     kind: TypeKind::Obj(props),
+                }
+            }
+            TypeKind::Alias { name, type_params } => {
+                let type_params = type_params
+                    .iter()
+                    .map(|ty| norm_type(ty, mapping))
+                    .collect();
+                Type {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    kind: TypeKind::Alias {
+                        name: name.to_owned(),
+                        type_params,
+                    },
                 }
             }
         }
@@ -304,6 +276,13 @@ fn generalize(env: &Env, ty: &Type) -> Scheme {
 }
 
 type InferResult = (Type, Vec<Constraint>);
+
+fn is_promise(ty: &Type) -> bool {
+    match &ty.kind {
+        TypeKind::Alias { name, .. } if name == "Promise" => true,
+        _ => false,
+    }
+}
 
 fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
     match expr {
@@ -371,7 +350,14 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
 
             (result_type, constraints)
         }
-        (Expr::Lam { args, body, .. }, _) => {
+        (
+            Expr::Lam {
+                args,
+                body,
+                is_async,
+            },
+            _,
+        ) => {
             // Creates a new type variable for each arg
             let arg_tvs: Vec<_> = args.iter().map(|_| ctx.fresh_tvar()).collect();
             let mut new_ctx = ctx.clone();
@@ -389,11 +375,19 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
                     }
                 };
             }
-            let (ret_ty, cs) = infer(body, &new_ctx);
+            new_ctx.r#async = is_async.to_owned();
+            let (ret, cs) = infer(body, &new_ctx);
             ctx.state.count.set(new_ctx.state.count.get());
+
+            let ret = if !is_async || is_promise(&ret) {
+                ret
+            } else {
+                ctx.alias("Promise", vec![ret])
+            };
+
             let lam_ty = ctx.from_lam(TLam {
                 args: arg_tvs,
-                ret: Box::new(ret_ty),
+                ret: Box::new(ret),
             });
 
             (lam_ty, cs)
@@ -445,15 +439,36 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
         }
         (Expr::Obj { properties }, _) => {
             let mut all_cs: Vec<Constraint> = Vec::new();
-            let properties: Vec<_> = properties.iter().map(|(p, _)| {
-                let (ty, cs) = infer(&p.value, ctx);
-                all_cs.extend(cs);
-                ctx.prop(&p.name, ty)
-            }).collect();
+            let properties: Vec<_> = properties
+                .iter()
+                .map(|(p, _)| {
+                    let (ty, cs) = infer(&p.value, ctx);
+                    all_cs.extend(cs);
+                    ctx.prop(&p.name, ty)
+                })
+                .collect();
 
             let obj_ty = ctx.obj(&properties);
 
             (obj_ty, all_cs)
+        }
+        (Expr::Await { expr }, _) => {
+            if !ctx.r#async {
+                panic!("Can't use `await` inside non-async lambda")
+            }
+
+            let (promise_ty, promise_cs) = infer(expr, ctx);
+            let tv = ctx.fresh_tvar();
+
+            let c = Constraint {
+                types: (promise_ty, ctx.alias("Promise", vec![tv.clone()])),
+            };
+
+            let mut cs: Vec<Constraint> = Vec::new();
+            cs.extend(promise_cs);
+            cs.push(c);
+
+            (tv, cs)
         }
     }
 }
