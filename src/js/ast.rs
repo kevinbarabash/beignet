@@ -28,6 +28,7 @@ pub enum Expression {
     Function {
         params: Vec<Param>,
         body: Vec<Statement>,
+        r#async: bool,
     },
     Ident {
         name: String,
@@ -50,6 +51,9 @@ pub enum Expression {
     Object {
         properties: Vec<Property>,
     },
+    Await {
+        expr: Box<Expression>,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

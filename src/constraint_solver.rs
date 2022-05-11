@@ -59,6 +59,27 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
         (TypeKind::Prim(prim1), TypeKind::Prim(prim2)) if prim1 == prim2 => Subst::new(),
         (TypeKind::Lit(lit1), TypeKind::Lit(lit2)) if lit1 == lit2 => Subst::new(),
         (TypeKind::Lam(lam1), TypeKind::Lam(lam2)) => unify_lams(&lam1, &lam2, ctx),
+        // TODO: copy tests case from `compiler` project for this
+        (
+            TypeKind::Alias {
+                name: name1,
+                type_params: vars1,
+            },
+            TypeKind::Alias {
+                name: name2,
+                type_params: vars2,
+            },
+        ) if name1 == name2 => {
+            // TODO: throw if vars1 and vars2 have different lengths
+            let cs: Vec<_> = vars1
+                .iter()
+                .zip(vars2)
+                .map(|(a, b)| Constraint {
+                    types: (a.clone(), b.clone()),
+                })
+                .collect();
+            unify_many(&cs, ctx)
+        }
 
         _ => {
             if is_subtype(&t1, &t2) {
@@ -163,11 +184,11 @@ fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Subst {
     let mut types: Vec<Type> = vec![];
     match &t1.kind {
         TypeKind::Union(t1_types) => types.extend(t1_types.to_owned()),
-        _ => types.push(t1.to_owned())
+        _ => types.push(t1.to_owned()),
     }
     match &t2.kind {
         TypeKind::Union(t2_types) => types.extend(t2_types.to_owned()),
-        _ => types.push(t2.to_owned())
+        _ => types.push(t2.to_owned()),
     }
     let union = ctx.union(&types);
 

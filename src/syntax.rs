@@ -56,6 +56,9 @@ pub enum Expr {
     Obj {
         properties: Vec<WithSpan<Property>>,
     },
+    Await {
+        expr: Box<WithSpan<Expr>>,
+    },
 }
 
 // TODO: rename this to something else since we can't use it for let bindings
