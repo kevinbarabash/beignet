@@ -248,8 +248,7 @@ pub fn token_parser(
                 }
             });
 
-        // NOTE: `let` is an expressionb because it current models
-        // let-in.
+        // NOTE: `let` is an expression because it currently models let-in.
         choice((lam, r#let, sum))
     });
 
