@@ -150,16 +150,14 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
         let app = just_with_padding("await")
             .or_not()
             .then(app.clone())
-            .map_with_span(|(option, app), span: Span| {
-                match option {
-                    Some(_) => (
-                        Expr::Await {
-                            expr: Box::from(app),
-                        },
-                        span,
-                    ),
-                    None => app,
-                }
+            .map_with_span(|(option, app), span: Span| match option {
+                Some(_) => (
+                    Expr::Await {
+                        expr: Box::from(app),
+                    },
+                    span,
+                ),
+                None => app,
             });
 
         let product = app
@@ -548,7 +546,7 @@ mod tests {
 
     #[test]
     fn fn_with_multiple_params() {
-    insta::assert_debug_snapshot!(parse("(a, b) => c"), @r###"
+        insta::assert_debug_snapshot!(parse("(a, b) => c"), @r###"
         Program {
             body: [
                 (
