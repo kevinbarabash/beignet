@@ -52,7 +52,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
         syntax::Expr::Ident { name } => Expression::Ident {
             name: name.to_owned(),
         },
-        syntax::Expr::Lam { args, body, .. } => {
+        syntax::Expr::Lam { args, body, is_async: r#async } => {
             let params: Vec<_> = args
                 .iter()
                 .map(|(ident, _)| match ident {
@@ -72,6 +72,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                     return Expression::Function {
                         params,
                         body: let_to_children(body),
+                        r#async: r#async.to_owned(),
                     }
                 }
                 _ => Expression::Function {
@@ -81,17 +82,19 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                     body: vec![Statement::Return {
                         arg: build_expr(body),
                     }],
+                    r#async: r#async.to_owned(),
                 },
             }
         }
         syntax::Expr::Let { .. } => {
             let children = let_to_children(expr);
 
-            // Return an IIFE.
+            // Return an IIFE
             Expression::Call {
                 func: Box::from(Expression::Function {
                     params: vec![],
                     body: children,
+                    r#async: false,
                 }),
                 args: vec![],
             }
@@ -120,7 +123,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
             consequent,
             alternate,
         } => {
-            // Return an IIFE.
+            // Returns an IIFE that looks like:
             // (() => {
             //    if (cond) {
             //        return consequent;
@@ -138,6 +141,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                             alternate: build_return_block(&alternate.as_ref().0),
                         },
                     }],
+                    r#async: false,
                 }),
                 args: vec![],
             }
@@ -151,6 +155,9 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
             }).collect();
 
             Expression::Object { properties }
+        },
+        syntax::Expr::Await { expr } => {
+            Expression::Await { expr: Box::from(build_expr(&expr.as_ref().0)) }
         },
     }
 }

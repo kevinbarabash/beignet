@@ -20,6 +20,10 @@ pub enum TsType {
     },
     Union(Vec<TsType>),
     Obj(Vec<TsObjProp>),
+    Alias {
+        name: String,
+        type_params: Vec<TsType>,
+    },
 }
 
 impl fmt::Display for TsQualifiedType {
@@ -68,6 +72,10 @@ impl fmt::Display for TsType {
 
                 // TODO: output multi-line object types
                 write!(f, "{{{props}}}")
+            }
+            TsType::Alias {name, type_params} => {
+                let type_params = type_params.iter().join(", ");
+                write!(f, "{name}<{type_params}>")
             }
         }
     }
