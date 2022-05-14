@@ -238,6 +238,8 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                 )
             });
 
+        // We use `just` instead of `just_with_padding` here to ensure that
+        // the span doesn't include leading whitespace.
         let r#let = just("let")
             .ignore_then(just_with_padding("rec").or_not())
             .then(pattern)
@@ -264,6 +266,8 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
         choice((lam, r#let, sum))
     });
 
+    // We use `just` instead of `just_with_padding` here to ensure that
+    // the span doesn't include leading whitespace.
     let decl = just("let")
         .ignore_then(just_with_padding("rec").or_not())
         .then(pattern)
@@ -308,10 +312,10 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
         );
 
     let program = choice((
-        decl.padded(),
-        expr.map_with_span(|e, span: Span| (Statement::Expr(e), span))
-            .padded(),
+        decl,
+        expr.map_with_span(|e, span: Span| (Statement::Expr(e), span)),
     ))
+    .padded()
     .repeated()
     .map(|body| Program { body });
 
