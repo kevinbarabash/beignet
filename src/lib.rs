@@ -2,7 +2,6 @@ pub mod constraint_solver;
 pub mod context;
 pub mod infer;
 pub mod js;
-pub mod lexer;
 pub mod literal;
 pub mod parser;
 pub mod substitutable;
@@ -83,10 +82,7 @@ fn build_d_ts(env: &Env, prog: &Program) -> String {
 
 #[wasm_bindgen]
 pub fn compile(input: &str) -> CompileResult {
-    let result = lexer::lexer().parse(input).unwrap();
-    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-    let prog = parser::token_parser(&spans).parse(tokens).unwrap();
+    let prog = parser::parser().parse(input).unwrap();
 
     let js_tree = js::builder::build_js(&prog);
     let js = js::printer::print_js(&js_tree);

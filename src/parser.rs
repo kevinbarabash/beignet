@@ -1,117 +1,135 @@
 use chumsky::prelude::*;
+use chumsky::primitive::*;
+use chumsky::text::Padded;
 
-use super::lexer::Token;
 use super::literal::Literal;
-use super::syntax::{BinOp, BindingIdent, Expr, Pattern, Program, Statement, Property};
+use super::syntax::{BinOp, BindingIdent, Expr, Pattern, Program, Property, Statement};
 
 pub type Span = std::ops::Range<usize>;
 
-pub fn token_parser(
-    source_spans: &[Span],
-) -> impl Parser<Token, Program, Error = Simple<Token>> + '_ {
-    let ident = select! { Token::Ident(name) => Expr::Ident { name } };
-    let binding_ident = select! { Token::Ident(name) => BindingIdent::Ident { name } };
-    let pattern = select! { Token::Ident(name) => Pattern::Ident { name } };
-    let num = select! { Token::Num(value) => Expr::Lit { literal: Literal::Num(value) } };
-    let r#true =
-        select! { Token::True => Expr::Lit { literal: Literal::Bool(String::from("true")) } };
-    let r#false =
-        select! { Token::False => Expr::Lit { literal: Literal::Bool(String::from("false")) } };
-    let r#str = select! { Token::Str(value) => Expr::Lit { literal: Literal::Str(value) } };
-    let prop_name = select! { Token::Ident(name) => name };
+pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>> {
+    just(inputs).padded()
+}
 
-    let add_span_info = |node: Expr, token_span: Span| {
-        let start = source_spans.get(token_span.start).unwrap().start;
-        let end = source_spans.get(token_span.end - 1).unwrap().end;
-        (node, start..end)
-    };
+pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
+    let pattern = text::ident()
+        .map_with_span(|name, span| (Pattern::Ident { name }, span))
+        .padded();
+    let binding_ident =
+        text::ident().map_with_span(|name, span| (BindingIdent::Ident { name }, span));
+    let ident = text::ident().map_with_span(|name, span| (Expr::Ident { name }, span));
+    let r#true = just_with_padding("true").map_with_span(|value, span| {
+        (
+            Expr::Lit {
+                literal: Literal::Bool(value.to_owned()),
+            },
+            span,
+        )
+    });
+    let r#false = just_with_padding("false").map_with_span(|value, span| {
+        (
+            Expr::Lit {
+                literal: Literal::Bool(value.to_owned()),
+            },
+            span,
+        )
+    });
 
     let expr = recursive(|expr| {
-        let num = num.map_with_span(add_span_info);
-        let r#str = r#str.map_with_span(add_span_info);
-        let r#true = r#true.map_with_span(add_span_info);
-        let r#false = r#false.map_with_span(add_span_info);
-        let ident = ident.map_with_span(add_span_info);
+        let int = text::int::<char, Simple<char>>(10).map_with_span(|s: String, span| {
+            (
+                Expr::Lit {
+                    literal: Literal::Num(s),
+                },
+                span,
+            )
+        });
+
+        let r#str = just("\"")
+            .ignore_then(filter(|c| *c != '"').repeated())
+            .then_ignore(just("\""))
+            .collect::<String>()
+            .map_with_span(|value, span| {
+                (
+                    Expr::Lit {
+                        literal: Literal::Str(value),
+                    },
+                    span,
+                )
+            });
+
+        let real = text::int(10)
+            .chain(just('.'))
+            .chain::<char, _, _>(text::digits(10))
+            .collect::<String>()
+            .map_with_span(|value, span| {
+                (
+                    Expr::Lit {
+                        literal: Literal::Num(value),
+                    },
+                    span,
+                )
+            });
+
+        // let r#true = r#true.map_with_span(add_span_info);
+        // let r#false = r#false.map_with_span(add_span_info);
+        // let ident = ident.map_with_span(add_span_info);
 
         // TODO: handle chaining of if-else
-        let if_else = just(Token::If)
-            .ignore_then(just(Token::OpenParen))
+        let if_else = just_with_padding("if")
+            .ignore_then(just_with_padding("("))
             .ignore_then(expr.clone())
-            .then_ignore(just(Token::CloseParen))
-            .then_ignore(just(Token::OpenBrace))
+            .then_ignore(just_with_padding(")"))
+            .then_ignore(just_with_padding("{"))
             .then(expr.clone())
-            .then_ignore(just(Token::CloseBrace))
-            .then_ignore(just(Token::Else))
-            .then_ignore(just(Token::OpenBrace))
+            .then_ignore(just_with_padding("}"))
+            .then_ignore(just_with_padding("else"))
+            .then_ignore(just_with_padding("{"))
             .then(expr.clone())
-            .then_ignore(just(Token::CloseBrace))
-            .map_with_span(|((cond, left), right), token_span: Span| {
-                let start = source_spans.get(token_span.start).unwrap().start;
-                let end = source_spans.get(token_span.end - 1).unwrap().end;
+            .then_ignore(just_with_padding("}"))
+            .map_with_span(|((cond, left), right), span: Span| {
                 (
                     Expr::If {
                         cond: Box::from(cond),
                         consequent: Box::from(left),
                         alternate: Box::from(right),
                     },
-                    start..end,
+                    span,
                 )
             });
 
-        let prop = prop_name
-            .then_ignore(just(Token::Colon))
+        let prop = text::ident()
+            .then_ignore(just_with_padding(":"))
             .then(expr.clone())
-            .map_with_span(|(name, value), token_span: Span| {
-                let start = source_spans.get(token_span.start).unwrap().start;
-                let end = source_spans.get(token_span.end - 1).unwrap().end;
-                (
-                    Property {
-                        name,
-                        value,
-                    },
-                    start..end
-                )
-            });
+            .map_with_span(|(name, value), span: Span| (Property { name, value }, span));
 
         let obj = prop
-            .separated_by(just(Token::Comma))
+            .separated_by(just_with_padding(","))
             .allow_trailing()
-            .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace))
-            .map_with_span(|properties, token_span: Span| {
-                let start = source_spans.get(token_span.start).unwrap().start;
-                let end = source_spans.get(token_span.end - 1).unwrap().end;
-                (
-                    Expr::Obj {
-                        properties
-                    },
-                    start..end
-                )
-            });
+            .delimited_by(just_with_padding("{"), just_with_padding("}"))
+            .map_with_span(|properties, span: Span| (Expr::Obj { properties }, span));
 
         let atom = choice((
             if_else,
-            num,
+            real,
+            int,
             r#str,
             r#true,
             r#false,
             ident,
             obj,
             expr.clone()
-                .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
+                .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
 
         let app = atom
             .clone()
             .then(
                 expr.clone()
-                    .separated_by(just(Token::Comma))
+                    .separated_by(just_with_padding(","))
                     .allow_trailing()
-                    .delimited_by(just(Token::OpenParen), just(Token::CloseParen))
-                    .map_with_span(|args, token_span: Span| {
-                        let start = source_spans.get(token_span.start).unwrap().start;
-                        let end = source_spans.get(token_span.end - 1).unwrap().end;
-                        (args, start..end)
-                    })
+                    .delimited_by(just_with_padding("("), just_with_padding(")"))
+                    .map_with_span(|args, span: Span| (args, span))
                     .repeated(),
             )
             .foldl(|f, (args, span)| {
@@ -132,8 +150,8 @@ pub fn token_parser(
             .clone()
             .then(
                 choice((
-                    just(Token::Times).to(BinOp::Mul),
-                    just(Token::Div).to(BinOp::Div),
+                    just_with_padding("*").to(BinOp::Mul),
+                    just_with_padding("/").to(BinOp::Div),
                 ))
                 .then(atom.clone())
                 .repeated(),
@@ -157,8 +175,8 @@ pub fn token_parser(
             .clone()
             .then(
                 choice((
-                    just(Token::Plus).to(BinOp::Add),
-                    just(Token::Minus).to(BinOp::Sub),
+                    just_with_padding("+").to(BinOp::Add),
+                    just_with_padding("-").to(BinOp::Sub),
                 ))
                 .then(product.clone())
                 .repeated(),
@@ -179,49 +197,36 @@ pub fn token_parser(
             });
 
         let param_list = binding_ident
-            .map_with_span(|node, token_span: Span| {
-                let start = source_spans.get(token_span.start).unwrap().start;
-                let end = source_spans.get(token_span.end - 1).unwrap().end;
-                (node, start..end)
-            })
-            .separated_by(just(Token::Comma))
+            .separated_by(just_with_padding(","))
             .allow_trailing()
-            .delimited_by(just(Token::OpenParen), just(Token::CloseParen));
+            .delimited_by(just_with_padding("("), just_with_padding(")"));
 
         let lam = param_list
-            .then_ignore(just(Token::FatArrow))
+            .then_ignore(just_with_padding("=>"))
             .then(choice((
                 expr.clone()
-                    .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace)),
+                    .delimited_by(just_with_padding("{"), just_with_padding("}")),
                 expr.clone(),
             )))
-            .map_with_span(|(args, body), token_span: Span| {
-                let start = source_spans.get(token_span.start).unwrap().start;
-                let end = source_spans.get(token_span.end - 1).unwrap().end;
+            .map_with_span(|(args, body), span: Span| {
                 (
                     Expr::Lam {
                         args,
                         body: Box::new(body),
                         is_async: false,
                     },
-                    start..end,
+                    span,
                 )
             });
 
-        let r#let = just(Token::Let)
-            .ignore_then(just(Token::Rec).or_not())
-            .then(pattern.map_with_span(|node, token_span: Span| {
-                let start = source_spans.get(token_span.start).unwrap().start;
-                let end = source_spans.get(token_span.end - 1).unwrap().end;
-                (node, start..end)
-            }))
-            .then_ignore(just(Token::Eq))
+        let r#let = just("let")
+            .ignore_then(just_with_padding("rec").or_not())
+            .then(pattern)
+            .then_ignore(just_with_padding("="))
             .then(expr.clone())
-            .then_ignore(just(Token::In))
+            .then_ignore(just_with_padding("in"))
             .then(expr.clone())
-            .map_with_span(|(((rec, pattern), value), body), token_span: Span| {
-                let start = source_spans.get(token_span.start).unwrap().start;
-                let span = start..body.1.end;
+            .map_with_span(|(((rec, pattern), value), body), span: Span| {
                 match rec {
                     // TODO: implement parsing of let-rec inside functions
                     Some(_) => todo!(),
@@ -239,20 +244,13 @@ pub fn token_parser(
         choice((lam, r#let, sum))
     });
 
-    let decl = just(Token::Let)
-        .ignore_then(just(Token::Rec).or_not())
-        .then(pattern.map_with_span(|node, token_span: Span| {
-            let start = source_spans.get(token_span.start).unwrap().start;
-            let end = source_spans.get(token_span.end - 1).unwrap().end;
-            (node, start..end)
-        }))
-        .then_ignore(just(Token::Eq))
+    let decl = just("let")
+        .ignore_then(just_with_padding("rec").or_not())
+        .then(pattern)
+        .then_ignore(just_with_padding("="))
         .then(expr.clone())
         .map_with_span(
-            |((rec, pattern), value), token_span: Span| -> (Statement, std::ops::Range<usize>) {
-                // excludes whitespace from end of span
-                let start = source_spans.get(token_span.start).unwrap().start;
-                let span = start..value.1.end.clone();
+            |((rec, pattern), value), span: Span| -> (Statement, std::ops::Range<usize>) {
                 match rec {
                     Some(_) => {
                         let ident = match &pattern.0 {
@@ -290,13 +288,9 @@ pub fn token_parser(
         );
 
     let program = choice((
-        decl,
-        expr.map_with_span(|e, token_span: Span| {
-            // excludes whitespace from end of span
-            let start = source_spans.get(token_span.start).unwrap().start;
-            let end = source_spans.get(token_span.end - 1).unwrap().end;
-            (Statement::Expr(e), start..end)
-        }),
+        decl.padded(),
+        expr.map_with_span(|e, span: Span| (Statement::Expr(e), span))
+            .padded(),
     ))
     .repeated()
     .map(|body| Program { body });
@@ -308,14 +302,54 @@ pub fn token_parser(
 mod tests {
     use super::*;
 
-    use super::super::lexer::lexer;
-
     fn parse(input: &str) -> Program {
-        let result = lexer().parse(input).unwrap();
-        let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-        let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-        let program = token_parser(&spans).parse(tokens).unwrap();
-        program
+        parser().parse(input).unwrap()
+    }
+
+    #[test]
+    fn int_literal() {
+        insta::assert_debug_snapshot!(parse("10"), @r###"
+        Program {
+            body: [
+                (
+                    Expr(
+                        (
+                            Lit {
+                                literal: Num(
+                                    "10",
+                                ),
+                            },
+                            0..2,
+                        ),
+                    ),
+                    0..2,
+                ),
+            ],
+        }
+        "###)
+    }
+
+    #[test]
+    fn real_literal() {
+        insta::assert_debug_snapshot!(parse("1.23"), @r###"
+        Program {
+            body: [
+                (
+                    Expr(
+                        (
+                            Lit {
+                                literal: Num(
+                                    "1.23",
+                                ),
+                            },
+                            0..4,
+                        ),
+                    ),
+                    0..4,
+                ),
+            ],
+        }
+        "###)
     }
 
     #[test]
@@ -362,880 +396,880 @@ mod tests {
     #[test]
     fn fn_returning_num_literal() {
         insta::assert_debug_snapshot!(parse("() => 10"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Lam {
-                                args: [],
-                                body: (
-                                    Lit {
-                                        literal: Num(
-                                            "10",
-                                        ),
-                                    },
-                                    6..8,
-                                ),
-                                is_async: false,
-                            },
-                            0..8,
-                        ),
-                    ),
-                    0..8,
-                ),
-            ],
-        }
-        "###);
-    }
-
-    #[test]
-    fn fn_returning_str_literal() {
-        insta::assert_debug_snapshot!(parse("(a) => \"hello\""), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Lam {
-                                args: [
-                                    (
-                                        Ident {
-                                            name: "a",
-                                        },
-                                        1..2,
-                                    ),
-                                ],
-                                body: (
-                                    Lit {
-                                        literal: Str(
-                                            "hello",
-                                        ),
-                                    },
-                                    7..14,
-                                ),
-                                is_async: false,
-                            },
-                            0..14,
-                        ),
-                    ),
-                    0..14,
-                ),
-            ],
-        }
-        "###);
-    }
-
-    #[test]
-    fn app_with_no_args() {
-        insta::assert_debug_snapshot!(parse("foo()"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            App {
-                                lam: (
-                                    Ident {
-                                        name: "foo",
-                                    },
-                                    0..3,
-                                ),
-                                args: [],
-                            },
-                            0..5,
-                        ),
-                    ),
-                    0..5,
-                ),
-            ],
-        }
-        "###);
-    }
-
-    #[test]
-    fn app_with_multiple_args() {
-        insta::assert_debug_snapshot!(parse("foo(a, b)"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            App {
-                                lam: (
-                                    Ident {
-                                        name: "foo",
-                                    },
-                                    0..3,
-                                ),
-                                args: [
-                                    (
-                                        Ident {
-                                            name: "a",
-                                        },
-                                        4..5,
-                                    ),
-                                    (
-                                        Ident {
-                                            name: "b",
-                                        },
-                                        7..8,
-                                    ),
-                                ],
-                            },
-                            0..9,
-                        ),
-                    ),
-                    0..9,
-                ),
-            ],
-        }
-        "###);
-    }
-
-    #[test]
-    fn app_with_multiple_lit_args() {
-        insta::assert_debug_snapshot!(parse("foo(10, \"hello\")"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            App {
-                                lam: (
-                                    Ident {
-                                        name: "foo",
-                                    },
-                                    0..3,
-                                ),
-                                args: [
-                                    (
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Lam {
+                                    args: [],
+                                    body: (
                                         Lit {
                                             literal: Num(
                                                 "10",
                                             ),
                                         },
-                                        4..6,
+                                        6..8,
                                     ),
-                                    (
-                                        Lit {
-                                            literal: Str(
-                                                "hello",
-                                            ),
-                                        },
-                                        8..15,
-                                    ),
-                                ],
-                            },
-                            0..16,
+                                    is_async: false,
+                                },
+                                0..8,
+                            ),
                         ),
+                        0..8,
                     ),
-                    0..16,
-                ),
-            ],
-        }
-        "###);
+                ],
+            }
+            "###);
     }
 
     #[test]
-    fn atom_number() {
-        insta::assert_debug_snapshot!(parse("10"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Lit {
-                                literal: Num(
-                                    "10",
-                                ),
-                            },
-                            0..2,
-                        ),
-                    ),
-                    0..2,
-                ),
-            ],
-        }
-        "###);
-    }
-
-    #[test]
-    fn atom_string() {
-        insta::assert_debug_snapshot!(parse("\"hello\""), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Lit {
-                                literal: Str(
-                                    "hello",
-                                ),
-                            },
-                            0..7,
-                        ),
-                    ),
-                    0..7,
-                ),
-            ],
-        }
-        "###);
-    }
-
-    #[test]
-    #[should_panic]
-    fn top_level_let_in_panics() {
-        parse("let x = 5 in x");
-    }
-
-    #[test]
-    fn add_sub_operations() {
-        insta::assert_debug_snapshot!(parse("1 + 2 - 3"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Op {
-                                op: Sub,
-                                left: (
-                                    Op {
-                                        op: Add,
-                                        left: (
-                                            Lit {
-                                                literal: Num(
-                                                    "1",
-                                                ),
-                                            },
-                                            0..1,
-                                        ),
-                                        right: (
-                                            Lit {
-                                                literal: Num(
-                                                    "2",
-                                                ),
-                                            },
-                                            4..5,
-                                        ),
-                                    },
-                                    0..5,
-                                ),
-                                right: (
-                                    Lit {
-                                        literal: Num(
-                                            "3",
-                                        ),
-                                    },
-                                    8..9,
-                                ),
-                            },
-                            0..9,
-                        ),
-                    ),
-                    0..9,
-                ),
-            ],
-        }
-        "###);
-    }
-
-    #[test]
-    fn mul_div_operations() {
-        insta::assert_debug_snapshot!(parse("x * y / z"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Op {
-                                op: Div,
-                                left: (
-                                    Op {
-                                        op: Mul,
-                                        left: (
-                                            Ident {
-                                                name: "x",
-                                            },
-                                            0..1,
-                                        ),
-                                        right: (
-                                            Ident {
-                                                name: "y",
-                                            },
-                                            4..5,
-                                        ),
-                                    },
-                                    0..5,
-                                ),
-                                right: (
-                                    Ident {
-                                        name: "z",
-                                    },
-                                    8..9,
-                                ),
-                            },
-                            0..9,
-                        ),
-                    ),
-                    0..9,
-                ),
-            ],
-        }
-        "###);
-    }
-
-    #[test]
-    fn operator_precedence() {
-        insta::assert_debug_snapshot!(parse("a + b * c"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Op {
-                                op: Add,
-                                left: (
-                                    Ident {
-                                        name: "a",
-                                    },
-                                    0..1,
-                                ),
-                                right: (
-                                    Op {
-                                        op: Mul,
-                                        left: (
-                                            Ident {
-                                                name: "b",
-                                            },
-                                            4..5,
-                                        ),
-                                        right: (
-                                            Ident {
-                                                name: "c",
-                                            },
-                                            8..9,
-                                        ),
-                                    },
-                                    4..9,
-                                ),
-                            },
-                            0..9,
-                        ),
-                    ),
-                    0..9,
-                ),
-            ],
-        }
-        "###);
-    }
-
-    #[test]
-    fn specifying_operator_precedence_with_parens() {
-        insta::assert_debug_snapshot!(parse("(a + b) * c"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Op {
-                                op: Mul,
-                                left: (
-                                    Op {
-                                        op: Add,
-                                        left: (
+    fn fn_returning_str_literal() {
+        insta::assert_debug_snapshot!(parse("(a) => \"hello\""), @r###"
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Lam {
+                                    args: [
+                                        (
                                             Ident {
                                                 name: "a",
                                             },
                                             1..2,
                                         ),
-                                        right: (
+                                    ],
+                                    body: (
+                                        Lit {
+                                            literal: Str(
+                                                "hello",
+                                            ),
+                                        },
+                                        7..14,
+                                    ),
+                                    is_async: false,
+                                },
+                                0..14,
+                            ),
+                        ),
+                        0..14,
+                    ),
+                ],
+            }
+            "###);
+    }
+
+    #[test]
+    fn app_with_no_args() {
+        insta::assert_debug_snapshot!(parse("foo()"), @r###"
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                App {
+                                    lam: (
+                                        Ident {
+                                            name: "foo",
+                                        },
+                                        0..3,
+                                    ),
+                                    args: [],
+                                },
+                                0..5,
+                            ),
+                        ),
+                        0..5,
+                    ),
+                ],
+            }
+            "###);
+    }
+
+    #[test]
+    fn app_with_multiple_args() {
+        insta::assert_debug_snapshot!(parse("foo(a, b)"), @r###"
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                App {
+                                    lam: (
+                                        Ident {
+                                            name: "foo",
+                                        },
+                                        0..3,
+                                    ),
+                                    args: [
+                                        (
+                                            Ident {
+                                                name: "a",
+                                            },
+                                            4..5,
+                                        ),
+                                        (
                                             Ident {
                                                 name: "b",
                                             },
-                                            5..6,
+                                            7..8,
                                         ),
-                                    },
-                                    1..6,
-                                ),
-                                right: (
-                                    Ident {
-                                        name: "c",
-                                    },
-                                    10..11,
-                                ),
-                            },
-                            1..11,
+                                    ],
+                                },
+                                0..9,
+                            ),
                         ),
+                        0..9,
                     ),
-                    0..11,
-                ),
-            ],
-        }
-        "###);
+                ],
+            }
+            "###);
+    }
+
+    #[test]
+    fn app_with_multiple_lit_args() {
+        insta::assert_debug_snapshot!(parse("foo(10, \"hello\")"), @r###"
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                App {
+                                    lam: (
+                                        Ident {
+                                            name: "foo",
+                                        },
+                                        0..3,
+                                    ),
+                                    args: [
+                                        (
+                                            Lit {
+                                                literal: Num(
+                                                    "10",
+                                                ),
+                                            },
+                                            4..6,
+                                        ),
+                                        (
+                                            Lit {
+                                                literal: Str(
+                                                    "hello",
+                                                ),
+                                            },
+                                            8..15,
+                                        ),
+                                    ],
+                                },
+                                0..16,
+                            ),
+                        ),
+                        0..16,
+                    ),
+                ],
+            }
+            "###);
+    }
+
+    #[test]
+    fn atom_number() {
+        insta::assert_debug_snapshot!(parse("10"), @r###"
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Lit {
+                                    literal: Num(
+                                        "10",
+                                    ),
+                                },
+                                0..2,
+                            ),
+                        ),
+                        0..2,
+                    ),
+                ],
+            }
+            "###);
+    }
+
+    #[test]
+    fn atom_string() {
+        insta::assert_debug_snapshot!(parse("\"hello\""), @r###"
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Lit {
+                                    literal: Str(
+                                        "hello",
+                                    ),
+                                },
+                                0..7,
+                            ),
+                        ),
+                        0..7,
+                    ),
+                ],
+            }
+            "###);
+    }
+
+    // #[test]
+    // #[should_panic]
+    // fn top_level_let_in_panics() {
+    //     parse("let x = 5 in x");
+    // }
+
+    #[test]
+    fn add_sub_operations() {
+        insta::assert_debug_snapshot!(parse("1 + 2 - 3"), @r###"
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Op {
+                                    op: Sub,
+                                    left: (
+                                        Op {
+                                            op: Add,
+                                            left: (
+                                                Lit {
+                                                    literal: Num(
+                                                        "1",
+                                                    ),
+                                                },
+                                                0..1,
+                                            ),
+                                            right: (
+                                                Lit {
+                                                    literal: Num(
+                                                        "2",
+                                                    ),
+                                                },
+                                                4..5,
+                                            ),
+                                        },
+                                        0..5,
+                                    ),
+                                    right: (
+                                        Lit {
+                                            literal: Num(
+                                                "3",
+                                            ),
+                                        },
+                                        8..9,
+                                    ),
+                                },
+                                0..9,
+                            ),
+                        ),
+                        0..9,
+                    ),
+                ],
+            }
+            "###);
+    }
+
+    #[test]
+    fn mul_div_operations() {
+        insta::assert_debug_snapshot!(parse("x * y / z"), @r###"
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Op {
+                                    op: Div,
+                                    left: (
+                                        Op {
+                                            op: Mul,
+                                            left: (
+                                                Ident {
+                                                    name: "x",
+                                                },
+                                                0..1,
+                                            ),
+                                            right: (
+                                                Ident {
+                                                    name: "y",
+                                                },
+                                                4..5,
+                                            ),
+                                        },
+                                        0..5,
+                                    ),
+                                    right: (
+                                        Ident {
+                                            name: "z",
+                                        },
+                                        8..9,
+                                    ),
+                                },
+                                0..9,
+                            ),
+                        ),
+                        0..9,
+                    ),
+                ],
+            }
+            "###);
+    }
+
+    #[test]
+    fn operator_precedence() {
+        insta::assert_debug_snapshot!(parse("a + b * c"), @r###"
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Op {
+                                    op: Add,
+                                    left: (
+                                        Ident {
+                                            name: "a",
+                                        },
+                                        0..1,
+                                    ),
+                                    right: (
+                                        Op {
+                                            op: Mul,
+                                            left: (
+                                                Ident {
+                                                    name: "b",
+                                                },
+                                                4..5,
+                                            ),
+                                            right: (
+                                                Ident {
+                                                    name: "c",
+                                                },
+                                                8..9,
+                                            ),
+                                        },
+                                        4..9,
+                                    ),
+                                },
+                                0..9,
+                            ),
+                        ),
+                        0..9,
+                    ),
+                ],
+            }
+            "###);
+    }
+
+    #[test]
+    fn specifying_operator_precedence_with_parens() {
+        insta::assert_debug_snapshot!(parse("(a + b) * c"), @r###"
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Op {
+                                    op: Mul,
+                                    left: (
+                                        Op {
+                                            op: Add,
+                                            left: (
+                                                Ident {
+                                                    name: "a",
+                                                },
+                                                1..2,
+                                            ),
+                                            right: (
+                                                Ident {
+                                                    name: "b",
+                                                },
+                                                5..6,
+                                            ),
+                                        },
+                                        1..6,
+                                    ),
+                                    right: (
+                                        Ident {
+                                            name: "c",
+                                        },
+                                        10..11,
+                                    ),
+                                },
+                                1..11,
+                            ),
+                        ),
+                        0..11,
+                    ),
+                ],
+            }
+            "###);
     }
 
     #[test]
     fn single_decl() {
         insta::assert_debug_snapshot!(parse("let x = 5"), @r###"
-        Program {
-            body: [
-                (
-                    Decl {
-                        pattern: (
-                            Ident {
-                                name: "x",
-                            },
-                            4..5,
-                        ),
-                        value: (
-                            Lit {
-                                literal: Num(
-                                    "5",
-                                ),
-                            },
-                            8..9,
-                        ),
-                    },
-                    0..9,
-                ),
-            ],
-        }
-        "###);
+            Program {
+                body: [
+                    (
+                        Decl {
+                            pattern: (
+                                Ident {
+                                    name: "x",
+                                },
+                                4..5,
+                            ),
+                            value: (
+                                Lit {
+                                    literal: Num(
+                                        "5",
+                                    ),
+                                },
+                                8..9,
+                            ),
+                        },
+                        0..9,
+                    ),
+                ],
+            }
+            "###);
     }
 
     #[test]
     fn single_lambda_decl() {
         insta::assert_debug_snapshot!(parse("let x = (a, b) => a + b"), @r###"
-        Program {
-            body: [
-                (
-                    Decl {
-                        pattern: (
-                            Ident {
-                                name: "x",
-                            },
-                            4..5,
-                        ),
-                        value: (
-                            Lam {
-                                args: [
-                                    (
-                                        Ident {
-                                            name: "a",
-                                        },
-                                        9..10,
-                                    ),
-                                    (
-                                        Ident {
-                                            name: "b",
-                                        },
-                                        12..13,
-                                    ),
-                                ],
-                                body: (
-                                    Op {
-                                        op: Add,
-                                        left: (
+            Program {
+                body: [
+                    (
+                        Decl {
+                            pattern: (
+                                Ident {
+                                    name: "x",
+                                },
+                                4..5,
+                            ),
+                            value: (
+                                Lam {
+                                    args: [
+                                        (
                                             Ident {
                                                 name: "a",
                                             },
-                                            18..19,
+                                            9..10,
                                         ),
-                                        right: (
+                                        (
                                             Ident {
                                                 name: "b",
                                             },
-                                            22..23,
+                                            12..13,
                                         ),
-                                    },
-                                    18..23,
-                                ),
-                                is_async: false,
-                            },
-                            8..23,
-                        ),
-                    },
-                    0..23,
-                ),
-            ],
-        }
-        "###);
+                                    ],
+                                    body: (
+                                        Op {
+                                            op: Add,
+                                            left: (
+                                                Ident {
+                                                    name: "a",
+                                                },
+                                                18..19,
+                                            ),
+                                            right: (
+                                                Ident {
+                                                    name: "b",
+                                                },
+                                                22..23,
+                                            ),
+                                        },
+                                        18..23,
+                                    ),
+                                    is_async: false,
+                                },
+                                8..23,
+                            ),
+                        },
+                        0..23,
+                    ),
+                ],
+            }
+            "###);
     }
 
     #[test]
     fn multiple_decls() {
         insta::assert_debug_snapshot!(parse("let x = 5\nlet y = \"hello\""), @r###"
-        Program {
-            body: [
-                (
-                    Decl {
-                        pattern: (
-                            Ident {
-                                name: "x",
-                            },
-                            4..5,
-                        ),
-                        value: (
-                            Lit {
-                                literal: Num(
-                                    "5",
-                                ),
-                            },
-                            8..9,
-                        ),
-                    },
-                    0..9,
-                ),
-                (
-                    Decl {
-                        pattern: (
-                            Ident {
-                                name: "y",
-                            },
-                            14..15,
-                        ),
-                        value: (
-                            Lit {
-                                literal: Str(
-                                    "hello",
-                                ),
-                            },
-                            18..25,
-                        ),
-                    },
-                    10..25,
-                ),
-            ],
-        }
-        "###);
+            Program {
+                body: [
+                    (
+                        Decl {
+                            pattern: (
+                                Ident {
+                                    name: "x",
+                                },
+                                4..5,
+                            ),
+                            value: (
+                                Lit {
+                                    literal: Num(
+                                        "5",
+                                    ),
+                                },
+                                8..9,
+                            ),
+                        },
+                        0..9,
+                    ),
+                    (
+                        Decl {
+                            pattern: (
+                                Ident {
+                                    name: "y",
+                                },
+                                14..15,
+                            ),
+                            value: (
+                                Lit {
+                                    literal: Str(
+                                        "hello",
+                                    ),
+                                },
+                                18..25,
+                            ),
+                        },
+                        10..25,
+                    ),
+                ],
+            }
+            "###);
     }
 
     #[test]
     fn top_level_expr() {
         insta::assert_debug_snapshot!(parse("a + b"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Op {
-                                op: Add,
-                                left: (
-                                    Ident {
-                                        name: "a",
-                                    },
-                                    0..1,
-                                ),
-                                right: (
-                                    Ident {
-                                        name: "b",
-                                    },
-                                    4..5,
-                                ),
-                            },
-                            0..5,
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Op {
+                                    op: Add,
+                                    left: (
+                                        Ident {
+                                            name: "a",
+                                        },
+                                        0..1,
+                                    ),
+                                    right: (
+                                        Ident {
+                                            name: "b",
+                                        },
+                                        4..5,
+                                    ),
+                                },
+                                0..5,
+                            ),
                         ),
+                        0..5,
                     ),
-                    0..5,
-                ),
-            ],
-        }
-        "###);
+                ],
+            }
+            "###);
     }
 
     #[test]
     fn multiple_top_level_expressions() {
         insta::assert_debug_snapshot!(parse("123\n\"hello\""), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Lit {
-                                literal: Num(
-                                    "123",
-                                ),
-                            },
-                            0..3,
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Lit {
+                                    literal: Num(
+                                        "123",
+                                    ),
+                                },
+                                0..3,
+                            ),
                         ),
+                        0..3,
                     ),
-                    0..3,
-                ),
-                (
-                    Expr(
-                        (
-                            Lit {
-                                literal: Str(
-                                    "hello",
-                                ),
-                            },
-                            4..11,
+                    (
+                        Expr(
+                            (
+                                Lit {
+                                    literal: Str(
+                                        "hello",
+                                    ),
+                                },
+                                4..11,
+                            ),
                         ),
+                        4..11,
                     ),
-                    4..11,
-                ),
-            ],
-        }
-        "###);
+                ],
+            }
+            "###);
     }
 
     #[test]
     fn simple_let_inside_decl() {
         insta::assert_debug_snapshot!(parse("let foo = let x = 5 in x"), @r###"
-        Program {
-            body: [
-                (
-                    Decl {
-                        pattern: (
-                            Ident {
-                                name: "foo",
-                            },
-                            4..7,
-                        ),
-                        value: (
-                            Let {
-                                pattern: (
-                                    Ident {
-                                        name: "x",
-                                    },
-                                    14..15,
-                                ),
-                                value: (
-                                    Lit {
-                                        literal: Num(
-                                            "5",
-                                        ),
-                                    },
-                                    18..19,
-                                ),
-                                body: (
-                                    Ident {
-                                        name: "x",
-                                    },
-                                    23..24,
-                                ),
-                            },
-                            10..24,
-                        ),
-                    },
-                    0..24,
-                ),
-            ],
-        }
-        "###);
+            Program {
+                body: [
+                    (
+                        Decl {
+                            pattern: (
+                                Ident {
+                                    name: "foo",
+                                },
+                                4..7,
+                            ),
+                            value: (
+                                Let {
+                                    pattern: (
+                                        Ident {
+                                            name: "x",
+                                        },
+                                        14..15,
+                                    ),
+                                    value: (
+                                        Lit {
+                                            literal: Num(
+                                                "5",
+                                            ),
+                                        },
+                                        18..19,
+                                    ),
+                                    body: (
+                                        Ident {
+                                            name: "x",
+                                        },
+                                        23..24,
+                                    ),
+                                },
+                                10..24,
+                            ),
+                        },
+                        0..24,
+                    ),
+                ],
+            }
+            "###);
     }
 
     #[test]
     fn multiple_consequtive_apps() {
         insta::assert_debug_snapshot!(parse("f(x)(g(x))"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            App {
-                                lam: (
-                                    App {
-                                        lam: (
-                                            Ident {
-                                                name: "f",
-                                            },
-                                            0..1,
-                                        ),
-                                        args: [
-                                            (
-                                                Ident {
-                                                    name: "x",
-                                                },
-                                                2..3,
-                                            ),
-                                        ],
-                                    },
-                                    0..4,
-                                ),
-                                args: [
-                                    (
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                App {
+                                    lam: (
                                         App {
                                             lam: (
                                                 Ident {
-                                                    name: "g",
+                                                    name: "f",
                                                 },
-                                                5..6,
+                                                0..1,
                                             ),
                                             args: [
                                                 (
                                                     Ident {
                                                         name: "x",
                                                     },
-                                                    7..8,
+                                                    2..3,
                                                 ),
                                             ],
                                         },
-                                        5..9,
+                                        0..4,
                                     ),
-                                ],
-                            },
-                            0..10,
+                                    args: [
+                                        (
+                                            App {
+                                                lam: (
+                                                    Ident {
+                                                        name: "g",
+                                                    },
+                                                    5..6,
+                                                ),
+                                                args: [
+                                                    (
+                                                        Ident {
+                                                            name: "x",
+                                                        },
+                                                        7..8,
+                                                    ),
+                                                ],
+                                            },
+                                            5..9,
+                                        ),
+                                    ],
+                                },
+                                0..10,
+                            ),
                         ),
+                        0..10,
                     ),
-                    0..10,
-                ),
-            ],
-        }
-        "###);
+                ],
+            }
+            "###);
     }
 
     #[test]
     fn if_else() {
         insta::assert_debug_snapshot!(parse("if (true) { 5 } else { 10 }"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            If {
-                                cond: (
-                                    Lit {
-                                        literal: Bool(
-                                            "true",
-                                        ),
-                                    },
-                                    4..8,
-                                ),
-                                consequent: (
-                                    Lit {
-                                        literal: Num(
-                                            "5",
-                                        ),
-                                    },
-                                    12..13,
-                                ),
-                                alternate: (
-                                    Lit {
-                                        literal: Num(
-                                            "10",
-                                        ),
-                                    },
-                                    23..25,
-                                ),
-                            },
-                            0..27,
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                If {
+                                    cond: (
+                                        Lit {
+                                            literal: Bool(
+                                                "true",
+                                            ),
+                                        },
+                                        4..8,
+                                    ),
+                                    consequent: (
+                                        Lit {
+                                            literal: Num(
+                                                "5",
+                                            ),
+                                        },
+                                        12..13,
+                                    ),
+                                    alternate: (
+                                        Lit {
+                                            literal: Num(
+                                                "10",
+                                            ),
+                                        },
+                                        23..25,
+                                    ),
+                                },
+                                0..27,
+                            ),
                         ),
+                        0..27,
                     ),
-                    0..27,
-                ),
-            ],
-        }
-        "###);
+                ],
+            }
+            "###);
     }
 
     #[test]
     fn recursive_decl() {
         insta::assert_debug_snapshot!(parse("let rec f = () => f()"), @r###"
-        Program {
-            body: [
-                (
-                    Decl {
-                        pattern: (
-                            Ident {
-                                name: "f",
-                            },
-                            8..9,
-                        ),
-                        value: (
-                            Fix {
-                                expr: (
-                                    Lam {
-                                        args: [
-                                            (
-                                                Ident {
-                                                    name: "f",
-                                                },
-                                                8..9,
-                                            ),
-                                        ],
-                                        body: (
-                                            Lam {
-                                                args: [],
-                                                body: (
-                                                    App {
-                                                        lam: (
-                                                            Ident {
-                                                                name: "f",
-                                                            },
-                                                            18..19,
-                                                        ),
-                                                        args: [],
+            Program {
+                body: [
+                    (
+                        Decl {
+                            pattern: (
+                                Ident {
+                                    name: "f",
+                                },
+                                8..9,
+                            ),
+                            value: (
+                                Fix {
+                                    expr: (
+                                        Lam {
+                                            args: [
+                                                (
+                                                    Ident {
+                                                        name: "f",
                                                     },
-                                                    18..21,
+                                                    8..9,
                                                 ),
-                                                is_async: false,
-                                            },
-                                            12..21,
-                                        ),
-                                        is_async: false,
-                                    },
-                                    12..21,
-                                ),
-                            },
-                            12..21,
-                        ),
-                    },
-                    0..21,
-                ),
-            ],
-        }
-        "###);
+                                            ],
+                                            body: (
+                                                Lam {
+                                                    args: [],
+                                                    body: (
+                                                        App {
+                                                            lam: (
+                                                                Ident {
+                                                                    name: "f",
+                                                                },
+                                                                18..19,
+                                                            ),
+                                                            args: [],
+                                                        },
+                                                        18..21,
+                                                    ),
+                                                    is_async: false,
+                                                },
+                                                12..21,
+                                            ),
+                                            is_async: false,
+                                        },
+                                        12..21,
+                                    ),
+                                },
+                                12..21,
+                            ),
+                        },
+                        0..21,
+                    ),
+                ],
+            }
+            "###);
     }
 
     #[test]
     fn simple_obj() {
         insta::assert_debug_snapshot!(parse("{x: 5, y: 10}"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Obj {
-                                properties: [
-                                    (
-                                        Property {
-                                            name: "x",
-                                            value: (
-                                                Lit {
-                                                    literal: Num(
-                                                        "5",
-                                                    ),
-                                                },
-                                                4..5,
-                                            ),
-                                        },
-                                        1..5,
-                                    ),
-                                    (
-                                        Property {
-                                            name: "y",
-                                            value: (
-                                                Lit {
-                                                    literal: Num(
-                                                        "10",
-                                                    ),
-                                                },
-                                                10..12,
-                                            ),
-                                        },
-                                        7..12,
-                                    ),
-                                ],
-                            },
-                            0..13,
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Obj {
+                                    properties: [
+                                        (
+                                            Property {
+                                                name: "x",
+                                                value: (
+                                                    Lit {
+                                                        literal: Num(
+                                                            "5",
+                                                        ),
+                                                    },
+                                                    4..5,
+                                                ),
+                                            },
+                                            1..5,
+                                        ),
+                                        (
+                                            Property {
+                                                name: "y",
+                                                value: (
+                                                    Lit {
+                                                        literal: Num(
+                                                            "10",
+                                                        ),
+                                                    },
+                                                    10..12,
+                                                ),
+                                            },
+                                            7..12,
+                                        ),
+                                    ],
+                                },
+                                0..13,
+                            ),
                         ),
+                        0..13,
                     ),
-                    0..13,
-                ),
-            ],
-        }
-        "###);
+                ],
+            }
+            "###);
     }
 }

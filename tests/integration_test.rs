@@ -5,18 +5,14 @@ use crochet::context::{Context, Env};
 use crochet::infer::infer_stmt;
 use crochet::js::builder::*;
 use crochet::js::printer::*;
-use crochet::lexer::lexer;
-use crochet::parser::token_parser;
+use crochet::parser::parser;
 use crochet::syntax::{Pattern, Program};
 use crochet::ts::convert::convert_scheme;
 
 fn infer(input: &str) -> String {
     let env: Env = HashMap::new();
     let ctx = Context::from(env);
-    let result = lexer().parse(input).unwrap();
-    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-    let prog = token_parser(&spans).parse(tokens).unwrap();
+    let prog = parser().parse(input).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = infer_stmt(&ctx, &stmt);
     format!("{}", result)
@@ -24,10 +20,7 @@ fn infer(input: &str) -> String {
 
 fn infer_prog(src: &str) -> (Program, Env) {
     let env: Env = HashMap::new();
-    let result = lexer().parse(src).unwrap();
-    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-    let result = token_parser(&spans).parse(tokens);
+    let result = parser().parse(src);
     let prog = match result {
         Ok(prog) => prog,
         Err(err) => {
