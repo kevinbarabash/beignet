@@ -2,14 +2,10 @@ use chumsky::prelude::*;
 
 use crochet::js::builder::build_js;
 use crochet::js::printer::print_js;
-use crochet::lexer::lexer;
-use crochet::parser::token_parser;
+use crochet::parser::parser;
 
 fn compile(input: &str) -> String {
-    let result = lexer().parse(input).unwrap();
-    let spans: Vec<_> = result.iter().map(|(_, s)| s.to_owned()).collect();
-    let tokens: Vec<_> = result.iter().map(|(t, _)| t.to_owned()).collect();
-    let prog = token_parser(&spans).parse(tokens).unwrap();
+    let prog = parser().parse(input).unwrap();
 
     let js_tree = build_js(&prog);
     print_js(&js_tree)
