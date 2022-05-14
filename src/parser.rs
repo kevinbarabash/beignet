@@ -377,6 +377,77 @@ mod tests {
     }
 
     #[test]
+    fn fn_with_multiple_params() {
+        insta::assert_debug_snapshot!(parse("(a, b) => c"), @r###"
+        Program {
+            body: [
+                (
+                    Expr(
+                        (
+                            Lam {
+                                args: [
+                                    (
+                                        Ident {
+                                            name: "a",
+                                        },
+                                        1..2,
+                                    ),
+                                    (
+                                        Ident {
+                                            name: "b",
+                                        },
+                                        4..5,
+                                    ),
+                                ],
+                                body: (
+                                    Ident {
+                                        name: "c",
+                                    },
+                                    10..11,
+                                ),
+                                is_async: false,
+                            },
+                            0..11,
+                        ),
+                    ),
+                    0..11,
+                ),
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn fn_returning_num_literal() {
+        insta::assert_debug_snapshot!(parse("() => 10"), @r###"
+            Program {
+                body: [
+                    (
+                        Expr(
+                            (
+                                Lam {
+                                    args: [],
+                                    body: (
+                                        Lit {
+                                            literal: Num(
+                                                "10",
+                                            ),
+                                        },
+                                        6..8,
+                                    ),
+                                    is_async: false,
+                                },
+                                0..8,
+                            ),
+                        ),
+                        0..8,
+                    ),
+                ],
+            }
+            "###);
+    }
+
+    #[test]
     fn fn_async() {
         insta::assert_debug_snapshot!(parse("async () => 10"), @r###"
         Program {
@@ -546,77 +617,6 @@ mod tests {
             ],
         }
         "###)
-    }
-
-    #[test]
-    fn fn_with_multiple_params() {
-        insta::assert_debug_snapshot!(parse("(a, b) => c"), @r###"
-        Program {
-            body: [
-                (
-                    Expr(
-                        (
-                            Lam {
-                                args: [
-                                    (
-                                        Ident {
-                                            name: "a",
-                                        },
-                                        1..2,
-                                    ),
-                                    (
-                                        Ident {
-                                            name: "b",
-                                        },
-                                        4..5,
-                                    ),
-                                ],
-                                body: (
-                                    Ident {
-                                        name: "c",
-                                    },
-                                    10..11,
-                                ),
-                                is_async: false,
-                            },
-                            0..11,
-                        ),
-                    ),
-                    0..11,
-                ),
-            ],
-        }
-        "###);
-    }
-
-    #[test]
-    fn fn_returning_num_literal() {
-        insta::assert_debug_snapshot!(parse("() => 10"), @r###"
-            Program {
-                body: [
-                    (
-                        Expr(
-                            (
-                                Lam {
-                                    args: [],
-                                    body: (
-                                        Lit {
-                                            literal: Num(
-                                                "10",
-                                            ),
-                                        },
-                                        6..8,
-                                    ),
-                                    is_async: false,
-                                },
-                                0..8,
-                            ),
-                        ),
-                        0..8,
-                    ),
-                ],
-            }
-            "###);
     }
 
     #[test]
