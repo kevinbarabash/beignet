@@ -378,7 +378,7 @@ mod tests {
             body: [
                 Expr {
                     span: 0..11,
-                    expr: Lam(
+                    expr: Lambda(
                         Lambda {
                             span: 0..11,
                             args: [
@@ -417,7 +417,7 @@ mod tests {
             body: [
                 Expr {
                     span: 0..8,
-                    expr: Lam(
+                    expr: Lambda(
                         Lambda {
                             span: 0..8,
                             args: [],
@@ -445,7 +445,7 @@ mod tests {
             body: [
                 Expr {
                     span: 0..14,
-                    expr: Lam(
+                    expr: Lambda(
                         Lambda {
                             span: 0..14,
                             args: [],
@@ -479,7 +479,7 @@ mod tests {
                             name: "foo",
                         },
                     ),
-                    value: Lam(
+                    value: Lambda(
                         Lambda {
                             span: 10..34,
                             args: [],
@@ -518,7 +518,7 @@ mod tests {
                             name: "foo",
                         },
                     ),
-                    value: Lam(
+                    value: Lambda(
                         Lambda {
                             span: 10..39,
                             args: [],
@@ -572,7 +572,7 @@ mod tests {
                             name: "foo",
                         },
                     ),
-                    value: Lam(
+                    value: Lambda(
                         Lambda {
                             span: 10..33,
                             args: [],
@@ -609,7 +609,7 @@ mod tests {
             body: [
                 Expr {
                     span: 0..14,
-                    expr: Lam(
+                    expr: Lambda(
                         Lambda {
                             span: 0..14,
                             args: [
@@ -1008,7 +1008,7 @@ mod tests {
                             name: "x",
                         },
                     ),
-                    value: Lam(
+                    value: Lambda(
                         Lambda {
                             span: 8..23,
                             args: [
@@ -1268,7 +1268,7 @@ mod tests {
             body: [
                 Expr {
                     span: 0..27,
-                    expr: If(
+                    expr: IfElse(
                         IfElse {
                             span: 0..27,
                             cond: Lit(
@@ -1319,7 +1319,7 @@ mod tests {
                     value: Fix(
                         Fix {
                             span: 12..21,
-                            expr: Lam(
+                            expr: Lambda(
                                 Lambda {
                                     span: 12..21,
                                     args: [
@@ -1330,7 +1330,7 @@ mod tests {
                                             },
                                         ),
                                     ],
-                                    body: Lam(
+                                    body: Lambda(
                                         Lambda {
                                             span: 12..21,
                                             args: [],
