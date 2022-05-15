@@ -13,42 +13,52 @@ pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>>
 
 pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
     let pattern = text::ident()
-        .map_with_span(|name, span| Pattern::Ident { span, name })
+        .map_with_span(|name, span| Pattern::Ident(Ident { span, name }))
         .padded();
     let binding_ident =
-        text::ident().map_with_span(|name, span| BindingIdent::Ident { span, name });
-    let ident = text::ident().map_with_span(|name, span| Expr::Ident { span, name });
-    let r#true = just_with_padding("true").map_with_span(|value, span| Expr::Lit {
-        span,
-        literal: Literal::Bool(value.to_owned()),
+        text::ident().map_with_span(|name, span| BindingIdent::Ident(Ident { span, name }));
+    let ident = text::ident().map_with_span(|name, span| Expr::Ident(Ident { span, name }));
+    let r#true = just_with_padding("true").map_with_span(|value, span| {
+        Expr::Lit(Lit {
+            span,
+            literal: Literal::Bool(value.to_owned()),
+        })
     });
-    let r#false = just_with_padding("false").map_with_span(|value, span| Expr::Lit {
-        span,
-        literal: Literal::Bool(value.to_owned()),
+    let r#false = just_with_padding("false").map_with_span(|value, span| {
+        Expr::Lit(Lit {
+            span,
+            literal: Literal::Bool(value.to_owned()),
+        })
     });
 
     let expr = recursive(|expr| {
-        let int = text::int::<char, Simple<char>>(10).map_with_span(|s: String, span| Expr::Lit {
-            span,
-            literal: Literal::Num(s),
+        let int = text::int::<char, Simple<char>>(10).map_with_span(|s: String, span| {
+            Expr::Lit(Lit {
+                span,
+                literal: Literal::Num(s),
+            })
         });
 
         let r#str = just("\"")
             .ignore_then(filter(|c| *c != '"').repeated())
             .then_ignore(just("\""))
             .collect::<String>()
-            .map_with_span(|value, span| Expr::Lit {
-                span,
-                literal: Literal::Str(value),
+            .map_with_span(|value, span| {
+                Expr::Lit(Lit {
+                    span,
+                    literal: Literal::Str(value),
+                })
             });
 
         let real = text::int(10)
             .chain(just('.'))
             .chain::<char, _, _>(text::digits(10))
             .collect::<String>()
-            .map_with_span(|value, span| Expr::Lit {
-                span,
-                literal: Literal::Num(value),
+            .map_with_span(|value, span| {
+                Expr::Lit(Lit {
+                    span,
+                    literal: Literal::Num(value),
+                })
             });
 
         // let r#true = r#true.map_with_span(add_span_info);
@@ -67,11 +77,13 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             .then_ignore(just_with_padding("{"))
             .then(expr.clone())
             .then_ignore(just_with_padding("}"))
-            .map_with_span(|((cond, left), right), span: Span| Expr::If {
-                span,
-                cond: Box::from(cond),
-                consequent: Box::from(left),
-                alternate: Box::from(right),
+            .map_with_span(|((cond, left), right), span: Span| {
+                Expr::If(IfElse {
+                    span,
+                    cond: Box::from(cond),
+                    consequent: Box::from(left),
+                    alternate: Box::from(right),
+                })
             });
 
         let prop = text::ident()
@@ -83,7 +95,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("{"), just_with_padding("}"))
-            .map_with_span(|properties, span: Span| Expr::Obj { span, properties });
+            .map_with_span(|properties, span: Span| Expr::Obj(Obj { span, properties }));
 
         // let jsx = just_with_padding("<")
         //     .ignore_then(text::ident().padded())
@@ -144,11 +156,11 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                 let end = span.end;
                 let span = start..end;
 
-                Expr::App {
+                Expr::App(App {
                     span,
                     lam: Box::new(f),
                     args,
-                }
+                })
             });
 
         // Application is higher precedence than `await`
@@ -156,10 +168,10 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             .or_not()
             .then(app.clone())
             .map_with_span(|(option, app), span: Span| match option {
-                Some(_) => Expr::Await {
+                Some(_) => Expr::Await(Await {
                     span,
                     expr: Box::from(app),
-                },
+                }),
                 None => app,
             });
 
@@ -176,12 +188,12 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             .foldl(|left, (op, right)| {
                 // atoms are already using source spans since they're WithSpan<Expr>
                 let span = left.span().start..right.span().end;
-                Expr::Op {
+                Expr::Op(Op {
                     span,
                     op,
                     left: Box::from(left),
                     right: Box::from(right),
-                }
+                })
             });
 
         let sum = product
@@ -197,12 +209,12 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             .foldl(|left, (op, right)| {
                 // products are already using source spans since they're WithSpan<Expr>
                 let span = left.span().start..right.span().end;
-                Expr::Op {
+                Expr::Op(Op {
                     span,
                     op,
                     left: Box::from(left),
                     right: Box::from(right),
-                }
+                })
             });
 
         let param_list = binding_ident
@@ -219,14 +231,16 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                     .delimited_by(just_with_padding("{"), just_with_padding("}")),
                 expr.clone(),
             )))
-            .map_with_span(|((r#async, args), body), span: Span| Expr::Lam {
-                span,
-                args,
-                body: Box::new(body),
-                is_async: match r#async {
-                    Some(_) => true,
-                    None => false,
-                },
+            .map_with_span(|((r#async, args), body), span: Span| {
+                Expr::Lam(Lambda {
+                    span,
+                    args,
+                    body: Box::new(body),
+                    is_async: match r#async {
+                        Some(_) => true,
+                        None => false,
+                    },
+                })
             });
 
         // We use `just` instead of `just_with_padding` here to ensure that
@@ -242,12 +256,12 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                 match rec {
                     // TODO: implement parsing of let-rec inside functions
                     Some(_) => todo!(),
-                    None => Expr::Let {
+                    None => Expr::Let(Let {
                         span,
                         pattern,
                         value: Box::new(value),
                         body: Box::new(body),
-                    },
+                    }),
                 }
             });
 
@@ -266,10 +280,10 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             match rec {
                 Some(_) => {
                     let ident = match &pattern {
-                        Pattern::Ident { name, span } => BindingIdent::Ident {
+                        Pattern::Ident(Ident { name, span }) => BindingIdent::Ident(Ident {
                             span: span.clone(),
                             name: name.clone(),
-                        },
+                        }),
                     };
 
                     Statement::Decl {
@@ -277,15 +291,15 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                         pattern,
                         // `let fib = fix((fib) => (n) => ...)`
                         // TODO: Fix always wraps a lambda
-                        value: Expr::Fix {
+                        value: Expr::Fix(Fix {
                             span: value.span(),
-                            expr: Box::from(Expr::Lam {
+                            expr: Box::from(Expr::Lam(Lambda {
                                 span: value.span(),
                                 args: vec![ident],
                                 body: Box::from(value),
                                 is_async: false,
-                            }),
-                        },
+                            })),
+                        }),
                     }
                 }
                 None => Statement::Decl {
@@ -322,12 +336,14 @@ mod tests {
             body: [
                 Expr {
                     span: 0..2,
-                    expr: Lit {
-                        span: 0..2,
-                        literal: Num(
-                            "10",
-                        ),
-                    },
+                    expr: Lit(
+                        Lit {
+                            span: 0..2,
+                            literal: Num(
+                                "10",
+                            ),
+                        },
+                    ),
                 },
             ],
         }
@@ -341,12 +357,14 @@ mod tests {
             body: [
                 Expr {
                     span: 0..4,
-                    expr: Lit {
-                        span: 0..4,
-                        literal: Num(
-                            "1.23",
-                        ),
-                    },
+                    expr: Lit(
+                        Lit {
+                            span: 0..4,
+                            literal: Num(
+                                "1.23",
+                            ),
+                        },
+                    ),
                 },
             ],
         }
@@ -360,24 +378,32 @@ mod tests {
             body: [
                 Expr {
                     span: 0..11,
-                    expr: Lam {
-                        span: 0..11,
-                        args: [
-                            Ident {
-                                span: 1..2,
-                                name: "a",
-                            },
-                            Ident {
-                                span: 4..5,
-                                name: "b",
-                            },
-                        ],
-                        body: Ident {
-                            span: 10..11,
-                            name: "c",
+                    expr: Lam(
+                        Lambda {
+                            span: 0..11,
+                            args: [
+                                Ident(
+                                    Ident {
+                                        span: 1..2,
+                                        name: "a",
+                                    },
+                                ),
+                                Ident(
+                                    Ident {
+                                        span: 4..5,
+                                        name: "b",
+                                    },
+                                ),
+                            ],
+                            body: Ident(
+                                Ident {
+                                    span: 10..11,
+                                    name: "c",
+                                },
+                            ),
+                            is_async: false,
                         },
-                        is_async: false,
-                    },
+                    ),
                 },
             ],
         }
@@ -391,17 +417,21 @@ mod tests {
             body: [
                 Expr {
                     span: 0..8,
-                    expr: Lam {
-                        span: 0..8,
-                        args: [],
-                        body: Lit {
-                            span: 6..8,
-                            literal: Num(
-                                "10",
+                    expr: Lam(
+                        Lambda {
+                            span: 0..8,
+                            args: [],
+                            body: Lit(
+                                Lit {
+                                    span: 6..8,
+                                    literal: Num(
+                                        "10",
+                                    ),
+                                },
                             ),
+                            is_async: false,
                         },
-                        is_async: false,
-                    },
+                    ),
                 },
             ],
         }
@@ -415,17 +445,21 @@ mod tests {
             body: [
                 Expr {
                     span: 0..14,
-                    expr: Lam {
-                        span: 0..14,
-                        args: [],
-                        body: Lit {
-                            span: 12..14,
-                            literal: Num(
-                                "10",
+                    expr: Lam(
+                        Lambda {
+                            span: 0..14,
+                            args: [],
+                            body: Lit(
+                                Lit {
+                                    span: 12..14,
+                                    literal: Num(
+                                        "10",
+                                    ),
+                                },
                             ),
+                            is_async: true,
                         },
-                        is_async: true,
-                    },
+                    ),
                 },
             ],
         }
@@ -439,24 +473,32 @@ mod tests {
             body: [
                 Decl {
                     span: 0..34,
-                    pattern: Ident {
-                        span: 4..7,
-                        name: "foo",
-                    },
-                    value: Lam {
-                        span: 10..34,
-                        args: [],
-                        body: Await {
-                            span: 24..32,
-                            expr: Lit {
-                                span: 30..32,
-                                literal: Num(
-                                    "10",
-                                ),
-                            },
+                    pattern: Ident(
+                        Ident {
+                            span: 4..7,
+                            name: "foo",
                         },
-                        is_async: true,
-                    },
+                    ),
+                    value: Lam(
+                        Lambda {
+                            span: 10..34,
+                            args: [],
+                            body: Await(
+                                Await {
+                                    span: 24..32,
+                                    expr: Lit(
+                                        Lit {
+                                            span: 30..32,
+                                            literal: Num(
+                                                "10",
+                                            ),
+                                        },
+                                    ),
+                                },
+                            ),
+                            is_async: true,
+                        },
+                    ),
                 },
             ],
         }
@@ -470,33 +512,47 @@ mod tests {
             body: [
                 Decl {
                     span: 0..39,
-                    pattern: Ident {
-                        span: 4..7,
-                        name: "foo",
-                    },
-                    value: Lam {
-                        span: 10..39,
-                        args: [],
-                        body: Op {
-                            span: 22..39,
-                            op: Add,
-                            left: Await {
-                                span: 22..29,
-                                expr: Ident {
-                                    span: 28..29,
-                                    name: "a",
-                                },
-                            },
-                            right: Await {
-                                span: 32..39,
-                                expr: Ident {
-                                    span: 38..39,
-                                    name: "b",
-                                },
-                            },
+                    pattern: Ident(
+                        Ident {
+                            span: 4..7,
+                            name: "foo",
                         },
-                        is_async: true,
-                    },
+                    ),
+                    value: Lam(
+                        Lambda {
+                            span: 10..39,
+                            args: [],
+                            body: Op(
+                                Op {
+                                    span: 22..39,
+                                    op: Add,
+                                    left: Await(
+                                        Await {
+                                            span: 22..29,
+                                            expr: Ident(
+                                                Ident {
+                                                    span: 28..29,
+                                                    name: "a",
+                                                },
+                                            ),
+                                        },
+                                    ),
+                                    right: Await(
+                                        Await {
+                                            span: 32..39,
+                                            expr: Ident(
+                                                Ident {
+                                                    span: 38..39,
+                                                    name: "b",
+                                                },
+                                            ),
+                                        },
+                                    ),
+                                },
+                            ),
+                            is_async: true,
+                        },
+                    ),
                 },
             ],
         }
@@ -510,26 +566,36 @@ mod tests {
             body: [
                 Decl {
                     span: 0..33,
-                    pattern: Ident {
-                        span: 4..7,
-                        name: "foo",
-                    },
-                    value: Lam {
-                        span: 10..33,
-                        args: [],
-                        body: Await {
-                            span: 22..33,
-                            expr: App {
-                                span: 28..33,
-                                lam: Ident {
-                                    span: 28..31,
-                                    name: "bar",
-                                },
-                                args: [],
-                            },
+                    pattern: Ident(
+                        Ident {
+                            span: 4..7,
+                            name: "foo",
                         },
-                        is_async: true,
-                    },
+                    ),
+                    value: Lam(
+                        Lambda {
+                            span: 10..33,
+                            args: [],
+                            body: Await(
+                                Await {
+                                    span: 22..33,
+                                    expr: App(
+                                        App {
+                                            span: 28..33,
+                                            lam: Ident(
+                                                Ident {
+                                                    span: 28..31,
+                                                    name: "bar",
+                                                },
+                                            ),
+                                            args: [],
+                                        },
+                                    ),
+                                },
+                            ),
+                            is_async: true,
+                        },
+                    ),
                 },
             ],
         }
@@ -543,22 +609,28 @@ mod tests {
             body: [
                 Expr {
                     span: 0..14,
-                    expr: Lam {
-                        span: 0..14,
-                        args: [
-                            Ident {
-                                span: 1..2,
-                                name: "a",
-                            },
-                        ],
-                        body: Lit {
-                            span: 7..14,
-                            literal: Str(
-                                "hello",
+                    expr: Lam(
+                        Lambda {
+                            span: 0..14,
+                            args: [
+                                Ident(
+                                    Ident {
+                                        span: 1..2,
+                                        name: "a",
+                                    },
+                                ),
+                            ],
+                            body: Lit(
+                                Lit {
+                                    span: 7..14,
+                                    literal: Str(
+                                        "hello",
+                                    ),
+                                },
                             ),
+                            is_async: false,
                         },
-                        is_async: false,
-                    },
+                    ),
                 },
             ],
         }
@@ -572,14 +644,18 @@ mod tests {
             body: [
                 Expr {
                     span: 0..5,
-                    expr: App {
-                        span: 0..5,
-                        lam: Ident {
-                            span: 0..3,
-                            name: "foo",
+                    expr: App(
+                        App {
+                            span: 0..5,
+                            lam: Ident(
+                                Ident {
+                                    span: 0..3,
+                                    name: "foo",
+                                },
+                            ),
+                            args: [],
                         },
-                        args: [],
-                    },
+                    ),
                 },
             ],
         }
@@ -593,23 +669,31 @@ mod tests {
             body: [
                 Expr {
                     span: 0..9,
-                    expr: App {
-                        span: 0..9,
-                        lam: Ident {
-                            span: 0..3,
-                            name: "foo",
+                    expr: App(
+                        App {
+                            span: 0..9,
+                            lam: Ident(
+                                Ident {
+                                    span: 0..3,
+                                    name: "foo",
+                                },
+                            ),
+                            args: [
+                                Ident(
+                                    Ident {
+                                        span: 4..5,
+                                        name: "a",
+                                    },
+                                ),
+                                Ident(
+                                    Ident {
+                                        span: 7..8,
+                                        name: "b",
+                                    },
+                                ),
+                            ],
                         },
-                        args: [
-                            Ident {
-                                span: 4..5,
-                                name: "a",
-                            },
-                            Ident {
-                                span: 7..8,
-                                name: "b",
-                            },
-                        ],
-                    },
+                    ),
                 },
             ],
         }
@@ -623,27 +707,35 @@ mod tests {
             body: [
                 Expr {
                     span: 0..16,
-                    expr: App {
-                        span: 0..16,
-                        lam: Ident {
-                            span: 0..3,
-                            name: "foo",
+                    expr: App(
+                        App {
+                            span: 0..16,
+                            lam: Ident(
+                                Ident {
+                                    span: 0..3,
+                                    name: "foo",
+                                },
+                            ),
+                            args: [
+                                Lit(
+                                    Lit {
+                                        span: 4..6,
+                                        literal: Num(
+                                            "10",
+                                        ),
+                                    },
+                                ),
+                                Lit(
+                                    Lit {
+                                        span: 8..15,
+                                        literal: Str(
+                                            "hello",
+                                        ),
+                                    },
+                                ),
+                            ],
                         },
-                        args: [
-                            Lit {
-                                span: 4..6,
-                                literal: Num(
-                                    "10",
-                                ),
-                            },
-                            Lit {
-                                span: 8..15,
-                                literal: Str(
-                                    "hello",
-                                ),
-                            },
-                        ],
-                    },
+                    ),
                 },
             ],
         }
@@ -657,12 +749,14 @@ mod tests {
             body: [
                 Expr {
                     span: 0..2,
-                    expr: Lit {
-                        span: 0..2,
-                        literal: Num(
-                            "10",
-                        ),
-                    },
+                    expr: Lit(
+                        Lit {
+                            span: 0..2,
+                            literal: Num(
+                                "10",
+                            ),
+                        },
+                    ),
                 },
             ],
         }
@@ -676,12 +770,14 @@ mod tests {
             body: [
                 Expr {
                     span: 0..7,
-                    expr: Lit {
-                        span: 0..7,
-                        literal: Str(
-                            "hello",
-                        ),
-                    },
+                    expr: Lit(
+                        Lit {
+                            span: 0..7,
+                            literal: Str(
+                                "hello",
+                            ),
+                        },
+                    ),
                 },
             ],
         }
@@ -701,32 +797,42 @@ mod tests {
             body: [
                 Expr {
                     span: 0..9,
-                    expr: Op {
-                        span: 0..9,
-                        op: Sub,
-                        left: Op {
-                            span: 0..5,
-                            op: Add,
-                            left: Lit {
-                                span: 0..1,
-                                literal: Num(
-                                    "1",
-                                ),
-                            },
-                            right: Lit {
-                                span: 4..5,
-                                literal: Num(
-                                    "2",
-                                ),
-                            },
-                        },
-                        right: Lit {
-                            span: 8..9,
-                            literal: Num(
-                                "3",
+                    expr: Op(
+                        Op {
+                            span: 0..9,
+                            op: Sub,
+                            left: Op(
+                                Op {
+                                    span: 0..5,
+                                    op: Add,
+                                    left: Lit(
+                                        Lit {
+                                            span: 0..1,
+                                            literal: Num(
+                                                "1",
+                                            ),
+                                        },
+                                    ),
+                                    right: Lit(
+                                        Lit {
+                                            span: 4..5,
+                                            literal: Num(
+                                                "2",
+                                            ),
+                                        },
+                                    ),
+                                },
+                            ),
+                            right: Lit(
+                                Lit {
+                                    span: 8..9,
+                                    literal: Num(
+                                        "3",
+                                    ),
+                                },
                             ),
                         },
-                    },
+                    ),
                 },
             ],
         }
@@ -740,26 +846,36 @@ mod tests {
             body: [
                 Expr {
                     span: 0..9,
-                    expr: Op {
-                        span: 0..9,
-                        op: Div,
-                        left: Op {
-                            span: 0..5,
-                            op: Mul,
-                            left: Ident {
-                                span: 0..1,
-                                name: "x",
-                            },
-                            right: Ident {
-                                span: 4..5,
-                                name: "y",
-                            },
+                    expr: Op(
+                        Op {
+                            span: 0..9,
+                            op: Div,
+                            left: Op(
+                                Op {
+                                    span: 0..5,
+                                    op: Mul,
+                                    left: Ident(
+                                        Ident {
+                                            span: 0..1,
+                                            name: "x",
+                                        },
+                                    ),
+                                    right: Ident(
+                                        Ident {
+                                            span: 4..5,
+                                            name: "y",
+                                        },
+                                    ),
+                                },
+                            ),
+                            right: Ident(
+                                Ident {
+                                    span: 8..9,
+                                    name: "z",
+                                },
+                            ),
                         },
-                        right: Ident {
-                            span: 8..9,
-                            name: "z",
-                        },
-                    },
+                    ),
                 },
             ],
         }
@@ -773,26 +889,36 @@ mod tests {
             body: [
                 Expr {
                     span: 0..9,
-                    expr: Op {
-                        span: 0..9,
-                        op: Add,
-                        left: Ident {
-                            span: 0..1,
-                            name: "a",
+                    expr: Op(
+                        Op {
+                            span: 0..9,
+                            op: Add,
+                            left: Ident(
+                                Ident {
+                                    span: 0..1,
+                                    name: "a",
+                                },
+                            ),
+                            right: Op(
+                                Op {
+                                    span: 4..9,
+                                    op: Mul,
+                                    left: Ident(
+                                        Ident {
+                                            span: 4..5,
+                                            name: "b",
+                                        },
+                                    ),
+                                    right: Ident(
+                                        Ident {
+                                            span: 8..9,
+                                            name: "c",
+                                        },
+                                    ),
+                                },
+                            ),
                         },
-                        right: Op {
-                            span: 4..9,
-                            op: Mul,
-                            left: Ident {
-                                span: 4..5,
-                                name: "b",
-                            },
-                            right: Ident {
-                                span: 8..9,
-                                name: "c",
-                            },
-                        },
-                    },
+                    ),
                 },
             ],
         }
@@ -806,26 +932,36 @@ mod tests {
             body: [
                 Expr {
                     span: 0..11,
-                    expr: Op {
-                        span: 1..11,
-                        op: Mul,
-                        left: Op {
-                            span: 1..6,
-                            op: Add,
-                            left: Ident {
-                                span: 1..2,
-                                name: "a",
-                            },
-                            right: Ident {
-                                span: 5..6,
-                                name: "b",
-                            },
+                    expr: Op(
+                        Op {
+                            span: 1..11,
+                            op: Mul,
+                            left: Op(
+                                Op {
+                                    span: 1..6,
+                                    op: Add,
+                                    left: Ident(
+                                        Ident {
+                                            span: 1..2,
+                                            name: "a",
+                                        },
+                                    ),
+                                    right: Ident(
+                                        Ident {
+                                            span: 5..6,
+                                            name: "b",
+                                        },
+                                    ),
+                                },
+                            ),
+                            right: Ident(
+                                Ident {
+                                    span: 10..11,
+                                    name: "c",
+                                },
+                            ),
                         },
-                        right: Ident {
-                            span: 10..11,
-                            name: "c",
-                        },
-                    },
+                    ),
                 },
             ],
         }
@@ -839,16 +975,20 @@ mod tests {
             body: [
                 Decl {
                     span: 0..9,
-                    pattern: Ident {
-                        span: 4..5,
-                        name: "x",
-                    },
-                    value: Lit {
-                        span: 8..9,
-                        literal: Num(
-                            "5",
-                        ),
-                    },
+                    pattern: Ident(
+                        Ident {
+                            span: 4..5,
+                            name: "x",
+                        },
+                    ),
+                    value: Lit(
+                        Lit {
+                            span: 8..9,
+                            literal: Num(
+                                "5",
+                            ),
+                        },
+                    ),
                 },
             ],
         }
@@ -862,36 +1002,50 @@ mod tests {
             body: [
                 Decl {
                     span: 0..23,
-                    pattern: Ident {
-                        span: 4..5,
-                        name: "x",
-                    },
-                    value: Lam {
-                        span: 8..23,
-                        args: [
-                            Ident {
-                                span: 9..10,
-                                name: "a",
-                            },
-                            Ident {
-                                span: 12..13,
-                                name: "b",
-                            },
-                        ],
-                        body: Op {
-                            span: 18..23,
-                            op: Add,
-                            left: Ident {
-                                span: 18..19,
-                                name: "a",
-                            },
-                            right: Ident {
-                                span: 22..23,
-                                name: "b",
-                            },
+                    pattern: Ident(
+                        Ident {
+                            span: 4..5,
+                            name: "x",
                         },
-                        is_async: false,
-                    },
+                    ),
+                    value: Lam(
+                        Lambda {
+                            span: 8..23,
+                            args: [
+                                Ident(
+                                    Ident {
+                                        span: 9..10,
+                                        name: "a",
+                                    },
+                                ),
+                                Ident(
+                                    Ident {
+                                        span: 12..13,
+                                        name: "b",
+                                    },
+                                ),
+                            ],
+                            body: Op(
+                                Op {
+                                    span: 18..23,
+                                    op: Add,
+                                    left: Ident(
+                                        Ident {
+                                            span: 18..19,
+                                            name: "a",
+                                        },
+                                    ),
+                                    right: Ident(
+                                        Ident {
+                                            span: 22..23,
+                                            name: "b",
+                                        },
+                                    ),
+                                },
+                            ),
+                            is_async: false,
+                        },
+                    ),
                 },
             ],
         }
@@ -905,29 +1059,37 @@ mod tests {
             body: [
                 Decl {
                     span: 0..9,
-                    pattern: Ident {
-                        span: 4..5,
-                        name: "x",
-                    },
-                    value: Lit {
-                        span: 8..9,
-                        literal: Num(
-                            "5",
-                        ),
-                    },
+                    pattern: Ident(
+                        Ident {
+                            span: 4..5,
+                            name: "x",
+                        },
+                    ),
+                    value: Lit(
+                        Lit {
+                            span: 8..9,
+                            literal: Num(
+                                "5",
+                            ),
+                        },
+                    ),
                 },
                 Decl {
                     span: 10..25,
-                    pattern: Ident {
-                        span: 14..15,
-                        name: "y",
-                    },
-                    value: Lit {
-                        span: 18..25,
-                        literal: Str(
-                            "hello",
-                        ),
-                    },
+                    pattern: Ident(
+                        Ident {
+                            span: 14..15,
+                            name: "y",
+                        },
+                    ),
+                    value: Lit(
+                        Lit {
+                            span: 18..25,
+                            literal: Str(
+                                "hello",
+                            ),
+                        },
+                    ),
                 },
             ],
         }
@@ -941,18 +1103,24 @@ mod tests {
             body: [
                 Expr {
                     span: 0..5,
-                    expr: Op {
-                        span: 0..5,
-                        op: Add,
-                        left: Ident {
-                            span: 0..1,
-                            name: "a",
+                    expr: Op(
+                        Op {
+                            span: 0..5,
+                            op: Add,
+                            left: Ident(
+                                Ident {
+                                    span: 0..1,
+                                    name: "a",
+                                },
+                            ),
+                            right: Ident(
+                                Ident {
+                                    span: 4..5,
+                                    name: "b",
+                                },
+                            ),
                         },
-                        right: Ident {
-                            span: 4..5,
-                            name: "b",
-                        },
-                    },
+                    ),
                 },
             ],
         }
@@ -966,21 +1134,25 @@ mod tests {
             body: [
                 Expr {
                     span: 0..3,
-                    expr: Lit {
-                        span: 0..3,
-                        literal: Num(
-                            "123",
-                        ),
-                    },
+                    expr: Lit(
+                        Lit {
+                            span: 0..3,
+                            literal: Num(
+                                "123",
+                            ),
+                        },
+                    ),
                 },
                 Expr {
                     span: 4..11,
-                    expr: Lit {
-                        span: 4..11,
-                        literal: Str(
-                            "hello",
-                        ),
-                    },
+                    expr: Lit(
+                        Lit {
+                            span: 4..11,
+                            literal: Str(
+                                "hello",
+                            ),
+                        },
+                    ),
                 },
             ],
         }
@@ -994,27 +1166,37 @@ mod tests {
             body: [
                 Decl {
                     span: 0..24,
-                    pattern: Ident {
-                        span: 4..7,
-                        name: "foo",
-                    },
-                    value: Let {
-                        span: 10..24,
-                        pattern: Ident {
-                            span: 14..15,
-                            name: "x",
+                    pattern: Ident(
+                        Ident {
+                            span: 4..7,
+                            name: "foo",
                         },
-                        value: Lit {
-                            span: 18..19,
-                            literal: Num(
-                                "5",
+                    ),
+                    value: Let(
+                        Let {
+                            span: 10..24,
+                            pattern: Ident(
+                                Ident {
+                                    span: 14..15,
+                                    name: "x",
+                                },
+                            ),
+                            value: Lit(
+                                Lit {
+                                    span: 18..19,
+                                    literal: Num(
+                                        "5",
+                                    ),
+                                },
+                            ),
+                            body: Ident(
+                                Ident {
+                                    span: 23..24,
+                                    name: "x",
+                                },
                             ),
                         },
-                        body: Ident {
-                            span: 23..24,
-                            name: "x",
-                        },
-                    },
+                    ),
                 },
             ],
         }
@@ -1028,37 +1210,51 @@ mod tests {
             body: [
                 Expr {
                     span: 0..10,
-                    expr: App {
-                        span: 0..10,
-                        lam: App {
-                            span: 0..4,
-                            lam: Ident {
-                                span: 0..1,
-                                name: "f",
-                            },
-                            args: [
-                                Ident {
-                                    span: 2..3,
-                                    name: "x",
+                    expr: App(
+                        App {
+                            span: 0..10,
+                            lam: App(
+                                App {
+                                    span: 0..4,
+                                    lam: Ident(
+                                        Ident {
+                                            span: 0..1,
+                                            name: "f",
+                                        },
+                                    ),
+                                    args: [
+                                        Ident(
+                                            Ident {
+                                                span: 2..3,
+                                                name: "x",
+                                            },
+                                        ),
+                                    ],
                                 },
+                            ),
+                            args: [
+                                App(
+                                    App {
+                                        span: 5..9,
+                                        lam: Ident(
+                                            Ident {
+                                                span: 5..6,
+                                                name: "g",
+                                            },
+                                        ),
+                                        args: [
+                                            Ident(
+                                                Ident {
+                                                    span: 7..8,
+                                                    name: "x",
+                                                },
+                                            ),
+                                        ],
+                                    },
+                                ),
                             ],
                         },
-                        args: [
-                            App {
-                                span: 5..9,
-                                lam: Ident {
-                                    span: 5..6,
-                                    name: "g",
-                                },
-                                args: [
-                                    Ident {
-                                        span: 7..8,
-                                        name: "x",
-                                    },
-                                ],
-                            },
-                        ],
-                    },
+                    ),
                 },
             ],
         }
@@ -1072,27 +1268,35 @@ mod tests {
             body: [
                 Expr {
                     span: 0..27,
-                    expr: If {
-                        span: 0..27,
-                        cond: Lit {
-                            span: 4..8,
-                            literal: Bool(
-                                "true",
+                    expr: If(
+                        IfElse {
+                            span: 0..27,
+                            cond: Lit(
+                                Lit {
+                                    span: 4..8,
+                                    literal: Bool(
+                                        "true",
+                                    ),
+                                },
+                            ),
+                            consequent: Lit(
+                                Lit {
+                                    span: 12..13,
+                                    literal: Num(
+                                        "5",
+                                    ),
+                                },
+                            ),
+                            alternate: Lit(
+                                Lit {
+                                    span: 23..25,
+                                    literal: Num(
+                                        "10",
+                                    ),
+                                },
                             ),
                         },
-                        consequent: Lit {
-                            span: 12..13,
-                            literal: Num(
-                                "5",
-                            ),
-                        },
-                        alternate: Lit {
-                            span: 23..25,
-                            literal: Num(
-                                "10",
-                            ),
-                        },
-                    },
+                    ),
                 },
             ],
         }
@@ -1106,36 +1310,50 @@ mod tests {
             body: [
                 Decl {
                     span: 0..21,
-                    pattern: Ident {
-                        span: 8..9,
-                        name: "f",
-                    },
-                    value: Fix {
-                        span: 12..21,
-                        expr: Lam {
-                            span: 12..21,
-                            args: [
-                                Ident {
-                                    span: 8..9,
-                                    name: "f",
-                                },
-                            ],
-                            body: Lam {
-                                span: 12..21,
-                                args: [],
-                                body: App {
-                                    span: 18..21,
-                                    lam: Ident {
-                                        span: 18..19,
-                                        name: "f",
-                                    },
-                                    args: [],
-                                },
-                                is_async: false,
-                            },
-                            is_async: false,
+                    pattern: Ident(
+                        Ident {
+                            span: 8..9,
+                            name: "f",
                         },
-                    },
+                    ),
+                    value: Fix(
+                        Fix {
+                            span: 12..21,
+                            expr: Lam(
+                                Lambda {
+                                    span: 12..21,
+                                    args: [
+                                        Ident(
+                                            Ident {
+                                                span: 8..9,
+                                                name: "f",
+                                            },
+                                        ),
+                                    ],
+                                    body: Lam(
+                                        Lambda {
+                                            span: 12..21,
+                                            args: [],
+                                            body: App(
+                                                App {
+                                                    span: 18..21,
+                                                    lam: Ident(
+                                                        Ident {
+                                                            span: 18..19,
+                                                            name: "f",
+                                                        },
+                                                    ),
+                                                    args: [],
+                                                },
+                                            ),
+                                            is_async: false,
+                                        },
+                                    ),
+                                    is_async: false,
+                                },
+                            ),
+                        },
+                    ),
                 },
             ],
         }
@@ -1149,31 +1367,37 @@ mod tests {
             body: [
                 Expr {
                     span: 0..13,
-                    expr: Obj {
-                        span: 0..13,
-                        properties: [
-                            Property {
-                                span: 1..5,
-                                name: "x",
-                                value: Lit {
-                                    span: 4..5,
-                                    literal: Num(
-                                        "5",
+                    expr: Obj(
+                        Obj {
+                            span: 0..13,
+                            properties: [
+                                Property {
+                                    span: 1..5,
+                                    name: "x",
+                                    value: Lit(
+                                        Lit {
+                                            span: 4..5,
+                                            literal: Num(
+                                                "5",
+                                            ),
+                                        },
                                     ),
                                 },
-                            },
-                            Property {
-                                span: 7..12,
-                                name: "y",
-                                value: Lit {
-                                    span: 10..12,
-                                    literal: Num(
-                                        "10",
+                                Property {
+                                    span: 7..12,
+                                    name: "y",
+                                    value: Lit(
+                                        Lit {
+                                            span: 10..12,
+                                            literal: Num(
+                                                "10",
+                                            ),
+                                        },
                                     ),
                                 },
-                            },
-                        ],
-                    },
+                            ],
+                        },
+                    ),
                 },
             ],
         }

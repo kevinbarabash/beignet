@@ -23,8 +23,8 @@ pub fn build_js(prog: &syntax::Program) -> Program {
 
 pub fn build_pattern(pattern: &syntax::Pattern) -> Pattern {
     match pattern {
-        syntax::Pattern::Ident { name, .. } => Pattern::Ident {
-            name: name.to_owned(),
+        syntax::Pattern::Ident(ident) => Pattern::Ident {
+            name: ident.name.to_owned(),
         },
     }
 }
@@ -41,26 +41,26 @@ pub fn build_return_block(body: &syntax::Expr) -> Vec<Statement> {
 
 pub fn build_expr(expr: &syntax::Expr) -> Expression {
     match expr {
-        syntax::Expr::App { lam, args, .. } => {
+        syntax::Expr::App(syntax::App { lam, args, .. }) => {
             let func = Box::from(build_expr(&lam.as_ref()));
             let args: Vec<_> = args.iter().map(|arg| build_expr(&arg)).collect();
 
             Expression::Call { func, args }
         }
-        syntax::Expr::Ident { name, .. } => Expression::Ident {
+        syntax::Expr::Ident(syntax::Ident { name, .. }) => Expression::Ident {
             name: name.to_owned(),
         },
-        syntax::Expr::Lam {
+        syntax::Expr::Lam(syntax::Lambda {
             args,
             body,
             is_async: r#async,
             ..
-        } => {
+        }) => {
             let params: Vec<_> = args
                 .iter()
                 .map(|ident| match ident {
-                    syntax::BindingIdent::Ident { name, .. } => Param::Ident {
-                        name: name.to_owned(),
+                    syntax::BindingIdent::Ident(ident) => Param::Ident {
+                        name: ident.name.to_owned(),
                     },
                     syntax::BindingIdent::Rest { name, .. } => Param::Ident {
                         name: name.to_owned(),
@@ -102,10 +102,12 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                 args: vec![],
             }
         }
-        syntax::Expr::Lit { literal, .. } => Expression::Literal {
+        syntax::Expr::Lit(syntax::Lit { literal, .. }) => Expression::Literal {
             literal: literal.to_owned(),
         },
-        syntax::Expr::Op { op, left, right, .. } => {
+        syntax::Expr::Op(syntax::Op {
+            op, left, right, ..
+        }) => {
             let op = match op {
                 syntax::BinOp::Add => BinaryOp::Add,
                 syntax::BinOp::Sub => BinaryOp::Sub,
@@ -117,16 +119,16 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
 
             Expression::Binary { op, left, right }
         }
-        syntax::Expr::Fix { expr, .. } => match expr.as_ref() {
-            syntax::Expr::Lam { body, .. } => build_expr(&body),
+        syntax::Expr::Fix(syntax::Fix { expr, .. }) => match expr.as_ref() {
+            syntax::Expr::Lam(syntax::Lambda { body, .. }) => build_expr(&body),
             _ => panic!("Fix should only wrap a lambda"),
         },
-        syntax::Expr::If {
+        syntax::Expr::If(syntax::IfElse {
             cond,
             consequent,
             alternate,
             ..
-        } => {
+        }) => {
             // Returns an IIFE that looks like:
             // (() => {
             //    if (cond) {
@@ -150,7 +152,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                 args: vec![],
             }
         }
-        syntax::Expr::Obj { properties, .. } => {
+        syntax::Expr::Obj(syntax::Obj { properties, .. }) => {
             let properties: Vec<_> = properties
                 .iter()
                 .map(|prop| Property {
@@ -161,7 +163,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
 
             Expression::Object { properties }
         }
-        syntax::Expr::Await { expr, .. } => Expression::Await {
+        syntax::Expr::Await(syntax::Await { expr, .. }) => Expression::Await {
             expr: Box::from(build_expr(&expr.as_ref())),
         },
         syntax::Expr::JSXElement(_) => todo!(),
@@ -169,12 +171,12 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
 }
 
 pub fn let_to_children(expr: &syntax::Expr) -> Vec<Statement> {
-    if let syntax::Expr::Let {
+    if let syntax::Expr::Let(syntax::Let {
         pattern,
         value,
         body,
         ..
-    } = expr
+    }) = expr
     {
         // TODO: handle shadowed variables in the same scope by introducing
         // unique identifiers.
@@ -185,12 +187,12 @@ pub fn let_to_children(expr: &syntax::Expr) -> Vec<Statement> {
         let mut children = vec![decl];
         let mut body = body.to_owned();
 
-        while let syntax::Expr::Let {
+        while let syntax::Expr::Let(syntax::Let {
             pattern,
             value,
             body: next_body,
             ..
-        } = body.as_ref()
+        }) = body.as_ref()
         {
             let pattern = build_pattern(&pattern);
             let value = build_expr(&value);

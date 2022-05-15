@@ -46,7 +46,7 @@ fn build_d_ts(env: &Env, prog: &Program) -> String {
                 ..
             } => {
                 let name = match pat {
-                    Pattern::Ident { name, .. } => name,
+                    Pattern::Ident(ident) => &ident.name,
                 };
                 let scheme = env.get(name).unwrap();
                 let result = convert_scheme(&scheme, Some(&expr));

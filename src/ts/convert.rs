@@ -1,4 +1,4 @@
-use super::super::syntax::{BindingIdent, Expr};
+use super::super::syntax::{BindingIdent, Expr, Fix, Lambda};
 use super::super::types::{Scheme, TLam, Type, TypeKind};
 use super::ast::{Param, TsObjProp, TsQualifiedType, TsType};
 
@@ -30,9 +30,9 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
         TypeKind::Lam(TLam { args, ret }) => {
             match expr {
                 // TODO: handle is_async
-                Some(Expr::Lam {
+                Some(Expr::Lam(Lambda {
                     args: expr_args, ..
-                }) => {
+                })) => {
                     if args.len() != expr_args.len() {
                         panic!("number of args don't match")
                     } else {
@@ -41,7 +41,7 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                             .zip(expr_args)
                             .map(|(arg, binding)| {
                                 let name = match binding {
-                                    BindingIdent::Ident { name, .. } => name,
+                                    BindingIdent::Ident(ident) => &ident.name,
                                     BindingIdent::Rest { name, .. } => name,
                                 };
                                 Param {
@@ -59,8 +59,8 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                 }
                 // Fix nodes are assumed to wrap a lambda where the body of
                 // the lambda is recursive function.
-                Some(Expr::Fix { expr, .. }) => match expr.as_ref() {
-                    Expr::Lam { body, .. } => convert_type(ty, Some(&body)),
+                Some(Expr::Fix(Fix { expr, .. })) => match expr.as_ref() {
+                    Expr::Lam(Lambda { body, .. }) => convert_type(ty, Some(&body)),
                     _ => panic!("mismatch"),
                 },
                 None => {

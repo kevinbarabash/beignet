@@ -49,73 +49,103 @@ pub enum JSXElementChild {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct App {
+    pub span: Span,
+    pub lam: Box<Expr>,
+    pub args: Vec<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Fix {
+    pub span: Span,
+    pub expr: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Ident {
+    pub span: Span,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IfElse {
+    pub span: Span,
+    pub cond: Box<Expr>,
+    pub consequent: Box<Expr>,
+    pub alternate: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Lambda {
+    pub span: Span,
+    pub args: Vec<BindingIdent>,
+    pub body: Box<Expr>,
+    pub is_async: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Let {
+    pub span: Span,
+    pub pattern: Pattern,
+    pub value: Box<Expr>,
+    pub body: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Lit {
+    pub span: Span,
+    pub literal: Literal,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Op {
+    pub span: Span,
+    pub op: BinOp,
+    pub left: Box<Expr>,
+    pub right: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Obj {
+    pub span: Span,
+    pub properties: Vec<Property>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Await {
+    pub span: Span,
+    pub expr: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
-    App {
-        span: Span,
-        lam: Box<Expr>,
-        args: Vec<Expr>,
-    },
-    Fix {
-        span: Span,
-        expr: Box<Expr>,
-    },
-    Ident {
-        span: Span,
-        name: String,
-    },
-    If {
-        span: Span,
-        cond: Box<Expr>,
-        consequent: Box<Expr>,
-        alternate: Box<Expr>,
-    },
+    App(App),
+    Fix(Fix),
+    Ident(Ident),
+    If(IfElse),
     JSXElement(JSXElement),
-    Lam {
-        span: Span,
-        args: Vec<BindingIdent>,
-        body: Box<Expr>,
-        is_async: bool,
-    },
-    Let {
-        span: Span,
-        pattern: Pattern,
-        value: Box<Expr>,
-        body: Box<Expr>,
-    },
-    Lit {
-        span: Span,
-        literal: Literal,
-    },
-    Op {
-        span: Span,
-        op: BinOp,
-        left: Box<Expr>,
-        right: Box<Expr>,
-    },
-    Obj {
-        span: Span,
-        properties: Vec<Property>,
-    },
-    Await {
-        span: Span,
-        expr: Box<Expr>,
-    },
+    Lam(Lambda),
+    Let(Let),
+    Lit(Lit),
+    Op(Op),
+    Obj(Obj),
+    Await(Await),
 }
 
 impl Expr {
     pub fn span(&self) -> Span {
         match &self {
-            Expr::App { span, .. } => span.to_owned(),
-            Expr::Fix { span, .. } => span.to_owned(),
-            Expr::Ident { span, .. } => span.to_owned(),
-            Expr::If { span, .. } => span.to_owned(),
+            Expr::App(App { span, .. }) => span.to_owned(),
+            Expr::Fix(Fix { span, .. }) => span.to_owned(),
+            Expr::Ident(Ident { span, .. }) => span.to_owned(),
+            Expr::If(IfElse { span, .. }) => span.to_owned(),
             Expr::JSXElement(_) => todo!(),
-            Expr::Lam { span, .. } => span.to_owned(),
-            Expr::Let { span, .. } => span.to_owned(),
-            Expr::Lit { span, .. } => span.to_owned(),
-            Expr::Op { span, .. } => span.to_owned(),
-            Expr::Obj { span, .. } => span.to_owned(),
-            Expr::Await { span, .. } => span.to_owned(),
+            Expr::Lam(Lambda{ span, .. }) => span.to_owned(),
+            Expr::Let(Let { span, .. }) => span.to_owned(),
+            Expr::Lit(Lit { span, .. }) => span.to_owned(),
+            Expr::Op(Op { span, .. }) => span.to_owned(),
+            Expr::Obj(Obj { span, .. }) => span.to_owned(),
+            Expr::Await(Await { span, .. }) => span.to_owned(),
         }
     }
 }
@@ -123,10 +153,7 @@ impl Expr {
 // TODO: rename this to something else since we can't use it for let bindings
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindingIdent {
-    Ident { 
-        span: Span,
-        name: String,
-    },
+    Ident(Ident),
     Rest { 
         span: Span,
         name: String,
@@ -135,10 +162,7 @@ pub enum BindingIdent {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern {
-    Ident { 
-        span: Span,
-        name: String,
-    },
+    Ident(Ident),
     // TODO: add more patterns later
 }
 
