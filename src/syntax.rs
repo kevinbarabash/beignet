@@ -1,4 +1,4 @@
-use super::literal::Literal;
+use super::literal::Lit;
 
 pub type Span = std::ops::Range<usize>;
 
@@ -92,12 +92,6 @@ pub struct Let {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Lit {
-    pub span: Span,
-    pub literal: Literal,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Op {
     pub span: Span,
     pub op: BinOp,
@@ -142,7 +136,7 @@ impl Expr {
             Expr::JSXElement(_) => todo!(),
             Expr::Lambda(Lambda{ span, .. }) => span.to_owned(),
             Expr::Let(Let { span, .. }) => span.to_owned(),
-            Expr::Lit(Lit { span, .. }) => span.to_owned(),
+            Expr::Lit(lit) => lit.span(),
             Expr::Op(Op { span, .. }) => span.to_owned(),
             Expr::Obj(Obj { span, .. }) => span.to_owned(),
             Expr::Await(Await { span, .. }) => span.to_owned(),

@@ -1,6 +1,6 @@
-use super::literal::Literal;
 use super::substitutable::*;
 use super::types::{self, Scheme, Type, TypeKind};
+use super::literal::Lit;
 
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -75,11 +75,17 @@ impl Context {
             kind: types::TypeKind::Prim(prim),
         }
     }
-    pub fn from_lit(&self, lit: Literal) -> Type {
+    pub fn from_lit(&self, lit: Lit) -> Type {
         types::Type {
             id: self.fresh_id(),
             frozen: false,
-            kind: types::TypeKind::Lit(lit),
+            kind: match lit {
+                Lit::Num(n) => types::TypeKind::Lit(types::Lit::Num(n.value)),
+                Lit::Bool(b) => types::TypeKind::Lit(types::Lit::Bool(b.value)),
+                Lit::Str(s) => types::TypeKind::Lit(types::Lit::Str(s.value)),
+                Lit::Null(_) => types::TypeKind::Lit(types::Lit::Null),
+                Lit::Undefined(_) => types::TypeKind::Lit(types::Lit::Undefined),
+            }
         }
     }
     pub fn union(&self, types: &[Type]) -> Type {

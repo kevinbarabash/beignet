@@ -1,6 +1,6 @@
 use super::super::syntax::{BindingIdent, Expr, Fix, Lambda};
 use super::super::types::{Scheme, TLam, Type, TypeKind};
-use super::ast::{Param, TsObjProp, TsQualifiedType, TsType};
+use super::ast::{Param, TsObjProp, TsQualifiedType, TsType, Func, Alias};
 
 /// Converts a Scheme to a TsQualifiedTyepe for eventual export to .d.ts.
 pub fn convert_scheme(scheme: &Scheme, expr: Option<&Expr>) -> TsQualifiedType {
@@ -51,10 +51,10 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                             })
                             .collect();
 
-                        TsType::Func {
+                        TsType::Func(Func {
                             params,
                             ret: Box::new(convert_type(&ret, None)),
-                        }
+                        })
                     }
                 }
                 // Fix nodes are assumed to wrap a lambda where the body of
@@ -72,10 +72,10 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                             ty: convert_type(arg, None),
                         })
                         .collect();
-                    TsType::Func {
+                    TsType::Func(Func {
                         params,
                         ret: Box::new(convert_type(&ret, None)),
-                    }
+                    })
                 }
                 _ => panic!("mismatch"),
             }
@@ -98,10 +98,10 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                 .iter()
                 .map(|ty| convert_type(ty, None))
                 .collect();
-            TsType::Alias {
+            TsType::Alias(Alias {
                 name: name.to_owned(),
                 type_params,
-            }
+            })
         }
     }
 }

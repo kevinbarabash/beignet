@@ -1,4 +1,4 @@
-use super::super::literal::Literal;
+use super::super::literal::Lit;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
@@ -33,7 +33,7 @@ pub enum Expression {
     Ident {
         name: String,
     },
-    Literal {literal: Literal},
+    Literal(Lit),
     Binary {
         op: BinaryOp,
         left: Box<Expression>,

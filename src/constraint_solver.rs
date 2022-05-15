@@ -1,5 +1,4 @@
 use super::context::Context;
-use super::literal::Literal;
 use super::substitutable::*;
 use super::types::*;
 
@@ -152,9 +151,9 @@ fn unify_many(cs: &[Constraint], ctx: &Context) -> Subst {
 
 fn is_subtype(t1: &Type, t2: &Type) -> bool {
     match (&t1.kind, &t2.kind) {
-        (TypeKind::Lit(Literal::Num(_)), TypeKind::Prim(Primitive::Num)) => true,
-        (TypeKind::Lit(Literal::Str(_)), TypeKind::Prim(Primitive::Str)) => true,
-        (TypeKind::Lit(Literal::Bool(_)), TypeKind::Prim(Primitive::Bool)) => true,
+        (TypeKind::Lit(Lit::Num(_)), TypeKind::Prim(Primitive::Num)) => true,
+        (TypeKind::Lit(Lit::Str(_)), TypeKind::Prim(Primitive::Str)) => true,
+        (TypeKind::Lit(Lit::Bool(_)), TypeKind::Prim(Primitive::Bool)) => true,
         _ => false,
     }
 }

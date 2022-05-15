@@ -2,7 +2,7 @@ use chumsky::prelude::*;
 use chumsky::primitive::*;
 use chumsky::text::Padded;
 
-use super::literal::Literal;
+use super::literal::*;
 use super::syntax::*;
 
 pub type Span = std::ops::Range<usize>;
@@ -18,52 +18,26 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
     let binding_ident =
         text::ident().map_with_span(|name, span| BindingIdent::Ident(Ident { span, name }));
     let ident = text::ident().map_with_span(|name, span| Expr::Ident(Ident { span, name }));
-    let r#true = just_with_padding("true").map_with_span(|value, span| {
-        Expr::Lit(Lit {
-            span,
-            literal: Literal::Bool(value.to_owned()),
-        })
-    });
-    let r#false = just_with_padding("false").map_with_span(|value, span| {
-        Expr::Lit(Lit {
-            span,
-            literal: Literal::Bool(value.to_owned()),
-        })
-    });
+    let r#true =
+        just_with_padding("true").map_with_span(|_, span| Expr::Lit(Lit::bool(true, span)));
+    let r#false =
+        just_with_padding("false").map_with_span(|_, span| Expr::Lit(Lit::bool(false, span)));
 
     let expr = recursive(|expr| {
-        let int = text::int::<char, Simple<char>>(10).map_with_span(|s: String, span| {
-            Expr::Lit(Lit {
-                span,
-                literal: Literal::Num(s),
-            })
-        });
+        let int = text::int::<char, Simple<char>>(10)
+            .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
 
         let r#str = just("\"")
             .ignore_then(filter(|c| *c != '"').repeated())
             .then_ignore(just("\""))
             .collect::<String>()
-            .map_with_span(|value, span| {
-                Expr::Lit(Lit {
-                    span,
-                    literal: Literal::Str(value),
-                })
-            });
+            .map_with_span(|value, span| Expr::Lit(Lit::str(value, span)));
 
         let real = text::int(10)
             .chain(just('.'))
             .chain::<char, _, _>(text::digits(10))
             .collect::<String>()
-            .map_with_span(|value, span| {
-                Expr::Lit(Lit {
-                    span,
-                    literal: Literal::Num(value),
-                })
-            });
-
-        // let r#true = r#true.map_with_span(add_span_info);
-        // let r#false = r#false.map_with_span(add_span_info);
-        // let ident = ident.map_with_span(add_span_info);
+            .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
 
         // TODO: handle chaining of if-else
         let if_else = just_with_padding("if")
@@ -337,12 +311,12 @@ mod tests {
                 Expr {
                     span: 0..2,
                     expr: Lit(
-                        Lit {
-                            span: 0..2,
-                            literal: Num(
-                                "10",
-                            ),
-                        },
+                        Num(
+                            Num {
+                                span: 0..2,
+                                value: "10",
+                            },
+                        ),
                     ),
                 },
             ],
@@ -358,12 +332,12 @@ mod tests {
                 Expr {
                     span: 0..4,
                     expr: Lit(
-                        Lit {
-                            span: 0..4,
-                            literal: Num(
-                                "1.23",
-                            ),
-                        },
+                        Num(
+                            Num {
+                                span: 0..4,
+                                value: "1.23",
+                            },
+                        ),
                     ),
                 },
             ],
@@ -422,12 +396,12 @@ mod tests {
                             span: 0..8,
                             args: [],
                             body: Lit(
-                                Lit {
-                                    span: 6..8,
-                                    literal: Num(
-                                        "10",
-                                    ),
-                                },
+                                Num(
+                                    Num {
+                                        span: 6..8,
+                                        value: "10",
+                                    },
+                                ),
                             ),
                             is_async: false,
                         },
@@ -450,12 +424,12 @@ mod tests {
                             span: 0..14,
                             args: [],
                             body: Lit(
-                                Lit {
-                                    span: 12..14,
-                                    literal: Num(
-                                        "10",
-                                    ),
-                                },
+                                Num(
+                                    Num {
+                                        span: 12..14,
+                                        value: "10",
+                                    },
+                                ),
                             ),
                             is_async: true,
                         },
@@ -487,12 +461,12 @@ mod tests {
                                 Await {
                                     span: 24..32,
                                     expr: Lit(
-                                        Lit {
-                                            span: 30..32,
-                                            literal: Num(
-                                                "10",
-                                            ),
-                                        },
+                                        Num(
+                                            Num {
+                                                span: 30..32,
+                                                value: "10",
+                                            },
+                                        ),
                                     ),
                                 },
                             ),
@@ -621,12 +595,12 @@ mod tests {
                                 ),
                             ],
                             body: Lit(
-                                Lit {
-                                    span: 7..14,
-                                    literal: Str(
-                                        "hello",
-                                    ),
-                                },
+                                Str(
+                                    Str {
+                                        span: 7..14,
+                                        value: "hello",
+                                    },
+                                ),
                             ),
                             is_async: false,
                         },
@@ -718,20 +692,20 @@ mod tests {
                             ),
                             args: [
                                 Lit(
-                                    Lit {
-                                        span: 4..6,
-                                        literal: Num(
-                                            "10",
-                                        ),
-                                    },
+                                    Num(
+                                        Num {
+                                            span: 4..6,
+                                            value: "10",
+                                        },
+                                    ),
                                 ),
                                 Lit(
-                                    Lit {
-                                        span: 8..15,
-                                        literal: Str(
-                                            "hello",
-                                        ),
-                                    },
+                                    Str(
+                                        Str {
+                                            span: 8..15,
+                                            value: "hello",
+                                        },
+                                    ),
                                 ),
                             ],
                         },
@@ -750,12 +724,12 @@ mod tests {
                 Expr {
                     span: 0..2,
                     expr: Lit(
-                        Lit {
-                            span: 0..2,
-                            literal: Num(
-                                "10",
-                            ),
-                        },
+                        Num(
+                            Num {
+                                span: 0..2,
+                                value: "10",
+                            },
+                        ),
                     ),
                 },
             ],
@@ -771,12 +745,12 @@ mod tests {
                 Expr {
                     span: 0..7,
                     expr: Lit(
-                        Lit {
-                            span: 0..7,
-                            literal: Str(
-                                "hello",
-                            ),
-                        },
+                        Str(
+                            Str {
+                                span: 0..7,
+                                value: "hello",
+                            },
+                        ),
                     ),
                 },
             ],
@@ -806,30 +780,30 @@ mod tests {
                                     span: 0..5,
                                     op: Add,
                                     left: Lit(
-                                        Lit {
-                                            span: 0..1,
-                                            literal: Num(
-                                                "1",
-                                            ),
-                                        },
+                                        Num(
+                                            Num {
+                                                span: 0..1,
+                                                value: "1",
+                                            },
+                                        ),
                                     ),
                                     right: Lit(
-                                        Lit {
-                                            span: 4..5,
-                                            literal: Num(
-                                                "2",
-                                            ),
-                                        },
+                                        Num(
+                                            Num {
+                                                span: 4..5,
+                                                value: "2",
+                                            },
+                                        ),
                                     ),
                                 },
                             ),
                             right: Lit(
-                                Lit {
-                                    span: 8..9,
-                                    literal: Num(
-                                        "3",
-                                    ),
-                                },
+                                Num(
+                                    Num {
+                                        span: 8..9,
+                                        value: "3",
+                                    },
+                                ),
                             ),
                         },
                     ),
@@ -982,12 +956,12 @@ mod tests {
                         },
                     ),
                     value: Lit(
-                        Lit {
-                            span: 8..9,
-                            literal: Num(
-                                "5",
-                            ),
-                        },
+                        Num(
+                            Num {
+                                span: 8..9,
+                                value: "5",
+                            },
+                        ),
                     ),
                 },
             ],
@@ -1066,12 +1040,12 @@ mod tests {
                         },
                     ),
                     value: Lit(
-                        Lit {
-                            span: 8..9,
-                            literal: Num(
-                                "5",
-                            ),
-                        },
+                        Num(
+                            Num {
+                                span: 8..9,
+                                value: "5",
+                            },
+                        ),
                     ),
                 },
                 Decl {
@@ -1083,12 +1057,12 @@ mod tests {
                         },
                     ),
                     value: Lit(
-                        Lit {
-                            span: 18..25,
-                            literal: Str(
-                                "hello",
-                            ),
-                        },
+                        Str(
+                            Str {
+                                span: 18..25,
+                                value: "hello",
+                            },
+                        ),
                     ),
                 },
             ],
@@ -1135,23 +1109,23 @@ mod tests {
                 Expr {
                     span: 0..3,
                     expr: Lit(
-                        Lit {
-                            span: 0..3,
-                            literal: Num(
-                                "123",
-                            ),
-                        },
+                        Num(
+                            Num {
+                                span: 0..3,
+                                value: "123",
+                            },
+                        ),
                     ),
                 },
                 Expr {
                     span: 4..11,
                     expr: Lit(
-                        Lit {
-                            span: 4..11,
-                            literal: Str(
-                                "hello",
-                            ),
-                        },
+                        Str(
+                            Str {
+                                span: 4..11,
+                                value: "hello",
+                            },
+                        ),
                     ),
                 },
             ],
@@ -1182,12 +1156,12 @@ mod tests {
                                 },
                             ),
                             value: Lit(
-                                Lit {
-                                    span: 18..19,
-                                    literal: Num(
-                                        "5",
-                                    ),
-                                },
+                                Num(
+                                    Num {
+                                        span: 18..19,
+                                        value: "5",
+                                    },
+                                ),
                             ),
                             body: Ident(
                                 Ident {
@@ -1272,28 +1246,28 @@ mod tests {
                         IfElse {
                             span: 0..27,
                             cond: Lit(
-                                Lit {
-                                    span: 4..8,
-                                    literal: Bool(
-                                        "true",
-                                    ),
-                                },
+                                Bool(
+                                    Bool {
+                                        span: 4..8,
+                                        value: true,
+                                    },
+                                ),
                             ),
                             consequent: Lit(
-                                Lit {
-                                    span: 12..13,
-                                    literal: Num(
-                                        "5",
-                                    ),
-                                },
+                                Num(
+                                    Num {
+                                        span: 12..13,
+                                        value: "5",
+                                    },
+                                ),
                             ),
                             alternate: Lit(
-                                Lit {
-                                    span: 23..25,
-                                    literal: Num(
-                                        "10",
-                                    ),
-                                },
+                                Num(
+                                    Num {
+                                        span: 23..25,
+                                        value: "10",
+                                    },
+                                ),
                             ),
                         },
                     ),
@@ -1375,24 +1349,24 @@ mod tests {
                                     span: 1..5,
                                     name: "x",
                                     value: Lit(
-                                        Lit {
-                                            span: 4..5,
-                                            literal: Num(
-                                                "5",
-                                            ),
-                                        },
+                                        Num(
+                                            Num {
+                                                span: 4..5,
+                                                value: "5",
+                                            },
+                                        ),
                                     ),
                                 },
                                 Property {
                                     span: 7..12,
                                     name: "y",
                                     value: Lit(
-                                        Lit {
-                                            span: 10..12,
-                                            literal: Num(
-                                                "10",
-                                            ),
-                                        },
+                                        Num(
+                                            Num {
+                                                span: 10..12,
+                                                value: "10",
+                                            },
+                                        ),
                                     ),
                                 },
                             ],

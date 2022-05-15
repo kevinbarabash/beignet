@@ -1,7 +1,28 @@
 use itertools::join;
 use std::fmt;
 
-use super::literal::Literal;
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Lit {
+    // We store all of the values as strings since f64 doesn't
+    // support the Eq trait because NaN and 0.1 + 0.2 != 0.3.
+    Num(String),
+    Bool(bool),
+    Str(String),
+    Null,
+    Undefined,
+}
+
+impl fmt::Display for Lit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Lit::Num(n) => write!(f, "{}", n),
+            Lit::Bool(b) => write!(f, "{}", b),
+            Lit::Str(s) => write!(f, "\"{}\"", s),
+            Lit::Null => write!(f, "null"),
+            Lit::Undefined => write!(f, "undefined"),
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Primitive {
@@ -55,7 +76,7 @@ pub enum TypeKind {
     Var,
     Lam(TLam),
     Prim(Primitive),
-    Lit(Literal),
+    Lit(Lit),
     Union(Vec<Type>),
     Obj(Vec<TProp>),
     Alias {
@@ -125,24 +146,5 @@ impl fmt::Display for Scheme {
                 ty
             )
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
-    use super::*;
-
-    #[test]
-    fn test_fmt_literal() {
-        assert_eq!(
-            format!("{}", Literal::from("hello")),
-            String::from("\"hello\"")
-        );
-        assert_eq!(
-            format!("{}", Literal::Num(String::from("5.0"))),
-            String::from("5.0")
-        );
-        assert_eq!(format!("{}", Literal::from(true)), String::from("true"));
     }
 }

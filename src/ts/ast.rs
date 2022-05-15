@@ -1,8 +1,7 @@
 use itertools::{join, Itertools};
 use std::fmt;
 
-use super::super::literal::Literal;
-use super::super::types::Primitive;
+use super::super::types::{Lit, Primitive};
 
 pub struct TsQualifiedType {
     pub ty: TsType,
@@ -10,20 +9,26 @@ pub struct TsQualifiedType {
 }
 
 #[derive(Debug)]
+pub struct Func {
+    pub params: Vec<Param>,
+    pub ret: Box<TsType>,
+}
+
+#[derive(Debug)]
+pub struct Alias {
+    pub name: String,
+    pub type_params: Vec<TsType>,
+}
+
+#[derive(Debug)]
 pub enum TsType {
     Prim(Primitive),
     Var(String),
-    Lit(Literal),
-    Func {
-        params: Vec<Param>,
-        ret: Box<TsType>,
-    },
+    Lit(Lit),
+    Func(Func),
     Union(Vec<TsType>),
     Obj(Vec<TsObjProp>),
-    Alias {
-        name: String,
-        type_params: Vec<TsType>,
-    },
+    Alias(Alias),
 }
 
 impl fmt::Display for TsQualifiedType {
@@ -54,13 +59,14 @@ impl fmt::Display for TsType {
             TsType::Var(name) => write!(f, "{}", name),
             TsType::Prim(prim) => write!(f, "{}", prim),
             TsType::Lit(lit) => write!(f, "{}", lit),
-            TsType::Func { params, ret } => {
-                let params = params
+            TsType::Func(func) => {
+                let params = func.params
                     .iter()
                     // TODO: use write! to format the params more directly instead of
                     // using the intermediary format!
                     .map(|Param { name, ty }| format!("{name}: {ty}").to_owned())
                     .join(", ");
+                let ret = &func.ret;
                 write!(f, "({params}) => {ret}")
             }
             TsType::Union(types) => write!(f, "{}", join(types, " | ")),
@@ -73,8 +79,9 @@ impl fmt::Display for TsType {
                 // TODO: output multi-line object types
                 write!(f, "{{{props}}}")
             }
-            TsType::Alias {name, type_params} => {
-                let type_params = type_params.iter().join(", ");
+            TsType::Alias(alias) => {
+                let name = &alias.name;
+                let type_params = alias.type_params.iter().join(", ");
                 write!(f, "{name}<{type_params}>")
             }
         }
