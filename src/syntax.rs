@@ -2,75 +2,143 @@ use super::literal::Literal;
 
 pub type Span = std::ops::Range<usize>;
 
-pub type WithSpan<T> = (T, Span);
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
-    pub body: Vec<WithSpan<Statement>>,
+    pub body: Vec<Statement>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     Decl {
-        pattern: WithSpan<Pattern>,
-        value: WithSpan<Expr>,
+        span: Span,
+        pattern: Pattern,
+        value: Expr,
     },
-    Expr(WithSpan<Expr>), // NOTE: does not include Expr::Let
+    Expr {
+        span: Span,
+        expr: Expr,
+    }, // NOTE: does not include Expr::Let
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JSXText {
+    span: Span,
+    value: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JSXExprContainer {
+    span: Span,
+    expr: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JSXElement {
+    // Other ASTs make have JSXOpeningElement and JSXClosingElement
+    pub name: String,
+    pub children: Vec<JSXElementChild>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum JSXElementChild {
+    JSXText(JSXText),
+    JSXExprContainer(JSXExprContainer),
+    // JSXSpreadChild(JSXSpreadChild),
+    JSXElement(Box<JSXElement>),
+    // JSXFragment(JSXFragment),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     App {
-        lam: Box<WithSpan<Expr>>,
-        args: Vec<WithSpan<Expr>>,
+        span: Span,
+        lam: Box<Expr>,
+        args: Vec<Expr>,
     },
     Fix {
-        expr: Box<WithSpan<Expr>>,
+        span: Span,
+        expr: Box<Expr>,
     },
     Ident {
+        span: Span,
         name: String,
     },
     If {
-        cond: Box<WithSpan<Expr>>,
-        consequent: Box<WithSpan<Expr>>,
-        alternate: Box<WithSpan<Expr>>,
+        span: Span,
+        cond: Box<Expr>,
+        consequent: Box<Expr>,
+        alternate: Box<Expr>,
     },
+    JSXElement(JSXElement),
     Lam {
-        args: Vec<WithSpan<BindingIdent>>,
-        body: Box<WithSpan<Expr>>,
+        span: Span,
+        args: Vec<BindingIdent>,
+        body: Box<Expr>,
         is_async: bool,
     },
     Let {
-        pattern: WithSpan<Pattern>,
-        value: Box<WithSpan<Expr>>,
-        body: Box<WithSpan<Expr>>,
+        span: Span,
+        pattern: Pattern,
+        value: Box<Expr>,
+        body: Box<Expr>,
     },
     Lit {
+        span: Span,
         literal: Literal,
     },
     Op {
+        span: Span,
         op: BinOp,
-        left: Box<WithSpan<Expr>>,
-        right: Box<WithSpan<Expr>>,
+        left: Box<Expr>,
+        right: Box<Expr>,
     },
     Obj {
-        properties: Vec<WithSpan<Property>>,
+        span: Span,
+        properties: Vec<Property>,
     },
     Await {
-        expr: Box<WithSpan<Expr>>,
+        span: Span,
+        expr: Box<Expr>,
     },
+}
+
+impl Expr {
+    pub fn span(&self) -> Span {
+        match &self {
+            Expr::App { span, .. } => span.to_owned(),
+            Expr::Fix { span, .. } => span.to_owned(),
+            Expr::Ident { span, .. } => span.to_owned(),
+            Expr::If { span, .. } => span.to_owned(),
+            Expr::JSXElement(_) => todo!(),
+            Expr::Lam { span, .. } => span.to_owned(),
+            Expr::Let { span, .. } => span.to_owned(),
+            Expr::Lit { span, .. } => span.to_owned(),
+            Expr::Op { span, .. } => span.to_owned(),
+            Expr::Obj { span, .. } => span.to_owned(),
+            Expr::Await { span, .. } => span.to_owned(),
+        }
+    }
 }
 
 // TODO: rename this to something else since we can't use it for let bindings
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindingIdent {
-    Ident { name: String },
-    Rest { name: String },
+    Ident { 
+        span: Span,
+        name: String,
+    },
+    Rest { 
+        span: Span,
+        name: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern {
-    Ident { name: String },
+    Ident { 
+        span: Span,
+        name: String,
+    },
     // TODO: add more patterns later
 }
 
@@ -84,6 +152,7 @@ pub enum BinOp {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Property {
+    pub span: Span,
     pub name: String,
-    pub value: WithSpan<Expr>,
+    pub value: Expr,
 }

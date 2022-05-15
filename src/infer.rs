@@ -137,23 +137,24 @@ where
 }
 
 use crate::context::{Context, Env};
-use crate::syntax::{BindingIdent, Expr, Pattern, Program, Statement, WithSpan};
+use crate::syntax::{BindingIdent, Expr, Pattern, Program, Statement};
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
 pub fn infer_prog(env: Env, prog: &Program) -> Env {
     let mut ctx: Context = Context::from(env);
 
-    for (stmt, _span) in &prog.body {
+    for stmt in &prog.body {
         match stmt {
             Statement::Decl {
-                pattern: (Pattern::Ident { name }, _span),
+                pattern: Pattern::Ident { name, .. },
                 value,
+                ..
             } => {
                 let scheme = infer_expr(&ctx, value);
                 ctx.env.insert(name.to_owned(), scheme);
             }
-            Statement::Expr(expr) => {
+            Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
                 infer_expr(&ctx, expr);
@@ -164,14 +165,14 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
     ctx.env
 }
 
-pub fn infer_stmt(ctx: &Context, stmt: &WithSpan<Statement>) -> Scheme {
+pub fn infer_stmt(ctx: &Context, stmt: &Statement) -> Scheme {
     match stmt {
-        (Statement::Expr(e), _) => infer_expr(ctx, e),
+        Statement::Expr { expr, .. } => infer_expr(ctx, expr),
         _ => panic!("We can't infer decls yet"),
     }
 }
 
-pub fn infer_expr(ctx: &Context, expr: &WithSpan<Expr>) -> Scheme {
+pub fn infer_expr(ctx: &Context, expr: &Expr) -> Scheme {
     let (ty, cs) = infer(expr, ctx);
     let subs = run_solve(&cs, ctx);
 
@@ -284,13 +285,13 @@ fn is_promise(ty: &Type) -> bool {
     }
 }
 
-fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
+fn infer(expr: &Expr, ctx: &Context) -> InferResult {
     match expr {
-        (Expr::Ident { name }, _) => {
+        Expr::Ident { name, .. } => {
             let ty = ctx.lookup_env(name);
             (ty, vec![])
         }
-        (Expr::App { lam, args }, _) => {
+        Expr::App { lam, args, .. } => {
             let (t_fn, cs_fn) = infer(lam, ctx);
             let (t_args, cs_args) = infer_many(args, ctx);
             let tv = ctx.fresh_tvar();
@@ -310,7 +311,7 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
 
             (tv, constraints)
         }
-        (Expr::Fix { expr }, _) => {
+        Expr::Fix { expr, .. } => {
             let (t, cs) = infer(expr, ctx);
             let tv = ctx.fresh_tvar();
             let mut constraints = Vec::new();
@@ -327,14 +328,12 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
 
             (tv, constraints)
         }
-        (
-            Expr::If {
-                cond,
-                consequent,
-                alternate,
-            },
-            _,
-        ) => {
+        Expr::If {
+            cond,
+            consequent,
+            alternate,
+            ..
+        } => {
             let (t1, cs1) = infer(cond, ctx);
             let (t2, cs2) = infer(consequent, ctx);
             let (t3, cs3) = infer(alternate, ctx);
@@ -350,14 +349,12 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
 
             (result_type, constraints)
         }
-        (
-            Expr::Lam {
-                args,
-                body,
-                is_async,
-            },
-            _,
-        ) => {
+        Expr::Lam {
+            args,
+            body,
+            is_async,
+            ..
+        } => {
             // Creates a new type variable for each arg
             let arg_tvs: Vec<_> = args.iter().map(|_| ctx.fresh_tvar()).collect();
             let mut new_ctx = ctx.clone();
@@ -367,12 +364,10 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
                     ty: tv.clone(),
                 };
                 match arg {
-                    (BindingIdent::Ident { name }, _) => {
+                    BindingIdent::Ident { name, .. } => {
                         new_ctx.env.insert(name.to_string(), scheme)
                     }
-                    (BindingIdent::Rest { name }, _) => {
-                        new_ctx.env.insert(name.to_string(), scheme)
-                    }
+                    BindingIdent::Rest { name, .. } => new_ctx.env.insert(name.to_string(), scheme),
                 };
             }
             new_ctx.r#async = is_async.to_owned();
@@ -392,14 +387,12 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
 
             (lam_ty, cs)
         }
-        (
-            Expr::Let {
-                pattern,
-                value,
-                body,
-            },
-            _,
-        ) => {
+        Expr::Let {
+            pattern,
+            value,
+            body,
+            ..
+        } => {
             let (t1, cs1) = infer(&value, &ctx);
             let subs = run_solve(&cs1, &ctx);
             let (new_ctx, new_cs) = infer_pattern(pattern, &t1, &subs, ctx);
@@ -412,9 +405,9 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
 
             (t2.apply(&subs), vec![])
         }
-        (Expr::Lit { literal }, _) => (ctx.from_lit(literal.to_owned()), vec![]),
+        Expr::Lit { literal, .. } => (ctx.from_lit(literal.to_owned()), vec![]),
         // TODO: check the `op` field when we introduce comparison operators
-        (Expr::Op { left, right, .. }, _) => {
+        Expr::Op { left, right, .. } => {
             let left = Box::as_ref(left);
             let right = Box::as_ref(right);
             let (ts, cs) = infer_many(&[left.clone(), right.clone()], ctx);
@@ -437,11 +430,11 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
 
             (tv, cs)
         }
-        (Expr::Obj { properties }, _) => {
+        Expr::Obj { properties, .. } => {
             let mut all_cs: Vec<Constraint> = Vec::new();
             let properties: Vec<_> = properties
                 .iter()
-                .map(|(p, _)| {
+                .map(|p| {
                     let (ty, cs) = infer(&p.value, ctx);
                     all_cs.extend(cs);
                     ctx.prop(&p.name, ty)
@@ -452,7 +445,7 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
 
             (obj_ty, all_cs)
         }
-        (Expr::Await { expr }, _) => {
+        Expr::Await { expr, .. } => {
             if !ctx.r#async {
                 panic!("Can't use `await` inside non-async lambda")
             }
@@ -470,11 +463,12 @@ fn infer(expr: &WithSpan<Expr>, ctx: &Context) -> InferResult {
 
             (tv, cs)
         }
+        Expr::JSXElement(_) => todo!(),
     }
 }
 
 fn infer_pattern(
-    pattern: &WithSpan<Pattern>,
+    pattern: &Pattern,
     ty: &Type,
     subs: &Subst,
     ctx: &Context,
@@ -482,7 +476,7 @@ fn infer_pattern(
     let scheme = generalize(&ctx.env.apply(subs), &ty.apply(subs));
 
     match pattern {
-        (Pattern::Ident { name }, _) => {
+        Pattern::Ident { name, .. } => {
             let mut new_ctx = ctx.clone();
             new_ctx.env.insert(name.to_owned(), scheme);
 
@@ -491,7 +485,7 @@ fn infer_pattern(
     }
 }
 
-fn infer_many(exprs: &[WithSpan<Expr>], ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
+fn infer_many(exprs: &[Expr], ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
     let mut ts: Vec<Type> = Vec::new();
     let mut all_cs: Vec<Constraint> = Vec::new();
 

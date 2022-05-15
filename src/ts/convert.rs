@@ -39,10 +39,10 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                         let params: Vec<_> = args
                             .iter()
                             .zip(expr_args)
-                            .map(|(arg, (binding, _span))| {
+                            .map(|(arg, binding)| {
                                 let name = match binding {
-                                    BindingIdent::Ident { name } => name,
-                                    BindingIdent::Rest { name } => name,
+                                    BindingIdent::Ident { name, .. } => name,
+                                    BindingIdent::Rest { name, .. } => name,
                                 };
                                 Param {
                                     name: name.to_owned(),
@@ -59,8 +59,8 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                 }
                 // Fix nodes are assumed to wrap a lambda where the body of
                 // the lambda is recursive function.
-                Some(Expr::Fix { expr }) => match expr.as_ref() {
-                    (Expr::Lam { body, .. }, _) => convert_type(ty, Some(&body.0)),
+                Some(Expr::Fix { expr, .. }) => match expr.as_ref() {
+                    Expr::Lam { body, .. } => convert_type(ty, Some(&body)),
                     _ => panic!("mismatch"),
                 },
                 None => {

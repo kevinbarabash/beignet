@@ -38,14 +38,15 @@ fn infer_prog(src: &str) -> (Program, Env) {
 fn build_d_ts(env: &Env, prog: &Program) -> String {
     let mut lines: Vec<_> = vec![];
 
-    for (statement, _) in &prog.body {
+    for statement in &prog.body {
         match statement {
             crochet::syntax::Statement::Decl {
-                pattern: (pat, _),
-                value: (expr, _),
+                pattern: pat,
+                value: expr,
+                ..
             } => {
                 let name = match pat {
-                    Pattern::Ident { name } => name,
+                    Pattern::Ident { name, .. } => name,
                 };
                 let scheme = env.get(name).unwrap();
                 let result = convert_scheme(&scheme, Some(&expr));
