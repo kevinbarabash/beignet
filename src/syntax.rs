@@ -2,75 +2,167 @@ use super::literal::Literal;
 
 pub type Span = std::ops::Range<usize>;
 
-pub type WithSpan<T> = (T, Span);
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
-    pub body: Vec<WithSpan<Statement>>,
+    pub body: Vec<Statement>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     Decl {
-        pattern: WithSpan<Pattern>,
-        value: WithSpan<Expr>,
+        span: Span,
+        pattern: Pattern,
+        value: Expr,
     },
-    Expr(WithSpan<Expr>), // NOTE: does not include Expr::Let
+    Expr {
+        span: Span,
+        expr: Expr,
+    }, // NOTE: does not include Expr::Let
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JSXText {
+    span: Span,
+    value: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JSXExprContainer {
+    span: Span,
+    expr: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JSXElement {
+    // Other ASTs make have JSXOpeningElement and JSXClosingElement
+    pub name: String,
+    pub children: Vec<JSXElementChild>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum JSXElementChild {
+    JSXText(JSXText),
+    JSXExprContainer(JSXExprContainer),
+    // JSXSpreadChild(JSXSpreadChild),
+    JSXElement(Box<JSXElement>),
+    // JSXFragment(JSXFragment),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct App {
+    pub span: Span,
+    pub lam: Box<Expr>,
+    pub args: Vec<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Fix {
+    pub span: Span,
+    pub expr: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Ident {
+    pub span: Span,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IfElse {
+    pub span: Span,
+    pub cond: Box<Expr>,
+    pub consequent: Box<Expr>,
+    pub alternate: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Lambda {
+    pub span: Span,
+    pub args: Vec<BindingIdent>,
+    pub body: Box<Expr>,
+    pub is_async: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Let {
+    pub span: Span,
+    pub pattern: Pattern,
+    pub value: Box<Expr>,
+    pub body: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Lit {
+    pub span: Span,
+    pub literal: Literal,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Op {
+    pub span: Span,
+    pub op: BinOp,
+    pub left: Box<Expr>,
+    pub right: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Obj {
+    pub span: Span,
+    pub properties: Vec<Property>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Await {
+    pub span: Span,
+    pub expr: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
-    App {
-        lam: Box<WithSpan<Expr>>,
-        args: Vec<WithSpan<Expr>>,
-    },
-    Fix {
-        expr: Box<WithSpan<Expr>>,
-    },
-    Ident {
-        name: String,
-    },
-    If {
-        cond: Box<WithSpan<Expr>>,
-        consequent: Box<WithSpan<Expr>>,
-        alternate: Box<WithSpan<Expr>>,
-    },
-    Lam {
-        args: Vec<WithSpan<BindingIdent>>,
-        body: Box<WithSpan<Expr>>,
-        is_async: bool,
-    },
-    Let {
-        pattern: WithSpan<Pattern>,
-        value: Box<WithSpan<Expr>>,
-        body: Box<WithSpan<Expr>>,
-    },
-    Lit {
-        literal: Literal,
-    },
-    Op {
-        op: BinOp,
-        left: Box<WithSpan<Expr>>,
-        right: Box<WithSpan<Expr>>,
-    },
-    Obj {
-        properties: Vec<WithSpan<Property>>,
-    },
-    Await {
-        expr: Box<WithSpan<Expr>>,
-    },
+    App(App),
+    Fix(Fix),
+    Ident(Ident),
+    IfElse(IfElse),
+    JSXElement(JSXElement),
+    Lambda(Lambda),
+    Let(Let),
+    Lit(Lit),
+    Op(Op),
+    Obj(Obj),
+    Await(Await),
+}
+
+impl Expr {
+    pub fn span(&self) -> Span {
+        match &self {
+            Expr::App(App { span, .. }) => span.to_owned(),
+            Expr::Fix(Fix { span, .. }) => span.to_owned(),
+            Expr::Ident(Ident { span, .. }) => span.to_owned(),
+            Expr::IfElse(IfElse { span, .. }) => span.to_owned(),
+            Expr::JSXElement(_) => todo!(),
+            Expr::Lambda(Lambda{ span, .. }) => span.to_owned(),
+            Expr::Let(Let { span, .. }) => span.to_owned(),
+            Expr::Lit(Lit { span, .. }) => span.to_owned(),
+            Expr::Op(Op { span, .. }) => span.to_owned(),
+            Expr::Obj(Obj { span, .. }) => span.to_owned(),
+            Expr::Await(Await { span, .. }) => span.to_owned(),
+        }
+    }
 }
 
 // TODO: rename this to something else since we can't use it for let bindings
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindingIdent {
-    Ident { name: String },
-    Rest { name: String },
+    Ident(Ident),
+    Rest { 
+        span: Span,
+        name: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern {
-    Ident { name: String },
+    Ident(Ident),
     // TODO: add more patterns later
 }
 
@@ -84,6 +176,7 @@ pub enum BinOp {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Property {
+    pub span: Span,
     pub name: String,
-    pub value: WithSpan<Expr>,
+    pub value: Expr,
 }
