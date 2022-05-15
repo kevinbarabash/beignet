@@ -1562,7 +1562,7 @@ mod tests {
         Program {
             body: [
                 Expr {
-                    span: 0..16,
+                    span: 0..11,
                     expr: JSXElement(
                         JSXElement {
                             span: 0..11,
