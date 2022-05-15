@@ -1,4 +1,4 @@
-use crate::ast::syntax::{BindingIdent, Expr, Fix, Lambda};
+use crate::ast::{BindingIdent, Expr, Fix, Lambda};
 use crate::ts::ast::{Param, TsObjProp, TsQualifiedType, TsType, Func, Alias};
 use crate::types::{Scheme, TLam, Type, TypeKind};
 

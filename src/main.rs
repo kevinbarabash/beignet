@@ -2,7 +2,6 @@ use chumsky::prelude::*;
 use std::collections::HashMap;
 
 use crochet::parser::*;
-use crochet::context::{Context, Env};
 use crochet::infer::*;
 
 fn main() {

@@ -1,9 +1,10 @@
-use super::substitutable::*;
-use super::types::{self, Scheme, Type, TypeKind};
-use crate::ast::literal::Lit;
-
 use std::cell::Cell;
 use std::collections::HashMap;
+
+use crate::types::{self, Scheme, Type, TypeKind};
+use crate::ast::literal::Lit;
+
+use super::substitutable::*;
 
 pub type Env = HashMap<String, types::Scheme>;
 

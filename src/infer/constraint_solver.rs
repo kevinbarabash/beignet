@@ -1,6 +1,7 @@
+use crate::types::*;
+
 use super::context::Context;
 use super::substitutable::*;
-use super::types::*;
 
 #[derive(Clone, Debug)]
 pub struct Constraint {
