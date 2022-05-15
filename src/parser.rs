@@ -108,7 +108,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
 
         let jsx = just_with_padding("<")
             .ignore_then(text::ident().padded()) // head
-            .then(jsx_attr.repeated())
+            .then(jsx_attr.clone().repeated())
             .then_ignore(just_with_padding(">"))
             .then(jsx_element_child.repeated())
             .then_ignore(just("<"))
@@ -126,6 +126,19 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                 })
             });
 
+        let jsx_self_closing = just_with_padding("<")
+            .ignore_then(text::ident().padded())
+            .then(jsx_attr.clone().repeated())
+            .then_ignore(just_with_padding("/>"))
+            .map_with_span(|(head, attrs), span| {
+                Expr::JSXElement(JSXElement {
+                    span,
+                    name: head,
+                    attrs,
+                    children: vec![],
+                })
+            });
+
         let atom = choice((
             if_else,
             real,
@@ -136,6 +149,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             ident,
             obj,
             jsx,
+            jsx_self_closing,
             expr.clone()
                 .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
@@ -1568,6 +1582,46 @@ mod tests {
                             span: 0..11,
                             name: "Foo",
                             attrs: [],
+                            children: [],
+                        },
+                    ),
+                },
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn jsx_self_closing() {
+        insta::assert_debug_snapshot!(parse("<Foo bar={baz} />"), @r###"
+        Program {
+            body: [
+                Expr {
+                    span: 0..17,
+                    expr: JSXElement(
+                        JSXElement {
+                            span: 0..17,
+                            name: "Foo",
+                            attrs: [
+                                JSXAttr {
+                                    span: 5..15,
+                                    ident: Ident {
+                                        span: 5..8,
+                                        name: "bar",
+                                    },
+                                    value: JSXExprContainer(
+                                        JSXExprContainer {
+                                            span: 9..15,
+                                            expr: Ident(
+                                                Ident {
+                                                    span: 10..13,
+                                                    name: "baz",
+                                                },
+                                            ),
+                                        },
+                                    ),
+                                },
+                            ],
                             children: [],
                         },
                     ),
