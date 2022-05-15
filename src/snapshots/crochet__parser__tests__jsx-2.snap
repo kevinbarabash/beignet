@@ -1,0 +1,31 @@
+---
+source: src/parser.rs
+expression: "parse(\"<Foo>{bar}</Foo>\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..16,
+            expr: JSXElement(
+                JSXElement {
+                    span: 0..16,
+                    name: "Foo",
+                    attrs: [],
+                    children: [
+                        JSXExprContainer(
+                            JSXExprContainer {
+                                span: 5..10,
+                                expr: Ident(
+                                    Ident {
+                                        span: 6..9,
+                                        name: "bar",
+                                    },
+                                ),
+                            },
+                        ),
+                    ],
+                },
+            ),
+        },
+    ],
+}

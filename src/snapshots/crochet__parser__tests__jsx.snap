@@ -1,0 +1,26 @@
+---
+source: src/parser.rs
+expression: "parse(\"<Foo>Hello</Foo>\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..16,
+            expr: JSXElement(
+                JSXElement {
+                    span: 0..16,
+                    name: "Foo",
+                    attrs: [],
+                    children: [
+                        JSXText(
+                            JSXText {
+                                span: 5..10,
+                                value: "Hello",
+                            },
+                        ),
+                    ],
+                },
+            ),
+        },
+    ],
+}

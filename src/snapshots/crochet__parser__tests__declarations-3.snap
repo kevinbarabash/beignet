@@ -1,0 +1,42 @@
+---
+source: src/parser.rs
+expression: "parse(\"let foo = let x = 5 in x\")"
+---
+Program {
+    body: [
+        Decl {
+            span: 0..24,
+            pattern: Ident(
+                Ident {
+                    span: 4..7,
+                    name: "foo",
+                },
+            ),
+            value: Let(
+                Let {
+                    span: 10..24,
+                    pattern: Ident(
+                        Ident {
+                            span: 14..15,
+                            name: "x",
+                        },
+                    ),
+                    value: Lit(
+                        Num(
+                            Num {
+                                span: 18..19,
+                                value: "5",
+                            },
+                        ),
+                    ),
+                    body: Ident(
+                        Ident {
+                            span: 23..24,
+                            name: "x",
+                        },
+                    ),
+                },
+            ),
+        },
+    ],
+}

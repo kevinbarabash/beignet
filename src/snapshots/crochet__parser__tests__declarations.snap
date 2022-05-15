@@ -1,0 +1,25 @@
+---
+source: src/parser.rs
+expression: "parse(\"let x = 5\")"
+---
+Program {
+    body: [
+        Decl {
+            span: 0..9,
+            pattern: Ident(
+                Ident {
+                    span: 4..5,
+                    name: "x",
+                },
+            ),
+            value: Lit(
+                Num(
+                    Num {
+                        span: 8..9,
+                        value: "5",
+                    },
+                ),
+            ),
+        },
+    ],
+}

@@ -1,0 +1,26 @@
+---
+source: src/parser.rs
+expression: "parse(\"() => 10\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..8,
+            expr: Lambda(
+                Lambda {
+                    span: 0..8,
+                    args: [],
+                    body: Lit(
+                        Num(
+                            Num {
+                                span: 6..8,
+                                value: "10",
+                            },
+                        ),
+                    ),
+                    is_async: false,
+                },
+            ),
+        },
+    ],
+}

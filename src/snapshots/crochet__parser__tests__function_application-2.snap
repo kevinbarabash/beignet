@@ -1,0 +1,36 @@
+---
+source: src/parser.rs
+expression: "parse(\"foo(a, b)\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..9,
+            expr: App(
+                App {
+                    span: 0..9,
+                    lam: Ident(
+                        Ident {
+                            span: 0..3,
+                            name: "foo",
+                        },
+                    ),
+                    args: [
+                        Ident(
+                            Ident {
+                                span: 4..5,
+                                name: "a",
+                            },
+                        ),
+                        Ident(
+                            Ident {
+                                span: 7..8,
+                                name: "b",
+                            },
+                        ),
+                    ],
+                },
+            ),
+        },
+    ],
+}

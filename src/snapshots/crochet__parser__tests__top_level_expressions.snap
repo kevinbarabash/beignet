@@ -1,0 +1,29 @@
+---
+source: src/parser.rs
+expression: "parse(\"a + b\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..5,
+            expr: Op(
+                Op {
+                    span: 0..5,
+                    op: Add,
+                    left: Ident(
+                        Ident {
+                            span: 0..1,
+                            name: "a",
+                        },
+                    ),
+                    right: Ident(
+                        Ident {
+                            span: 4..5,
+                            name: "b",
+                        },
+                    ),
+                },
+            ),
+        },
+    ],
+}

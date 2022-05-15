@@ -1,0 +1,38 @@
+---
+source: src/parser.rs
+expression: "parse(\"<Foo bar={baz} />\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..17,
+            expr: JSXElement(
+                JSXElement {
+                    span: 0..17,
+                    name: "Foo",
+                    attrs: [
+                        JSXAttr {
+                            span: 5..15,
+                            ident: Ident {
+                                span: 5..8,
+                                name: "bar",
+                            },
+                            value: JSXExprContainer(
+                                JSXExprContainer {
+                                    span: 9..15,
+                                    expr: Ident(
+                                        Ident {
+                                            span: 10..13,
+                                            name: "baz",
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                    ],
+                    children: [],
+                },
+            ),
+        },
+    ],
+}

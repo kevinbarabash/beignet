@@ -1,0 +1,55 @@
+---
+source: src/parser.rs
+expression: "parse(\"let rec f = () => f()\")"
+---
+Program {
+    body: [
+        Decl {
+            span: 0..21,
+            pattern: Ident(
+                Ident {
+                    span: 8..9,
+                    name: "f",
+                },
+            ),
+            value: Fix(
+                Fix {
+                    span: 12..21,
+                    expr: Lambda(
+                        Lambda {
+                            span: 12..21,
+                            args: [
+                                Ident(
+                                    Ident {
+                                        span: 8..9,
+                                        name: "f",
+                                    },
+                                ),
+                            ],
+                            body: Lambda(
+                                Lambda {
+                                    span: 12..21,
+                                    args: [],
+                                    body: App(
+                                        App {
+                                            span: 18..21,
+                                            lam: Ident(
+                                                Ident {
+                                                    span: 18..19,
+                                                    name: "f",
+                                                },
+                                            ),
+                                            args: [],
+                                        },
+                                    ),
+                                    is_async: false,
+                                },
+                            ),
+                            is_async: false,
+                        },
+                    ),
+                },
+            ),
+        },
+    ],
+}
