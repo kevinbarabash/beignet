@@ -118,7 +118,7 @@ pub fn print_expr(expr: &Expression, level: &u32) -> String {
             }
         }
         Expression::Ident { name } => name.to_owned(),
-        Expression::Literal { literal } => format!("{literal}"),
+        Expression::Literal(lit) => format!("{lit}"),
         Expression::Binary { op, left, right } => {
             let wrap_right = match (expr, right.as_ref()) {
                 (

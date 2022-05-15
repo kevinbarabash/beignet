@@ -405,7 +405,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (t2.apply(&subs), vec![])
         }
-        Expr::Lit(Lit { literal, .. }) => (ctx.from_lit(literal.to_owned()), vec![]),
+        Expr::Lit(literal) => (ctx.from_lit(literal.to_owned()), vec![]),
         // TODO: check the `op` field when we introduce comparison operators
         Expr::Op(Op { left, right, .. }) => {
             let left = Box::as_ref(left);

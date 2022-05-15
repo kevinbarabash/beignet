@@ -102,9 +102,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                 args: vec![],
             }
         }
-        syntax::Expr::Lit(syntax::Lit { literal, .. }) => Expression::Literal {
-            literal: literal.to_owned(),
-        },
+        syntax::Expr::Lit(lit) => Expression::Literal(lit.to_owned()),
         syntax::Expr::Op(syntax::Op {
             op, left, right, ..
         }) => {
