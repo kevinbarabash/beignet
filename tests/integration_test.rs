@@ -1,12 +1,11 @@
 use chumsky::prelude::*;
 use std::collections::HashMap;
 
-use crochet::context::{Context, Env};
-use crochet::infer::infer_stmt;
+use crochet::infer::*;
 use crochet::js::builder::*;
 use crochet::js::printer::*;
 use crochet::parser::parser;
-use crochet::ast::syntax::{Pattern, Program, Statement};
+use crochet::ast::{Pattern, Program, Statement};
 use crochet::ts::convert::convert_scheme;
 
 fn infer(input: &str) -> String {

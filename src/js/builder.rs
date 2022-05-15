@@ -1,17 +1,17 @@
-use crate::ast::syntax;
+use crate::ast;
 use crate::js::ast::*;
 
-pub fn build_js(prog: &syntax::Program) -> Program {
+pub fn build_js(prog: &ast::Program) -> Program {
     let body: Vec<_> = prog
         .body
         .iter()
         .map(|child| match child {
-            syntax::Statement::Decl { pattern, value, .. } => {
+            ast::Statement::Decl { pattern, value, .. } => {
                 let pattern = build_pattern(&pattern);
                 let value = build_expr(&value);
                 Statement::Decl { pattern, value }
             }
-            syntax::Statement::Expr { expr, .. } => {
+            ast::Statement::Expr { expr, .. } => {
                 let expr = build_expr(&expr);
                 Statement::Expression { expr }
             }
@@ -21,36 +21,36 @@ pub fn build_js(prog: &syntax::Program) -> Program {
     Program { body }
 }
 
-pub fn build_pattern(pattern: &syntax::Pattern) -> Pattern {
+pub fn build_pattern(pattern: &ast::Pattern) -> Pattern {
     match pattern {
-        syntax::Pattern::Ident(ident) => Pattern::Ident {
+        ast::Pattern::Ident(ident) => Pattern::Ident {
             name: ident.name.to_owned(),
         },
     }
 }
 
-pub fn build_return_block(body: &syntax::Expr) -> Vec<Statement> {
+pub fn build_return_block(body: &ast::Expr) -> Vec<Statement> {
     match body {
         // Avoids wrapping in an IIFE when it isn't necessary.
-        syntax::Expr::Let { .. } => let_to_children(body),
+        ast::Expr::Let { .. } => let_to_children(body),
         _ => vec![Statement::Return {
             arg: build_expr(body),
         }],
     }
 }
 
-pub fn build_expr(expr: &syntax::Expr) -> Expression {
+pub fn build_expr(expr: &ast::Expr) -> Expression {
     match expr {
-        syntax::Expr::App(syntax::App { lam, args, .. }) => {
+        ast::Expr::App(ast::App { lam, args, .. }) => {
             let func = Box::from(build_expr(&lam.as_ref()));
             let args: Vec<_> = args.iter().map(|arg| build_expr(&arg)).collect();
 
             Expression::Call { func, args }
         }
-        syntax::Expr::Ident(syntax::Ident { name, .. }) => Expression::Ident {
+        ast::Expr::Ident(ast::Ident { name, .. }) => Expression::Ident {
             name: name.to_owned(),
         },
-        syntax::Expr::Lambda(syntax::Lambda {
+        ast::Expr::Lambda(ast::Lambda {
             args,
             body,
             is_async: r#async,
@@ -59,10 +59,10 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
             let params: Vec<_> = args
                 .iter()
                 .map(|ident| match ident {
-                    syntax::BindingIdent::Ident(ident) => Param::Ident {
+                    ast::BindingIdent::Ident(ident) => Param::Ident {
                         name: ident.name.to_owned(),
                     },
-                    syntax::BindingIdent::Rest { name, .. } => Param::Ident {
+                    ast::BindingIdent::Rest { name, .. } => Param::Ident {
                         name: name.to_owned(),
                     },
                 })
@@ -71,7 +71,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
 
             match body {
                 // Avoids wrapping in an IIFE when it isn't necessary.
-                syntax::Expr::Let { .. } => {
+                ast::Expr::Let { .. } => {
                     return Expression::Function {
                         params,
                         body: let_to_children(body),
@@ -89,7 +89,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                 },
             }
         }
-        syntax::Expr::Let { .. } => {
+        ast::Expr::Let { .. } => {
             let children = let_to_children(expr);
 
             // Return an IIFE
@@ -102,26 +102,26 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                 args: vec![],
             }
         }
-        syntax::Expr::Lit(lit) => Expression::Literal(lit.to_owned()),
-        syntax::Expr::Op(syntax::Op {
+        ast::Expr::Lit(lit) => Expression::Literal(lit.to_owned()),
+        ast::Expr::Op(ast::Op {
             op, left, right, ..
         }) => {
             let op = match op {
-                syntax::BinOp::Add => BinaryOp::Add,
-                syntax::BinOp::Sub => BinaryOp::Sub,
-                syntax::BinOp::Mul => BinaryOp::Mul,
-                syntax::BinOp::Div => BinaryOp::Div,
+                ast::BinOp::Add => BinaryOp::Add,
+                ast::BinOp::Sub => BinaryOp::Sub,
+                ast::BinOp::Mul => BinaryOp::Mul,
+                ast::BinOp::Div => BinaryOp::Div,
             };
             let left = Box::from(build_expr(&left));
             let right = Box::from(build_expr(&right));
 
             Expression::Binary { op, left, right }
         }
-        syntax::Expr::Fix(syntax::Fix { expr, .. }) => match expr.as_ref() {
-            syntax::Expr::Lambda(syntax::Lambda { body, .. }) => build_expr(&body),
+        ast::Expr::Fix(ast::Fix { expr, .. }) => match expr.as_ref() {
+            ast::Expr::Lambda(ast::Lambda { body, .. }) => build_expr(&body),
             _ => panic!("Fix should only wrap a lambda"),
         },
-        syntax::Expr::IfElse(syntax::IfElse {
+        ast::Expr::IfElse(ast::IfElse {
             cond,
             consequent,
             alternate,
@@ -150,7 +150,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
                 args: vec![],
             }
         }
-        syntax::Expr::Obj(syntax::Obj { properties, .. }) => {
+        ast::Expr::Obj(ast::Obj { properties, .. }) => {
             let properties: Vec<_> = properties
                 .iter()
                 .map(|prop| Property {
@@ -161,15 +161,15 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
 
             Expression::Object { properties }
         }
-        syntax::Expr::Await(syntax::Await { expr, .. }) => Expression::Await {
+        ast::Expr::Await(ast::Await { expr, .. }) => Expression::Await {
             expr: Box::from(build_expr(&expr.as_ref())),
         },
-        syntax::Expr::JSXElement(_) => todo!(),
+        ast::Expr::JSXElement(_) => todo!(),
     }
 }
 
-pub fn let_to_children(expr: &syntax::Expr) -> Vec<Statement> {
-    if let syntax::Expr::Let(syntax::Let {
+pub fn let_to_children(expr: &ast::Expr) -> Vec<Statement> {
+    if let ast::Expr::Let(ast::Let {
         pattern,
         value,
         body,
@@ -185,7 +185,7 @@ pub fn let_to_children(expr: &syntax::Expr) -> Vec<Statement> {
         let mut children = vec![decl];
         let mut body = body.to_owned();
 
-        while let syntax::Expr::Let(syntax::Let {
+        while let ast::Expr::Let(ast::Let {
             pattern,
             value,
             body: next_body,
@@ -205,6 +205,6 @@ pub fn let_to_children(expr: &syntax::Expr) -> Vec<Statement> {
 
         children
     } else {
-        panic!("was expecting an syntax::Expr::Let")
+        panic!("was expecting an ast::Expr::Let")
     }
 }

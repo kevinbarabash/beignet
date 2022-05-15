@@ -1,6 +1,7 @@
-use super::literal::Lit;
-
-pub type Span = std::ops::Range<usize>;
+use crate::ast::ident::Ident;
+use crate::ast::literal::Lit;
+use crate::ast::pattern::Pattern;
+use crate::ast::span::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
@@ -59,12 +60,6 @@ pub struct App {
 pub struct Fix {
     pub span: Span,
     pub expr: Box<Expr>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Ident {
-    pub span: Span,
-    pub name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -129,17 +124,17 @@ pub enum Expr {
 impl Expr {
     pub fn span(&self) -> Span {
         match &self {
-            Expr::App(App { span, .. }) => span.to_owned(),
-            Expr::Fix(Fix { span, .. }) => span.to_owned(),
-            Expr::Ident(Ident { span, .. }) => span.to_owned(),
-            Expr::IfElse(IfElse { span, .. }) => span.to_owned(),
+            Expr::App(app) => app.span.to_owned(),
+            Expr::Fix(fix) => fix.span.to_owned(),
+            Expr::Ident(ident) => ident.span.to_owned(),
+            Expr::IfElse(if_else) => if_else.span.to_owned(),
             Expr::JSXElement(_) => todo!(),
-            Expr::Lambda(Lambda{ span, .. }) => span.to_owned(),
-            Expr::Let(Let { span, .. }) => span.to_owned(),
+            Expr::Lambda(lam) => lam.span.to_owned(),
+            Expr::Let(r#let) => r#let.span.to_owned(),
             Expr::Lit(lit) => lit.span(),
-            Expr::Op(Op { span, .. }) => span.to_owned(),
-            Expr::Obj(Obj { span, .. }) => span.to_owned(),
-            Expr::Await(Await { span, .. }) => span.to_owned(),
+            Expr::Op(op) => op.span.to_owned(),
+            Expr::Obj(obj) => obj.span.to_owned(),
+            Expr::Await(r#await) => r#await.span.to_owned(),
         }
     }
 }
@@ -152,12 +147,6 @@ pub enum BindingIdent {
         span: Span,
         name: String,
     },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Pattern {
-    Ident(Ident),
-    // TODO: add more patterns later
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

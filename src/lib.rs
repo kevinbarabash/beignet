@@ -1,10 +1,7 @@
 pub mod ast;
-pub mod constraint_solver;
-pub mod context;
 pub mod infer;
 pub mod js;
 pub mod parser;
-pub mod substitutable;
 pub mod ts;
 pub mod types;
 
@@ -12,9 +9,8 @@ use chumsky::*;
 use wasm_bindgen::prelude::*;
 use std::collections::HashMap;
 
-use context::Env;
-use infer::infer_prog;
-use crate::ast::syntax::{self, Pattern, Program};
+use crate::ast::{Pattern, Program};
+use crate::infer::{Env, infer_prog};
 use ts::convert::convert_scheme;
 
 #[wasm_bindgen]
@@ -63,7 +59,7 @@ fn build_d_ts(env: &Env, prog: &Program) -> String {
 
     for statement in &prog.body {
         match statement {
-            syntax::Statement::Decl { pattern: pat, value: expr, .. } => {
+            ast::Statement::Decl { pattern: pat, value: expr, .. } => {
                 let name = match pat {
                     Pattern::Ident(ident) => &ident.name,
                 };
