@@ -328,7 +328,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (tv, constraints)
         }
-        Expr::If(IfElse {
+        Expr::IfElse(IfElse {
             cond,
             consequent,
             alternate,
@@ -349,7 +349,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (result_type, constraints)
         }
-        Expr::Lam(Lambda {
+        Expr::Lambda(Lambda {
             args,
             body,
             is_async,

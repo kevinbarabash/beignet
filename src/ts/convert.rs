@@ -30,7 +30,7 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
         TypeKind::Lam(TLam { args, ret }) => {
             match expr {
                 // TODO: handle is_async
-                Some(Expr::Lam(Lambda {
+                Some(Expr::Lambda(Lambda {
                     args: expr_args, ..
                 })) => {
                     if args.len() != expr_args.len() {
@@ -60,7 +60,7 @@ pub fn convert_type(ty: &Type, expr: Option<&Expr>) -> TsType {
                 // Fix nodes are assumed to wrap a lambda where the body of
                 // the lambda is recursive function.
                 Some(Expr::Fix(Fix { expr, .. })) => match expr.as_ref() {
-                    Expr::Lam(Lambda { body, .. }) => convert_type(ty, Some(&body)),
+                    Expr::Lambda(Lambda { body, .. }) => convert_type(ty, Some(&body)),
                     _ => panic!("mismatch"),
                 },
                 None => {

@@ -78,7 +78,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             .then(expr.clone())
             .then_ignore(just_with_padding("}"))
             .map_with_span(|((cond, left), right), span: Span| {
-                Expr::If(IfElse {
+                Expr::IfElse(IfElse {
                     span,
                     cond: Box::from(cond),
                     consequent: Box::from(left),
@@ -232,7 +232,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                 expr.clone(),
             )))
             .map_with_span(|((r#async, args), body), span: Span| {
-                Expr::Lam(Lambda {
+                Expr::Lambda(Lambda {
                     span,
                     args,
                     body: Box::new(body),
@@ -293,7 +293,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                         // TODO: Fix always wraps a lambda
                         value: Expr::Fix(Fix {
                             span: value.span(),
-                            expr: Box::from(Expr::Lam(Lambda {
+                            expr: Box::from(Expr::Lambda(Lambda {
                                 span: value.span(),
                                 args: vec![ident],
                                 body: Box::from(value),

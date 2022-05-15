@@ -50,7 +50,7 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
         syntax::Expr::Ident(syntax::Ident { name, .. }) => Expression::Ident {
             name: name.to_owned(),
         },
-        syntax::Expr::Lam(syntax::Lambda {
+        syntax::Expr::Lambda(syntax::Lambda {
             args,
             body,
             is_async: r#async,
@@ -120,10 +120,10 @@ pub fn build_expr(expr: &syntax::Expr) -> Expression {
             Expression::Binary { op, left, right }
         }
         syntax::Expr::Fix(syntax::Fix { expr, .. }) => match expr.as_ref() {
-            syntax::Expr::Lam(syntax::Lambda { body, .. }) => build_expr(&body),
+            syntax::Expr::Lambda(syntax::Lambda { body, .. }) => build_expr(&body),
             _ => panic!("Fix should only wrap a lambda"),
         },
-        syntax::Expr::If(syntax::IfElse {
+        syntax::Expr::IfElse(syntax::IfElse {
             cond,
             consequent,
             alternate,
