@@ -2,6 +2,7 @@ use crate::ast::ident::Ident;
 use crate::ast::literal::Lit;
 use crate::ast::pattern::Pattern;
 use crate::ast::span::Span;
+use crate::ast::jsx::JSXElement;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
@@ -19,34 +20,6 @@ pub enum Statement {
         span: Span,
         expr: Expr,
     }, // NOTE: does not include Expr::Let
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct JSXText {
-    span: Span,
-    value: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct JSXExprContainer {
-    span: Span,
-    expr: Box<Expr>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct JSXElement {
-    // Other ASTs make have JSXOpeningElement and JSXClosingElement
-    pub name: String,
-    pub children: Vec<JSXElementChild>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum JSXElementChild {
-    JSXText(JSXText),
-    JSXExprContainer(JSXExprContainer),
-    // JSXSpreadChild(JSXSpreadChild),
-    JSXElement(Box<JSXElement>),
-    // JSXFragment(JSXFragment),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
