@@ -1,6 +1,6 @@
 use super::substitutable::*;
 use super::types::{self, Scheme, Type, TypeKind};
-use super::literal::Lit;
+use crate::ast::literal::Lit;
 
 use std::cell::Cell;
 use std::collections::HashMap;

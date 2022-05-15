@@ -136,8 +136,8 @@ where
     }
 }
 
+use crate::ast::syntax::*;
 use crate::context::{Context, Env};
-use crate::syntax::*;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...

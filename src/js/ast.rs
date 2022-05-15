@@ -1,4 +1,4 @@
-use super::super::literal::Lit;
+use crate::ast::literal::Lit;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {

@@ -1,5 +1,5 @@
-use super::super::syntax;
-use super::ast::*;
+use crate::ast::syntax;
+use crate::js::ast::*;
 
 pub fn build_js(prog: &syntax::Program) -> Program {
     let body: Vec<_> = prog

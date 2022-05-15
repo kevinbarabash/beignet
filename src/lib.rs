@@ -1,11 +1,10 @@
+pub mod ast;
 pub mod constraint_solver;
 pub mod context;
 pub mod infer;
 pub mod js;
-pub mod literal;
 pub mod parser;
 pub mod substitutable;
-pub mod syntax;
 pub mod ts;
 pub mod types;
 
@@ -15,7 +14,7 @@ use std::collections::HashMap;
 
 use context::Env;
 use infer::infer_prog;
-use syntax::{Pattern, Program};
+use crate::ast::syntax::{self, Pattern, Program};
 use ts::convert::convert_scheme;
 
 #[wasm_bindgen]

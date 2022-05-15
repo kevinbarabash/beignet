@@ -1,6 +1,6 @@
-use super::super::syntax::{BindingIdent, Expr, Fix, Lambda};
-use super::super::types::{Scheme, TLam, Type, TypeKind};
-use super::ast::{Param, TsObjProp, TsQualifiedType, TsType, Func, Alias};
+use crate::ast::syntax::{BindingIdent, Expr, Fix, Lambda};
+use crate::ts::ast::{Param, TsObjProp, TsQualifiedType, TsType, Func, Alias};
+use crate::types::{Scheme, TLam, Type, TypeKind};
 
 /// Converts a Scheme to a TsQualifiedTyepe for eventual export to .d.ts.
 pub fn convert_scheme(scheme: &Scheme, expr: Option<&Expr>) -> TsQualifiedType {

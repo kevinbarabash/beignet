@@ -2,7 +2,7 @@ use chumsky::prelude::*;
 use chumsky::primitive::*;
 use chumsky::text::Padded;
 
-use super::literal::*;
+use crate::ast::literal::*;
 use super::syntax::*;
 
 pub type Span = std::ops::Range<usize>;

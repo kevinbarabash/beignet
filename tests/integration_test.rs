@@ -6,7 +6,7 @@ use crochet::infer::infer_stmt;
 use crochet::js::builder::*;
 use crochet::js::printer::*;
 use crochet::parser::parser;
-use crochet::syntax::{Pattern, Program};
+use crochet::ast::syntax::{Pattern, Program, Statement};
 use crochet::ts::convert::convert_scheme;
 
 fn infer(input: &str) -> String {
@@ -40,7 +40,7 @@ fn build_d_ts(env: &Env, prog: &Program) -> String {
 
     for statement in &prog.body {
         match statement {
-            crochet::syntax::Statement::Decl {
+            Statement::Decl {
                 pattern: pat,
                 value: expr,
                 ..
