@@ -2,7 +2,7 @@ use chumsky::prelude::*;
 use chumsky::primitive::*;
 use chumsky::text::Padded;
 
-use super::ast::*;
+use crate::ast::*;
 
 pub type Span = std::ops::Range<usize>;
 
@@ -26,11 +26,13 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
         let int = text::int::<char, Simple<char>>(10)
             .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
 
-        let r#str = just("\"")
-            .ignore_then(filter(|c| *c != '"').repeated())
+        let str_lit = just("\"")
+            .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
             .then_ignore(just("\""))
             .collect::<String>()
-            .map_with_span(|value, span| Expr::Lit(Lit::str(value, span)));
+            .map_with_span(|value, span| Lit::str(value, span));
+
+        let r#str = str_lit.map(|lit| Expr::Lit(lit));
 
         let real = text::int(10)
             .chain(just('.'))
@@ -70,35 +72,59 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             .delimited_by(just_with_padding("{"), just_with_padding("}"))
             .map_with_span(|properties, span: Span| Expr::Obj(Obj { span, properties }));
 
-        // let jsx = just_with_padding("<")
-        //     .ignore_then(text::ident().padded())
-        //     .then_ignore(just_with_padding(">"))
-        //     .then(
-        //         filter(|c| *c != '<')
-        //             .repeated()
-        //             .collect::<String>()
-        //             .map_with_span(|value, span| Expr::Lit {
-        //                 span,
-        //                 literal: Literal::Str(value),
-        //             }),
-        //     )
-        //     .then_ignore(just("<"))
-        //     .then_ignore(just("/"))
-        //     .then(text::ident().padded())
-        //     .then_ignore(just_with_padding(">"))
-        //     .map_with_span(|((head, body), tail), span| {
-        //         assert_eq!(head, tail);
-        //         (
-        //             Expr::JSXElement(JSXElement {
-        //                 name: head,
-        //                 children: vec![JSXElementChild::JSXExprContainer(JSXExprContainer {
-        //                     span: span,
-        //                     expr: body,
-        //                 })],
-        //             }),
-        //             span,
-        //         )
-        //     });
+        let jsx_text = filter(|c| *c != '<' && *c != '{')
+            .repeated()
+            .at_least(1)
+            .collect::<String>()
+            .map_with_span(|value, span| JSXText { span, value });
+
+        let jsx_expr = just_with_padding("{")
+            .ignore_then(expr.clone())
+            .then_ignore(just_with_padding("}"))
+            .map_with_span(|expr, span| JSXExprContainer { span, expr });
+
+        let jsx_element_child = choice((
+            jsx_expr
+                .clone()
+                .map(|node| JSXElementChild::JSXExprContainer(node)),
+            jsx_text.map(|node| JSXElementChild::JSXText(node)),
+        ));
+
+        let jsx_attr = text::ident()
+            .map_with_span(|name, span| Ident { name, span })
+            .then_ignore(just_with_padding("="))
+            .then(choice((
+                str_lit.map(|node| JSXAttrValue::Lit(node)),
+                jsx_expr
+                    .clone()
+                    .map(|node| JSXAttrValue::JSXExprContainer(node)),
+            )))
+            .map_with_span(|(name, value), span| JSXAttr {
+                span,
+                ident: name,
+                value,
+            })
+            .padded();
+
+        let jsx = just_with_padding("<")
+            .ignore_then(text::ident().padded()) // head
+            .then(jsx_attr.repeated())
+            .then_ignore(just_with_padding(">"))
+            .then(jsx_element_child.repeated())
+            .then_ignore(just("<"))
+            .then_ignore(just("/"))
+            .then(text::ident().padded()) // tail
+            .then_ignore(just_with_padding(">"))
+            .map_with_span(|(((head, attrs), children), tail), span| {
+                assert_eq!(head, tail);
+
+                Expr::JSXElement(JSXElement {
+                    span,
+                    name: head,
+                    attrs,
+                    children,
+                })
+            });
 
         let atom = choice((
             if_else,
@@ -109,7 +135,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             r#false,
             ident,
             obj,
-            // jsx,
+            jsx,
             expr.clone()
                 .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
@@ -1377,34 +1403,232 @@ mod tests {
         "###);
     }
 
-    // #[test]
-    // fn jsx_with_string_child() {
-    //     insta::assert_debug_snapshot!(parse("<Foo>Hello</Foo>"), @r###"
-    //     Program {
-    //         body: [
-    //             (
-    //                 Expr(
-    //                     (
-    //                         Jsx {
-    //                             name: "Foo",
-    //                             body: [
-    //                                 (
-    //                                     Lit {
-    //                                         literal: Str(
-    //                                             "Hello",
-    //                                         ),
-    //                                     },
-    //                                     5..10,
-    //                                 ),
-    //                             ],
-    //                         },
-    //                         0..16,
-    //                     ),
-    //                 ),
-    //                 0..16,
-    //             ),
-    //         ],
-    //     }
-    //     "###);
-    // }
+    #[test]
+    fn jsx_with_jsx_text_child() {
+        insta::assert_debug_snapshot!(parse("<Foo>Hello</Foo>"), @r###"
+        Program {
+            body: [
+                Expr {
+                    span: 0..16,
+                    expr: JSXElement(
+                        JSXElement {
+                            span: 0..16,
+                            name: "Foo",
+                            attrs: [],
+                            children: [
+                                JSXText(
+                                    JSXText {
+                                        span: 5..10,
+                                        value: "Hello",
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                },
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn jsx_with_jsx_expr_child() {
+        insta::assert_debug_snapshot!(parse("<Foo>{bar}</Foo>"), @r###"
+        Program {
+            body: [
+                Expr {
+                    span: 0..16,
+                    expr: JSXElement(
+                        JSXElement {
+                            span: 0..16,
+                            name: "Foo",
+                            attrs: [],
+                            children: [
+                                JSXExprContainer(
+                                    JSXExprContainer {
+                                        span: 5..10,
+                                        expr: Ident(
+                                            Ident {
+                                                span: 6..9,
+                                                name: "bar",
+                                            },
+                                        ),
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                },
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn jsx_with_jsx_expr_and_text_children() {
+        insta::assert_debug_snapshot!(parse("<Foo>Hello {world}!</Foo>"), @r###"
+        Program {
+            body: [
+                Expr {
+                    span: 0..25,
+                    expr: JSXElement(
+                        JSXElement {
+                            span: 0..25,
+                            name: "Foo",
+                            attrs: [],
+                            children: [
+                                JSXText(
+                                    JSXText {
+                                        span: 5..11,
+                                        value: "Hello ",
+                                    },
+                                ),
+                                JSXExprContainer(
+                                    JSXExprContainer {
+                                        span: 11..18,
+                                        expr: Ident(
+                                            Ident {
+                                                span: 12..17,
+                                                name: "world",
+                                            },
+                                        ),
+                                    },
+                                ),
+                                JSXText(
+                                    JSXText {
+                                        span: 18..19,
+                                        value: "!",
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                },
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn jsx_with_nested_jsx_in_expr_child() {
+        insta::assert_debug_snapshot!(parse("<Foo>{<Bar>{baz}</Bar>}</Foo>"), @r###"
+        Program {
+            body: [
+                Expr {
+                    span: 0..29,
+                    expr: JSXElement(
+                        JSXElement {
+                            span: 0..29,
+                            name: "Foo",
+                            attrs: [],
+                            children: [
+                                JSXExprContainer(
+                                    JSXExprContainer {
+                                        span: 5..23,
+                                        expr: JSXElement(
+                                            JSXElement {
+                                                span: 6..22,
+                                                name: "Bar",
+                                                attrs: [],
+                                                children: [
+                                                    JSXExprContainer(
+                                                        JSXExprContainer {
+                                                            span: 11..16,
+                                                            expr: Ident(
+                                                                Ident {
+                                                                    span: 12..15,
+                                                                    name: "baz",
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
+                                                ],
+                                            },
+                                        ),
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                },
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn jsx_with_no_child() {
+        insta::assert_debug_snapshot!(parse("<Foo></Foo>"), @r###"
+        Program {
+            body: [
+                Expr {
+                    span: 0..16,
+                    expr: JSXElement(
+                        JSXElement {
+                            span: 0..11,
+                            name: "Foo",
+                            attrs: [],
+                            children: [],
+                        },
+                    ),
+                },
+            ],
+        }
+        "###);
+    }
+
+    #[test]
+    fn jsx_with_attrs() {
+        insta::assert_debug_snapshot!(parse("<Foo msg=\"hello\" bar={baz}></Foo>"), @r###"
+        Program {
+            body: [
+                Expr {
+                    span: 0..33,
+                    expr: JSXElement(
+                        JSXElement {
+                            span: 0..33,
+                            name: "Foo",
+                            attrs: [
+                                JSXAttr {
+                                    span: 5..16,
+                                    ident: Ident {
+                                        span: 5..8,
+                                        name: "msg",
+                                    },
+                                    value: Lit(
+                                        Str(
+                                            Str {
+                                                span: 9..16,
+                                                value: "hello",
+                                            },
+                                        ),
+                                    ),
+                                },
+                                JSXAttr {
+                                    span: 17..26,
+                                    ident: Ident {
+                                        span: 17..20,
+                                        name: "bar",
+                                    },
+                                    value: JSXExprContainer(
+                                        JSXExprContainer {
+                                            span: 21..26,
+                                            expr: Ident(
+                                                Ident {
+                                                    span: 22..25,
+                                                    name: "baz",
+                                                },
+                                            ),
+                                        },
+                                    ),
+                                },
+                            ],
+                            children: [],
+                        },
+                    ),
+                },
+            ],
+        }
+        "###);
+    }
 }
