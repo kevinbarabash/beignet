@@ -77,14 +77,14 @@ fn build_d_ts(env: &Env, prog: &Program) -> String {
 
 #[wasm_bindgen]
 pub fn compile(input: &str) -> CompileResult {
-    let prog = parser::parser().parse(input).unwrap();
+    let program = parser::parser().parse(input).unwrap();
 
-    let js_tree = js::builder::build_js(&prog);
-    let js = js::printer::print_js(&js_tree);
+    let js_program = js::builder::build_js(&program);
+    let js = js::printer::print_js(&js_program);
 
     let env: Env = HashMap::new();
-    let env = infer_prog(env, &prog);
-    let dts = build_d_ts(&env, &prog);
+    let env = infer_prog(env, &program);
+    let dts = build_d_ts(&env, &program);
 
     CompileResult { js, dts }
 }

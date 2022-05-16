@@ -256,11 +256,8 @@ fn codegen_let_rec() {
     let js_tree = build_js(&prog);
 
     insta::assert_snapshot!(print_js(&js_tree), @r###"
-    const f = () => {
-        return f();
-    };
-
-    export {f};
+    export const f = ()=>f()
+    ;
     "###);
 
     insta::assert_snapshot!(build_d_ts(&env, &prog), @"export declare const f = <A>() => A;");
@@ -276,16 +273,14 @@ fn codegen_if_else() {
 
     let js_tree = build_js(&prog);
     insta::assert_snapshot!(print_js(&js_tree), @r###"
-    const cond = true;
-    const result = (() => {
+    export const cond = true;
+    export const result = ()=>{
         if (cond) {
             return 5;
         } else {
             return 5;
-        };
-    })();
-
-    export {cond, result};
+        }
+    }();
     "###);
 
     insta::assert_snapshot!(build_d_ts(&env, &prog), @r###"
@@ -301,9 +296,10 @@ fn codegen_object() {
     let js_tree = build_js(&prog);
 
     insta::assert_snapshot!(print_js(&js_tree), @r###"
-    const point = {x: 5, y: 10};
-
-    export {point};
+    export const point = {
+        x: 5,
+        y: 10
+    };
     "###);
 
     insta::assert_snapshot!(build_d_ts(&env, &prog), @r###"
@@ -319,11 +315,8 @@ fn codegen_async_math() {
     let js_tree = build_js(&prog);
 
     insta::assert_snapshot!(print_js(&js_tree), @r###"
-    const add = async (a, b) => {
-        return await a() + await b();
-    };
-
-    export {add};
+    export const add = async (a, b)=>await a() + await b()
+    ;
     "###);
 
     insta::assert_snapshot!(build_d_ts(&env, &prog), @"export declare const add = (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;");
