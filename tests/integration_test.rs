@@ -1,12 +1,13 @@
 use chumsky::prelude::*;
 use std::collections::HashMap;
 
+use crochet::ast::Program;
 use crochet::infer::*;
 use crochet::js::builder::*;
 use crochet::js::printer::*;
 use crochet::parser::parser;
-use crochet::ast::{Pattern, Program, Statement};
-use crochet::ts::convert::convert_scheme;
+use crochet::ts::builder::build_d_ts;
+use crochet::ts::printer::print_ts;
 
 fn infer(input: &str) -> String {
     let env: Env = HashMap::new();
@@ -32,31 +33,6 @@ fn infer_prog(src: &str) -> (Program, Env) {
     let env = crochet::infer::infer_prog(env, &prog);
 
     (prog, env)
-}
-
-fn build_d_ts(env: &Env, prog: &Program) -> String {
-    let mut lines: Vec<_> = vec![];
-
-    for statement in &prog.body {
-        match statement {
-            Statement::Decl {
-                pattern: pat,
-                value: expr,
-                ..
-            } => {
-                let name = match pat {
-                    Pattern::Ident(ident) => &ident.name,
-                };
-                let scheme = env.get(name).unwrap();
-                let result = convert_scheme(&scheme, Some(&expr));
-                let line = format!("export declare const {name} = {result};");
-                lines.push(line.to_owned());
-            }
-            _ => (),
-        }
-    }
-
-    lines.join("\n")
 }
 
 #[test]
@@ -104,9 +80,13 @@ fn infer_i_combinator() {
 
 #[test]
 fn infer_k_combinator_not_curried() {
-    let (_, env) = infer_prog("let K = (x, y) => x");
+    let (program, env) = infer_prog("let K = (x, y) => x");
     let result = format!("{}", env.get("K").unwrap());
     assert_eq!(result, "<A, B>(A, B) => A");
+
+    let program = build_d_ts(&program, &env);
+    let result = print_ts(&program);
+    insta::assert_snapshot!(result, @"export declare const K: <A, B>(x: A, y: B) => A;\n");
 }
 
 #[test]
@@ -163,12 +143,13 @@ fn infer_decl() {
     let foo = (a, b) => a + b
     let bar = "hello"
     "#;
-    let (prog, env) = infer_prog(src);
-    let result = build_d_ts(&env, &prog);
+    let (program, env) = infer_prog(src);
+    let program = build_d_ts(&program, &env);
+    let result = print_ts(&program);
 
     insta::assert_snapshot!(result, @r###"
-    export declare const foo = (a: number, b: number) => number;
-    export declare const bar = "hello";
+    export declare const foo: (a: number, b: number) => number;
+    export declare const bar: "hello";
     "###);
 }
 
@@ -178,12 +159,13 @@ fn infer_with_subtyping() {
     let foo = (a, b) => a + b
     let bar = foo(5, 10)
     "#;
-    let (prog, env) = infer_prog(src);
-    let result = build_d_ts(&env, &prog);
+    let (program, env) = infer_prog(src);
+    let program = build_d_ts(&program, &env);
+    let result = print_ts(&program);
 
     insta::assert_snapshot!(result, @r###"
-    export declare const foo = (a: number, b: number) => number;
-    export declare const bar = number;
+    export declare const foo: (a: number, b: number) => number;
+    export declare const bar: number;
     "###);
 }
 
@@ -207,17 +189,28 @@ fn infer_if_else_with_multiple_widenings() {
     let x = if (true) { 5 } else { 10 }
     let y = if (false) { x } else { 15 }
     "#;
-    let (_, env) = infer_prog(src);
+    let (program, env) = infer_prog(src);
     let result = format!("{}", env.get("y").unwrap());
     assert_eq!(result, "5 | 10 | 15");
+
+    let program = build_d_ts(&program, &env);
+    let result = print_ts(&program);
+    insta::assert_snapshot!(result, @r###"
+    export declare const x: 5 | 10;
+    export declare const y: 5 | 10 | 15;
+    "###);
 }
 
 #[test]
 fn infer_let_rec_until() {
     let src = "let rec until = (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) }";
-    let (_, env) = infer_prog(src);
+    let (program, env) = infer_prog(src);
     let result = format!("{}", env.get("until").unwrap());
     assert_eq!(result, "<A>((A) => boolean, (A) => A, A) => A");
+
+    let program = build_d_ts(&program, &env);
+    let result = print_ts(&program);
+    insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A;\n");
 }
 
 #[test]
@@ -241,26 +234,33 @@ fn infer_async() {
 #[test]
 fn infer_async_math() {
     let src = "let add = async (a, b) => await a() + await b()";
-    let (_, env) = infer_prog(src);
+    let (program, env) = infer_prog(src);
     let result = format!("{}", env.get("add").unwrap());
     assert_eq!(
         result,
         "(() => Promise<number>, () => Promise<number>) => Promise<number>"
     );
+
+    let program = build_d_ts(&program, &env);
+    let result = print_ts(&program);
+    insta::assert_snapshot!(result, @"export declare const add: (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;\n");
 }
 
 #[test]
 fn codegen_let_rec() {
     let src = "let rec f = () => f()";
-    let (prog, env) = infer_prog(src);
-    let js_tree = build_js(&prog);
+    let (program, env) = infer_prog(src);
+    let js_tree = build_js(&program);
 
     insta::assert_snapshot!(print_js(&js_tree), @r###"
     export const f = ()=>f()
     ;
     "###);
 
-    insta::assert_snapshot!(build_d_ts(&env, &prog), @"export declare const f = <A>() => A;");
+    let program = build_d_ts(&program, &env);
+    let result = print_ts(&program);
+
+    insta::assert_snapshot!(result, @"export declare const f: <A>() => A;\n");
 }
 
 #[test]
@@ -269,9 +269,9 @@ fn codegen_if_else() {
     let cond = true
     let result = if (cond) { 5 } else { 5 }
     "#;
-    let (prog, env) = infer_prog(src);
+    let (program, env) = infer_prog(src);
 
-    let js_tree = build_js(&prog);
+    let js_tree = build_js(&program);
     insta::assert_snapshot!(print_js(&js_tree), @r###"
     export const cond = true;
     export const result = ()=>{
@@ -283,17 +283,20 @@ fn codegen_if_else() {
     }();
     "###);
 
-    insta::assert_snapshot!(build_d_ts(&env, &prog), @r###"
-    export declare const cond = true;
-    export declare const result = 5;
+    let program = build_d_ts(&program, &env);
+    let result = print_ts(&program);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const cond: true;
+    export declare const result: 5;
     "###);
 }
 
 #[test]
 fn codegen_object() {
     let src = "let point = {x: 5, y: 10}";
-    let (prog, env) = infer_prog(src);
-    let js_tree = build_js(&prog);
+    let (program, env) = infer_prog(src);
+    let js_tree = build_js(&program);
 
     insta::assert_snapshot!(print_js(&js_tree), @r###"
     export const point = {
@@ -302,22 +305,31 @@ fn codegen_object() {
     };
     "###);
 
-    insta::assert_snapshot!(build_d_ts(&env, &prog), @r###"
-    export declare const point = {x: 5, y: 10};
+    let program = build_d_ts(&program, &env);
+    let result = print_ts(&program);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const point: {
+        x: 5;
+        y: 10;
+    };
     "###);
 }
 
 #[test]
 fn codegen_async_math() {
     let src = "let add = async (a, b) => await a() + await b()";
-    let (prog, env) = infer_prog(src);
+    let (program, env) = infer_prog(src);
 
-    let js_tree = build_js(&prog);
+    let js_tree = build_js(&program);
 
     insta::assert_snapshot!(print_js(&js_tree), @r###"
     export const add = async (a, b)=>await a() + await b()
     ;
     "###);
 
-    insta::assert_snapshot!(build_d_ts(&env, &prog), @"export declare const add = (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;");
+    let program = build_d_ts(&program, &env);
+    let result = print_ts(&program);
+
+    insta::assert_snapshot!(result, @"export declare const add: (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;\n");
 }
