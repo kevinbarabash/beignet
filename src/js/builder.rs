@@ -32,8 +32,6 @@ pub fn build_js(program: &ast::Program) -> Program {
         })
         .collect();
 
-    // TODO: export all top-level decls as named exports
-
     Program::Module(Module {
         span: DUMMY_SP,
         body,

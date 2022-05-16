@@ -9,9 +9,9 @@ use chumsky::*;
 use wasm_bindgen::prelude::*;
 use std::collections::HashMap;
 
-use crate::ast::{Pattern, Program};
 use crate::infer::{Env, infer_prog};
-use ts::convert::convert_scheme;
+use crate::ts::builder::build_d_ts;
+use crate::ts::printer::print_ts;
 
 #[wasm_bindgen]
 extern "C" {
@@ -54,27 +54,6 @@ impl CompileResult {
     }
 }
 
-fn build_d_ts(env: &Env, prog: &Program) -> String {
-    let mut lines: Vec<_> = vec![];
-
-    for statement in &prog.body {
-        match statement {
-            ast::Statement::Decl { pattern: pat, value: expr, .. } => {
-                let name = match pat {
-                    Pattern::Ident(ident) => &ident.name,
-                };
-                let scheme = env.get(name).unwrap();
-                let result = convert_scheme(&scheme, Some(&expr));
-                let line = format!("export declare const {name} = {result};");
-                lines.push(line.to_owned());
-            },
-            _ => ()
-        }
-    };
-
-    lines.join("\n")
-}
-
 #[wasm_bindgen]
 pub fn compile(input: &str) -> CompileResult {
     let program = parser::parser().parse(input).unwrap();
@@ -84,7 +63,8 @@ pub fn compile(input: &str) -> CompileResult {
 
     let env: Env = HashMap::new();
     let env = infer_prog(env, &program);
-    let dts = build_d_ts(&env, &program);
+    let program = build_d_ts(&program, &env);
+    let dts = print_ts(&program);
 
     CompileResult { js, dts }
 }
