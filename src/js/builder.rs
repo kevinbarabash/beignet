@@ -1,108 +1,208 @@
-use crate::ast;
-use crate::js::ast::*;
+use swc_atoms::*;
+use swc_common::source_map::DUMMY_SP;
+use swc_ecma_ast::*;
 
-pub fn build_js(prog: &ast::Program) -> Program {
-    let body: Vec<_> = prog
+use crate::ast;
+
+pub fn build_js(program: &ast::Program) -> Program {
+    let body: Vec<ModuleItem> = program
         .body
         .iter()
         .map(|child| match child {
             ast::Statement::Decl { pattern, value, .. } => {
-                let pattern = build_pattern(&pattern);
-                let value = build_expr(&value);
-                Statement::Decl { pattern, value }
+                ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                    span: DUMMY_SP,
+                    decl: Decl::Var(VarDecl {
+                        span: DUMMY_SP,
+                        kind: VarDeclKind::Const,
+                        declare: false,
+                        decls: vec![VarDeclarator {
+                            span: DUMMY_SP,
+                            name: build_pattern(&pattern),
+                            init: Some(Box::from(build_expr(&value))),
+                            definite: false,
+                        }],
+                    }),
+                }))
             }
-            ast::Statement::Expr { expr, .. } => {
-                let expr = build_expr(&expr);
-                Statement::Expression { expr }
-            }
+            ast::Statement::Expr { expr, .. } => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                span: DUMMY_SP,
+                expr: Box::from(build_expr(&expr)),
+            })),
         })
         .collect();
 
-    Program { body }
+    // TODO: export all top-level decls as named exports
+
+    Program::Module(Module {
+        span: DUMMY_SP,
+        body,
+        shebang: None,
+    })
 }
 
-pub fn build_pattern(pattern: &ast::Pattern) -> Pattern {
+pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
     match pattern {
-        ast::Pattern::Ident(ident) => Pattern::Ident {
-            name: ident.name.to_owned(),
-        },
+        ast::Pattern::Ident(ident) => Pat::Ident(BindingIdent {
+            id: Ident {
+                span: DUMMY_SP,
+                sym: JsWord::from(ident.name.to_owned()),
+                optional: false,
+            },
+            type_ann: None,
+        }),
     }
 }
 
-pub fn build_return_block(body: &ast::Expr) -> Vec<Statement> {
+pub fn build_return_block(body: &ast::Expr) -> BlockStmt {
     match body {
         // Avoids wrapping in an IIFE when it isn't necessary.
-        ast::Expr::Let { .. } => let_to_children(body),
-        _ => vec![Statement::Return {
-            arg: build_expr(body),
-        }],
+        ast::Expr::Let { .. } => BlockStmt {
+            span: DUMMY_SP,
+            stmts: let_to_children(body),
+        },
+        _ => BlockStmt {
+            span: DUMMY_SP,
+            stmts: vec![Stmt::Return(ReturnStmt {
+                span: DUMMY_SP,
+                arg: Some(Box::from(build_expr(body))),
+            })],
+        },
     }
 }
 
-pub fn build_expr(expr: &ast::Expr) -> Expression {
+pub fn build_expr(expr: &ast::Expr) -> Expr {
     match expr {
         ast::Expr::App(ast::App { lam, args, .. }) => {
-            let func = Box::from(build_expr(&lam.as_ref()));
-            let args: Vec<_> = args.iter().map(|arg| build_expr(&arg)).collect();
+            let callee = Callee::Expr(Box::from(build_expr(&lam.as_ref())));
+            let args: Vec<ExprOrSpread> = args
+                .iter()
+                .map(|arg| ExprOrSpread {
+                    spread: None,
+                    expr: Box::from(build_expr(&arg)),
+                })
+                .collect();
 
-            Expression::Call { func, args }
+            Expr::Call(CallExpr {
+                span: DUMMY_SP,
+                callee,
+                args,
+                type_args: None,
+            })
         }
-        ast::Expr::Ident(ast::Ident { name, .. }) => Expression::Ident {
-            name: name.to_owned(),
-        },
+        ast::Expr::Ident(ident) => Expr::from(Ident {
+            span: DUMMY_SP,
+            sym: JsWord::from(ident.name.to_owned()),
+            optional: false,
+        }),
         ast::Expr::Lambda(ast::Lambda {
             args,
             body,
-            is_async: r#async,
+            is_async,
             ..
         }) => {
-            let params: Vec<_> = args
+            let params: Vec<Pat> = args
                 .iter()
-                .map(|ident| match ident {
-                    ast::BindingIdent::Ident(ident) => Param::Ident {
-                        name: ident.name.to_owned(),
-                    },
-                    ast::BindingIdent::Rest { name, .. } => Param::Ident {
-                        name: name.to_owned(),
-                    },
+                .map(|ident| {
+                    let name = match ident {
+                        ast::BindingIdent::Ident(ident) => ident.name.to_owned(),
+                        ast::BindingIdent::Rest { name, .. } => name.to_owned(),
+                    };
+                    Pat::Ident(BindingIdent {
+                        id: Ident {
+                            span: DUMMY_SP,
+                            sym: JsWord::from(name),
+                            optional: false,
+                        },
+                        type_ann: None,
+                    })
                 })
                 .collect();
-            let body = &body.as_ref();
 
-            match body {
-                // Avoids wrapping in an IIFE when it isn't necessary.
-                ast::Expr::Let { .. } => {
-                    return Expression::Function {
-                        params,
-                        body: let_to_children(body),
-                        r#async: r#async.to_owned(),
-                    }
-                }
-                _ => Expression::Function {
-                    params,
-                    // The last statement in the body of a function
-                    // should always be a `return` statement.
-                    body: vec![Statement::Return {
-                        arg: build_expr(body),
-                    }],
-                    r#async: r#async.to_owned(),
-                },
-            }
+            let body: BlockStmtOrExpr = match &body.as_ref() {
+                // TODO: Avoid wrapping in an IIFE when it isn't necessary.
+                ast::Expr::Let { .. } => BlockStmtOrExpr::BlockStmt(BlockStmt {
+                    span: DUMMY_SP,
+                    stmts: let_to_children(body),
+                }),
+                _ => BlockStmtOrExpr::Expr(Box::from(build_expr(body))),
+            };
+
+            Expr::Arrow(ArrowExpr {
+                span: DUMMY_SP,
+                params,
+                body,
+                is_async: is_async.to_owned(),
+                is_generator: false,
+                type_params: None,
+                return_type: None,
+            })
         }
         ast::Expr::Let { .. } => {
-            let children = let_to_children(expr);
-
             // Return an IIFE
-            Expression::Call {
-                func: Box::from(Expression::Function {
-                    params: vec![],
-                    body: children,
-                    r#async: false,
+            let arrow = Expr::Arrow(ArrowExpr {
+                span: DUMMY_SP,
+                params: vec![],
+                body: BlockStmtOrExpr::BlockStmt(BlockStmt {
+                    span: DUMMY_SP,
+                    stmts: let_to_children(expr),
                 }),
+                is_async: false,
+                is_generator: false,
+                type_params: None,
+                return_type: None,
+            });
+
+            let callee = Callee::Expr(Box::from(arrow));
+
+            Expr::Call(CallExpr {
+                span: DUMMY_SP,
+                callee,
                 args: vec![],
+                type_args: None,
+            })
+        }
+        ast::Expr::Lit(lit) => {
+            match lit {
+                ast::Lit::Num(n) => {
+                    let lit = Lit::Num(Number {
+                        span: DUMMY_SP,
+                        // TODO: include the parsed value in the source AST node
+                        value: n.value.parse().unwrap(),
+                        // Use `None` value only for transformations to avoid recalculate
+                        // characters in number literal
+                        raw: Some(JsWord::from(n.value.clone())),
+                    });
+                    Expr::Lit(lit)
+                }
+                ast::Lit::Bool(b) => {
+                    let lit = Lit::Bool(Bool {
+                        span: DUMMY_SP,
+                        value: b.value,
+                    });
+                    Expr::Lit(lit)
+                }
+                ast::Lit::Str(s) => {
+                    let lit = Lit::Str(Str {
+                        span: DUMMY_SP,
+                        value: JsWord::from(s.value.clone()),
+                        // Use `None` value only for transformations to avoid recalculate escaped
+                        // characters in strings
+                        raw: None,
+                    });
+                    Expr::Lit(lit)
+                }
+                ast::Lit::Null(_) => {
+                    let lit = Lit::Null(Null { span: DUMMY_SP });
+                    Expr::Lit(lit)
+                }
+                ast::Lit::Undefined(_) => Expr::from(Ident {
+                    span: DUMMY_SP,
+                    sym: JsWord::from("undefined"),
+                    optional: false,
+                }),
             }
         }
-        ast::Expr::Lit(lit) => Expression::Literal(lit.to_owned()),
         ast::Expr::Op(ast::Op {
             op, left, right, ..
         }) => {
@@ -112,10 +212,45 @@ pub fn build_expr(expr: &ast::Expr) -> Expression {
                 ast::BinOp::Mul => BinaryOp::Mul,
                 ast::BinOp::Div => BinaryOp::Div,
             };
+
             let left = Box::from(build_expr(&left));
+
+            let wrap_left = match left.as_ref() {
+                Expr::Bin(left) => left.op.precedence() < op.precedence(),
+                _ => false,
+            };
+
             let right = Box::from(build_expr(&right));
 
-            Expression::Binary { op, left, right }
+            let wrap_right = match right.as_ref() {
+                Expr::Bin(right) => match (op, right.op) {
+                    (BinaryOp::Div, BinaryOp::Div) => true,
+                    (BinaryOp::Sub, BinaryOp::Sub) => true,
+                    _ => right.op.precedence() < op.precedence(),
+                },
+                _ => false,
+            };
+
+            Expr::Bin(BinExpr {
+                span: DUMMY_SP,
+                op,
+                left: if wrap_left {
+                    Box::from(Expr::Paren(ParenExpr {
+                        span: DUMMY_SP,
+                        expr: left,
+                    }))
+                } else {
+                    left
+                },
+                right: if wrap_right {
+                    Box::from(Expr::Paren(ParenExpr {
+                        span: DUMMY_SP,
+                        expr: right,
+                    }))
+                } else {
+                    right
+                },
+            })
         }
         ast::Expr::Fix(ast::Fix { expr, .. }) => match expr.as_ref() {
             ast::Expr::Lambda(ast::Lambda { body, .. }) => build_expr(&body),
@@ -135,40 +270,66 @@ pub fn build_expr(expr: &ast::Expr) -> Expression {
             //        return alternate;
             //    }
             // })();
-            Expression::Call {
-                func: Box::from(Expression::Function {
-                    params: vec![],
-                    body: vec![Statement::Expression {
-                        expr: Expression::IfElse {
-                            cond: Box::from(build_expr(&cond.as_ref())),
-                            consequent: build_return_block(&consequent.as_ref()),
-                            alternate: build_return_block(&alternate.as_ref()),
-                        },
-                    }],
-                    r#async: false,
-                }),
+            let body = BlockStmtOrExpr::BlockStmt(BlockStmt {
+                span: DUMMY_SP,
+                stmts: vec![Stmt::If(IfStmt {
+                    span: DUMMY_SP,
+                    test: Box::from(build_expr(&cond.as_ref())),
+                    cons: Box::from(Stmt::Block(build_return_block(&consequent.as_ref()))),
+                    alt: Some(Box::from(Stmt::Block(build_return_block(
+                        &alternate.as_ref(),
+                    )))),
+                })],
+            });
+
+            let arrow = Expr::Arrow(ArrowExpr {
+                span: DUMMY_SP,
+                params: vec![],
+                body,
+                is_async: false,
+                is_generator: false,
+                type_params: None,
+                return_type: None,
+            });
+
+            let callee = Callee::Expr(Box::from(arrow));
+
+            Expr::Call(CallExpr {
+                span: DUMMY_SP,
+                callee,
                 args: vec![],
-            }
+                type_args: None,
+            })
         }
         ast::Expr::Obj(ast::Obj { properties, .. }) => {
-            let properties: Vec<_> = properties
+            let props: Vec<PropOrSpread> = properties
                 .iter()
-                .map(|prop| Property {
-                    name: prop.name.clone(),
-                    value: build_expr(&prop.value),
+                .map(|prop| {
+                    PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
+                        key: PropName::from(Ident {
+                            span: DUMMY_SP,
+                            sym: JsWord::from(prop.name.clone()),
+                            optional: false,
+                        }),
+                        value: Box::from(build_expr(&prop.value)),
+                    })))
                 })
                 .collect();
 
-            Expression::Object { properties }
+            Expr::Object(ObjectLit {
+                span: DUMMY_SP,
+                props,
+            })
         }
-        ast::Expr::Await(ast::Await { expr, .. }) => Expression::Await {
-            expr: Box::from(build_expr(&expr.as_ref())),
-        },
+        ast::Expr::Await(ast::Await { expr, .. }) => Expr::Await(AwaitExpr {
+            span: DUMMY_SP,
+            arg: Box::from(build_expr(&expr.as_ref())),
+        }),
         ast::Expr::JSXElement(_) => todo!(),
     }
 }
 
-pub fn let_to_children(expr: &ast::Expr) -> Vec<Statement> {
+pub fn let_to_children(expr: &ast::Expr) -> Vec<Stmt> {
     if let ast::Expr::Let(ast::Let {
         pattern,
         value,
@@ -178,11 +339,19 @@ pub fn let_to_children(expr: &ast::Expr) -> Vec<Statement> {
     {
         // TODO: handle shadowed variables in the same scope by introducing
         // unique identifiers.
-        let pattern = build_pattern(&pattern);
-        let value = build_expr(&value);
-        let decl = Statement::Decl { pattern, value };
+        let decl = Stmt::Decl(Decl::Var(VarDecl {
+            span: DUMMY_SP,
+            kind: VarDeclKind::Const,
+            declare: false,
+            decls: vec![VarDeclarator {
+                span: DUMMY_SP,
+                name: build_pattern(&pattern),
+                init: Some(Box::from(build_expr(&value))),
+                definite: false,
+            }],
+        }));
 
-        let mut children = vec![decl];
+        let mut children: Vec<Stmt> = vec![decl];
         let mut body = body.to_owned();
 
         while let ast::Expr::Let(ast::Let {
@@ -192,16 +361,25 @@ pub fn let_to_children(expr: &ast::Expr) -> Vec<Statement> {
             ..
         }) = body.as_ref()
         {
-            let pattern = build_pattern(&pattern);
-            let value = build_expr(&value);
-            let decl = Statement::Decl { pattern, value };
+            let decl = Stmt::Decl(Decl::Var(VarDecl {
+                span: DUMMY_SP,
+                kind: VarDeclKind::Const,
+                declare: false,
+                decls: vec![VarDeclarator {
+                    span: DUMMY_SP,
+                    name: build_pattern(&pattern),
+                    init: Some(Box::from(build_expr(&value))),
+                    definite: false,
+                }],
+            }));
             children.push(decl);
             body = next_body.to_owned();
         }
 
-        children.push(Statement::Return {
-            arg: build_expr(&body),
-        });
+        children.push(Stmt::Return(ReturnStmt {
+            span: DUMMY_SP,
+            arg: Some(Box::from(build_expr(&body))),
+        }));
 
         children
     } else {

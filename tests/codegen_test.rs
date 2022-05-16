@@ -6,8 +6,9 @@ use crochet::parser::parser;
 
 fn compile(input: &str) -> String {
     let prog = parser().parse(input).unwrap();
-
+    // println!("{:#?}", &prog);
     let js_tree = build_js(&prog);
+    // println!("{:#?}", &js_tree);
     print_js(&js_tree)
 }
 
@@ -44,27 +45,24 @@ fn call_with_no_args() {
 #[test]
 fn lambda_with_two_args() {
     insta::assert_snapshot!(compile("(a, b) => a + b"), @r###"
-    (a, b) => {
-        return a + b;
-    };
+    (a, b)=>a + b
+    ;
     "###);
 }
 
 #[test]
 fn lambda_with_one_arg() {
     insta::assert_snapshot!(compile("(a) => a"), @r###"
-    (a) => {
-        return a;
-    };
+    (a)=>a
+    ;
     "###);
 }
 
 #[test]
 fn lambda_with_no_args() {
     insta::assert_snapshot!(compile("() => 5"), @r###"
-    () => {
-        return 5;
-    };
+    ()=>5
+    ;
     "###);
 }
 
@@ -106,33 +104,24 @@ fn subtraction_with_parens() {
 #[test]
 fn function_declaration() {
     insta::assert_snapshot!(compile("let add = (a, b) => a + b"), @r###"
-    const add = (a, b) => {
-        return a + b;
-    };
-
-    export {add};
+    export const add = (a, b)=>a + b
+    ;
     "###);
 }
 
 #[test]
 fn variable_declaration_with_number_literal() {
-    insta::assert_snapshot!(compile("let five = 5"), @r###"
-    const five = 5;
-
-    export {five};
-    "###);
+    insta::assert_snapshot!(compile("let five = 5"), @"export const five = 5;\n");
 }
 
 #[test]
 fn let_in_inside_declaration() {
     // TODO: only allow `let-in` inside of non-top-level scopes
     insta::assert_snapshot!(compile("let foo = let x = 5 in x"), @r###"
-    const foo = (() => {
+    export const foo = ()=>{
         const x = 5;
         return x;
-    })();
-
-    export {foo};
+    }();
     "###);
 }
 
@@ -140,24 +129,19 @@ fn let_in_inside_declaration() {
 fn nested_let_in_inside_declaration() {
     // TODO: only allow `let-in` inside of non-top-level scopes
     insta::assert_snapshot!(compile("let foo = let x = 5 in let y = 10 in x + y"), @r###"
-    const foo = (() => {
+    export const foo = ()=>{
         const x = 5;
         const y = 10;
         return x + y;
-    })();
-
-    export {foo};
+    }();
     "###);
 }
 
 #[test]
 fn js_print_simple_lambda() {
     insta::assert_snapshot!(compile("let add = (a, b) => a + b"), @r###"
-    const add = (a, b) => {
-        return a + b;
-    };
-
-    export {add};
+    export const add = (a, b)=>a + b
+    ;
     "###);
 }
 
@@ -165,84 +149,69 @@ fn js_print_simple_lambda() {
 fn js_print_let_in() {
     let input = "let foo = let x = 5 in let y = 10 in x + y";
     insta::assert_snapshot!(compile(input), @r###"
-    const foo = (() => {
+    export const foo = ()=>{
         const x = 5;
         const y = 10;
         return x + y;
-    })();
-
-    export {foo};
+    }();
     "###);
 }
 
 #[test]
 fn js_print_variable_shadowing() {
     insta::assert_snapshot!(compile("let foo = let x = 5 in let x = 10 in x"), @r###"
-    const foo = (() => {
+    export const foo = ()=>{
         const x = 5;
         const x = 10;
         return x;
-    })();
-
-    export {foo};
+    }();
     "###);
 }
 
 #[test]
 fn js_print_let_in_inside_lambda() {
     insta::assert_snapshot!(compile("let foo = () => let x = 5 in let y = 10 in x + y"), @r###"
-    const foo = () => {
+    export const foo = ()=>{
         const x = 5;
         const y = 10;
         return x + y;
     };
-
-    export {foo};
     "###);
 }
 
 #[test]
 fn js_print_nested_lambdas() {
     insta::assert_snapshot!(compile("let foo = (a) => (b) => a + b"), @r###"
-    const foo = (a) => {
-        return (b) => {
-            return a + b;
-        };
-    };
-
-    export {foo};
+    export const foo = (a)=>(b)=>a + b
+    ;
     "###);
 }
 
 #[test]
 fn js_print_nested_lambdas_with_multiple_lines() {
     insta::assert_snapshot!(compile("let foo = (a) => (b) => let sum = a + b in sum"), @r###"
-    const foo = (a) => {
-        return (b) => {
+    export const foo = (a)=>(b)=>{
             const sum = a + b;
             return sum;
-        };
-    };
-
-    export {foo};
+        }
+    ;
     "###);
 }
 
 #[test]
 fn js_print_multiple_decls() {
     insta::assert_snapshot!(compile("let foo = \"hello\"\nlet bar = \"world\""), @r###"
-    const foo = "hello";
-    const bar = "world";
-
-    export {foo, bar};
+    export const foo = "hello";
+    export const bar = "world";
     "###);
 }
 
 #[test]
 fn js_print_object() {
     insta::assert_snapshot!(compile("let point = {x: 5, y: 10}"), @r###"
-    const point = {x: 5, y: 10};
-
-    export {point};
+    export const point = {
+        x: 5,
+        y: 10
+    };
     "###);
 }
