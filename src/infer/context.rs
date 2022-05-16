@@ -17,7 +17,7 @@ pub struct State {
 pub struct Context {
     pub env: Env,
     pub state: State,
-    pub r#async: bool,
+    pub is_async: bool,
 }
 
 impl From<Env> for Context {
@@ -27,7 +27,7 @@ impl From<Env> for Context {
             state: State {
                 count: Cell::new(0),
             },
-            r#async: false,
+            is_async: false,
         }
     }
 }

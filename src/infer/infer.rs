@@ -239,7 +239,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                     BindingIdent::Rest { name, .. } => new_ctx.env.insert(name.to_string(), scheme),
                 };
             }
-            new_ctx.r#async = is_async.to_owned();
+            new_ctx.is_async = is_async.to_owned();
             let (ret, cs) = infer(body, &new_ctx);
             ctx.state.count.set(new_ctx.state.count.get());
 
@@ -315,7 +315,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             (obj_ty, all_cs)
         }
         Expr::Await(Await { expr, .. }) => {
-            if !ctx.r#async {
+            if !ctx.is_async {
                 panic!("Can't use `await` inside non-async lambda")
             }
 

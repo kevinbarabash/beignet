@@ -244,12 +244,12 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                     .delimited_by(just_with_padding("{"), just_with_padding("}")),
                 expr.clone(),
             )))
-            .map_with_span(|((r#async, args), body), span: Span| {
+            .map_with_span(|((is_async, args), body), span: Span| {
                 Expr::Lambda(Lambda {
                     span,
                     args,
                     body: Box::new(body),
-                    is_async: match r#async {
+                    is_async: match is_async {
                         Some(_) => true,
                         None => false,
                     },
