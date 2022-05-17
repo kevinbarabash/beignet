@@ -329,7 +329,104 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             span: DUMMY_SP,
             arg: Box::from(build_expr(&expr.as_ref())),
         }),
-        ast::Expr::JSXElement(_) => todo!(),
+        ast::Expr::JSXElement(elem) => Expr::JSXElement(Box::from(build_jsx_element(elem))),
+    }
+}
+
+pub fn build_jsx_element(elem: &ast::JSXElement) -> JSXElement {
+    let name = JSXElementName::Ident(Ident {
+        span: DUMMY_SP,
+        sym: JsWord::from(elem.name.to_owned()),
+        optional: false,
+    });
+
+    let elem = JSXElement {
+        span: DUMMY_SP,
+        opening: JSXOpeningElement {
+            span: DUMMY_SP,
+            name: name.to_owned(),
+            attrs: elem
+                .attrs
+                .iter()
+                .map(|ast::JSXAttr { value, ident, .. }| {
+                    let value = Some(match value {
+                        ast::JSXAttrValue::Lit(lit) => JSXAttrValue::Lit(build_lit(&lit)),
+                        ast::JSXAttrValue::JSXExprContainer(ast::JSXExprContainer {
+                            expr, ..
+                        }) => JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                            span: DUMMY_SP,
+                            expr: JSXExpr::Expr(Box::from(build_expr(expr))),
+                        }),
+                    });
+
+                    JSXAttrOrSpread::JSXAttr(JSXAttr {
+                        span: DUMMY_SP,
+                        name: JSXAttrName::Ident(Ident {
+                            span: DUMMY_SP,
+                            sym: JsWord::from(ident.name.to_owned()),
+                            optional: false,
+                        }),
+                        value,
+                    })
+                })
+                .collect(),
+            self_closing: false,
+            type_args: None,
+        },
+        children: elem
+            .children
+            .iter()
+            .map(|child| {
+                let result: JSXElementChild = match child {
+                    ast::JSXElementChild::JSXText(ast::JSXText { value, .. }) => {
+                        JSXElementChild::JSXText(JSXText {
+                            span: DUMMY_SP,
+                            value: JsWord::from(value.to_owned()),
+                            raw: JsWord::from(value.to_owned()),
+                        })
+                    }
+                    ast::JSXElementChild::JSXExprContainer(ast::JSXExprContainer {
+                        expr, ..
+                    }) => JSXElementChild::JSXExprContainer(JSXExprContainer {
+                        span: DUMMY_SP,
+                        expr: JSXExpr::Expr(Box::from(build_expr(expr))),
+                    }),
+                    ast::JSXElementChild::JSXElement(elem) => {
+                        JSXElementChild::JSXElement(Box::from(build_jsx_element(elem)))
+                    }
+                };
+                result
+            })
+            .collect(),
+        closing: Some(JSXClosingElement {
+            span: DUMMY_SP,
+            name: name.to_owned(),
+        }),
+    };
+
+    elem
+}
+
+pub fn build_lit(lit: &ast::Lit) -> Lit {
+    match lit {
+        ast::Lit::Num(n) => Lit::Num(Number {
+            span: DUMMY_SP,
+            value: n.value.parse().unwrap(),
+            raw: None,
+        }),
+        ast::Lit::Bool(b) => Lit::Bool(Bool {
+            span: DUMMY_SP,
+            value: b.value,
+        }),
+        ast::Lit::Str(s) => Lit::Str(Str {
+            span: DUMMY_SP,
+            value: JsWord::from(s.value.to_owned()),
+            raw: None,
+            // Some would include the quotes around the string
+            // Some(JsWord::from(s.value.to_owned())),
+        }),
+        ast::Lit::Null(_) => Lit::Null(Null { span: DUMMY_SP }),
+        ast::Lit::Undefined(_) => todo!(),
     }
 }
 

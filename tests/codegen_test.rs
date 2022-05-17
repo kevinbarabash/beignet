@@ -215,3 +215,14 @@ fn js_print_object() {
     };
     "###);
 }
+
+#[test]
+fn codegen_jsx() {
+    insta::assert_snapshot!(compile("<Foo>Hello</Foo>"), @"<Foo >Hello</Foo>;");
+    insta::assert_snapshot!(compile("<Foo>{bar}</Foo>"), @"<Foo >{bar}</Foo>;\n");
+    insta::assert_snapshot!(compile("<Foo>Hello {world}!</Foo>"), @"<Foo >Hello {world}!</Foo>;\n");
+    insta::assert_snapshot!(compile("<Foo>{<Bar>{baz}</Bar>}</Foo>"), @"<Foo >{<Bar >{baz}</Bar>}</Foo>;\n");
+    insta::assert_snapshot!(compile("<Foo></Foo>"), @"<Foo ></Foo>;\n");
+    insta::assert_snapshot!(compile("<Foo bar={baz} />"), @"<Foo bar={baz}></Foo>;\n");
+    insta::assert_snapshot!(compile("<Foo msg=\"hello\" bar={baz}></Foo>"), @r###"<Foo msg="hello" bar={baz}></Foo>;"###);
+}
