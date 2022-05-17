@@ -151,7 +151,10 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 return_type: None,
             });
 
-            let callee = Callee::Expr(Box::from(arrow));
+            let callee = Callee::Expr(Box::from(Expr::Paren(ParenExpr {
+                span: DUMMY_SP,
+                expr: Box::from(arrow),
+            })));
 
             Expr::Call(CallExpr {
                 span: DUMMY_SP,
@@ -290,7 +293,10 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 return_type: None,
             });
 
-            let callee = Callee::Expr(Box::from(arrow));
+            let callee = Callee::Expr(Box::from(Expr::Paren(ParenExpr {
+                span: DUMMY_SP,
+                expr: Box::from(arrow),
+            })));
 
             Expr::Call(CallExpr {
                 span: DUMMY_SP,

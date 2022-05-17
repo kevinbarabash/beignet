@@ -118,10 +118,10 @@ fn variable_declaration_with_number_literal() {
 fn let_in_inside_declaration() {
     // TODO: only allow `let-in` inside of non-top-level scopes
     insta::assert_snapshot!(compile("let foo = let x = 5 in x"), @r###"
-    export const foo = ()=>{
+    export const foo = (()=>{
         const x = 5;
         return x;
-    }();
+    })();
     "###);
 }
 
@@ -129,11 +129,11 @@ fn let_in_inside_declaration() {
 fn nested_let_in_inside_declaration() {
     // TODO: only allow `let-in` inside of non-top-level scopes
     insta::assert_snapshot!(compile("let foo = let x = 5 in let y = 10 in x + y"), @r###"
-    export const foo = ()=>{
+    export const foo = (()=>{
         const x = 5;
         const y = 10;
         return x + y;
-    }();
+    })();
     "###);
 }
 
@@ -149,22 +149,22 @@ fn js_print_simple_lambda() {
 fn js_print_let_in() {
     let input = "let foo = let x = 5 in let y = 10 in x + y";
     insta::assert_snapshot!(compile(input), @r###"
-    export const foo = ()=>{
+    export const foo = (()=>{
         const x = 5;
         const y = 10;
         return x + y;
-    }();
+    })();
     "###);
 }
 
 #[test]
 fn js_print_variable_shadowing() {
     insta::assert_snapshot!(compile("let foo = let x = 5 in let x = 10 in x"), @r###"
-    export const foo = ()=>{
+    export const foo = (()=>{
         const x = 5;
         const x = 10;
         return x;
-    }();
+    })();
     "###);
 }
 
