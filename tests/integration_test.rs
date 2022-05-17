@@ -274,13 +274,13 @@ fn codegen_if_else() {
     let js_tree = build_js(&program);
     insta::assert_snapshot!(print_js(&js_tree), @r###"
     export const cond = true;
-    export const result = ()=>{
+    export const result = (()=>{
         if (cond) {
             return 5;
         } else {
             return 5;
         }
-    }();
+    })();
     "###);
 
     let program = build_d_ts(&program, &env);
