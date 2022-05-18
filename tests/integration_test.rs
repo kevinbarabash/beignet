@@ -3,11 +3,8 @@ use std::collections::HashMap;
 
 use crochet::ast::Program;
 use crochet::infer::*;
-use crochet::js::builder::*;
-use crochet::js::printer::*;
+use crochet::codegen::*;
 use crochet::parser::parser;
-use crochet::ts::builder::build_d_ts;
-use crochet::ts::printer::print_ts;
 
 fn infer(input: &str) -> String {
     let env: Env = HashMap::new();
@@ -84,8 +81,7 @@ fn infer_k_combinator_not_curried() {
     let result = format!("{}", env.get("K").unwrap());
     assert_eq!(result, "<A, B>(A, B) => A");
 
-    let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = codegen_d_ts(&program, &env);
     insta::assert_snapshot!(result, @"export declare const K: <A, B>(x: A, y: B) => A;\n");
 }
 
@@ -144,8 +140,7 @@ fn infer_decl() {
     let bar = "hello"
     "#;
     let (program, env) = infer_prog(src);
-    let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = codegen_d_ts(&program, &env);
 
     insta::assert_snapshot!(result, @r###"
     export declare const foo: (a: number, b: number) => number;
@@ -160,8 +155,7 @@ fn infer_with_subtyping() {
     let bar = foo(5, 10)
     "#;
     let (program, env) = infer_prog(src);
-    let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = codegen_d_ts(&program, &env);
 
     insta::assert_snapshot!(result, @r###"
     export declare const foo: (a: number, b: number) => number;
@@ -193,8 +187,7 @@ fn infer_if_else_with_multiple_widenings() {
     let result = format!("{}", env.get("y").unwrap());
     assert_eq!(result, "5 | 10 | 15");
 
-    let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = codegen_d_ts(&program, &env);
     insta::assert_snapshot!(result, @r###"
     export declare const x: 5 | 10;
     export declare const y: 5 | 10 | 15;
@@ -208,8 +201,7 @@ fn infer_let_rec_until() {
     let result = format!("{}", env.get("until").unwrap());
     assert_eq!(result, "<A>((A) => boolean, (A) => A, A) => A");
 
-    let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = codegen_d_ts(&program, &env);
     insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A;\n");
 }
 
@@ -241,8 +233,7 @@ fn infer_async_math() {
         "(() => Promise<number>, () => Promise<number>) => Promise<number>"
     );
 
-    let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = codegen_d_ts(&program, &env);
     insta::assert_snapshot!(result, @"export declare const add: (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;\n");
 }
 
@@ -250,15 +241,14 @@ fn infer_async_math() {
 fn codegen_let_rec() {
     let src = "let rec f = () => f()";
     let (program, env) = infer_prog(src);
-    let js_tree = build_js(&program);
+    let js = codegen_js(&program);
 
-    insta::assert_snapshot!(print_js(&js_tree), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const f = ()=>f()
     ;
     "###);
 
-    let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = codegen_d_ts(&program, &env);
 
     insta::assert_snapshot!(result, @"export declare const f: <A>() => A;\n");
 }
@@ -271,8 +261,8 @@ fn codegen_if_else() {
     "#;
     let (program, env) = infer_prog(src);
 
-    let js_tree = build_js(&program);
-    insta::assert_snapshot!(print_js(&js_tree), @r###"
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
     export const cond = true;
     export const result = (()=>{
         if (cond) {
@@ -283,8 +273,7 @@ fn codegen_if_else() {
     })();
     "###);
 
-    let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = codegen_d_ts(&program, &env);
 
     insta::assert_snapshot!(result, @r###"
     export declare const cond: true;
@@ -296,17 +285,16 @@ fn codegen_if_else() {
 fn codegen_object() {
     let src = "let point = {x: 5, y: 10}";
     let (program, env) = infer_prog(src);
-    let js_tree = build_js(&program);
+    let js = codegen_js(&program);
 
-    insta::assert_snapshot!(print_js(&js_tree), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const point = {
         x: 5,
         y: 10
     };
     "###);
 
-    let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = codegen_d_ts(&program, &env);
 
     insta::assert_snapshot!(result, @r###"
     export declare const point: {
@@ -321,15 +309,14 @@ fn codegen_async_math() {
     let src = "let add = async (a, b) => await a() + await b()";
     let (program, env) = infer_prog(src);
 
-    let js_tree = build_js(&program);
+    let js = codegen_js(&program);
 
-    insta::assert_snapshot!(print_js(&js_tree), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const add = async (a, b)=>await a() + await b()
     ;
     "###);
 
-    let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = codegen_d_ts(&program, &env);
 
     insta::assert_snapshot!(result, @"export declare const add: (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;\n");
 }

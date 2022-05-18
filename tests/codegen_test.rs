@@ -1,15 +1,11 @@
 use chumsky::prelude::*;
 
-use crochet::js::builder::build_js;
-use crochet::js::printer::print_js;
+use crochet::codegen::js::*;
 use crochet::parser::parser;
 
 fn compile(input: &str) -> String {
-    let prog = parser().parse(input).unwrap();
-    // println!("{:#?}", &prog);
-    let js_tree = build_js(&prog);
-    // println!("{:#?}", &js_tree);
-    print_js(&js_tree)
+    let program = parser().parse(input).unwrap();
+    codegen_js(&program)
 }
 
 #[test]

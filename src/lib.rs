@@ -1,8 +1,7 @@
 pub mod ast;
+pub mod codegen;
 pub mod infer;
-pub mod js;
-pub mod parser;
-pub mod ts;
+pub mod parser; 
 pub mod types;
 
 use chumsky::*;
@@ -10,8 +9,6 @@ use wasm_bindgen::prelude::*;
 use std::collections::HashMap;
 
 use crate::infer::{Env, infer_prog};
-use crate::ts::builder::build_d_ts;
-use crate::ts::printer::print_ts;
 
 #[wasm_bindgen]
 extern "C" {
@@ -58,13 +55,11 @@ impl CompileResult {
 pub fn compile(input: &str) -> CompileResult {
     let program = parser::parser().parse(input).unwrap();
 
-    let js_program = js::builder::build_js(&program);
-    let js = js::printer::print_js(&js_program);
+    let js = codegen::js::codegen_js(&program);
 
     let env: Env = HashMap::new();
     let env = infer_prog(env, &program);
-    let program = build_d_ts(&program, &env);
-    let dts = print_ts(&program);
+    let dts = codegen::d_ts::codegen_d_ts(&program, &env);
 
     CompileResult { js, dts }
 }
