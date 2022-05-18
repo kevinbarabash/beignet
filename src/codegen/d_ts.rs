@@ -9,7 +9,11 @@ use crate::ast;
 use crate::infer::Env;
 use crate::types::{Scheme, TLam, Type, TypeKind};
 
-pub fn print_d_ts(prog: &Program) -> String {
+pub fn codegen_d_ts(program: &ast::Program, env: &Env) -> String {
+    print_d_ts(&build_d_ts(program, env))
+}
+
+fn print_d_ts(program: &Program) -> String {
     let mut buf = vec![];
     let cm = Rc::new(SourceMap::default());
 
@@ -22,12 +26,12 @@ pub fn print_d_ts(prog: &Program) -> String {
         wr: text_writer::JsWriter::new(cm.clone(), "\n", &mut buf, None),
     };
 
-    emitter.emit_program(prog).unwrap();
+    emitter.emit_program(program).unwrap();
 
     String::from_utf8_lossy(&buf).to_string()
 }
 
-pub fn build_d_ts(program: &ast::Program, env: &Env) -> Program {
+fn build_d_ts(program: &ast::Program, env: &Env) -> Program {
     let body: Vec<ModuleItem> = program
         .body
         .iter()

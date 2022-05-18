@@ -7,7 +7,11 @@ use swc_ecma_codegen::*;
 
 use crate::ast;
 
-pub fn print_js(prog: &Program) -> String {
+pub fn codegen_js(program: &ast::Program) -> String {
+    print_js(&build_js(program))
+}
+
+fn print_js(program: &Program) -> String {
     let mut buf = vec![];
     let cm = Rc::new(SourceMap::default());
 
@@ -20,12 +24,12 @@ pub fn print_js(prog: &Program) -> String {
         wr: text_writer::JsWriter::new(cm.clone(), "\n", &mut buf, None),
     };
 
-    emitter.emit_program(prog).unwrap();
+    emitter.emit_program(program).unwrap();
 
     String::from_utf8_lossy(&buf).to_string()
 }
 
-pub fn build_js(program: &ast::Program) -> Program {
+fn build_js(program: &ast::Program) -> Program {
     let body: Vec<ModuleItem> = program
         .body
         .iter()

@@ -55,13 +55,11 @@ impl CompileResult {
 pub fn compile(input: &str) -> CompileResult {
     let program = parser::parser().parse(input).unwrap();
 
-    let js_program = codegen::js::build_js(&program);
-    let js = codegen::js::print_js(&js_program);
+    let js = codegen::js::codegen_js(&program);
 
     let env: Env = HashMap::new();
     let env = infer_prog(env, &program);
-    let program = codegen::d_ts::build_d_ts(&program, &env);
-    let dts = codegen::d_ts::print_d_ts(&program);
+    let dts = codegen::d_ts::codegen_d_ts(&program, &env);
 
     CompileResult { js, dts }
 }
