@@ -3,11 +3,8 @@ use std::collections::HashMap;
 
 use crochet::ast::Program;
 use crochet::infer::*;
-use crochet::js::builder::*;
-use crochet::js::printer::*;
+use crochet::codegen::*;
 use crochet::parser::parser;
-use crochet::ts::builder::build_d_ts;
-use crochet::ts::printer::print_ts;
 
 fn infer(input: &str) -> String {
     let env: Env = HashMap::new();
@@ -85,7 +82,7 @@ fn infer_k_combinator_not_curried() {
     assert_eq!(result, "<A, B>(A, B) => A");
 
     let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = print_d_ts(&program);
     insta::assert_snapshot!(result, @"export declare const K: <A, B>(x: A, y: B) => A;\n");
 }
 
@@ -145,7 +142,7 @@ fn infer_decl() {
     "#;
     let (program, env) = infer_prog(src);
     let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = print_d_ts(&program);
 
     insta::assert_snapshot!(result, @r###"
     export declare const foo: (a: number, b: number) => number;
@@ -161,7 +158,7 @@ fn infer_with_subtyping() {
     "#;
     let (program, env) = infer_prog(src);
     let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = print_d_ts(&program);
 
     insta::assert_snapshot!(result, @r###"
     export declare const foo: (a: number, b: number) => number;
@@ -194,7 +191,7 @@ fn infer_if_else_with_multiple_widenings() {
     assert_eq!(result, "5 | 10 | 15");
 
     let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = print_d_ts(&program);
     insta::assert_snapshot!(result, @r###"
     export declare const x: 5 | 10;
     export declare const y: 5 | 10 | 15;
@@ -209,7 +206,7 @@ fn infer_let_rec_until() {
     assert_eq!(result, "<A>((A) => boolean, (A) => A, A) => A");
 
     let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = print_d_ts(&program);
     insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A;\n");
 }
 
@@ -242,7 +239,7 @@ fn infer_async_math() {
     );
 
     let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = print_d_ts(&program);
     insta::assert_snapshot!(result, @"export declare const add: (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;\n");
 }
 
@@ -258,7 +255,7 @@ fn codegen_let_rec() {
     "###);
 
     let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = print_d_ts(&program);
 
     insta::assert_snapshot!(result, @"export declare const f: <A>() => A;\n");
 }
@@ -284,7 +281,7 @@ fn codegen_if_else() {
     "###);
 
     let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = print_d_ts(&program);
 
     insta::assert_snapshot!(result, @r###"
     export declare const cond: true;
@@ -306,7 +303,7 @@ fn codegen_object() {
     "###);
 
     let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = print_d_ts(&program);
 
     insta::assert_snapshot!(result, @r###"
     export declare const point: {
@@ -329,7 +326,7 @@ fn codegen_async_math() {
     "###);
 
     let program = build_d_ts(&program, &env);
-    let result = print_ts(&program);
+    let result = print_d_ts(&program);
 
     insta::assert_snapshot!(result, @"export declare const add: (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;\n");
 }

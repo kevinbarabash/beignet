@@ -1,7 +1,6 @@
 use chumsky::prelude::*;
 
-use crochet::js::builder::build_js;
-use crochet::js::printer::print_js;
+use crochet::codegen::js::*;
 use crochet::parser::parser;
 
 fn compile(input: &str) -> String {

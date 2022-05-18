@@ -1,10 +1,31 @@
+use std::rc::Rc;
+
 use swc_atoms::*;
-use swc_common::DUMMY_SP;
+use swc_common::{DUMMY_SP, SourceMap};
 use swc_ecma_ast::*;
+use swc_ecma_codegen::*;
 
 use crate::ast;
 use crate::infer::Env;
 use crate::types::{Scheme, TLam, Type, TypeKind};
+
+pub fn print_d_ts(prog: &Program) -> String {
+    let mut buf = vec![];
+    let cm = Rc::new(SourceMap::default());
+
+    let mut emitter = Emitter {
+        cfg: swc_ecma_codegen::Config {
+            ..Default::default()
+        },
+        cm: cm.clone(),
+        comments: None,
+        wr: text_writer::JsWriter::new(cm.clone(), "\n", &mut buf, None),
+    };
+
+    emitter.emit_program(prog).unwrap();
+
+    String::from_utf8_lossy(&buf).to_string()
+}
 
 pub fn build_d_ts(program: &ast::Program, env: &Env) -> Program {
     let body: Vec<ModuleItem> = program

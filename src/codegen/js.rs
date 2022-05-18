@@ -1,8 +1,29 @@
+use std::rc::Rc;
+
 use swc_atoms::*;
-use swc_common::source_map::DUMMY_SP;
+use swc_common::source_map::{DUMMY_SP, SourceMap};
 use swc_ecma_ast::*;
+use swc_ecma_codegen::*;
 
 use crate::ast;
+
+pub fn print_js(prog: &Program) -> String {
+    let mut buf = vec![];
+    let cm = Rc::new(SourceMap::default());
+
+    let mut emitter = Emitter {
+        cfg: swc_ecma_codegen::Config {
+            ..Default::default()
+        },
+        cm: cm.clone(),
+        comments: None,
+        wr: text_writer::JsWriter::new(cm.clone(), "\n", &mut buf, None),
+    };
+
+    emitter.emit_program(prog).unwrap();
+
+    String::from_utf8_lossy(&buf).to_string()
+}
 
 pub fn build_js(program: &ast::Program) -> Program {
     let body: Vec<ModuleItem> = program
