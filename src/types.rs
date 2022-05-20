@@ -46,19 +46,6 @@ impl fmt::Display for Primitive {
 }
 
 #[derive(Clone, Debug)]
-pub struct TLam {
-    pub args: Vec<Type>,
-    pub ret: Box<Type>,
-}
-
-impl fmt::Display for TLam {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { args, ret } = self;
-        write!(f, "({}) => {}", join(args, ", "), ret)
-    }
-}
-
-#[derive(Clone, Debug)]
 pub struct TProp {
     pub name: String,
     pub ty: Type,
@@ -72,43 +59,108 @@ impl fmt::Display for TProp {
 }
 
 #[derive(Clone, Debug)]
-pub enum TypeKind {
-    Var,
-    Lam(TLam),
-    Prim(Primitive),
-    Lit(Lit),
-    Union(Vec<Type>),
-    Obj(Vec<TProp>),
-    Alias {
-        name: String,
-        type_params: Vec<Type>,
-    },
+pub struct VarType {
+    pub id: i32,
+    pub frozen: bool,
 }
 
 #[derive(Clone, Debug)]
-pub struct Type {
+pub struct LamType {
     pub id: i32,
     pub frozen: bool,
-    pub kind: TypeKind,
+    pub args: Vec<Type>,
+    pub ret: Box<Type>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PrimType {
+    pub id: i32,
+    pub frozen: bool,
+    pub prim: Primitive,
+}
+
+#[derive(Clone, Debug)]
+pub struct LitType {
+    pub id: i32,
+    pub frozen: bool,
+    pub lit: Lit,
+}
+
+#[derive(Clone, Debug)]
+pub struct UnionType {
+    pub id: i32,
+    pub frozen: bool,
+    pub types: Vec<Type>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ObjectType {
+    pub id: i32,
+    pub frozen: bool,
+    pub props: Vec<TProp>,
+}
+
+#[derive(Clone, Debug)]
+pub struct AliasType {
+    pub id: i32,
+    pub frozen: bool,
+    pub name: String,
+    pub type_params: Vec<Type>,
+}
+
+#[derive(Clone, Debug)]
+pub enum Type {
+    Var(VarType),
+    Lam(LamType),
+    Prim(PrimType),
+    Lit(LitType),
+    Union(UnionType),
+    Object(ObjectType),
+    Alias(AliasType),
+}
+
+impl Type {
+    pub fn frozen(&self) -> bool {
+        match self {
+            Type::Var(x) => x.frozen,
+            Type::Lam(x) => x.frozen,
+            Type::Prim(x) => x.frozen,
+            Type::Lit(x) => x.frozen,
+            Type::Union(x) => x.frozen,
+            Type::Object(x) => x.frozen,
+            Type::Alias(x) => x.frozen,
+        }
+    }
+
+    pub fn id(&self) -> i32 {
+        match self {
+            Type::Var(x) => x.id,
+            Type::Lam(x) => x.id,
+            Type::Prim(x) => x.id,
+            Type::Lit(x) => x.id,
+            Type::Union(x) => x.id,
+            Type::Object(x) => x.id,
+            Type::Alias(x) => x.id,
+        }
+    }
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let id = self.id;
-        match &self.kind {
-            TypeKind::Var => {
+        match self {
+            Type::Var(VarType { id, .. }) => {
                 let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                     .chars()
                     .collect();
                 let id = chars.get(id.to_owned() as usize).unwrap();
                 write!(f, "{}", id)
             }
-            TypeKind::Lam(tlam) => write!(f, "{}", tlam),
-            TypeKind::Prim(prim) => write!(f, "{}", prim),
-            TypeKind::Lit(lit) => write!(f, "{}", lit),
-            TypeKind::Union(types) => write!(f, "{}", join(types, " | ")),
-            TypeKind::Obj(props) => write!(f, "{{{}}}", join(props, ", ")),
-            TypeKind::Alias { name, type_params } => {
+            Type::Lam(LamType {args, ret, ..}) => write!(f, "({}) => {}", join(args, ", "), ret),
+            Type::Prim(PrimType {prim, ..}) => write!(f, "{}", prim),
+            Type::Lit(LitType {lit, ..}) => write!(f, "{}", lit),
+            Type::Union(UnionType {types, ..}) => write!(f, "{}", join(types, " | ")),
+            Type::Object(ObjectType {props, ..}) => write!(f, "{{{}}}", join(props, ", ")),
+            Type::Alias(AliasType { name, type_params, .. }) => {
                 write!(f, "{name}<{}>", join(type_params, ", "))
             }
         }

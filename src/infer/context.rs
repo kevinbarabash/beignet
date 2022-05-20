@@ -1,8 +1,8 @@
 use std::cell::Cell;
 use std::collections::HashMap;
 
-use crate::types::{self, Scheme, Type, TypeKind};
 use crate::ast::literal::Lit;
+use crate::types::{self, Scheme, Type};
 
 use super::substitutable::*;
 
@@ -39,7 +39,7 @@ impl Context {
     }
 
     fn instantiate(&self, scheme: &Scheme) -> Type {
-        let fresh_quals = scheme.qualifiers.iter().map(|_| self.fresh_tvar());
+        let fresh_quals = scheme.qualifiers.iter().map(|_| self.fresh_var());
 
         let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
         // The iterator returned by into_iter may yield any of T, &T or &mut T,
@@ -54,54 +54,54 @@ impl Context {
         self.state.count.set(id);
         id
     }
-    pub fn fresh_tvar(&self) -> Type {
-        Type {
-            id: self.fresh_id(),
-            frozen: false,
-            kind: types::TypeKind::Var,
-        }
-    }
 
-    pub fn from_lam(&self, lam: types::TLam) -> Type {
-        types::Type {
+    pub fn fresh_var(&self) -> Type {
+        Type::Var(types::VarType {
             id: self.fresh_id(),
             frozen: false,
-            kind: types::TypeKind::Lam(lam),
-        }
+        })
     }
-    pub fn from_prim(&self, prim: types::Primitive) -> Type {
-        types::Type {
+    pub fn lam(&self, args: Vec<Type>, ret: Box<Type>) -> Type {
+        Type::Lam(types::LamType {
             id: self.fresh_id(),
             frozen: false,
-            kind: types::TypeKind::Prim(prim),
-        }
+            args,
+            ret,
+        })
     }
-    pub fn from_lit(&self, lit: Lit) -> Type {
-        types::Type {
+    pub fn prim(&self, prim: types::Primitive) -> Type {
+        Type::Prim(types::PrimType {
             id: self.fresh_id(),
             frozen: false,
-            kind: match lit {
-                Lit::Num(n) => types::TypeKind::Lit(types::Lit::Num(n.value)),
-                Lit::Bool(b) => types::TypeKind::Lit(types::Lit::Bool(b.value)),
-                Lit::Str(s) => types::TypeKind::Lit(types::Lit::Str(s.value)),
-                Lit::Null(_) => types::TypeKind::Lit(types::Lit::Null),
-                Lit::Undefined(_) => types::TypeKind::Lit(types::Lit::Undefined),
-            }
-        }
+            prim,
+        })
+    }
+    pub fn lit(&self, lit: Lit) -> Type {
+        Type::Lit(types::LitType {
+            id: self.fresh_id(),
+            frozen: false,
+            lit: match lit {
+                Lit::Num(n) => types::Lit::Num(n.value),
+                Lit::Bool(b) => types::Lit::Bool(b.value),
+                Lit::Str(s) => types::Lit::Str(s.value),
+                Lit::Null(_) => types::Lit::Null,
+                Lit::Undefined(_) => types::Lit::Undefined,
+            },
+        })
     }
     pub fn union(&self, types: &[Type]) -> Type {
-        types::Type {
+        Type::Union(types::UnionType {
             id: self.fresh_id(),
             frozen: false,
-            kind: types::TypeKind::Union(types.to_owned()),
-        }
+            types: types.to_owned(),
+        })
     }
-    pub fn obj(&self, properties: &[types::TProp]) -> Type {
-        Type {
+    pub fn object(&self, properties: &[types::TProp]) -> Type {
+        Type::Object(types::ObjectType {
             id: self.fresh_id(),
             frozen: false,
-            kind: TypeKind::Obj(properties.to_vec()),
-        }
+            props: properties.to_vec(),
+        })
     }
     pub fn prop(&self, name: &str, ty: Type) -> types::TProp {
         types::TProp {
@@ -110,13 +110,11 @@ impl Context {
         }
     }
     pub fn alias(&self, name: &str, type_params: Vec<Type>) -> Type {
-        types::Type {
+        Type::Alias(types::AliasType {
             id: self.fresh_id(),
             frozen: false,
-            kind: TypeKind::Alias {
-                name: name.to_owned(),
-                type_params: type_params.to_owned(),
-            },
-        }
+            name: name.to_owned(),
+            type_params: type_params.to_owned(),
+        })
     }
 }

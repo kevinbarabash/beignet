@@ -64,40 +64,45 @@ fn normalize(sc: &Scheme) -> Scheme {
         .map(|(index, key)| {
             (
                 key.to_owned(),
-                Type {
+                Type::Var(VarType {
                     id: index as i32,
-                    kind: TypeKind::Var,
                     frozen: false,
-                },
+                }),
             )
         })
         .collect();
 
     fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>) -> Type {
-        let id = ty.id;
-        let frozen = ty.frozen;
-        match &ty.kind {
-            TypeKind::Var => mapping.get(&id).unwrap().to_owned(),
-            TypeKind::Lam(TLam { args, ret }) => {
+        // let id = ty.id;
+        // let frozen = ty.frozen;
+        match ty {
+            Type::Var(VarType { id, .. }) => mapping.get(&id).unwrap().to_owned(),
+            Type::Lam(LamType {
+                id,
+                frozen,
+                args,
+                ret,
+            }) => {
                 let args: Vec<_> = args.iter().map(|arg| norm_type(arg, mapping)).collect();
                 let ret = Box::from(norm_type(&ret, mapping));
-                Type {
+                Type::Lam(LamType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
-                    kind: TypeKind::Lam(TLam { args, ret }),
-                }
+                    args,
+                    ret,
+                })
             }
-            TypeKind::Prim(_) => ty.to_owned(),
-            TypeKind::Lit(_) => ty.to_owned(),
-            TypeKind::Union(types) => {
+            Type::Prim(_) => ty.to_owned(),
+            Type::Lit(_) => ty.to_owned(),
+            Type::Union(UnionType { id, frozen, types }) => {
                 let types = types.iter().map(|ty| norm_type(ty, mapping)).collect();
-                Type {
+                Type::Union(UnionType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
-                    kind: TypeKind::Union(types),
-                }
+                    types,
+                })
             }
-            TypeKind::Obj(props) => {
+            Type::Object(ObjectType { id, frozen, props }) => {
                 let props = props
                     .iter()
                     .map(|prop| TProp {
@@ -105,25 +110,28 @@ fn normalize(sc: &Scheme) -> Scheme {
                         ty: norm_type(&prop.ty, mapping),
                     })
                     .collect();
-                Type {
+                Type::Object(ObjectType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
-                    kind: TypeKind::Obj(props),
-                }
+                    props,
+                })
             }
-            TypeKind::Alias { name, type_params } => {
+            Type::Alias(AliasType {
+                id,
+                frozen,
+                name,
+                type_params,
+            }) => {
                 let type_params = type_params
                     .iter()
                     .map(|ty| norm_type(ty, mapping))
                     .collect();
-                Type {
+                Type::Alias(AliasType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
-                    kind: TypeKind::Alias {
-                        name: name.to_owned(),
-                        type_params,
-                    },
-                }
+                    name: name.to_owned(),
+                    type_params,
+                })
             }
         }
     }
@@ -148,8 +156,8 @@ fn generalize(env: &Env, ty: &Type) -> Scheme {
 type InferResult = (Type, Vec<Constraint>);
 
 fn is_promise(ty: &Type) -> bool {
-    match &ty.kind {
-        TypeKind::Alias { name, .. } if name == "Promise" => true,
+    match ty {
+        Type::Alias(AliasType { name, .. }) if name == "Promise" => true,
         _ => false,
     }
 }
@@ -163,36 +171,24 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
         Expr::App(App { lam, args, .. }) => {
             let (t_fn, cs_fn) = infer(lam, ctx);
             let (t_args, cs_args) = infer_many(args, ctx);
-            let tv = ctx.fresh_tvar();
+            let tv = ctx.fresh_var();
 
             let mut constraints = Vec::new();
             constraints.extend(cs_fn);
             constraints.extend(cs_args);
             constraints.push(Constraint {
-                types: (
-                    ctx.from_lam(TLam {
-                        args: t_args,
-                        ret: Box::new(tv.clone()),
-                    }),
-                    t_fn,
-                ),
+                types: (ctx.lam(t_args, Box::new(tv.clone())), t_fn),
             });
 
             (tv, constraints)
         }
         Expr::Fix(Fix { expr, .. }) => {
             let (t, cs) = infer(expr, ctx);
-            let tv = ctx.fresh_tvar();
+            let tv = ctx.fresh_var();
             let mut constraints = Vec::new();
             constraints.extend(cs);
             constraints.push(Constraint {
-                types: (
-                    ctx.from_lam(TLam {
-                        args: vec![tv.clone()],
-                        ret: Box::new(tv.clone()),
-                    }),
-                    t,
-                ),
+                types: (ctx.lam(vec![tv.clone()], Box::new(tv.clone())), t),
             });
 
             (tv, constraints)
@@ -206,7 +202,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             let (t1, cs1) = infer(cond, ctx);
             let (t2, cs2) = infer(consequent, ctx);
             let (t3, cs3) = infer(alternate, ctx);
-            let bool = ctx.from_prim(Primitive::Bool);
+            let bool = ctx.prim(Primitive::Bool);
 
             let result_type = t2.clone();
             let mut constraints = Vec::new();
@@ -225,7 +221,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             ..
         }) => {
             // Creates a new type variable for each arg
-            let arg_tvs: Vec<_> = args.iter().map(|_| ctx.fresh_tvar()).collect();
+            let arg_tvs: Vec<_> = args.iter().map(|_| ctx.fresh_var()).collect();
             let mut new_ctx = ctx.clone();
             for (arg, tv) in args.iter().zip(arg_tvs.clone().into_iter()) {
                 let scheme = Scheme {
@@ -249,10 +245,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 ctx.alias("Promise", vec![ret])
             };
 
-            let lam_ty = ctx.from_lam(TLam {
-                args: arg_tvs,
-                ret: Box::new(ret),
-            });
+            let lam_ty = ctx.lam(arg_tvs, Box::new(ret));
 
             (lam_ty, cs)
         }
@@ -274,7 +267,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (t2.apply(&subs), vec![])
         }
-        Expr::Lit(literal) => (ctx.from_lit(literal.to_owned()), vec![]),
+        Expr::Lit(literal) => (ctx.lit(literal.to_owned()), vec![]),
         // TODO: consider introduce functions for each operator and rewrite Ops as Apps
         Expr::Op(Op {
             left, right, op, ..
@@ -282,65 +275,42 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             let left = Box::as_ref(left);
             let right = Box::as_ref(right);
             let (ts, cs) = infer_many(&[left.clone(), right.clone()], ctx);
-            let tv = ctx.fresh_tvar();
+            let tv = ctx.fresh_var();
 
             let mut cs = cs;
 
             let c = match op {
                 BinOp::EqEq | BinOp::NotEq => {
-                    let arg_tv = ctx.fresh_tvar();
+                    let arg_tv = ctx.fresh_var();
                     Constraint {
                         types: (
-                            ctx.from_lam(TLam {
-                                args: ts,
-                                ret: Box::from(tv.clone()),
-                            }),
+                            ctx.lam(ts, Box::from(tv.clone())),
                             // equivalent to <T>(arg0: T, arg1: T) => bool
-                            ctx.from_lam(TLam {
-                                args: vec![arg_tv.clone(), arg_tv.clone()],
-                                ret: Box::from(ctx.from_prim(Primitive::Bool)),
-                            }),
+                            ctx.lam(
+                                vec![arg_tv.clone(), arg_tv.clone()],
+                                Box::from(ctx.prim(Primitive::Bool)),
+                            ),
                         ),
                     }
                 }
                 // For now, only numbers can be ordered, but in the future we should allow
                 // strings and potentially user defined types.
-                BinOp::Lt
-                | BinOp::LtEq
-                | BinOp::Gt
-                | BinOp::GtEq => {
-                    Constraint {
-                        types: (
-                            ctx.from_lam(TLam {
-                                args: ts,
-                                ret: Box::from(tv.clone()),
-                            }),
-                            ctx.from_lam(TLam {
-                                args: vec![
-                                    ctx.from_prim(Primitive::Num),
-                                    ctx.from_prim(Primitive::Num),
-                                ],
-                                ret: Box::from(ctx.from_prim(Primitive::Bool)),
-                            }),
-                        ),
-                    }
-                }
-                BinOp::Add
-                | BinOp::Sub
-                | BinOp::Div
-                | BinOp::Mul => Constraint {
+                BinOp::Lt | BinOp::LtEq | BinOp::Gt | BinOp::GtEq => Constraint {
                     types: (
-                        ctx.from_lam(TLam {
-                            args: ts,
-                            ret: Box::from(tv.clone()),
-                        }),
-                        ctx.from_lam(TLam {
-                            args: vec![
-                                ctx.from_prim(Primitive::Num),
-                                ctx.from_prim(Primitive::Num),
-                            ],
-                            ret: Box::from(ctx.from_prim(Primitive::Num)),
-                        }),
+                        ctx.lam(ts, Box::from(tv.clone())),
+                        ctx.lam(
+                            vec![ctx.prim(Primitive::Num), ctx.prim(Primitive::Num)],
+                            Box::from(ctx.prim(Primitive::Bool)),
+                        ),
+                    ),
+                },
+                BinOp::Add | BinOp::Sub | BinOp::Div | BinOp::Mul => Constraint {
+                    types: (
+                        ctx.lam(ts, Box::from(tv.clone())),
+                        ctx.lam(
+                            vec![ctx.prim(Primitive::Num), ctx.prim(Primitive::Num)],
+                            Box::from(ctx.prim(Primitive::Num)),
+                        ),
                     ),
                 },
             };
@@ -359,7 +329,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 })
                 .collect();
 
-            let obj_ty = ctx.obj(&properties);
+            let obj_ty = ctx.object(&properties);
 
             (obj_ty, all_cs)
         }
@@ -369,7 +339,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             }
 
             let (promise_ty, promise_cs) = infer(expr, ctx);
-            let tv = ctx.fresh_tvar();
+            let tv = ctx.fresh_var();
 
             let c = Constraint {
                 types: (promise_ty, ctx.alias("Promise", vec![tv.clone()])),
