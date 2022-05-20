@@ -53,22 +53,30 @@ fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
 fn unifies(c: &Constraint, ctx: &Context) -> Subst {
     let (t1, t2) = c.types.clone();
 
-    match (&t1.kind, &t2.kind) {
-        (TypeKind::Var, _) => bind(&t1.id, &t2, ctx),
-        (_, TypeKind::Var) => bind(&t2.id, &t1, ctx),
-        (TypeKind::Prim(prim1), TypeKind::Prim(prim2)) if prim1 == prim2 => Subst::new(),
-        (TypeKind::Lit(lit1), TypeKind::Lit(lit2)) if lit1 == lit2 => Subst::new(),
-        (TypeKind::Lam(lam1), TypeKind::Lam(lam2)) => unify_lams(&lam1, &lam2, ctx),
+    match (&t1, &t2) {
+        (Type::Var(v), _) => bind(&v.id, &t2, ctx),
+        (_, Type::Var(v)) => bind(&v.id, &t1, ctx),
+        (Type::Prim(PrimType { prim: p1, .. }), Type::Prim(PrimType { prim: p2, .. }))
+            if p1 == p2 =>
+        {
+            Subst::new()
+        }
+        (Type::Lit(LitType { lit: l1, .. }), Type::Lit(LitType { lit: l2, .. })) if l1 == l2 => {
+            Subst::new()
+        }
+        (Type::Lam(lam1), Type::Lam(lam2)) => unify_lams(&lam1, &lam2, ctx),
         // TODO: copy tests case from `compiler` project for this
         (
-            TypeKind::Alias {
+            Type::Alias(AliasType {
                 name: name1,
                 type_params: vars1,
-            },
-            TypeKind::Alias {
+                ..
+            }),
+            Type::Alias(AliasType {
                 name: name2,
                 type_params: vars2,
-            },
+                ..
+            }),
         ) if name1 == name2 => {
             // TODO: throw if vars1 and vars2 have different lengths
             let cs: Vec<_> = vars1
@@ -86,7 +94,7 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
                 return Subst::new();
             }
 
-            if !t1.frozen && !t2.frozen {
+            if !t1.frozen() && !t2.frozen() {
                 return widen_types(&t1, &t2, ctx);
             }
 
@@ -95,30 +103,25 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
     }
 }
 
-fn unify_lams(t1: &TLam, t2: &TLam, ctx: &Context) -> Subst {
+fn unify_lams(t1: &LamType, t2: &LamType, ctx: &Context) -> Subst {
     // TODO:
     // - varargs
     // - subtyping
 
     // Partial application
     if t1.args.len() < t2.args.len() {
-        let t2_partial = TLam {
-            args: t2.args[..t1.args.len()].to_vec(),
-            ret: Box::from(ctx.from_lam(TLam {
-                args: t2.args[t1.args.len()..].to_vec(),
-                ret: t2.ret.clone(),
-            })),
-        };
+        let partial_args = t2.args[..t1.args.len()].to_vec();
+        let partial_ret = ctx.lam(t2.args[t1.args.len()..].to_vec(), t2.ret.clone());
         let mut cs: Vec<_> = t1
             .args
             .iter()
-            .zip(&t2_partial.args)
+            .zip(&partial_args)
             .map(|(a, b)| Constraint {
                 types: (a.clone(), b.clone()),
             })
             .collect();
         cs.push(Constraint {
-            types: (*t1.ret.clone(), *t2_partial.ret),
+            types: (*t1.ret.clone(), partial_ret),
         });
         unify_many(&cs, ctx)
     } else if t1.args.len() != t2.args.len() {
@@ -151,10 +154,13 @@ fn unify_many(cs: &[Constraint], ctx: &Context) -> Subst {
 }
 
 fn is_subtype(t1: &Type, t2: &Type) -> bool {
-    match (&t1.kind, &t2.kind) {
-        (TypeKind::Lit(Lit::Num(_)), TypeKind::Prim(Primitive::Num)) => true,
-        (TypeKind::Lit(Lit::Str(_)), TypeKind::Prim(Primitive::Str)) => true,
-        (TypeKind::Lit(Lit::Bool(_)), TypeKind::Prim(Primitive::Bool)) => true,
+    match (t1, t2) {
+        (Type::Lit(LitType { lit, .. }), Type::Prim(PrimType { prim, .. })) => match (lit, prim) {
+            (Lit::Num(_), Primitive::Num) => true,
+            (Lit::Str(_), Primitive::Str) => true,
+            (Lit::Bool(_), Primitive::Bool) => true,
+            _ => false,
+        },
         _ => false,
     }
 }
@@ -164,11 +170,7 @@ fn bind(tv_id: &i32, ty: &Type, _: &Context) -> Subst {
     // NOTE: This will require the use of the &Context
 
     match ty {
-        Type {
-            id,
-            kind: TypeKind::Var,
-            ..
-        } if id == tv_id => Subst::new(),
+        Type::Var(VarType { id, .. }) if id == tv_id => Subst::new(),
         ty if ty.ftv().contains(tv_id) => panic!("type var appears in type"),
         ty => {
             let mut subst = Subst::new();
@@ -182,18 +184,22 @@ fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Subst {
     let mut result = Subst::new();
 
     let mut types: Vec<Type> = vec![];
-    match &t1.kind {
-        TypeKind::Union(t1_types) => types.extend(t1_types.to_owned()),
+    match t1 {
+        Type::Union(UnionType {
+            types: t1_types, ..
+        }) => types.extend(t1_types.to_owned()),
         _ => types.push(t1.to_owned()),
     }
-    match &t2.kind {
-        TypeKind::Union(t2_types) => types.extend(t2_types.to_owned()),
+    match t2 {
+        Type::Union(UnionType {
+            types: t2_types, ..
+        }) => types.extend(t2_types.to_owned()),
         _ => types.push(t2.to_owned()),
     }
     let union = ctx.union(&types);
 
-    result.insert(t1.id, union.clone());
-    result.insert(t2.id, union.clone());
+    result.insert(t1.id(), union.clone());
+    result.insert(t2.id(), union.clone());
 
     result
 }
