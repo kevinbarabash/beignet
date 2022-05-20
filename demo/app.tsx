@@ -34,6 +34,9 @@ export const App = () => {
       "let point = {x: 5, y: 10}",
       "",
       "let add = async (a, b) => await a() + await b()",
+      "",
+      "let msg = \"world\"",
+      "let elem = <div point={point} id=\"point\">Hello, {msg}</div>",
     ].join("\n");
   });
 
