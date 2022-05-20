@@ -207,10 +207,45 @@ fn codegen_jsx() {
         children: "Hello"
     });
     "###);
-    insta::assert_snapshot!(compile("<Foo>{bar}</Foo>"), @"<Foo >{bar}</Foo>;\n");
-    insta::assert_snapshot!(compile("<Foo>Hello {world}!</Foo>"), @"<Foo >Hello {world}!</Foo>;\n");
-    insta::assert_snapshot!(compile("<Foo>{<Bar>{baz}</Bar>}</Foo>"), @"<Foo >{<Bar >{baz}</Bar>}</Foo>;\n");
-    insta::assert_snapshot!(compile("<Foo></Foo>"), @"<Foo ></Foo>;\n");
-    insta::assert_snapshot!(compile("<Foo bar={baz} />"), @"<Foo bar={baz}></Foo>;\n");
-    insta::assert_snapshot!(compile("<Foo msg=\"hello\" bar={baz}></Foo>"), @r###"<Foo msg="hello" bar={baz}></Foo>;"###);
+    insta::assert_snapshot!(compile("<Foo>{bar}</Foo>"), @r###"
+    import { jsx as _jsx } from "react/jsx-runtime";
+    _jsx(Foo, {
+        children: bar
+    });
+    "###);
+    insta::assert_snapshot!(compile("<Foo>Hello {world}!</Foo>"), @r###"
+    import { jsxs as _jsxs } from "react/jsx-runtime";
+    _jsxs(Foo, {
+        children: [
+            "Hello ",
+            world,
+            "!"
+        ]
+    });
+    "###);
+    insta::assert_snapshot!(compile("<Foo>{<Bar>{baz}</Bar>}</Foo>"), @r###"
+    import { jsx as _jsx } from "react/jsx-runtime";
+    _jsx(Foo, {
+        children: _jsx(Bar, {
+            children: baz
+        })
+    });
+    "###);
+    insta::assert_snapshot!(compile("<Foo></Foo>"), @r###"
+    import { jsx as _jsx } from "react/jsx-runtime";
+    _jsx(Foo, {});
+    "###);
+    insta::assert_snapshot!(compile("<Foo bar={baz} />"), @r###"
+    import { jsx as _jsx } from "react/jsx-runtime";
+    _jsx(Foo, {
+        bar: baz
+    });
+    "###);
+    insta::assert_snapshot!(compile("<Foo msg=\"hello\" bar={baz}></Foo>"), @r###"
+    import { jsx as _jsx } from "react/jsx-runtime";
+    _jsx(Foo, {
+        msg: "hello",
+        bar: baz
+    });
+    "###);
 }
