@@ -255,6 +255,12 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 ast::BinOp::Sub => BinaryOp::Sub,
                 ast::BinOp::Mul => BinaryOp::Mul,
                 ast::BinOp::Div => BinaryOp::Div,
+                ast::BinOp::EqEq => BinaryOp::EqEqEq,
+                ast::BinOp::NotEq => BinaryOp::NotEqEq,
+                ast::BinOp::Lt => BinaryOp::Lt,
+                ast::BinOp::LtEq => BinaryOp::LtEq,
+                ast::BinOp::Gt => BinaryOp::Gt,
+                ast::BinOp::GtEq => BinaryOp::GtEq,
             };
 
             let left = Box::from(build_expr(&left));

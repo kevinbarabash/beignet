@@ -128,6 +128,12 @@ pub enum BinOp {
     Sub,
     Mul,
     Div,
+    EqEq,
+    NotEq,
+    Gt,
+    GtEq,
+    Lt,
+    LtEq,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::iter::Iterator;
 
-use crate::types::*;
 use crate::ast::*;
+use crate::types::*;
 
 use super::constraint_solver::{run_solve, Constraint};
-use super::substitutable::{Substitutable, Subst};
 use super::context::{Context, Env};
+use super::substitutable::{Subst, Substitutable};
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
@@ -275,25 +275,74 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             (t2.apply(&subs), vec![])
         }
         Expr::Lit(literal) => (ctx.from_lit(literal.to_owned()), vec![]),
-        // TODO: check the `op` field when we introduce comparison operators
-        Expr::Op(Op { left, right, .. }) => {
+        // TODO: consider introduce functions for each operator and rewrite Ops as Apps
+        Expr::Op(Op {
+            left, right, op, ..
+        }) => {
             let left = Box::as_ref(left);
             let right = Box::as_ref(right);
             let (ts, cs) = infer_many(&[left.clone(), right.clone()], ctx);
             let tv = ctx.fresh_tvar();
 
             let mut cs = cs;
-            let c = Constraint {
-                types: (
-                    ctx.from_lam(TLam {
-                        args: ts,
-                        ret: Box::from(tv.clone()),
-                    }),
-                    ctx.from_lam(TLam {
-                        args: vec![ctx.from_prim(Primitive::Num), ctx.from_prim(Primitive::Num)],
-                        ret: Box::from(ctx.from_prim(Primitive::Num)),
-                    }),
-                ),
+
+            let c = match op {
+                BinOp::EqEq | BinOp::NotEq => {
+                    let arg_tv = ctx.fresh_tvar();
+                    Constraint {
+                        types: (
+                            ctx.from_lam(TLam {
+                                args: ts,
+                                ret: Box::from(tv.clone()),
+                            }),
+                            // equivalent to <T>(arg0: T, arg1: T) => bool
+                            ctx.from_lam(TLam {
+                                args: vec![arg_tv.clone(), arg_tv.clone()],
+                                ret: Box::from(ctx.from_prim(Primitive::Bool)),
+                            }),
+                        ),
+                    }
+                }
+                // For now, only numbers can be ordered, but in the future we should allow
+                // strings and potentially user defined types.
+                BinOp::Lt
+                | BinOp::LtEq
+                | BinOp::Gt
+                | BinOp::GtEq => {
+                    Constraint {
+                        types: (
+                            ctx.from_lam(TLam {
+                                args: ts,
+                                ret: Box::from(tv.clone()),
+                            }),
+                            ctx.from_lam(TLam {
+                                args: vec![
+                                    ctx.from_prim(Primitive::Num),
+                                    ctx.from_prim(Primitive::Num),
+                                ],
+                                ret: Box::from(ctx.from_prim(Primitive::Bool)),
+                            }),
+                        ),
+                    }
+                }
+                BinOp::Add
+                | BinOp::Sub
+                | BinOp::Div
+                | BinOp::Mul => Constraint {
+                    types: (
+                        ctx.from_lam(TLam {
+                            args: ts,
+                            ret: Box::from(tv.clone()),
+                        }),
+                        ctx.from_lam(TLam {
+                            args: vec![
+                                ctx.from_prim(Primitive::Num),
+                                ctx.from_prim(Primitive::Num),
+                            ],
+                            ret: Box::from(ctx.from_prim(Primitive::Num)),
+                        }),
+                    ),
+                },
             };
             cs.push(c);
 
@@ -332,16 +381,21 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (tv, cs)
         }
-        Expr::JSXElement(JSXElement { span: _, name: _, attrs: _, children: _ }) => {
+        Expr::JSXElement(JSXElement {
+            span: _,
+            name: _,
+            attrs: _,
+            children: _,
+        }) => {
             // TODO: check that the `attrs` match the props of the component/tag with
             // the given `name`.  If there are any `children`, check that they matches
             // props['children'].
 
             // TODO: replace this with JSX.Element once we have support for Type::Mem
             let ty = ctx.alias("JSXElement", vec![]);
-            
+
             (ty, vec![])
-        },
+        }
     }
 }
 

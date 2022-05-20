@@ -195,6 +195,35 @@ fn infer_if_else_with_multiple_widenings() {
 }
 
 #[test]
+fn infer_equal_with_numbers() {
+    let (_, env) = infer_prog("let cond = 5 == 10");
+    let result = format!("{}", env.get("cond").unwrap());
+    assert_eq!(result, "boolean");
+}
+
+#[test]
+fn infer_not_equal_with_variables() {
+    let (_, env) = infer_prog("let neq = (a, b) => a != b");
+    let result = format!("{}", env.get("neq").unwrap());
+    assert_eq!(result, "<A>(A, A) => boolean");
+}
+
+#[test]
+fn infer_inequalities() {
+    let src = r###"
+    let lt = (a, b) => a < b
+    let lte = (a, b) => a <= b
+    let gt = (a, b) => a > b
+    let gte = (a, b) => a >= b
+    "###;
+    let (_, env) = infer_prog(src);
+    assert_eq!(format!("{}", env.get("lt").unwrap()), "(number, number) => boolean");
+    assert_eq!(format!("{}", env.get("lte").unwrap()), "(number, number) => boolean");
+    assert_eq!(format!("{}", env.get("gt").unwrap()), "(number, number) => boolean");
+    assert_eq!(format!("{}", env.get("gte").unwrap()), "(number, number) => boolean");
+}
+
+#[test]
 fn infer_let_rec_until() {
     let src = "let rec until = (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) }";
     let (program, env) = infer_prog(src);
@@ -203,6 +232,25 @@ fn infer_let_rec_until() {
 
     let result = codegen_d_ts(&program, &env);
     insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A;\n");
+}
+
+#[test]
+fn infer_fib() {
+    let src = r###"
+    let rec fib = (n) => if (n == 0) {
+        0
+    } else {
+        if (n == 1) {
+            1
+        } else {
+            fib(n - 1) + fib(n - 2)
+        }
+    }
+    "###;
+
+    let (_, env) = infer_prog(src);
+    // TODO: simplify union types before returning them
+    assert_eq!(format!("{}", env.get("fib").unwrap()), "(number | 1 | 0 | number | number) => number | 0 | 1");
 }
 
 #[test]
