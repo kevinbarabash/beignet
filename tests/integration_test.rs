@@ -243,10 +243,8 @@ fn codegen_let_rec() {
     let (program, env) = infer_prog(src);
     let js = codegen_js(&program);
 
-    insta::assert_snapshot!(js, @r###"
-    export const f = ()=>f()
-    ;
-    "###);
+    insta::assert_snapshot!(js, @"export const f = ()=>f();
+");
 
     let result = codegen_d_ts(&program, &env);
 
@@ -311,10 +309,8 @@ fn codegen_async_math() {
 
     let js = codegen_js(&program);
 
-    insta::assert_snapshot!(js, @r###"
-    export const add = async (a, b)=>await a() + await b()
-    ;
-    "###);
+    insta::assert_snapshot!(js, @"export const add = async (a, b)=>await a() + await b();
+");
 
     let result = codegen_d_ts(&program, &env);
 
