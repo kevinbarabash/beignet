@@ -129,7 +129,7 @@ pub enum BinOp {
     Mul,
     Div,
     Eq,
-    Neq,
+    NotEq,
     Gt,
     GtEq,
     Lt,

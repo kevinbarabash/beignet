@@ -256,7 +256,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 ast::BinOp::Mul => BinaryOp::Mul,
                 ast::BinOp::Div => BinaryOp::Div,
                 ast::BinOp::Eq => BinaryOp::EqEqEq,
-                ast::BinOp::Neq => BinaryOp::NotEqEq,
+                ast::BinOp::NotEq => BinaryOp::NotEqEq,
                 ast::BinOp::Lt => BinaryOp::Lt,
                 ast::BinOp::LtEq => BinaryOp::LtEq,
                 ast::BinOp::Gt => BinaryOp::Gt,
