@@ -287,7 +287,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             let mut cs = cs;
 
             let c = match op {
-                BinOp::Eq | BinOp::NotEq => {
+                BinOp::EqEq | BinOp::NotEq => {
                     let arg_tv = ctx.fresh_tvar();
                     Constraint {
                         types: (

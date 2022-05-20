@@ -9,7 +9,7 @@ Program {
             expr: Op(
                 Op {
                     span: 0..6,
-                    op: Eq,
+                    op: EqEq,
                     left: Ident(
                         Ident {
                             span: 0..1,

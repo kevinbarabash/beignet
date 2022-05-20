@@ -235,7 +235,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             .clone()
             .then(
                 choice((
-                    just_with_padding("==").to(BinOp::Eq),
+                    just_with_padding("==").to(BinOp::EqEq),
                     just_with_padding("!=").to(BinOp::NotEq),
                     // Must appear before ">"
                     just_with_padding(">=").to(BinOp::GtEq),
