@@ -201,7 +201,12 @@ fn js_print_object() {
 
 #[test]
 fn codegen_jsx() {
-    insta::assert_snapshot!(compile("<Foo>Hello</Foo>"), @"<Foo >Hello</Foo>;");
+    insta::assert_snapshot!(compile("<Foo>Hello</Foo>"), @r###"
+    import { jsx as _jsx } from "react/jsx-runtime";
+    _jsx(Foo, {
+        children: "Hello"
+    });
+    "###);
     insta::assert_snapshot!(compile("<Foo>{bar}</Foo>"), @"<Foo >{bar}</Foo>;\n");
     insta::assert_snapshot!(compile("<Foo>Hello {world}!</Foo>"), @"<Foo >Hello {world}!</Foo>;\n");
     insta::assert_snapshot!(compile("<Foo>{<Bar>{baz}</Bar>}</Foo>"), @"<Foo >{<Bar >{baz}</Bar>}</Foo>;\n");

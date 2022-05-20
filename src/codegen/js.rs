@@ -1,14 +1,41 @@
 use std::rc::Rc;
 
 use swc_atoms::*;
-use swc_common::source_map::{DUMMY_SP, SourceMap};
+use swc_common::comments::SingleThreadedComments;
+use swc_common::hygiene::Mark;
+use swc_common::source_map::{Globals, SourceMap, DUMMY_SP, GLOBALS};
 use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
+use swc_ecma_transforms_react::{react, Options, Runtime};
+use swc_ecma_visit::*;
 
 use crate::ast;
 
 pub fn codegen_js(program: &ast::Program) -> String {
-    print_js(&build_js(program))
+    let program = build_js(program);
+
+    let cm = Rc::new(SourceMap::default());
+    let comments: Option<SingleThreadedComments> = None;
+    let options = Options {
+        next: None,
+        runtime: Some(Runtime::Automatic),
+        import_source: None,
+        pragma: None,
+        pragma_frag: None,
+        throw_if_namespace: None,
+        development: None,
+        use_builtins: None,
+        use_spread: None,
+        refresh: None,
+    };
+
+    let globals = Globals::default();
+    GLOBALS.set(&globals, || {
+        let top_level_mark = Mark::new();
+        let mut v = react(cm, comments, options, top_level_mark);
+        let program = program.fold_with(&mut v);
+        print_js(&program)
+    })
 }
 
 fn print_js(program: &Program) -> String {
