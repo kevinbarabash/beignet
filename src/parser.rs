@@ -230,6 +230,34 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                 })
             });
 
+        // TODO: logic operators
+        let comp = sum
+            .clone()
+            .then(
+                choice((
+                    just_with_padding("==").to(BinOp::Eq),
+                    just_with_padding("!=").to(BinOp::Neq),
+                    // Must appear before ">"
+                    just_with_padding(">=").to(BinOp::GtEq),
+                    just_with_padding(">").to(BinOp::Gt),
+                    // Must appear before "<"
+                    just_with_padding("<=").to(BinOp::LtEq),
+                    just_with_padding("<").to(BinOp::Lt),
+                ))
+                .then(sum.clone())
+                .repeated(),
+            )
+            .foldl(|left, (op, right)| {
+                // sums are already using source spans since they're WithSpan<Expr>
+                let span = left.span().start..right.span().end;
+                Expr::Op(Op {
+                    span,
+                    op,
+                    left: Box::from(left),
+                    right: Box::from(right),
+                })
+            });
+                
         let param_list = binding_ident
             .separated_by(just_with_padding(","))
             .allow_trailing()
@@ -279,7 +307,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
             });
 
         // NOTE: `let` is an expression because it currently models let-in.
-        choice((lam, r#let, sum))
+        choice((lam, r#let, comp))
     });
 
     // We use `just` instead of `just_with_padding` here to ensure that
@@ -354,6 +382,13 @@ mod tests {
         insta::assert_debug_snapshot!(parse("1 + 2 - 3"));
         insta::assert_debug_snapshot!(parse("x * y / z"));
         insta::assert_debug_snapshot!(parse("(a + b) * c"));
+        insta::assert_debug_snapshot!(parse("a == b"));
+        insta::assert_debug_snapshot!(parse("a != b"));
+        insta::assert_debug_snapshot!(parse("a > b"));
+        insta::assert_debug_snapshot!(parse("a >= b"));
+        insta::assert_debug_snapshot!(parse("a < b"));
+        insta::assert_debug_snapshot!(parse("a <= b"));
+        insta::assert_debug_snapshot!(parse("let cond = a != b"));
     }
 
     #[test]
