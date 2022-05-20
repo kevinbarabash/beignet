@@ -16,20 +16,11 @@ pub fn codegen_js(program: &ast::Program) -> String {
 
     let cm = Rc::new(SourceMap::default());
     let comments: Option<SingleThreadedComments> = None;
-    let options = Options {
-        next: None,
-        runtime: Some(Runtime::Automatic),
-        import_source: None,
-        pragma: None,
-        pragma_frag: None,
-        throw_if_namespace: None,
-        development: None,
-        use_builtins: None,
-        use_spread: None,
-        refresh: None,
-    };
+    let mut options = Options::default();
+    options.runtime = Some(Runtime::Automatic);
 
     let globals = Globals::default();
+    // The call to Mark::new() must be wrapped in a GLOBALS.set() closure
     GLOBALS.set(&globals, || {
         let top_level_mark = Mark::new();
         let mut v = react(cm, comments, options, top_level_mark);
