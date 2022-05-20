@@ -40,26 +40,20 @@ fn call_with_no_args() {
 
 #[test]
 fn lambda_with_two_args() {
-    insta::assert_snapshot!(compile("(a, b) => a + b"), @r###"
-    (a, b)=>a + b
-    ;
-    "###);
+    insta::assert_snapshot!(compile("(a, b) => a + b"), @"(a, b)=>a + b;
+");
 }
 
 #[test]
 fn lambda_with_one_arg() {
-    insta::assert_snapshot!(compile("(a) => a"), @r###"
-    (a)=>a
-    ;
-    "###);
+    insta::assert_snapshot!(compile("(a) => a"), @"(a)=>a;
+");
 }
 
 #[test]
 fn lambda_with_no_args() {
-    insta::assert_snapshot!(compile("() => 5"), @r###"
-    ()=>5
-    ;
-    "###);
+    insta::assert_snapshot!(compile("() => 5"), @"()=>5;
+");
 }
 
 #[test]
@@ -99,10 +93,8 @@ fn subtraction_with_parens() {
 
 #[test]
 fn function_declaration() {
-    insta::assert_snapshot!(compile("let add = (a, b) => a + b"), @r###"
-    export const add = (a, b)=>a + b
-    ;
-    "###);
+    insta::assert_snapshot!(compile("let add = (a, b) => a + b"), @"export const add = (a, b)=>a + b;
+");
 }
 
 #[test]
@@ -135,10 +127,8 @@ fn nested_let_in_inside_declaration() {
 
 #[test]
 fn js_print_simple_lambda() {
-    insta::assert_snapshot!(compile("let add = (a, b) => a + b"), @r###"
-    export const add = (a, b)=>a + b
-    ;
-    "###);
+    insta::assert_snapshot!(compile("let add = (a, b) => a + b"), @"export const add = (a, b)=>a + b;
+");
 }
 
 #[test]
@@ -177,10 +167,8 @@ fn js_print_let_in_inside_lambda() {
 
 #[test]
 fn js_print_nested_lambdas() {
-    insta::assert_snapshot!(compile("let foo = (a) => (b) => a + b"), @r###"
-    export const foo = (a)=>(b)=>a + b
-    ;
-    "###);
+    insta::assert_snapshot!(compile("let foo = (a) => (b) => a + b"), @"export const foo = (a)=>(b)=>a + b;
+");
 }
 
 #[test]
@@ -189,8 +177,7 @@ fn js_print_nested_lambdas_with_multiple_lines() {
     export const foo = (a)=>(b)=>{
             const sum = a + b;
             return sum;
-        }
-    ;
+        };
     "###);
 }
 
