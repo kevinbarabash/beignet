@@ -101,7 +101,7 @@ impl Expr {
             Expr::Fix(fix) => fix.span.to_owned(),
             Expr::Ident(ident) => ident.span.to_owned(),
             Expr::IfElse(if_else) => if_else.span.to_owned(),
-            Expr::JSXElement(_) => todo!(),
+            Expr::JSXElement(elem) => elem.span.to_owned(),
             Expr::Lambda(lam) => lam.span.to_owned(),
             Expr::Let(r#let) => r#let.span.to_owned(),
             Expr::Lit(lit) => lit.span(),

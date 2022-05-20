@@ -332,7 +332,16 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (tv, cs)
         }
-        Expr::JSXElement(_) => todo!(),
+        Expr::JSXElement(JSXElement { span: _, name: _, attrs: _, children: _ }) => {
+            // TODO: check that the `attrs` match the props of the component/tag with
+            // the given `name`.  If there are any `children`, check that they matches
+            // props['children'].
+
+            // TODO: replace this with JSX.Element once we have support for Type::Mem
+            let ty = ctx.alias("JSXElement", vec![]);
+            
+            (ty, vec![])
+        },
     }
 }
 
