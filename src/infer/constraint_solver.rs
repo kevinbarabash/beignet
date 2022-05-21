@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::types::*;
 
 use super::context::Context;
@@ -180,26 +182,150 @@ fn bind(tv_id: &i32, ty: &Type, _: &Context) -> Subst {
     }
 }
 
+fn flatten_types(ty: &Type) -> Vec<Type> {
+    match ty {
+        Type::Union(UnionType { types, .. }) => types.iter().flat_map(flatten_types).collect(),
+        _ => vec![ty.to_owned()],
+    }
+}
+
+fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
+    let mut types: Vec<Type> = vec![];
+    types.extend(flatten_types(t1));
+    types.extend(flatten_types(t2));
+
+    let types_set: HashSet<_> = types.iter().cloned().collect();
+
+    let prim_types: HashSet<_> = types_set
+        .iter()
+        .cloned()
+        .filter(|ty| match ty {
+            Type::Prim(_) => true,
+            _ => false,
+        })
+        .collect();
+    let lit_types: HashSet<_> = types_set
+        .iter()
+        .cloned()
+        .filter(|ty| match ty {
+            // Primitive types subsume corresponding literal types
+            Type::Lit(LitType { lit, .. }) => match lit {
+                Lit::Num(_) => !prim_types.contains(&ctx.prim(Primitive::Num)),
+                Lit::Bool(_) => !prim_types.contains(&ctx.prim(Primitive::Bool)),
+                Lit::Str(_) => !prim_types.contains(&ctx.prim(Primitive::Str)),
+                Lit::Null => !prim_types.contains(&ctx.prim(Primitive::Null)),
+                Lit::Undefined => !prim_types.contains(&ctx.prim(Primitive::Undefined)),
+            },
+            _ => false,
+        })
+        .collect();
+    let rest_types: HashSet<_> = types_set
+        .iter()
+        .cloned()
+        .filter(|ty| match ty {
+            Type::Prim(_) => false,
+            Type::Lit(_) => false,
+            _ => true,
+        })
+        .collect();
+
+    let mut types: Vec<_> = prim_types
+        .iter()
+        .chain(lit_types.iter())
+        .chain(rest_types.iter())
+        .cloned()
+        .collect();
+    types.sort_by_key(|k| k.id());
+
+    if types.len() > 1 {
+        ctx.union(types)
+    } else {
+        types[0].clone()
+    }
+}
+
 fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Subst {
     let mut result = Subst::new();
 
-    let mut types: Vec<Type> = vec![];
-    match t1 {
-        Type::Union(UnionType {
-            types: t1_types, ..
-        }) => types.extend(t1_types.to_owned()),
-        _ => types.push(t1.to_owned()),
-    }
-    match t2 {
-        Type::Union(UnionType {
-            types: t2_types, ..
-        }) => types.extend(t2_types.to_owned()),
-        _ => types.push(t2.to_owned()),
-    }
-    let union = ctx.union(&types);
+    let new_type = union_types(t1, t2, ctx);
 
-    result.insert(t1.id(), union.clone());
-    result.insert(t2.id(), union.clone());
+    result.insert(t1.id(), new_type.clone());
+    result.insert(t2.id(), new_type.clone());
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn union_of_number_primitives() {
+        let ctx = Context::new();
+        let t1 = ctx.prim(Primitive::Num);
+        let t2 = ctx.prim(Primitive::Num);
+        
+        let result = union_types(&t1, &t2, &ctx);
+        assert_eq!(result, ctx.prim(Primitive::Num));
+    }
+
+    #[test]
+    fn union_of_number_literals() {
+        let ctx = Context::new();
+        let t1 = ctx.lit_type(Lit::Num(String::from("5")));
+        let t2 = ctx.lit_type(Lit::Num(String::from("10")));
+        
+        let result = union_types(&t1, &t2, &ctx);
+        assert_eq!(result, ctx.union(vec![t1, t2]));
+    }
+
+    #[test]
+    fn union_of_number_prim_and_lit() {
+        let ctx = Context::new();
+        let t1 = ctx.lit_type(Lit::Num(String::from("5")));
+        let t2 = ctx.prim(Primitive::Num);
+        
+        let result = union_types(&t1, &t2, &ctx);
+        assert_eq!(result, ctx.prim(Primitive::Num));
+    }
+
+    #[test]
+    fn union_of_string_prim_and_lit() {
+        let ctx = Context::new();
+        let t1 = ctx.lit_type(Lit::Str(String::from("hello")));
+        let t2 = ctx.prim(Primitive::Str);
+        
+        let result = union_types(&t1, &t2, &ctx);
+        assert_eq!(result, ctx.prim(Primitive::Str));
+    }
+
+    #[test]
+    fn union_of_boolean_prim_and_lit() {
+        let ctx = Context::new();
+        let t1 = ctx.lit_type(Lit::Bool(true));
+        let t2 = ctx.prim(Primitive::Bool);
+        
+        let result = union_types(&t1, &t2, &ctx);
+        assert_eq!(result, ctx.prim(Primitive::Bool));
+    }
+
+    #[test]
+    fn union_of_unions() {
+        let ctx = Context::new();
+        let t1 = ctx.union(vec![
+            ctx.prim(Primitive::Num),
+            ctx.prim(Primitive::Bool),
+        ]);
+        let t2 = ctx.union(vec![
+            ctx.prim(Primitive::Bool),
+            ctx.prim(Primitive::Str),
+        ]);
+   
+        let result = union_types(&t1, &t2, &ctx);
+        assert_eq!(result, ctx.union(vec![
+            ctx.prim(Primitive::Num),
+            ctx.prim(Primitive::Bool),
+            ctx.prim(Primitive::Str),
+        ]));
+    }
 }

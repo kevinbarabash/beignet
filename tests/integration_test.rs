@@ -249,8 +249,8 @@ fn infer_fib() {
     "###;
 
     let (_, env) = infer_prog(src);
-    // TODO: simplify union types before returning them
-    assert_eq!(format!("{}", env.get("fib").unwrap()), "(number | 1 | 0 | number | number) => number | 0 | 1");
+    let fib_type = env.get("fib").unwrap();
+    assert_eq!(format!("{}", fib_type), "(number) => number");
 }
 
 #[test]
