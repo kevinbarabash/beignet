@@ -84,14 +84,15 @@ fn build_js(program: &ast::Program) -> Program {
 
 pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
     match pattern {
-        ast::Pattern::Ident(ident) => Pat::Ident(BindingIdent {
+        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
             id: Ident {
                 span: DUMMY_SP,
-                sym: JsWord::from(ident.name.to_owned()),
+                sym: JsWord::from(id.name.to_owned()),
                 optional: false,
             },
             type_ann: None,
         }),
+        ast::Pattern::Rest(_) => todo!(),
     }
 }
 
@@ -144,10 +145,12 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
         }) => {
             let params: Vec<Pat> = args
                 .iter()
-                .map(|ident| {
-                    let name = match ident {
-                        ast::BindingIdent::Ident(ident) => ident.name.to_owned(),
-                        ast::BindingIdent::Rest { name, .. } => name.to_owned(),
+                .map(|pat| {
+                    let name = match pat {
+                        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
+                            id.name.to_owned()
+                        },
+                        ast::Pattern::Rest(_) => todo!(),
                     };
                     Pat::Ident(BindingIdent {
                         id: Ident {

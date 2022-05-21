@@ -46,7 +46,7 @@ pub struct IfElse {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lambda {
     pub span: Span,
-    pub args: Vec<BindingIdent>,
+    pub args: Vec<Pattern>,
     pub body: Box<Expr>,
     pub is_async: bool,
 }
@@ -110,16 +110,6 @@ impl Expr {
             Expr::Await(r#await) => r#await.span.to_owned(),
         }
     }
-}
-
-// TODO: rename this to something else since we can't use it for let bindings
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum BindingIdent {
-    Ident(Ident),
-    Rest { 
-        span: Span,
-        name: String,
-    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
