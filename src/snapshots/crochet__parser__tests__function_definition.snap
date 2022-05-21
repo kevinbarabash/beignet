@@ -11,15 +11,23 @@ Program {
                     span: 0..11,
                     args: [
                         Ident(
-                            Ident {
+                            BindingIdent {
                                 span: 1..2,
-                                name: "a",
+                                id: Ident {
+                                    span: 1..2,
+                                    name: "a",
+                                },
+                                type_ann: None,
                             },
                         ),
                         Ident(
-                            Ident {
+                            BindingIdent {
                                 span: 4..5,
-                                name: "b",
+                                id: Ident {
+                                    span: 4..5,
+                                    name: "b",
+                                },
+                                type_ann: None,
                             },
                         ),
                     ],

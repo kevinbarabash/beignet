@@ -7,9 +7,13 @@ Program {
         Decl {
             span: 0..17,
             pattern: Ident(
-                Ident {
+                BindingIdent {
                     span: 4..8,
-                    name: "cond",
+                    id: Ident {
+                        span: 4..8,
+                        name: "cond",
+                    },
+                    type_ann: None,
                 },
             ),
             value: Op(

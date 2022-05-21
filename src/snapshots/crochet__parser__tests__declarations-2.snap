@@ -7,9 +7,13 @@ Program {
         Decl {
             span: 0..23,
             pattern: Ident(
-                Ident {
+                BindingIdent {
                     span: 4..5,
-                    name: "x",
+                    id: Ident {
+                        span: 4..5,
+                        name: "x",
+                    },
+                    type_ann: None,
                 },
             ),
             value: Lambda(
@@ -17,15 +21,23 @@ Program {
                     span: 8..23,
                     args: [
                         Ident(
-                            Ident {
+                            BindingIdent {
                                 span: 9..10,
-                                name: "a",
+                                id: Ident {
+                                    span: 9..10,
+                                    name: "a",
+                                },
+                                type_ann: None,
                             },
                         ),
                         Ident(
-                            Ident {
+                            BindingIdent {
                                 span: 12..13,
-                                name: "b",
+                                id: Ident {
+                                    span: 12..13,
+                                    name: "b",
+                                },
+                                type_ann: None,
                             },
                         ),
                     ],

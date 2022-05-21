@@ -65,14 +65,14 @@ fn build_d_ts(program: &ast::Program, env: &Env) -> Program {
 
 pub fn build_pattern(pattern: &ast::Pattern, value: &ast::Expr, env: &Env) -> Pat {
     match pattern {
-        ast::Pattern::Ident(ident) => {
-            let scheme = env.get(&ident.name).unwrap();
+        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
+            let scheme = env.get(&id.name).unwrap();
             let type_params = build_type_params(&scheme);
 
             Pat::Ident(BindingIdent {
                 id: Ident {
                     span: DUMMY_SP,
-                    sym: JsWord::from(ident.name.to_owned()),
+                    sym: JsWord::from(id.name.to_owned()),
                     optional: false,
                 },
                 type_ann: Some(TsTypeAnn {
@@ -80,7 +80,31 @@ pub fn build_pattern(pattern: &ast::Pattern, value: &ast::Expr, env: &Env) -> Pa
                     type_ann: Box::from(build_type(&scheme.ty, Some(value), type_params)),
                 }),
             })
-        }
+        },
+        ast::Pattern::Rest(_) => todo!(),
+    }
+}
+
+pub fn build_pattern_rec(pattern: &ast::Pattern) -> Pat {
+    match pattern {
+        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
+            Pat::Ident(BindingIdent {
+                id: Ident {
+                    span: DUMMY_SP,
+                    sym: JsWord::from(id.name.to_owned()),
+                    optional: false,
+                },
+                type_ann: None,
+            })
+        },
+        ast::Pattern::Rest(ast::RestPat {arg, ..}) => {
+            Pat::Rest(RestPat {
+                span: DUMMY_SP,
+                dot3_token: DUMMY_SP,
+                arg: Box::from(build_pattern_rec(arg.as_ref())),
+                type_ann: None,
+            })
+        },
     }
 }
 
@@ -202,32 +226,28 @@ pub fn build_type(
                         let params: Vec<TsFnParam> = args
                             .iter()
                             .zip(expr_args)
-                            .map(|(arg, binding)| {
+                            .map(|(inferred_type, pattern)| {
                                 let type_ann = Some(TsTypeAnn {
                                     span: DUMMY_SP,
-                                    type_ann: Box::from(build_type(arg, None, None)),
+                                    type_ann: Box::from(build_type(inferred_type, None, None)),
                                 });
 
-                                match binding {
-                                    ast::BindingIdent::Ident(ident) => {
+                                match pattern {
+                                    ast::Pattern::Ident(ast::BindingIdent {id, ..}) => {
                                         TsFnParam::Ident(BindingIdent {
                                             id: Ident {
                                                 span: DUMMY_SP,
-                                                sym: JsWord::from(ident.name.to_owned()),
+                                                sym: JsWord::from(id.name.to_owned()),
                                                 optional: false,
                                             },
                                             type_ann,
                                         })
                                     }
-                                    ast::BindingIdent::Rest { name, .. } => {
+                                    ast::Pattern::Rest(ast::RestPat { arg, .. }) => {
                                         TsFnParam::Rest(RestPat {
                                             span: DUMMY_SP,
                                             dot3_token: DUMMY_SP,
-                                            arg: Box::from(Pat::from(Ident {
-                                                span: DUMMY_SP,
-                                                sym: JsWord::from(name.to_owned()),
-                                                optional: false,
-                                            })),
+                                            arg: Box::from(build_pattern_rec(arg.as_ref())),
                                             type_ann,
                                         })
                                     }

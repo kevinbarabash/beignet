@@ -12,10 +12,14 @@ pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>>
 
 pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
     let pattern = text::ident()
-        .map_with_span(|name, span| Pattern::Ident(Ident { span, name }))
+        .map_with_span(|name, span: Span| {
+            Pattern::Ident(BindingIdent {
+                span: span.clone(),
+                id: Ident { name, span: span.clone() },
+                type_ann: None,
+            })
+        })
         .padded();
-    let binding_ident =
-        text::ident().map_with_span(|name, span| BindingIdent::Ident(Ident { span, name }));
     let ident = text::ident().map_with_span(|name, span| Expr::Ident(Ident { span, name }));
     let r#true =
         just_with_padding("true").map_with_span(|_, span| Expr::Lit(Lit::bool(true, span)));
@@ -257,8 +261,8 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                     right: Box::from(right),
                 })
             });
-                
-        let param_list = binding_ident
+
+        let param_list = pattern
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("("), just_with_padding(")"));
@@ -320,23 +324,16 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
         .map_with_span(|((rec, pattern), value), span: Span| -> Statement {
             match rec {
                 Some(_) => {
-                    let ident = match &pattern {
-                        Pattern::Ident(Ident { name, span }) => BindingIdent::Ident(Ident {
-                            span: span.clone(),
-                            name: name.clone(),
-                        }),
-                    };
-
                     Statement::Decl {
                         span,
-                        pattern,
+                        pattern: pattern.clone(),
                         // `let fib = fix((fib) => (n) => ...)`
                         // TODO: Fix always wraps a lambda
                         value: Expr::Fix(Fix {
                             span: value.span(),
                             expr: Box::from(Expr::Lambda(Lambda {
                                 span: value.span(),
-                                args: vec![ident],
+                                args: vec![pattern.clone()],
                                 body: Box::from(value),
                                 is_async: false,
                             })),

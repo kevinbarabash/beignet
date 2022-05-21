@@ -7,18 +7,26 @@ Program {
         Decl {
             span: 0..24,
             pattern: Ident(
-                Ident {
+                BindingIdent {
                     span: 4..7,
-                    name: "foo",
+                    id: Ident {
+                        span: 4..7,
+                        name: "foo",
+                    },
+                    type_ann: None,
                 },
             ),
             value: Let(
                 Let {
                     span: 10..24,
                     pattern: Ident(
-                        Ident {
+                        BindingIdent {
                             span: 14..15,
-                            name: "x",
+                            id: Ident {
+                                span: 14..15,
+                                name: "x",
+                            },
+                            type_ann: None,
                         },
                     ),
                     value: Lit(

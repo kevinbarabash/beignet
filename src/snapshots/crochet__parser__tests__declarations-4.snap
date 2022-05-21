@@ -7,9 +7,13 @@ Program {
         Decl {
             span: 0..21,
             pattern: Ident(
-                Ident {
+                BindingIdent {
                     span: 8..9,
-                    name: "f",
+                    id: Ident {
+                        span: 8..9,
+                        name: "f",
+                    },
+                    type_ann: None,
                 },
             ),
             value: Fix(
@@ -20,9 +24,13 @@ Program {
                             span: 12..21,
                             args: [
                                 Ident(
-                                    Ident {
+                                    BindingIdent {
                                         span: 8..9,
-                                        name: "f",
+                                        id: Ident {
+                                            span: 8..9,
+                                            name: "f",
+                                        },
+                                        type_ann: None,
                                     },
                                 ),
                             ],

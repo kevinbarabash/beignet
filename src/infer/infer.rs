@@ -16,12 +16,17 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
     for stmt in &prog.body {
         match stmt {
             Statement::Decl {
-                pattern: Pattern::Ident(Ident { name, .. }),
+                pattern,
                 value,
                 ..
             } => {
-                let scheme = infer_expr(&ctx, value);
-                ctx.env.insert(name.to_owned(), scheme);
+                match pattern {
+                    Pattern::Ident(BindingIdent { id, .. }) => {
+                        let scheme = infer_expr(&ctx, value);
+                        ctx.env.insert(id.name.to_owned(), scheme);
+                    },
+                    _ => todo!(),
+                } 
             }
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
@@ -229,10 +234,10 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                     ty: tv.clone(),
                 };
                 match arg {
-                    BindingIdent::Ident(Ident { name, .. }) => {
-                        new_ctx.env.insert(name.to_string(), scheme)
-                    }
-                    BindingIdent::Rest { name, .. } => new_ctx.env.insert(name.to_string(), scheme),
+                    Pattern::Ident(BindingIdent { id, .. }) => {
+                        new_ctx.env.insert(id.name.to_string(), scheme)
+                    },
+                    Pattern::Rest(_) => todo!(),
                 };
             }
             new_ctx.is_async = is_async.to_owned();
@@ -378,12 +383,13 @@ fn infer_pattern(
     let scheme = generalize(&ctx.env.apply(subs), &ty.apply(subs));
 
     match pattern {
-        Pattern::Ident(Ident { name, .. }) => {
+        Pattern::Ident(BindingIdent { id, .. }) => {
             let mut new_ctx = ctx.clone();
-            new_ctx.env.insert(name.to_owned(), scheme);
+            new_ctx.env.insert(id.name.to_owned(), scheme);
 
             (new_ctx, vec![])
         }
+        Pattern::Rest(_) => todo!(),
     }
 }
 
