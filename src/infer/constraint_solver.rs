@@ -328,4 +328,14 @@ mod tests {
             ctx.prim(Primitive::Str),
         ]));
     }
+
+    #[test]
+    fn union_of_type_vars() {
+        let ctx = Context::new();
+        let t1 = ctx.fresh_var();
+        let t2 = ctx.fresh_var();
+        
+        let result = union_types(&t1, &t2, &ctx);
+        assert_eq!(result, ctx.union(vec![t1, t2]));
+    }
 }
