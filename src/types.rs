@@ -1,7 +1,8 @@
 use itertools::join;
 use std::fmt;
+use std::hash::Hash;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Lit {
     // We store all of the values as strings since f64 doesn't
     // support the Eq trait because NaN and 0.1 + 0.2 != 0.3.
@@ -24,7 +25,7 @@ impl fmt::Display for Lit {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Primitive {
     Num,
     Bool,
@@ -45,7 +46,7 @@ impl fmt::Display for Primitive {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TProp {
     pub name: String,
     pub ty: Type,
@@ -58,13 +59,25 @@ impl fmt::Display for TProp {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq)]
 pub struct VarType {
     pub id: i32,
     pub frozen: bool,
 }
 
-#[derive(Clone, Debug)]
+impl PartialEq for VarType {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Hash for VarType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+#[derive(Clone, Debug, Eq)]
 pub struct LamType {
     pub id: i32,
     pub frozen: bool,
@@ -72,35 +85,96 @@ pub struct LamType {
     pub ret: Box<Type>,
 }
 
-#[derive(Clone, Debug)]
+impl PartialEq for LamType {
+    fn eq(&self, other: &Self) -> bool {
+        self.args == other.args && self.ret == other.ret
+    }
+}
+
+impl Hash for LamType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.args.hash(state);
+        self.ret.hash(state);
+    }
+}
+
+#[derive(Clone, Debug, Eq)]
 pub struct PrimType {
     pub id: i32,
     pub frozen: bool,
     pub prim: Primitive,
 }
 
-#[derive(Clone, Debug)]
+impl PartialEq for PrimType {
+    fn eq(&self, other: &Self) -> bool {
+        self.prim == other.prim
+    }
+}
+
+impl Hash for PrimType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.prim.hash(state);
+    }
+}
+
+#[derive(Clone, Debug, Eq)]
 pub struct LitType {
     pub id: i32,
     pub frozen: bool,
     pub lit: Lit,
 }
 
-#[derive(Clone, Debug)]
+impl PartialEq for LitType {
+    fn eq(&self, other: &Self) -> bool {
+        self.lit == other.lit
+    }
+}
+
+impl Hash for LitType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.lit.hash(state);
+    }
+}
+
+#[derive(Clone, Debug, Eq)]
 pub struct UnionType {
     pub id: i32,
     pub frozen: bool,
     pub types: Vec<Type>,
 }
 
-#[derive(Clone, Debug)]
+impl PartialEq for UnionType {
+    fn eq(&self, other: &Self) -> bool {
+        self.types == other.types
+    }
+}
+
+impl Hash for UnionType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.types.hash(state);
+    }
+}
+
+#[derive(Clone, Debug, Eq)]
 pub struct ObjectType {
     pub id: i32,
     pub frozen: bool,
     pub props: Vec<TProp>,
 }
 
-#[derive(Clone, Debug)]
+impl PartialEq for ObjectType {
+    fn eq(&self, other: &Self) -> bool {
+        self.props == other.props
+    }
+}
+
+impl Hash for ObjectType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.props.hash(state);
+    }
+}
+
+#[derive(Clone, Debug, Eq)]
 pub struct AliasType {
     pub id: i32,
     pub frozen: bool,
@@ -108,7 +182,20 @@ pub struct AliasType {
     pub type_params: Vec<Type>,
 }
 
-#[derive(Clone, Debug)]
+impl PartialEq for AliasType {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.type_params == other.type_params
+    }
+}
+
+impl Hash for AliasType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.type_params.hash(state);
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Var(VarType),
     Lam(LamType),

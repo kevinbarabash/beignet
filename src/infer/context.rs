@@ -33,6 +33,16 @@ impl From<Env> for Context {
 }
 
 impl Context {
+    pub fn new() -> Self {
+        Context {
+            env: HashMap::new(),
+            state: State {
+                count: Cell::from(0),
+            },
+            is_async: false,
+        }
+    }
+
     pub fn lookup_env(&self, name: &str) -> Type {
         let scheme = self.env.get(name).unwrap();
         self.instantiate(scheme)
@@ -89,11 +99,18 @@ impl Context {
             },
         })
     }
-    pub fn union(&self, types: &[Type]) -> Type {
+    pub fn lit_type(&self, lit: types::Lit) -> Type {
+        Type::Lit(types::LitType {
+            id: self.fresh_id(),
+            frozen: false,
+            lit,
+        })
+    }
+    pub fn union(&self, types: Vec<Type>) -> Type {
         Type::Union(types::UnionType {
             id: self.fresh_id(),
             frozen: false,
-            types: types.to_owned(),
+            types,
         })
     }
     pub fn object(&self, properties: &[types::TProp]) -> Type {

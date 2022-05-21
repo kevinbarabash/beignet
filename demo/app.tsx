@@ -37,6 +37,16 @@ export const App = () => {
       "",
       "let msg = \"world\"",
       "let elem = <div point={point} id=\"point\">Hello, {msg}</div>",
+      "",
+      "let rec fib = (n) => if (n == 0) {",
+      "  0",
+      "} else {",
+      "  if (n == 1) {",
+      "      1",
+      "  } else {",
+      "      fib(n - 1) + fib(n - 2)",
+      "  }",
+      "}",
     ].join("\n");
   });
 
