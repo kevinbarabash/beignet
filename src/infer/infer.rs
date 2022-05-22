@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, Scheme, Type, Primitive};
+use crate::types::{self, freeze, Primitive, Scheme, Type};
 
-use super::constraint_solver::{run_solve, Constraint};
+use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::{Context, Env};
-use super::substitutable::{Subst, Substitutable};
+use super::substitutable::Substitutable;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
@@ -15,19 +15,23 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
 
     for stmt in &prog.body {
         match stmt {
-            Statement::Decl {
-                pattern,
-                value,
-                ..
-            } => {
-                match pattern {
-                    Pattern::Ident(BindingIdent { id, .. }) => {
-                        let scheme = infer_expr(&ctx, value);
-                        ctx.env.insert(id.name.to_owned(), scheme);
-                    },
-                    _ => todo!(),
-                } 
-            }
+            Statement::Decl { pattern, value, .. } => match pattern {
+                Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
+                    let inferred_scheme = infer_expr(&ctx, value);
+                    let scheme = match type_ann {
+                        Some(type_ann) => {
+                            let type_ann_ty = type_ann_to_type(type_ann, &ctx);
+                            match is_subtype(&inferred_scheme.ty, &type_ann_ty) {
+                                true => type_to_scheme(&type_ann_ty),
+                                false => panic!("value is not a subtype of decl's declared type"),
+                            }
+                        }
+                        None => inferred_scheme,
+                    };
+                    ctx.env.insert(id.name.to_owned(), scheme);
+                }
+                _ => todo!(),
+            },
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
@@ -128,14 +132,13 @@ fn normalize(sc: &Scheme) -> Scheme {
                 type_params,
             }) => {
                 let type_params = type_params
-                    .iter()
-                    .map(|ty| norm_type(ty, mapping))
-                    .collect();
+                    .clone()
+                    .map(|params| params.iter().map(|ty| norm_type(ty, mapping)).collect());
                 Type::Alias(types::AliasType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     name: name.to_owned(),
-                    type_params,
+                    type_params: type_params,
                 })
             }
         }
@@ -226,7 +229,16 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             ..
         }) => {
             // Creates a new type variable for each arg
-            let arg_tvs: Vec<_> = args.iter().map(|_| ctx.fresh_var()).collect();
+            let arg_tvs: Vec<_> = args
+                .iter()
+                .map(|arg| match arg {
+                    Pattern::Ident(BindingIdent { type_ann, .. }) => match type_ann {
+                        Some(type_ann) => type_ann_to_type(type_ann, ctx),
+                        None => ctx.fresh_var(),
+                    },
+                    Pattern::Rest(_) => todo!(),
+                })
+                .collect();
             let mut new_ctx = ctx.clone();
             for (arg, tv) in args.iter().zip(arg_tvs.clone().into_iter()) {
                 let scheme = Scheme {
@@ -236,7 +248,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 match arg {
                     Pattern::Ident(BindingIdent { id, .. }) => {
                         new_ctx.env.insert(id.name.to_string(), scheme)
-                    },
+                    }
                     Pattern::Rest(_) => todo!(),
                 };
             }
@@ -247,7 +259,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             let ret = if !is_async || is_promise(&ret) {
                 ret
             } else {
-                ctx.alias("Promise", vec![ret])
+                ctx.alias("Promise", Some(vec![ret]))
             };
 
             let lam_ty = ctx.lam(arg_tvs, Box::new(ret));
@@ -262,7 +274,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
         }) => {
             let (t1, cs1) = infer(&value, &ctx);
             let subs = run_solve(&cs1, &ctx);
-            let (new_ctx, new_cs) = infer_pattern(pattern, &t1, &subs, ctx);
+            let (new_ctx, new_cs) = infer_pattern(pattern, &t1, ctx);
             let (t2, cs2) = infer(body, &new_ctx);
             ctx.state.count.set(new_ctx.state.count.get());
             let mut cs: Vec<Constraint> = Vec::new();
@@ -270,7 +282,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             cs.extend(new_cs);
             cs.extend(cs2.apply(&subs));
 
-            (t2.apply(&subs), vec![])
+            (t2.apply(&subs), cs)
         }
         Expr::Lit(literal) => (ctx.lit(literal.to_owned()), vec![]),
         // TODO: consider introduce functions for each operator and rewrite Ops as Apps
@@ -347,7 +359,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             let tv = ctx.fresh_var();
 
             let c = Constraint {
-                types: (promise_ty, ctx.alias("Promise", vec![tv.clone()])),
+                types: (promise_ty, ctx.alias("Promise", Some(vec![tv.clone()]))),
             };
 
             let mut cs: Vec<Constraint> = Vec::new();
@@ -367,27 +379,48 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             // props['children'].
 
             // TODO: replace this with JSX.Element once we have support for Type::Mem
-            let ty = ctx.alias("JSXElement", vec![]);
+            let ty = ctx.alias("JSXElement", None);
 
             (ty, vec![])
         }
     }
 }
 
-fn infer_pattern(
-    pattern: &Pattern,
-    ty: &Type,
-    subs: &Subst,
-    ctx: &Context,
-) -> (Context, Vec<Constraint>) {
-    let scheme = generalize(&ctx.env.apply(subs), &ty.apply(subs));
+fn type_to_scheme(ty: &Type) -> Scheme {
+    Scheme {
+        qualifiers: vec![],
+        ty: ty.clone(),
+    }
+}
 
+fn infer_pattern(pattern: &Pattern, ty: &Type, ctx: &Context) -> (Context, Vec<Constraint>) {
     match pattern {
-        Pattern::Ident(BindingIdent { id, .. }) => {
+        Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
             let mut new_ctx = ctx.clone();
-            new_ctx.env.insert(id.name.to_owned(), scheme);
 
-            (new_ctx, vec![])
+            let cs = match type_ann {
+                // If the pattern has a type annotation then we use that when inserting a
+                // type definition for the identifier into new_ctx, othewise we use the
+                // type that has been passed to us (which should be the type inferred from
+                // the `value` in the `let-in` node).
+                Some(type_ann) => {
+                    let type_ann_ty = type_ann_to_type(type_ann, ctx);
+                    new_ctx
+                        .env
+                        .insert(id.name.to_owned(), type_to_scheme(&type_ann_ty));
+                    // This constraint is so that the type of the `value` in the `let-in`
+                    // node conforms to the type annotation that was provided by the developer.
+                    vec![Constraint {
+                        types: (ty.to_owned(), type_ann_ty.clone()),
+                    }]
+                }
+                None => {
+                    new_ctx.env.insert(id.name.to_owned(), type_to_scheme(&ty));
+                    vec![]
+                }
+            };
+
+            (new_ctx, cs)
         }
         Pattern::Rest(_) => todo!(),
     }
@@ -404,4 +437,68 @@ fn infer_many(exprs: &[Expr], ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
     }
 
     (ts, all_cs)
+}
+
+fn type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
+    freeze(_type_ann_to_type(type_ann, ctx))
+}
+
+fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
+    match type_ann {
+        TypeAnn::Lam(LamType { args, ret, .. }) => {
+            let args: Vec<_> = args.iter().map(|arg| _type_ann_to_type(arg, ctx)).collect();
+            let ret = Box::from(_type_ann_to_type(ret.as_ref(), ctx));
+            ctx.lam(args, ret)
+        }
+        TypeAnn::Lit(LitType { lit, .. }) => ctx.lit(lit.to_owned()),
+        TypeAnn::Prim(PrimType { prim, .. }) => ctx.prim(prim.to_owned()),
+        TypeAnn::Object(ObjectType { props, .. }) => {
+            let props: Vec<_> = props
+                .iter()
+                .map(|prop| types::TProp {
+                    name: prop.name.to_owned(),
+                    ty: _type_ann_to_type(prop.type_ann.as_ref(), ctx),
+                })
+                .collect();
+            ctx.object(&props)
+        }
+        TypeAnn::TypeRef(TypeRef {
+            name, type_params, ..
+        }) => {
+            let type_params = type_params.clone().map(|params| {
+                params
+                    .iter()
+                    .map(|param| _type_ann_to_type(param, ctx))
+                    .collect()
+            });
+            ctx.alias(name, type_params)
+        }
+        TypeAnn::Union(_) => todo!(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::expr::expr_parser;
+    use chumsky::prelude::*;
+
+    use super::*;
+
+    fn parse_and_infer_expr(input: &str) -> String {
+        let env: Env = HashMap::new();
+        let ctx: Context = Context::from(env);
+        let expr = expr_parser().then_ignore(end()).parse(input).unwrap();
+        format!("{}", infer_expr(&ctx, &expr))
+    }
+
+    #[test]
+    fn infer_let_with_type_ann() {
+        assert_eq!(parse_and_infer_expr("let x: number = 5 in x"), "number");
+    }
+
+    #[test]
+    #[should_panic = "unification failed"]
+    fn infer_let_with_incorrect_type_ann() {
+        parse_and_infer_expr("let x: string = 5 in x");
+    }
 }

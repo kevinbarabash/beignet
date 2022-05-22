@@ -16,7 +16,6 @@ fn infer(input: &str) -> String {
 }
 
 fn infer_prog(src: &str) -> (Program, Env) {
-    let env: Env = HashMap::new();
     let result = parser().parse(src);
     let prog = match result {
         Ok(prog) => prog,
@@ -27,6 +26,7 @@ fn infer_prog(src: &str) -> (Program, Env) {
     };
     // println!("prog = {:#?}", &prog);
     // let prog = token_parser(&spans).parse(tokens).unwrap();
+    let env: Env = HashMap::new();
     let env = crochet::infer::infer_prog(env, &prog);
 
     (prog, env)
@@ -58,6 +58,20 @@ fn infer_fn_param() {
         infer("(f, x) => f(x) + x"),
         "((number) => number, number) => number"
     );
+}
+
+#[test]
+fn infer_fn_with_param_types() {
+    assert_eq!(
+        infer("(a: 5, b: 10) => a + b"),
+        "(5, 10) => number"
+    );
+}
+
+#[test]
+#[should_panic = "unification failed"]
+fn infer_fn_with_incorrect_param_types() {
+    infer("(a: string, b: boolean) => a + b");
 }
 
 #[test]
@@ -363,4 +377,23 @@ fn codegen_async_math() {
     let result = codegen_d_ts(&program, &env);
 
     insta::assert_snapshot!(result, @"export declare const add: (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;\n");
+}
+
+#[test]
+fn infer_let_decl_with_type_ann() {
+    let src = "let x: number = 10";
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("x").unwrap());
+    assert_eq!(result, "number");
+}
+
+#[test]
+#[should_panic = "value is not a subtype of decl's declared type"]
+fn infer_let_decl_with_incorrect_type_ann() {
+    let src = "let x: string = 10";
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("x").unwrap());
+    assert_eq!(result, "number");
 }

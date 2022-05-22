@@ -82,7 +82,9 @@ impl Substitutable for Type {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     name: name.to_owned(),
-                    type_params: type_params.iter().map(|ty| ty.apply(sub)).collect(),
+                    type_params: type_params.clone().map(|params| {
+                        params.iter().map(|ty| ty.apply(sub)).collect()
+                    }),
                 }),
             },
         }

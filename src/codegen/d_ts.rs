@@ -356,12 +356,14 @@ pub fn build_type(
                 sym: JsWord::from(name.to_owned()),
                 optional: false,
             }),
-            type_params: Some(TsTypeParamInstantiation {
-                span: DUMMY_SP,
-                params: type_params
-                    .iter()
-                    .map(|ty| Box::from(build_type(ty, None, None)))
-                    .collect(),
+            type_params: type_params.clone().map(|params| {
+                TsTypeParamInstantiation {
+                    span: DUMMY_SP,
+                    params: params
+                        .iter()
+                        .map(|ty| Box::from(build_type(ty, None, None)))
+                        .collect(),
+                }
             }),
         }),
     }
