@@ -1,14 +1,9 @@
 use chumsky::prelude::*;
-use chumsky::primitive::*;
-use chumsky::text::Padded;
 
 use crate::ast::*;
-use crate::parser::pattern::pattern_parser;
 use crate::parser::jsx::jsx_parser;
-
-pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>> {
-    just(inputs).padded()
-}
+use crate::parser::pattern::pattern_parser;
+use crate::parser::util::just_with_padding;
 
 pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
     let ident = text::ident().map_with_span(|name, span| Expr::Ident(Ident { span, name }));

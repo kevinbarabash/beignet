@@ -2,6 +2,7 @@ pub mod expr;
 pub mod jsx;
 pub mod pattern;
 pub mod types;
+pub mod util;
 
 use expr::expr_parser;
 use pattern::pattern_parser;

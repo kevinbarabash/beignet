@@ -1,12 +1,7 @@
 use chumsky::prelude::*;
-use chumsky::primitive::*;
-use chumsky::text::Padded;
 
 use crate::ast::*;
-
-pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>> {
-    just(inputs).padded()
-}
+use crate::parser::util::just_with_padding;
 
 pub fn jsx_parser<'a>(
     expr: BoxedParser<'a, char, Expr, Simple<char>>,

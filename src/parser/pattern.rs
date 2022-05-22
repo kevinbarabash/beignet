@@ -1,13 +1,8 @@
 use chumsky::prelude::*;
-use chumsky::primitive::*;
-use chumsky::text::Padded;
 
-use crate::parser::types::*;
 use crate::ast::*;
-
-pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>> {
-    just(inputs).padded()
-}
+use crate::parser::types::*;
+use crate::parser::util::just_with_padding;
 
 pub fn pattern_parser() -> impl Parser<char, Pattern, Error = Simple<char>> {
     let type_ann = type_parser();
