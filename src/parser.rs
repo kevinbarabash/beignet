@@ -3,6 +3,7 @@ use chumsky::primitive::*;
 use chumsky::text::Padded;
 
 use crate::ast::*;
+use crate::types::Primitive;
 
 pub type Span = std::ops::Range<usize>;
 
@@ -10,16 +11,110 @@ pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>>
     just(inputs).padded()
 }
 
-pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
+pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
+    let prim = choice((
+        just("number").to(Primitive::Num),
+        just("string").to(Primitive::Str),
+        just("boolean").to(Primitive::Bool),
+        just("null").to(Primitive::Null),
+        just("undefined").to(Primitive::Undefined),
+    ))
+    .map_with_span(|prim, span| TypeAnn::Prim(PrimType { span, prim }))
+    .padded();
+
+    let int = text::int::<char, Simple<char>>(10).map_with_span(|value, span: Span| {
+        TypeAnn::Lit(LitType {
+            span: span.clone(),
+            lit: Lit::num(value, span.clone()),
+        })
+    });
+
+    let r#str = just("\"")
+        .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
+        .then_ignore(just("\""))
+        .collect::<String>()
+        .map_with_span(|value, span: Span| {
+            TypeAnn::Lit(LitType {
+                span: span.clone(),
+                lit: Lit::str(value, span.clone()),
+            })
+        });
+
+    let real = text::int(10)
+        .chain(just('.'))
+        .chain::<char, _, _>(text::digits(10))
+        .collect::<String>()
+        .map_with_span(|value, span: Span| {
+            TypeAnn::Lit(LitType {
+                span: span.clone(),
+                lit: Lit::num(value, span.clone()),
+            })
+        });
+
+    let type_ann = recursive(|type_ann| {
+        let alias_params = type_ann
+            .clone()
+            .separated_by(just_with_padding(","))
+            .allow_trailing()
+            .delimited_by(just_with_padding("<"), just_with_padding(">"));
+
+        let alias =
+            text::ident()
+                .then(alias_params.or_not())
+                .map_with_span(|(name, type_params), span| {
+                    TypeAnn::TypeRef(TypeRef {
+                        span,
+                        name,
+                        type_params,
+                    })
+                });
+
+        let lam_params = type_ann
+            .clone()
+            .separated_by(just_with_padding(","))
+            .allow_trailing()
+            .delimited_by(just_with_padding("("), just_with_padding(")"));
+
+        let lam = lam_params
+            .then_ignore(just_with_padding("=>"))
+            .then(type_ann.clone())
+            .map_with_span(|(args, ret), span| {
+                TypeAnn::Lam(LamType {
+                    span,
+                    args,
+                    ret: Box::from(ret),
+                })
+            });
+
+        let atom = choice((int, real, r#str));
+
+        choice((lam, atom, prim, alias))
+    });
+
+    type_ann
+}
+
+pub fn parse_pattern() -> impl Parser<char, Pattern, Error = Simple<char>> {
+    let type_ann = type_parser();
+
     let pattern = text::ident()
-        .map_with_span(|name, span: Span| {
+        .then(just_with_padding(":").ignore_then(type_ann).or_not())
+        .map_with_span(|(name, type_ann), span: Span| {
             Pattern::Ident(BindingIdent {
                 span: span.clone(),
-                id: Ident { name, span: span.clone() },
-                type_ann: None,
+                id: Ident {
+                    name,
+                    span: span.clone(),
+                },
+                type_ann,
             })
         })
         .padded();
+
+    pattern
+}
+
+pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
     let ident = text::ident().map_with_span(|name, span| Expr::Ident(Ident { span, name }));
     let r#true =
         just_with_padding("true").map_with_span(|_, span| Expr::Lit(Lit::bool(true, span)));
@@ -262,7 +357,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                 })
             });
 
-        let param_list = pattern
+        let param_list = parse_pattern()
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("("), just_with_padding(")"));
@@ -292,7 +387,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
         // the span doesn't include leading whitespace.
         let r#let = just("let")
             .ignore_then(just_with_padding("rec").or_not())
-            .then(pattern)
+            .then(parse_pattern())
             .then_ignore(just_with_padding("="))
             .then(expr.clone())
             .then_ignore(just_with_padding("in"))
@@ -314,13 +409,18 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
         choice((lam, r#let, comp))
     });
 
+    expr
+}
+
+pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
     // We use `just` instead of `just_with_padding` here to ensure that
     // the span doesn't include leading whitespace.
+    // TODO: add `declare` syntax
     let decl = just("let")
         .ignore_then(just_with_padding("rec").or_not())
-        .then(pattern)
+        .then(parse_pattern())
         .then_ignore(just_with_padding("="))
-        .then(expr.clone())
+        .then(expr_parser())
         .map_with_span(|((rec, pattern), value), span: Span| -> Statement {
             match rec {
                 Some(_) => {
@@ -350,7 +450,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
 
     let program = choice((
         decl,
-        expr.map_with_span(|expr, span: Span| Statement::Expr { expr, span }),
+        expr_parser().map_with_span(|expr, span: Span| Statement::Expr { expr, span }),
     ))
     .padded()
     .repeated()
@@ -365,6 +465,10 @@ mod tests {
 
     fn parse(input: &str) -> Program {
         parser().parse(input).unwrap()
+    }
+
+    fn parse_type(input: &str) -> TypeAnn {
+        type_parser().then_ignore(end()).parse(input).unwrap()
     }
 
     #[test]
@@ -444,5 +548,16 @@ mod tests {
         insta::assert_debug_snapshot!(parse("<Foo></Foo>"));
         insta::assert_debug_snapshot!(parse("<Foo bar={baz} />"));
         insta::assert_debug_snapshot!(parse("<Foo msg=\"hello\" bar={baz}></Foo>"));
+    }
+
+    #[test]
+    fn type_annotations() {
+        insta::assert_debug_snapshot!(parse("let x: number = 5"));
+        insta::assert_debug_snapshot!(parse("let msg: string = \"hello\""));
+        insta::assert_debug_snapshot!(parse("let add = (a: number, b: number) => a + b"));
+        insta::assert_debug_snapshot!(parse_type("Promise<number>"));
+        insta::assert_debug_snapshot!(parse("let p: Point = {x: 5, y: 10}"));
+        insta::assert_debug_snapshot!(parse("let FOO: \"foo\" = \"foo\""));
+        insta::assert_debug_snapshot!(parse_type("(number, string) => boolean"));
     }
 }

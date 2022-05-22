@@ -1,6 +1,6 @@
 use std::fmt;
 
-pub type Span = std::ops::Range<usize>;
+use crate::ast::span::Span;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Num {
