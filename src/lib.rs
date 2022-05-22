@@ -1,7 +1,7 @@
 pub mod ast;
 pub mod codegen;
 pub mod infer;
-pub mod parser; 
+pub mod parser;
 pub mod types;
 
 use chumsky::*;

@@ -1,0 +1,23 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"foo()\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..5,
+            expr: App(
+                App {
+                    span: 0..5,
+                    lam: Ident(
+                        Ident {
+                            span: 0..3,
+                            name: "foo",
+                        },
+                    ),
+                    args: [],
+                },
+            ),
+        },
+    ],
+}

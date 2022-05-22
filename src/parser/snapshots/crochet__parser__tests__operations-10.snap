@@ -1,0 +1,39 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"let cond = a != b\")"
+---
+Program {
+    body: [
+        Decl {
+            span: 0..17,
+            pattern: Ident(
+                BindingIdent {
+                    span: 4..8,
+                    id: Ident {
+                        span: 4..8,
+                        name: "cond",
+                    },
+                    type_ann: None,
+                },
+            ),
+            value: Op(
+                Op {
+                    span: 11..17,
+                    op: NotEq,
+                    left: Ident(
+                        Ident {
+                            span: 11..12,
+                            name: "a",
+                        },
+                    ),
+                    right: Ident(
+                        Ident {
+                            span: 16..17,
+                            name: "b",
+                        },
+                    ),
+                },
+            ),
+        },
+    ],
+}

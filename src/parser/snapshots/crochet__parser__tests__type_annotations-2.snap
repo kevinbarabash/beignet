@@ -1,0 +1,36 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"let msg: string = \\\"hello\\\"\")"
+---
+Program {
+    body: [
+        Decl {
+            span: 0..25,
+            pattern: Ident(
+                BindingIdent {
+                    span: 4..16,
+                    id: Ident {
+                        span: 4..16,
+                        name: "msg",
+                    },
+                    type_ann: Some(
+                        Prim(
+                            PrimType {
+                                span: 9..15,
+                                prim: Str,
+                            },
+                        ),
+                    ),
+                },
+            ),
+            value: Lit(
+                Str(
+                    Str {
+                        span: 18..25,
+                        value: "hello",
+                    },
+                ),
+            ),
+        },
+    ],
+}

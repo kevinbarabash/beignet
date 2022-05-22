@@ -1,0 +1,29 @@
+---
+source: src/parser/types.rs
+expression: "parse_type(\"(number, string) => boolean\")"
+---
+Lam(
+    LamType {
+        span: 0..27,
+        args: [
+            Prim(
+                PrimType {
+                    span: 1..7,
+                    prim: Num,
+                },
+            ),
+            Prim(
+                PrimType {
+                    span: 9..15,
+                    prim: Str,
+                },
+            ),
+        ],
+        ret: Prim(
+            PrimType {
+                span: 20..27,
+                prim: Bool,
+            },
+        ),
+    },
+)

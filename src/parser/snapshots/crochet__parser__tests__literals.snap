@@ -1,0 +1,19 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"10\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..2,
+            expr: Lit(
+                Num(
+                    Num {
+                        span: 0..2,
+                        value: "10",
+                    },
+                ),
+            ),
+        },
+    ],
+}
