@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::*;
+use crate::types::{self, Scheme, Type, Primitive};
 
 use super::constraint_solver::{run_solve, Constraint};
 use super::context::{Context, Env};
@@ -69,7 +69,7 @@ fn normalize(sc: &Scheme) -> Scheme {
         .map(|(index, key)| {
             (
                 key.to_owned(),
-                Type::Var(VarType {
+                Type::Var(types::VarType {
                     id: index as i32,
                     frozen: false,
                 }),
@@ -81,8 +81,8 @@ fn normalize(sc: &Scheme) -> Scheme {
         // let id = ty.id;
         // let frozen = ty.frozen;
         match ty {
-            Type::Var(VarType { id, .. }) => mapping.get(&id).unwrap().to_owned(),
-            Type::Lam(LamType {
+            Type::Var(types::VarType { id, .. }) => mapping.get(&id).unwrap().to_owned(),
+            Type::Lam(types::LamType {
                 id,
                 frozen,
                 args,
@@ -90,7 +90,7 @@ fn normalize(sc: &Scheme) -> Scheme {
             }) => {
                 let args: Vec<_> = args.iter().map(|arg| norm_type(arg, mapping)).collect();
                 let ret = Box::from(norm_type(&ret, mapping));
-                Type::Lam(LamType {
+                Type::Lam(types::LamType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     args,
@@ -99,29 +99,29 @@ fn normalize(sc: &Scheme) -> Scheme {
             }
             Type::Prim(_) => ty.to_owned(),
             Type::Lit(_) => ty.to_owned(),
-            Type::Union(UnionType { id, frozen, types }) => {
+            Type::Union(types::UnionType { id, frozen, types }) => {
                 let types = types.iter().map(|ty| norm_type(ty, mapping)).collect();
-                Type::Union(UnionType {
+                Type::Union(types::UnionType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     types,
                 })
             }
-            Type::Object(ObjectType { id, frozen, props }) => {
+            Type::Object(types::ObjectType { id, frozen, props }) => {
                 let props = props
                     .iter()
-                    .map(|prop| TProp {
+                    .map(|prop| types::TProp {
                         name: prop.name.clone(),
                         ty: norm_type(&prop.ty, mapping),
                     })
                     .collect();
-                Type::Object(ObjectType {
+                Type::Object(types::ObjectType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     props,
                 })
             }
-            Type::Alias(AliasType {
+            Type::Alias(types::AliasType {
                 id,
                 frozen,
                 name,
@@ -131,7 +131,7 @@ fn normalize(sc: &Scheme) -> Scheme {
                     .iter()
                     .map(|ty| norm_type(ty, mapping))
                     .collect();
-                Type::Alias(AliasType {
+                Type::Alias(types::AliasType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     name: name.to_owned(),
@@ -162,7 +162,7 @@ type InferResult = (Type, Vec<Constraint>);
 
 fn is_promise(ty: &Type) -> bool {
     match ty {
-        Type::Alias(AliasType { name, .. }) if name == "Promise" => true,
+        Type::Alias(types::AliasType { name, .. }) if name == "Promise" => true,
         _ => false,
     }
 }
