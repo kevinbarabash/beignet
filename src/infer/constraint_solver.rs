@@ -161,7 +161,7 @@ fn unify_many(cs: &[Constraint], ctx: &Context) -> Subst {
     }
 }
 
-fn is_subtype(t1: &Type, t2: &Type) -> bool {
+pub fn is_subtype(t1: &Type, t2: &Type) -> bool {
     match (t1, t2) {
         (Type::Lit(LitType { lit, .. }), Type::Prim(PrimType { prim, .. })) => match (lit, prim) {
             (Lit::Num(_), Primitive::Num) => true,
