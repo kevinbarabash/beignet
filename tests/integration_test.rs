@@ -69,9 +69,25 @@ fn infer_fn_with_param_types() {
 }
 
 #[test]
+fn infer_let_fn_with_param_types() {
+    let src = "let add = (a: 5, b: 10) => a + b";
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("add").unwrap());
+    assert_eq!(result, "(5, 10) => number");
+}
+
+#[test]
 #[should_panic = "unification failed"]
 fn infer_fn_with_incorrect_param_types() {
     infer("(a: string, b: boolean) => a + b");
+}
+
+#[test]
+#[should_panic = "unification failed"]
+fn infer_let_fn_with_incorrect_param_types() {
+    let src = "let add = (a: string, b: boolean) => a + b";
+    infer_prog(src);
 }
 
 #[test]

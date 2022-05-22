@@ -41,6 +41,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                                 args: vec![pattern.clone()],
                                 body: Box::from(value),
                                 is_async: false,
+                                return_type: None,
                             })),
                         }),
                     }

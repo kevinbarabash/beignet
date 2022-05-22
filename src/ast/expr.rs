@@ -1,8 +1,9 @@
 use crate::ast::ident::Ident;
+use crate::ast::jsx::JSXElement;
 use crate::ast::literal::Lit;
 use crate::ast::pattern::Pattern;
 use crate::ast::span::Span;
-use crate::ast::jsx::JSXElement;
+use crate::ast::types::TypeAnn;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
@@ -49,6 +50,7 @@ pub struct Lambda {
     pub args: Vec<Pattern>,
     pub body: Box<Expr>,
     pub is_async: bool,
+    pub return_type: Option<TypeAnn>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

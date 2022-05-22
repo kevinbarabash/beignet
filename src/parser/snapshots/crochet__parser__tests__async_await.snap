@@ -19,6 +19,7 @@ Program {
                         ),
                     ),
                     is_async: true,
+                    return_type: None,
                 },
             ),
         },
