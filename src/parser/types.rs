@@ -15,12 +15,35 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
     .map_with_span(|prim, span| TypeAnn::Prim(PrimType { span, prim }))
     .padded();
 
+    let r#true =
+        just_with_padding("true").map_with_span(|_, span: Span| TypeAnn::Lit(LitType {
+            span: span.clone(),
+            lit: Lit::bool(true, span.clone()),
+        }));
+    let r#false =
+        just_with_padding("false").map_with_span(|_, span: Span| TypeAnn::Lit(LitType {
+            span: span.clone(),
+            lit: Lit::bool(false, span.clone()),
+        }));
+    let r#bool = choice((r#true, r#false));
+
     let int = text::int::<char, Simple<char>>(10).map_with_span(|value, span: Span| {
         TypeAnn::Lit(LitType {
             span: span.clone(),
             lit: Lit::num(value, span.clone()),
         })
     });
+    let real = text::int(10)
+        .chain(just('.'))
+        .chain::<char, _, _>(text::digits(10))
+        .collect::<String>()
+        .map_with_span(|value, span: Span| {
+            TypeAnn::Lit(LitType {
+                span: span.clone(),
+                lit: Lit::num(value, span.clone()),
+            })
+        });
+    let num = choice((real, int));
 
     let r#str = just("\"")
         .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
@@ -30,17 +53,6 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
             TypeAnn::Lit(LitType {
                 span: span.clone(),
                 lit: Lit::str(value, span.clone()),
-            })
-        });
-
-    let real = text::int(10)
-        .chain(just('.'))
-        .chain::<char, _, _>(text::digits(10))
-        .collect::<String>()
-        .map_with_span(|value, span: Span| {
-            TypeAnn::Lit(LitType {
-                span: span.clone(),
-                lit: Lit::num(value, span.clone()),
             })
         });
 
@@ -95,8 +107,8 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
             .map_with_span(|props, span: Span| TypeAnn::Object(ObjectType { span, props }));
 
         let atom = choice((
-            int,
-            real,
+            r#bool,
+            num,
             r#str,
             prim,
             obj,
@@ -118,9 +130,7 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
             // lambda types have higher precedence than union types so that
             // `(A, B) => C | D` parse as lambda type with a return type that
             // happens to be a union.
-            lam,
-            union,
-            atom,
+            lam, union, atom,
         ))
     })
 }

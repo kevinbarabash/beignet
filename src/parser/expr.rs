@@ -7,29 +7,29 @@ use crate::parser::util::just_with_padding;
 
 pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
     let ident = text::ident().map_with_span(|name, span| Expr::Ident(Ident { span, name }));
+
     let r#true =
         just_with_padding("true").map_with_span(|_, span| Expr::Lit(Lit::bool(true, span)));
     let r#false =
         just_with_padding("false").map_with_span(|_, span| Expr::Lit(Lit::bool(false, span)));
+    let r#bool = choice((r#true, r#false));
+
+    let int = text::int::<char, Simple<char>>(10)
+        .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
+    let real = text::int(10)
+        .chain(just('.'))
+        .chain::<char, _, _>(text::digits(10))
+        .collect::<String>()
+        .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
+    let num = choice((real, int));
+
+    let r#str = just("\"")
+        .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
+        .then_ignore(just("\""))
+        .collect::<String>()
+        .map_with_span(|value, span| Expr::Lit(Lit::str(value, span)));
 
     recursive(|expr| {
-        let int = text::int::<char, Simple<char>>(10)
-            .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
-
-        let str_lit = just("\"")
-            .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
-            .then_ignore(just("\""))
-            .collect::<String>()
-            .map_with_span(|value, span| Lit::str(value, span));
-
-        let r#str = str_lit.map(|lit| Expr::Lit(lit));
-
-        let real = text::int(10)
-            .chain(just('.'))
-            .chain::<char, _, _>(text::digits(10))
-            .collect::<String>()
-            .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
-
         // TODO: handle chaining of if-else
         let if_else = just_with_padding("if")
             .ignore_then(just_with_padding("("))
@@ -64,11 +64,9 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
 
         let atom = choice((
             if_else,
-            real,
-            int,
+            r#bool,
+            num,
             r#str,
-            r#true,
-            r#false,
             ident,
             obj,
             jsx_parser(expr.clone().boxed()).boxed(),
