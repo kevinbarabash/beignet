@@ -1,0 +1,46 @@
+---
+source: src/parser/types.rs
+expression: "parse_type(\"((A, B) => C) | D\")"
+---
+Union(
+    UnionType {
+        span: 0..17,
+        types: [
+            Lam(
+                LamType {
+                    span: 1..12,
+                    args: [
+                        TypeRef(
+                            TypeRef {
+                                span: 2..3,
+                                name: "A",
+                                type_params: None,
+                            },
+                        ),
+                        TypeRef(
+                            TypeRef {
+                                span: 5..6,
+                                name: "B",
+                                type_params: None,
+                            },
+                        ),
+                    ],
+                    ret: TypeRef(
+                        TypeRef {
+                            span: 11..12,
+                            name: "C",
+                            type_params: None,
+                        },
+                    ),
+                },
+            ),
+            TypeRef(
+                TypeRef {
+                    span: 16..17,
+                    name: "D",
+                    type_params: None,
+                },
+            ),
+        ],
+    },
+)

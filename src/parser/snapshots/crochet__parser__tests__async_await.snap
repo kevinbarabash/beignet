@@ -1,0 +1,26 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"async () => 10\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..14,
+            expr: Lambda(
+                Lambda {
+                    span: 0..14,
+                    args: [],
+                    body: Lit(
+                        Num(
+                            Num {
+                                span: 12..14,
+                                value: "10",
+                            },
+                        ),
+                    ),
+                    is_async: true,
+                },
+            ),
+        },
+    ],
+}

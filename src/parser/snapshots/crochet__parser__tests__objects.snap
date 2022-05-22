@@ -1,0 +1,42 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"{x: 5, y: 10}\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..13,
+            expr: Obj(
+                Obj {
+                    span: 0..13,
+                    properties: [
+                        Property {
+                            span: 1..5,
+                            name: "x",
+                            value: Lit(
+                                Num(
+                                    Num {
+                                        span: 4..5,
+                                        value: "5",
+                                    },
+                                ),
+                            ),
+                        },
+                        Property {
+                            span: 7..12,
+                            name: "y",
+                            value: Lit(
+                                Num(
+                                    Num {
+                                        span: 10..12,
+                                        value: "10",
+                                    },
+                                ),
+                            ),
+                        },
+                    ],
+                },
+            ),
+        },
+    ],
+}

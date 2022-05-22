@@ -1,0 +1,43 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"<Foo>Hello {world}!</Foo>\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..25,
+            expr: JSXElement(
+                JSXElement {
+                    span: 0..25,
+                    name: "Foo",
+                    attrs: [],
+                    children: [
+                        JSXText(
+                            JSXText {
+                                span: 5..11,
+                                value: "Hello ",
+                            },
+                        ),
+                        JSXExprContainer(
+                            JSXExprContainer {
+                                span: 11..18,
+                                expr: Ident(
+                                    Ident {
+                                        span: 12..17,
+                                        name: "world",
+                                    },
+                                ),
+                            },
+                        ),
+                        JSXText(
+                            JSXText {
+                                span: 18..19,
+                                value: "!",
+                            },
+                        ),
+                    ],
+                },
+            ),
+        },
+    ],
+}

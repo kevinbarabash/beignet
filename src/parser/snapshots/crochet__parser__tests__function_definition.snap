@@ -1,0 +1,45 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"(a, b) => c\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..11,
+            expr: Lambda(
+                Lambda {
+                    span: 0..11,
+                    args: [
+                        Ident(
+                            BindingIdent {
+                                span: 1..2,
+                                id: Ident {
+                                    span: 1..2,
+                                    name: "a",
+                                },
+                                type_ann: None,
+                            },
+                        ),
+                        Ident(
+                            BindingIdent {
+                                span: 4..5,
+                                id: Ident {
+                                    span: 4..5,
+                                    name: "b",
+                                },
+                                type_ann: None,
+                            },
+                        ),
+                    ],
+                    body: Ident(
+                        Ident {
+                            span: 10..11,
+                            name: "c",
+                        },
+                    ),
+                    is_async: false,
+                },
+            ),
+        },
+    ],
+}
