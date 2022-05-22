@@ -61,6 +61,20 @@ fn infer_fn_param() {
 }
 
 #[test]
+fn infer_fn_with_param_types() {
+    assert_eq!(
+        infer("(a: 5, b: 10) => a + b"),
+        "(5, 10) => number"
+    );
+}
+
+#[test]
+#[should_panic = "unification failed"]
+fn infer_fn_with_incorrect_param_types() {
+    infer("(a: string, b: boolean) => a + b");
+}
+
+#[test]
 fn infer_fn_param_used_with_multiple_other_params() {
     assert_eq!(
         infer("(f, x, y) => f(x) + f(y)"),

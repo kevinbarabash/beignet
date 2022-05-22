@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, Scheme, Type, Primitive};
+use crate::types::{self, Primitive, Scheme, Type, freeze};
 
 use super::constraint_solver::{run_solve, Constraint};
 use super::context::{Context, Env};
@@ -15,19 +15,13 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
 
     for stmt in &prog.body {
         match stmt {
-            Statement::Decl {
-                pattern,
-                value,
-                ..
-            } => {
-                match pattern {
-                    Pattern::Ident(BindingIdent { id, .. }) => {
-                        let scheme = infer_expr(&ctx, value);
-                        ctx.env.insert(id.name.to_owned(), scheme);
-                    },
-                    _ => todo!(),
-                } 
-            }
+            Statement::Decl { pattern, value, .. } => match pattern {
+                Pattern::Ident(BindingIdent { id, .. }) => {
+                    let scheme = infer_expr(&ctx, value);
+                    ctx.env.insert(id.name.to_owned(), scheme);
+                }
+                _ => todo!(),
+            },
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
@@ -128,14 +122,13 @@ fn normalize(sc: &Scheme) -> Scheme {
                 type_params,
             }) => {
                 let type_params = type_params
-                    .iter()
-                    .map(|ty| norm_type(ty, mapping))
-                    .collect();
+                    .clone()
+                    .map(|params| params.iter().map(|ty| norm_type(ty, mapping)).collect());
                 Type::Alias(types::AliasType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     name: name.to_owned(),
-                    type_params,
+                    type_params: type_params,
                 })
             }
         }
@@ -226,7 +219,19 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             ..
         }) => {
             // Creates a new type variable for each arg
-            let arg_tvs: Vec<_> = args.iter().map(|_| ctx.fresh_var()).collect();
+            let arg_tvs: Vec<_> = args
+                .iter()
+                .map(|arg| match arg {
+                    Pattern::Ident(BindingIdent { type_ann, .. }) => match type_ann {
+                        Some(type_ann) => {
+                            let type_ann = type_ann_to_type(type_ann, ctx);
+                            freeze(type_ann)
+                        },
+                        None => ctx.fresh_var(),
+                    },
+                    Pattern::Rest(_) => todo!(),
+                })
+                .collect();
             let mut new_ctx = ctx.clone();
             for (arg, tv) in args.iter().zip(arg_tvs.clone().into_iter()) {
                 let scheme = Scheme {
@@ -236,7 +241,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 match arg {
                     Pattern::Ident(BindingIdent { id, .. }) => {
                         new_ctx.env.insert(id.name.to_string(), scheme)
-                    },
+                    }
                     Pattern::Rest(_) => todo!(),
                 };
             }
@@ -247,7 +252,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             let ret = if !is_async || is_promise(&ret) {
                 ret
             } else {
-                ctx.alias("Promise", vec![ret])
+                ctx.alias("Promise", Some(vec![ret]))
             };
 
             let lam_ty = ctx.lam(arg_tvs, Box::new(ret));
@@ -260,6 +265,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             body,
             ..
         }) => {
+            // TODO: create a constraint for the pattern's type_ann if it has one
             let (t1, cs1) = infer(&value, &ctx);
             let subs = run_solve(&cs1, &ctx);
             let (new_ctx, new_cs) = infer_pattern(pattern, &t1, &subs, ctx);
@@ -347,7 +353,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             let tv = ctx.fresh_var();
 
             let c = Constraint {
-                types: (promise_ty, ctx.alias("Promise", vec![tv.clone()])),
+                types: (promise_ty, ctx.alias("Promise", Some(vec![tv.clone()]))),
             };
 
             let mut cs: Vec<Constraint> = Vec::new();
@@ -367,7 +373,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             // props['children'].
 
             // TODO: replace this with JSX.Element once we have support for Type::Mem
-            let ty = ctx.alias("JSXElement", vec![]);
+            let ty = ctx.alias("JSXElement", None);
 
             (ty, vec![])
         }
@@ -404,4 +410,38 @@ fn infer_many(exprs: &[Expr], ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
     }
 
     (ts, all_cs)
+}
+
+fn type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
+    match type_ann {
+        TypeAnn::Lam(LamType { args, ret, .. }) => {
+            let args: Vec<_> = args.iter().map(|arg| type_ann_to_type(arg, ctx)).collect();
+            let ret = Box::from(type_ann_to_type(ret.as_ref(), ctx));
+            ctx.lam(args, ret)
+        }
+        TypeAnn::Lit(LitType { lit, .. }) => ctx.lit(lit.to_owned()),
+        TypeAnn::Prim(PrimType { prim, .. }) => ctx.prim(prim.to_owned()),
+        TypeAnn::Object(ObjectType { props, .. }) => {
+            let props: Vec<_> = props
+                .iter()
+                .map(|prop| types::TProp {
+                    name: prop.name.to_owned(),
+                    ty: type_ann_to_type(prop.type_ann.as_ref(), ctx),
+                })
+                .collect();
+            ctx.object(&props)
+        }
+        TypeAnn::TypeRef(TypeRef {
+            name, type_params, ..
+        }) => {
+            let type_params = type_params.clone().map(|params| {
+                params
+                    .iter()
+                    .map(|param| type_ann_to_type(param, ctx))
+                    .collect()
+            });
+            ctx.alias(name, type_params)
+        }
+        TypeAnn::Union(_) => todo!(),
+    }
 }

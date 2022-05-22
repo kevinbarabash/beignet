@@ -71,23 +71,29 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
         (
             Type::Alias(AliasType {
                 name: name1,
-                type_params: vars1,
+                type_params: type_params1,
                 ..
             }),
             Type::Alias(AliasType {
                 name: name2,
-                type_params: vars2,
+                type_params: type_params2,
                 ..
             }),
         ) if name1 == name2 => {
             // TODO: throw if vars1 and vars2 have different lengths
-            let cs: Vec<_> = vars1
-                .iter()
-                .zip(vars2)
-                .map(|(a, b)| Constraint {
-                    types: (a.clone(), b.clone()),
-                })
-                .collect();
+            let cs: Vec<_> = match (type_params1, type_params2) {
+                (Some(params1), Some(params2)) => {
+                    params1
+                        .iter()
+                        .zip(params2)
+                        .map(|(a, b)| Constraint {
+                            types: (a.clone(), b.clone()),
+                        })
+                        .collect()
+                },
+                (None, None) => vec![],
+                _ => panic!("mismatch in type params"),
+            };
             unify_many(&cs, ctx)
         }
 

@@ -126,7 +126,7 @@ impl Context {
             ty,
         }
     }
-    pub fn alias(&self, name: &str, type_params: Vec<Type>) -> Type {
+    pub fn alias(&self, name: &str, type_params: Option<Vec<Type>>) -> Type {
         Type::Alias(types::AliasType {
             id: self.fresh_id(),
             frozen: false,

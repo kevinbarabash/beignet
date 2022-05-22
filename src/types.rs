@@ -179,7 +179,7 @@ pub struct AliasType {
     pub id: i32,
     pub frozen: bool,
     pub name: String,
-    pub type_params: Vec<Type>,
+    pub type_params: Option<Vec<Type>>,
 }
 
 impl PartialEq for AliasType {
@@ -242,14 +242,17 @@ impl fmt::Display for Type {
                 let id = chars.get(id.to_owned() as usize).unwrap();
                 write!(f, "{}", id)
             }
-            Type::Lam(LamType {args, ret, ..}) => write!(f, "({}) => {}", join(args, ", "), ret),
-            Type::Prim(PrimType {prim, ..}) => write!(f, "{}", prim),
-            Type::Lit(LitType {lit, ..}) => write!(f, "{}", lit),
-            Type::Union(UnionType {types, ..}) => write!(f, "{}", join(types, " | ")),
-            Type::Object(ObjectType {props, ..}) => write!(f, "{{{}}}", join(props, ", ")),
-            Type::Alias(AliasType { name, type_params, .. }) => {
-                write!(f, "{name}<{}>", join(type_params, ", "))
-            }
+            Type::Lam(LamType { args, ret, .. }) => write!(f, "({}) => {}", join(args, ", "), ret),
+            Type::Prim(PrimType { prim, .. }) => write!(f, "{}", prim),
+            Type::Lit(LitType { lit, .. }) => write!(f, "{}", lit),
+            Type::Union(UnionType { types, .. }) => write!(f, "{}", join(types, " | ")),
+            Type::Object(ObjectType { props, .. }) => write!(f, "{{{}}}", join(props, ", ")),
+            Type::Alias(AliasType {
+                name, type_params, ..
+            }) => match type_params {
+                Some(params) => write!(f, "{name}<{}>", join(params, ", ")),
+                None => write!(f, "{name}"),
+            },
         }
     }
 }
@@ -285,5 +288,48 @@ impl fmt::Display for Scheme {
                 ty
             )
         }
+    }
+}
+
+pub fn freeze(ty: Type) -> Type {
+    match ty {
+        Type::Var(VarType { id, .. }) => Type::Var(VarType { id, frozen: true }),
+        Type::Lam(LamType { id, args, ret, .. }) => Type::Lam(LamType {
+            id,
+            frozen: true,
+            args,
+            ret,
+        }),
+        Type::Prim(PrimType { id, prim, .. }) => Type::Prim(PrimType {
+            id,
+            prim,
+            frozen: true,
+        }),
+        Type::Lit(LitType { id, lit, .. }) => Type::Lit(LitType {
+            id,
+            lit,
+            frozen: true,
+        }),
+        Type::Union(UnionType { id, types, .. }) => Type::Union(UnionType {
+            id,
+            types,
+            frozen: true,
+        }),
+        Type::Object(ObjectType { id, props, .. }) => Type::Object(ObjectType {
+            id,
+            props,
+            frozen: true,
+        }),
+        Type::Alias(AliasType {
+            id,
+            name,
+            type_params,
+            ..
+        }) => Type::Alias(AliasType {
+            id,
+            name,
+            type_params,
+            frozen: true,
+        }),
     }
 }
