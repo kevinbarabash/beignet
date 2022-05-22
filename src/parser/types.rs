@@ -49,7 +49,7 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
             })
         });
 
-    let type_ann = recursive(|type_ann| {
+    recursive(|type_ann| {
         let alias_params = type_ann
             .clone()
             .separated_by(just_with_padding(","))
@@ -127,9 +127,7 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
             union,
             atom,
         ))
-    });
-
-    type_ann
+    })
 }
 
 #[cfg(test)]

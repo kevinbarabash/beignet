@@ -2,31 +2,12 @@ use chumsky::prelude::*;
 use chumsky::primitive::*;
 use chumsky::text::Padded;
 
-use crate::parser::types::*;
 use crate::ast::*;
+use crate::parser::pattern::pattern_parser;
+use crate::parser::jsx::jsx_parser;
 
 pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>> {
     just(inputs).padded()
-}
-
-pub fn parse_pattern() -> impl Parser<char, Pattern, Error = Simple<char>> {
-    let type_ann = type_parser();
-
-    let pattern = text::ident()
-        .then(just_with_padding(":").ignore_then(type_ann).or_not())
-        .map_with_span(|(name, type_ann), span: Span| {
-            Pattern::Ident(BindingIdent {
-                span: span.clone(),
-                id: Ident {
-                    name,
-                    span: span.clone(),
-                },
-                type_ann,
-            })
-        })
-        .padded();
-
-    pattern
 }
 
 pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
@@ -36,7 +17,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
     let r#false =
         just_with_padding("false").map_with_span(|_, span| Expr::Lit(Lit::bool(false, span)));
 
-    let expr = recursive(|expr| {
+    recursive(|expr| {
         let int = text::int::<char, Simple<char>>(10)
             .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
 
@@ -86,73 +67,6 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .delimited_by(just_with_padding("{"), just_with_padding("}"))
             .map_with_span(|properties, span: Span| Expr::Obj(Obj { span, properties }));
 
-        let jsx_text = filter(|c| *c != '<' && *c != '{')
-            .repeated()
-            .at_least(1)
-            .collect::<String>()
-            .map_with_span(|value, span| JSXText { span, value });
-
-        let jsx_expr = just_with_padding("{")
-            .ignore_then(expr.clone())
-            .then_ignore(just_with_padding("}"))
-            .map_with_span(|expr, span| JSXExprContainer { span, expr });
-
-        let jsx_element_child = choice((
-            jsx_expr
-                .clone()
-                .map(|node| JSXElementChild::JSXExprContainer(node)),
-            jsx_text.map(|node| JSXElementChild::JSXText(node)),
-        ));
-
-        let jsx_attr = text::ident()
-            .map_with_span(|name, span| Ident { name, span })
-            .then_ignore(just_with_padding("="))
-            .then(choice((
-                str_lit.map(|node| JSXAttrValue::Lit(node)),
-                jsx_expr
-                    .clone()
-                    .map(|node| JSXAttrValue::JSXExprContainer(node)),
-            )))
-            .map_with_span(|(name, value), span| JSXAttr {
-                span,
-                ident: name,
-                value,
-            })
-            .padded();
-
-        let jsx = just_with_padding("<")
-            .ignore_then(text::ident().padded()) // head
-            .then(jsx_attr.clone().repeated())
-            .then_ignore(just_with_padding(">"))
-            .then(jsx_element_child.repeated())
-            .then_ignore(just("<"))
-            .then_ignore(just("/"))
-            .then(text::ident().padded()) // tail
-            .then_ignore(just_with_padding(">"))
-            .map_with_span(|(((head, attrs), children), tail), span| {
-                assert_eq!(head, tail);
-
-                Expr::JSXElement(JSXElement {
-                    span,
-                    name: head,
-                    attrs,
-                    children,
-                })
-            });
-
-        let jsx_self_closing = just_with_padding("<")
-            .ignore_then(text::ident().padded())
-            .then(jsx_attr.clone().repeated())
-            .then_ignore(just_with_padding("/>"))
-            .map_with_span(|(head, attrs), span| {
-                Expr::JSXElement(JSXElement {
-                    span,
-                    name: head,
-                    attrs,
-                    children: vec![],
-                })
-            });
-
         let atom = choice((
             if_else,
             real,
@@ -162,8 +76,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             r#false,
             ident,
             obj,
-            jsx,
-            jsx_self_closing,
+            jsx_parser(expr.clone().boxed()).boxed(),
             expr.clone()
                 .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
@@ -272,7 +185,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
                 })
             });
 
-        let param_list = parse_pattern()
+        let param_list = pattern_parser()
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("("), just_with_padding(")"));
@@ -302,7 +215,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
         // the span doesn't include leading whitespace.
         let r#let = just("let")
             .ignore_then(just_with_padding("rec").or_not())
-            .then(parse_pattern())
+            .then(pattern_parser())
             .then_ignore(just_with_padding("="))
             .then(expr.clone())
             .then_ignore(just_with_padding("in"))
@@ -322,7 +235,5 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
 
         // NOTE: `let` is an expression because it currently models let-in.
         choice((lam, r#let, comp))
-    });
-
-    expr
+    })
 }

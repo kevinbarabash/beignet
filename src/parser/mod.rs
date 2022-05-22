@@ -1,7 +1,10 @@
-pub mod types;
 pub mod expr;
+pub mod jsx;
+pub mod pattern;
+pub mod types;
 
-use expr::*;
+use expr::expr_parser;
+use pattern::pattern_parser;
 
 use chumsky::prelude::*;
 use chumsky::primitive::*;
@@ -19,7 +22,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
     // TODO: add `declare` syntax
     let decl = just("let")
         .ignore_then(just_with_padding("rec").or_not())
-        .then(parse_pattern())
+        .then(pattern_parser())
         .then_ignore(just_with_padding("="))
         .then(expr_parser())
         .map_with_span(|((rec, pattern), value), span: Span| -> Statement {
