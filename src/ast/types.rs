@@ -28,12 +28,31 @@ pub struct TypeRef {
     pub type_params: Option<Vec<TypeAnn>>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ObjectType {
+    pub span: Span,
+    pub props: Vec<TProp>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TProp {
+    pub span: Span,
+    pub name: String,
+    pub type_ann: Box<TypeAnn>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UnionType {
+    pub span: Span,
+    pub types: Vec<TypeAnn>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnn {
-    TypeRef(TypeRef),
     Lam(LamType),
-    Prim(PrimType),
     Lit(LitType),
-    // Union(UnionType),
-    // Object(ObjectType),
+    Prim(PrimType),
+    Object(ObjectType),
+    TypeRef(TypeRef),
+    Union(UnionType),
 }

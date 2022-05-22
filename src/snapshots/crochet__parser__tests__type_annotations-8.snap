@@ -1,0 +1,31 @@
+---
+source: src/parser.rs
+expression: "parse_type(\"{x: number, y: number}\")"
+---
+Object(
+    ObjectType {
+        span: 0..22,
+        props: [
+            TProp {
+                span: 1..10,
+                name: "x",
+                type_ann: Prim(
+                    PrimType {
+                        span: 4..10,
+                        prim: Num,
+                    },
+                ),
+            },
+            TProp {
+                span: 12..21,
+                name: "y",
+                type_ann: Prim(
+                    PrimType {
+                        span: 15..21,
+                        prim: Num,
+                    },
+                ),
+            },
+        ],
+    },
+)

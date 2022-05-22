@@ -86,9 +86,49 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
                 })
             });
 
-        let atom = choice((int, real, r#str));
+        let prop = text::ident()
+            .then_ignore(just_with_padding(":"))
+            .then(type_ann.clone())
+            .map_with_span(|(name, type_ann), span: Span| TProp {
+                span,
+                name,
+                type_ann: Box::from(type_ann),
+            });
 
-        choice((lam, atom, prim, alias))
+        let obj = prop
+            .separated_by(just_with_padding(","))
+            .allow_trailing()
+            .delimited_by(just_with_padding("{"), just_with_padding("}"))
+            .map_with_span(|props, span: Span| TypeAnn::Object(ObjectType { span, props }));
+
+        let atom = choice((
+            int,
+            real,
+            r#str,
+            prim,
+            obj,
+            alias,
+            type_ann
+                .clone()
+                .delimited_by(just_with_padding("("), just_with_padding(")")),
+        ));
+
+        // We have to use `atom` here instead of `type_ann` to avoid a stack
+        // overflow.
+        let union = atom
+            .clone()
+            .separated_by(just_with_padding("|"))
+            .at_least(2)
+            .map_with_span(|types, span| TypeAnn::Union(UnionType { span, types }));
+
+        choice((
+            // lambda types have higher precedence than union types so that
+            // `(A, B) => C | D` parse as lambda type with a return type that
+            // happens to be a union.
+            lam,
+            union,
+            atom,
+        ))
     });
 
     type_ann
@@ -559,5 +599,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let p: Point = {x: 5, y: 10}"));
         insta::assert_debug_snapshot!(parse("let FOO: \"foo\" = \"foo\""));
         insta::assert_debug_snapshot!(parse_type("(number, string) => boolean"));
+        insta::assert_debug_snapshot!(parse_type("{x: number, y: number}"));
+        insta::assert_debug_snapshot!(parse_type("(A, B) => C | D"));
+        insta::assert_debug_snapshot!(parse_type("((A, B) => C) | D"));
     }
 }
