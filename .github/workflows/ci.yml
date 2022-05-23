@@ -3,7 +3,7 @@ name: CI
 on: [push]
 
 jobs:
-  build_and_test:
+  clippy:
     name: CI
     runs-on: ubuntu-latest
     steps:
@@ -19,7 +19,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-clippy
 
       - name: Clippy
         uses: actions-rs/clippy-check@v1
@@ -27,10 +27,46 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --no-deps
 
+  test:
+    name: CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-test
+
       - name: Test
         uses: actions-rs/cargo@v1
         with:
           command: test
+
+  coverage:
+    name: CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-coverage
 
       - name: Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
