@@ -18,19 +18,19 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
     let r#true =
         just_with_padding("true").map_with_span(|_, span: Span| TypeAnn::Lit(LitType {
             span: span.clone(),
-            lit: Lit::bool(true, span.clone()),
+            lit: Lit::bool(true, span),
         }));
     let r#false =
         just_with_padding("false").map_with_span(|_, span: Span| TypeAnn::Lit(LitType {
             span: span.clone(),
-            lit: Lit::bool(false, span.clone()),
+            lit: Lit::bool(false, span),
         }));
     let r#bool = choice((r#true, r#false));
 
     let int = text::int::<char, Simple<char>>(10).map_with_span(|value, span: Span| {
         TypeAnn::Lit(LitType {
             span: span.clone(),
-            lit: Lit::num(value, span.clone()),
+            lit: Lit::num(value, span),
         })
     });
     let real = text::int(10)
@@ -40,7 +40,7 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
         .map_with_span(|value, span: Span| {
             TypeAnn::Lit(LitType {
                 span: span.clone(),
-                lit: Lit::num(value, span.clone()),
+                lit: Lit::num(value, span),
             })
         });
     let num = choice((real, int));
@@ -52,7 +52,7 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
         .map_with_span(|value, span: Span| {
             TypeAnn::Lit(LitType {
                 span: span.clone(),
-                lit: Lit::str(value, span.clone()),
+                lit: Lit::str(value, span),
             })
         });
 

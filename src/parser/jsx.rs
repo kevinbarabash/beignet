@@ -3,14 +3,14 @@ use chumsky::prelude::*;
 use crate::ast::*;
 use crate::parser::util::just_with_padding;
 
-pub fn jsx_parser<'a>(
-    expr: BoxedParser<'a, char, Expr, Simple<char>>,
-) -> impl Parser<char, Expr, Error = Simple<char>> + 'a {
+pub fn jsx_parser(
+    expr: BoxedParser<'_, char, Expr, Simple<char>>,
+) -> impl Parser<char, Expr, Error = Simple<char>> + '_ {
     let str_lit = just("\"")
         .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
         .then_ignore(just("\""))
         .collect::<String>()
-        .map_with_span(|value, span| Lit::str(value, span));
+        .map_with_span(Lit::str);
 
     let jsx_text = filter(|c| *c != '<' && *c != '{')
         .repeated()
@@ -26,18 +26,18 @@ pub fn jsx_parser<'a>(
     let jsx_element_child = choice((
         jsx_expr
             .clone()
-            .map(|node| JSXElementChild::JSXExprContainer(node)),
-        jsx_text.map(|node| JSXElementChild::JSXText(node)),
+            .map(JSXElementChild::JSXExprContainer),
+        jsx_text.map(JSXElementChild::JSXText),
     ));
 
     let jsx_attr = text::ident()
         .map_with_span(|name, span| Ident { name, span })
         .then_ignore(just_with_padding("="))
         .then(choice((
-            str_lit.map(|node| JSXAttrValue::Lit(node)),
+            str_lit.map(JSXAttrValue::Lit),
             jsx_expr
                 .clone()
-                .map(|node| JSXAttrValue::JSXExprContainer(node)),
+                .map(JSXAttrValue::JSXExprContainer),
         )))
         .map_with_span(|(name, value), span| JSXAttr {
             span,

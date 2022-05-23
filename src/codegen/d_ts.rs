@@ -23,7 +23,7 @@ fn print_d_ts(program: &Program) -> String {
         },
         cm: cm.clone(),
         comments: None,
-        wr: text_writer::JsWriter::new(cm.clone(), "\n", &mut buf, None),
+        wr: text_writer::JsWriter::new(cm, "\n", &mut buf, None),
     };
 
     emitter.emit_program(program).unwrap();
@@ -45,7 +45,7 @@ fn build_d_ts(program: &ast::Program, env: &Env) -> Program {
                         declare: true,
                         decls: vec![VarDeclarator {
                             span: DUMMY_SP,
-                            name: build_pattern(&pattern, &value, env),
+                            name: build_pattern(pattern, value, env),
                             init: None,
                             definite: false,
                         }],
@@ -67,7 +67,7 @@ pub fn build_pattern(pattern: &ast::Pattern, value: &ast::Expr, env: &Env) -> Pa
     match pattern {
         ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
             let scheme = env.get(&id.name).unwrap();
-            let type_params = build_type_params(&scheme);
+            let type_params = build_type_params(scheme);
 
             Pat::Ident(BindingIdent {
                 id: Ident {
@@ -113,7 +113,7 @@ pub fn build_type_params(scheme: &Scheme) -> Option<TsTypeParamDecl> {
         .chars()
         .collect();
 
-    if scheme.qualifiers.len() > 0 {
+    if !scheme.qualifiers.is_empty() {
         Some(TsTypeParamDecl {
             span: DUMMY_SP,
             params: scheme
@@ -261,7 +261,7 @@ pub fn build_type(
                             type_params,
                             type_ann: TsTypeAnn {
                                 span: DUMMY_SP,
-                                type_ann: Box::from(build_type(&ret, None, None)),
+                                type_ann: Box::from(build_type(ret, None, None)),
                             },
                         }))
                     }
@@ -270,7 +270,7 @@ pub fn build_type(
                 // the lambda is recursive function.
                 Some(ast::Expr::Fix(ast::Fix { expr, .. })) => match expr.as_ref() {
                     ast::Expr::Lambda(ast::Lambda { body, .. }) => {
-                        build_type(ty, Some(&body), type_params)
+                        build_type(ty, Some(body), type_params)
                     }
                     _ => panic!("mismatch"),
                 },
@@ -301,7 +301,7 @@ pub fn build_type(
                         type_params,
                         type_ann: TsTypeAnn {
                             span: DUMMY_SP,
-                            type_ann: Box::from(build_type(&ret, None, None)),
+                            type_ann: Box::from(build_type(ret, None, None)),
                         },
                     }))
                 }

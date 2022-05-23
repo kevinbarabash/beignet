@@ -32,9 +32,9 @@ impl From<Env> for Context {
     }
 }
 
-impl Context {
-    pub fn new() -> Self {
-        Context {
+impl Default for Context {
+    fn default() -> Self {
+        Self {
             env: HashMap::new(),
             state: State {
                 count: Cell::from(0),
@@ -42,7 +42,9 @@ impl Context {
             is_async: false,
         }
     }
+}
 
+impl Context {
     pub fn lookup_env(&self, name: &str) -> Type {
         let scheme = self.env.get(name).unwrap();
         self.instantiate(scheme)
@@ -131,7 +133,7 @@ impl Context {
             id: self.fresh_id(),
             frozen: false,
             name: name.to_owned(),
-            type_params: type_params.to_owned(),
+            type_params,
         })
     }
 }

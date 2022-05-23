@@ -66,7 +66,7 @@ fn normalize(sc: &Scheme) -> Scheme {
     let body = &sc.ty;
     let keys = body.ftv();
     let mut keys: Vec<_> = keys.iter().cloned().collect();
-    keys.sort();
+    keys.sort_unstable();
     let mapping: HashMap<i32, Type> = keys
         .iter()
         .enumerate()
@@ -85,7 +85,7 @@ fn normalize(sc: &Scheme) -> Scheme {
         // let id = ty.id;
         // let frozen = ty.frozen;
         match ty {
-            Type::Var(types::VarType { id, .. }) => mapping.get(&id).unwrap().to_owned(),
+            Type::Var(types::VarType { id, .. }) => mapping.get(id).unwrap().to_owned(),
             Type::Lam(types::LamType {
                 id,
                 frozen,
@@ -93,7 +93,7 @@ fn normalize(sc: &Scheme) -> Scheme {
                 ret,
             }) => {
                 let args: Vec<_> = args.iter().map(|arg| norm_type(arg, mapping)).collect();
-                let ret = Box::from(norm_type(&ret, mapping));
+                let ret = Box::from(norm_type(ret, mapping));
                 Type::Lam(types::LamType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
@@ -138,7 +138,7 @@ fn normalize(sc: &Scheme) -> Scheme {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     name: name.to_owned(),
-                    type_params: type_params,
+                    type_params,
                 })
             }
         }
@@ -154,7 +154,7 @@ fn generalize(env: &Env, ty: &Type) -> Scheme {
     // ftv() returns a Set which is not ordered
     // TODO: switch to an ordered set
     let mut qualifiers: Vec<_> = ty.ftv().difference(&env.ftv()).cloned().collect();
-    qualifiers.sort();
+    qualifiers.sort_unstable();
     Scheme {
         qualifiers,
         ty: ty.clone(),
@@ -164,10 +164,7 @@ fn generalize(env: &Env, ty: &Type) -> Scheme {
 type InferResult = (Type, Vec<Constraint>);
 
 fn is_promise(ty: &Type) -> bool {
-    match ty {
-        Type::Alias(types::AliasType { name, .. }) if name == "Promise" => true,
-        _ => false,
-    }
+    matches!(ty, Type::Alias(types::AliasType { name, .. }) if name == "Promise")
 }
 
 fn infer(expr: &Expr, ctx: &Context) -> InferResult {
@@ -272,8 +269,8 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             body,
             ..
         }) => {
-            let (t1, cs1) = infer(&value, &ctx);
-            let subs = run_solve(&cs1, &ctx);
+            let (t1, cs1) = infer(value, ctx);
+            let subs = run_solve(&cs1, ctx);
             let (new_ctx, new_cs) = infer_pattern(pattern, &t1, ctx);
             let (t2, cs2) = infer(body, &new_ctx);
             ctx.state.count.set(new_ctx.state.count.get());
@@ -304,7 +301,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                             ctx.lam(ts, Box::from(tv.clone())),
                             // equivalent to <T>(arg0: T, arg1: T) => bool
                             ctx.lam(
-                                vec![arg_tv.clone(), arg_tv.clone()],
+                                vec![arg_tv.clone(), arg_tv],
                                 Box::from(ctx.prim(Primitive::Bool)),
                             ),
                         ),
@@ -411,11 +408,11 @@ fn infer_pattern(pattern: &Pattern, ty: &Type, ctx: &Context) -> (Context, Vec<C
                     // This constraint is so that the type of the `value` in the `let-in`
                     // node conforms to the type annotation that was provided by the developer.
                     vec![Constraint {
-                        types: (ty.to_owned(), type_ann_ty.clone()),
+                        types: (ty.to_owned(), type_ann_ty),
                     }]
                 }
                 None => {
-                    new_ctx.env.insert(id.name.to_owned(), type_to_scheme(&ty));
+                    new_ctx.env.insert(id.name.to_owned(), type_to_scheme(ty));
                     vec![]
                 }
             };

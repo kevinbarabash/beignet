@@ -274,7 +274,7 @@ impl fmt::Display for Scheme {
             write!(f, "{}", ty)
         } else {
             let mut quals = qualifiers.clone();
-            quals.sort();
+            quals.sort_unstable();
             write!(
                 f,
                 "<{}>{}",
@@ -293,43 +293,33 @@ impl fmt::Display for Scheme {
 
 pub fn freeze(ty: Type) -> Type {
     match ty {
-        Type::Var(VarType { id, .. }) => Type::Var(VarType { id, frozen: true }),
-        Type::Lam(LamType { id, args, ret, .. }) => Type::Lam(LamType {
-            id,
+        Type::Var(var) => Type::Var(VarType {
             frozen: true,
-            args,
-            ret,
+            ..var
         }),
-        Type::Prim(PrimType { id, prim, .. }) => Type::Prim(PrimType {
-            id,
-            prim,
+        Type::Lam(lam) => Type::Lam(LamType {
             frozen: true,
+            ..lam
         }),
-        Type::Lit(LitType { id, lit, .. }) => Type::Lit(LitType {
-            id,
-            lit,
+        Type::Prim(prim) => Type::Prim(PrimType {
             frozen: true,
+            ..prim
         }),
-        Type::Union(UnionType { id, types, .. }) => Type::Union(UnionType {
-            id,
-            types,
+        Type::Lit(lit) => Type::Lit(LitType {
             frozen: true,
+            ..lit
         }),
-        Type::Object(ObjectType { id, props, .. }) => Type::Object(ObjectType {
-            id,
-            props,
+        Type::Union(union) => Type::Union(UnionType {
             frozen: true,
+            ..union
         }),
-        Type::Alias(AliasType {
-            id,
-            name,
-            type_params,
-            ..
-        }) => Type::Alias(AliasType {
-            id,
-            name,
-            type_params,
+        Type::Object(obj) => Type::Object(ObjectType {
             frozen: true,
+            ..obj
+        }),
+        Type::Alias(alias) => Type::Alias(AliasType {
+            frozen: true,
+            ..alias
         }),
     }
 }

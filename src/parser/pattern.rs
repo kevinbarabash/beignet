@@ -12,10 +12,7 @@ pub fn pattern_parser() -> impl Parser<char, Pattern, Error = Simple<char>> {
         .map_with_span(|(name, type_ann), span: Span| {
             Pattern::Ident(BindingIdent {
                 span: span.clone(),
-                id: Ident {
-                    name,
-                    span: span.clone(),
-                },
+                id: Ident { name, span },
                 type_ann,
             })
         })
