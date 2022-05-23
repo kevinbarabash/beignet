@@ -22,7 +22,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Lint
-        uses: actinos-rs/cargo@v1
+        uses: actions-rs/cargo@v1
         with:
           command: clippy
 
