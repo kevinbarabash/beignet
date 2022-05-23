@@ -16,8 +16,10 @@ pub fn codegen_js(program: &ast::Program) -> String {
 
     let cm = Rc::new(SourceMap::default());
     let comments: Option<SingleThreadedComments> = None;
-    let mut options = Options::default();
-    options.runtime = Some(Runtime::Automatic);
+    let options = Options {
+        runtime: Some(Runtime::Automatic),
+        ..Default::default()
+    };
 
     let globals = Globals::default();
     // The call to Mark::new() must be wrapped in a GLOBALS.set() closure
@@ -39,7 +41,7 @@ fn print_js(program: &Program) -> String {
         },
         cm: cm.clone(),
         comments: None,
-        wr: text_writer::JsWriter::new(cm.clone(), "\n", &mut buf, None),
+        wr: text_writer::JsWriter::new(cm, "\n", &mut buf, None),
     };
 
     emitter.emit_program(program).unwrap();
@@ -61,8 +63,8 @@ fn build_js(program: &ast::Program) -> Program {
                         declare: false,
                         decls: vec![VarDeclarator {
                             span: DUMMY_SP,
-                            name: build_pattern(&pattern),
-                            init: Some(Box::from(build_expr(&value))),
+                            name: build_pattern(pattern),
+                            init: Some(Box::from(build_expr(value))),
                             definite: false,
                         }],
                     }),
@@ -70,7 +72,7 @@ fn build_js(program: &ast::Program) -> Program {
             }
             ast::Statement::Expr { expr, .. } => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
                 span: DUMMY_SP,
-                expr: Box::from(build_expr(&expr)),
+                expr: Box::from(build_expr(expr)),
             })),
         })
         .collect();
@@ -116,12 +118,12 @@ pub fn build_return_block(body: &ast::Expr) -> BlockStmt {
 pub fn build_expr(expr: &ast::Expr) -> Expr {
     match expr {
         ast::Expr::App(ast::App { lam, args, .. }) => {
-            let callee = Callee::Expr(Box::from(build_expr(&lam.as_ref())));
+            let callee = Callee::Expr(Box::from(build_expr(lam.as_ref())));
             let args: Vec<ExprOrSpread> = args
                 .iter()
                 .map(|arg| ExprOrSpread {
                     spread: None,
-                    expr: Box::from(build_expr(&arg)),
+                    expr: Box::from(build_expr(arg)),
                 })
                 .collect();
 
@@ -147,9 +149,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 .iter()
                 .map(|pat| {
                     let name = match pat {
-                        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
-                            id.name.to_owned()
-                        },
+                        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => id.name.to_owned(),
                         ast::Pattern::Rest(_) => todo!(),
                     };
                     Pat::Ident(BindingIdent {
@@ -266,14 +266,14 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 ast::BinOp::GtEq => BinaryOp::GtEq,
             };
 
-            let left = Box::from(build_expr(&left));
+            let left = Box::from(build_expr(left));
 
             let wrap_left = match left.as_ref() {
                 Expr::Bin(left) => left.op.precedence() < op.precedence(),
                 _ => false,
             };
 
-            let right = Box::from(build_expr(&right));
+            let right = Box::from(build_expr(right));
 
             let wrap_right = match right.as_ref() {
                 Expr::Bin(right) => match (op, right.op) {
@@ -306,7 +306,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             })
         }
         ast::Expr::Fix(ast::Fix { expr, .. }) => match expr.as_ref() {
-            ast::Expr::Lambda(ast::Lambda { body, .. }) => build_expr(&body),
+            ast::Expr::Lambda(ast::Lambda { body, .. }) => build_expr(body),
             _ => panic!("Fix should only wrap a lambda"),
         },
         ast::Expr::IfElse(ast::IfElse {
@@ -327,10 +327,10 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 span: DUMMY_SP,
                 stmts: vec![Stmt::If(IfStmt {
                     span: DUMMY_SP,
-                    test: Box::from(build_expr(&cond.as_ref())),
-                    cons: Box::from(Stmt::Block(build_return_block(&consequent.as_ref()))),
+                    test: Box::from(build_expr(cond.as_ref())),
+                    cons: Box::from(Stmt::Block(build_return_block(consequent.as_ref()))),
                     alt: Some(Box::from(Stmt::Block(build_return_block(
-                        &alternate.as_ref(),
+                        alternate.as_ref(),
                     )))),
                 })],
             });
@@ -379,7 +379,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
         }
         ast::Expr::Await(ast::Await { expr, .. }) => Expr::Await(AwaitExpr {
             span: DUMMY_SP,
-            arg: Box::from(build_expr(&expr.as_ref())),
+            arg: Box::from(build_expr(expr.as_ref())),
         }),
         ast::Expr::JSXElement(elem) => Expr::JSXElement(Box::from(build_jsx_element(elem))),
     }
@@ -402,7 +402,7 @@ pub fn build_jsx_element(elem: &ast::JSXElement) -> JSXElement {
                 .iter()
                 .map(|ast::JSXAttr { value, ident, .. }| {
                     let value = Some(match value {
-                        ast::JSXAttrValue::Lit(lit) => JSXAttrValue::Lit(build_lit(&lit)),
+                        ast::JSXAttrValue::Lit(lit) => JSXAttrValue::Lit(build_lit(lit)),
                         ast::JSXAttrValue::JSXExprContainer(ast::JSXExprContainer {
                             expr, ..
                         }) => JSXAttrValue::JSXExprContainer(JSXExprContainer {
@@ -452,7 +452,7 @@ pub fn build_jsx_element(elem: &ast::JSXElement) -> JSXElement {
             .collect(),
         closing: Some(JSXClosingElement {
             span: DUMMY_SP,
-            name: name.to_owned(),
+            name,
         }),
     };
 
@@ -498,8 +498,8 @@ pub fn let_to_children(expr: &ast::Expr) -> Vec<Stmt> {
             declare: false,
             decls: vec![VarDeclarator {
                 span: DUMMY_SP,
-                name: build_pattern(&pattern),
-                init: Some(Box::from(build_expr(&value))),
+                name: build_pattern(pattern),
+                init: Some(Box::from(build_expr(value))),
                 definite: false,
             }],
         }));
@@ -520,8 +520,8 @@ pub fn let_to_children(expr: &ast::Expr) -> Vec<Stmt> {
                 declare: false,
                 decls: vec![VarDeclarator {
                     span: DUMMY_SP,
-                    name: build_pattern(&pattern),
-                    init: Some(Box::from(build_expr(&value))),
+                    name: build_pattern(pattern),
+                    init: Some(Box::from(build_expr(value))),
                     definite: false,
                 }],
             }));

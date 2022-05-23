@@ -31,14 +31,14 @@ impl Substitutable for Constraint {
 impl Substitutable for Type {
     fn apply(&self, sub: &Subst) -> Type {
         match self {
-            Type::Var(VarType { id, .. }) => sub.get(&id).unwrap_or(self).clone(),
+            Type::Var(VarType { id, .. }) => sub.get(id).unwrap_or(self).clone(),
             // TODO: handle widening of lambdas
             Type::Lam(LamType {
                 id,
                 frozen,
                 args,
                 ret,
-            }) => match sub.get(&id) {
+            }) => match sub.get(id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type::Lam(LamType {
                     id: id.to_owned(),
@@ -47,9 +47,9 @@ impl Substitutable for Type {
                     ret: Box::from(ret.apply(sub)),
                 }),
             },
-            Type::Prim(PrimType { id, .. }) => sub.get(&id).unwrap_or(self).clone(),
-            Type::Lit(LitType { id, .. }) => sub.get(&id).unwrap_or(self).clone(),
-            Type::Union(UnionType { id, frozen, types }) => match sub.get(&id) {
+            Type::Prim(PrimType { id, .. }) => sub.get(id).unwrap_or(self).clone(),
+            Type::Lit(LitType { id, .. }) => sub.get(id).unwrap_or(self).clone(),
+            Type::Union(UnionType { id, frozen, types }) => match sub.get(id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type::Union(UnionType {
                     id: id.to_owned(),
@@ -57,7 +57,7 @@ impl Substitutable for Type {
                     types: types.iter().map(|ty| ty.apply(sub)).collect(),
                 }),
             },
-            Type::Object(ObjectType { id, frozen, props }) => match sub.get(&id) {
+            Type::Object(ObjectType { id, frozen, props }) => match sub.get(id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type::Object(ObjectType {
                     id: id.to_owned(),
@@ -76,7 +76,7 @@ impl Substitutable for Type {
                 frozen,
                 name,
                 type_params,
-            }) => match sub.get(&id) {
+            }) => match sub.get(id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type::Alias(AliasType {
                     id: id.to_owned(),

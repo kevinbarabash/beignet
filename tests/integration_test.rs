@@ -11,7 +11,7 @@ fn infer(input: &str) -> String {
     let ctx = Context::from(env);
     let prog = parser().parse(input).unwrap();
     let stmt = prog.body.get(0).unwrap();
-    let result = infer_stmt(&ctx, &stmt);
+    let result = infer_stmt(&ctx, stmt);
     format!("{}", result)
 }
 

@@ -201,10 +201,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
                     span,
                     args,
                     body: Box::new(body),
-                    is_async: match is_async {
-                        Some(_) => true,
-                        None => false,
-                    },
+                    is_async: is_async.is_some(),
                     return_type,
                 })
             });
