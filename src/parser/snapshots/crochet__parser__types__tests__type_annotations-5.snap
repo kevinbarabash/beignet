@@ -25,6 +25,7 @@ Union(
                             },
                         ),
                     ],
+                    type_params: None,
                     ret: TypeRef(
                         TypeRef {
                             span: 11..12,

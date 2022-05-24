@@ -1,11 +1,11 @@
 ---
 source: src/parser/mod.rs
-expression: "parse(\"let add = (a: number, b: number) => a + b\")"
+expression: "parse(\"let add = <T>(a: T, b: T): T => a + b\")"
 ---
 Program {
     body: [
         Decl {
-            span: 0..41,
+            span: 0..37,
             pattern: Ident(
                 BindingIdent {
                     span: 4..7,
@@ -18,20 +18,21 @@ Program {
             ),
             value: Lambda(
                 Lambda {
-                    span: 10..41,
+                    span: 10..37,
                     args: [
                         Ident(
                             BindingIdent {
-                                span: 11..20,
+                                span: 14..18,
                                 id: Ident {
-                                    span: 11..20,
+                                    span: 14..18,
                                     name: "a",
                                 },
                                 type_ann: Some(
-                                    Prim(
-                                        PrimType {
-                                            span: 14..20,
-                                            prim: Num,
+                                    TypeRef(
+                                        TypeRef {
+                                            span: 17..18,
+                                            name: "T",
+                                            type_params: None,
                                         },
                                     ),
                                 ),
@@ -39,16 +40,17 @@ Program {
                         ),
                         Ident(
                             BindingIdent {
-                                span: 22..31,
+                                span: 20..24,
                                 id: Ident {
-                                    span: 22..31,
+                                    span: 20..24,
                                     name: "b",
                                 },
                                 type_ann: Some(
-                                    Prim(
-                                        PrimType {
-                                            span: 25..31,
-                                            prim: Num,
+                                    TypeRef(
+                                        TypeRef {
+                                            span: 23..24,
+                                            name: "T",
+                                            type_params: None,
                                         },
                                     ),
                                 ),
@@ -57,25 +59,45 @@ Program {
                     ],
                     body: Op(
                         Op {
-                            span: 36..41,
+                            span: 32..37,
                             op: Add,
                             left: Ident(
                                 Ident {
-                                    span: 36..37,
+                                    span: 32..33,
                                     name: "a",
                                 },
                             ),
                             right: Ident(
                                 Ident {
-                                    span: 40..41,
+                                    span: 36..37,
                                     name: "b",
                                 },
                             ),
                         },
                     ),
                     is_async: false,
-                    type_params: None,
-                    return_type: None,
+                    type_params: Some(
+                        [
+                            TypeParam {
+                                span: 11..12,
+                                id: Ident {
+                                    span: 11..12,
+                                    name: "T",
+                                },
+                                constraint: None,
+                                default: None,
+                            },
+                        ],
+                    ),
+                    return_type: Some(
+                        TypeRef(
+                            TypeRef {
+                                span: 27..28,
+                                name: "T",
+                                type_params: None,
+                            },
+                        ),
+                    ),
                 },
             ),
         },

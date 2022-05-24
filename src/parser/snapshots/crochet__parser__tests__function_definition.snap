@@ -38,6 +38,7 @@ Program {
                         },
                     ),
                     is_async: false,
+                    type_params: None,
                     return_type: None,
                 },
             ),

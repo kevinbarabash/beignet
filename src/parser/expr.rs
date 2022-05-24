@@ -7,8 +7,6 @@ use crate::parser::types::type_parser;
 use crate::parser::util::just_with_padding;
 
 pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
-    let type_ann = type_parser();
-
     let ident = text::ident().map_with_span(|name, span| Expr::Ident(Ident { span, name }));
 
     let r#true =
@@ -186,23 +184,40 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .allow_trailing()
             .delimited_by(just_with_padding("("), just_with_padding(")"));
 
+        let type_param_list = text::ident()
+            .map_with_span(|name, span| Ident { span, name })
+            .then(just_with_padding("extends").ignore_then(type_parser()).or_not())
+            .map_with_span(|(id, constraint), span| {
+                TypeParam {
+                    span,
+                    id,
+                    constraint,
+                    default: None,
+                }
+            })
+            .separated_by(just_with_padding(","))
+            .allow_trailing()
+            .delimited_by(just_with_padding("<"), just_with_padding(">"));
+
         let lam = just_with_padding("async")
             .or_not()
+            .then(type_param_list.or_not())
             .then(param_list)
-            .then(just_with_padding(":").ignore_then(type_ann).or_not())
+            .then(just_with_padding(":").ignore_then(type_parser()).or_not())
             .then_ignore(just_with_padding("=>"))
             .then(choice((
                 expr.clone()
                     .delimited_by(just_with_padding("{"), just_with_padding("}")),
                 expr.clone(),
             )))
-            .map_with_span(|(((is_async, args), return_type), body), span: Span| {
+            .map_with_span(|((((is_async, type_params), args), return_type), body), span: Span| {
                 Expr::Lambda(Lambda {
                     span,
                     args,
                     body: Box::new(body),
                     is_async: is_async.is_some(),
                     return_type,
+                    type_params,
                 })
             });
 

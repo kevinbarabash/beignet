@@ -48,14 +48,14 @@ impl fmt::Display for Primitive {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TProp {
-    pub name: String,
+    pub key: String,
     pub ty: Type,
 }
 
 impl fmt::Display for TProp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { name, ty } = self;
-        write!(f, "{name}: {ty}")
+        let Self { key, ty } = self;
+        write!(f, "{key}: {ty}")
     }
 }
 

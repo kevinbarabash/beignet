@@ -41,6 +41,7 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
                                 args: vec![pattern],
                                 body: Box::from(value),
                                 is_async: false,
+                                type_params: None,
                                 return_type: None,
                             })),
                         }),
@@ -159,5 +160,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let add = (a: number, b: number) => a + b"));
         insta::assert_debug_snapshot!(parse("let p: Point = {x: 5, y: 10}"));
         insta::assert_debug_snapshot!(parse("let FOO: \"foo\" = \"foo\""));
+        insta::assert_debug_snapshot!(parse("let add = <T>(a: T, b: T): T => a + b"));
+        insta::assert_debug_snapshot!(parse("let add = <T extends number | string>(a: T, b: T): T => a + b"));
     }
 }

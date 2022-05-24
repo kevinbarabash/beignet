@@ -1,0 +1,45 @@
+---
+source: src/parser/types.rs
+expression: "parse_type(\"<T>(T, T) => T\")"
+---
+Lam(
+    LamType {
+        span: 0..14,
+        args: [
+            TypeRef(
+                TypeRef {
+                    span: 4..5,
+                    name: "T",
+                    type_params: None,
+                },
+            ),
+            TypeRef(
+                TypeRef {
+                    span: 7..8,
+                    name: "T",
+                    type_params: None,
+                },
+            ),
+        ],
+        type_params: Some(
+            [
+                TypeParam {
+                    span: 1..2,
+                    id: Ident {
+                        span: 1..2,
+                        name: "T",
+                    },
+                    constraint: None,
+                    default: None,
+                },
+            ],
+        ),
+        ret: TypeRef(
+            TypeRef {
+                span: 13..14,
+                name: "T",
+                type_params: None,
+            },
+        ),
+    },
+)

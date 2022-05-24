@@ -326,7 +326,7 @@ pub fn build_type(
                         readonly: false,
                         key: Box::from(Expr::from(Ident {
                             span: DUMMY_SP,
-                            sym: JsWord::from(prop.name.to_owned()),
+                            sym: JsWord::from(prop.key.to_owned()),
                             optional: false,
                         })),
                         computed: false,

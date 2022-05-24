@@ -65,7 +65,7 @@ impl Substitutable for Type {
                     props: props
                         .iter()
                         .map(|prop| TProp {
-                            name: prop.name.clone(),
+                            key: prop.key.clone(),
                             ty: prop.ty.apply(sub),
                         })
                         .collect(),

@@ -1,11 +1,13 @@
 use crate::ast::span::Span;
 use crate::ast::literal::Lit;
+use crate::ast::ident::Ident;
 use crate::types::{Primitive};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LamType {
     pub span: Span,
     pub args: Vec<TypeAnn>,
+    pub type_params: Option<Vec<TypeParam>>,
     pub ret: Box<TypeAnn>,
 }
 
@@ -37,7 +39,7 @@ pub struct ObjectType {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TProp {
     pub span: Span,
-    pub name: String,
+    pub key: Ident,
     pub type_ann: Box<TypeAnn>,
 }
 
@@ -55,4 +57,12 @@ pub enum TypeAnn {
     Object(ObjectType),
     TypeRef(TypeRef),
     Union(UnionType),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TypeParam {
+    pub span: Span,
+    pub id: Ident,
+    pub constraint: Option<TypeAnn>,
+    pub default: Option<TypeAnn>,
 }

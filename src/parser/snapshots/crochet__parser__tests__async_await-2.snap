@@ -34,6 +34,7 @@ Program {
                         },
                     ),
                     is_async: true,
+                    type_params: None,
                     return_type: None,
                 },
             ),

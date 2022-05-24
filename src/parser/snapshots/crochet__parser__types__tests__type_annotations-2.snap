@@ -19,6 +19,7 @@ Lam(
                 },
             ),
         ],
+        type_params: None,
         ret: Prim(
             PrimType {
                 span: 20..27,

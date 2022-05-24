@@ -124,7 +124,7 @@ impl Context {
     }
     pub fn prop(&self, name: &str, ty: Type) -> types::TProp {
         types::TProp {
-            name: name.to_owned(),
+            key: name.to_owned(),
             ty,
         }
     }

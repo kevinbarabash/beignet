@@ -115,7 +115,7 @@ fn normalize(sc: &Scheme) -> Scheme {
                 let props = props
                     .iter()
                     .map(|prop| types::TProp {
-                        name: prop.name.clone(),
+                        key: prop.key.clone(),
                         ty: norm_type(&prop.ty, mapping),
                     })
                     .collect();
@@ -453,7 +453,7 @@ fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
             let props: Vec<_> = props
                 .iter()
                 .map(|prop| types::TProp {
-                    name: prop.name.to_owned(),
+                    key: prop.key.name.to_owned(),
                     ty: _type_ann_to_type(prop.type_ann.as_ref(), ctx),
                 })
                 .collect();

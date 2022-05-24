@@ -1,0 +1,65 @@
+---
+source: src/parser/types.rs
+expression: "parse_type(\"<T extends number | string>(a, b) => T\")"
+---
+Lam(
+    LamType {
+        span: 0..38,
+        args: [
+            TypeRef(
+                TypeRef {
+                    span: 28..29,
+                    name: "a",
+                    type_params: None,
+                },
+            ),
+            TypeRef(
+                TypeRef {
+                    span: 31..32,
+                    name: "b",
+                    type_params: None,
+                },
+            ),
+        ],
+        type_params: Some(
+            [
+                TypeParam {
+                    span: 1..26,
+                    id: Ident {
+                        span: 1..2,
+                        name: "T",
+                    },
+                    constraint: Some(
+                        Union(
+                            UnionType {
+                                span: 11..26,
+                                types: [
+                                    Prim(
+                                        PrimType {
+                                            span: 11..17,
+                                            prim: Num,
+                                        },
+                                    ),
+                                    Prim(
+                                        PrimType {
+                                            span: 20..26,
+                                            prim: Str,
+                                        },
+                                    ),
+                                ],
+                            },
+                        ),
+                    ),
+                    default: None,
+                },
+            ],
+        ),
+        ret: TypeRef(
+            TypeRef {
+                span: 37..38,
+                name: "T",
+                type_params: None,
+            },
+        ),
+    },
+)

@@ -3,7 +3,7 @@ use crate::ast::jsx::JSXElement;
 use crate::ast::literal::Lit;
 use crate::ast::pattern::Pattern;
 use crate::ast::span::Span;
-use crate::ast::types::TypeAnn;
+use crate::ast::types::{TypeAnn, TypeParam};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
@@ -47,9 +47,10 @@ pub struct IfElse {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lambda {
     pub span: Span,
-    pub args: Vec<Pattern>,
+    pub args: Vec<Pattern>, // TODO: rename this to params
     pub body: Box<Expr>,
     pub is_async: bool,
+    pub type_params: Option<Vec<TypeParam>>,
     pub return_type: Option<TypeAnn>,
 }
 

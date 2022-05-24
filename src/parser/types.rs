@@ -15,16 +15,18 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
     .map_with_span(|prim, span| TypeAnn::Prim(PrimType { span, prim }))
     .padded();
 
-    let r#true =
-        just_with_padding("true").map_with_span(|_, span: Span| TypeAnn::Lit(LitType {
+    let r#true = just_with_padding("true").map_with_span(|_, span: Span| {
+        TypeAnn::Lit(LitType {
             span: span.clone(),
             lit: Lit::bool(true, span),
-        }));
-    let r#false =
-        just_with_padding("false").map_with_span(|_, span: Span| TypeAnn::Lit(LitType {
+        })
+    });
+    let r#false = just_with_padding("false").map_with_span(|_, span: Span| {
+        TypeAnn::Lit(LitType {
             span: span.clone(),
             lit: Lit::bool(false, span),
-        }));
+        })
+    });
     let r#bool = choice((r#true, r#false));
 
     let int = text::int::<char, Simple<char>>(10).map_with_span(|value, span: Span| {
@@ -74,29 +76,50 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
                     })
                 });
 
+        let type_param_list = text::ident()
+            .map_with_span(|name, span| Ident { span, name })
+            .then(
+                just_with_padding("extends")
+                    .ignore_then(type_ann.clone())
+                    .or_not(),
+            )
+            .map_with_span(|(id, constraint), span| TypeParam {
+                span,
+                id,
+                constraint,
+                default: None,
+            })
+            .separated_by(just_with_padding(","))
+            .allow_trailing()
+            .delimited_by(just_with_padding("<"), just_with_padding(">"));
+
         let lam_params = type_ann
             .clone()
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("("), just_with_padding(")"));
 
-        let lam = lam_params
+        let lam = type_param_list
+            .or_not()
+            .then(lam_params)
             .then_ignore(just_with_padding("=>"))
             .then(type_ann.clone())
-            .map_with_span(|(args, ret), span| {
+            .map_with_span(|((type_params, args), ret), span| {
                 TypeAnn::Lam(LamType {
                     span,
                     args,
+                    type_params,
                     ret: Box::from(ret),
                 })
             });
 
         let prop = text::ident()
+            .map_with_span(|name, span| Ident { span, name })
             .then_ignore(just_with_padding(":"))
             .then(type_ann.clone())
             .map_with_span(|(name, type_ann), span: Span| TProp {
                 span,
-                name,
+                key: name,
                 type_ann: Box::from(type_ann),
             });
 
@@ -150,5 +173,9 @@ mod tests {
         insta::assert_debug_snapshot!(parse_type("{x: number, y: number}"));
         insta::assert_debug_snapshot!(parse_type("(A, B) => C | D"));
         insta::assert_debug_snapshot!(parse_type("((A, B) => C) | D"));
+
+        // TODO: allow params to have names in function types
+        insta::assert_debug_snapshot!(parse_type("<T>(T, T) => T"));
+        insta::assert_debug_snapshot!(parse_type("<T extends number | string>(a, b) => T"));
     }
 }

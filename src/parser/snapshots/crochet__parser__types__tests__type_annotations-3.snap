@@ -8,7 +8,10 @@ Object(
         props: [
             TProp {
                 span: 1..10,
-                name: "x",
+                key: Ident {
+                    span: 1..2,
+                    name: "x",
+                },
                 type_ann: Prim(
                     PrimType {
                         span: 4..10,
@@ -18,7 +21,10 @@ Object(
             },
             TProp {
                 span: 12..21,
-                name: "y",
+                key: Ident {
+                    span: 12..13,
+                    name: "y",
+                },
                 type_ann: Prim(
                     PrimType {
                         span: 15..21,
