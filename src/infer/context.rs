@@ -15,27 +15,17 @@ pub struct State {
 
 #[derive(Clone)]
 pub struct Context {
-    pub env: Env,
+    pub env: Env, // TODO: rename this to val_env
+    pub type_env: Env,
     pub state: State,
     pub is_async: bool,
-}
-
-impl From<Env> for Context {
-    fn from(env: Env) -> Self {
-        Context {
-            env,
-            state: State {
-                count: Cell::new(0),
-            },
-            is_async: false,
-        }
-    }
 }
 
 impl Default for Context {
     fn default() -> Self {
         Self {
             env: HashMap::new(),
+            type_env: HashMap::new(),
             state: State {
                 count: Cell::from(0),
             },

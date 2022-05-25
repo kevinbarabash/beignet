@@ -179,6 +179,12 @@ pub struct AliasType {
     pub id: i32,
     pub frozen: bool,
     pub name: String,
+    // Why do we need to include type_params here?
+    // If an AliasType has type params then those
+    // should be represented by the qualifiers in a
+    // Scheme
+
+    // We need this because these are actually type args
     pub type_params: Option<Vec<Type>>,
 }
 
@@ -259,6 +265,7 @@ impl fmt::Display for Type {
 
 #[derive(Clone, Debug)]
 pub struct Scheme {
+    // TODO: add optiona predicates to the qualifiers
     pub qualifiers: Vec<i32>,
     pub ty: Type,
 }

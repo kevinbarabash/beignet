@@ -7,8 +7,7 @@ use crochet::codegen::*;
 use crochet::parser::parser;
 
 fn infer(input: &str) -> String {
-    let env: Env = HashMap::new();
-    let ctx = Context::from(env);
+    let ctx = Context::default();
     let prog = parser().parse(input).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = infer_stmt(&ctx, stmt);

@@ -6,12 +6,15 @@ use crate::types::{self, freeze, Primitive, Scheme, Type};
 
 use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::{Context, Env};
-use super::substitutable::Substitutable;
+use super::substitutable::{Subst, Substitutable};
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
 pub fn infer_prog(env: Env, prog: &Program) -> Env {
-    let mut ctx: Context = Context::from(env);
+    let mut ctx: Context = Context {
+        env,
+        ..Context::default()
+    };
 
     for stmt in &prog.body {
         match stmt {
@@ -223,19 +226,54 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             args,
             body,
             is_async,
+            type_params,
+            return_type,
             ..
         }) => {
+            let mut cs: Vec<Constraint> = vec![];
+
+            // Create a hash table of the type params where the key is
+            // the name of type variable and the value is its type.  This
+            // is used below when constructing args_tv.  If a variable has
+            // a type annotation then we use this hash table to determine
+            // it actual type by doing appropriate substitions.  See the
+            // implementation of `type_ann_to_type` and `instantiate` for details.
+            let mut type_env = ctx.type_env.clone();
+            if let Some(type_params) = type_params {
+                for TypeParam { id, constraint, .. } in type_params {
+                    let tv = ctx.fresh_var();
+                    let scheme = type_to_scheme(&tv);
+                    type_env.insert(id.name.to_string(), scheme);
+
+                    if let Some(constraint) = constraint {
+                        cs.push(Constraint {
+                            types: (tv, type_ann_to_type(constraint, ctx)),
+                        })
+                    }
+                }
+            }
+
+            // TODO: figure out a better way of using the new type_env temporarily
+            // wehn calling type_ann_to_type().
+            let ctx_with_type_params = Context {
+                type_env,
+                ..ctx.to_owned()
+            };
             // Creates a new type variable for each arg
             let arg_tvs: Vec<_> = args
                 .iter()
                 .map(|arg| match arg {
                     Pattern::Ident(BindingIdent { type_ann, .. }) => match type_ann {
-                        Some(type_ann) => type_ann_to_type(type_ann, ctx),
-                        None => ctx.fresh_var(),
+                        Some(type_ann) => type_ann_to_type(type_ann, &ctx_with_type_params),
+                        // NOTE: we have to use ctx_with_type_params here
+                        None => ctx_with_type_params.fresh_var(),
                     },
                     Pattern::Rest(_) => todo!(),
                 })
                 .collect();
+            // Make sure that the `count` in the parent Context stays up to date
+            ctx.state.count.set(ctx_with_type_params.state.count.get());
+
             let mut new_ctx = ctx.clone();
             for (arg, tv) in args.iter().zip(arg_tvs.clone().into_iter()) {
                 let scheme = Scheme {
@@ -250,7 +288,9 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 };
             }
             new_ctx.is_async = is_async.to_owned();
-            let (ret, cs) = infer(body, &new_ctx);
+            let (ret, cs_body) = infer(body, &new_ctx);
+            cs.extend(cs_body);
+            // Make sure that the `count` in the parent Context stays up to date
             ctx.state.count.set(new_ctx.state.count.get());
 
             let ret = if !is_async || is_promise(&ret) {
@@ -259,6 +299,20 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 ctx.alias("Promise", Some(vec![ret]))
             };
 
+            // Testing:
+            // - <T>(a: T, b) => b should be inferred as <T, B>(T, B) => B
+            let ret = match return_type {
+                Some(return_type) => {
+                    let return_type = type_ann_to_type(return_type, ctx);
+                    cs.push(Constraint {
+                        types: (ret, return_type.clone()),
+                    });
+                    return_type
+                }
+                None => ret,
+            };
+
+            // TODO: update ctx.lam() so that it can accept type params
             let lam_ty = ctx.lam(arg_tvs, Box::new(ret));
 
             (lam_ty, cs)
@@ -462,16 +516,40 @@ fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
         TypeAnn::TypeRef(TypeRef {
             name, type_params, ..
         }) => {
-            let type_params = type_params.clone().map(|params| {
+            let type_params: Option<Vec<_>> = type_params.clone().map(|params| {
                 params
                     .iter()
                     .map(|param| _type_ann_to_type(param, ctx))
                     .collect()
             });
-            ctx.alias(name, type_params)
+            match ctx.type_env.get(name) {
+                Some(scheme) => match type_params {
+                    Some(params) => instantiate(scheme, params),
+                    None => {
+                        assert_eq!(scheme.qualifiers.len(), 0);
+                        scheme.ty.clone()
+                    }
+                },
+                None => ctx.alias(name, type_params),
+            }
         }
         TypeAnn::Union(_) => todo!(),
     }
+}
+
+// TODO: have a version that created fresh type vars from a Context instead
+// of having to explicitly pass in the types to uses.
+// TODO: check that the type params conform the qualifiers' predicates if
+// they exist.
+pub fn instantiate(scheme: &Scheme, type_params: Vec<Type>) -> Type {
+    assert_eq!(scheme.qualifiers.len(), type_params.len());
+    let subs: Subst = scheme
+        .qualifiers
+        .clone()
+        .into_iter()
+        .zip(type_params.into_iter())
+        .collect();
+    scheme.ty.apply(&subs)
 }
 
 #[cfg(test)]
@@ -482,8 +560,7 @@ mod tests {
     use super::*;
 
     fn parse_and_infer_expr(input: &str) -> String {
-        let env: Env = HashMap::new();
-        let ctx: Context = Context::from(env);
+        let ctx: Context = Context::default();
         let expr = expr_parser().then_ignore(end()).parse(input).unwrap();
         format!("{}", infer_expr(&ctx, &expr))
     }
