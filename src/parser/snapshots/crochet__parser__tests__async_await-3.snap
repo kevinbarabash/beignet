@@ -16,42 +16,45 @@ Program {
                     type_ann: None,
                 },
             ),
-            value: Lambda(
-                Lambda {
-                    span: 10..39,
-                    args: [],
-                    body: Op(
-                        Op {
-                            span: 22..39,
-                            op: Add,
-                            left: Await(
-                                Await {
-                                    span: 22..29,
-                                    expr: Ident(
-                                        Ident {
-                                            span: 28..29,
-                                            name: "a",
-                                        },
-                                    ),
-                                },
-                            ),
-                            right: Await(
-                                Await {
-                                    span: 32..39,
-                                    expr: Ident(
-                                        Ident {
-                                            span: 38..39,
-                                            name: "b",
-                                        },
-                                    ),
-                                },
-                            ),
-                        },
-                    ),
-                    is_async: true,
-                    return_type: None,
-                },
+            init: Some(
+                Lambda(
+                    Lambda {
+                        span: 10..39,
+                        args: [],
+                        body: Op(
+                            Op {
+                                span: 22..39,
+                                op: Add,
+                                left: Await(
+                                    Await {
+                                        span: 22..29,
+                                        expr: Ident(
+                                            Ident {
+                                                span: 28..29,
+                                                name: "a",
+                                            },
+                                        ),
+                                    },
+                                ),
+                                right: Await(
+                                    Await {
+                                        span: 32..39,
+                                        expr: Ident(
+                                            Ident {
+                                                span: 38..39,
+                                                name: "b",
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                        is_async: true,
+                        return_type: None,
+                    },
+                ),
             ),
+            declare: false,
         },
     ],
 }

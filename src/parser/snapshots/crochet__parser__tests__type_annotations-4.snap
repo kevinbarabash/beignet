@@ -10,7 +10,7 @@ Program {
                 BindingIdent {
                     span: 4..12,
                     id: Ident {
-                        span: 4..12,
+                        span: 4..5,
                         name: "p",
                     },
                     type_ann: Some(
@@ -24,37 +24,40 @@ Program {
                     ),
                 },
             ),
-            value: Obj(
-                Obj {
-                    span: 15..28,
-                    properties: [
-                        Property {
-                            span: 16..20,
-                            name: "x",
-                            value: Lit(
-                                Num(
-                                    Num {
-                                        span: 19..20,
-                                        value: "5",
-                                    },
+            init: Some(
+                Obj(
+                    Obj {
+                        span: 15..28,
+                        properties: [
+                            Property {
+                                span: 16..20,
+                                name: "x",
+                                value: Lit(
+                                    Num(
+                                        Num {
+                                            span: 19..20,
+                                            value: "5",
+                                        },
+                                    ),
                                 ),
-                            ),
-                        },
-                        Property {
-                            span: 22..27,
-                            name: "y",
-                            value: Lit(
-                                Num(
-                                    Num {
-                                        span: 25..27,
-                                        value: "10",
-                                    },
+                            },
+                            Property {
+                                span: 22..27,
+                                name: "y",
+                                value: Lit(
+                                    Num(
+                                        Num {
+                                            span: 25..27,
+                                            value: "10",
+                                        },
+                                    ),
                                 ),
-                            ),
-                        },
-                    ],
-                },
+                            },
+                        ],
+                    },
+                ),
             ),
+            declare: false,
         },
     ],
 }

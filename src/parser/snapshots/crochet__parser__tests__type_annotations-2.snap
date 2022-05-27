@@ -10,7 +10,7 @@ Program {
                 BindingIdent {
                     span: 4..16,
                     id: Ident {
-                        span: 4..16,
+                        span: 4..7,
                         name: "msg",
                     },
                     type_ann: Some(
@@ -23,14 +23,17 @@ Program {
                     ),
                 },
             ),
-            value: Lit(
-                Str(
-                    Str {
-                        span: 18..25,
-                        value: "hello",
-                    },
+            init: Some(
+                Lit(
+                    Str(
+                        Str {
+                            span: 18..25,
+                            value: "hello",
+                        },
+                    ),
                 ),
             ),
+            declare: false,
         },
     ],
 }

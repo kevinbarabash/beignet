@@ -15,22 +15,42 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
 
     for stmt in &prog.body {
         match stmt {
-            Statement::Decl { pattern, value, .. } => match pattern {
-                Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
-                    let inferred_scheme = infer_expr(&ctx, value);
-                    let scheme = match type_ann {
-                        Some(type_ann) => {
-                            let type_ann_ty = type_ann_to_type(type_ann, &ctx);
-                            match is_subtype(&inferred_scheme.ty, &type_ann_ty) {
-                                true => type_to_scheme(&type_ann_ty),
-                                false => panic!("value is not a subtype of decl's declared type"),
-                            }
+            Statement::Decl { declare, init, pattern, .. } => {
+                match declare {
+                    true => {
+                        match pattern {
+                            Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
+                                // A type annotation should always be provided when using `declare`
+                                let type_ann = type_ann.as_ref().unwrap();
+                                let type_ann_ty = type_ann_to_type(type_ann, &ctx);
+                                let scheme = type_to_scheme(&type_ann_ty);
+                                ctx.env.insert(id.name.to_owned(), scheme);
+                            },
+                            _ => todo!(),
                         }
-                        None => inferred_scheme,
-                    };
-                    ctx.env.insert(id.name.to_owned(), scheme);
-                }
-                _ => todo!(),
+                    },
+                    false => {
+                        // An initial value should always be used when using a normal `let` statement
+                        let init = init.as_ref().unwrap();
+                        match pattern {
+                            Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
+                                let inferred_scheme = infer_expr(&ctx, init);
+                                let scheme = match type_ann {
+                                    Some(type_ann) => {
+                                        let type_ann_ty = type_ann_to_type(type_ann, &ctx);
+                                        match is_subtype(&inferred_scheme.ty, &type_ann_ty) {
+                                            true => type_to_scheme(&type_ann_ty),
+                                            false => panic!("value is not a subtype of decl's declared type"),
+                                        }
+                                    }
+                                    None => inferred_scheme,
+                                };
+                                ctx.env.insert(id.name.to_owned(), scheme);
+                            }
+                            _ => todo!(),
+                        }
+                    },
+                };
             },
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that

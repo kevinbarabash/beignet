@@ -15,7 +15,8 @@ pub enum Statement {
     Decl {
         span: Span,
         pattern: Pattern,
-        value: Expr,
+        init: Option<Expr>,
+        declare: bool,
     },
     Expr {
         span: Span,
