@@ -5,7 +5,7 @@ expression: "parse_type(\"(number, string) => boolean\")"
 Lam(
     LamType {
         span: 0..27,
-        args: [
+        params: [
             Prim(
                 PrimType {
                     span: 1..7,

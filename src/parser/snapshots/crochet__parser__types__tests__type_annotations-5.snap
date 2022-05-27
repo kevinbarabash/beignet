@@ -9,7 +9,7 @@ Union(
             Lam(
                 LamType {
                     span: 1..12,
-                    args: [
+                    params: [
                         TypeRef(
                             TypeRef {
                                 span: 2..3,

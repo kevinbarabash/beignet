@@ -5,7 +5,7 @@ use crate::types::{Primitive};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LamType {
     pub span: Span,
-    pub args: Vec<TypeAnn>,
+    pub params: Vec<TypeAnn>,
     pub ret: Box<TypeAnn>,
 }
 

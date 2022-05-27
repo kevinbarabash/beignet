@@ -442,7 +442,7 @@ fn type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
 
 fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
     match type_ann {
-        TypeAnn::Lam(LamType { args, ret, .. }) => {
+        TypeAnn::Lam(LamType { params: args, ret, .. }) => {
             let args: Vec<_> = args.iter().map(|arg| _type_ann_to_type(arg, ctx)).collect();
             let ret = Box::from(_type_ann_to_type(ret.as_ref(), ctx));
             ctx.lam(args, ret)

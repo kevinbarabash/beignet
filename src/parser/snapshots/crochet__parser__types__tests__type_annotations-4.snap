@@ -5,7 +5,7 @@ expression: "parse_type(\"(A, B) => C | D\")"
 Lam(
     LamType {
         span: 0..15,
-        args: [
+        params: [
             TypeRef(
                 TypeRef {
                     span: 1..2,

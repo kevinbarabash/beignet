@@ -86,7 +86,7 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
             .map_with_span(|(args, ret), span| {
                 TypeAnn::Lam(LamType {
                     span,
-                    args,
+                    params: args,
                     ret: Box::from(ret),
                 })
             });
