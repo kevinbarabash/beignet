@@ -51,11 +51,8 @@ impl Context {
     }
 
     fn instantiate(&self, scheme: &Scheme) -> Type {
-        let fresh_quals = scheme.qualifiers.iter().map(|_| self.fresh_var());
-
         let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
-        // The iterator returned by into_iter may yield any of T, &T or &mut T,
-        // depending on the context.
+        let fresh_quals = scheme.qualifiers.iter().map(|_| self.fresh_var());
         let subs: Subst = ids.zip(fresh_quals).collect();
 
         scheme.ty.apply(&subs)
@@ -141,6 +138,14 @@ impl Context {
             id: self.fresh_id(),
             frozen: false,
             types,
+        })
+    }
+    pub fn mem(&self, obj: Type, prop: &str) -> Type {
+        Type::Member(types::MemberType {
+            id: self.fresh_id(),
+            frozen: false,
+            obj: Box::from(obj),
+            prop: prop.to_owned(),
         })
     }
 }

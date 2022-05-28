@@ -89,6 +89,25 @@ pub struct Tuple {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Member {
+    pub span: Span,
+    pub obj: Box<Expr>,
+    pub prop: MemberProp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MemberProp {
+    Ident(Ident),
+    Computed(ComputedPropName),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ComputedPropName {
+    pub span: Span, // includes enclosing []
+    pub expr: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     App(App),
     Fix(Fix),
@@ -102,6 +121,7 @@ pub enum Expr {
     Obj(Obj),
     Await(Await),
     Tuple(Tuple),
+    Member(Member),
 }
 
 impl Expr {
@@ -119,6 +139,7 @@ impl Expr {
             Expr::Obj(obj) => obj.span.to_owned(),
             Expr::Await(r#await) => r#await.span.to_owned(),
             Expr::Tuple(tuple) => tuple.span.to_owned(),
+            Expr::Member(member) => member.span.to_owned(),
         }
     }
 }

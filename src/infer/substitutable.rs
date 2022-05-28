@@ -71,28 +71,27 @@ impl Substitutable for Type {
                         .collect(),
                 }),
             },
-            Type::Alias(AliasType {
-                id,
-                frozen,
-                name,
-                type_params,
-            }) => match sub.get(id) {
+            Type::Alias(alias) => match sub.get(&alias.id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type::Alias(AliasType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
-                    name: name.to_owned(),
-                    type_params: type_params.clone().map(|params| {
+                    type_params: alias.type_params.clone().map(|params| {
                         params.iter().map(|ty| ty.apply(sub)).collect()
                     }),
+                    ..alias.to_owned()
                 }),
             },
-            Type::Tuple(TupleType { id, frozen, types }) => match sub.get(id) {
+            Type::Tuple(tuple) => match sub.get(&tuple.id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type::Tuple(TupleType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
-                    types: types.iter().map(|ty| ty.apply(sub)).collect(),
+                    types: tuple.types.iter().map(|ty| ty.apply(sub)).collect(),
+                    ..tuple.to_owned()
+                }),
+            },
+            Type::Member(member) => match sub.get(&member.id) {
+                Some(replacement) => replacement.to_owned(),
+                None => Type::Member(MemberType {
+                    obj: Box::from(member.obj.apply(sub)),
+                    ..member.to_owned()
                 }),
             },
         }
@@ -101,20 +100,23 @@ impl Substitutable for Type {
         match self {
             Type::Var(VarType { id, .. }) => HashSet::from([id.to_owned()]),
             Type::Lam(LamType { params, ret, .. }) => {
-                let mut result: HashSet<_> = params.iter().flat_map(|param| param.ftv()).collect();
+                let mut result: HashSet<_> = params.ftv();
                 result.extend(ret.ftv());
                 result
             }
             Type::Prim(_) => HashSet::new(),
             Type::Lit(_) => HashSet::new(),
-            Type::Union(UnionType { types, .. }) => types.iter().flat_map(|ty| ty.ftv()).collect(),
+            Type::Union(UnionType { types, .. }) => types.ftv(),
             Type::Object(ObjectType { props, .. }) => {
+                // TODO: implement Substitutable fro TProp
                 props.iter().flat_map(|prop| prop.ty.ftv()).collect()
             }
             Type::Alias(AliasType { type_params, .. }) => {
+                // TODO: implement Substitutable fro Option
                 type_params.iter().flat_map(|ty| ty.ftv()).collect()
             }
-            Type::Tuple(TupleType { types, .. }) =>  types.iter().flat_map(|ty| ty.ftv()).collect(),
+            Type::Tuple(TupleType { types, .. }) => types.ftv(),
+            Type::Member(MemberType { obj, .. }) => obj.ftv(),
         }
     }
 }

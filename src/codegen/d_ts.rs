@@ -372,5 +372,6 @@ pub fn build_type(
                 })
                 .collect(),
         }),
+        Type::Member(_) => todo!(),
     }
 }
