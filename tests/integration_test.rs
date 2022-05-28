@@ -544,3 +544,50 @@ fn infer_var_with_union_type_annotation() {
     let b = format!("{}", env.get("b").unwrap());
     assert_eq!(b, "number | string");
 }
+
+#[test]
+fn infer_widen_tuple_return() {
+    let src = r#"
+    let result = (cond) => {
+        if (cond) {
+            [1, 2]
+        } else {
+            [true, false]
+        }
+    }
+    "#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("result").unwrap());
+    assert_eq!(result, "(boolean) => [1, 2] | [true, false]");
+}
+
+// TODO: meditate on how to allow if-else to return a widened type
+// if both branches return a frozen type.
+// IDEA: we could make a copy of the type an unfreeze it.
+// When do we care about the frozeness of a type:
+// - assignment
+// - application
+// The problem is that the constraint solver doesn't know about these.
+// We should consider tagging constraints when we infer them.  We need
+// to do this anyways to handle subtyping of functions so that callbacks
+// are handled correctly.
+#[ignore]
+#[test]
+fn infer_widen_tuples_with_type_annotations() {
+    let src = r#"
+    let result = (cond) => {
+        if (cond) {
+            let x: [number, number] = [1, 2] in
+            x
+        } else {
+            let y: [boolean, boolean] = [true, false] in
+            y
+        }
+    }
+    "#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("result").unwrap());
+    assert_eq!(result, "(boolean) => [number | number] | [boolean | boolean]");
+}
