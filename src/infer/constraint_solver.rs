@@ -160,8 +160,6 @@ fn unify_many(cs: &[Constraint], ctx: &Context) -> Subst {
 }
 
 pub fn is_subtype(t1: &Type, t2: &Type) -> bool {
-    println!("is_subtype({t1}, {t2})");
-    // TODO: add support for object subtypes
     match (t1, t2) {
         (Type::Lit(LitType { lit, .. }), Type::Prim(PrimType { prim, .. })) => {
             matches!(
