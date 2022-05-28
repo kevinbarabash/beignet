@@ -15,7 +15,12 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
 
     for stmt in &prog.body {
         match stmt {
-            Statement::Decl { declare, init, pattern, .. } => {
+            Statement::Decl {
+                declare,
+                init,
+                pattern,
+                ..
+            } => {
                 match declare {
                     true => {
                         match pattern {
@@ -25,10 +30,10 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
                                 let type_ann_ty = type_ann_to_type(type_ann, &ctx);
                                 let scheme = type_to_scheme(&type_ann_ty);
                                 ctx.env.insert(id.name.to_owned(), scheme);
-                            },
+                            }
                             _ => todo!(),
                         }
-                    },
+                    }
                     false => {
                         // An initial value should always be used when using a normal `let` statement
                         let init = init.as_ref().unwrap();
@@ -40,7 +45,9 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
                                         let type_ann_ty = type_ann_to_type(type_ann, &ctx);
                                         match is_subtype(&inferred_scheme.ty, &type_ann_ty) {
                                             true => type_to_scheme(&type_ann_ty),
-                                            false => panic!("value is not a subtype of decl's declared type"),
+                                            false => panic!(
+                                                "value is not a subtype of decl's declared type"
+                                            ),
                                         }
                                     }
                                     None => inferred_scheme,
@@ -49,9 +56,9 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
                             }
                             _ => todo!(),
                         }
-                    },
+                    }
                 };
-            },
+            }
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
@@ -112,7 +119,10 @@ fn normalize(sc: &Scheme) -> Scheme {
                 params,
                 ret,
             }) => {
-                let params: Vec<_> = params.iter().map(|param| norm_type(param, mapping)).collect();
+                let params: Vec<_> = params
+                    .iter()
+                    .map(|param| norm_type(param, mapping))
+                    .collect();
                 let ret = Box::from(norm_type(ret, mapping));
                 Type::Lam(types::LamType {
                     id: id.to_owned(),
@@ -159,6 +169,14 @@ fn normalize(sc: &Scheme) -> Scheme {
                     frozen: frozen.to_owned(),
                     name: name.to_owned(),
                     type_params,
+                })
+            }
+            Type::Tuple(types::TupleType { id, frozen, types }) => {
+                let types = types.iter().map(|ty| norm_type(ty, mapping)).collect();
+                Type::Tuple(types::TupleType {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    types,
                 })
             }
         }
@@ -400,6 +418,17 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (ty, vec![])
         }
+        Expr::Tuple(Tuple { elements, .. }) => {
+            let mut types: Vec<Type> = vec![];
+            let mut all_cs: Vec<Constraint> = Vec::new();
+            for elem in elements {
+                let (ty, cs) = infer(elem, ctx);
+                types.push(ty);
+                all_cs.extend(cs);
+            }
+
+            (ctx.tuple(types), all_cs)
+        }
     }
 }
 
@@ -463,7 +492,10 @@ fn type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
 fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
     match type_ann {
         TypeAnn::Lam(LamType { params, ret, .. }) => {
-            let params: Vec<_> = params.iter().map(|arg| _type_ann_to_type(arg, ctx)).collect();
+            let params: Vec<_> = params
+                .iter()
+                .map(|arg| _type_ann_to_type(arg, ctx))
+                .collect();
             let ret = Box::from(_type_ann_to_type(ret.as_ref(), ctx));
             ctx.lam(params, ret)
         }
@@ -490,7 +522,12 @@ fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
             });
             ctx.alias(name, type_params)
         }
-        TypeAnn::Union(_) => todo!(),
+        TypeAnn::Union(UnionType { types, .. }) => {
+            ctx.union(types.iter().map(|ty| _type_ann_to_type(ty, ctx)).collect())
+        }
+        TypeAnn::Tuple(TupleType { types, .. }) => {
+            ctx.tuple(types.iter().map(|ty| _type_ann_to_type(ty, ctx)).collect())
+        }
     }
 }
 

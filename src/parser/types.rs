@@ -106,12 +106,20 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
             .delimited_by(just_with_padding("{"), just_with_padding("}"))
             .map_with_span(|props, span: Span| TypeAnn::Object(ObjectType { span, props }));
 
+        let tuple = type_ann
+            .clone()
+            .separated_by(just_with_padding(","))
+            .allow_trailing()
+            .delimited_by(just_with_padding("["), just_with_padding("]"))
+            .map_with_span(|types, span: Span| TypeAnn::Tuple(TupleType { span, types }));
+
         let atom = choice((
             r#bool,
             num,
             r#str,
             prim,
             obj,
+            tuple,
             alias,
             type_ann
                 .clone()

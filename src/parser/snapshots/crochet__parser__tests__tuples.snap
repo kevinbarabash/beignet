@@ -1,0 +1,30 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"let x = []\")"
+---
+Program {
+    body: [
+        Decl {
+            span: 0..10,
+            pattern: Ident(
+                BindingIdent {
+                    span: 4..5,
+                    id: Ident {
+                        span: 4..5,
+                        name: "x",
+                    },
+                    type_ann: None,
+                },
+            ),
+            init: Some(
+                Tuple(
+                    Tuple {
+                        span: 8..10,
+                        elements: [],
+                    },
+                ),
+            ),
+            declare: false,
+        },
+    ],
+}

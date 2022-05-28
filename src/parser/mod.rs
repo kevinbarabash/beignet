@@ -132,4 +132,11 @@ mod tests {
         insta::assert_debug_snapshot!(parse("   let x = 5")); // with leading whitespace
         insta::assert_debug_snapshot!(parse("declare let x: number"));
     }
+
+    #[test]
+    fn tuples() {
+        insta::assert_debug_snapshot!(parse("let x = []"));
+        insta::assert_debug_snapshot!(parse("let x = [1, 2, 3]"));
+        insta::assert_debug_snapshot!(parse("let x = [1, [a, b]]"));
+    }
 }

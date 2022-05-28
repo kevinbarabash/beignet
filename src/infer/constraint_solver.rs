@@ -175,11 +175,28 @@ pub fn is_subtype(t1: &Type, t2: &Type) -> bool {
         ) => {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
             props2.iter().all(|prop2| {
-                props1.iter().any(|prop1| {
-                    prop1.name == prop2.name && is_subtype(&prop1.ty, &prop2.ty)
-                })
+                props1
+                    .iter()
+                    .any(|prop1| prop1.name == prop2.name && is_subtype(&prop1.ty, &prop2.ty))
             })
-        },
+        }
+        (
+            Type::Tuple(TupleType { types: types1, .. }),
+            Type::Tuple(TupleType { types: types2, .. }),
+        ) => {
+            // It's okay if t1 has extra properties, but it has to have all of t2's properties.
+            if types1.len() < types2.len() {
+                panic!("t1 contain at least the same number of elements as t2");
+            }
+            types1
+                .iter()
+                .zip(types2.iter())
+                .all(|(t1, t2)| is_subtype(t1, t2))
+        }
+        (Type::Union(_), Type::Union(_)) => {
+            panic!("is_subtype() can't handle t1 being a union yet")
+        }
+        (_, Type::Union(UnionType { types, .. })) => types.iter().any(|t2| is_subtype(t1, t2)),
         _ => false,
     }
 }

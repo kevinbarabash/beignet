@@ -195,6 +195,25 @@ impl Hash for AliasType {
     }
 }
 
+#[derive(Clone, Debug, Eq)]
+pub struct TupleType {
+    pub id: i32,
+    pub frozen: bool,
+    pub types: Vec<Type>,
+}
+
+impl PartialEq for TupleType {
+    fn eq(&self, other: &Self) -> bool {
+        self.types == other.types
+    }
+}
+
+impl Hash for TupleType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.types.hash(state);
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Var(VarType),
@@ -204,6 +223,7 @@ pub enum Type {
     Union(UnionType),
     Object(ObjectType),
     Alias(AliasType),
+    Tuple(TupleType),
 }
 
 impl Type {
@@ -216,6 +236,7 @@ impl Type {
             Type::Union(x) => x.frozen,
             Type::Object(x) => x.frozen,
             Type::Alias(x) => x.frozen,
+            Type::Tuple(x) => x.frozen,
         }
     }
 
@@ -228,6 +249,7 @@ impl Type {
             Type::Union(x) => x.id,
             Type::Object(x) => x.id,
             Type::Alias(x) => x.id,
+            Type::Tuple(x) => x.id,
         }
     }
 }
@@ -253,6 +275,7 @@ impl fmt::Display for Type {
                 Some(params) => write!(f, "{name}<{}>", join(params, ", ")),
                 None => write!(f, "{name}"),
             },
+            Type::Tuple(TupleType { types, .. }) => write!(f, "[{}]", join(types, ", ")),
         }
     }
 }
@@ -335,6 +358,11 @@ pub fn freeze(ty: Type) -> Type {
                 .type_params
                 .map(|type_params| type_params.into_iter().map(freeze).collect()),
             ..alias
+        }),
+        Type::Tuple(tuple) => Type::Tuple(TupleType {
+            frozen: true,
+            types: tuple.types.into_iter().map(freeze).collect(),
+            ..tuple
         }),
     }
 }
