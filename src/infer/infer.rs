@@ -6,8 +6,8 @@ use crate::types::{self, freeze, Primitive, Scheme, Type};
 
 use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::{Context, Env};
-use super::substitutable::Substitutable;
 use super::infer_mem::infer_mem;
+use super::substitutable::Substitutable;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
@@ -82,15 +82,15 @@ pub fn infer_expr(ctx: &Context, expr: &Expr) -> Scheme {
     let (ty, cs) = infer(expr, ctx);
     let subs = run_solve(&cs, ctx);
 
-    close_over(&ty.apply(&subs))
+    close_over(&ty.apply(&subs), ctx)
 }
 
-fn close_over(ty: &Type) -> Scheme {
+fn close_over(ty: &Type, ctx: &Context) -> Scheme {
     let empty_env = Env::new();
-    normalize(&generalize(&empty_env, ty))
+    normalize(&generalize(&empty_env, ty), ctx)
 }
 
-fn normalize(sc: &Scheme) -> Scheme {
+fn normalize(sc: &Scheme, _ctx: &Context) -> Scheme {
     let body = &sc.ty;
     let keys = body.ftv();
     let mut keys: Vec<_> = keys.iter().cloned().collect();
@@ -109,6 +109,7 @@ fn normalize(sc: &Scheme) -> Scheme {
         })
         .collect();
 
+    // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
     fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>) -> Type {
         // let id = ty.id;
         // let frozen = ty.frozen;
@@ -133,16 +134,35 @@ fn normalize(sc: &Scheme) -> Scheme {
             }
             Type::Prim(_) => ty.to_owned(),
             Type::Lit(_) => ty.to_owned(),
-            Type::Union(types::UnionType { id, frozen, types }) => {
-                let types = types.iter().map(|ty| norm_type(ty, mapping)).collect();
+            Type::Union(union) => {
+                // TODO: update union_types from constraint_solver.rs to handle
+                // any number of types instead of just two and then call it here.
+                let types = union
+                    .types
+                    .iter()
+                    .map(|ty| norm_type(ty, mapping))
+                    .collect();
                 Type::Union(types::UnionType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
                     types,
+                    ..union.to_owned()
                 })
             }
-            Type::Object(types::ObjectType { id, frozen, props }) => {
-                let props = props
+            Type::Intersection(intersection) => {
+                // TODO: update intersection_types from constraint_solver.rs to handle
+                // any number of types instead of just two and then call it here.
+                let types = intersection
+                    .types
+                    .iter()
+                    .map(|ty| norm_type(ty, mapping))
+                    .collect();
+                Type::Intersection(types::IntersectionType {
+                    types,
+                    ..intersection.to_owned()
+                })
+            }
+            Type::Object(object) => {
+                let props = object
+                    .props
                     .iter()
                     .map(|prop| types::TProp {
                         name: prop.name.clone(),
@@ -150,9 +170,8 @@ fn normalize(sc: &Scheme) -> Scheme {
                     })
                     .collect();
                 Type::Object(types::ObjectType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
                     props,
+                    ..object.to_owned()
                 })
             }
             Type::Alias(types::AliasType {
@@ -392,7 +411,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 })
                 .collect();
 
-            let obj_ty = ctx.object(&properties);
+            let obj_ty = ctx.object(&properties, None);
 
             (obj_ty, all_cs)
         }
@@ -521,7 +540,7 @@ fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
                     ty: _type_ann_to_type(prop.type_ann.as_ref(), ctx),
                 })
                 .collect();
-            ctx.object(&props)
+            ctx.object(&props, None)
         }
         TypeAnn::TypeRef(TypeRef {
             name, type_params, ..

@@ -1,6 +1,6 @@
 use super::constraint_solver::Constraint;
 use crate::ast::*;
-use crate::types::Type;
+use crate::types::{self, Type, WidenFlag};
 
 use super::context::Context;
 use super::infer::InferResult;
@@ -28,12 +28,28 @@ fn type_of_property_on_type(ty: Type, prop: &MemberProp, ctx: &Context) -> Infer
             // TODO: implementing this correctly should allow for the following
             // expression to be inferred:
             // let mag_square = (point) => point.x * point.x + point.y * point.y
-            todo!()
-        },
+            let tv = ctx.fresh_var();
+            let obj = ctx.object(&[types::TProp {
+                name: unwrap_property(prop),
+                ty: tv.clone(),
+            }], Some(WidenFlag::Intersection));
+            let mem1 = ctx.mem(ty.clone(), &unwrap_property(prop));
+            let mem2 = ctx.mem(obj.clone(), &unwrap_property(prop));
+            (
+                tv,
+                vec![
+                    Constraint {
+                        types: (mem1, mem2),
+                    },
+                    Constraint { types: (ty, obj) },
+                ],
+            )
+        }
         Type::Lam(_) => todo!(),
         Type::Prim(_) => todo!(),
         Type::Lit(_) => todo!(),
         Type::Union(_) => todo!(),
+        Type::Intersection(_) => todo!(),
         Type::Object(obj) => {
             // TODO: allow the use of string literals to access properties on
             // object types.
@@ -45,7 +61,7 @@ fn type_of_property_on_type(ty: Type, prop: &MemberProp, ctx: &Context) -> Infer
                 // TODO: include property name in error message
                 None => panic!("Record literal doesn't contain property"),
             }
-        },
+        }
         Type::Alias(_) => todo!(),
         Type::Tuple(_) => todo!(),
         Type::Member(_) => todo!(),

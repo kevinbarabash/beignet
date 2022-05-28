@@ -314,6 +314,17 @@ pub fn build_type(
                     .collect(),
             }))
         }
+        Type::Intersection(types::IntersectionType { types, .. }) => {
+            TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsIntersectionType(
+                TsIntersectionType {
+                    span: DUMMY_SP,
+                    types: types
+                        .iter()
+                        .map(|ty| Box::from(build_type(ty, None, None)))
+                        .collect(),
+                },
+            ))
+        }
         Type::Object(types::ObjectType { props, .. }) => {
             let members: Vec<TsTypeElement> = props
                 .iter()

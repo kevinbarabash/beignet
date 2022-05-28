@@ -51,32 +51,41 @@ impl Substitutable for Type {
             Type::Lit(LitType { id, .. }) => sub.get(id).unwrap_or(self).clone(),
             Type::Union(UnionType { id, frozen, types }) => match sub.get(id) {
                 Some(replacement) => replacement.to_owned(),
-                None => Type::Union(UnionType {
+                None => norm_type(Type::Union(UnionType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
-                    types: types.iter().map(|ty| ty.apply(sub)).collect(),
-                }),
+                    types: types.apply(sub),
+                })),
             },
-            Type::Object(ObjectType { id, frozen, props }) => match sub.get(id) {
+            Type::Intersection(IntersectionType { id, frozen, types }) => match sub.get(id) {
+                Some(replacement) => replacement.to_owned(),
+                None => norm_type(Type::Intersection(IntersectionType {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    types: types.apply(sub),
+                })),
+            },
+            Type::Object(object) => match sub.get(&object.id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type::Object(ObjectType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
-                    props: props
+                    props: object
+                        .props
                         .iter()
                         .map(|prop| TProp {
                             name: prop.name.clone(),
                             ty: prop.ty.apply(sub),
                         })
                         .collect(),
+                    ..object.to_owned()
                 }),
             },
             Type::Alias(alias) => match sub.get(&alias.id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type::Alias(AliasType {
-                    type_params: alias.type_params.clone().map(|params| {
-                        params.iter().map(|ty| ty.apply(sub)).collect()
-                    }),
+                    type_params: alias
+                        .type_params
+                        .clone()
+                        .map(|params| params.iter().map(|ty| ty.apply(sub)).collect()),
                     ..alias.to_owned()
                 }),
             },
@@ -107,6 +116,7 @@ impl Substitutable for Type {
             Type::Prim(_) => HashSet::new(),
             Type::Lit(_) => HashSet::new(),
             Type::Union(UnionType { types, .. }) => types.ftv(),
+            Type::Intersection(IntersectionType { types, .. }) => types.ftv(),
             Type::Object(ObjectType { props, .. }) => {
                 // TODO: implement Substitutable fro TProp
                 props.iter().flat_map(|prop| prop.ty.ftv()).collect()
@@ -155,5 +165,36 @@ where
     }
     fn ftv(&self) -> HashSet<i32> {
         self.iter().flat_map(|c| c.ftv()).collect()
+    }
+}
+
+fn norm_type(ty: Type) -> Type {
+    match ty {
+        Type::Union(union) => {
+            let types: HashSet<_> = union.types.into_iter().collect();
+            let mut types: Vec<_> = types.into_iter().collect();
+            types.sort_by_key(|k| k.id());
+
+            if types.len() == 1 {
+                types.get(0).unwrap().to_owned()
+            } else {
+                Type::Union(UnionType { types, ..union })
+            }
+        }
+        Type::Intersection(intersection) => {
+            let types: HashSet<_> = intersection.types.into_iter().collect();
+            let mut types: Vec<_> = types.into_iter().collect();
+            types.sort_by_key(|k| k.id());
+
+            if types.len() == 1 {
+                types.get(0).unwrap().to_owned()
+            } else {
+                Type::Intersection(IntersectionType {
+                    types,
+                    ..intersection
+                })
+            }
+        }
+        _ => ty,
     }
 }
