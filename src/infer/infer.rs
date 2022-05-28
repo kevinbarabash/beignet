@@ -109,15 +109,15 @@ fn normalize(sc: &Scheme) -> Scheme {
             Type::Lam(types::LamType {
                 id,
                 frozen,
-                args,
+                params,
                 ret,
             }) => {
-                let args: Vec<_> = args.iter().map(|arg| norm_type(arg, mapping)).collect();
+                let params: Vec<_> = params.iter().map(|param| norm_type(param, mapping)).collect();
                 let ret = Box::from(norm_type(ret, mapping));
                 Type::Lam(types::LamType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
-                    args,
+                    params,
                     ret,
                 })
             }
@@ -240,15 +240,15 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             (result_type, constraints)
         }
         Expr::Lambda(Lambda {
-            args,
+            params,
             body,
             is_async,
             ..
         }) => {
             // Creates a new type variable for each arg
-            let arg_tvs: Vec<_> = args
+            let param_tvs: Vec<_> = params
                 .iter()
-                .map(|arg| match arg {
+                .map(|param| match param {
                     Pattern::Ident(BindingIdent { type_ann, .. }) => match type_ann {
                         Some(type_ann) => type_ann_to_type(type_ann, ctx),
                         None => ctx.fresh_var(),
@@ -257,7 +257,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 })
                 .collect();
             let mut new_ctx = ctx.clone();
-            for (arg, tv) in args.iter().zip(arg_tvs.clone().into_iter()) {
+            for (arg, tv) in params.iter().zip(param_tvs.clone().into_iter()) {
                 let scheme = Scheme {
                     qualifiers: vec![],
                     ty: tv.clone(),
@@ -279,7 +279,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 ctx.alias("Promise", Some(vec![ret]))
             };
 
-            let lam_ty = ctx.lam(arg_tvs, Box::new(ret));
+            let lam_ty = ctx.lam(param_tvs, Box::new(ret));
 
             (lam_ty, cs)
         }
@@ -462,10 +462,10 @@ fn type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
 
 fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
     match type_ann {
-        TypeAnn::Lam(LamType { params: args, ret, .. }) => {
-            let args: Vec<_> = args.iter().map(|arg| _type_ann_to_type(arg, ctx)).collect();
+        TypeAnn::Lam(LamType { params, ret, .. }) => {
+            let params: Vec<_> = params.iter().map(|arg| _type_ann_to_type(arg, ctx)).collect();
             let ret = Box::from(_type_ann_to_type(ret.as_ref(), ctx));
-            ctx.lam(args, ret)
+            ctx.lam(params, ret)
         }
         TypeAnn::Lit(LitType { lit, .. }) => ctx.lit(lit.to_owned()),
         TypeAnn::Prim(PrimType { prim, .. }) => ctx.prim(prim.to_owned()),

@@ -36,14 +36,14 @@ impl Substitutable for Type {
             Type::Lam(LamType {
                 id,
                 frozen,
-                args,
+                params,
                 ret,
             }) => match sub.get(id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type::Lam(LamType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
-                    args: args.iter().map(|arg| arg.apply(sub)).collect(),
+                    params: params.iter().map(|param| param.apply(sub)).collect(),
                     ret: Box::from(ret.apply(sub)),
                 }),
             },
@@ -92,8 +92,8 @@ impl Substitutable for Type {
     fn ftv(&self) -> HashSet<i32> {
         match self {
             Type::Var(VarType { id, .. }) => HashSet::from([id.to_owned()]),
-            Type::Lam(LamType { args, ret, .. }) => {
-                let mut result: HashSet<_> = args.iter().flat_map(|a| a.ftv()).collect();
+            Type::Lam(LamType { params, ret, .. }) => {
+                let mut result: HashSet<_> = params.iter().flat_map(|param| param.ftv()).collect();
                 result.extend(ret.ftv());
                 result
             }

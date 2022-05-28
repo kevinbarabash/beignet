@@ -48,7 +48,7 @@ pub struct IfElse {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lambda {
     pub span: Span,
-    pub args: Vec<Pattern>,
+    pub params: Vec<Pattern>,
     pub body: Box<Expr>,
     pub is_async: bool,
     pub return_type: Option<TypeAnn>,

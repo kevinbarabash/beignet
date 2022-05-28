@@ -31,7 +31,7 @@ pub fn decl_parser() -> impl Parser<char, Statement, Error = Simple<char>> {
                             span: init.span(),
                             expr: Box::from(Expr::Lambda(Lambda {
                                 span: init.span(),
-                                args: vec![pattern.clone()],
+                                params: vec![pattern.clone()],
                                 body: Box::from(init),
                                 is_async: false,
                                 return_type: None,

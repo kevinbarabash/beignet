@@ -81,19 +81,19 @@ impl Hash for VarType {
 pub struct LamType {
     pub id: i32,
     pub frozen: bool,
-    pub args: Vec<Type>, // TOOD: rename this params
+    pub params: Vec<Type>, // TOOD: rename this params
     pub ret: Box<Type>,
 }
 
 impl PartialEq for LamType {
     fn eq(&self, other: &Self) -> bool {
-        self.args == other.args && self.ret == other.ret
+        self.params == other.params && self.ret == other.ret
     }
 }
 
 impl Hash for LamType {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.args.hash(state);
+        self.params.hash(state);
         self.ret.hash(state);
     }
 }
@@ -242,7 +242,7 @@ impl fmt::Display for Type {
                 let id = chars.get(id.to_owned() as usize).unwrap();
                 write!(f, "{}", id)
             }
-            Type::Lam(LamType { args, ret, .. }) => write!(f, "({}) => {}", join(args, ", "), ret),
+            Type::Lam(LamType { params, ret, .. }) => write!(f, "({}) => {}", join(params, ", "), ret),
             Type::Prim(PrimType { prim, .. }) => write!(f, "{}", prim),
             Type::Lit(LitType { lit, .. }) => write!(f, "{}", lit),
             Type::Union(UnionType { types, .. }) => write!(f, "{}", join(types, " | ")),
@@ -300,7 +300,7 @@ pub fn freeze(ty: Type) -> Type {
         }),
         Type::Lam(lam) => Type::Lam(LamType {
             frozen: true,
-            args: lam.args.into_iter().map(freeze).collect(),
+            params: lam.params.into_iter().map(freeze).collect(),
             ret: Box::from(freeze(lam.ret.as_ref().clone())),
             ..lam
         }),

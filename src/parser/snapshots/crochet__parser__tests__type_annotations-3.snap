@@ -20,7 +20,7 @@ Program {
                 Lambda(
                     Lambda {
                         span: 10..41,
-                        args: [
+                        params: [
                             Ident(
                                 BindingIdent {
                                     span: 11..20,
