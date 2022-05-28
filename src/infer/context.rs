@@ -136,4 +136,11 @@ impl Context {
             type_params,
         })
     }
+    pub fn tuple(&self, types: Vec<Type>) -> Type {
+        Type::Tuple(types::TupleType {
+            id: self.fresh_id(),
+            frozen: false,
+            types,
+        })
+    }
 }

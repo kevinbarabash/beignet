@@ -393,6 +393,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             arg: Box::from(build_expr(expr.as_ref())),
         }),
         ast::Expr::JSXElement(elem) => Expr::JSXElement(Box::from(build_jsx_element(elem))),
+        ast::Expr::Tuple(_) => todo!(),
     }
 }
 

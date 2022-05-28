@@ -87,6 +87,14 @@ impl Substitutable for Type {
                     }),
                 }),
             },
+            Type::Tuple(TupleType { id, frozen, types }) => match sub.get(id) {
+                Some(replacement) => replacement.to_owned(),
+                None => Type::Tuple(TupleType {
+                    id: id.to_owned(),
+                    frozen: frozen.to_owned(),
+                    types: types.iter().map(|ty| ty.apply(sub)).collect(),
+                }),
+            },
         }
     }
     fn ftv(&self) -> HashSet<i32> {
@@ -106,6 +114,7 @@ impl Substitutable for Type {
             Type::Alias(AliasType { type_params, .. }) => {
                 type_params.iter().flat_map(|ty| ty.ftv()).collect()
             }
+            Type::Tuple(TupleType { types, .. }) =>  types.iter().flat_map(|ty| ty.ftv()).collect(),
         }
     }
 }

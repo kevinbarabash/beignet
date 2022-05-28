@@ -83,6 +83,12 @@ pub struct Await {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Tuple {
+    pub span: Span,
+    pub elements: Vec<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     App(App),
     Fix(Fix),
@@ -95,6 +101,7 @@ pub enum Expr {
     Op(Op),
     Obj(Obj),
     Await(Await),
+    Tuple(Tuple),
 }
 
 impl Expr {
@@ -111,6 +118,7 @@ impl Expr {
             Expr::Op(op) => op.span.to_owned(),
             Expr::Obj(obj) => obj.span.to_owned(),
             Expr::Await(r#await) => r#await.span.to_owned(),
+            Expr::Tuple(tuple) => tuple.span.to_owned(),
         }
     }
 }

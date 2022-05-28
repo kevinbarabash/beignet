@@ -1,0 +1,58 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"let x = [1, [a, b]]\")"
+---
+Program {
+    body: [
+        Decl {
+            span: 0..19,
+            pattern: Ident(
+                BindingIdent {
+                    span: 4..5,
+                    id: Ident {
+                        span: 4..5,
+                        name: "x",
+                    },
+                    type_ann: None,
+                },
+            ),
+            init: Some(
+                Tuple(
+                    Tuple {
+                        span: 8..19,
+                        elements: [
+                            Lit(
+                                Num(
+                                    Num {
+                                        span: 9..10,
+                                        value: "1",
+                                    },
+                                ),
+                            ),
+                            Tuple(
+                                Tuple {
+                                    span: 12..18,
+                                    elements: [
+                                        Ident(
+                                            Ident {
+                                                span: 13..14,
+                                                name: "a",
+                                            },
+                                        ),
+                                        Ident(
+                                            Ident {
+                                                span: 16..17,
+                                                name: "b",
+                                            },
+                                        ),
+                                    ],
+                                },
+                            ),
+                        ],
+                    },
+                ),
+            ),
+            declare: false,
+        },
+    ],
+}

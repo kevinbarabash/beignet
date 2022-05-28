@@ -65,6 +65,12 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .delimited_by(just_with_padding("{"), just_with_padding("}"))
             .map_with_span(|properties, span: Span| Expr::Obj(Obj { span, properties }));
 
+        let tuple = expr.clone()
+            .separated_by(just_with_padding(","))
+            .allow_trailing()
+            .delimited_by(just_with_padding("["), just_with_padding("]"))
+            .map_with_span(|elements, span: Span| Expr::Tuple(Tuple { span, elements }));
+
         let atom = choice((
             if_else,
             r#bool,
@@ -72,6 +78,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             r#str,
             ident,
             obj,
+            tuple,
             jsx_parser(expr.clone().boxed()).boxed(),
             expr.clone()
                 .delimited_by(just_with_padding("("), just_with_padding(")")),

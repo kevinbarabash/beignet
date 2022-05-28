@@ -80,31 +80,27 @@ pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, env: &En
                     type_ann: Box::from(build_type(&scheme.ty, value, type_params)),
                 }),
             })
-        },
+        }
         ast::Pattern::Rest(_) => todo!(),
     }
 }
 
 pub fn build_pattern_rec(pattern: &ast::Pattern) -> Pat {
     match pattern {
-        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
-            Pat::Ident(BindingIdent {
-                id: Ident {
-                    span: DUMMY_SP,
-                    sym: JsWord::from(id.name.to_owned()),
-                    optional: false,
-                },
-                type_ann: None,
-            })
-        },
-        ast::Pattern::Rest(ast::RestPat {arg, ..}) => {
-            Pat::Rest(RestPat {
+        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
+            id: Ident {
                 span: DUMMY_SP,
-                dot3_token: DUMMY_SP,
-                arg: Box::from(build_pattern_rec(arg.as_ref())),
-                type_ann: None,
-            })
-        },
+                sym: JsWord::from(id.name.to_owned()),
+                optional: false,
+            },
+            type_ann: None,
+        }),
+        ast::Pattern::Rest(ast::RestPat { arg, .. }) => Pat::Rest(RestPat {
+            span: DUMMY_SP,
+            dot3_token: DUMMY_SP,
+            arg: Box::from(build_pattern_rec(arg.as_ref())),
+            type_ann: None,
+        }),
     }
 }
 
@@ -218,7 +214,8 @@ pub fn build_type(
             match expr {
                 // TODO: handle is_async
                 Some(ast::Expr::Lambda(ast::Lambda {
-                    params: expr_params, ..
+                    params: expr_params,
+                    ..
                 })) => {
                     if params.len() != expr_params.len() {
                         panic!("number of args don't match")
@@ -233,7 +230,7 @@ pub fn build_type(
                                 });
 
                                 match pattern {
-                                    ast::Pattern::Ident(ast::BindingIdent {id, ..}) => {
+                                    ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
                                         TsFnParam::Ident(BindingIdent {
                                             id: Ident {
                                                 span: DUMMY_SP,
@@ -356,15 +353,24 @@ pub fn build_type(
                 sym: JsWord::from(name.to_owned()),
                 optional: false,
             }),
-            type_params: type_params.clone().map(|params| {
-                TsTypeParamInstantiation {
-                    span: DUMMY_SP,
-                    params: params
-                        .iter()
-                        .map(|ty| Box::from(build_type(ty, None, None)))
-                        .collect(),
-                }
+            type_params: type_params.clone().map(|params| TsTypeParamInstantiation {
+                span: DUMMY_SP,
+                params: params
+                    .iter()
+                    .map(|ty| Box::from(build_type(ty, None, None)))
+                    .collect(),
             }),
+        }),
+        Type::Tuple(types::TupleType { types, .. }) => TsType::TsTupleType(TsTupleType {
+            span: DUMMY_SP,
+            elem_types: types
+                .iter()
+                .map(|ty| TsTupleElement {
+                    span: DUMMY_SP,
+                    label: None,
+                    ty: build_type(ty, None, None),
+                })
+                .collect(),
         }),
     }
 }

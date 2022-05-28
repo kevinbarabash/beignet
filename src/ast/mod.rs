@@ -12,4 +12,4 @@ pub use jsx::*;
 pub use literal::*;
 pub use pattern::*;
 pub use span::*;
-pub use types::{TypeAnn, PrimType, LamType, LitType, TypeRef, ObjectType, TProp, UnionType};
+pub use types::{TypeAnn, PrimType, LamType, LitType, TypeRef, ObjectType, TProp, UnionType, TupleType};

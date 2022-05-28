@@ -2,8 +2,8 @@ use chumsky::prelude::*;
 use std::collections::HashMap;
 
 use crochet::ast::Program;
-use crochet::infer::*;
 use crochet::codegen::*;
+use crochet::infer::*;
 use crochet::parser::parser;
 
 fn infer(input: &str) -> String {
@@ -62,10 +62,7 @@ fn infer_fn_param() {
 
 #[test]
 fn infer_fn_with_param_types() {
-    assert_eq!(
-        infer("(a: 5, b: 10) => a + b"),
-        "(5, 10) => number"
-    );
+    assert_eq!(infer("(a: 5, b: 10) => a + b"), "(5, 10) => number");
 }
 
 #[test]
@@ -247,10 +244,22 @@ fn infer_inequalities() {
     let gte = (a, b) => a >= b
     "###;
     let (_, env) = infer_prog(src);
-    assert_eq!(format!("{}", env.get("lt").unwrap()), "(number, number) => boolean");
-    assert_eq!(format!("{}", env.get("lte").unwrap()), "(number, number) => boolean");
-    assert_eq!(format!("{}", env.get("gt").unwrap()), "(number, number) => boolean");
-    assert_eq!(format!("{}", env.get("gte").unwrap()), "(number, number) => boolean");
+    assert_eq!(
+        format!("{}", env.get("lt").unwrap()),
+        "(number, number) => boolean"
+    );
+    assert_eq!(
+        format!("{}", env.get("lte").unwrap()),
+        "(number, number) => boolean"
+    );
+    assert_eq!(
+        format!("{}", env.get("gt").unwrap()),
+        "(number, number) => boolean"
+    );
+    assert_eq!(
+        format!("{}", env.get("gte").unwrap()),
+        "(number, number) => boolean"
+    );
 }
 
 #[test]
@@ -481,3 +490,57 @@ fn calling_a_fn_with_an_obj_missing_a_property() {
     infer_prog(src);
 }
 
+#[test]
+fn infer_literal_tuple() {
+    let src = r#"let tuple = [1, "two", true]"#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("tuple").unwrap());
+    assert_eq!(result, "[1, \"two\", true]");
+}
+
+#[test]
+fn infer_tuple_with_type_annotation() {
+    let src = r#"let tuple: [number, string, boolean] = [1, "two", true]"#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("tuple").unwrap());
+    assert_eq!(result, "[number, string, boolean]");
+}
+
+#[test]
+fn infer_tuple_with_type_annotation_and_extra_element() {
+    let src = r#"let tuple: [number, string, boolean] = [1, "two", true, "ignored"]"#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("tuple").unwrap());
+    assert_eq!(result, "[number, string, boolean]");
+}
+
+#[test]
+#[should_panic = "value is not a subtype of decl's declared type"]
+fn infer_tuple_with_type_annotation_and_incorrect_element() {
+    let src = r#"let tuple: [number, string, boolean] = [1, "two", 3]"#;
+    infer_prog(src);
+}
+
+#[test]
+#[should_panic = "t1 contain at least the same number of elements as t2"]
+fn infer_tuple_with_not_enough_elements() {
+    let src = r#"let tuple: [number, string, boolean] = [1, "two"]"#;
+    infer_prog(src);
+}
+
+#[test]
+fn infer_var_with_union_type_annotation() {
+    let src = r#"
+    let a: number | string = 5
+    let b: number | string = "ten"
+    "#;
+    let (_, env) = infer_prog(src);
+
+    let a = format!("{}", env.get("a").unwrap());
+    assert_eq!(a, "number | string");
+    let b = format!("{}", env.get("b").unwrap());
+    assert_eq!(b, "number | string");
+}

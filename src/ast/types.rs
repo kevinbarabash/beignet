@@ -47,6 +47,12 @@ pub struct UnionType {
     pub types: Vec<TypeAnn>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TupleType {
+    pub span: Span,
+    pub types: Vec<TypeAnn>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnn {
     Lam(LamType),
@@ -55,4 +61,5 @@ pub enum TypeAnn {
     Object(ObjectType),
     TypeRef(TypeRef),
     Union(UnionType),
+    Tuple(TupleType),
 }
