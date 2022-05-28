@@ -214,18 +214,18 @@ pub fn build_type(
         }
         // This is used to copy the names of args from the expression
         // over to the lambda's type.
-        Type::Lam(types::LamType { args, ret, .. }) => {
+        Type::Lam(types::LamType { params, ret, .. }) => {
             match expr {
                 // TODO: handle is_async
                 Some(ast::Expr::Lambda(ast::Lambda {
-                    args: expr_args, ..
+                    params: expr_params, ..
                 })) => {
-                    if args.len() != expr_args.len() {
+                    if params.len() != expr_params.len() {
                         panic!("number of args don't match")
                     } else {
-                        let params: Vec<TsFnParam> = args
+                        let params: Vec<TsFnParam> = params
                             .iter()
-                            .zip(expr_args)
+                            .zip(expr_params)
                             .map(|(inferred_type, pattern)| {
                                 let type_ann = Some(TsTypeAnn {
                                     span: DUMMY_SP,
@@ -275,7 +275,7 @@ pub fn build_type(
                     _ => panic!("mismatch"),
                 },
                 None => {
-                    let params: Vec<TsFnParam> = args
+                    let params: Vec<TsFnParam> = params
                         .iter()
                         .enumerate()
                         .map(|(i, arg)| {

@@ -9,7 +9,7 @@ Program {
             expr: Lambda(
                 Lambda {
                     span: 0..14,
-                    args: [],
+                    params: [],
                     body: Lit(
                         Num(
                             Num {

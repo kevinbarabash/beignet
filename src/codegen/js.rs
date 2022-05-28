@@ -151,7 +151,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             optional: false,
         }),
         ast::Expr::Lambda(ast::Lambda {
-            args,
+            params: args,
             body,
             is_async,
             ..

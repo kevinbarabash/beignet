@@ -115,11 +115,11 @@ fn unify_lams(t1: &LamType, t2: &LamType, ctx: &Context) -> Subst {
     // - subtyping
 
     // Partial application
-    if t1.args.len() < t2.args.len() {
-        let partial_args = t2.args[..t1.args.len()].to_vec();
-        let partial_ret = ctx.lam(t2.args[t1.args.len()..].to_vec(), t2.ret.clone());
+    if t1.params.len() < t2.params.len() {
+        let partial_args = t2.params[..t1.params.len()].to_vec();
+        let partial_ret = ctx.lam(t2.params[t1.params.len()..].to_vec(), t2.ret.clone());
         let mut cs: Vec<_> = t1
-            .args
+            .params
             .iter()
             .zip(&partial_args)
             .map(|(a, b)| Constraint {
@@ -130,13 +130,13 @@ fn unify_lams(t1: &LamType, t2: &LamType, ctx: &Context) -> Subst {
             types: (*t1.ret.clone(), partial_ret),
         });
         unify_many(&cs, ctx)
-    } else if t1.args.len() != t2.args.len() {
+    } else if t1.params.len() != t2.params.len() {
         panic!("Unification mismatch: arity mismatch");
     } else {
         let mut cs: Vec<_> = t1
-            .args
+            .params
             .iter()
-            .zip(&t2.args)
+            .zip(&t2.params)
             .map(|(a, b)| Constraint {
                 types: (a.clone(), b.clone()),
             })

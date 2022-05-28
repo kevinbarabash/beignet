@@ -199,7 +199,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .map_with_span(|(((is_async, args), return_type), body), span: Span| {
                 Expr::Lambda(Lambda {
                     span,
-                    args,
+                    params: args,
                     body: Box::new(body),
                     is_async: is_async.is_some(),
                     return_type,

@@ -20,7 +20,7 @@ Program {
                 Lambda(
                     Lambda {
                         span: 10..34,
-                        args: [],
+                        params: [],
                         body: Await(
                             Await {
                                 span: 24..32,

@@ -73,11 +73,11 @@ impl Context {
             frozen: false,
         })
     }
-    pub fn lam(&self, args: Vec<Type>, ret: Box<Type>) -> Type {
+    pub fn lam(&self, params: Vec<Type>, ret: Box<Type>) -> Type {
         Type::Lam(types::LamType {
             id: self.fresh_id(),
             frozen: false,
-            args,
+            params,
             ret,
         })
     }

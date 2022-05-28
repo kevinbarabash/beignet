@@ -23,7 +23,7 @@ Program {
                         expr: Lambda(
                             Lambda {
                                 span: 12..21,
-                                args: [
+                                params: [
                                     Ident(
                                         BindingIdent {
                                             span: 8..9,
@@ -38,7 +38,7 @@ Program {
                                 body: Lambda(
                                     Lambda {
                                         span: 12..21,
-                                        args: [],
+                                        params: [],
                                         body: App(
                                             App {
                                                 span: 18..21,
