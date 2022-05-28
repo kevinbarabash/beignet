@@ -65,7 +65,8 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .delimited_by(just_with_padding("{"), just_with_padding("}"))
             .map_with_span(|properties, span: Span| Expr::Obj(Obj { span, properties }));
 
-        let tuple = expr.clone()
+        let tuple = expr
+            .clone()
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("["), just_with_padding("]"))
@@ -84,7 +85,33 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
                 .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
 
-        let app = atom
+        let mem = atom
+            .clone()
+            .then(
+                just_with_padding(".")
+                    .ignore_then(text::ident())
+                    .map_with_span(|name, span: Span| {
+                        let prop = MemberProp::Ident(Ident {
+                            span: span.clone(),
+                            name,
+                        });
+                        (prop, span)
+                    })
+                    .repeated(),
+            )
+            .foldl(|f, (prop, span)| {
+                let start = f.span().start;
+                let end = span.end;
+                let span = start..end;
+
+                Expr::Member(Member {
+                    span,
+                    obj: Box::new(f),
+                    prop,
+                })
+            });
+
+        let app = mem
             .clone()
             .then(
                 expr.clone()
@@ -107,25 +134,25 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             });
 
         // Application is higher precedence than `await`
-        let app = just_with_padding("await")
+        let r#await = just_with_padding("await")
             .or_not()
             .then(app.clone())
-            .map_with_span(|(option, app), span: Span| match option {
+            .map_with_span(|(option, arg), span: Span| match option {
                 Some(_) => Expr::Await(Await {
                     span,
-                    expr: Box::from(app),
+                    expr: Box::from(arg),
                 }),
-                None => app,
+                None => arg,
             });
 
-        let product = app
+        let product = r#await
             .clone()
             .then(
                 choice((
                     just_with_padding("*").to(BinOp::Mul),
                     just_with_padding("/").to(BinOp::Div),
                 ))
-                .then(atom.clone())
+                .then(r#await.clone())
                 .repeated(),
             )
             .foldl(|left, (op, right)| {

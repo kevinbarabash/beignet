@@ -7,6 +7,7 @@ use crate::types::{self, freeze, Primitive, Scheme, Type};
 use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::{Context, Env};
 use super::substitutable::Substitutable;
+use super::infer_mem::infer_mem;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
@@ -123,12 +124,11 @@ fn normalize(sc: &Scheme) -> Scheme {
                     .iter()
                     .map(|param| norm_type(param, mapping))
                     .collect();
-                let ret = Box::from(norm_type(ret, mapping));
                 Type::Lam(types::LamType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     params,
-                    ret,
+                    ret: Box::from(norm_type(ret, mapping)),
                 })
             }
             Type::Prim(_) => ty.to_owned(),
@@ -179,6 +179,17 @@ fn normalize(sc: &Scheme) -> Scheme {
                     types,
                 })
             }
+            Type::Member(types::MemberType {
+                id,
+                frozen,
+                obj,
+                prop,
+            }) => Type::Member(types::MemberType {
+                id: id.to_owned(),
+                frozen: frozen.to_owned(),
+                obj: Box::from(norm_type(obj, mapping)),
+                prop: prop.to_owned(),
+            }),
         }
     }
 
@@ -199,7 +210,7 @@ fn generalize(env: &Env, ty: &Type) -> Scheme {
     }
 }
 
-type InferResult = (Type, Vec<Constraint>);
+pub type InferResult = (Type, Vec<Constraint>);
 
 fn is_promise(ty: &Type) -> bool {
     matches!(ty, Type::Alias(types::AliasType { name, .. }) if name == "Promise")
@@ -429,6 +440,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             (ctx.tuple(types), all_cs)
         }
+        Expr::Member(member) => infer_mem(infer, member, ctx),
     }
 }
 

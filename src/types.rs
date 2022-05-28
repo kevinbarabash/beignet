@@ -214,6 +214,27 @@ impl Hash for TupleType {
     }
 }
 
+#[derive(Clone, Debug, Eq)]
+pub struct MemberType {
+    pub id: i32,
+    pub frozen: bool,
+    pub obj: Box<Type>,
+    pub prop: String, // TODO: allow numbers as well for accessing elements on tuples and arrays
+}
+
+impl PartialEq for MemberType {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj && self.prop == other.prop
+    }
+}
+
+impl Hash for MemberType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+        self.prop.hash(state);
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Var(VarType),
@@ -224,6 +245,7 @@ pub enum Type {
     Object(ObjectType),
     Alias(AliasType),
     Tuple(TupleType),
+    Member(MemberType),
 }
 
 impl Type {
@@ -237,6 +259,7 @@ impl Type {
             Type::Object(x) => x.frozen,
             Type::Alias(x) => x.frozen,
             Type::Tuple(x) => x.frozen,
+            Type::Member(x) => x.frozen,
         }
     }
 
@@ -250,6 +273,7 @@ impl Type {
             Type::Object(x) => x.id,
             Type::Alias(x) => x.id,
             Type::Tuple(x) => x.id,
+            Type::Member(x) => x.id,
         }
     }
 }
@@ -276,6 +300,7 @@ impl fmt::Display for Type {
                 None => write!(f, "{name}"),
             },
             Type::Tuple(TupleType { types, .. }) => write!(f, "[{}]", join(types, ", ")),
+            Type::Member(MemberType { obj, prop, .. }) => write!(f, "{obj}[\"{prop}\"]"),
         }
     }
 }
@@ -363,6 +388,11 @@ pub fn freeze(ty: Type) -> Type {
             frozen: true,
             types: tuple.types.into_iter().map(freeze).collect(),
             ..tuple
+        }),
+        Type::Member(member) => Type::Member(MemberType {
+            frozen: true,
+            obj: Box::from(freeze(member.obj.as_ref().clone())),
+            ..member
         }),
     }
 }

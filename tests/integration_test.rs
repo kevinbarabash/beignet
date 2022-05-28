@@ -591,3 +591,58 @@ fn infer_widen_tuples_with_type_annotations() {
     let result = format!("{}", env.get("result").unwrap());
     assert_eq!(result, "(boolean) => [number | number] | [boolean | boolean]");
 }
+
+#[test]
+fn infer_member_access() {
+    let src = r#"
+    let point = {x: 5, y: 10}
+    let x = point.x
+    let y = point.y
+    "#;
+    let (_, env) = infer_prog(src);
+
+    let x = format!("{}", env.get("x").unwrap());
+    assert_eq!(x, "5");
+    let y = format!("{}", env.get("y").unwrap());
+    assert_eq!(y, "10");
+}
+
+#[test]
+#[should_panic = "Record literal doesn't contain property"]
+fn infer_incorrect_member_access() {
+    let src = r#"
+    let point = {x: 5, y: 10}
+    let z = point.z
+    "#;
+    infer_prog(src);
+}
+
+#[test]
+fn infer_member_access_on_obj_lit() {
+    let src = r#"let x = {x: 5, y: 10}.x"#;
+    let (_, env) = infer_prog(src);
+
+    let x = format!("{}", env.get("x").unwrap());
+    assert_eq!(x, "5");
+}
+
+#[test]
+fn infer_member_access_nested_obj() {
+    let src = r#"
+    let obj = {
+        point: {x: 5, y: 10},
+    }
+    let x = obj.point.x
+    "#;
+    let (_, env) = infer_prog(src);
+
+    let x = format!("{}", env.get("x").unwrap());
+    assert_eq!(x, "5");
+}
+
+#[test]
+#[should_panic = "not yet implemented"]
+fn infer_obj_type_based_on_member_access() {
+    let src = r#"let mag = (point) => point.x + point.y"#;
+    infer_prog(src);
+}

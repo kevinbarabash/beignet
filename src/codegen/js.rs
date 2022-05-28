@@ -60,7 +60,7 @@ fn build_js(program: &ast::Program) -> Program {
                 declare,
                 ..
             } => match declare {
-                true => ModuleItem::Stmt(Stmt::Empty(EmptyStmt {span: DUMMY_SP})),
+                true => ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP })),
                 false => {
                     // It should be okay to unwrap this here since any decl that isn't
                     // using `declare` should have an initial value.
@@ -393,7 +393,33 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             arg: Box::from(build_expr(expr.as_ref())),
         }),
         ast::Expr::JSXElement(elem) => Expr::JSXElement(Box::from(build_jsx_element(elem))),
-        ast::Expr::Tuple(_) => todo!(),
+        ast::Expr::Tuple(ast::Tuple { elements, .. }) => Expr::Array(ArrayLit {
+            span: DUMMY_SP,
+            elems: elements
+                .iter()
+                .map(|elem| Some(ExprOrSpread::from(build_expr(elem))))
+                .collect(),
+        }),
+        ast::Expr::Member(ast::Member { obj, prop, .. }) => {
+            let prop = match prop {
+                ast::MemberProp::Ident(ident) => MemberProp::Ident(Ident {
+                    span: DUMMY_SP,
+                    sym: JsWord::from(ident.name.to_owned()),
+                    optional: false,
+                }),
+                ast::MemberProp::Computed(ast::ComputedPropName { expr, .. }) => {
+                    MemberProp::Computed(ComputedPropName {
+                        span: DUMMY_SP,
+                        expr: Box::from(build_expr(expr)),
+                    })
+                }
+            };
+            Expr::Member(MemberExpr {
+                span: DUMMY_SP,
+                obj: Box::from(build_expr(obj)),
+                prop,
+            })
+        }
     }
 }
 
