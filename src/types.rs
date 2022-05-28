@@ -81,7 +81,7 @@ impl Hash for VarType {
 pub struct LamType {
     pub id: i32,
     pub frozen: bool,
-    pub args: Vec<Type>,
+    pub args: Vec<Type>, // TOOD: rename this params
     pub ret: Box<Type>,
 }
 
@@ -291,6 +291,7 @@ impl fmt::Display for Scheme {
     }
 }
 
+// TODO: make this recursive
 pub fn freeze(ty: Type) -> Type {
     match ty {
         Type::Var(var) => Type::Var(VarType {
@@ -299,6 +300,8 @@ pub fn freeze(ty: Type) -> Type {
         }),
         Type::Lam(lam) => Type::Lam(LamType {
             frozen: true,
+            args: lam.args.into_iter().map(freeze).collect(),
+            ret: Box::from(freeze(lam.ret.as_ref().clone())),
             ..lam
         }),
         Type::Prim(prim) => Type::Prim(PrimType {
@@ -311,14 +314,26 @@ pub fn freeze(ty: Type) -> Type {
         }),
         Type::Union(union) => Type::Union(UnionType {
             frozen: true,
+            types: union.types.into_iter().map(freeze).collect(),
             ..union
         }),
         Type::Object(obj) => Type::Object(ObjectType {
             frozen: true,
+            props: obj
+                .props
+                .into_iter()
+                .map(|prop| TProp {
+                    ty: freeze(prop.ty),
+                    ..prop
+                })
+                .collect(),
             ..obj
         }),
         Type::Alias(alias) => Type::Alias(AliasType {
             frozen: true,
+            type_params: alias
+                .type_params
+                .map(|type_params| type_params.into_iter().map(freeze).collect()),
             ..alias
         }),
     }

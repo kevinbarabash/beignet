@@ -413,3 +413,71 @@ fn infer_let_decl_with_incorrect_type_ann() {
     let result = format!("{}", env.get("x").unwrap());
     assert_eq!(result, "number");
 }
+
+#[test]
+fn infer_declare() {
+    let src = "declare let x: number";
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("x").unwrap());
+    assert_eq!(result, "number");
+}
+
+#[test]
+fn infer_expr_using_declared_var() {
+    let src = r#"
+    declare let x: number
+    let y = x + 5
+    "#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("y").unwrap());
+    assert_eq!(result, "number");
+}
+
+#[test]
+fn infer_app_of_declared_fn() {
+    let src = r#"
+    declare let add: (number, number) => number
+    let sum = add(5, 10)
+    "#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("sum").unwrap());
+    assert_eq!(result, "number");
+}
+
+#[test]
+fn infer_app_of_declared_fn_with_obj_param() {
+    let src = r#"
+    declare let mag: ({x: number, y: number}) => number
+    let result = mag({x: 5, y: 10})
+    "#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("result").unwrap());
+    assert_eq!(result, "number");
+}
+
+#[test]
+fn calling_a_fn_with_an_obj_subtype() {
+    let src = r#"
+    declare let mag: ({x: number, y: number}) => number
+    let result = mag({x: 5, y: 10, z: 15})
+    "#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("result").unwrap());
+    assert_eq!(result, "number");
+}
+
+#[test]
+#[should_panic = "unification failed"]
+fn calling_a_fn_with_an_obj_missing_a_property() {
+    let src = r#"
+    declare let mag: ({x: number, y: number}) => number
+    let result = mag({x: 5})
+    "#;
+    infer_prog(src);
+}
+
