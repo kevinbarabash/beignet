@@ -1,11 +1,12 @@
 pub mod expr;
+pub mod decl;
 pub mod jsx;
 pub mod pattern;
 pub mod types;
 pub mod util;
 
 use expr::expr_parser;
-use pattern::pattern_parser;
+use decl::decl_parser;
 
 use chumsky::prelude::*;
 use chumsky::primitive::*;
@@ -18,44 +19,8 @@ pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>>
 }
 
 pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
-    // We use `just` instead of `just_with_padding` here to ensure that
-    // the span doesn't include leading whitespace.
-    // TODO: add `declare` syntax
-    let decl = just("let")
-        .ignore_then(just_with_padding("rec").or_not())
-        .then(pattern_parser())
-        .then_ignore(just_with_padding("="))
-        .then(expr_parser())
-        .map_with_span(|((rec, pattern), value), span: Span| -> Statement {
-            match rec {
-                Some(_) => {
-                    Statement::Decl {
-                        span,
-                        pattern: pattern.clone(),
-                        // `let fib = fix((fib) => (n) => ...)`
-                        // TODO: Fix always wraps a lambda
-                        value: Expr::Fix(Fix {
-                            span: value.span(),
-                            expr: Box::from(Expr::Lambda(Lambda {
-                                span: value.span(),
-                                args: vec![pattern],
-                                body: Box::from(value),
-                                is_async: false,
-                                return_type: None,
-                            })),
-                        }),
-                    }
-                }
-                None => Statement::Decl {
-                    span,
-                    pattern,
-                    value,
-                },
-            }
-        });
-
     let program = choice((
-        decl,
+        decl_parser(),
         expr_parser().map_with_span(|expr, span: Span| Statement::Expr { expr, span }),
     ))
     .padded()
@@ -159,5 +124,12 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let add = (a: number, b: number) => a + b"));
         insta::assert_debug_snapshot!(parse("let p: Point = {x: 5, y: 10}"));
         insta::assert_debug_snapshot!(parse("let FOO: \"foo\" = \"foo\""));
+    }
+
+    #[test]
+    fn decls() {
+        insta::assert_debug_snapshot!(parse("let x = 5"));
+        insta::assert_debug_snapshot!(parse("   let x = 5")); // with leading whitespace
+        insta::assert_debug_snapshot!(parse("declare let x: number"));
     }
 }

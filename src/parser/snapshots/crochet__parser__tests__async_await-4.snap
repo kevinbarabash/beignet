@@ -16,31 +16,34 @@ Program {
                     type_ann: None,
                 },
             ),
-            value: Lambda(
-                Lambda {
-                    span: 10..33,
-                    args: [],
-                    body: Await(
-                        Await {
-                            span: 22..33,
-                            expr: App(
-                                App {
-                                    span: 28..33,
-                                    lam: Ident(
-                                        Ident {
-                                            span: 28..31,
-                                            name: "bar",
-                                        },
-                                    ),
-                                    args: [],
-                                },
-                            ),
-                        },
-                    ),
-                    is_async: true,
-                    return_type: None,
-                },
+            init: Some(
+                Lambda(
+                    Lambda {
+                        span: 10..33,
+                        args: [],
+                        body: Await(
+                            Await {
+                                span: 22..33,
+                                expr: App(
+                                    App {
+                                        span: 28..33,
+                                        lam: Ident(
+                                            Ident {
+                                                span: 28..31,
+                                                name: "bar",
+                                            },
+                                        ),
+                                        args: [],
+                                    },
+                                ),
+                            },
+                        ),
+                        is_async: true,
+                        return_type: None,
+                    },
+                ),
             ),
+            declare: false,
         },
     ],
 }

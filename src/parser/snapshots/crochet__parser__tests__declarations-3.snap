@@ -16,35 +16,38 @@ Program {
                     type_ann: None,
                 },
             ),
-            value: Let(
-                Let {
-                    span: 10..24,
-                    pattern: Ident(
-                        BindingIdent {
-                            span: 14..15,
-                            id: Ident {
+            init: Some(
+                Let(
+                    Let {
+                        span: 10..24,
+                        pattern: Ident(
+                            BindingIdent {
                                 span: 14..15,
-                                name: "x",
-                            },
-                            type_ann: None,
-                        },
-                    ),
-                    value: Lit(
-                        Num(
-                            Num {
-                                span: 18..19,
-                                value: "5",
+                                id: Ident {
+                                    span: 14..15,
+                                    name: "x",
+                                },
+                                type_ann: None,
                             },
                         ),
-                    ),
-                    body: Ident(
-                        Ident {
-                            span: 23..24,
-                            name: "x",
-                        },
-                    ),
-                },
+                        value: Lit(
+                            Num(
+                                Num {
+                                    span: 18..19,
+                                    value: "5",
+                                },
+                            ),
+                        ),
+                        body: Ident(
+                            Ident {
+                                span: 23..24,
+                                name: "x",
+                            },
+                        ),
+                    },
+                ),
             ),
+            declare: false,
         },
     ],
 }

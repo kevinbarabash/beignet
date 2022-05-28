@@ -169,6 +169,17 @@ pub fn is_subtype(t1: &Type, t2: &Type) -> bool {
                     | (Lit::Bool(_), Primitive::Bool)
             )
         }
+        (
+            Type::Object(ObjectType { props: props1, .. }),
+            Type::Object(ObjectType { props: props2, .. }),
+        ) => {
+            // It's okay if t1 has extra properties, but it has to have all of t2's properties.
+            props2.iter().all(|prop2| {
+                props1.iter().any(|prop1| {
+                    prop1.name == prop2.name && is_subtype(&prop1.ty, &prop2.ty)
+                })
+            })
+        },
         _ => false,
     }
 }

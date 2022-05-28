@@ -1,33 +1,26 @@
 ---
 source: src/parser/mod.rs
-expression: "parse(\"let x: number = 5\")"
+expression: "parse(\"   let x = 5\")"
 ---
 Program {
     body: [
         Decl {
-            span: 0..17,
+            span: 3..12,
             pattern: Ident(
                 BindingIdent {
-                    span: 4..14,
+                    span: 7..8,
                     id: Ident {
-                        span: 4..5,
+                        span: 7..8,
                         name: "x",
                     },
-                    type_ann: Some(
-                        Prim(
-                            PrimType {
-                                span: 7..13,
-                                prim: Num,
-                            },
-                        ),
-                    ),
+                    type_ann: None,
                 },
             ),
             init: Some(
                 Lit(
                     Num(
                         Num {
-                            span: 16..17,
+                            span: 11..12,
                             value: "5",
                         },
                     ),

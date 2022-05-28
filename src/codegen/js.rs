@@ -54,22 +54,33 @@ fn build_js(program: &ast::Program) -> Program {
         .body
         .iter()
         .map(|child| match child {
-            ast::Statement::Decl { pattern, value, .. } => {
-                ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                    span: DUMMY_SP,
-                    decl: Decl::Var(VarDecl {
+            ast::Statement::Decl {
+                pattern,
+                init,
+                declare,
+                ..
+            } => match declare {
+                true => ModuleItem::Stmt(Stmt::Empty(EmptyStmt {span: DUMMY_SP})),
+                false => {
+                    // It should be okay to unwrap this here since any decl that isn't
+                    // using `declare` should have an initial value.
+                    let init = init.as_ref().unwrap();
+                    ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                         span: DUMMY_SP,
-                        kind: VarDeclKind::Const,
-                        declare: false,
-                        decls: vec![VarDeclarator {
+                        decl: Decl::Var(VarDecl {
                             span: DUMMY_SP,
-                            name: build_pattern(pattern),
-                            init: Some(Box::from(build_expr(value))),
-                            definite: false,
-                        }],
-                    }),
-                }))
-            }
+                            kind: VarDeclKind::Const,
+                            declare: false,
+                            decls: vec![VarDeclarator {
+                                span: DUMMY_SP,
+                                name: build_pattern(pattern),
+                                init: Some(Box::from(build_expr(init))),
+                                definite: false,
+                            }],
+                        }),
+                    }))
+                }
+            },
             ast::Statement::Expr { expr, .. } => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
                 span: DUMMY_SP,
                 expr: Box::from(build_expr(expr)),

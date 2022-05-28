@@ -36,7 +36,7 @@ fn build_d_ts(program: &ast::Program, env: &Env) -> Program {
         .body
         .iter()
         .map(|child| match child {
-            ast::Statement::Decl { pattern, value, .. } => {
+            ast::Statement::Decl { pattern, init, .. } => {
                 ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                     span: DUMMY_SP,
                     decl: Decl::Var(VarDecl {
@@ -45,7 +45,7 @@ fn build_d_ts(program: &ast::Program, env: &Env) -> Program {
                         declare: true,
                         decls: vec![VarDeclarator {
                             span: DUMMY_SP,
-                            name: build_pattern(pattern, value, env),
+                            name: build_pattern(pattern, init.as_ref(), env),
                             init: None,
                             definite: false,
                         }],
@@ -63,7 +63,7 @@ fn build_d_ts(program: &ast::Program, env: &Env) -> Program {
     })
 }
 
-pub fn build_pattern(pattern: &ast::Pattern, value: &ast::Expr, env: &Env) -> Pat {
+pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, env: &Env) -> Pat {
     match pattern {
         ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
             let scheme = env.get(&id.name).unwrap();
@@ -77,7 +77,7 @@ pub fn build_pattern(pattern: &ast::Pattern, value: &ast::Expr, env: &Env) -> Pa
                 },
                 type_ann: Some(TsTypeAnn {
                     span: DUMMY_SP,
-                    type_ann: Box::from(build_type(&scheme.ty, Some(value), type_params)),
+                    type_ann: Box::from(build_type(&scheme.ty, value, type_params)),
                 }),
             })
         },
