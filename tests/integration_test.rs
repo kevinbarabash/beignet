@@ -655,7 +655,7 @@ fn infer_obj_type_based_on_nested_member_access() {
     let (_, env) = infer_prog(src);
 
     let result = format!("{}", env.get("slope").unwrap());
-    assert_eq!(result, "({p1: {y: number} & {x: number}, p0: {y: number} & {x: number}}) => number");
+    assert_eq!(result, "({p1: {x: number, y: number}, p0: {x: number, y: number}}) => number");
 }
 
 #[test]

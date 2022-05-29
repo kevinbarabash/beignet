@@ -22,6 +22,7 @@ swc_ecma_ast = "0.78.0"
 swc_ecma_codegen = "0.108.2"
 swc_ecma_transforms_react = "0.114.1"
 swc_ecma_visit = "0.64.0"
+defaultmap = "0.5.0"
 
 [dev-dependencies]
 insta = "1.13.0"

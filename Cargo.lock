@@ -173,6 +173,7 @@ name = "crochet_cli"
 version = "0.1.0"
 dependencies = [
  "chumsky",
+ "defaultmap",
  "insta",
  "itertools",
  "swc_atoms",
@@ -254,6 +255,12 @@ checksum = "9a032eac705ca39214d169f83e3d3da290af06d8d1d344d1baad2fd002dca4b3"
 dependencies = [
  "unreachable",
 ]
+
+[[package]]
+name = "defaultmap"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51c4d4fbd66561c3acff86b297b024826505a715eb1b0984a78013b349d0e834"
 
 [[package]]
 name = "digest"
