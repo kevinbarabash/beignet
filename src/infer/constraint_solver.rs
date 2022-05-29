@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::panic;
 
 use crate::types::*;
 
@@ -105,6 +106,20 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
             } else {
                 todo!()
             }
+        }
+        (_, Type::Intersection(IntersectionType {types: _, ..})) => {
+            // TODO: switch from panics to results
+            // for ty in types {
+            //     let result = panic::catch_unwind(|| {
+            //         unifies(
+            //             &Constraint {
+            //                 types: (t1, ty.to_owned()),
+            //             },
+            //             ctx,
+            //         )
+            //     });
+            // }
+            todo!()
         }
         _ => {
             if is_subtype(&t1, &t2, ctx) {
