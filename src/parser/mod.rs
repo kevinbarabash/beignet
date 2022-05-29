@@ -115,8 +115,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse("<Foo></Foo>"));
         insta::assert_debug_snapshot!(parse("<Foo bar={baz} />"));
         insta::assert_debug_snapshot!(parse("<Foo msg=\"hello\" bar={baz}></Foo>"));
-        // Enable once https://github.com/crochet-lang/crochet/issues/74 is fixed
-        // insta::assert_debug_snapshot!(parse("<Foo><Bar>{baz}</Bar></Foo>"));
+        insta::assert_debug_snapshot!(parse("<Foo><Bar>{baz}</Bar></Foo>"));
+        insta::assert_debug_snapshot!(parse("<Foo>hello<Bar/>{world}<Baz/></Foo>"));
     }
 
     #[test]

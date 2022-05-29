@@ -28,8 +28,8 @@ pub struct JSXElement {
 pub enum JSXElementChild {
     JSXText(JSXText),
     JSXExprContainer(JSXExprContainer),
-    // JSXSpreadChild(JSXSpreadChild),
     JSXElement(Box<JSXElement>),
+    // JSXSpreadChild(JSXSpreadChild),
     // JSXFragment(JSXFragment),
 }
 
