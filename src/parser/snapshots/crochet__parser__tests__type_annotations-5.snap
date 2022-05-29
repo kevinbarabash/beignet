@@ -4,7 +4,7 @@ expression: "parse(\"let FOO: \\\"foo\\\" = \\\"foo\\\"\")"
 ---
 Program {
     body: [
-        Decl {
+        VarDecl {
             span: 0..22,
             pattern: Ident(
                 BindingIdent {

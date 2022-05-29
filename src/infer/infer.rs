@@ -12,12 +12,12 @@ use super::substitutable::Substitutable;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
-pub fn infer_prog(env: Env, prog: &Program) -> Env {
-    let mut ctx: Context = Context::from(env);
+pub fn infer_prog(prog: &Program) -> Context {
+    let mut ctx: Context = Context::default();
 
     for stmt in &prog.body {
         match stmt {
-            Statement::Decl {
+            Statement::VarDecl {
                 declare,
                 init,
                 pattern,
@@ -31,7 +31,7 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
                                 let type_ann = type_ann.as_ref().unwrap();
                                 let type_ann_ty = type_ann_to_type(type_ann, &ctx);
                                 let scheme = type_to_scheme(&type_ann_ty);
-                                ctx.env.insert(id.name.to_owned(), scheme);
+                                ctx.values.insert(id.name.to_owned(), scheme);
                             }
                             _ => todo!(),
                         }
@@ -45,7 +45,7 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
                                 let scheme = match type_ann {
                                     Some(type_ann) => {
                                         let type_ann_ty = type_ann_to_type(type_ann, &ctx);
-                                        match is_subtype(&inferred_scheme.ty, &type_ann_ty) {
+                                        match is_subtype(&inferred_scheme.ty, &type_ann_ty, &ctx) {
                                             true => type_to_scheme(&type_ann_ty),
                                             false => panic!(
                                                 "value is not a subtype of decl's declared type"
@@ -54,12 +54,17 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
                                     }
                                     None => inferred_scheme,
                                 };
-                                ctx.env.insert(id.name.to_owned(), scheme);
+                                ctx.values.insert(id.name.to_owned(), scheme);
                             }
                             _ => todo!(),
                         }
                     }
                 };
+            }
+            Statement::TypeDecl { id, type_ann, .. } => {
+                let type_ann_ty = type_ann_to_type(type_ann, &ctx);
+                let scheme = type_to_scheme(&type_ann_ty);
+                ctx.types.insert(id.name.to_owned(), scheme);
             }
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
@@ -69,7 +74,7 @@ pub fn infer_prog(env: Env, prog: &Program) -> Env {
         };
     }
 
-    ctx.env
+    ctx
 }
 
 pub fn infer_stmt(ctx: &Context, stmt: &Statement) -> Scheme {
@@ -239,7 +244,7 @@ fn is_promise(ty: &Type) -> bool {
 fn infer(expr: &Expr, ctx: &Context) -> InferResult {
     match expr {
         Expr::Ident(Ident { name, .. }) => {
-            let ty = ctx.lookup_env(name);
+            let ty = ctx.lookup_value(name);
             (ty, vec![])
         }
         Expr::App(App { lam, args, .. }) => {
@@ -313,7 +318,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 };
                 match arg {
                     Pattern::Ident(BindingIdent { id, .. }) => {
-                        new_ctx.env.insert(id.name.to_string(), scheme)
+                        new_ctx.values.insert(id.name.to_string(), scheme)
                     }
                     Pattern::Rest(_) => todo!(),
                 };
@@ -484,7 +489,7 @@ fn infer_pattern(pattern: &Pattern, ty: &Type, ctx: &Context) -> (Context, Vec<C
                 Some(type_ann) => {
                     let type_ann_ty = type_ann_to_type(type_ann, ctx);
                     new_ctx
-                        .env
+                        .values
                         .insert(id.name.to_owned(), type_to_scheme(&type_ann_ty));
                     // This constraint is so that the type of the `value` in the `let-in`
                     // node conforms to the type annotation that was provided by the developer.
@@ -493,7 +498,7 @@ fn infer_pattern(pattern: &Pattern, ty: &Type, ctx: &Context) -> (Context, Vec<C
                     }]
                 }
                 None => {
-                    new_ctx.env.insert(id.name.to_owned(), type_to_scheme(ty));
+                    new_ctx.values.insert(id.name.to_owned(), type_to_scheme(ty));
                     vec![]
                 }
             };
@@ -517,7 +522,7 @@ fn infer_many(exprs: &[Expr], ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
     (ts, all_cs)
 }
 
-fn type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
+pub fn type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
     freeze(_type_ann_to_type(type_ann, ctx))
 }
 
@@ -625,8 +630,7 @@ mod tests {
     use super::*;
 
     fn parse_and_infer_expr(input: &str) -> String {
-        let env: Env = HashMap::new();
-        let ctx: Context = Context::from(env);
+        let ctx: Context = Context::default();
         let expr = expr_parser().then_ignore(end()).parse(input).unwrap();
         format!("{}", infer_expr(&ctx, &expr))
     }

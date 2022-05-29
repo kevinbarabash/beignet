@@ -4,7 +4,7 @@ expression: "parse(\"let add = (a: number, b: number) => a + b\")"
 ---
 Program {
     body: [
-        Decl {
+        VarDecl {
             span: 0..41,
             pattern: Ident(
                 BindingIdent {

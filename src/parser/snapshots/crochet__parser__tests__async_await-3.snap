@@ -4,7 +4,7 @@ expression: "parse(\"let foo = async () => await a + await b\")"
 ---
 Program {
     body: [
-        Decl {
+        VarDecl {
             span: 0..39,
             pattern: Ident(
                 BindingIdent {

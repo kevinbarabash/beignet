@@ -54,7 +54,7 @@ fn build_js(program: &ast::Program) -> Program {
         .body
         .iter()
         .map(|child| match child {
-            ast::Statement::Decl {
+            ast::Statement::VarDecl {
                 pattern,
                 init,
                 declare,
@@ -81,6 +81,9 @@ fn build_js(program: &ast::Program) -> Program {
                     }))
                 }
             },
+            ast::Statement::TypeDecl { .. } => {
+                ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP }))
+            }
             ast::Statement::Expr { expr, .. } => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
                 span: DUMMY_SP,
                 expr: Box::from(build_expr(expr)),

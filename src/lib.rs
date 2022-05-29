@@ -6,9 +6,8 @@ pub mod types;
 
 use chumsky::*;
 use wasm_bindgen::prelude::*;
-use std::collections::HashMap;
 
-use crate::infer::{Env, infer_prog};
+use crate::infer::{infer_prog};
 
 #[wasm_bindgen]
 extern "C" {
@@ -57,9 +56,8 @@ pub fn compile(input: &str) -> CompileResult {
 
     let js = codegen::js::codegen_js(&program);
 
-    let env: Env = HashMap::new();
-    let env = infer_prog(env, &program);
-    let dts = codegen::d_ts::codegen_d_ts(&program, &env);
+    let ctx = infer_prog(&program);
+    let dts = codegen::d_ts::codegen_d_ts(&program, &ctx);
 
     CompileResult { js, dts }
 }

@@ -15,27 +15,17 @@ pub struct State {
 
 #[derive(Clone)]
 pub struct Context {
-    pub env: Env,
+    pub values: Env,
+    pub types: Env,
     pub state: State,
     pub is_async: bool,
-}
-
-impl From<Env> for Context {
-    fn from(env: Env) -> Self {
-        Context {
-            env,
-            state: State {
-                count: Cell::new(0),
-            },
-            is_async: false,
-        }
-    }
 }
 
 impl Default for Context {
     fn default() -> Self {
         Self {
-            env: HashMap::new(),
+            values: HashMap::new(),
+            types: HashMap::new(),
             state: State {
                 count: Cell::from(0),
             },
@@ -45,8 +35,8 @@ impl Default for Context {
 }
 
 impl Context {
-    pub fn lookup_env(&self, name: &str) -> Type {
-        let scheme = self.env.get(name).unwrap();
+    pub fn lookup_value(&self, name: &str) -> Type {
+        let scheme = self.values.get(name).unwrap();
         self.instantiate(scheme)
     }
 

@@ -62,7 +62,16 @@ fn type_of_property_on_type(ty: Type, prop: &MemberProp, ctx: &Context) -> Infer
                 None => panic!("Record literal doesn't contain property"),
             }
         }
-        Type::Alias(_) => todo!(),
+        Type::Alias(alias) => {
+            match ctx.types.get(&alias.name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    let aliased_def = scheme.ty.to_owned();
+                    type_of_property_on_type(aliased_def, prop, ctx)
+                },
+                None => panic!("Can't find alias in context"),
+            }
+        },
         Type::Tuple(_) => todo!(),
         Type::Member(_) => todo!(),
     }

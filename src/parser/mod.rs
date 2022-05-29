@@ -115,6 +115,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse("<Foo></Foo>"));
         insta::assert_debug_snapshot!(parse("<Foo bar={baz} />"));
         insta::assert_debug_snapshot!(parse("<Foo msg=\"hello\" bar={baz}></Foo>"));
+        // Enable once https://github.com/crochet-lang/crochet/issues/74 is fixed
+        // insta::assert_debug_snapshot!(parse("<Foo><Bar>{baz}</Bar></Foo>"));
     }
 
     #[test]
@@ -148,5 +150,12 @@ mod tests {
         // TODO: rework the parser to allow this test case to pass
         // This likely requires extracting `atom` out into its own recursive parser
         // insta::assert_debug_snapshot!(parse("foo().bar()"));
+    }
+
+    #[test]
+    fn type_decls() {
+        insta::assert_debug_snapshot!(parse("type Num = number"));
+        insta::assert_debug_snapshot!(parse("type Point = {x: number, y: number}"));
+        // TODO: add support for type params
     }
 }

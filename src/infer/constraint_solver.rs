@@ -107,13 +107,15 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
             }
         }
         _ => {
-            if is_subtype(&t1, &t2) {
+            if is_subtype(&t1, &t2, ctx) {
                 return Subst::new();
             }
 
             if !t1.frozen() && !t2.frozen() {
                 return widen_types(&t1, &t2, ctx);
             }
+
+            println!("unification failed: {t1} != {t2}");
 
             panic!("unification failed")
         }
@@ -171,7 +173,7 @@ fn unify_many(cs: &[Constraint], ctx: &Context) -> Subst {
 }
 
 // Returns true if t2 admits all values from t1.
-pub fn is_subtype(t1: &Type, t2: &Type) -> bool {
+pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> bool {
     match (t1, t2) {
         (Type::Lit(LitType { lit, .. }), Type::Prim(PrimType { prim, .. })) => {
             matches!(
@@ -189,7 +191,7 @@ pub fn is_subtype(t1: &Type, t2: &Type) -> bool {
             props2.iter().all(|prop2| {
                 props1
                     .iter()
-                    .any(|prop1| prop1.name == prop2.name && is_subtype(&prop1.ty, &prop2.ty))
+                    .any(|prop1| prop1.name == prop2.name && is_subtype(&prop1.ty, &prop2.ty, ctx))
             })
         }
         (
@@ -203,10 +205,20 @@ pub fn is_subtype(t1: &Type, t2: &Type) -> bool {
             types1
                 .iter()
                 .zip(types2.iter())
-                .all(|(t1, t2)| is_subtype(t1, t2))
+                .all(|(t1, t2)| is_subtype(t1, t2, ctx))
         }
-        (Type::Union(UnionType { types, .. }), _) => types.iter().all(|t1| is_subtype(t1, t2)),
-        (_, Type::Union(UnionType { types, .. })) => types.iter().any(|t2| is_subtype(t1, t2)),
+        (Type::Union(UnionType { types, .. }), _) => types.iter().all(|t1| is_subtype(t1, t2, ctx)),
+        (_, Type::Union(UnionType { types, .. })) => types.iter().any(|t2| is_subtype(t1, t2, ctx)),
+        (_, Type::Alias(alias)) => {
+            match ctx.types.get(&alias.name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    let aliased_def = scheme.ty.to_owned();
+                    is_subtype(t1, &aliased_def, ctx)
+                },
+                None => panic!("Can't find alias in context"),
+            }
+        },
         (t1, t2) => t1 == t2,
     }
 }
@@ -455,7 +467,7 @@ mod tests {
         let t2 = ctx.lit_type(Lit::Num(String::from("10")));
         let union = ctx.union(vec![t1, t2]);
 
-        assert!(is_subtype(&union, &ctx.prim(Primitive::Num)));
+        assert!(is_subtype(&union, &ctx.prim(Primitive::Num), &ctx));
     }
 
     #[test]
@@ -469,7 +481,7 @@ mod tests {
             ctx.prim(Primitive::Bool),
         ]);
 
-        assert!(is_subtype(&union1, &union2));
+        assert!(is_subtype(&union1, &union2, &ctx));
     }
 
     #[test]
@@ -483,6 +495,6 @@ mod tests {
         ]);
         let union2 = ctx.union(vec![ctx.prim(Primitive::Num), ctx.prim(Primitive::Str)]);
 
-        assert!(!is_subtype(&union1, &union2));
+        assert!(!is_subtype(&union1, &union2, &ctx));
     }
 }

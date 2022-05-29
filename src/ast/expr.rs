@@ -12,11 +12,17 @@ pub struct Program {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
-    Decl {
+    VarDecl {
         span: Span,
         pattern: Pattern,
         init: Option<Expr>,
         declare: bool,
+    },
+    TypeDecl {
+        span: Span,
+        declare: bool,
+        id: Ident,
+        type_ann: TypeAnn,        
     },
     Expr {
         span: Span,

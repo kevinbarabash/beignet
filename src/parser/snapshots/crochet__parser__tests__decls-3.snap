@@ -4,7 +4,7 @@ expression: "parse(\"declare let x: number\")"
 ---
 Program {
     body: [
-        Decl {
+        VarDecl {
             span: 0..21,
             pattern: Ident(
                 BindingIdent {

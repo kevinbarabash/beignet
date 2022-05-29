@@ -46,6 +46,8 @@ pub fn jsx_parser(
         })
         .padded();
 
+    // TODO: make jsx recursive so that we can nested elements, e.g.
+    // <Foo><Bar>{baz}</Bar></Foo>
     let jsx = just_with_padding("<")
         .ignore_then(text::ident().padded()) // head
         .then(jsx_attr.clone().repeated())

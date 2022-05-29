@@ -6,11 +6,11 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crate::ast;
-use crate::infer::Env;
+use crate::infer::Context;
 use crate::types::{self, Scheme, Type};
 
-pub fn codegen_d_ts(program: &ast::Program, env: &Env) -> String {
-    print_d_ts(&build_d_ts(program, env))
+pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
+    print_d_ts(&build_d_ts(program, ctx))
 }
 
 fn print_d_ts(program: &Program) -> String {
@@ -31,12 +31,12 @@ fn print_d_ts(program: &Program) -> String {
     String::from_utf8_lossy(&buf).to_string()
 }
 
-fn build_d_ts(program: &ast::Program, env: &Env) -> Program {
+fn build_d_ts(program: &ast::Program, ctx: &Context) -> Program {
     let body: Vec<ModuleItem> = program
         .body
         .iter()
         .map(|child| match child {
-            ast::Statement::Decl { pattern, init, .. } => {
+            ast::Statement::VarDecl { pattern, init, .. } => {
                 ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                     span: DUMMY_SP,
                     decl: Decl::Var(VarDecl {
@@ -45,13 +45,27 @@ fn build_d_ts(program: &ast::Program, env: &Env) -> Program {
                         declare: true,
                         decls: vec![VarDeclarator {
                             span: DUMMY_SP,
-                            name: build_pattern(pattern, init.as_ref(), env),
+                            name: build_pattern(pattern, init.as_ref(), ctx),
                             init: None,
                             definite: false,
                         }],
                     }),
                 }))
             }
+            ast::Statement::TypeDecl {
+                declare,
+                id,
+                ..
+            } => match ctx.types.get(&id.name) {
+                Some(scheme) => ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(TsTypeAliasDecl {
+                    span: DUMMY_SP,
+                    declare: declare.to_owned(),
+                    id: build_ident(id),
+                    type_params: None,
+                    type_ann: Box::from(build_type(&scheme.ty, None, None)),
+                }))),
+                None => panic!("Couldn't find type in ctx.types"),
+            },
             _ => ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP })),
         })
         .collect();
@@ -63,18 +77,23 @@ fn build_d_ts(program: &ast::Program, env: &Env) -> Program {
     })
 }
 
-pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, env: &Env) -> Pat {
+// TODO: create a trait for this and then provide multiple implementations
+pub fn build_ident(id: &ast::Ident) -> Ident {
+    Ident {
+        span: DUMMY_SP,
+        sym: JsWord::from(id.name.to_owned()),
+        optional: false,
+    }
+}
+
+pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, ctx: &Context) -> Pat {
     match pattern {
         ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
-            let scheme = env.get(&id.name).unwrap();
+            let scheme = ctx.values.get(&id.name).unwrap();
             let type_params = build_type_params(scheme);
 
             Pat::Ident(BindingIdent {
-                id: Ident {
-                    span: DUMMY_SP,
-                    sym: JsWord::from(id.name.to_owned()),
-                    optional: false,
-                },
+                id: build_ident(id),
                 type_ann: Some(TsTypeAnn {
                     span: DUMMY_SP,
                     type_ann: Box::from(build_type(&scheme.ty, value, type_params)),
@@ -88,11 +107,7 @@ pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, env: &En
 pub fn build_pattern_rec(pattern: &ast::Pattern) -> Pat {
     match pattern {
         ast::Pattern::Ident(ast::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
-            id: Ident {
-                span: DUMMY_SP,
-                sym: JsWord::from(id.name.to_owned()),
-                optional: false,
-            },
+            id: build_ident(id),
             type_ann: None,
         }),
         ast::Pattern::Rest(ast::RestPat { arg, .. }) => Pat::Rest(RestPat {
@@ -232,11 +247,7 @@ pub fn build_type(
                                 match pattern {
                                     ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
                                         TsFnParam::Ident(BindingIdent {
-                                            id: Ident {
-                                                span: DUMMY_SP,
-                                                sym: JsWord::from(id.name.to_owned()),
-                                                optional: false,
-                                            },
+                                            id: build_ident(id),
                                             type_ann,
                                         })
                                     }

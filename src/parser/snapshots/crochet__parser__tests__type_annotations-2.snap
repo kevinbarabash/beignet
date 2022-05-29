@@ -4,7 +4,7 @@ expression: "parse(\"let msg: string = \\\"hello\\\"\")"
 ---
 Program {
     body: [
-        Decl {
+        VarDecl {
             span: 0..25,
             pattern: Ident(
                 BindingIdent {

@@ -1,5 +1,4 @@
 use chumsky::prelude::*;
-use std::collections::HashMap;
 
 use crochet::ast::Program;
 use crochet::codegen::*;
@@ -7,15 +6,14 @@ use crochet::infer::*;
 use crochet::parser::parser;
 
 fn infer(input: &str) -> String {
-    let env: Env = HashMap::new();
-    let ctx = Context::from(env);
+    let ctx = Context::default();
     let prog = parser().parse(input).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = infer_stmt(&ctx, stmt);
     format!("{}", result)
 }
 
-fn infer_prog(src: &str) -> (Program, Env) {
+fn infer_prog(src: &str) -> (Program, Context) {
     let result = parser().parse(src);
     let prog = match result {
         Ok(prog) => prog,
@@ -26,10 +24,9 @@ fn infer_prog(src: &str) -> (Program, Env) {
     };
     // println!("prog = {:#?}", &prog);
     // let prog = token_parser(&spans).parse(tokens).unwrap();
-    let env: Env = HashMap::new();
-    let env = crochet::infer::infer_prog(env, &prog);
+    let ctx = crochet::infer::infer_prog(&prog);
 
-    (prog, env)
+    (prog, ctx)
 }
 
 #[test]
@@ -68,9 +65,9 @@ fn infer_fn_with_param_types() {
 #[test]
 fn infer_let_fn_with_param_types() {
     let src = "let add = (a: 5, b: 10) => a + b";
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("add").unwrap());
+    let result = format!("{}", ctx.values.get("add").unwrap());
     assert_eq!(result, "(5, 10) => number");
 }
 
@@ -97,39 +94,39 @@ fn infer_fn_param_used_with_multiple_other_params() {
 
 #[test]
 fn infer_i_combinator() {
-    let (_, env) = infer_prog("let I = (x) => x");
-    let result = format!("{}", env.get("I").unwrap());
+    let (_, ctx) = infer_prog("let I = (x) => x");
+    let result = format!("{}", ctx.values.get("I").unwrap());
     assert_eq!(result, "<A>(A) => A");
 }
 
 #[test]
 fn infer_k_combinator_not_curried() {
-    let (program, env) = infer_prog("let K = (x, y) => x");
-    let result = format!("{}", env.get("K").unwrap());
+    let (program, ctx) = infer_prog("let K = (x, y) => x");
+    let result = format!("{}", ctx.values.get("K").unwrap());
     assert_eq!(result, "<A, B>(A, B) => A");
 
-    let result = codegen_d_ts(&program, &env);
+    let result = codegen_d_ts(&program, &ctx);
     insta::assert_snapshot!(result, @"export declare const K: <A, B>(x: A, y: B) => A;\n");
 }
 
 #[test]
 fn infer_s_combinator_not_curried() {
-    let (_, env) = infer_prog("let S = (f, g, x) => f(x, g(x))");
-    let result = format!("{}", env.get("S").unwrap());
+    let (_, ctx) = infer_prog("let S = (f, g, x) => f(x, g(x))");
+    let result = format!("{}", ctx.values.get("S").unwrap());
     assert_eq!(result, "<A, B, C>((A, B) => C, (A) => B, A) => C");
 }
 
 #[test]
 fn infer_k_combinator_curried() {
-    let (_, env) = infer_prog("let K = (x) => (y) => x");
-    let result = format!("{}", env.get("K").unwrap());
+    let (_, ctx) = infer_prog("let K = (x) => (y) => x");
+    let result = format!("{}", ctx.values.get("K").unwrap());
     assert_eq!(result, "<A, B>(A) => (B) => A");
 }
 
 #[test]
 fn infer_s_combinator_curried() {
-    let (_, env) = infer_prog("let S = (f) => (g) => (x) => f(x)(g(x))");
-    let result = format!("{}", env.get("S").unwrap());
+    let (_, ctx) = infer_prog("let S = (f) => (g) => (x) => f(x)(g(x))");
+    let result = format!("{}", ctx.values.get("S").unwrap());
     assert_eq!(
         result,
         "<A, B, C>((A) => (B) => C) => ((A) => B) => (A) => C"
@@ -143,8 +140,8 @@ fn infer_skk() {
     let K = (x) => (y) => x
     let I = S(K)(K)
     "#;
-    let (_, env) = infer_prog(src);
-    let result = format!("{}", env.get("I").unwrap());
+    let (_, ctx) = infer_prog(src);
+    let result = format!("{}", ctx.values.get("I").unwrap());
     assert_eq!(result, "<A>(A) => A");
 }
 
@@ -155,8 +152,8 @@ fn infer_adding_variables() {
     let y = 10
     let z = x + y
     "#;
-    let (_, env) = infer_prog(src);
-    let result = format!("{}", env.get("z").unwrap());
+    let (_, ctx) = infer_prog(src);
+    let result = format!("{}", ctx.values.get("z").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -166,8 +163,8 @@ fn infer_decl() {
     let foo = (a, b) => a + b
     let bar = "hello"
     "#;
-    let (program, env) = infer_prog(src);
-    let result = codegen_d_ts(&program, &env);
+    let (program, ctx) = infer_prog(src);
+    let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
     export declare const foo: (a: number, b: number) => number;
@@ -181,8 +178,8 @@ fn infer_with_subtyping() {
     let foo = (a, b) => a + b
     let bar = foo(5, 10)
     "#;
-    let (program, env) = infer_prog(src);
-    let result = codegen_d_ts(&program, &env);
+    let (program, ctx) = infer_prog(src);
+    let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
     export declare const foo: (a: number, b: number) => number;
@@ -192,15 +189,15 @@ fn infer_with_subtyping() {
 
 #[test]
 fn infer_if_else_without_widening() {
-    let (_, env) = infer_prog("let x = if (true) { 5 } else { 5 }");
-    let result = format!("{}", env.get("x").unwrap());
+    let (_, ctx) = infer_prog("let x = if (true) { 5 } else { 5 }");
+    let result = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(result, "5");
 }
 
 #[test]
 fn infer_if_else_with_widening() {
-    let (_, env) = infer_prog("let x = if (true) { 5 } else { 10 }");
-    let result = format!("{}", env.get("x").unwrap());
+    let (_, ctx) = infer_prog("let x = if (true) { 5 } else { 10 }");
+    let result = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(result, "5 | 10");
 }
 
@@ -210,11 +207,11 @@ fn infer_if_else_with_multiple_widenings() {
     let x = if (true) { 5 } else { 10 }
     let y = if (false) { x } else { 15 }
     "#;
-    let (program, env) = infer_prog(src);
-    let result = format!("{}", env.get("y").unwrap());
+    let (program, ctx) = infer_prog(src);
+    let result = format!("{}", ctx.values.get("y").unwrap());
     assert_eq!(result, "5 | 10 | 15");
 
-    let result = codegen_d_ts(&program, &env);
+    let result = codegen_d_ts(&program, &ctx);
     insta::assert_snapshot!(result, @r###"
     export declare const x: 5 | 10;
     export declare const y: 5 | 10 | 15;
@@ -223,15 +220,15 @@ fn infer_if_else_with_multiple_widenings() {
 
 #[test]
 fn infer_equal_with_numbers() {
-    let (_, env) = infer_prog("let cond = 5 == 10");
-    let result = format!("{}", env.get("cond").unwrap());
+    let (_, ctx) = infer_prog("let cond = 5 == 10");
+    let result = format!("{}", ctx.values.get("cond").unwrap());
     assert_eq!(result, "boolean");
 }
 
 #[test]
 fn infer_not_equal_with_variables() {
-    let (_, env) = infer_prog("let neq = (a, b) => a != b");
-    let result = format!("{}", env.get("neq").unwrap());
+    let (_, ctx) = infer_prog("let neq = (a, b) => a != b");
+    let result = format!("{}", ctx.values.get("neq").unwrap());
     assert_eq!(result, "<A>(A, A) => boolean");
 }
 
@@ -243,21 +240,21 @@ fn infer_inequalities() {
     let gt = (a, b) => a > b
     let gte = (a, b) => a >= b
     "###;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
     assert_eq!(
-        format!("{}", env.get("lt").unwrap()),
+        format!("{}", ctx.values.get("lt").unwrap()),
         "(number, number) => boolean"
     );
     assert_eq!(
-        format!("{}", env.get("lte").unwrap()),
+        format!("{}", ctx.values.get("lte").unwrap()),
         "(number, number) => boolean"
     );
     assert_eq!(
-        format!("{}", env.get("gt").unwrap()),
+        format!("{}", ctx.values.get("gt").unwrap()),
         "(number, number) => boolean"
     );
     assert_eq!(
-        format!("{}", env.get("gte").unwrap()),
+        format!("{}", ctx.values.get("gte").unwrap()),
         "(number, number) => boolean"
     );
 }
@@ -265,11 +262,11 @@ fn infer_inequalities() {
 #[test]
 fn infer_let_rec_until() {
     let src = "let rec until = (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) }";
-    let (program, env) = infer_prog(src);
-    let result = format!("{}", env.get("until").unwrap());
+    let (program, ctx) = infer_prog(src);
+    let result = format!("{}", ctx.values.get("until").unwrap());
     assert_eq!(result, "<A>((A) => boolean, (A) => A, A) => A");
 
-    let result = codegen_d_ts(&program, &env);
+    let result = codegen_d_ts(&program, &ctx);
     insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A;\n");
 }
 
@@ -287,8 +284,8 @@ fn infer_fib() {
     }
     "###;
 
-    let (_, env) = infer_prog(src);
-    let fib_type = env.get("fib").unwrap();
+    let (_, ctx) = infer_prog(src);
+    let fib_type = ctx.values.get("fib").unwrap();
     assert_eq!(format!("{}", fib_type), "(number) => number");
 }
 
@@ -297,43 +294,43 @@ fn infer_obj() {
     let src = r#"
     let point = {x: 5, y: 10, msg: "Hello, world!"}
     "#;
-    let (_, env) = infer_prog(src);
-    let result = format!("{}", env.get("point").unwrap());
+    let (_, ctx) = infer_prog(src);
+    let result = format!("{}", ctx.values.get("point").unwrap());
     assert_eq!(result, "{x: 5, y: 10, msg: \"Hello, world!\"}");
 }
 
 #[test]
 fn infer_async() {
     let src = "let foo = async () => 10";
-    let (_, env) = infer_prog(src);
-    let result = format!("{}", env.get("foo").unwrap());
+    let (_, ctx) = infer_prog(src);
+    let result = format!("{}", ctx.values.get("foo").unwrap());
     assert_eq!(result, "() => Promise<10>");
 }
 
 #[test]
 fn infer_async_math() {
     let src = "let add = async (a, b) => await a() + await b()";
-    let (program, env) = infer_prog(src);
-    let result = format!("{}", env.get("add").unwrap());
+    let (program, ctx) = infer_prog(src);
+    let result = format!("{}", ctx.values.get("add").unwrap());
     assert_eq!(
         result,
         "(() => Promise<number>, () => Promise<number>) => Promise<number>"
     );
 
-    let result = codegen_d_ts(&program, &env);
+    let result = codegen_d_ts(&program, &ctx);
     insta::assert_snapshot!(result, @"export declare const add: (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;\n");
 }
 
 #[test]
 fn codegen_let_rec() {
     let src = "let rec f = () => f()";
-    let (program, env) = infer_prog(src);
+    let (program, ctx) = infer_prog(src);
     let js = codegen_js(&program);
 
     insta::assert_snapshot!(js, @"export const f = ()=>f();
 ");
 
-    let result = codegen_d_ts(&program, &env);
+    let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const f: <A>() => A;\n");
 }
@@ -344,7 +341,7 @@ fn codegen_if_else() {
     let cond = true
     let result = if (cond) { 5 } else { 5 }
     "#;
-    let (program, env) = infer_prog(src);
+    let (program, ctx) = infer_prog(src);
 
     let js = codegen_js(&program);
     insta::assert_snapshot!(js, @r###"
@@ -358,7 +355,7 @@ fn codegen_if_else() {
     })();
     "###);
 
-    let result = codegen_d_ts(&program, &env);
+    let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
     export declare const cond: true;
@@ -369,7 +366,7 @@ fn codegen_if_else() {
 #[test]
 fn codegen_object() {
     let src = "let point = {x: 5, y: 10}";
-    let (program, env) = infer_prog(src);
+    let (program, ctx) = infer_prog(src);
     let js = codegen_js(&program);
 
     insta::assert_snapshot!(js, @r###"
@@ -379,7 +376,7 @@ fn codegen_object() {
     };
     "###);
 
-    let result = codegen_d_ts(&program, &env);
+    let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
     export declare const point: {
@@ -392,14 +389,14 @@ fn codegen_object() {
 #[test]
 fn codegen_async_math() {
     let src = "let add = async (a, b) => await a() + await b()";
-    let (program, env) = infer_prog(src);
+    let (program, ctx) = infer_prog(src);
 
     let js = codegen_js(&program);
 
     insta::assert_snapshot!(js, @"export const add = async (a, b)=>await a() + await b();
 ");
 
-    let result = codegen_d_ts(&program, &env);
+    let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const add: (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;\n");
 }
@@ -407,9 +404,9 @@ fn codegen_async_math() {
 #[test]
 fn infer_let_decl_with_type_ann() {
     let src = "let x: number = 10";
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("x").unwrap());
+    let result = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -417,18 +414,18 @@ fn infer_let_decl_with_type_ann() {
 #[should_panic = "value is not a subtype of decl's declared type"]
 fn infer_let_decl_with_incorrect_type_ann() {
     let src = "let x: string = 10";
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("x").unwrap());
+    let result = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(result, "number");
 }
 
 #[test]
 fn infer_declare() {
     let src = "declare let x: number";
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("x").unwrap());
+    let result = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -438,9 +435,9 @@ fn infer_expr_using_declared_var() {
     declare let x: number
     let y = x + 5
     "#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("y").unwrap());
+    let result = format!("{}", ctx.values.get("y").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -450,9 +447,9 @@ fn infer_app_of_declared_fn() {
     declare let add: (number, number) => number
     let sum = add(5, 10)
     "#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("sum").unwrap());
+    let result = format!("{}", ctx.values.get("sum").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -462,9 +459,9 @@ fn infer_app_of_declared_fn_with_obj_param() {
     declare let mag: ({x: number, y: number}) => number
     let result = mag({x: 5, y: 10})
     "#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("result").unwrap());
+    let result = format!("{}", ctx.values.get("result").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -474,9 +471,9 @@ fn calling_a_fn_with_an_obj_subtype() {
     declare let mag: ({x: number, y: number}) => number
     let result = mag({x: 5, y: 10, z: 15})
     "#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("result").unwrap());
+    let result = format!("{}", ctx.values.get("result").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -493,27 +490,27 @@ fn calling_a_fn_with_an_obj_missing_a_property() {
 #[test]
 fn infer_literal_tuple() {
     let src = r#"let tuple = [1, "two", true]"#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("tuple").unwrap());
+    let result = format!("{}", ctx.values.get("tuple").unwrap());
     assert_eq!(result, "[1, \"two\", true]");
 }
 
 #[test]
 fn infer_tuple_with_type_annotation() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two", true]"#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("tuple").unwrap());
+    let result = format!("{}", ctx.values.get("tuple").unwrap());
     assert_eq!(result, "[number, string, boolean]");
 }
 
 #[test]
 fn infer_tuple_with_type_annotation_and_extra_element() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two", true, "ignored"]"#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("tuple").unwrap());
+    let result = format!("{}", ctx.values.get("tuple").unwrap());
     assert_eq!(result, "[number, string, boolean]");
 }
 
@@ -537,11 +534,11 @@ fn infer_var_with_union_type_annotation() {
     let a: number | string = 5
     let b: number | string = "ten"
     "#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let a = format!("{}", env.get("a").unwrap());
+    let a = format!("{}", ctx.values.get("a").unwrap());
     assert_eq!(a, "number | string");
-    let b = format!("{}", env.get("b").unwrap());
+    let b = format!("{}", ctx.values.get("b").unwrap());
     assert_eq!(b, "number | string");
 }
 
@@ -556,9 +553,9 @@ fn infer_widen_tuple_return() {
         }
     }
     "#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("result").unwrap());
+    let result = format!("{}", ctx.values.get("result").unwrap());
     assert_eq!(result, "(boolean) => [1, 2] | [true, false]");
 }
 
@@ -586,9 +583,9 @@ fn infer_widen_tuples_with_type_annotations() {
         }
     }
     "#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("result").unwrap());
+    let result = format!("{}", ctx.values.get("result").unwrap());
     assert_eq!(result, "(boolean) => [number | number] | [boolean | boolean]");
 }
 
@@ -599,11 +596,11 @@ fn infer_member_access() {
     let x = point.x
     let y = point.y
     "#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let x = format!("{}", env.get("x").unwrap());
+    let x = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(x, "5");
-    let y = format!("{}", env.get("y").unwrap());
+    let y = format!("{}", ctx.values.get("y").unwrap());
     assert_eq!(y, "10");
 }
 
@@ -620,9 +617,9 @@ fn infer_incorrect_member_access() {
 #[test]
 fn infer_member_access_on_obj_lit() {
     let src = r#"let x = {x: 5, y: 10}.x"#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let x = format!("{}", env.get("x").unwrap());
+    let x = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(x, "5");
 }
 
@@ -634,35 +631,89 @@ fn infer_member_access_nested_obj() {
     }
     let x = obj.point.x
     "#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let x = format!("{}", env.get("x").unwrap());
+    let x = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(x, "5");
 }
 
 #[test]
 fn infer_obj_type_based_on_member_access() {
     let src = r#"let foo = (point) => point.x + point.y"#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("foo").unwrap());
+    let result = format!("{}", ctx.values.get("foo").unwrap());
     assert_eq!(result, "({x: number, y: number}) => number");
 }
 
 #[test]
 fn infer_obj_type_based_on_nested_member_access() {
     let src = r#"let slope = (line) => (line.p1.y - line.p0.y) / (line.p1.x - line.p0.x)"#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("slope").unwrap());
+    let result = format!("{}", ctx.values.get("slope").unwrap());
     assert_eq!(result, "({p1: {x: number, y: number}, p0: {x: number, y: number}}) => number");
 }
 
 #[test]
 fn infer_obj_type_based_on_member_access_with_type_var_intersection() {
     let src = r#"let foo = (point) => point.x * point.x + point.y * point.y"#;
-    let (_, env) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", env.get("foo").unwrap());
+    let result = format!("{}", ctx.values.get("foo").unwrap());
     assert_eq!(result, "({x: number, y: number}) => number");
+}
+
+#[test]
+fn infer_fn_using_type_decl() {
+    let src = r#"
+    type Point = {x: number, y: number}
+    let mag = (p: Point) => p.x * p.x + p.y * p.y
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("mag").unwrap());
+    assert_eq!(result, "(Point) => number");
+}
+
+#[test]
+fn infer_react_component() {
+    let src = r#"
+    type Props = {name: string}
+    let Foo = (props: Props) => {
+        <div>Hello, world</div>
+    }
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("Foo").unwrap());
+    assert_eq!(result, "(Props) => JSXElement");
+}
+
+#[test]
+fn codegen_code_with_type_delcarations() {
+    let src = r#"
+    type Point = {x: number, y: number}
+    let point: Point = {x: 5, y: 10}
+    "#;
+    let (program, ctx) = infer_prog(src);
+    let js = codegen_js(&program);
+
+    insta::assert_snapshot!(js, @r###"
+    ;
+    export const point = {
+        x: 5,
+        y: 10
+    };
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    type Point = {
+        x: number;
+        y: number;
+    };
+    export declare const point: Point;
+    "###);
 }
