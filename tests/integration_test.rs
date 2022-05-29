@@ -641,8 +641,28 @@ fn infer_member_access_nested_obj() {
 }
 
 #[test]
-#[should_panic = "not yet implemented"]
 fn infer_obj_type_based_on_member_access() {
-    let src = r#"let mag = (point) => point.x + point.y"#;
-    infer_prog(src);
+    let src = r#"let foo = (point) => point.x + point.y"#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("foo").unwrap());
+    assert_eq!(result, "({x: number, y: number}) => number");
+}
+
+#[test]
+fn infer_obj_type_based_on_nested_member_access() {
+    let src = r#"let slope = (line) => (line.p1.y - line.p0.y) / (line.p1.x - line.p0.x)"#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("slope").unwrap());
+    assert_eq!(result, "({p1: {x: number, y: number}, p0: {x: number, y: number}}) => number");
+}
+
+#[test]
+fn infer_obj_type_based_on_member_access_with_type_var_intersection() {
+    let src = r#"let foo = (point) => point.x * point.x + point.y * point.y"#;
+    let (_, env) = infer_prog(src);
+
+    let result = format!("{}", env.get("foo").unwrap());
+    assert_eq!(result, "({x: number, y: number}) => number");
 }

@@ -156,10 +156,36 @@ impl Hash for UnionType {
 }
 
 #[derive(Clone, Debug, Eq)]
+pub struct IntersectionType {
+    pub id: i32,
+    pub frozen: bool,
+    pub types: Vec<Type>,
+}
+
+impl PartialEq for IntersectionType {
+    fn eq(&self, other: &Self) -> bool {
+        self.types == other.types
+    }
+}
+
+impl Hash for IntersectionType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.types.hash(state);
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum WidenFlag {
+    Intersection,
+    Union,
+}
+
+#[derive(Clone, Debug, Eq)]
 pub struct ObjectType {
     pub id: i32,
     pub frozen: bool,
     pub props: Vec<TProp>,
+    pub widen_flag: Option<WidenFlag>,
 }
 
 impl PartialEq for ObjectType {
@@ -242,6 +268,7 @@ pub enum Type {
     Prim(PrimType),
     Lit(LitType),
     Union(UnionType),
+    Intersection(IntersectionType),
     Object(ObjectType),
     Alias(AliasType),
     Tuple(TupleType),
@@ -256,6 +283,7 @@ impl Type {
             Type::Prim(x) => x.frozen,
             Type::Lit(x) => x.frozen,
             Type::Union(x) => x.frozen,
+            Type::Intersection(x) => x.frozen,
             Type::Object(x) => x.frozen,
             Type::Alias(x) => x.frozen,
             Type::Tuple(x) => x.frozen,
@@ -270,6 +298,7 @@ impl Type {
             Type::Prim(x) => x.id,
             Type::Lit(x) => x.id,
             Type::Union(x) => x.id,
+            Type::Intersection(x) => x.id,
             Type::Object(x) => x.id,
             Type::Alias(x) => x.id,
             Type::Tuple(x) => x.id,
@@ -292,6 +321,7 @@ impl fmt::Display for Type {
             Type::Prim(PrimType { prim, .. }) => write!(f, "{}", prim),
             Type::Lit(LitType { lit, .. }) => write!(f, "{}", lit),
             Type::Union(UnionType { types, .. }) => write!(f, "{}", join(types, " | ")),
+            Type::Intersection(IntersectionType { types, .. }) => write!(f, "{}", join(types, " & ")),
             Type::Object(ObjectType { props, .. }) => write!(f, "{{{}}}", join(props, ", ")),
             Type::Alias(AliasType {
                 name, type_params, ..
@@ -364,6 +394,11 @@ pub fn freeze(ty: Type) -> Type {
             frozen: true,
             types: union.types.into_iter().map(freeze).collect(),
             ..union
+        }),
+        Type::Intersection(intersection) => Type::Intersection(IntersectionType {
+            frozen: true,
+            types: intersection.types.into_iter().map(freeze).collect(),
+            ..intersection
         }),
         Type::Object(obj) => Type::Object(ObjectType {
             frozen: true,

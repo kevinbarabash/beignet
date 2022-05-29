@@ -1,13 +1,14 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
+use defaultmap::*;
 
 use crate::ast::*;
 use crate::types::{self, freeze, Primitive, Scheme, Type};
 
 use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::{Context, Env};
-use super::substitutable::Substitutable;
 use super::infer_mem::infer_mem;
+use super::substitutable::Substitutable;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
@@ -82,15 +83,15 @@ pub fn infer_expr(ctx: &Context, expr: &Expr) -> Scheme {
     let (ty, cs) = infer(expr, ctx);
     let subs = run_solve(&cs, ctx);
 
-    close_over(&ty.apply(&subs))
+    close_over(&ty.apply(&subs), ctx)
 }
 
-fn close_over(ty: &Type) -> Scheme {
+fn close_over(ty: &Type, ctx: &Context) -> Scheme {
     let empty_env = Env::new();
-    normalize(&generalize(&empty_env, ty))
+    normalize(&generalize(&empty_env, ty), ctx)
 }
 
-fn normalize(sc: &Scheme) -> Scheme {
+fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
     let body = &sc.ty;
     let keys = body.ftv();
     let mut keys: Vec<_> = keys.iter().cloned().collect();
@@ -109,7 +110,8 @@ fn normalize(sc: &Scheme) -> Scheme {
         })
         .collect();
 
-    fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>) -> Type {
+    // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
+    fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
         // let id = ty.id;
         // let frozen = ty.frozen;
         match ty {
@@ -122,37 +124,55 @@ fn normalize(sc: &Scheme) -> Scheme {
             }) => {
                 let params: Vec<_> = params
                     .iter()
-                    .map(|param| norm_type(param, mapping))
+                    .map(|param| norm_type(param, mapping, ctx))
                     .collect();
                 Type::Lam(types::LamType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
                     params,
-                    ret: Box::from(norm_type(ret, mapping)),
+                    ret: Box::from(norm_type(ret, mapping, ctx)),
                 })
             }
             Type::Prim(_) => ty.to_owned(),
             Type::Lit(_) => ty.to_owned(),
-            Type::Union(types::UnionType { id, frozen, types }) => {
-                let types = types.iter().map(|ty| norm_type(ty, mapping)).collect();
+            Type::Union(union) => {
+                // TODO: update union_types from constraint_solver.rs to handle
+                // any number of types instead of just two and then call it here.
+                let types = union
+                    .types
+                    .iter()
+                    .map(|ty| norm_type(ty, mapping, ctx))
+                    .collect();
                 Type::Union(types::UnionType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
                     types,
+                    ..union.to_owned()
                 })
             }
-            Type::Object(types::ObjectType { id, frozen, props }) => {
-                let props = props
+            Type::Intersection(intersection) => {
+                // TODO: update intersection_types from constraint_solver.rs to handle
+                // any number of types instead of just two and then call it here.
+                let types = intersection
+                    .types
+                    .iter()
+                    .map(|ty| norm_type(ty, mapping, ctx))
+                    .collect();
+                simplify_intersection(types::IntersectionType {
+                    types,
+                    ..intersection.to_owned()
+                }, ctx)
+            }
+            Type::Object(object) => {
+                let props = object
+                    .props
                     .iter()
                     .map(|prop| types::TProp {
                         name: prop.name.clone(),
-                        ty: norm_type(&prop.ty, mapping),
+                        ty: norm_type(&prop.ty, mapping, ctx),
                     })
                     .collect();
                 Type::Object(types::ObjectType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
                     props,
+                    ..object.to_owned()
                 })
             }
             Type::Alias(types::AliasType {
@@ -163,7 +183,7 @@ fn normalize(sc: &Scheme) -> Scheme {
             }) => {
                 let type_params = type_params
                     .clone()
-                    .map(|params| params.iter().map(|ty| norm_type(ty, mapping)).collect());
+                    .map(|params| params.iter().map(|ty| norm_type(ty, mapping, ctx)).collect());
                 Type::Alias(types::AliasType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
@@ -172,7 +192,7 @@ fn normalize(sc: &Scheme) -> Scheme {
                 })
             }
             Type::Tuple(types::TupleType { id, frozen, types }) => {
-                let types = types.iter().map(|ty| norm_type(ty, mapping)).collect();
+                let types = types.iter().map(|ty| norm_type(ty, mapping, ctx)).collect();
                 Type::Tuple(types::TupleType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
@@ -187,7 +207,7 @@ fn normalize(sc: &Scheme) -> Scheme {
             }) => Type::Member(types::MemberType {
                 id: id.to_owned(),
                 frozen: frozen.to_owned(),
-                obj: Box::from(norm_type(obj, mapping)),
+                obj: Box::from(norm_type(obj, mapping, ctx)),
                 prop: prop.to_owned(),
             }),
         }
@@ -195,7 +215,7 @@ fn normalize(sc: &Scheme) -> Scheme {
 
     Scheme {
         qualifiers: (0..keys.len()).map(|x| x as i32).collect(),
-        ty: norm_type(body, &mapping),
+        ty: norm_type(body, &mapping, ctx),
     }
 }
 
@@ -392,7 +412,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 })
                 .collect();
 
-            let obj_ty = ctx.object(&properties);
+            let obj_ty = ctx.object(&properties, None);
 
             (obj_ty, all_cs)
         }
@@ -521,7 +541,7 @@ fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
                     ty: _type_ann_to_type(prop.type_ann.as_ref(), ctx),
                 })
                 .collect();
-            ctx.object(&props)
+            ctx.object(&props, None)
         }
         TypeAnn::TypeRef(TypeRef {
             name, type_params, ..
@@ -540,6 +560,60 @@ fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
         TypeAnn::Tuple(TupleType { types, .. }) => {
             ctx.tuple(types.iter().map(|ty| _type_ann_to_type(ty, ctx)).collect())
         }
+    }
+}
+
+// TODO: make this recursive
+fn simplify_intersection(intersection: types::IntersectionType, ctx: &Context) -> Type {
+    let obj_types: Vec<_> = intersection
+        .types
+        .iter()
+        .filter_map(|ty| match ty {
+            types::Type::Object(object) => Some(object),
+            _ => None,
+        })  
+        .collect();
+
+    // The use of HashSet<Type> here is to avoid duplicate types
+    let mut props_map: DefaultHashMap<String, HashSet<Type>> = defaulthashmap!();
+    for obj_type in obj_types {
+        for prop in &obj_type.props {
+            props_map[prop.name.clone()].insert(prop.ty.clone());
+        }
+    }
+
+    let mut props: Vec<types::TProp> = props_map.iter().map(|(name, types)| {
+        let types: Vec<_> = types.iter().cloned().collect();
+        let ty: Type = if types.len() == 1 {
+            types[0].clone()
+        } else {
+            ctx.intersection(types)  
+        };
+        types::TProp {
+            name: name.to_owned(),
+            ty,
+        }
+    }).collect();
+    props.sort_by_key(|prop| prop.name.clone()); // ensure a stable order
+
+    let obj_type = ctx.object(&props, None);
+
+    let mut not_obj_types: Vec<_> = intersection
+        .types
+        .iter()
+        .filter(|ty| !matches!(ty, types::Type::Object(_)))
+        .cloned()
+        .collect();
+
+    let mut types = vec![];
+    types.append(&mut not_obj_types);
+    types.push(obj_type);
+    types.sort_by_key(|ty| ty.id()); // ensure a stable order
+
+    if types.len() == 1 {
+        types[0].clone()
+    } else {
+        ctx.intersection(types)
     }
 }
 

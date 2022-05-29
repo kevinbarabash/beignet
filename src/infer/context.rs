@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::collections::HashMap;
 
 use crate::ast::literal::Lit;
-use crate::types::{self, Scheme, Type};
+use crate::types::{self, Scheme, Type, WidenFlag};
 
 use super::substitutable::*;
 
@@ -112,11 +112,19 @@ impl Context {
             types,
         })
     }
-    pub fn object(&self, properties: &[types::TProp]) -> Type {
+    pub fn intersection(&self, types: Vec<Type>) -> Type {
+        Type::Intersection(types::IntersectionType {
+            id: self.fresh_id(),
+            frozen: false,
+            types,
+        })
+    }
+    pub fn object(&self, properties: &[types::TProp], widen_flag: Option<WidenFlag>) -> Type {
         Type::Object(types::ObjectType {
             id: self.fresh_id(),
             frozen: false,
             props: properties.to_vec(),
+            widen_flag,
         })
     }
     pub fn prop(&self, name: &str, ty: Type) -> types::TProp {

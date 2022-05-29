@@ -94,7 +94,18 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
             };
             unify_many(&cs, ctx)
         }
-
+        (Type::Member(mem1), Type::Member(mem2)) => {
+            if mem1.prop == mem2.prop {
+                unifies(
+                    &Constraint {
+                        types: (mem1.obj.as_ref().to_owned(), mem2.obj.as_ref().to_owned()),
+                    },
+                    ctx,
+                )
+            } else {
+                todo!()
+            }
+        }
         _ => {
             if is_subtype(&t1, &t2) {
                 return Subst::new();
@@ -270,15 +281,89 @@ fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
     }
 }
 
+fn intersect_properties(props1: &[TProp], props2: &[TProp], ctx: &Context) -> Vec<TProp> {
+    // The resulting object type should combine all properties from each.
+    let mut props: Vec<TProp> = vec![];
+    let mut unique1: Vec<_> = props1
+        .iter()
+        .filter(|p1| !props2.iter().any(|p2| p1.name == p2.name))
+        .cloned()
+        .collect();
+    let mut unique2: Vec<_> = props2
+        .iter()
+        .filter(|p2| !props1.iter().any(|p1| p1.name == p2.name))
+        .cloned()
+        .collect();
+    props.append(&mut unique1);
+    props.append(&mut unique2);
+
+    // If there is a property that exists on both, then we need to take the
+    // interesction of those properties' values.
+    let mut duplicates: Vec<_> = props1
+        .iter()
+        .filter_map(|p1| {
+            props2.iter().find(|p2| p1.name == p2.name).map(|p2| TProp {
+                name: p1.name.to_owned(),
+                ty: intersect_types(&p1.ty, &p2.ty, ctx),
+            })
+        })
+        .collect();
+    props.append(&mut duplicates);
+
+    props
+}
+
+fn intersect_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
+    match (t1, t2) {
+        (
+            Type::Object(ObjectType { props: props1, .. }),
+            Type::Object(ObjectType { props: props2, .. }),
+        ) => {
+            let props = intersect_properties(props1, props2, ctx);
+            ctx.object(&props, None)
+        }
+        (_, _) => ctx.intersection(vec![t1.to_owned(), t2.to_owned()]),
+    }
+}
+
 fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Subst {
-    let mut result = Subst::new();
+    match (t1, t2) {
+        // TODO: Figure out if we need both to have the same flag or if it's okay
+        // if only one has the flag?
+        (
+            Type::Object(ObjectType {
+                widen_flag: Some(WidenFlag::Intersection),
+                ..
+            }),
+            Type::Object(_),
+        )
+        | (
+            Type::Object(_),
+            Type::Object(ObjectType {
+                widen_flag: Some(WidenFlag::Intersection),
+                ..
+            }),
+        ) => {
+            let new_type = intersect_types(t1, t2, ctx);
 
-    let new_type = union_types(t1, t2, ctx);
+            let mut result = Subst::new();
 
-    result.insert(t1.id(), new_type.clone());
-    result.insert(t2.id(), new_type);
+            result.insert(t1.id(), new_type.clone());
+            result.insert(t2.id(), new_type);
 
-    result
+            result
+        }
+        (_, _) => {
+            let new_type = union_types(t1, t2, ctx);
+
+            let mut result = Subst::new();
+
+            result.insert(t1.id(), new_type.clone());
+            result.insert(t2.id(), new_type);
+
+            result
+        }
+    }
 }
 
 #[cfg(test)]
