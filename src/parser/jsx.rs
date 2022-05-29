@@ -23,21 +23,12 @@ pub fn jsx_parser(
         .then_ignore(just_with_padding("}"))
         .map_with_span(|expr, span| JSXExprContainer { span, expr });
 
-    let jsx_element_child = choice((
-        jsx_expr
-            .clone()
-            .map(JSXElementChild::JSXExprContainer),
-        jsx_text.map(JSXElementChild::JSXText),
-    ));
-
     let jsx_attr = text::ident()
         .map_with_span(|name, span| Ident { name, span })
         .then_ignore(just_with_padding("="))
         .then(choice((
             str_lit.map(JSXAttrValue::Lit),
-            jsx_expr
-                .clone()
-                .map(JSXAttrValue::JSXExprContainer),
+            jsx_expr.clone().map(JSXAttrValue::JSXExprContainer),
         )))
         .map_with_span(|(name, value), span| JSXAttr {
             span,
@@ -46,17 +37,58 @@ pub fn jsx_parser(
         })
         .padded();
 
-    // TODO: make jsx recursive so that we can nested elements, e.g.
-    // <Foo><Bar>{baz}</Bar></Foo>
-    let jsx = just_with_padding("<")
-        .ignore_then(text::ident().padded()) // head
+    let jsx_head = just_with_padding("<")
+        .ignore_then(text::ident().padded())
         .then(jsx_attr.clone().repeated())
-        .then_ignore(just_with_padding(">"))
+        .then_ignore(just_with_padding(">"));
+
+    let jsx_tail = just("<")
+        .ignore_then(just("/"))
+        .ignore_then(text::ident().padded())
+        .then_ignore(just_with_padding(">"));
+
+    let jsx_element_self_closing = just_with_padding("<")
+        .ignore_then(text::ident().padded())
+        .then(jsx_attr.clone().repeated())
+        .then_ignore(just_with_padding("/>"))
+        .map_with_span(|(head, attrs), span| JSXElement {
+            span,
+            name: head,
+            attrs,
+            children: vec![],
+        });
+
+    let jsx_element_child = recursive(|jsx_element_child| {
+        // TODO: dedupe with `jsx_element` below
+        let jsx_element = jsx_head
+            .clone()
+            .then(jsx_element_child.repeated())
+            .then(jsx_tail)
+            .map_with_span(|(((head, attrs), children), tail), span| {
+                assert_eq!(head, tail);
+
+                JSXElementChild::JSXElement(Box::from(JSXElement {
+                    span,
+                    name: head,
+                    attrs,
+                    children,
+                }))
+            });
+
+        choice((
+            jsx_element,
+            jsx_element_self_closing
+                .clone()
+                .map(|elem| JSXElementChild::JSXElement(Box::from(elem))),
+            jsx_expr.clone().map(JSXElementChild::JSXExprContainer),
+            jsx_text.map(JSXElementChild::JSXText),
+        ))
+    });
+
+    // TODO: dedupe with `jsx_element` above
+    let jsx_element = jsx_head
         .then(jsx_element_child.repeated())
-        .then_ignore(just("<"))
-        .then_ignore(just("/"))
-        .then(text::ident().padded()) // tail
-        .then_ignore(just_with_padding(">"))
+        .then(jsx_tail)
         .map_with_span(|(((head, attrs), children), tail), span| {
             assert_eq!(head, tail);
 
@@ -68,18 +100,5 @@ pub fn jsx_parser(
             })
         });
 
-    let jsx_self_closing = just_with_padding("<")
-        .ignore_then(text::ident().padded())
-        .then(jsx_attr.clone().repeated())
-        .then_ignore(just_with_padding("/>"))
-        .map_with_span(|(head, attrs), span| {
-            Expr::JSXElement(JSXElement {
-                span,
-                name: head,
-                attrs,
-                children: vec![],
-            })
-        });
-
-    choice((jsx, jsx_self_closing))
+    choice((jsx_element, jsx_element_self_closing.map(Expr::JSXElement)))
 }
