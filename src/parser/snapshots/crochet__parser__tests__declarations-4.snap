@@ -4,7 +4,7 @@ expression: "parse(\"let rec f = () => f()\")"
 ---
 Program {
     body: [
-        Decl {
+        VarDecl {
             span: 0..21,
             pattern: Ident(
                 BindingIdent {

@@ -4,7 +4,7 @@ expression: "parse(\"let cond = a != b\")"
 ---
 Program {
     body: [
-        Decl {
+        VarDecl {
             span: 0..17,
             pattern: Ident(
                 BindingIdent {

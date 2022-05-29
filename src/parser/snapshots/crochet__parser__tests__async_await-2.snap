@@ -4,7 +4,7 @@ expression: "parse(\"let foo = async () => { await 10 }\")"
 ---
 Program {
     body: [
-        Decl {
+        VarDecl {
             span: 0..34,
             pattern: Ident(
                 BindingIdent {

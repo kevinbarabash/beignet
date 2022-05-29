@@ -4,7 +4,7 @@ expression: "parse(\"let x = [1, [a, b]]\")"
 ---
 Program {
     body: [
-        Decl {
+        VarDecl {
             span: 0..19,
             pattern: Ident(
                 BindingIdent {

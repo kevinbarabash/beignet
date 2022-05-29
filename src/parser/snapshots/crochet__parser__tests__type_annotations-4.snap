@@ -4,7 +4,7 @@ expression: "parse(\"let p: Point = {x: 5, y: 10}\")"
 ---
 Program {
     body: [
-        Decl {
+        VarDecl {
             span: 0..28,
             pattern: Ident(
                 BindingIdent {
