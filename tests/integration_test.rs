@@ -717,3 +717,21 @@ fn codegen_code_with_type_delcarations() {
     export declare const point: Point;
     "###);
 }
+
+// TODO: Re-enable once we can solve constraints involving intersection types.
+// See https://github.com/crochet-lang/crochet/issues/79 for details.
+#[test]
+#[ignore]
+fn infer_function_overloading() {
+    let src = r#"
+    declare let add: ((number, number) => number) & ((string, string) => string)
+    let num = add(5, 10)
+    let str = add("hello, ", "world")
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let num_result = format!("{}", ctx.values.get("num").unwrap());
+    assert_eq!(num_result, "number");
+    let str_result = format!("{}", ctx.values.get("num").unwrap());
+    assert_eq!(str_result, "string");
+}

@@ -1,0 +1,32 @@
+---
+source: src/parser/types.rs
+expression: "parse_type(\"A & B & C\")"
+---
+Intersection(
+    IntersectionType {
+        span: 0..9,
+        types: [
+            TypeRef(
+                TypeRef {
+                    span: 0..1,
+                    name: "A",
+                    type_params: None,
+                },
+            ),
+            TypeRef(
+                TypeRef {
+                    span: 4..5,
+                    name: "B",
+                    type_params: None,
+                },
+            ),
+            TypeRef(
+                TypeRef {
+                    span: 8..9,
+                    name: "C",
+                    type_params: None,
+                },
+            ),
+        ],
+    },
+)
