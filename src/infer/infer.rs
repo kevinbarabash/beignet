@@ -562,6 +562,9 @@ fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
         TypeAnn::Union(UnionType { types, .. }) => {
             ctx.union(types.iter().map(|ty| _type_ann_to_type(ty, ctx)).collect())
         }
+        TypeAnn::Intersection(IntersectionType { types, .. }) => {
+            ctx.intersection(types.iter().map(|ty| _type_ann_to_type(ty, ctx)).collect())
+        }
         TypeAnn::Tuple(TupleType { types, .. }) => {
             ctx.tuple(types.iter().map(|ty| _type_ann_to_type(ty, ctx)).collect())
         }

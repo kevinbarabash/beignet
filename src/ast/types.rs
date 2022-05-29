@@ -48,6 +48,12 @@ pub struct UnionType {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IntersectionType {
+    pub span: Span,
+    pub types: Vec<TypeAnn>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TupleType {
     pub span: Span,
     pub types: Vec<TypeAnn>,
@@ -61,5 +67,6 @@ pub enum TypeAnn {
     Object(ObjectType),
     TypeRef(TypeRef),
     Union(UnionType),
+    Intersection(IntersectionType),
     Tuple(TupleType),
 }
