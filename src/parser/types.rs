@@ -128,24 +128,30 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
 
         // We have to use `atom` here instead of `type_ann` to avoid a stack
         // overflow.
-
         let intersection = atom
             .clone()
             .separated_by(just_with_padding("&"))
-            .at_least(2)
-            .map_with_span(|types, span| TypeAnn::Intersection(IntersectionType { span, types }));
+            .map_with_span(|types, span| {
+                match types.len() {
+                    1 => types[0].clone(),
+                    _ => TypeAnn::Intersection(IntersectionType { span, types }),
+                }
+            });
 
-        // insection must come before atom
-        let union = choice((intersection.clone(), atom.clone()))
+        let union = intersection
             .separated_by(just_with_padding("|"))
-            .at_least(2)
-            .map_with_span(|types, span| TypeAnn::Union(UnionType { span, types }));
+            .map_with_span(|types, span| {
+                match types.len() {
+                    1 => types[0].clone(),
+                    _ => TypeAnn::Union(UnionType { span, types })
+                }
+            });
 
         choice((
             // lambda types have higher precedence than union types so that
             // `(A, B) => C | D` parse as lambda type with a return type that
             // happens to be a union.
-            lam, union, intersection, atom,
+            lam, union, atom,
         ))
     })
 }
@@ -169,5 +175,6 @@ mod tests {
         insta::assert_debug_snapshot!(parse_type("A & B | C & D"));
         insta::assert_debug_snapshot!(parse_type("(A) => B & C | D"));
         insta::assert_debug_snapshot!(parse_type("(A | B) & (C | D)"));
+        insta::assert_debug_snapshot!(parse_type("(A, B) => C & D"));
     }
 }
