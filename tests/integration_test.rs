@@ -719,6 +719,51 @@ fn codegen_code_with_type_delcarations() {
 }
 
 #[test]
+fn infer_mem_access_with_optional_prop() {
+    let src = r#"
+    declare let point: {x?: number, y: number}
+    let x = point.x
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("x").unwrap());
+    assert_eq!(result, "number | undefined");
+}
+
+#[test]
+#[should_panic = "not yet implemented"]
+fn recursive_mem_access_on_optional_prop_should_fail() {
+    let src = r#"
+    declare let foo: {a?: {b?: number}}
+    let b = foo.a.b
+    "#;
+    infer_prog(src);
+}
+
+#[test]
+fn infer_assigning_to_obj_with_optional_props() {
+    let src = r#"
+    let p: {x?: number, y: number} = {y: 10}
+    let x = p.x
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let x = format!("{}", ctx.values.get("x").unwrap());
+    assert_eq!(x, "number | undefined");
+}
+
+#[test]
+fn infer_assigning_an_obj_lit_with_extra_props() {
+    let src = r#"
+    let point: {x: number, y: number} = {x: 5, y: 10, z: 15}
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let point = format!("{}", ctx.values.get("point").unwrap());
+    assert_eq!(point, "{x: number, y: number}");
+}
+
+#[test]
 fn infer_function_overloading() {
     let src = r#"
     declare let add: ((number, number) => number) & ((string, string) => string)
@@ -741,4 +786,31 @@ fn infer_function_overloading_with_incorrect_args() {
     let bool = add(true, false)
     "#;
     infer_prog(src);
+}
+
+#[test]
+fn codegen_object_type_with_optional_property() {
+    let src = r#"
+    type Point = {x?: number, y: number}
+    let point: Point = {y: 10}
+    "#;
+    let (program, ctx) = infer_prog(src);
+    let js = codegen_js(&program);
+
+    insta::assert_snapshot!(js, @r###"
+    ;
+    export const point = {
+        y: 10
+    };
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    type Point = {
+        x?: number;
+        y: number;
+    };
+    export declare const point: Point;
+    "###);
 }

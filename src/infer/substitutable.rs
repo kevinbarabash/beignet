@@ -72,8 +72,8 @@ impl Substitutable for Type {
                         .props
                         .iter()
                         .map(|prop| TProp {
-                            name: prop.name.clone(),
                             ty: prop.ty.apply(sub),
+                            ..prop.to_owned()
                         })
                         .collect(),
                     ..object.to_owned()

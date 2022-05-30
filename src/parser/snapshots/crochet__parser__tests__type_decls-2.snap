@@ -18,6 +18,7 @@ Program {
                         TProp {
                             span: 14..23,
                             name: "x",
+                            optional: false,
                             type_ann: Prim(
                                 PrimType {
                                     span: 17..23,
@@ -28,6 +29,7 @@ Program {
                         TProp {
                             span: 25..34,
                             name: "y",
+                            optional: false,
                             type_ann: Prim(
                                 PrimType {
                                     span: 28..34,

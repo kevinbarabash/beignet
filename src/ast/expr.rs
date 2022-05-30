@@ -107,6 +107,15 @@ pub enum MemberProp {
     Computed(ComputedPropName),
 }
 
+impl MemberProp {
+    pub fn name(&self) -> String {
+        match self {
+            MemberProp::Ident(Ident { name, .. }) => name.to_owned(),
+            MemberProp::Computed(_) => todo!(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ComputedPropName {
     pub span: Span, // includes enclosing []

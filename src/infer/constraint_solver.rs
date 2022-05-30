@@ -177,6 +177,7 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> bool {
         ) => {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
             props2.iter().all(|prop2| {
+                prop2.optional ||
                 props1
                     .iter()
                     .any(|prop1| prop1.name == prop2.name && is_subtype(&prop1.ty, &prop2.ty, ctx))
@@ -304,6 +305,7 @@ fn intersect_properties(props1: &[TProp], props2: &[TProp], ctx: &Context) -> Ve
         .filter_map(|p1| {
             props2.iter().find(|p2| p1.name == p2.name).map(|p2| TProp {
                 name: p1.name.to_owned(),
+                optional: p1.optional && p2.optional,
                 ty: intersect_types(&p1.ty, &p2.ty, ctx),
             })
         })
