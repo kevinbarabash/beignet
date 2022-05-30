@@ -111,7 +111,6 @@ fn unifies(c: &Constraint, ctx: &Context) -> Result<Subst, String> {
             }
         }
         (_, Type::Intersection(IntersectionType { types, .. })) => {
-            // TODO: switch from panics to results
             for ty in types {
                 let result = unifies(
                     &Constraint {
