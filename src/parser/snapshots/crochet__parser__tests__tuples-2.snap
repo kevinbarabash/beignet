@@ -20,7 +20,7 @@ Program {
                 Tuple(
                     Tuple {
                         span: 8..17,
-                        elements: [
+                        elems: [
                             Lit(
                                 Num(
                                     Num {

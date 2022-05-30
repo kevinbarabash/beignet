@@ -28,7 +28,7 @@ Program {
                 Obj(
                     Obj {
                         span: 15..28,
-                        properties: [
+                        props: [
                             Property {
                                 span: 16..20,
                                 name: "x",

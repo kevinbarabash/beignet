@@ -9,7 +9,7 @@ Program {
             expr: Obj(
                 Obj {
                     span: 0..13,
-                    properties: [
+                    props: [
                         Property {
                             span: 1..5,
                             name: "x",

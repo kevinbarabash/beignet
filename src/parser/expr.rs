@@ -63,14 +63,14 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("{"), just_with_padding("}"))
-            .map_with_span(|properties, span: Span| Expr::Obj(Obj { span, properties }));
+            .map_with_span(|props, span: Span| Expr::Obj(Obj { span, props }));
 
         let tuple = expr
             .clone()
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("["), just_with_padding("]"))
-            .map_with_span(|elements, span: Span| Expr::Tuple(Tuple { span, elements }));
+            .map_with_span(|elems, span: Span| Expr::Tuple(Tuple { span, elems }));
 
         let atom = choice((
             if_else,

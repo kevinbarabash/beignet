@@ -371,8 +371,8 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 type_args: None,
             })
         }
-        ast::Expr::Obj(ast::Obj { properties, .. }) => {
-            let props: Vec<PropOrSpread> = properties
+        ast::Expr::Obj(ast::Obj { props, .. }) => {
+            let props: Vec<PropOrSpread> = props
                 .iter()
                 .map(|prop| {
                     PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
@@ -396,9 +396,9 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             arg: Box::from(build_expr(expr.as_ref())),
         }),
         ast::Expr::JSXElement(elem) => Expr::JSXElement(Box::from(build_jsx_element(elem))),
-        ast::Expr::Tuple(ast::Tuple { elements, .. }) => Expr::Array(ArrayLit {
+        ast::Expr::Tuple(ast::Tuple { elems, .. }) => Expr::Array(ArrayLit {
             span: DUMMY_SP,
-            elems: elements
+            elems: elems
                 .iter()
                 .map(|elem| Some(ExprOrSpread::from(build_expr(elem))))
                 .collect(),

@@ -413,9 +413,9 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
 
             Ok((tv, cs))
         }
-        Expr::Obj(Obj { properties, .. }) => {
+        Expr::Obj(Obj { props, .. }) => {
             let mut all_cs: Vec<Constraint> = Vec::new();
-            let properties: Result<Vec<types::TProp>, String> = properties
+            let props: Result<Vec<types::TProp>, String> = props
                 .iter()
                 .map(|p| {
                     let (ty, cs) = infer(&p.value, ctx)?;
@@ -424,7 +424,7 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                 })
                 .collect();
 
-            let obj_ty = ctx.object(&properties?, None);
+            let obj_ty = ctx.object(&props?, None);
 
             Ok((obj_ty, all_cs))
         }
@@ -461,10 +461,10 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
 
             Ok((ty, vec![]))
         }
-        Expr::Tuple(Tuple { elements, .. }) => {
+        Expr::Tuple(Tuple { elems, .. }) => {
             let mut types: Vec<Type> = vec![];
             let mut all_cs: Vec<Constraint> = Vec::new();
-            for elem in elements {
+            for elem in elems {
                 let (ty, cs) = infer(elem, ctx)?;
                 types.push(ty);
                 all_cs.extend(cs);

@@ -79,7 +79,7 @@ pub struct Op {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Obj {
     pub span: Span,
-    pub properties: Vec<Property>,
+    pub props: Vec<Property>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -91,7 +91,7 @@ pub struct Await {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tuple {
     pub span: Span,
-    pub elements: Vec<Expr>,
+    pub elems: Vec<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
