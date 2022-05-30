@@ -524,11 +524,29 @@ pub fn build_lit(lit: &ast::Lit) -> Lit {
 }
 
 pub fn let_to_children(r#let: &ast::Let) -> Vec<Stmt> {
-    let ast::Let {pattern, value, body, ..} = r#let;
+    let mut children: Vec<Stmt> = vec![let_to_child(r#let)];
+    let mut body = r#let.body.to_owned();
+
+    while let ast::Expr::Let(r#let) = body.as_ref()
+    {
+        children.push(let_to_child(r#let));
+        body = r#let.body.to_owned();
+    }
+
+    children.push(Stmt::Return(ReturnStmt {
+        span: DUMMY_SP,
+        arg: Some(Box::from(build_expr(&body))),
+    }));
+
+    children
+}
+
+fn let_to_child(r#let: &ast::Let) -> Stmt {
+    let ast::Let {pattern, value, ..} = r#let;
 
     // TODO: handle shadowed variables in the same scope by introducing
     // unique identifiers.
-    let child = match pattern {
+    match pattern {
         Some(pattern) => Stmt::Decl(Decl::Var(VarDecl {
             span: DUMMY_SP,
             kind: VarDeclKind::Const,
@@ -544,43 +562,5 @@ pub fn let_to_children(r#let: &ast::Let) -> Vec<Stmt> {
             span: DUMMY_SP,
             expr: Box::from(build_expr(value)),
         }),
-    };
-
-    let mut children: Vec<Stmt> = vec![child];
-    let mut body = body.to_owned();
-
-    while let ast::Expr::Let(ast::Let {
-        pattern,
-        value,
-        body: next_body,
-        ..
-    }) = body.as_ref()
-    {
-        let child = match pattern {
-            Some(pattern) => Stmt::Decl(Decl::Var(VarDecl {
-                span: DUMMY_SP,
-                kind: VarDeclKind::Const,
-                declare: false,
-                decls: vec![VarDeclarator {
-                    span: DUMMY_SP,
-                    name: build_pattern(pattern),
-                    init: Some(Box::from(build_expr(value))),
-                    definite: false,
-                }],
-            })),
-            None => Stmt::Expr(ExprStmt {
-                span: DUMMY_SP,
-                expr: Box::from(build_expr(value)),
-            }),
-        };
-        children.push(child);
-        body = next_body.to_owned();
     }
-
-    children.push(Stmt::Return(ReturnStmt {
-        span: DUMMY_SP,
-        arg: Some(Box::from(build_expr(&body))),
-    }));
-
-    children
 }
