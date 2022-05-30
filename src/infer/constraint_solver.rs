@@ -110,19 +110,19 @@ fn unifies(c: &Constraint, ctx: &Context) -> Result<Subst, String> {
                 todo!()
             }
         }
-        (_, Type::Intersection(IntersectionType { types: _, .. })) => {
-            // TODO: switch from panics to results
-            // for ty in types {
-            //     let result = panic::catch_unwind(|| {
-            //         unifies(
-            //             &Constraint {
-            //                 types: (t1, ty.to_owned()),
-            //             },
-            //             ctx,
-            //         )
-            //     });
-            // }
-            todo!()
+        (_, Type::Intersection(IntersectionType { types, .. })) => {
+            for ty in types {
+                let result = unifies(
+                    &Constraint {
+                        types: (t1.clone(), ty.to_owned()),
+                    },
+                    ctx,
+                );
+                if result.is_ok() {
+                    return result;
+                }
+            }
+            Err(String::from("unification failed"))
         }
         _ => {
             if is_subtype(&t1, &t2, ctx) {
@@ -132,8 +132,6 @@ fn unifies(c: &Constraint, ctx: &Context) -> Result<Subst, String> {
             if !t1.frozen() && !t2.frozen() {
                 return widen_types(&t1, &t2, ctx);
             }
-
-            println!("unification failed: {t1} != {t2}");
 
             Err(String::from("unification failed"))
         }
