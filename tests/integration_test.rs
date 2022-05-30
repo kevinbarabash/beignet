@@ -718,10 +718,7 @@ fn codegen_code_with_type_delcarations() {
     "###);
 }
 
-// TODO: Re-enable once we can solve constraints involving intersection types.
-// See https://github.com/crochet-lang/crochet/issues/79 for details.
 #[test]
-#[ignore]
 fn infer_function_overloading() {
     let src = r#"
     declare let add: ((number, number) => number) & ((string, string) => string)
@@ -732,6 +729,16 @@ fn infer_function_overloading() {
 
     let num_result = format!("{}", ctx.values.get("num").unwrap());
     assert_eq!(num_result, "number");
-    let str_result = format!("{}", ctx.values.get("num").unwrap());
+    let str_result = format!("{}", ctx.values.get("str").unwrap());
     assert_eq!(str_result, "string");
+}
+
+#[test]
+#[should_panic = "unification failed"]
+fn infer_function_overloading_with_incorrect_args() {
+    let src = r#"
+    declare let add: ((number, number) => number) & ((string, string) => string)
+    let bool = add(true, false)
+    "#;
+    infer_prog(src);
 }
