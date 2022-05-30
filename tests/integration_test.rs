@@ -41,7 +41,7 @@ fn infer_lam() {
 
 #[test]
 fn infer_let_inside_function() {
-    assert_eq!(infer("() => let x = 5 in x"), "() => 5");
+    assert_eq!(infer("() => {let x = 5; x}"), "() => 5");
 }
 
 #[test]
@@ -813,4 +813,13 @@ fn codegen_object_type_with_optional_property() {
     };
     export declare const point: Point;
     "###);
+}
+
+#[test]
+fn infer_nested_block() {
+    let src = "let result = {let sum = {let x = 5; let y = 10; x + y}; sum}";
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("result").unwrap());
+    assert_eq!(result, "number");
 }

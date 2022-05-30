@@ -6,9 +6,10 @@ use crate::parser::pattern::pattern_parser;
 use crate::parser::types::type_parser;
 use crate::parser::util::just_with_padding;
 
-pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
+pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
     let type_ann = type_parser();
-
+    let pattern = pattern_parser();
+    
     let ident = text::ident().map_with_span(|name, span| Expr::Ident(Ident { span, name }));
 
     let r#true =
@@ -32,19 +33,45 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
         .collect::<String>()
         .map_with_span(|value, span| Expr::Lit(Lit::str(value, span)));
 
-    recursive(|expr| {
+    let parser = recursive(|expr| {
+
+        // TODO: support recursive functions to be declared within another function
+        // let let_rec = ...
+
+        let r#let = just("let")
+            .ignore_then(pattern.clone())
+            .then_ignore(just_with_padding("="))
+            .then(expr.clone())
+            .separated_by(just_with_padding(";"))
+            .then_ignore(just_with_padding(";"))
+            .then(expr.clone())
+            .map(|(lets, final_expr)| {
+                let result: Expr = lets.iter().rev().fold(final_expr, |body, (pattern, value)| {
+                    let start = pattern.span().start;
+                    let end = body.span().end;
+
+                    Expr::Let(Let {
+                        span: start..end,
+                        pattern: pattern.to_owned(),
+                        value: Box::new(value.to_owned()),
+                        body: Box::new(body),
+                    })
+                });
+
+                result
+            });
+           
+        let block = choice((r#let.clone(), expr.clone()))
+            .delimited_by(just_with_padding("{"), just_with_padding("}"));
+
         // TODO: handle chaining of if-else
         let if_else = just_with_padding("if")
             .ignore_then(just_with_padding("("))
             .ignore_then(expr.clone())
             .then_ignore(just_with_padding(")"))
-            .then_ignore(just_with_padding("{"))
-            .then(expr.clone())
-            .then_ignore(just_with_padding("}"))
+            .then(block.clone())
             .then_ignore(just_with_padding("else"))
-            .then_ignore(just_with_padding("{"))
-            .then(expr.clone())
-            .then_ignore(just_with_padding("}"))
+            .then(block.clone())
             .map_with_span(|((cond, left), right), span: Span| {
                 Expr::IfElse(IfElse {
                     span,
@@ -80,7 +107,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             ident,
             obj,
             tuple,
-            jsx_parser(expr.clone().boxed()).boxed(),
+            jsx_parser(expr.clone().boxed()),
             expr.clone()
                 .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
@@ -225,11 +252,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .then(param_list)
             .then(just_with_padding(":").ignore_then(type_ann).or_not())
             .then_ignore(just_with_padding("=>"))
-            .then(choice((
-                expr.clone()
-                    .delimited_by(just_with_padding("{"), just_with_padding("}")),
-                expr.clone(),
-            )))
+            .then(choice((block.clone(), expr.clone())))
             .map_with_span(|(((is_async, args), return_type), body), span: Span| {
                 Expr::Lambda(Lambda {
                     span,
@@ -240,29 +263,8 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
                 })
             });
 
-        // We use `just` instead of `just_with_padding` here to ensure that
-        // the span doesn't include leading whitespace.
-        let r#let = just("let")
-            .ignore_then(just_with_padding("rec").or_not())
-            .then(pattern_parser())
-            .then_ignore(just_with_padding("="))
-            .then(expr.clone())
-            .then_ignore(just_with_padding("in"))
-            .then(expr.clone())
-            .map_with_span(|(((rec, pattern), value), body), span: Span| {
-                match rec {
-                    // TODO: implement parsing of let-rec inside functions
-                    Some(_) => todo!(),
-                    None => Expr::Let(Let {
-                        span,
-                        pattern,
-                        value: Box::new(value),
-                        body: Box::new(body),
-                    }),
-                }
-            });
+        choice((lam, block, comp))
+    });
 
-        // NOTE: `let` is an expression because it currently models let-in.
-        choice((lam, r#let, comp))
-    })
+    parser.boxed()
 }

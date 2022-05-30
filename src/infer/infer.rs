@@ -664,12 +664,12 @@ mod tests {
 
     #[test]
     fn infer_let_with_type_ann() {
-        assert_eq!(parse_and_infer_expr("let x: number = 5 in x"), "number");
+        assert_eq!(parse_and_infer_expr("{let x: number = 5; x}"), "number");
     }
 
     #[test]
     #[should_panic = "unification failed"]
     fn infer_let_with_incorrect_type_ann() {
-        parse_and_infer_expr("let x: string = 5 in x");
+        parse_and_infer_expr("{let x: string = 5; x}");
     }
 }

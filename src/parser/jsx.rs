@@ -4,8 +4,8 @@ use crate::ast::*;
 use crate::parser::util::just_with_padding;
 
 pub fn jsx_parser(
-    expr: BoxedParser<'_, char, Expr, Simple<char>>,
-) -> impl Parser<char, Expr, Error = Simple<char>> + '_ {
+    expr: BoxedParser<'static, char, Expr, Simple<char>>,
+) -> BoxedParser<'static, char, Expr, Simple<char>> {
     let str_lit = just("\"")
         .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
         .then_ignore(just("\""))
@@ -19,7 +19,7 @@ pub fn jsx_parser(
         .map_with_span(|value, span| JSXText { span, value });
 
     let jsx_expr = just_with_padding("{")
-        .ignore_then(expr)
+        .ignore_then(expr.clone())
         .then_ignore(just_with_padding("}"))
         .map_with_span(|expr, span| JSXExprContainer { span, expr });
 
@@ -100,5 +100,7 @@ pub fn jsx_parser(
             })
         });
 
-    choice((jsx_element, jsx_element_self_closing.map(Expr::JSXElement)))
+    let parser = choice((jsx_element, jsx_element_self_closing.map(Expr::JSXElement)));
+
+    parser.boxed()
 }
