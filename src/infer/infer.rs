@@ -1,6 +1,6 @@
+use defaultmap::*;
 use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
-use defaultmap::*;
 
 use crate::ast::*;
 use crate::types::{self, freeze, Primitive, Scheme, Type};
@@ -12,9 +12,10 @@ use super::substitutable::Substitutable;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
-pub fn infer_prog(prog: &Program) -> Context {
+pub fn infer_prog(prog: &Program) -> Result<Context, String> {
     let mut ctx: Context = Context::default();
 
+    // TODO: figure out how report multiple errors
     for stmt in &prog.body {
         match stmt {
             Statement::VarDecl {
@@ -41,20 +42,20 @@ pub fn infer_prog(prog: &Program) -> Context {
                         let init = init.as_ref().unwrap();
                         match pattern {
                             Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
-                                let inferred_scheme = infer_expr(&ctx, init);
+                                let inferred_scheme = infer_expr(&ctx, init)?;
                                 let scheme = match type_ann {
                                     Some(type_ann) => {
                                         let type_ann_ty = type_ann_to_type(type_ann, &ctx);
                                         match is_subtype(&inferred_scheme.ty, &type_ann_ty, &ctx) {
-                                            true => type_to_scheme(&type_ann_ty),
-                                            false => panic!(
-                                                "value is not a subtype of decl's declared type"
-                                            ),
+                                            true => Ok(type_to_scheme(&type_ann_ty)),
+                                            false => Err(String::from(
+                                                "value is not a subtype of decl's declared type",
+                                            )),
                                         }
                                     }
-                                    None => inferred_scheme,
+                                    None => Ok(inferred_scheme),
                                 };
-                                ctx.values.insert(id.name.to_owned(), scheme);
+                                ctx.values.insert(id.name.to_owned(), scheme?);
                             }
                             _ => todo!(),
                         }
@@ -69,26 +70,26 @@ pub fn infer_prog(prog: &Program) -> Context {
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
-                infer_expr(&ctx, expr);
+                infer_expr(&ctx, expr)?;
             }
         };
     }
 
-    ctx
+    Ok(ctx)
 }
 
-pub fn infer_stmt(ctx: &Context, stmt: &Statement) -> Scheme {
+pub fn infer_stmt(ctx: &Context, stmt: &Statement) -> Result<Scheme, String> {
     match stmt {
         Statement::Expr { expr, .. } => infer_expr(ctx, expr),
-        _ => panic!("We can't infer decls yet"),
+        _ => Err(String::from("We can't infer decls yet")),
     }
 }
 
-pub fn infer_expr(ctx: &Context, expr: &Expr) -> Scheme {
-    let (ty, cs) = infer(expr, ctx);
-    let subs = run_solve(&cs, ctx);
+pub fn infer_expr(ctx: &Context, expr: &Expr) -> Result<Scheme, String> {
+    let (ty, cs) = infer(expr, ctx)?;
+    let subs = run_solve(&cs, ctx)?;
 
-    close_over(&ty.apply(&subs), ctx)
+    Ok(close_over(&ty.apply(&subs), ctx))
 }
 
 fn close_over(ty: &Type, ctx: &Context) -> Scheme {
@@ -161,10 +162,13 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .iter()
                     .map(|ty| norm_type(ty, mapping, ctx))
                     .collect();
-                simplify_intersection(types::IntersectionType {
-                    types,
-                    ..intersection.to_owned()
-                }, ctx)
+                simplify_intersection(
+                    types::IntersectionType {
+                        types,
+                        ..intersection.to_owned()
+                    },
+                    ctx,
+                )
             }
             Type::Object(object) => {
                 let props = object
@@ -186,9 +190,12 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 name,
                 type_params,
             }) => {
-                let type_params = type_params
-                    .clone()
-                    .map(|params| params.iter().map(|ty| norm_type(ty, mapping, ctx)).collect());
+                let type_params = type_params.clone().map(|params| {
+                    params
+                        .iter()
+                        .map(|ty| norm_type(ty, mapping, ctx))
+                        .collect()
+                });
                 Type::Alias(types::AliasType {
                     id: id.to_owned(),
                     frozen: frozen.to_owned(),
@@ -241,15 +248,15 @@ fn is_promise(ty: &Type) -> bool {
     matches!(ty, Type::Alias(types::AliasType { name, .. }) if name == "Promise")
 }
 
-fn infer(expr: &Expr, ctx: &Context) -> InferResult {
+fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
     match expr {
         Expr::Ident(Ident { name, .. }) => {
             let ty = ctx.lookup_value(name);
-            (ty, vec![])
+            Ok((ty, vec![]))
         }
         Expr::App(App { lam, args, .. }) => {
-            let (t_fn, cs_fn) = infer(lam, ctx);
-            let (t_args, cs_args) = infer_many(args, ctx);
+            let (t_fn, cs_fn) = infer(lam, ctx)?;
+            let (t_args, cs_args) = infer_many(args, ctx)?;
             let tv = ctx.fresh_var();
 
             let mut constraints = Vec::new();
@@ -259,10 +266,10 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 types: (ctx.lam(t_args, Box::new(tv.clone())), t_fn),
             });
 
-            (tv, constraints)
+            Ok((tv, constraints))
         }
         Expr::Fix(Fix { expr, .. }) => {
-            let (t, cs) = infer(expr, ctx);
+            let (t, cs) = infer(expr, ctx)?;
             let tv = ctx.fresh_var();
             let mut constraints = Vec::new();
             constraints.extend(cs);
@@ -270,7 +277,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 types: (ctx.lam(vec![tv.clone()], Box::new(tv.clone())), t),
             });
 
-            (tv, constraints)
+            Ok((tv, constraints))
         }
         Expr::IfElse(IfElse {
             cond,
@@ -278,9 +285,9 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             alternate,
             ..
         }) => {
-            let (t1, cs1) = infer(cond, ctx);
-            let (t2, cs2) = infer(consequent, ctx);
-            let (t3, cs3) = infer(alternate, ctx);
+            let (t1, cs1) = infer(cond, ctx)?;
+            let (t2, cs2) = infer(consequent, ctx)?;
+            let (t3, cs3) = infer(alternate, ctx)?;
             let bool = ctx.prim(Primitive::Bool);
 
             let result_type = t2.clone();
@@ -291,7 +298,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             constraints.push(Constraint { types: (t1, bool) });
             constraints.push(Constraint { types: (t2, t3) });
 
-            (result_type, constraints)
+            Ok((result_type, constraints))
         }
         Expr::Lambda(Lambda {
             params,
@@ -324,7 +331,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
                 };
             }
             new_ctx.is_async = is_async.to_owned();
-            let (ret, cs) = infer(body, &new_ctx);
+            let (ret, cs) = infer(body, &new_ctx)?;
             ctx.state.count.set(new_ctx.state.count.get());
 
             let ret = if !is_async || is_promise(&ret) {
@@ -335,7 +342,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
 
             let lam_ty = ctx.lam(param_tvs, Box::new(ret));
 
-            (lam_ty, cs)
+            Ok((lam_ty, cs))
         }
         Expr::Let(Let {
             pattern,
@@ -343,26 +350,26 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             body,
             ..
         }) => {
-            let (t1, cs1) = infer(value, ctx);
-            let subs = run_solve(&cs1, ctx);
-            let (new_ctx, new_cs) = infer_pattern(pattern, &t1, ctx);
-            let (t2, cs2) = infer(body, &new_ctx);
+            let (t1, cs1) = infer(value, ctx)?;
+            let subs = run_solve(&cs1, ctx)?;
+            let (new_ctx, new_cs) = infer_pattern(pattern, &t1, ctx)?;
+            let (t2, cs2) = infer(body, &new_ctx)?;
             ctx.state.count.set(new_ctx.state.count.get());
             let mut cs: Vec<Constraint> = Vec::new();
             cs.extend(cs1);
             cs.extend(new_cs);
             cs.extend(cs2.apply(&subs));
 
-            (t2.apply(&subs), cs)
+            Ok((t2.apply(&subs), cs))
         }
-        Expr::Lit(literal) => (ctx.lit(literal.to_owned()), vec![]),
+        Expr::Lit(literal) => Ok((ctx.lit(literal.to_owned()), vec![])),
         // TODO: consider introduce functions for each operator and rewrite Ops as Apps
         Expr::Op(Op {
             left, right, op, ..
         }) => {
             let left = Box::as_ref(left);
             let right = Box::as_ref(right);
-            let (ts, cs) = infer_many(&[left.clone(), right.clone()], ctx);
+            let (ts, cs) = infer_many(&[left.clone(), right.clone()], ctx)?;
             let tv = ctx.fresh_var();
 
             let mut cs = cs;
@@ -404,29 +411,29 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             };
             cs.push(c);
 
-            (tv, cs)
+            Ok((tv, cs))
         }
         Expr::Obj(Obj { properties, .. }) => {
             let mut all_cs: Vec<Constraint> = Vec::new();
-            let properties: Vec<_> = properties
+            let properties: Result<Vec<types::TProp>, String> = properties
                 .iter()
                 .map(|p| {
-                    let (ty, cs) = infer(&p.value, ctx);
+                    let (ty, cs) = infer(&p.value, ctx)?;
                     all_cs.extend(cs);
-                    ctx.prop(&p.name, ty)
+                    Ok(ctx.prop(&p.name, ty))
                 })
                 .collect();
 
-            let obj_ty = ctx.object(&properties, None);
+            let obj_ty = ctx.object(&properties?, None);
 
-            (obj_ty, all_cs)
+            Ok((obj_ty, all_cs))
         }
         Expr::Await(Await { expr, .. }) => {
             if !ctx.is_async {
-                panic!("Can't use `await` inside non-async lambda")
+                return Err(String::from("Can't use `await` inside non-async lambda"));
             }
 
-            let (promise_ty, promise_cs) = infer(expr, ctx);
+            let (promise_ty, promise_cs) = infer(expr, ctx)?;
             let tv = ctx.fresh_var();
 
             let c = Constraint {
@@ -437,7 +444,7 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             cs.extend(promise_cs);
             cs.push(c);
 
-            (tv, cs)
+            Ok((tv, cs))
         }
         Expr::JSXElement(JSXElement {
             span: _,
@@ -452,18 +459,18 @@ fn infer(expr: &Expr, ctx: &Context) -> InferResult {
             // TODO: replace this with JSX.Element once we have support for Type::Mem
             let ty = ctx.alias("JSXElement", None);
 
-            (ty, vec![])
+            Ok((ty, vec![]))
         }
         Expr::Tuple(Tuple { elements, .. }) => {
             let mut types: Vec<Type> = vec![];
             let mut all_cs: Vec<Constraint> = Vec::new();
             for elem in elements {
-                let (ty, cs) = infer(elem, ctx);
+                let (ty, cs) = infer(elem, ctx)?;
                 types.push(ty);
                 all_cs.extend(cs);
             }
 
-            (ctx.tuple(types), all_cs)
+            Ok((ctx.tuple(types), all_cs))
         }
         Expr::Member(member) => infer_mem(infer, member, ctx),
     }
@@ -476,7 +483,11 @@ fn type_to_scheme(ty: &Type) -> Scheme {
     }
 }
 
-fn infer_pattern(pattern: &Pattern, ty: &Type, ctx: &Context) -> (Context, Vec<Constraint>) {
+fn infer_pattern(
+    pattern: &Pattern,
+    ty: &Type,
+    ctx: &Context,
+) -> Result<(Context, Vec<Constraint>), String> {
     match pattern {
         Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
             let mut new_ctx = ctx.clone();
@@ -498,28 +509,30 @@ fn infer_pattern(pattern: &Pattern, ty: &Type, ctx: &Context) -> (Context, Vec<C
                     }]
                 }
                 None => {
-                    new_ctx.values.insert(id.name.to_owned(), type_to_scheme(ty));
+                    new_ctx
+                        .values
+                        .insert(id.name.to_owned(), type_to_scheme(ty));
                     vec![]
                 }
             };
 
-            (new_ctx, cs)
+            Ok((new_ctx, cs))
         }
         Pattern::Rest(_) => todo!(),
     }
 }
 
-fn infer_many(exprs: &[Expr], ctx: &Context) -> (Vec<Type>, Vec<Constraint>) {
+fn infer_many(exprs: &[Expr], ctx: &Context) -> Result<(Vec<Type>, Vec<Constraint>), String> {
     let mut ts: Vec<Type> = Vec::new();
     let mut all_cs: Vec<Constraint> = Vec::new();
 
     for elem in exprs {
-        let (ty, cs) = infer(elem, ctx);
+        let (ty, cs) = infer(elem, ctx)?;
         ts.push(ty);
         all_cs.extend(cs);
     }
 
-    (ts, all_cs)
+    Ok((ts, all_cs))
 }
 
 pub fn type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
@@ -579,7 +592,7 @@ fn simplify_intersection(intersection: types::IntersectionType, ctx: &Context) -
         .filter_map(|ty| match ty {
             types::Type::Object(object) => Some(object),
             _ => None,
-        })  
+        })
         .collect();
 
     // The use of HashSet<Type> here is to avoid duplicate types
@@ -590,18 +603,21 @@ fn simplify_intersection(intersection: types::IntersectionType, ctx: &Context) -
         }
     }
 
-    let mut props: Vec<types::TProp> = props_map.iter().map(|(name, types)| {
-        let types: Vec<_> = types.iter().cloned().collect();
-        let ty: Type = if types.len() == 1 {
-            types[0].clone()
-        } else {
-            ctx.intersection(types)  
-        };
-        types::TProp {
-            name: name.to_owned(),
-            ty,
-        }
-    }).collect();
+    let mut props: Vec<types::TProp> = props_map
+        .iter()
+        .map(|(name, types)| {
+            let types: Vec<_> = types.iter().cloned().collect();
+            let ty: Type = if types.len() == 1 {
+                types[0].clone()
+            } else {
+                ctx.intersection(types)
+            };
+            types::TProp {
+                name: name.to_owned(),
+                ty,
+            }
+        })
+        .collect();
     props.sort_by_key(|prop| prop.name.clone()); // ensure a stable order
 
     let obj_type = ctx.object(&props, None);
@@ -635,7 +651,7 @@ mod tests {
     fn parse_and_infer_expr(input: &str) -> String {
         let ctx: Context = Context::default();
         let expr = expr_parser().then_ignore(end()).parse(input).unwrap();
-        format!("{}", infer_expr(&ctx, &expr))
+        format!("{}", infer_expr(&ctx, &expr).unwrap())
     }
 
     #[test]

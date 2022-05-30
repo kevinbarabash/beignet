@@ -56,7 +56,8 @@ pub fn compile(input: &str) -> CompileResult {
 
     let js = codegen::js::codegen_js(&program);
 
-    let ctx = infer_prog(&program);
+    // TODO: return errors as part of CompileResult
+    let ctx = infer_prog(&program).unwrap();
     let dts = codegen::d_ts::codegen_d_ts(&program, &ctx);
 
     CompileResult { js, dts }

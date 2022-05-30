@@ -13,17 +13,17 @@ pub struct Constraint {
 
 type Unifier = (Subst, Vec<Constraint>);
 
-pub fn run_solve(cs: &[Constraint], ctx: &Context) -> Subst {
+pub fn run_solve(cs: &[Constraint], ctx: &Context) -> Result<Subst, String> {
     let empty_subst = Subst::new();
 
     solver((empty_subst, cs.to_vec()), ctx)
 }
 
-fn solver(u: Unifier, ctx: &Context) -> Subst {
+fn solver(u: Unifier, ctx: &Context) -> Result<Subst, String> {
     let (su, cs) = u;
 
     if cs.is_empty() {
-        return su;
+        return Ok(su);
     }
 
     let rest = &cs[1..]; // const [_ , ...rest] = cs;
@@ -37,23 +37,23 @@ fn solver(u: Unifier, ctx: &Context) -> Subst {
     match cs.get(0) {
         Some(c) => {
             // su1 represents new substitutions from unifying the first constraint in cs.
-            let su1 = unifies(c, ctx);
+            let su1 = unifies(c, ctx)?;
             // This is applied to the remaining constraints (rest).  compose_subs is used
             // to apply su1 to the HashMap of subsitutions, su.
-            let unifier: Unifier = (compose_subs(&su1, &su), Vec::from(rest).apply(&su1));
+            let unifier: Unifier = (compose_subs(&su1, &su)?, Vec::from(rest).apply(&su1));
             solver(unifier, ctx)
         }
-        None => su,
+        None => Ok(su),
     }
 }
 
-fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
+fn compose_subs(s1: &Subst, s2: &Subst) -> Result<Subst, String> {
     let mut result: Subst = s2.iter().map(|(id, tv)| (*id, tv.apply(s1))).collect();
     result.extend(s1.to_owned());
-    result
+    Ok(result)
 }
 
-fn unifies(c: &Constraint, ctx: &Context) -> Subst {
+fn unifies(c: &Constraint, ctx: &Context) -> Result<Subst, String> {
     let (t1, t2) = c.types.clone();
 
     match (&t1, &t2) {
@@ -62,10 +62,10 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
         (Type::Prim(PrimType { prim: p1, .. }), Type::Prim(PrimType { prim: p2, .. }))
             if p1 == p2 =>
         {
-            Subst::new()
+            Ok(Subst::new())
         }
         (Type::Lit(LitType { lit: l1, .. }), Type::Lit(LitType { lit: l2, .. })) if l1 == l2 => {
-            Subst::new()
+            Ok(Subst::new())
         }
         (Type::Lam(lam1), Type::Lam(lam2)) => unify_lams(lam1, lam2, ctx),
         // TODO: copy tests case from `compiler` project for this
@@ -82,18 +82,21 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
             }),
         ) if name1 == name2 => {
             // TODO: throw if vars1 and vars2 have different lengths
-            let cs: Vec<_> = match (type_params1, type_params2) {
-                (Some(params1), Some(params2)) => params1
-                    .iter()
-                    .zip(params2)
-                    .map(|(a, b)| Constraint {
-                        types: (a.clone(), b.clone()),
-                    })
-                    .collect(),
-                (None, None) => vec![],
-                _ => panic!("mismatch in type params"),
+            let cs: Result<Vec<_>, _> = match (type_params1, type_params2) {
+                (Some(params1), Some(params2)) => {
+                    let cs = params1
+                        .iter()
+                        .zip(params2)
+                        .map(|(a, b)| Constraint {
+                            types: (a.clone(), b.clone()),
+                        })
+                        .collect();
+                    Ok(cs)
+                }
+                (None, None) => Ok(vec![]),
+                _ => Err(String::from("mismatch in type params")),
             };
-            unify_many(&cs, ctx)
+            unify_many(&cs?, ctx)
         }
         (Type::Member(mem1), Type::Member(mem2)) => {
             if mem1.prop == mem2.prop {
@@ -107,7 +110,7 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
                 todo!()
             }
         }
-        (_, Type::Intersection(IntersectionType {types: _, ..})) => {
+        (_, Type::Intersection(IntersectionType { types: _, .. })) => {
             // TODO: switch from panics to results
             // for ty in types {
             //     let result = panic::catch_unwind(|| {
@@ -123,7 +126,7 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
         }
         _ => {
             if is_subtype(&t1, &t2, ctx) {
-                return Subst::new();
+                return Ok(Subst::new());
             }
 
             if !t1.frozen() && !t2.frozen() {
@@ -132,12 +135,12 @@ fn unifies(c: &Constraint, ctx: &Context) -> Subst {
 
             println!("unification failed: {t1} != {t2}");
 
-            panic!("unification failed")
+            Err(String::from("unification failed"))
         }
     }
 }
 
-fn unify_lams(t1: &LamType, t2: &LamType, ctx: &Context) -> Subst {
+fn unify_lams(t1: &LamType, t2: &LamType, ctx: &Context) -> Result<Subst, String> {
     // TODO:
     // - varargs
     // - subtyping
@@ -159,7 +162,7 @@ fn unify_lams(t1: &LamType, t2: &LamType, ctx: &Context) -> Subst {
         });
         unify_many(&cs, ctx)
     } else if t1.params.len() != t2.params.len() {
-        panic!("Unification mismatch: arity mismatch");
+        Err(String::from("Unification mismatch: arity mismatch"))
     } else {
         let mut cs: Vec<_> = t1
             .params
@@ -176,18 +179,19 @@ fn unify_lams(t1: &LamType, t2: &LamType, ctx: &Context) -> Subst {
     }
 }
 
-fn unify_many(cs: &[Constraint], ctx: &Context) -> Subst {
+fn unify_many(cs: &[Constraint], ctx: &Context) -> Result<Subst, String> {
     match cs {
         [head, tail @ ..] => {
-            let su_1 = unifies(head, ctx);
-            let su_2 = unify_many(&tail.to_vec().apply(&su_1), ctx);
+            let su_1 = unifies(head, ctx)?;
+            let su_2 = unify_many(&tail.to_vec().apply(&su_1), ctx)?;
             compose_subs(&su_2, &su_1)
         }
-        _ => Subst::new(),
+        _ => Ok(Subst::new()),
     }
 }
 
 // Returns true if t2 admits all values from t1.
+// TODO: figure out how to make this return a Result<bool, String>
 pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> bool {
     match (t1, t2) {
         (Type::Lit(LitType { lit, .. }), Type::Prim(PrimType { prim, .. })) => {
@@ -230,25 +234,25 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> bool {
                     // TODO: handle schemes with qualifiers
                     let aliased_def = scheme.ty.to_owned();
                     is_subtype(t1, &aliased_def, ctx)
-                },
+                }
                 None => panic!("Can't find alias in context"),
             }
-        },
+        }
         (t1, t2) => t1 == t2,
     }
 }
 
-fn bind(tv_id: &i32, ty: &Type, _: &Context) -> Subst {
+fn bind(tv_id: &i32, ty: &Type, _: &Context) -> Result<Subst, String> {
     // TODO: Handle Type::Mem once it's added
     // NOTE: This will require the use of the &Context
 
     match ty {
-        Type::Var(VarType { id, .. }) if id == tv_id => Subst::new(),
-        ty if ty.ftv().contains(tv_id) => panic!("type var appears in type"),
+        Type::Var(VarType { id, .. }) if id == tv_id => Ok(Subst::new()),
+        ty if ty.ftv().contains(tv_id) => Err(String::from("type var appears in type")),
         ty => {
             let mut subst = Subst::new();
             subst.insert(tv_id.to_owned(), ty.clone());
-            subst
+            Ok(subst)
         }
     }
 }
@@ -353,7 +357,7 @@ fn intersect_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
     }
 }
 
-fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Subst {
+fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     match (t1, t2) {
         // TODO: Figure out if we need both to have the same flag or if it's okay
         // if only one has the flag?
@@ -378,7 +382,7 @@ fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Subst {
             result.insert(t1.id(), new_type.clone());
             result.insert(t2.id(), new_type);
 
-            result
+            Ok(result)
         }
         (_, _) => {
             let new_type = union_types(t1, t2, ctx);
@@ -388,7 +392,7 @@ fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Subst {
             result.insert(t1.id(), new_type.clone());
             result.insert(t2.id(), new_type);
 
-            result
+            Ok(result)
         }
     }
 }
