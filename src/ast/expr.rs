@@ -30,6 +30,12 @@ pub enum Statement {
     }, // NOTE: does not include Expr::Let
 }
 
+// #[derive(Debug, Clone, PartialEq, Eq)]
+// struct Block {
+//     pub span: Span,
+//     pub stmts: Vec<Expr>,
+// }
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct App {
     pub span: Span,

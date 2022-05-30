@@ -12,6 +12,15 @@ pub enum Pattern {
     // Assign(AssignPat),
 }
 
+impl Pattern {
+    pub fn span(&self) -> Span {
+        match self {
+            Pattern::Ident(ident) => ident.span.to_owned(),
+            Pattern::Rest(rest) => rest.span.to_owned(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BindingIdent {
     pub span: Span,

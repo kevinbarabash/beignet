@@ -4,7 +4,7 @@ use crate::ast::*;
 use crate::parser::util::just_with_padding;
 use crate::types::Primitive;
 
-pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
+pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
     let prim = choice((
         just("number").to(Primitive::Num),
         just("string").to(Primitive::Str),
@@ -56,7 +56,7 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
             })
         });
 
-    recursive(|type_ann| {
+    let parser = recursive(|type_ann| {
         let alias_params = type_ann
             .clone()
             .separated_by(just_with_padding(","))
@@ -155,7 +155,9 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
             // happens to be a union.
             lam, union, atom,
         ))
-    })
+    });
+
+    parser.boxed()
 }
 
 #[cfg(test)]

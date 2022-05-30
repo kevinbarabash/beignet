@@ -104,8 +104,7 @@ fn variable_declaration_with_number_literal() {
 
 #[test]
 fn let_in_inside_declaration() {
-    // TODO: only allow `let-in` inside of non-top-level scopes
-    insta::assert_snapshot!(compile("let foo = let x = 5 in x"), @r###"
+    insta::assert_snapshot!(compile("let foo = {let x = 5; x}"), @r###"
     export const foo = (()=>{
         const x = 5;
         return x;
@@ -115,8 +114,7 @@ fn let_in_inside_declaration() {
 
 #[test]
 fn nested_let_in_inside_declaration() {
-    // TODO: only allow `let-in` inside of non-top-level scopes
-    insta::assert_snapshot!(compile("let foo = let x = 5 in let y = 10 in x + y"), @r###"
+    insta::assert_snapshot!(compile("let foo = {let x = 5; let y = 10; x + y}"), @r###"
     export const foo = (()=>{
         const x = 5;
         const y = 10;
@@ -133,7 +131,9 @@ fn js_print_simple_lambda() {
 
 #[test]
 fn js_print_let_in() {
-    let input = "let foo = let x = 5 in let y = 10 in x + y";
+    let input = r#"
+    let foo = {let x = 5; let y = 10; x + y}
+    "#;
     insta::assert_snapshot!(compile(input), @r###"
     export const foo = (()=>{
         const x = 5;
@@ -145,7 +145,13 @@ fn js_print_let_in() {
 
 #[test]
 fn js_print_variable_shadowing() {
-    insta::assert_snapshot!(compile("let foo = let x = 5 in let x = 10 in x"), @r###"
+    let input = r#"
+    let foo = {
+        let x = 5;
+        let x = 10;
+        x
+    }"#;
+    insta::assert_snapshot!(compile(input), @r###"
     export const foo = (()=>{
         const x = 5;
         const x = 10;
@@ -156,7 +162,12 @@ fn js_print_variable_shadowing() {
 
 #[test]
 fn js_print_let_in_inside_lambda() {
-    insta::assert_snapshot!(compile("let foo = () => let x = 5 in let y = 10 in x + y"), @r###"
+    insta::assert_snapshot!(compile(r#"
+    let foo = () => {
+        let x = 5;
+        let y = 10;
+        x + y
+    }"#), @r###"
     export const foo = ()=>{
         const x = 5;
         const y = 10;
@@ -173,11 +184,33 @@ fn js_print_nested_lambdas() {
 
 #[test]
 fn js_print_nested_lambdas_with_multiple_lines() {
-    insta::assert_snapshot!(compile("let foo = (a) => (b) => let sum = a + b in sum"), @r###"
+    insta::assert_snapshot!(compile("let foo = (a) => (b) => {let sum = a + b; sum}"), @r###"
     export const foo = (a)=>(b)=>{
             const sum = a + b;
             return sum;
         };
+    "###);
+}
+
+#[test]
+fn js_print_nested_blocks() {
+    insta::assert_snapshot!(compile(r#"
+    let result = {
+        let sum = {
+            let x = 5;
+            let y = 10;
+            x + y
+        };
+        sum
+    }"#), @r###"
+    export const result = (()=>{
+        const sum = (()=>{
+            const x = 5;
+            const y = 10;
+            return x + y;
+        })();
+        return sum;
+    })();
     "###);
 }
 

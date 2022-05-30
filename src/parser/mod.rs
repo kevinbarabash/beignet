@@ -86,7 +86,7 @@ mod tests {
     fn declarations() {
         insta::assert_debug_snapshot!(parse("let x = 5"));
         insta::assert_debug_snapshot!(parse("let x = (a, b) => a + b"));
-        insta::assert_debug_snapshot!(parse("let foo = let x = 5 in x"));
+        insta::assert_debug_snapshot!(parse("let foo = {let x = 5; x}"));
         insta::assert_debug_snapshot!(parse("let rec f = () => f()")); // recursive
     }
 
@@ -157,5 +157,13 @@ mod tests {
         insta::assert_debug_snapshot!(parse("type Num = number"));
         insta::assert_debug_snapshot!(parse("type Point = {x: number, y: number}"));
         // TODO: add support for type params
+    }
+
+    #[test]
+    fn blocks() {
+        insta::assert_debug_snapshot!(parse("let foo = {let x = 5; x}"));
+        insta::assert_debug_snapshot!(parse("let foo = {let x = 5; let y = 10; x + y}"));
+        insta::assert_debug_snapshot!(parse("{let x = 5; let y = 10; x + y}"));
+        insta::assert_debug_snapshot!(parse("{let sum = {let x = 5; let y = 10; x + y}; sum}"))
     }
 }
