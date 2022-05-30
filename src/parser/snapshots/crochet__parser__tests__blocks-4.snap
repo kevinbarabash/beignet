@@ -9,28 +9,32 @@ Program {
             expr: Let(
                 Let {
                     span: 5..46,
-                    pattern: Ident(
-                        BindingIdent {
-                            span: 5..8,
-                            id: Ident {
+                    pattern: Some(
+                        Ident(
+                            BindingIdent {
                                 span: 5..8,
-                                name: "sum",
+                                id: Ident {
+                                    span: 5..8,
+                                    name: "sum",
+                                },
+                                type_ann: None,
                             },
-                            type_ann: None,
-                        },
+                        ),
                     ),
                     value: Let(
                         Let {
                             span: 16..40,
-                            pattern: Ident(
-                                BindingIdent {
-                                    span: 16..17,
-                                    id: Ident {
+                            pattern: Some(
+                                Ident(
+                                    BindingIdent {
                                         span: 16..17,
-                                        name: "x",
+                                        id: Ident {
+                                            span: 16..17,
+                                            name: "x",
+                                        },
+                                        type_ann: None,
                                     },
-                                    type_ann: None,
-                                },
+                                ),
                             ),
                             value: Lit(
                                 Num(
@@ -43,15 +47,17 @@ Program {
                             body: Let(
                                 Let {
                                     span: 27..40,
-                                    pattern: Ident(
-                                        BindingIdent {
-                                            span: 27..28,
-                                            id: Ident {
+                                    pattern: Some(
+                                        Ident(
+                                            BindingIdent {
                                                 span: 27..28,
-                                                name: "y",
+                                                id: Ident {
+                                                    span: 27..28,
+                                                    name: "y",
+                                                },
+                                                type_ann: None,
                                             },
-                                            type_ann: None,
-                                        },
+                                        ),
                                     ),
                                     value: Lit(
                                         Num(

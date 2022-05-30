@@ -33,21 +33,31 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
         .collect::<String>()
         .map_with_span(|value, span| Expr::Lit(Lit::str(value, span)));
 
-    let parser = recursive(|expr| {
+    let parser = recursive(|expr: Recursive<'_, char, Expr, Simple<char>>| {
 
         // TODO: support recursive functions to be declared within another function
         // let let_rec = ...
 
         let r#let = just("let")
             .ignore_then(pattern.clone())
-            .then_ignore(just_with_padding("="))
+            .then_ignore(just_with_padding("=")).or_not()
             .then(expr.clone())
             .separated_by(just_with_padding(";"))
-            .then_ignore(just_with_padding(";"))
-            .then(expr.clone())
-            .map(|(lets, final_expr)| {
-                let result: Expr = lets.iter().rev().fold(final_expr, |body, (pattern, value)| {
-                    let start = pattern.span().start;
+            // .then_ignore(just_with_padding(";"))
+            // .then(expr.clone())
+            .map(|lets| {
+                let mut iter = lets.iter().rev();
+                
+                let first = match iter.next().unwrap() {
+                    (Some(_), _) => panic!("Didn't expect `let` here"),
+                    (_, expr) => expr.clone(),
+                };
+
+                let result: Expr = iter.fold(first, |body, (pattern, value)| {
+                    let start = match pattern {
+                        Some(pattern) => pattern.span().start,
+                        None => value.span().start,
+                    };
                     let end = body.span().end;
 
                     Expr::Let(Let {
