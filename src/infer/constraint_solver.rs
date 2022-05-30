@@ -35,9 +35,9 @@ fn solver(u: Unifier, ctx: &Context) -> Result<Subst, String> {
     // }
 
     match cs.get(0) {
-        Some(c) => {
+        Some(Constraint { types: (t1, t2) }) => {
             // su1 represents new substitutions from unifying the first constraint in cs.
-            let su1 = unifies(c, ctx)?;
+            let su1 = unifies(t1, t2, ctx)?;
             // This is applied to the remaining constraints (rest).  compose_subs is used
             // to apply su1 to the HashMap of subsitutions, su.
             let unifier: Unifier = (compose_subs(&su1, &su)?, Vec::from(rest).apply(&su1));
@@ -53,12 +53,10 @@ fn compose_subs(s1: &Subst, s2: &Subst) -> Result<Subst, String> {
     Ok(result)
 }
 
-fn unifies(c: &Constraint, ctx: &Context) -> Result<Subst, String> {
-    let (t1, t2) = c.types.clone();
-
-    match (&t1, &t2) {
-        (Type::Var(v), _) => bind(&v.id, &t2, ctx),
-        (_, Type::Var(v)) => bind(&v.id, &t1, ctx),
+fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
+    match (t1, t2) {
+        (Type::Var(v), _) => bind(&v.id, t2, ctx),
+        (_, Type::Var(v)) => bind(&v.id, t1, ctx),
         (Type::Prim(PrimType { prim: p1, .. }), Type::Prim(PrimType { prim: p2, .. }))
             if p1 == p2 =>
         {
@@ -81,9 +79,11 @@ fn unifies(c: &Constraint, ctx: &Context) -> Result<Subst, String> {
                 ..
             }),
         ) if name1 == name2 => {
-            // TODO: throw if vars1 and vars2 have different lengths
             let cs: Result<Vec<_>, _> = match (type_params1, type_params2) {
                 (Some(params1), Some(params2)) => {
+                    if params1.len() != params2.len() {
+                        return Err(String::from("alias params have different numbers of type params"))
+                    }
                     let cs = params1
                         .iter()
                         .zip(params2)
@@ -100,24 +100,14 @@ fn unifies(c: &Constraint, ctx: &Context) -> Result<Subst, String> {
         }
         (Type::Member(mem1), Type::Member(mem2)) => {
             if mem1.prop == mem2.prop {
-                unifies(
-                    &Constraint {
-                        types: (mem1.obj.as_ref().to_owned(), mem2.obj.as_ref().to_owned()),
-                    },
-                    ctx,
-                )
+                unifies(mem1.obj.as_ref(), mem2.obj.as_ref(), ctx)
             } else {
-                todo!()
+                Err(String::from("unification failed - member access properties don't match"))
             }
         }
         (_, Type::Intersection(IntersectionType { types, .. })) => {
             for ty in types {
-                let result = unifies(
-                    &Constraint {
-                        types: (t1.clone(), ty.to_owned()),
-                    },
-                    ctx,
-                );
+                let result = unifies(t1, ty, ctx);
                 if result.is_ok() {
                     return result;
                 }
@@ -125,12 +115,12 @@ fn unifies(c: &Constraint, ctx: &Context) -> Result<Subst, String> {
             Err(String::from("unification failed"))
         }
         _ => {
-            if is_subtype(&t1, &t2, ctx) {
+            if is_subtype(t1, t2, ctx) {
                 return Ok(Subst::new());
             }
 
             if !t1.frozen() && !t2.frozen() {
-                return widen_types(&t1, &t2, ctx);
+                return widen_types(t1, t2, ctx);
             }
 
             Err(String::from("unification failed"))
@@ -179,8 +169,8 @@ fn unify_lams(t1: &LamType, t2: &LamType, ctx: &Context) -> Result<Subst, String
 
 fn unify_many(cs: &[Constraint], ctx: &Context) -> Result<Subst, String> {
     match cs {
-        [head, tail @ ..] => {
-            let su_1 = unifies(head, ctx)?;
+        [Constraint { types: (t1, t2) }, tail @ ..] => {
+            let su_1 = unifies(t1, t2, ctx)?;
             let su_2 = unify_many(&tail.to_vec().apply(&su_1), ctx)?;
             compose_subs(&su_2, &su_1)
         }
