@@ -823,3 +823,32 @@ fn infer_nested_block() {
     let result = format!("{}", ctx.values.get("result").unwrap());
     assert_eq!(result, "number");
 }
+
+#[test]
+fn infer_block_with_multiple_non_let_lines() {
+    let src = "let result = {let x = 5; x + 0; x}";
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("result").unwrap());
+    assert_eq!(result, "5");
+}
+
+#[test]
+fn codegen_block_with_multiple_non_let_lines() {
+    let src = "let result = {let x = 5; x + 0; x}";
+    let (program, ctx) = infer_prog(src);
+    let js = codegen_js(&program);
+
+    insta::assert_snapshot!(js, @r###"
+    export const result = (()=>{
+        const x = 5;
+        x + 0;
+        return x;
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const result: 5;
+");
+}

@@ -69,7 +69,7 @@ pub struct Lambda {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Let {
     pub span: Span,
-    pub pattern: Pattern,
+    pub pattern: Option<Pattern>,
     pub value: Box<Expr>,
     pub body: Box<Expr>,
 }

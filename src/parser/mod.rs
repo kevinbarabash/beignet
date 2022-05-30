@@ -164,6 +164,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let foo = {let x = 5; x}"));
         insta::assert_debug_snapshot!(parse("let foo = {let x = 5; let y = 10; x + y}"));
         insta::assert_debug_snapshot!(parse("{let x = 5; let y = 10; x + y}"));
-        insta::assert_debug_snapshot!(parse("{let sum = {let x = 5; let y = 10; x + y}; sum}"))
+        insta::assert_debug_snapshot!(parse("{let sum = {let x = 5; let y = 10; x + y}; sum}"));
+        insta::assert_debug_snapshot!(parse("let foo = {let x = 5; console.log(x); x}"));
+        insta::assert_debug_snapshot!(parse("let foo = {console.log(x); x}"));
     }
 }

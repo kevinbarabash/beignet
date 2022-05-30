@@ -351,15 +351,27 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
             body,
             ..
         }) => {
+            let mut cs: Vec<Constraint> = Vec::new();
             let (t1, cs1) = infer(value, ctx)?;
             let subs = run_solve(&cs1, ctx)?;
-            let (new_ctx, new_cs) = infer_pattern(pattern, &t1, ctx)?;
-            let (t2, cs2) = infer(body, &new_ctx)?;
-            ctx.state.count.set(new_ctx.state.count.get());
-            let mut cs: Vec<Constraint> = Vec::new();
             cs.extend(cs1);
-            cs.extend(new_cs);
-            cs.extend(cs2.apply(&subs));
+
+            let t2 = match pattern {
+                Some(pattern) => {
+                    let (new_ctx, new_cs) = infer_pattern(pattern, &t1, ctx)?;
+                    cs.extend(new_cs);
+                    let (t2, cs2) = infer(body, &new_ctx)?;
+                    ctx.state.count.set(new_ctx.state.count.get());
+                    cs.extend(cs2.apply(&subs));
+                    t2
+                },
+                // handles: let _ = ...
+                None => {
+                    let (t2, cs2) = infer(body, ctx)?;
+                    cs.extend(cs2.apply(&subs));
+                    t2
+                }
+            };
 
             Ok((t2.apply(&subs), cs))
         }

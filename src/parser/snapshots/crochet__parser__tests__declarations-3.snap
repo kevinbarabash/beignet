@@ -20,15 +20,17 @@ Program {
                 Let(
                     Let {
                         span: 15..23,
-                        pattern: Ident(
-                            BindingIdent {
-                                span: 15..16,
-                                id: Ident {
+                        pattern: Some(
+                            Ident(
+                                BindingIdent {
                                     span: 15..16,
-                                    name: "x",
+                                    id: Ident {
+                                        span: 15..16,
+                                        name: "x",
+                                    },
+                                    type_ann: None,
                                 },
-                                type_ann: None,
-                            },
+                            ),
                         ),
                         value: Lit(
                             Num(
