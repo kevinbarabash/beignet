@@ -61,19 +61,8 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         (Type::Lit(l1), Type::Lit(l2)) if l1 == l2 => Ok(Subst::new()),
         (Type::Lam(lam1), Type::Lam(lam2)) => unify_lams(lam1, lam2, ctx),
         // TODO: copy tests case from `compiler` project for this
-        (
-            Type::Alias(AliasType {
-                name: name1,
-                type_params: type_params1,
-                ..
-            }),
-            Type::Alias(AliasType {
-                name: name2,
-                type_params: type_params2,
-                ..
-            }),
-        ) if name1 == name2 => {
-            let cs: Result<Vec<_>, _> = match (type_params1, type_params2) {
+        (Type::Alias(alias1), Type::Alias(alias2)) if alias1.name == alias2.name => {
+            let cs: Result<Vec<_>, _> = match (&alias1.type_params, &alias2.type_params) {
                 (Some(params1), Some(params2)) => {
                     if params1.len() != params2.len() {
                         return Err(String::from(
@@ -97,8 +86,8 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         (Type::Member(mem1), Type::Member(mem2)) if mem1.prop == mem2.prop => {
             unifies(mem1.obj.as_ref(), mem2.obj.as_ref(), ctx)
         }
-        (_, Type::Intersection(IntersectionType { types, .. })) => {
-            for ty in types {
+        (_, Type::Intersection(intersection)) => {
+            for ty in &intersection.types {
                 let result = unifies(t1, ty, ctx);
                 if result.is_ok() {
                     return result;
