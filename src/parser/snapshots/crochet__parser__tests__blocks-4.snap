@@ -1,0 +1,96 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"{let sum = {let x = 5; let y = 10; x + y}; sum}\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..47,
+            expr: Let(
+                Let {
+                    span: 5..46,
+                    pattern: Ident(
+                        BindingIdent {
+                            span: 5..8,
+                            id: Ident {
+                                span: 5..8,
+                                name: "sum",
+                            },
+                            type_ann: None,
+                        },
+                    ),
+                    value: Let(
+                        Let {
+                            span: 16..40,
+                            pattern: Ident(
+                                BindingIdent {
+                                    span: 16..17,
+                                    id: Ident {
+                                        span: 16..17,
+                                        name: "x",
+                                    },
+                                    type_ann: None,
+                                },
+                            ),
+                            value: Lit(
+                                Num(
+                                    Num {
+                                        span: 20..21,
+                                        value: "5",
+                                    },
+                                ),
+                            ),
+                            body: Let(
+                                Let {
+                                    span: 27..40,
+                                    pattern: Ident(
+                                        BindingIdent {
+                                            span: 27..28,
+                                            id: Ident {
+                                                span: 27..28,
+                                                name: "y",
+                                            },
+                                            type_ann: None,
+                                        },
+                                    ),
+                                    value: Lit(
+                                        Num(
+                                            Num {
+                                                span: 31..33,
+                                                value: "10",
+                                            },
+                                        ),
+                                    ),
+                                    body: Op(
+                                        Op {
+                                            span: 35..40,
+                                            op: Add,
+                                            left: Ident(
+                                                Ident {
+                                                    span: 35..36,
+                                                    name: "x",
+                                                },
+                                            ),
+                                            right: Ident(
+                                                Ident {
+                                                    span: 39..40,
+                                                    name: "y",
+                                                },
+                                            ),
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                    ),
+                    body: Ident(
+                        Ident {
+                            span: 43..46,
+                            name: "sum",
+                        },
+                    ),
+                },
+            ),
+        },
+    ],
+}
