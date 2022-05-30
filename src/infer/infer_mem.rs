@@ -6,23 +6,23 @@ use super::context::Context;
 use super::infer::InferResult;
 
 pub fn infer_mem(
-    infer: fn(expr: &Expr, ctx: &Context) -> InferResult,
+    infer: fn(expr: &Expr, ctx: &Context) -> Result<InferResult, String>,
     mem: &Member,
     ctx: &Context,
-) -> InferResult {
+) -> Result<InferResult, String> {
     let Member { obj, prop, .. } = mem;
 
-    let (obj_type, mut obj_cs) = infer(obj, ctx);
-    let (prop_type, mut prop_cs) = type_of_property_on_type(obj_type, prop, ctx);
+    let (obj_type, mut obj_cs) = infer(obj, ctx)?;
+    let (prop_type, mut prop_cs) = type_of_property_on_type(obj_type, prop, ctx)?;
 
     let mut cs: Vec<Constraint> = vec![];
     cs.append(&mut obj_cs);
     cs.append(&mut prop_cs);
 
-    (unwrap_member_type(&prop_type).to_owned(), cs)
+    Ok((unwrap_member_type(&prop_type).to_owned(), cs))
 }
 
-fn type_of_property_on_type(ty: Type, prop: &MemberProp, ctx: &Context) -> InferResult {
+fn type_of_property_on_type(ty: Type, prop: &MemberProp, ctx: &Context) -> Result<InferResult, String> {
     match &ty {
         Type::Var(_) => {
             // TODO: implementing this correctly should allow for the following
@@ -35,7 +35,7 @@ fn type_of_property_on_type(ty: Type, prop: &MemberProp, ctx: &Context) -> Infer
             }], Some(WidenFlag::Intersection));
             let mem1 = ctx.mem(ty.clone(), &unwrap_property(prop));
             let mem2 = ctx.mem(obj.clone(), &unwrap_property(prop));
-            (
+            Ok((
                 tv,
                 vec![
                     Constraint {
@@ -43,7 +43,7 @@ fn type_of_property_on_type(ty: Type, prop: &MemberProp, ctx: &Context) -> Infer
                     },
                     Constraint { types: (ty, obj) },
                 ],
-            )
+            ))
         }
         Type::Lam(_) => todo!(),
         Type::Prim(_) => todo!(),
@@ -57,9 +57,9 @@ fn type_of_property_on_type(ty: Type, prop: &MemberProp, ctx: &Context) -> Infer
             let prop = obj.props.iter().find(|p| p.name == unwrap_property(prop));
 
             match prop {
-                Some(_) => (mem, vec![]),
+                Some(_) => Ok((mem, vec![])),
                 // TODO: include property name in error message
-                None => panic!("Record literal doesn't contain property"),
+                None => Err(String::from("Record literal doesn't contain property")),
             }
         }
         Type::Alias(alias) => {
@@ -69,7 +69,7 @@ fn type_of_property_on_type(ty: Type, prop: &MemberProp, ctx: &Context) -> Infer
                     let aliased_def = scheme.ty.to_owned();
                     type_of_property_on_type(aliased_def, prop, ctx)
                 },
-                None => panic!("Can't find alias in context"),
+                None => Err(String::from("Can't find alias in context")),
             }
         },
         Type::Tuple(_) => todo!(),

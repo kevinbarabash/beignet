@@ -9,7 +9,7 @@ fn infer(input: &str) -> String {
     let ctx = Context::default();
     let prog = parser().parse(input).unwrap();
     let stmt = prog.body.get(0).unwrap();
-    let result = infer_stmt(&ctx, stmt);
+    let result = infer_stmt(&ctx, stmt).unwrap();
     format!("{}", result)
 }
 
@@ -24,7 +24,7 @@ fn infer_prog(src: &str) -> (Program, Context) {
     };
     // println!("prog = {:#?}", &prog);
     // let prog = token_parser(&spans).parse(tokens).unwrap();
-    let ctx = crochet::infer::infer_prog(&prog);
+    let ctx = crochet::infer::infer_prog(&prog).unwrap();
 
     (prog, ctx)
 }
