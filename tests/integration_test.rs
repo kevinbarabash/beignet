@@ -787,3 +787,30 @@ fn infer_function_overloading_with_incorrect_args() {
     "#;
     infer_prog(src);
 }
+
+#[test]
+fn codegen_object_type_with_optional_property() {
+    let src = r#"
+    type Point = {x?: number, y: number}
+    let point: Point = {y: 10}
+    "#;
+    let (program, ctx) = infer_prog(src);
+    let js = codegen_js(&program);
+
+    insta::assert_snapshot!(js, @r###"
+    ;
+    export const point = {
+        y: 10
+    };
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    type Point = {
+        x?: number;
+        y: number;
+    };
+    export declare const point: Point;
+    "###);
+}

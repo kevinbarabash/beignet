@@ -349,7 +349,7 @@ pub fn build_type(
                             optional: false,
                         })),
                         computed: false,
-                        optional: false,
+                        optional: prop.optional,
                         init: None,
                         params: vec![],
                         type_ann: Some(TsTypeAnn {
