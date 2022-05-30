@@ -6,9 +6,10 @@ use crate::parser::pattern::pattern_parser;
 use crate::parser::types::type_parser;
 use crate::parser::util::just_with_padding;
 
-pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
+pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
     let type_ann = type_parser();
-
+    let pattern = pattern_parser();
+    
     let ident = text::ident().map_with_span(|name, span| Expr::Ident(Ident { span, name }));
 
     let r#true =
@@ -32,8 +33,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
         .collect::<String>()
         .map_with_span(|value, span| Expr::Lit(Lit::str(value, span)));
 
-    recursive(|expr| {
-        let pattern = pattern_parser();
+    let parser = recursive(|expr| {
 
         // TODO: support recursive functions to be declared within another function
         // let let_rec = ...
@@ -107,7 +107,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             ident,
             obj,
             tuple,
-            jsx_parser(expr.clone().boxed()).boxed(),
+            jsx_parser(expr.clone().boxed()),
             expr.clone()
                 .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
@@ -264,5 +264,7 @@ pub fn expr_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             });
 
         choice((lam, block, comp))
-    })
+    });
+
+    parser.boxed()
 }
