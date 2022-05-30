@@ -117,9 +117,10 @@ impl Context {
             widen_flag,
         })
     }
-    pub fn prop(&self, name: &str, ty: Type) -> types::TProp {
+    pub fn prop(&self, name: &str, ty: Type, optional: bool) -> types::TProp {
         types::TProp {
             name: name.to_owned(),
+            optional,
             ty,
         }
     }

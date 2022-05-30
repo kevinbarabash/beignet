@@ -92,11 +92,13 @@ pub fn type_parser() -> impl Parser<char, TypeAnn, Error = Simple<char>> {
             });
 
         let prop = text::ident()
+            .then(just("?").or_not())
             .then_ignore(just_with_padding(":"))
             .then(type_ann.clone())
-            .map_with_span(|(name, type_ann), span: Span| TProp {
+            .map_with_span(|((name, optional), type_ann), span: Span| TProp {
                 span,
                 name,
+                optional: optional.is_some(),
                 type_ann: Box::from(type_ann),
             });
 

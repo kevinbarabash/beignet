@@ -49,13 +49,17 @@ impl fmt::Display for Primitive {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TProp {
     pub name: String,
+    pub optional: bool,
     pub ty: Type,
 }
 
 impl fmt::Display for TProp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { name, ty } = self;
-        write!(f, "{name}: {ty}")
+        let Self { name, optional, ty } = self;
+        match optional {
+            false => write!(f, "{name}: {ty}"),
+            true => write!(f, "{name}?: {ty}"),
+        }
     }
 }
 

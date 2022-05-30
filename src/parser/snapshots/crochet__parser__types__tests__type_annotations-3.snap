@@ -9,6 +9,7 @@ Object(
             TProp {
                 span: 1..10,
                 name: "x",
+                optional: false,
                 type_ann: Prim(
                     PrimType {
                         span: 4..10,
@@ -19,6 +20,7 @@ Object(
             TProp {
                 span: 12..21,
                 name: "y",
+                optional: false,
                 type_ann: Prim(
                     PrimType {
                         span: 15..21,

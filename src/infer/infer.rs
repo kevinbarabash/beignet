@@ -176,6 +176,7 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .iter()
                     .map(|prop| types::TProp {
                         name: prop.name.clone(),
+                        optional: prop.optional,
                         ty: norm_type(&prop.ty, mapping, ctx),
                     })
                     .collect();
@@ -420,7 +421,9 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                 .map(|p| {
                     let (ty, cs) = infer(&p.value, ctx)?;
                     all_cs.extend(cs);
-                    Ok(ctx.prop(&p.name, ty))
+                    // The property is not optional in the type we infer from
+                    // an object literal, because the property has a value.
+                    Ok(ctx.prop(&p.name, ty, false))
                 })
                 .collect();
 
@@ -556,6 +559,7 @@ fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
                 .iter()
                 .map(|prop| types::TProp {
                     name: prop.name.to_owned(),
+                    optional: prop.optional,
                     ty: _type_ann_to_type(prop.type_ann.as_ref(), ctx),
                 })
                 .collect();
@@ -614,6 +618,10 @@ fn simplify_intersection(intersection: types::IntersectionType, ctx: &Context) -
             };
             types::TProp {
                 name: name.to_owned(),
+                // TODO: determine this field from all of the TProps with
+                // the same name.  This should only be optional if all of
+                // the TProps with the current name are optional.
+                optional: false,
                 ty,
             }
         })
