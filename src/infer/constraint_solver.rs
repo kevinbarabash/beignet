@@ -57,14 +57,8 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     match (t1, t2) {
         (Type::Var(v), _) => bind(&v.id, t2, ctx),
         (_, Type::Var(v)) => bind(&v.id, t1, ctx),
-        (Type::Prim(PrimType { prim: p1, .. }), Type::Prim(PrimType { prim: p2, .. }))
-            if p1 == p2 =>
-        {
-            Ok(Subst::new())
-        }
-        (Type::Lit(LitType { lit: l1, .. }), Type::Lit(LitType { lit: l2, .. })) if l1 == l2 => {
-            Ok(Subst::new())
-        }
+        (Type::Prim(p1), Type::Prim(p2)) if p1 == p2 => Ok(Subst::new()),
+        (Type::Lit(l1), Type::Lit(l2)) if l1 == l2 => Ok(Subst::new()),
         (Type::Lam(lam1), Type::Lam(lam2)) => unify_lams(lam1, lam2, ctx),
         // TODO: copy tests case from `compiler` project for this
         (
@@ -82,7 +76,9 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let cs: Result<Vec<_>, _> = match (type_params1, type_params2) {
                 (Some(params1), Some(params2)) => {
                     if params1.len() != params2.len() {
-                        return Err(String::from("alias params have different numbers of type params"))
+                        return Err(String::from(
+                            "alias params have different numbers of type params",
+                        ));
                     }
                     let cs = params1
                         .iter()
@@ -98,12 +94,8 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             };
             unify_many(&cs?, ctx)
         }
-        (Type::Member(mem1), Type::Member(mem2)) => {
-            if mem1.prop == mem2.prop {
-                unifies(mem1.obj.as_ref(), mem2.obj.as_ref(), ctx)
-            } else {
-                Err(String::from("unification failed - member access properties don't match"))
-            }
+        (Type::Member(mem1), Type::Member(mem2)) if mem1.prop == mem2.prop => {
+            unifies(mem1.obj.as_ref(), mem2.obj.as_ref(), ctx)
         }
         (_, Type::Intersection(IntersectionType { types, .. })) => {
             for ty in types {
