@@ -1,0 +1,49 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"let {x, y} = point\")"
+---
+Program {
+    body: [
+        VarDecl {
+            span: 0..18,
+            pattern: Object(
+                ObjectPat {
+                    span: 4..11,
+                    props: [
+                        Assign(
+                            AssignPatProp {
+                                span: 5..6,
+                                key: Ident {
+                                    span: 5..6,
+                                    name: "x",
+                                },
+                                value: None,
+                            },
+                        ),
+                        Assign(
+                            AssignPatProp {
+                                span: 8..9,
+                                key: Ident {
+                                    span: 8..9,
+                                    name: "y",
+                                },
+                                value: None,
+                            },
+                        ),
+                    ],
+                    optional: false,
+                    type_ann: None,
+                },
+            ),
+            init: Some(
+                Ident(
+                    Ident {
+                        span: 13..18,
+                        name: "point",
+                    },
+                ),
+            ),
+            declare: false,
+        },
+    ],
+}

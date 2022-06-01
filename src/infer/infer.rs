@@ -316,6 +316,8 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                         None => ctx.fresh_var(),
                     },
                     Pattern::Rest(_) => todo!(),
+                    Pattern::Object(_) => todo!(),
+                    Pattern::Array(_) => todo!(),
                 })
                 .collect();
             let mut new_ctx = ctx.clone();
@@ -329,6 +331,8 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                         new_ctx.values.insert(id.name.to_string(), scheme)
                     }
                     Pattern::Rest(_) => todo!(),
+                    Pattern::Object(_) => todo!(),
+                    Pattern::Array(_) => todo!(),
                 };
             }
             new_ctx.is_async = is_async.to_owned();
@@ -534,6 +538,8 @@ fn infer_pattern(
             Ok((new_ctx, cs))
         }
         Pattern::Rest(_) => todo!(),
+        Pattern::Object(_) => todo!(),
+        Pattern::Array(_) => todo!(),
     }
 }
 
