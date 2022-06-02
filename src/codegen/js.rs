@@ -109,6 +109,8 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
             type_ann: None,
         }),
         ast::Pattern::Rest(_) => todo!(),
+        ast::Pattern::Object(_) => todo!(),
+        ast::Pattern::Array(_) => todo!(),
     }
 }
 
@@ -165,6 +167,8 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                     let name = match pat {
                         ast::Pattern::Ident(ast::BindingIdent { id, .. }) => id.name.to_owned(),
                         ast::Pattern::Rest(_) => todo!(),
+                        ast::Pattern::Object(_) => todo!(),
+                        ast::Pattern::Array(_) => todo!(),
                     };
                     Pat::Ident(BindingIdent {
                         id: Ident {

@@ -168,4 +168,18 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let foo = {let x = 5; console.log(x); x}"));
         insta::assert_debug_snapshot!(parse("let foo = {console.log(x); x}"));
     }
+
+    #[test]
+    fn destructuring() {
+        insta::assert_debug_snapshot!(parse("let {x, y} = point"));
+        insta::assert_debug_snapshot!(parse("let {a, b, ...rest} = letters"));
+        insta::assert_debug_snapshot!(parse("let {p0: {x, y}, p1: {x, y}} = line"));
+        insta::assert_debug_snapshot!(parse("let [a, b, ...rest] = letters"));
+        insta::assert_debug_snapshot!(parse("let [foo, ...[bar, ...rest]] = baz"));
+        // TODO: renaming properties when destructuring objects
+        // TODO: assigning defaults
+        // TODO: type annotations
+        // TODO: function params
+        // TODO: disallowed patterns, e.g. top-level rest, non-top-level type annotations
+    }
 }

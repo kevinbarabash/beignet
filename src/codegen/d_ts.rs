@@ -101,6 +101,8 @@ pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, ctx: &Co
             })
         }
         ast::Pattern::Rest(_) => todo!(),
+        ast::Pattern::Object(_) => todo!(),
+        ast::Pattern::Array(_) => todo!(),
     }
 }
 
@@ -116,6 +118,8 @@ pub fn build_pattern_rec(pattern: &ast::Pattern) -> Pat {
             arg: Box::from(build_pattern_rec(arg.as_ref())),
             type_ann: None,
         }),
+        ast::Pattern::Object(_) => todo!(),
+        ast::Pattern::Array(_) => todo!(),
     }
 }
 
@@ -259,6 +263,8 @@ pub fn build_type(
                                             type_ann,
                                         })
                                     }
+                                    ast::Pattern::Object(_) => todo!(),
+                                    ast::Pattern::Array(_) => todo!(),
                                 }
                             })
                             .collect();
