@@ -233,7 +233,6 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
     match expr {
         Expr::Ident(Ident { name, .. }) => {
             let ty = ctx.lookup_value(name);
-            println!("lookup_value({name}) = {:?}", ty);
             Ok((ty, vec![]))
         }
         Expr::App(App { lam, args, .. }) => {
