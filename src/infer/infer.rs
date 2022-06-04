@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, freeze, Primitive, Scheme, Type, Variant, WidenFlag};
+use crate::types::{self, freeze, Primitive, Scheme, Type, Variant, Flag};
 
 use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::{Context, Env};
@@ -113,7 +113,7 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     id: index as i32,
                     frozen: false,
                     variant: Variant::Var,
-                    widen_flag: None,
+                    flag: None,
                 },
             )
         })
@@ -192,7 +192,7 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 }
             }
             Variant::Rest(arg) => Type {
-                variant: Variant::Rest(Box::from(norm_type(&arg, mapping, ctx))),
+                variant: Variant::Rest(Box::from(norm_type(arg, mapping, ctx))),
                 ..ty.to_owned()
             },
             Variant::Member(types::MemberType { obj, prop }) => Type {
@@ -423,8 +423,8 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                     let inf_type = ctx.lam(ts, Box::from(tv.clone()));
                     let def_type = ctx.lam(
                         vec![
-                            ctx.prim_with_flag(Primitive::Num, WidenFlag::SubtypesWin),
-                            ctx.prim_with_flag(Primitive::Num, WidenFlag::SubtypesWin),
+                            ctx.prim_with_flag(Primitive::Num, Flag::SubtypesWin),
+                            ctx.prim_with_flag(Primitive::Num, Flag::SubtypesWin),
                         ],
                         Box::from(ctx.prim(Primitive::Num)),
                     );
@@ -451,7 +451,7 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                 })
                 .collect();
 
-            let obj_ty = ctx.object(&props?, None);
+            let obj_ty = ctx.object(&props?);
 
             Ok((obj_ty, all_cs))
         }
@@ -548,7 +548,7 @@ fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
                     ty: _type_ann_to_type(prop.type_ann.as_ref(), ctx),
                 })
                 .collect();
-            ctx.object(&props, None)
+            ctx.object(&props)
         }
         TypeAnn::TypeRef(TypeRef {
             name, type_params, ..
@@ -612,7 +612,7 @@ fn simplify_intersection(in_types: &[types::Type], ctx: &Context) -> Type {
         .collect();
     props.sort_by_key(|prop| prop.name.clone()); // ensure a stable order
 
-    let obj_type = ctx.object(&props, None);
+    let obj_type = ctx.object(&props);
 
     let mut not_obj_types: Vec<_> = in_types
         .iter()

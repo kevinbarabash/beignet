@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::collections::HashMap;
 
 use crate::ast::literal::Lit;
-use crate::types::{self, Scheme, Type, Variant, WidenFlag};
+use crate::types::{self, Flag, Scheme, Type, Variant};
 
 use super::substitutable::*;
 
@@ -48,7 +48,7 @@ impl Context {
         scheme.ty.apply(&subs)
     }
 
-    pub fn fresh_id(&self) -> i32 {
+    fn fresh_id(&self) -> i32 {
         let id = self.state.count.get() + 1;
         self.state.count.set(id);
         id
@@ -59,34 +59,47 @@ impl Context {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Var,
-            widen_flag: None,
+            flag: None,
         }
     }
+
     pub fn lam(&self, params: Vec<Type>, ret: Box<Type>) -> Type {
+        self.lam_with_option_flag(params, ret, None)
+    }
+    pub fn lam_with_flag(&self, params: Vec<Type>, ret: Box<Type>, flag: Flag) -> Type {
+        self.lam_with_option_flag(params, ret, Some(flag))
+    }
+    fn lam_with_option_flag(&self, params: Vec<Type>, ret: Box<Type>, flag: Option<Flag>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Lam(types::LamType { params, ret }),
-            widen_flag: None,
+            flag,
         }
     }
+
     pub fn prim(&self, prim: types::Primitive) -> Type {
+        self.prim_with_option_flag(prim, None)
+    }
+    pub fn prim_with_flag(&self, prim: types::Primitive, flag: Flag) -> Type {
+        self.prim_with_option_flag(prim, Some(flag))
+    }
+    fn prim_with_option_flag(&self, prim: types::Primitive, flag: Option<Flag>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Prim(prim),
-            widen_flag: None,
+            flag,
         }
     }
-    pub fn prim_with_flag(&self, prim: types::Primitive, widen_flag: WidenFlag) -> Type {
-        Type {
-            id: self.fresh_id(),
-            frozen: false,
-            variant: Variant::Prim(prim),
-            widen_flag: Some(widen_flag),
-        }
-    }
+
     pub fn lit(&self, lit: Lit) -> Type {
+        self.lit_with_option_flag(lit, None)
+    }
+    pub fn lit_with_flag(&self, lit: Lit, flag: Flag) -> Type {
+        self.lit_with_option_flag(lit, Some(flag))
+    }
+    fn lit_with_option_flag(&self, lit: Lit, flag: Option<Flag>) -> Type {
         let lit = match lit {
             Lit::Num(n) => types::Lit::Num(n.value),
             Lit::Bool(b) => types::Lit::Bool(b.value),
@@ -98,41 +111,64 @@ impl Context {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Lit(lit),
-            widen_flag: None,
+            flag,
         }
     }
+
     pub fn lit_type(&self, lit: types::Lit) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Lit(lit),
-            widen_flag: None,
+            flag: None,
         }
     }
+
     pub fn union(&self, types: Vec<Type>) -> Type {
+        self.union_with_option_flag(types, None)
+    }
+    pub fn union_with_flag(&self, types: Vec<Type>, flag: Flag) -> Type {
+        self.union_with_option_flag(types, Some(flag))
+    }
+    fn union_with_option_flag(&self, types: Vec<Type>, flag: Option<Flag>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Union(types),
-            widen_flag: None,
+            flag,
         }
     }
+
     pub fn intersection(&self, types: Vec<Type>) -> Type {
+        self.intersection_with_option_flag(types, None)
+    }
+    pub fn intersection_with_flag(&self, types: Vec<Type>, flag: Flag) -> Type {
+        self.intersection_with_option_flag(types, Some(flag))
+    }
+    fn intersection_with_option_flag(&self, types: Vec<Type>, flag: Option<Flag>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Intersection(types),
-            widen_flag: None,
+            flag,
         }
     }
-    pub fn object(&self, props: &[types::TProp], widen_flag: Option<WidenFlag>) -> Type {
+
+    pub fn object(&self, props: &[types::TProp]) -> Type {
+        self.object_with_option_flag(props, None)
+    }
+    pub fn object_with_flag(&self, props: &[types::TProp], flag: Flag) -> Type {
+        self.object_with_option_flag(props, Some(flag))
+    }
+    fn object_with_option_flag(&self, props: &[types::TProp], flag: Option<Flag>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Object(props.to_vec()),
-            widen_flag,
+            flag,
         }
     }
+
     pub fn prop(&self, name: &str, ty: Type, optional: bool) -> types::TProp {
         types::TProp {
             name: name.to_owned(),
@@ -140,7 +176,19 @@ impl Context {
             ty,
         }
     }
+
     pub fn alias(&self, name: &str, type_params: Option<Vec<Type>>) -> Type {
+        self.alias_with_option_flag(name, type_params, None)
+    }
+    pub fn alias_with_flag(&self, name: &str, type_params: Option<Vec<Type>>, flag: Flag) -> Type {
+        self.alias_with_option_flag(name, type_params, Some(flag))
+    }
+    fn alias_with_option_flag(
+        &self,
+        name: &str,
+        type_params: Option<Vec<Type>>,
+        flag: Option<Flag>,
+    ) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
@@ -148,26 +196,47 @@ impl Context {
                 name: name.to_owned(),
                 type_params,
             }),
-            widen_flag: None,
+            flag,
         }
     }
+
     pub fn tuple(&self, types: Vec<Type>) -> Type {
+        self.tuple_with_option_flag(types, None)
+    }
+    pub fn tuple_with_flag(&self, types: Vec<Type>, flag: Flag) -> Type {
+        self.tuple_with_option_flag(types, Some(flag))
+    }
+    fn tuple_with_option_flag(&self, types: Vec<Type>, flag: Option<Flag>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Tuple(types),
-            widen_flag: None,
+            flag,
         }
     }
+
     pub fn rest(&self, arg: Type) -> Type {
+        self.rest_with_option_flag(arg, None)
+    }
+    pub fn rest_with_flag(&self, arg: Type, flag: Flag) -> Type {
+        self.rest_with_option_flag(arg, Some(flag))
+    }
+    fn rest_with_option_flag(&self, arg: Type, flag: Option<Flag>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Rest(Box::from(arg)),
-            widen_flag: None,
+            flag,
         }
     }
+
     pub fn mem(&self, obj: Type, prop: &str) -> Type {
+        self.mem_with_option_flag(obj, prop, None)
+    }
+    pub fn mem_with_flag(&self, obj: Type, prop: &str, flag: Flag) -> Type {
+        self.mem_with_option_flag(obj, prop, Some(flag))
+    }
+    fn mem_with_option_flag(&self, obj: Type, prop: &str, flag: Option<Flag>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
@@ -175,7 +244,7 @@ impl Context {
                 obj: Box::from(obj),
                 prop: prop.to_owned(),
             }),
-            widen_flag: None,
+            flag,
         }
     }
 }

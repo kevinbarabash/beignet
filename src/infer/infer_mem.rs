@@ -1,6 +1,6 @@
 use super::constraint_solver::Constraint;
 use crate::ast::*;
-use crate::types::{self, Type, WidenFlag, Variant};
+use crate::types::{self, Type, Flag, Variant};
 
 use super::context::Context;
 use super::infer::InferResult;
@@ -33,7 +33,7 @@ fn type_of_property_on_type(
             // expression to be inferred:
             // let mag_square = (point) => point.x * point.x + point.y * point.y
             let tv = ctx.fresh_var();
-            let obj = ctx.object(
+            let obj = ctx.object_with_flag(
                 &[types::TProp {
                     name: prop.name(),
                     // We assume the property is not optional when inferring an
@@ -41,7 +41,7 @@ fn type_of_property_on_type(
                     optional: false,
                     ty: tv.clone(),
                 }],
-                Some(WidenFlag::Intersection),
+                Flag::MemberAccess,
             );
             let mem1 = ctx.mem(ty.clone(), &prop.name());
             let mem2 = ctx.mem(obj.clone(), &prop.name());

@@ -101,9 +101,8 @@ impl Hash for LamType {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum WidenFlag {
-    Intersection,
-    Union,
+pub enum Flag {
+    MemberAccess,
     SubtypesWin,
 }
 
@@ -165,7 +164,7 @@ pub struct Type {
     pub variant: Variant,
     pub id: i32,
     pub frozen: bool,
-    pub widen_flag: Option<WidenFlag>,
+    pub flag: Option<Flag>,
 }
 
 impl PartialEq for Type {
