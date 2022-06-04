@@ -113,6 +113,7 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     id: index as i32,
                     frozen: false,
                     variant: Variant::Var,
+                    widen_flag: None,
                 },
             )
         })
@@ -139,37 +140,23 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
             }
             Variant::Prim(_) => ty.to_owned(),
             Variant::Lit(_) => ty.to_owned(),
-            Variant::Union(union) => {
+            Variant::Union(types) => {
                 // TODO: update union_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
-                let types = union
-                    .types
-                    .iter()
-                    .map(|ty| norm_type(ty, mapping, ctx))
-                    .collect();
+                let types = types.iter().map(|ty| norm_type(ty, mapping, ctx)).collect();
                 Type {
-                    variant: Variant::Union(types::UnionType { types }),
+                    variant: Variant::Union(types),
                     ..ty.to_owned()
                 }
             }
-            Variant::Intersection(intersection) => {
+            Variant::Intersection(types) => {
                 // TODO: update intersection_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
-                let types = intersection
-                    .types
-                    .iter()
-                    .map(|ty| norm_type(ty, mapping, ctx))
-                    .collect();
-                simplify_intersection(
-                    types::IntersectionType {
-                        types,
-                    },
-                    ctx,
-                )
+                let types: Vec<_> = types.iter().map(|ty| norm_type(ty, mapping, ctx)).collect();
+                simplify_intersection(&types, ctx)
             }
-            Variant::Object(object) => {
-                let props = object
-                    .props
+            Variant::Object(props) => {
+                let props = props
                     .iter()
                     .map(|prop| types::TProp {
                         name: prop.name.clone(),
@@ -178,10 +165,7 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     })
                     .collect();
                 Type {
-                    variant: Variant::Object(types::ObjectType {
-                        props,
-                        widen_flag: object.widen_flag.to_owned(),
-                    }),
+                    variant: Variant::Object(props),
                     ..ty.to_owned()
                 }
             }
@@ -200,17 +184,15 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     ..ty.to_owned()
                 }
             }
-            Variant::Tuple(types::TupleType { types }) => {
+            Variant::Tuple(types) => {
                 let types = types.iter().map(|ty| norm_type(ty, mapping, ctx)).collect();
                 Type {
-                    variant: Variant::Tuple(types::TupleType { types }),
+                    variant: Variant::Tuple(types),
                     ..ty.to_owned()
                 }
             }
-            Variant::Rest(rest) => Type {
-                variant: Variant::Rest(types::RestType {
-                    ty: Box::from(norm_type(&rest.ty, mapping, ctx)),
-                }),
+            Variant::Rest(arg) => Type {
+                variant: Variant::Rest(Box::from(norm_type(&arg, mapping, ctx))),
                 ..ty.to_owned()
             },
             Variant::Member(types::MemberType { obj, prop }) => Type {
@@ -628,20 +610,19 @@ fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
 }
 
 // TODO: make this recursive
-fn simplify_intersection(intersection: types::IntersectionType, ctx: &Context) -> Type {
-    let obj_types: Vec<_> = intersection
-        .types
+fn simplify_intersection(in_types: &[types::Type], ctx: &Context) -> Type {
+    let obj_types: Vec<_> = in_types
         .iter()
         .filter_map(|ty| match &ty.variant {
-            Variant::Object(object) => Some(object),
+            Variant::Object(props) => Some(props),
             _ => None,
         })
         .collect();
 
     // The use of HashSet<Type> here is to avoid duplicate types
     let mut props_map: DefaultHashMap<String, HashSet<Type>> = defaulthashmap!();
-    for obj_type in obj_types {
-        for prop in &obj_type.props {
+    for props in obj_types {
+        for prop in props {
             props_map[prop.name.clone()].insert(prop.ty.clone());
         }
     }
@@ -669,22 +650,21 @@ fn simplify_intersection(intersection: types::IntersectionType, ctx: &Context) -
 
     let obj_type = ctx.object(&props, None);
 
-    let mut not_obj_types: Vec<_> = intersection
-        .types
+    let mut not_obj_types: Vec<_> = in_types
         .iter()
         .filter(|ty| !matches!(ty.variant, Variant::Object(_)))
         .cloned()
         .collect();
 
-    let mut types = vec![];
-    types.append(&mut not_obj_types);
-    types.push(obj_type);
-    types.sort_by_key(|ty| ty.id); // ensure a stable order
+    let mut out_types = vec![];
+    out_types.append(&mut not_obj_types);
+    out_types.push(obj_type);
+    out_types.sort_by_key(|ty| ty.id); // ensure a stable order
 
-    if types.len() == 1 {
-        types[0].clone()
+    if out_types.len() == 1 {
+        out_types[0].clone()
     } else {
-        ctx.intersection(types)
+        ctx.intersection(out_types)
     }
 }
 

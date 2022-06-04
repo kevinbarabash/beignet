@@ -100,96 +100,10 @@ impl Hash for LamType {
     }
 }
 
-#[derive(Clone, Debug, Eq)]
-pub struct PrimType {
-    pub prim: Primitive,
-}
-
-impl PartialEq for PrimType {
-    fn eq(&self, other: &Self) -> bool {
-        self.prim == other.prim
-    }
-}
-
-impl Hash for PrimType {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.prim.hash(state);
-    }
-}
-
-#[derive(Clone, Debug, Eq)]
-pub struct LitType {
-    pub lit: Lit,
-}
-
-impl PartialEq for LitType {
-    fn eq(&self, other: &Self) -> bool {
-        self.lit == other.lit
-    }
-}
-
-impl Hash for LitType {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.lit.hash(state);
-    }
-}
-
-#[derive(Clone, Debug, Eq)]
-pub struct UnionType {
-    pub types: Vec<Type>,
-}
-
-impl PartialEq for UnionType {
-    fn eq(&self, other: &Self) -> bool {
-        self.types == other.types
-    }
-}
-
-impl Hash for UnionType {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.types.hash(state);
-    }
-}
-
-#[derive(Clone, Debug, Eq)]
-pub struct IntersectionType {
-    pub types: Vec<Type>,
-}
-
-impl PartialEq for IntersectionType {
-    fn eq(&self, other: &Self) -> bool {
-        self.types == other.types
-    }
-}
-
-impl Hash for IntersectionType {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.types.hash(state);
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum WidenFlag {
     Intersection,
     Union,
-}
-
-#[derive(Clone, Debug, Eq)]
-pub struct ObjectType {
-    pub props: Vec<TProp>,
-    pub widen_flag: Option<WidenFlag>,
-}
-
-impl PartialEq for ObjectType {
-    fn eq(&self, other: &Self) -> bool {
-        self.props == other.props
-    }
-}
-
-impl Hash for ObjectType {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.props.hash(state);
-    }
 }
 
 #[derive(Clone, Debug, Eq)]
@@ -208,40 +122,6 @@ impl Hash for AliasType {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.name.hash(state);
         self.type_params.hash(state);
-    }
-}
-
-#[derive(Clone, Debug, Eq)]
-pub struct TupleType {
-    pub types: Vec<Type>,
-}
-
-impl PartialEq for TupleType {
-    fn eq(&self, other: &Self) -> bool {
-        self.types == other.types
-    }
-}
-
-impl Hash for TupleType {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.types.hash(state);
-    }
-}
-
-#[derive(Clone, Debug, Eq)]
-pub struct RestType {
-    pub ty: Box<Type>,
-}
-
-impl PartialEq for RestType {
-    fn eq(&self, other: &Self) -> bool {
-        self.ty == other.ty
-    }
-}
-
-impl Hash for RestType {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.ty.hash(state);
     }
 }
 
@@ -268,14 +148,14 @@ impl Hash for MemberType {
 pub enum Variant {
     Var,
     Lam(LamType),
-    Prim(PrimType),
-    Lit(LitType),
-    Union(UnionType),
-    Intersection(IntersectionType),
-    Object(ObjectType),
+    Prim(Primitive),
+    Lit(Lit),
+    Union(Vec<Type>),
+    Intersection(Vec<Type>),
+    Object(Vec<TProp>),
     Alias(AliasType),
-    Tuple(TupleType),
-    Rest(RestType),
+    Tuple(Vec<Type>),
+    Rest(Box<Type>),
     Member(MemberType),
 }
 
@@ -284,6 +164,7 @@ pub struct Type {
     pub variant: Variant,
     pub id: i32,
     pub frozen: bool,
+    pub widen_flag: Option<WidenFlag>,
 }
 
 impl PartialEq for Type {
@@ -317,21 +198,21 @@ impl fmt::Display for Type {
             Variant::Lam(LamType { params, ret, .. }) => {
                 write!(f, "({}) => {}", join(params, ", "), ret)
             }
-            Variant::Prim(PrimType { prim, .. }) => write!(f, "{}", prim),
-            Variant::Lit(LitType { lit, .. }) => write!(f, "{}", lit),
-            Variant::Union(UnionType { types, .. }) => write!(f, "{}", join(types, " | ")),
-            Variant::Intersection(IntersectionType { types, .. }) => {
+            Variant::Prim(prim) => write!(f, "{}", prim),
+            Variant::Lit(lit) => write!(f, "{}", lit),
+            Variant::Union(types) => write!(f, "{}", join(types, " | ")),
+            Variant::Intersection(types) => {
                 write!(f, "{}", join(types, " & "))
             }
-            Variant::Object(ObjectType { props, .. }) => write!(f, "{{{}}}", join(props, ", ")),
+            Variant::Object(props) => write!(f, "{{{}}}", join(props, ", ")),
             Variant::Alias(AliasType {
                 name, type_params, ..
             }) => match type_params {
                 Some(params) => write!(f, "{name}<{}>", join(params, ", ")),
                 None => write!(f, "{name}"),
             },
-            Variant::Tuple(TupleType { types, .. }) => write!(f, "[{}]", join(types, ", ")),
-            Variant::Rest(RestType { ty, .. }) => write!(f, "...{ty}"),
+            Variant::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
+            Variant::Rest(arg) => write!(f, "...{arg}"),
             Variant::Member(MemberType { obj, prop, .. }) => write!(f, "{obj}[\"{prop}\"]"),
         }
     }
@@ -381,39 +262,35 @@ pub fn freeze(ty: Type) -> Type {
         }),
         Variant::Prim(prim) => Variant::Prim(prim),
         Variant::Lit(lit) => Variant::Lit(lit),
-        Variant::Union(union) => Variant::Union(UnionType {
-            types: union.types.into_iter().map(freeze).collect(),
-        }),
-        Variant::Intersection(intersection) => Variant::Intersection(IntersectionType {
-            types: intersection.types.into_iter().map(freeze).collect(),
-        }),
-        Variant::Object(obj) => Variant::Object(ObjectType {
-            props: obj
-                .props
+        Variant::Union(types) => Variant::Union(types.into_iter().map(freeze).collect()),
+        Variant::Intersection(types) => {
+            Variant::Intersection(types.into_iter().map(freeze).collect())
+        }
+        Variant::Object(props) => Variant::Object(
+            props
                 .into_iter()
                 .map(|prop| TProp {
                     ty: freeze(prop.ty),
                     ..prop
                 })
                 .collect(),
-            widen_flag: obj.widen_flag,
-        }),
+        ),
         Variant::Alias(alias) => Variant::Alias(AliasType {
             name: alias.name,
             type_params: alias
                 .type_params
                 .map(|type_params| type_params.into_iter().map(freeze).collect()),
         }),
-        Variant::Tuple(tuple) => Variant::Tuple(TupleType {
-            types: tuple.types.into_iter().map(freeze).collect(),
-        }),
-        Variant::Rest(rest) => Variant::Rest(RestType {
-            ty: Box::from(freeze(rest.ty.as_ref().clone())),
-        }),
+        Variant::Tuple(types) => Variant::Tuple(types.into_iter().map(freeze).collect()),
+        Variant::Rest(arg) => Variant::Rest(Box::from(freeze(arg.as_ref().clone()))),
         Variant::Member(member) => Variant::Member(MemberType {
             obj: Box::from(freeze(member.obj.as_ref().clone())),
             prop: member.prop,
         }),
     };
-    Type { variant, id: ty.id, frozen: true }
+    Type {
+        variant,
+        frozen: true,
+        ..ty
+    }
 }

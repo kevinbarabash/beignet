@@ -65,11 +65,11 @@ fn type_of_property_on_type(
             todo!()
         },
         Variant::Intersection(_) => todo!(),
-        Variant::Object(obj) => {
+        Variant::Object(props) => {
             // TODO: allow the use of string literals to access properties on
             // object types.
             let mem = ctx.mem(ty.clone(), &prop.name());
-            let prop = obj.props.iter().find(|p| p.name == prop.name());
+            let prop = props.iter().find(|p| p.name == prop.name());
 
             match prop {
                 Some(_) => Ok((mem, vec![])),
@@ -96,8 +96,8 @@ fn type_of_property_on_type(
 fn unwrap_member_type(ty: &Type, ctx: &Context) -> Type {
     match &ty.variant {
         Variant::Member(member) => match &member.obj.as_ref().variant {
-            Variant::Object(obj) => {
-                let prop = obj.props.iter().find(|prop| prop.name == member.prop);
+            Variant::Object(props) => {
+                let prop = props.iter().find(|prop| prop.name == member.prop);
                 match prop {
                     Some(prop) => match prop.optional {
                         true => ctx.union(vec![
