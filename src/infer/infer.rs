@@ -9,6 +9,7 @@ use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::{Context, Env};
 use super::infer_mem::infer_mem;
 use super::substitutable::Substitutable;
+use super::infer_pattern::{infer_pattern as infer_pattern2};
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
@@ -212,6 +213,12 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     types,
                 })
             }
+            Type::Rest(rest) => {
+                Type::Rest(types::RestType {
+                    ty: Box::from(norm_type(rest.ty.as_ref(), mapping, ctx)),
+                    ..rest.to_owned()
+                })
+            }
             Type::Member(types::MemberType {
                 id,
                 frozen,
@@ -315,14 +322,24 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                         Some(type_ann) => type_ann_to_type(type_ann, ctx),
                         None => ctx.fresh_var(),
                     },
-                    Pattern::Rest(_) => todo!(),
+                    Pattern::Rest(RestPat { type_ann, .. }) => {
+                        match type_ann {
+                            Some(type_ann) => {
+                                // TODO: check that type_ann is an array
+                                type_ann_to_type(type_ann, ctx)
+                            }
+                            None => ctx.alias("Array", Some(vec![ctx.fresh_var()])),
+                        }
+                    }
                     Pattern::Object(_) => todo!(),
                     Pattern::Array(_) => todo!(),
                 })
                 .collect();
             let mut new_ctx = ctx.clone();
+            // TODO: try to do this without iterating over `params` twice.
             for (arg, tv) in params.iter().zip(param_tvs.clone().into_iter()) {
                 let scheme = Scheme {
+                    // When would qualifiers not be an empty vector here?
                     qualifiers: vec![],
                     ty: tv.clone(),
                 };
@@ -330,7 +347,12 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                     Pattern::Ident(BindingIdent { id, .. }) => {
                         new_ctx.values.insert(id.name.to_string(), scheme)
                     }
-                    Pattern::Rest(_) => todo!(),
+                    Pattern::Rest(RestPat { arg, .. }) => match arg.as_ref() {
+                        Pattern::Ident(BindingIdent { id, .. }) => {
+                            new_ctx.values.insert(id.name.to_string(), scheme)
+                        }
+                        _ => todo!(),
+                    },
                     Pattern::Object(_) => todo!(),
                     Pattern::Array(_) => todo!(),
                 };
@@ -362,8 +384,14 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
 
             let t2 = match pattern {
                 Some(pattern) => {
+                    // let mut new_ctx = ctx.clone();
+                    // let pat_ty = infer_pattern2(pattern, &mut new_ctx, &mut cs);
+                    // println!("pat_ty = {:?}", pat_ty);
+                    // println!("t1 = {:?}", t1);
+                    // cs.push(Constraint {types: (pat_ty, t1)});
                     let (new_ctx, new_cs) = infer_pattern(pattern, &t1, ctx)?;
                     cs.extend(new_cs);
+                    println!("cs = {:?}", cs);
                     let (t2, cs2) = infer(body, &new_ctx)?;
                     ctx.state.count.set(new_ctx.state.count.get());
                     cs.extend(cs2.apply(&subs));
@@ -502,6 +530,7 @@ fn type_to_scheme(ty: &Type) -> Scheme {
     }
 }
 
+// TODO: make this recursive, only the top-level needs `ty`
 fn infer_pattern(
     pattern: &Pattern,
     ty: &Type,
@@ -537,7 +566,9 @@ fn infer_pattern(
 
             Ok((new_ctx, cs))
         }
-        Pattern::Rest(_) => todo!(),
+        Pattern::Rest(_) => {
+            todo!()
+        }
         Pattern::Object(_) => todo!(),
         Pattern::Array(_) => todo!(),
     }

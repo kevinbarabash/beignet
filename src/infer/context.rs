@@ -139,6 +139,13 @@ impl Context {
             types,
         })
     }
+    pub fn rest(&self, ty: Type) -> Type {
+        Type::Rest(types::RestType {
+            id: self.fresh_id(),
+            frozen: false,
+            ty: Box::from(ty),
+        })
+    }
     pub fn mem(&self, obj: Type, prop: &str) -> Type {
         Type::Member(types::MemberType {
             id: self.fresh_id(),

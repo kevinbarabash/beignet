@@ -826,6 +826,11 @@ fn infer_nested_block() {
 
 #[test]
 fn infer_block_with_multiple_non_let_lines() {
+    // TODO:
+    // instead of inferring that `x` should be a `number` when we see
+    // `x + 0`, we should instead infer that it's a `subtype of number`.
+    // that way when we reconcile it with the other inferred type of `x`
+    // which is `5`, the final inferred type will be `5`.
     let src = "let result = {let x = 5; x + 0; x}";
     let (_, ctx) = infer_prog(src);
 

@@ -400,6 +400,7 @@ pub fn build_type(
                 })
                 .collect(),
         }),
+        Type::Rest(_) => todo!(),
         Type::Member(_) => todo!(),
     }
 }

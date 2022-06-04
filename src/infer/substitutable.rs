@@ -96,6 +96,13 @@ impl Substitutable for Type {
                     ..tuple.to_owned()
                 }),
             },
+            Type::Rest(rest) => match sub.get(&rest.id) {
+                Some(replacement) => replacement.to_owned(),
+                None => Type::Rest(RestType {
+                    ty: Box::from(rest.ty.apply(sub)),
+                    ..rest.to_owned()
+                }),
+            }
             Type::Member(member) => match sub.get(&member.id) {
                 Some(replacement) => replacement.to_owned(),
                 None => Type::Member(MemberType {
@@ -126,6 +133,7 @@ impl Substitutable for Type {
                 type_params.iter().flat_map(|ty| ty.ftv()).collect()
             }
             Type::Tuple(TupleType { types, .. }) => types.ftv(),
+            Type::Rest(RestType { ty, .. }) => ty.ftv(),
             Type::Member(MemberType { obj, .. }) => obj.ftv(),
         }
     }
