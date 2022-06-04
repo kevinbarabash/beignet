@@ -119,6 +119,27 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
         return widen_types(t1, t2, ctx);
     }
 
+    // If we run into an alias, unwrap it an try again
+    // TODO: move this into `unifies`
+    if let Variant::Alias(alias) = &t1.variant {
+        if let Some(scheme) = ctx.types.get(&alias.name) {
+            // TODO: handle schemes with qualifiers
+            let aliased_def = scheme.ty.to_owned();
+            return unifies(&aliased_def, t2, ctx)
+        }
+    }
+
+    // TODO: move `widen_types` into this method so that all of our logic for dealing with
+    // MemberAccess is together.
+    if let (Variant::Object(props1), Variant::Object(props2)) = (&t1.variant, &t2.variant) {
+        if t2.flag == Some(Flag::MemberAccess) {
+            // TODO: propagate errors instead of unwrap()-ing
+            let prop2 = props2.get(0).unwrap();
+            let prop1 = props1.iter().find(|p| p.name == prop2.name).unwrap();
+            return unifies(&prop1.ty, &prop2.ty, ctx);
+        }
+    }
+
     println!("unifcation failed: {:?} {:?}", t1, t2);
 
     Err(String::from("unification failed"))
@@ -345,18 +366,30 @@ fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             // type by replacing the types with their intersection which merges
             // the properties and any shared properties are also intersected
             // recursively.
-            if t1.flag == Some(Flag::MemberAccess)
-                || t2.flag == Some(Flag::MemberAccess) =>
+            if t1.flag == Some(Flag::MemberAccess) =>
         {
             let new_type = intersect_types(t1, t2, ctx);
 
-            let mut result = Subst::new();
-
-            result.insert(t1.id, new_type.clone());
-            result.insert(t2.id, new_type);
-
+            // We should never widen object types with the MemberAccess flag
+            // because we may need to grab its only property in other cirucmstances.
+            let result = Subst::from([(t2.id, new_type)]);
             Ok(result)
-        }
+        },
+        (Variant::Object(_), Variant::Object(_))
+            // Accessing a property on an object indicates that that property
+            // exists on the object, but there may be other properties on the
+            // object as well.  For object types with the flag, we widen the
+            // type by replacing the types with their intersection which merges
+            // the properties and any shared properties are also intersected
+            // recursively.
+            if t2.flag == Some(Flag::MemberAccess) =>
+        {
+            let new_type = intersect_types(t1, t2, ctx);
+            // We should never widen object types with the MemberAccess flag
+            // because we may need to grab its only property in other cirucmstances.
+            let result = Subst::from([(t1.id, new_type)]);
+            Ok(result)
+        },
         (_, _) => {
             let new_type = union_types(t1, t2, ctx);
 
