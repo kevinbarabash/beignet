@@ -30,7 +30,10 @@ fn solver(u: Unifier, ctx: &Context) -> Result<Subst, String> {
 
     println!("-----------");
     println!("constraints:");
-    for Constraint {types: (left, right)} in cs.iter() {
+    for Constraint {
+        types: (left, right),
+    } in cs.iter()
+    {
         println!("{left} = {right}")
     }
 
@@ -95,31 +98,30 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
             Err(String::from("unification failed"))
         }
-        _ => {
-            if let (Variant::Lit(lit), Variant::Prim(prim), Some(Flag::SubtypesWin)) =
-                (&t1.variant, &t2.variant, &t2.flag)
-            {
-                if matches!((lit, prim), (Lit::Num(_), Primitive::Num)) {
-                    let mut result = Subst::new();
-                    result.insert(t2.id, t1.to_owned());
+        _ => unify_mismatched_types(t1, t2, ctx),
+    }
+}
 
-                    return Ok(result);
-                }
-            }
-
-            if is_subtype(t1, t2, ctx) {
-                return Ok(Subst::new());
-            }
-
-            if !t1.frozen && !t2.frozen {
-                return widen_types(t1, t2, ctx);
-            }
-
-            println!("unifcation failed: {:?} {:?}", t1, t2);
-
-            Err(String::from("unification failed"))
+fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
+    if is_subtype(t1, t2, ctx) {
+        match t2.flag {
+            Some(Flag::SubtypeWins) => {
+                return Ok(Subst::from([(t2.id, t1.to_owned())]));
+            },
+            Some(Flag::SupertypeWins) => {
+                return Ok(Subst::from([(t1.id, t2.to_owned())]));
+            }, 
+            _ => ()
         }
     }
+
+    if !t1.frozen && !t2.frozen {
+        return widen_types(t1, t2, ctx);
+    }
+
+    println!("unifcation failed: {:?} {:?}", t1, t2);
+
+    Err(String::from("unification failed"))
 }
 
 fn unify_lams(t1: &LamType, t2: &LamType, ctx: &Context) -> Result<Subst, String> {

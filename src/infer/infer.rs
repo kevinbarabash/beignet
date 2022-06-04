@@ -3,12 +3,13 @@ use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, freeze, Primitive, Scheme, Type, Variant, Flag};
+use crate::types::{self, Primitive, Scheme, Type, Variant, Flag};
 
 use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::{Context, Env};
 use super::infer_mem::infer_mem;
 use super::infer_pattern::infer_pattern;
+use super::infer_type_ann::infer_type_ann;
 use super::substitutable::Substitutable;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
@@ -31,7 +32,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                             Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
                                 // A type annotation should always be provided when using `declare`
                                 let type_ann = type_ann.as_ref().unwrap();
-                                let type_ann_ty = type_ann_to_type(type_ann, &ctx);
+                                let type_ann_ty = infer_type_ann(type_ann, &ctx);
                                 let scheme = type_to_scheme(&type_ann_ty);
                                 ctx.values.insert(id.name.to_owned(), scheme);
                             }
@@ -46,7 +47,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                                 let inferred_scheme = infer_expr(&ctx, init)?;
                                 let scheme = match type_ann {
                                     Some(type_ann) => {
-                                        let type_ann_ty = type_ann_to_type(type_ann, &ctx);
+                                        let type_ann_ty = infer_type_ann(type_ann, &ctx);
                                         match is_subtype(&inferred_scheme.ty, &type_ann_ty, &ctx) {
                                             true => Ok(type_to_scheme(&type_ann_ty)),
                                             false => Err(String::from(
@@ -64,7 +65,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                 };
             }
             Statement::TypeDecl { id, type_ann, .. } => {
-                let type_ann_ty = type_ann_to_type(type_ann, &ctx);
+                let type_ann_ty = infer_type_ann(type_ann, &ctx);
                 let scheme = type_to_scheme(&type_ann_ty);
                 ctx.types.insert(id.name.to_owned(), scheme);
             }
@@ -232,6 +233,7 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
     match expr {
         Expr::Ident(Ident { name, .. }) => {
             let ty = ctx.lookup_value(name);
+            println!("lookup_value({name}) = {:?}", ty);
             Ok((ty, vec![]))
         }
         Expr::App(App { lam, args, .. }) => {
@@ -291,14 +293,14 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                 .iter()
                 .map(|param| match param {
                     Pattern::Ident(BindingIdent { type_ann, .. }) => match type_ann {
-                        Some(type_ann) => type_ann_to_type(type_ann, ctx),
+                        Some(type_ann) => infer_type_ann(type_ann, ctx),
                         None => ctx.fresh_var(),
                     },
                     Pattern::Rest(RestPat { type_ann, .. }) => {
                         match type_ann {
                             Some(type_ann) => {
                                 // TODO: check that type_ann is an array
-                                type_ann_to_type(type_ann, ctx)
+                                infer_type_ann(type_ann, ctx)
                             }
                             None => ctx.alias("Array", Some(vec![ctx.fresh_var()])),
                         }
@@ -357,7 +359,8 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
             let t2 = match pattern {
                 Some(pattern) => {
                     let mut new_ctx = ctx.clone();
-                    let pattern_type = infer_pattern(pattern, &mut new_ctx, &mut cs);
+                    let mut pattern_type = infer_pattern(pattern, &mut new_ctx, &mut cs);
+                    pattern_type.flag = Some(Flag::SupertypeWins);
                     cs.push(Constraint {
                         // order matters here
                         // Instead of relying on order, we should tag all types so that the 
@@ -423,8 +426,8 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                     let inf_type = ctx.lam(ts, Box::from(tv.clone()));
                     let def_type = ctx.lam(
                         vec![
-                            ctx.prim_with_flag(Primitive::Num, Flag::SubtypesWin),
-                            ctx.prim_with_flag(Primitive::Num, Flag::SubtypesWin),
+                            ctx.prim_with_flag(Primitive::Num, Flag::SubtypeWins),
+                            ctx.prim_with_flag(Primitive::Num, Flag::SubtypeWins),
                         ],
                         Box::from(ctx.prim(Primitive::Num)),
                     );
@@ -521,56 +524,6 @@ fn infer_many(exprs: &[Expr], ctx: &Context) -> Result<(Vec<Type>, Vec<Constrain
     }
 
     Ok((ts, all_cs))
-}
-
-pub fn type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
-    freeze(_type_ann_to_type(type_ann, ctx))
-}
-
-fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
-    match type_ann {
-        TypeAnn::Lam(LamType { params, ret, .. }) => {
-            let params: Vec<_> = params
-                .iter()
-                .map(|arg| _type_ann_to_type(arg, ctx))
-                .collect();
-            let ret = Box::from(_type_ann_to_type(ret.as_ref(), ctx));
-            ctx.lam(params, ret)
-        }
-        TypeAnn::Lit(LitType { lit, .. }) => ctx.lit(lit.to_owned()),
-        TypeAnn::Prim(PrimType { prim, .. }) => ctx.prim(prim.to_owned()),
-        TypeAnn::Object(ObjectType { props, .. }) => {
-            let props: Vec<_> = props
-                .iter()
-                .map(|prop| types::TProp {
-                    name: prop.name.to_owned(),
-                    optional: prop.optional,
-                    ty: _type_ann_to_type(prop.type_ann.as_ref(), ctx),
-                })
-                .collect();
-            ctx.object(&props)
-        }
-        TypeAnn::TypeRef(TypeRef {
-            name, type_params, ..
-        }) => {
-            let type_params = type_params.clone().map(|params| {
-                params
-                    .iter()
-                    .map(|param| _type_ann_to_type(param, ctx))
-                    .collect()
-            });
-            ctx.alias(name, type_params)
-        }
-        TypeAnn::Union(UnionType { types, .. }) => {
-            ctx.union(types.iter().map(|ty| _type_ann_to_type(ty, ctx)).collect())
-        }
-        TypeAnn::Intersection(IntersectionType { types, .. }) => {
-            ctx.intersection(types.iter().map(|ty| _type_ann_to_type(ty, ctx)).collect())
-        }
-        TypeAnn::Tuple(TupleType { types, .. }) => {
-            ctx.tuple(types.iter().map(|ty| _type_ann_to_type(ty, ctx)).collect())
-        }
-    }
 }
 
 // TODO: make this recursive
