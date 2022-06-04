@@ -54,14 +54,14 @@ fn compose_subs(s1: &Subst, s2: &Subst) -> Result<Subst, String> {
 }
 
 fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
-    match (t1, t2) {
-        (Type::Var(v), _) => bind(&v.id, t2, ctx),
-        (_, Type::Var(v)) => bind(&v.id, t1, ctx),
-        (Type::Prim(p1), Type::Prim(p2)) if p1 == p2 => Ok(Subst::new()),
-        (Type::Lit(l1), Type::Lit(l2)) if l1 == l2 => Ok(Subst::new()),
-        (Type::Lam(lam1), Type::Lam(lam2)) => unify_lams(lam1, lam2, ctx),
+    match (&t1.variant, &t2.variant) {
+        (Variant::Var, _) => bind(&t1.id, t2, ctx),
+        (_, Variant::Var) => bind(&t2.id, t1, ctx),
+        (Variant::Prim(p1), Variant::Prim(p2)) if p1 == p2 => Ok(Subst::new()),
+        (Variant::Lit(l1), Variant::Lit(l2)) if l1 == l2 => Ok(Subst::new()),
+        (Variant::Lam(lam1), Variant::Lam(lam2)) => unify_lams(lam1, lam2, ctx),
         // TODO: copy tests case from `compiler` project for this
-        (Type::Alias(alias1), Type::Alias(alias2)) if alias1.name == alias2.name => {
+        (Variant::Alias(alias1), Variant::Alias(alias2)) if alias1.name == alias2.name => {
             let cs: Result<Vec<_>, _> = match (&alias1.type_params, &alias2.type_params) {
                 (Some(params1), Some(params2)) => {
                     if params1.len() != params2.len() {
@@ -83,10 +83,10 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             };
             unify_many(&cs?, ctx)
         }
-        (Type::Member(mem1), Type::Member(mem2)) if mem1.prop == mem2.prop => {
+        (Variant::Member(mem1), Variant::Member(mem2)) if mem1.prop == mem2.prop => {
             unifies(mem1.obj.as_ref(), mem2.obj.as_ref(), ctx)
         }
-        (_, Type::Intersection(intersection)) => {
+        (_, Variant::Intersection(intersection)) => {
             for ty in &intersection.types {
                 let result = unifies(t1, ty, ctx);
                 if result.is_ok() {
@@ -100,7 +100,7 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 return Ok(Subst::new());
             }
 
-            if !t1.frozen() && !t2.frozen() {
+            if !t1.frozen && !t2.frozen {
                 return widen_types(t1, t2, ctx);
             }
 
@@ -162,8 +162,8 @@ fn unify_many(cs: &[Constraint], ctx: &Context) -> Result<Subst, String> {
 // Returns true if t2 admits all values from t1.
 // TODO: figure out how to make this return a Result<bool, String>
 pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> bool {
-    match (t1, t2) {
-        (Type::Lit(LitType { lit, .. }), Type::Prim(PrimType { prim, .. })) => {
+    match (&t1.variant, &t2.variant) {
+        (Variant::Lit(LitType { lit, .. }), Variant::Prim(PrimType { prim, .. })) => {
             matches!(
                 (lit, prim),
                 (Lit::Num(_), Primitive::Num)
@@ -172,8 +172,8 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> bool {
             )
         }
         (
-            Type::Object(ObjectType { props: props1, .. }),
-            Type::Object(ObjectType { props: props2, .. }),
+            Variant::Object(ObjectType { props: props1, .. }),
+            Variant::Object(ObjectType { props: props2, .. }),
         ) => {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
             props2.iter().all(|prop2| {
@@ -184,8 +184,8 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> bool {
             })
         }
         (
-            Type::Tuple(TupleType { types: types1, .. }),
-            Type::Tuple(TupleType { types: types2, .. }),
+            Variant::Tuple(TupleType { types: types1, .. }),
+            Variant::Tuple(TupleType { types: types2, .. }),
         ) => {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
             if types1.len() < types2.len() {
@@ -196,9 +196,9 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> bool {
                 .zip(types2.iter())
                 .all(|(t1, t2)| is_subtype(t1, t2, ctx))
         }
-        (Type::Union(UnionType { types, .. }), _) => types.iter().all(|t1| is_subtype(t1, t2, ctx)),
-        (_, Type::Union(UnionType { types, .. })) => types.iter().any(|t2| is_subtype(t1, t2, ctx)),
-        (_, Type::Alias(alias)) => {
+        (Variant::Union(UnionType { types, .. }), _) => types.iter().all(|t1| is_subtype(t1, t2, ctx)),
+        (_, Variant::Union(UnionType { types, .. })) => types.iter().any(|t2| is_subtype(t1, t2, ctx)),
+        (_, Variant::Alias(alias)) => {
             match ctx.types.get(&alias.name) {
                 Some(scheme) => {
                     // TODO: handle schemes with qualifiers
@@ -213,13 +213,13 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> bool {
 }
 
 fn bind(tv_id: &i32, ty: &Type, _: &Context) -> Result<Subst, String> {
-    // TODO: Handle Type::Mem once it's added
+    // TODO: Handle Variant::Mem once it's added
     // NOTE: This will require the use of the &Context
 
-    match ty {
-        Type::Var(VarType { id, .. }) if id == tv_id => Ok(Subst::new()),
-        ty if ty.ftv().contains(tv_id) => Err(String::from("type var appears in type")),
-        ty => {
+    match ty.variant {
+        Variant::Var if &ty.id == tv_id => Ok(Subst::new()),
+        _ if ty.ftv().contains(tv_id) => Err(String::from("type var appears in type")),
+        _ => {
             let mut subst = Subst::new();
             subst.insert(tv_id.to_owned(), ty.clone());
             Ok(subst)
@@ -228,8 +228,8 @@ fn bind(tv_id: &i32, ty: &Type, _: &Context) -> Result<Subst, String> {
 }
 
 fn flatten_types(ty: &Type) -> Vec<Type> {
-    match ty {
-        Type::Union(UnionType { types, .. }) => types.iter().flat_map(flatten_types).collect(),
+    match &ty.variant {
+        Variant::Union(UnionType { types, .. }) => types.iter().flat_map(flatten_types).collect(),
         _ => vec![ty.to_owned()],
     }
 }
@@ -244,14 +244,14 @@ fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
     let prim_types: HashSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|ty| matches!(ty, Type::Prim(_)))
+        .filter(|ty| matches!(ty.variant, Variant::Prim(_)))
         .collect();
     let lit_types: HashSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|ty| match ty {
+        .filter(|ty| match &ty.variant {
             // Primitive types subsume corresponding literal types
-            Type::Lit(LitType { lit, .. }) => match lit {
+            Variant::Lit(LitType { lit, .. }) => match lit {
                 Lit::Num(_) => !prim_types.contains(&ctx.prim(Primitive::Num)),
                 Lit::Bool(_) => !prim_types.contains(&ctx.prim(Primitive::Bool)),
                 Lit::Str(_) => !prim_types.contains(&ctx.prim(Primitive::Str)),
@@ -264,7 +264,7 @@ fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
     let rest_types: HashSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|ty| !matches!(ty, Type::Prim(_) | Type::Lit(_)))
+        .filter(|ty| !matches!(ty.variant, Variant::Prim(_) | Variant::Lit(_)))
         .collect();
 
     let mut types: Vec<_> = prim_types
@@ -273,7 +273,7 @@ fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
         .chain(rest_types.iter())
         .cloned()
         .collect();
-    types.sort_by_key(|k| k.id());
+    types.sort_by_key(|k| k.id);
 
     if types.len() > 1 {
         ctx.union(types)
@@ -316,10 +316,10 @@ fn intersect_properties(props1: &[TProp], props2: &[TProp], ctx: &Context) -> Ve
 }
 
 fn intersect_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
-    match (t1, t2) {
+    match (&t1.variant, &t2.variant) {
         (
-            Type::Object(ObjectType { props: props1, .. }),
-            Type::Object(ObjectType { props: props2, .. }),
+            Variant::Object(ObjectType { props: props1, .. }),
+            Variant::Object(ObjectType { props: props2, .. }),
         ) => {
             let props = intersect_properties(props1, props2, ctx);
             ctx.object(&props, None)
@@ -329,19 +329,19 @@ fn intersect_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
 }
 
 fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
-    match (t1, t2) {
+    match (&t1.variant, &t2.variant) {
         // TODO: Figure out if we need both to have the same flag or if it's okay
         // if only one has the flag?
         (
-            Type::Object(ObjectType {
+            Variant::Object(ObjectType {
                 widen_flag: Some(WidenFlag::Intersection),
                 ..
             }),
-            Type::Object(_),
+            Variant::Object(_),
         )
         | (
-            Type::Object(_),
-            Type::Object(ObjectType {
+            Variant::Object(_),
+            Variant::Object(ObjectType {
                 widen_flag: Some(WidenFlag::Intersection),
                 ..
             }),
@@ -350,8 +350,8 @@ fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
             let mut result = Subst::new();
 
-            result.insert(t1.id(), new_type.clone());
-            result.insert(t2.id(), new_type);
+            result.insert(t1.id, new_type.clone());
+            result.insert(t2.id, new_type);
 
             Ok(result)
         }
@@ -360,8 +360,8 @@ fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
             let mut result = Subst::new();
 
-            result.insert(t1.id(), new_type.clone());
-            result.insert(t2.id(), new_type);
+            result.insert(t1.id, new_type.clone());
+            result.insert(t2.id, new_type);
 
             Ok(result)
         }

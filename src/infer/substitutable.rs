@@ -30,111 +30,86 @@ impl Substitutable for Constraint {
 
 impl Substitutable for Type {
     fn apply(&self, sub: &Subst) -> Type {
-        match self {
-            Type::Var(VarType { id, .. }) => sub.get(id).unwrap_or(self).clone(),
-            // TODO: handle widening of lambdas
-            Type::Lam(LamType {
-                id,
-                frozen,
-                params,
-                ret,
-            }) => match sub.get(id) {
-                Some(replacement) => replacement.to_owned(),
-                None => Type::Lam(LamType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
-                    params: params.iter().map(|param| param.apply(sub)).collect(),
-                    ret: Box::from(ret.apply(sub)),
-                }),
-            },
-            Type::Prim(PrimType { id, .. }) => sub.get(id).unwrap_or(self).clone(),
-            Type::Lit(LitType { id, .. }) => sub.get(id).unwrap_or(self).clone(),
-            Type::Union(UnionType { id, frozen, types }) => match sub.get(id) {
-                Some(replacement) => replacement.to_owned(),
-                None => norm_type(Type::Union(UnionType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
-                    types: types.apply(sub),
-                })),
-            },
-            Type::Intersection(IntersectionType { id, frozen, types }) => match sub.get(id) {
-                Some(replacement) => replacement.to_owned(),
-                None => norm_type(Type::Intersection(IntersectionType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
-                    types: types.apply(sub),
-                })),
-            },
-            Type::Object(object) => match sub.get(&object.id) {
-                Some(replacement) => replacement.to_owned(),
-                None => Type::Object(ObjectType {
-                    props: object
-                        .props
-                        .iter()
-                        .map(|prop| TProp {
-                            ty: prop.ty.apply(sub),
-                            ..prop.to_owned()
+        let result = match sub.get(&self.id) {
+            Some(replacement) => replacement.to_owned(),
+            None => {
+                let variant = match &self.variant {
+                    Variant::Var => self.variant.to_owned(),
+                    // TODO: handle widening of lambdas
+                    Variant::Lam(LamType { params, ret }) => Variant::Lam(LamType {
+                        params: params.iter().map(|param| param.apply(sub)).collect(),
+                        ret: Box::from(ret.apply(sub)),
+                    }),
+                    Variant::Prim(_) => self.variant.to_owned(),
+                    Variant::Lit(_) => self.variant.to_owned(),
+                    Variant::Union(UnionType { types }) => Variant::Union(UnionType {
+                        types: types.apply(sub),
+                    }),
+                    Variant::Intersection(IntersectionType { types }) => {
+                        Variant::Intersection(IntersectionType {
+                            types: types.apply(sub),
                         })
-                        .collect(),
-                    ..object.to_owned()
-                }),
-            },
-            Type::Alias(alias) => match sub.get(&alias.id) {
-                Some(replacement) => replacement.to_owned(),
-                None => Type::Alias(AliasType {
-                    type_params: alias
-                        .type_params
-                        .clone()
-                        .map(|params| params.iter().map(|ty| ty.apply(sub)).collect()),
-                    ..alias.to_owned()
-                }),
-            },
-            Type::Tuple(tuple) => match sub.get(&tuple.id) {
-                Some(replacement) => replacement.to_owned(),
-                None => Type::Tuple(TupleType {
-                    types: tuple.types.iter().map(|ty| ty.apply(sub)).collect(),
-                    ..tuple.to_owned()
-                }),
-            },
-            Type::Rest(rest) => match sub.get(&rest.id) {
-                Some(replacement) => replacement.to_owned(),
-                None => Type::Rest(RestType {
-                    ty: Box::from(rest.ty.apply(sub)),
-                    ..rest.to_owned()
-                }),
+                    }
+                    Variant::Object(object) => Variant::Object(ObjectType {
+                        props: object
+                            .props
+                            .iter()
+                            .map(|prop| TProp {
+                                ty: prop.ty.apply(sub),
+                                ..prop.to_owned()
+                            })
+                            .collect(),
+                        ..object.to_owned()
+                    }),
+                    Variant::Alias(alias) => Variant::Alias(AliasType {
+                        type_params: alias
+                            .type_params
+                            .clone()
+                            .map(|params| params.iter().map(|ty| ty.apply(sub)).collect()),
+                        ..alias.to_owned()
+                    }),
+                    Variant::Tuple(tuple) => Variant::Tuple(TupleType {
+                        types: tuple.types.iter().map(|ty| ty.apply(sub)).collect(),
+                    }),
+                    Variant::Rest(rest) => Variant::Rest(RestType {
+                        ty: Box::from(rest.ty.apply(sub)),
+                    }),
+                    Variant::Member(member) => Variant::Member(MemberType {
+                        obj: Box::from(member.obj.apply(sub)),
+                        ..member.to_owned()
+                    }),
+                };
+                Type {
+                    variant,
+                    ..self.to_owned()
+                }
             }
-            Type::Member(member) => match sub.get(&member.id) {
-                Some(replacement) => replacement.to_owned(),
-                None => Type::Member(MemberType {
-                    obj: Box::from(member.obj.apply(sub)),
-                    ..member.to_owned()
-                }),
-            },
-        }
+        };
+        norm_type(result)
     }
     fn ftv(&self) -> HashSet<i32> {
-        match self {
-            Type::Var(VarType { id, .. }) => HashSet::from([id.to_owned()]),
-            Type::Lam(LamType { params, ret, .. }) => {
+        match &self.variant {
+            Variant::Var => HashSet::from([self.id.to_owned()]),
+            Variant::Lam(LamType { params, ret, .. }) => {
                 let mut result: HashSet<_> = params.ftv();
                 result.extend(ret.ftv());
                 result
             }
-            Type::Prim(_) => HashSet::new(),
-            Type::Lit(_) => HashSet::new(),
-            Type::Union(UnionType { types, .. }) => types.ftv(),
-            Type::Intersection(IntersectionType { types, .. }) => types.ftv(),
-            Type::Object(ObjectType { props, .. }) => {
+            Variant::Prim(_) => HashSet::new(),
+            Variant::Lit(_) => HashSet::new(),
+            Variant::Union(UnionType { types, .. }) => types.ftv(),
+            Variant::Intersection(IntersectionType { types, .. }) => types.ftv(),
+            Variant::Object(ObjectType { props, .. }) => {
                 // TODO: implement Substitutable fro TProp
                 props.iter().flat_map(|prop| prop.ty.ftv()).collect()
             }
-            Type::Alias(AliasType { type_params, .. }) => {
+            Variant::Alias(AliasType { type_params, .. }) => {
                 // TODO: implement Substitutable fro Option
                 type_params.iter().flat_map(|ty| ty.ftv()).collect()
             }
-            Type::Tuple(TupleType { types, .. }) => types.ftv(),
-            Type::Rest(RestType { ty, .. }) => ty.ftv(),
-            Type::Member(MemberType { obj, .. }) => obj.ftv(),
+            Variant::Tuple(TupleType { types, .. }) => types.ftv(),
+            Variant::Rest(RestType { ty, .. }) => ty.ftv(),
+            Variant::Member(MemberType { obj, .. }) => obj.ftv(),
         }
     }
 }
@@ -177,30 +152,33 @@ where
 }
 
 fn norm_type(ty: Type) -> Type {
-    match ty {
-        Type::Union(union) => {
-            let types: HashSet<_> = union.types.into_iter().collect();
+    match &ty.variant {
+        Variant::Union(union) => {
+            let types: HashSet<_> = union.to_owned().types.into_iter().collect();
             let mut types: Vec<_> = types.into_iter().collect();
-            types.sort_by_key(|k| k.id());
+            types.sort_by_key(|k| k.id);
 
             if types.len() == 1 {
                 types.get(0).unwrap().to_owned()
             } else {
-                Type::Union(UnionType { types, ..union })
+                Type {
+                    variant: Variant::Union(UnionType { types }),
+                    ..ty.to_owned()
+                }
             }
         }
-        Type::Intersection(intersection) => {
-            let types: HashSet<_> = intersection.types.into_iter().collect();
+        Variant::Intersection(intersection) => {
+            let types: HashSet<_> = intersection.to_owned().types.into_iter().collect();
             let mut types: Vec<_> = types.into_iter().collect();
-            types.sort_by_key(|k| k.id());
+            types.sort_by_key(|k| k.id);
 
             if types.len() == 1 {
                 types.get(0).unwrap().to_owned()
             } else {
-                Type::Intersection(IntersectionType {
-                    types,
-                    ..intersection
-                })
+                Type {
+                    variant: Variant::Intersection(IntersectionType { types }),
+                    ..ty.to_owned()
+                }
             }
         }
         _ => ty,
