@@ -96,8 +96,8 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             Err(String::from("unification failed"))
         }
         _ => {
-            if let (Variant::Lit(lit), Variant::Prim(prim), Some(WidenFlag::SubtypesWin)) =
-                (&t1.variant, &t2.variant, &t2.widen_flag)
+            if let (Variant::Lit(lit), Variant::Prim(prim), Some(Flag::SubtypesWin)) =
+                (&t1.variant, &t2.variant, &t2.flag)
             {
                 if matches!((lit, prim), (Lit::Num(_), Primitive::Num)) {
                     let mut result = Subst::new();
@@ -326,7 +326,7 @@ fn intersect_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
     match (&t1.variant, &t2.variant) {
         (Variant::Object(props1), Variant::Object(props2)) => {
             let props = intersect_properties(props1, props2, ctx);
-            ctx.object(&props, None)
+            ctx.object(&props)
         }
         (_, _) => ctx.intersection(vec![t1.to_owned(), t2.to_owned()]),
     }
@@ -337,8 +337,14 @@ fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         // TODO: Figure out if we need both to have the same flag or if it's okay
         // if only one has the flag?
         (Variant::Object(_), Variant::Object(_))
-            if t1.widen_flag == Some(WidenFlag::Intersection)
-                || t2.widen_flag == Some(WidenFlag::Intersection) =>
+            // Accessing a property on an object indicates that that property
+            // exists on the object, but there may be other properties on the
+            // object as well.  For object types with the flag, we widen the
+            // type by replacing the types with their intersection which merges
+            // the properties and any shared properties are also intersected
+            // recursively.
+            if t1.flag == Some(Flag::MemberAccess)
+                || t2.flag == Some(Flag::MemberAccess) =>
         {
             let new_type = intersect_types(t1, t2, ctx);
 

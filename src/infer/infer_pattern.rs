@@ -125,7 +125,7 @@ fn _infer_pattern_rec(pattern: &Pattern, ctx: &mut Context, cs: &mut Vec<Constra
                 }
             }).collect();
 
-            let obj_type = ctx.object(&props, None);
+            let obj_type = ctx.object(&props);
 
             match rest_opt_ty {
                 Some(rest_ty) => ctx.intersection(vec![obj_type, rest_ty]),
@@ -168,7 +168,7 @@ fn _type_ann_to_type(type_ann: &TypeAnn, ctx: &Context) -> Type {
                     ty: _type_ann_to_type(prop.type_ann.as_ref(), ctx),
                 })
                 .collect();
-            ctx.object(&props, None)
+            ctx.object(&props)
         }
         TypeAnn::TypeRef(TypeRef {
             name, type_params, ..
