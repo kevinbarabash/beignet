@@ -88,6 +88,7 @@ fn type_of_property_on_type(
             }
         }
         Type::Tuple(_) => todo!(),
+        Type::Rest(_) => todo!(),
         Type::Member(_) => todo!(),
     }
 }
