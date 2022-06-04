@@ -28,11 +28,11 @@ fn solver(u: Unifier, ctx: &Context) -> Result<Subst, String> {
 
     let rest = &cs[1..]; // const [_ , ...rest] = cs;
 
-    // println!("-----------");
-    // println!("constraints:");
-    // for Constraint {types: (left, right)} in cs.iter() {
-    //     println!("{left} = {right}")
-    // }
+    println!("-----------");
+    println!("constraints:");
+    for Constraint {types: (left, right)} in cs.iter() {
+        println!("{left} = {right}")
+    }
 
     match cs.get(0) {
         Some(Constraint { types: (t1, t2) }) => {
@@ -96,6 +96,17 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             Err(String::from("unification failed"))
         }
         _ => {
+            if let (Variant::Lit(lit), Variant::Prim(prim), Some(WidenFlag::SubtypesWin)) =
+                (&t1.variant, &t2.variant, &t2.widen_flag)
+            {
+                if matches!((lit, prim), (Lit::Num(_), Primitive::Num)) {
+                    let mut result = Subst::new();
+                    result.insert(t2.id, t1.to_owned());
+
+                    return Ok(result);
+                }
+            }
+
             if is_subtype(t1, t2, ctx) {
                 return Ok(Subst::new());
             }
@@ -103,6 +114,8 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             if !t1.frozen && !t2.frozen {
                 return widen_types(t1, t2, ctx);
             }
+
+            println!("unifcation failed: {:?} {:?}", t1, t2);
 
             Err(String::from("unification failed"))
         }

@@ -78,6 +78,14 @@ impl Context {
             widen_flag: None,
         }
     }
+    pub fn prim_with_flag(&self, prim: types::Primitive, widen_flag: WidenFlag) -> Type {
+        Type {
+            id: self.fresh_id(),
+            frozen: false,
+            variant: Variant::Prim(prim),
+            widen_flag: Some(widen_flag),
+        }
+    }
     pub fn lit(&self, lit: Lit) -> Type {
         let lit = match lit {
             Lit::Num(n) => types::Lit::Num(n.value),
