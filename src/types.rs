@@ -104,6 +104,7 @@ impl Hash for LamType {
 pub enum WidenFlag {
     Intersection,
     Union,
+    SubtypesWin,
 }
 
 #[derive(Clone, Debug, Eq)]

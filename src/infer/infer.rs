@@ -3,12 +3,12 @@ use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, freeze, Primitive, Scheme, Type, Variant};
+use crate::types::{self, freeze, Primitive, Scheme, Type, Variant, WidenFlag};
 
 use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::{Context, Env};
 use super::infer_mem::infer_mem;
-use super::infer_pattern::infer_pattern as infer_pattern2;
+use super::infer_pattern::infer_pattern;
 use super::substitutable::Substitutable;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
@@ -350,20 +350,23 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
             ..
         }) => {
             let mut cs: Vec<Constraint> = Vec::new();
-            let (t1, cs1) = infer(value, ctx)?;
+            let (value_type, cs1) = infer(value, ctx)?;
             let subs = run_solve(&cs1, ctx)?;
             cs.extend(cs1);
 
             let t2 = match pattern {
                 Some(pattern) => {
-                    // let mut new_ctx = ctx.clone();
-                    // let pat_ty = infer_pattern2(pattern, &mut new_ctx, &mut cs);
-                    // println!("pat_ty = {:?}", pat_ty);
-                    // println!("t1 = {:?}", t1);
-                    // cs.push(Constraint {types: (pat_ty, t1)});
-                    let (new_ctx, new_cs) = infer_pattern(pattern, &t1, ctx)?;
-                    cs.extend(new_cs);
-                    println!("cs = {:?}", cs);
+                    let mut new_ctx = ctx.clone();
+                    let pattern_type = infer_pattern(pattern, &mut new_ctx, &mut cs);
+                    cs.push(Constraint {
+                        // order matters here
+                        // Instead of relying on order, we should tag all types so that the 
+                        // constraint solver has more information when deciding on how to resolve
+                        // a sub type relationship.  Possible resolutions include:
+                        // - letting one of the types win
+                        // - widening the type via a union
+                        types: (value_type, pattern_type),
+                    });
                     let (t2, cs2) = infer(body, &new_ctx)?;
                     ctx.state.count.set(new_ctx.state.count.get());
                     cs.extend(cs2.apply(&subs));
@@ -416,15 +419,20 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                         ),
                     ),
                 },
-                BinOp::Add | BinOp::Sub | BinOp::Div | BinOp::Mul => Constraint {
-                    types: (
-                        ctx.lam(ts, Box::from(tv.clone())),
-                        ctx.lam(
-                            vec![ctx.prim(Primitive::Num), ctx.prim(Primitive::Num)],
-                            Box::from(ctx.prim(Primitive::Num)),
-                        ),
-                    ),
-                },
+                BinOp::Add | BinOp::Sub | BinOp::Div | BinOp::Mul => {
+                    let inf_type = ctx.lam(ts, Box::from(tv.clone()));
+                    let def_type = ctx.lam(
+                        vec![
+                            ctx.prim_with_flag(Primitive::Num, WidenFlag::SubtypesWin),
+                            ctx.prim_with_flag(Primitive::Num, WidenFlag::SubtypesWin),
+                        ],
+                        Box::from(ctx.prim(Primitive::Num)),
+                    );
+
+                    Constraint {
+                        types: (inf_type, def_type),
+                    }
+                }
             };
             cs.push(c);
 
@@ -499,50 +507,6 @@ fn type_to_scheme(ty: &Type) -> Scheme {
     Scheme {
         qualifiers: vec![],
         ty: ty.clone(),
-    }
-}
-
-// TODO: make this recursive, only the top-level needs `ty`
-fn infer_pattern(
-    pattern: &Pattern,
-    ty: &Type,
-    ctx: &Context,
-) -> Result<(Context, Vec<Constraint>), String> {
-    match pattern {
-        Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
-            let mut new_ctx = ctx.clone();
-
-            let cs = match type_ann {
-                // If the pattern has a type annotation then we use that when inserting a
-                // type definition for the identifier into new_ctx, othewise we use the
-                // type that has been passed to us (which should be the type inferred from
-                // the `value` in the `let-in` node).
-                Some(type_ann) => {
-                    let type_ann_ty = type_ann_to_type(type_ann, ctx);
-                    new_ctx
-                        .values
-                        .insert(id.name.to_owned(), type_to_scheme(&type_ann_ty));
-                    // This constraint is so that the type of the `value` in the `let-in`
-                    // node conforms to the type annotation that was provided by the developer.
-                    vec![Constraint {
-                        types: (ty.to_owned(), type_ann_ty),
-                    }]
-                }
-                None => {
-                    new_ctx
-                        .values
-                        .insert(id.name.to_owned(), type_to_scheme(ty));
-                    vec![]
-                }
-            };
-
-            Ok((new_ctx, cs))
-        }
-        Pattern::Rest(_) => {
-            todo!()
-        }
-        Pattern::Object(_) => todo!(),
-        Pattern::Array(_) => todo!(),
     }
 }
 
