@@ -44,25 +44,12 @@ impl Substitutable for Type {
                     Variant::Lit(_) => self.variant.to_owned(),
                     Variant::Union(types) => Variant::Union(types.apply(sub)),
                     Variant::Intersection(types) => Variant::Intersection(types.apply(sub)),
-                    Variant::Object(props) => Variant::Object(
-                        props
-                            .iter()
-                            .map(|prop| TProp {
-                                ty: prop.ty.apply(sub),
-                                ..prop.to_owned()
-                            })
-                            .collect(),
-                    ),
+                    Variant::Object(props) => Variant::Object(props.apply(sub)),
                     Variant::Alias(alias) => Variant::Alias(AliasType {
-                        type_params: alias
-                            .type_params
-                            .clone()
-                            .map(|params| params.iter().map(|ty| ty.apply(sub)).collect()),
+                        type_params: alias.type_params.apply(sub),
                         ..alias.to_owned()
                     }),
-                    Variant::Tuple(types) => {
-                        Variant::Tuple(types.iter().map(|ty| ty.apply(sub)).collect())
-                    }
+                    Variant::Tuple(types) => Variant::Tuple(types.apply(sub)),
                     Variant::Rest(arg) => Variant::Rest(Box::from(arg.apply(sub))),
                     Variant::Member(member) => Variant::Member(MemberType {
                         obj: Box::from(member.obj.apply(sub)),
@@ -89,18 +76,24 @@ impl Substitutable for Type {
             Variant::Lit(_) => HashSet::new(),
             Variant::Union(types) => types.ftv(),
             Variant::Intersection(types) => types.ftv(),
-            Variant::Object(props) => {
-                // TODO: implement Substitutable fro TProp
-                props.iter().flat_map(|prop| prop.ty.ftv()).collect()
-            }
-            Variant::Alias(AliasType { type_params, .. }) => {
-                // TODO: implement Substitutable fro Option
-                type_params.iter().flat_map(|ty| ty.ftv()).collect()
-            }
+            Variant::Object(props) => props.ftv(),
+            Variant::Alias(AliasType { type_params, .. }) => type_params.ftv(),
             Variant::Tuple(types) => types.ftv(),
             Variant::Rest(arg) => arg.ftv(),
             Variant::Member(MemberType { obj, .. }) => obj.ftv(),
         }
+    }
+}
+
+impl Substitutable for TProp {
+    fn apply(&self, sub: &Subst) -> TProp {
+        TProp {
+            ty: self.ty.apply(sub),
+            ..self.to_owned()
+        }
+    }
+    fn ftv(&self) -> HashSet<i32> {
+        self.ty.ftv()
     }
 }
 
@@ -138,6 +131,20 @@ where
     }
     fn ftv(&self) -> HashSet<i32> {
         self.iter().flat_map(|c| c.ftv()).collect()
+    }
+}
+
+impl<I> Substitutable for Option<I>
+where
+    I: Substitutable,
+{
+    fn apply(&self, sub: &Subst) -> Option<I> {
+        self.as_ref().map(|val| val.to_owned().apply(sub))
+    }
+    fn ftv(&self) -> HashSet<i32> {
+        self.as_ref()
+            .map(|val| val.to_owned().ftv())
+            .unwrap_or_default()
     }
 }
 
