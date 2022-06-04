@@ -83,8 +83,6 @@ impl Hash for VarType {
 
 #[derive(Clone, Debug, Eq)]
 pub struct LamType {
-    pub id: i32,
-    pub frozen: bool,
     pub params: Vec<Type>, // TOOD: rename this params
     pub ret: Box<Type>,
 }
@@ -104,8 +102,6 @@ impl Hash for LamType {
 
 #[derive(Clone, Debug, Eq)]
 pub struct PrimType {
-    pub id: i32,
-    pub frozen: bool,
     pub prim: Primitive,
 }
 
@@ -123,8 +119,6 @@ impl Hash for PrimType {
 
 #[derive(Clone, Debug, Eq)]
 pub struct LitType {
-    pub id: i32,
-    pub frozen: bool,
     pub lit: Lit,
 }
 
@@ -142,8 +136,6 @@ impl Hash for LitType {
 
 #[derive(Clone, Debug, Eq)]
 pub struct UnionType {
-    pub id: i32,
-    pub frozen: bool,
     pub types: Vec<Type>,
 }
 
@@ -161,8 +153,6 @@ impl Hash for UnionType {
 
 #[derive(Clone, Debug, Eq)]
 pub struct IntersectionType {
-    pub id: i32,
-    pub frozen: bool,
     pub types: Vec<Type>,
 }
 
@@ -186,8 +176,6 @@ pub enum WidenFlag {
 
 #[derive(Clone, Debug, Eq)]
 pub struct ObjectType {
-    pub id: i32,
-    pub frozen: bool,
     pub props: Vec<TProp>,
     pub widen_flag: Option<WidenFlag>,
 }
@@ -206,8 +194,6 @@ impl Hash for ObjectType {
 
 #[derive(Clone, Debug, Eq)]
 pub struct AliasType {
-    pub id: i32,
-    pub frozen: bool,
     pub name: String,
     pub type_params: Option<Vec<Type>>,
 }
@@ -227,8 +213,6 @@ impl Hash for AliasType {
 
 #[derive(Clone, Debug, Eq)]
 pub struct TupleType {
-    pub id: i32,
-    pub frozen: bool,
     pub types: Vec<Type>,
 }
 
@@ -246,8 +230,6 @@ impl Hash for TupleType {
 
 #[derive(Clone, Debug, Eq)]
 pub struct RestType {
-    pub id: i32,
-    pub frozen: bool,
     pub ty: Box<Type>,
 }
 
@@ -265,8 +247,6 @@ impl Hash for RestType {
 
 #[derive(Clone, Debug, Eq)]
 pub struct MemberType {
-    pub id: i32,
-    pub frozen: bool,
     pub obj: Box<Type>,
     pub prop: String, // TODO: allow numbers as well for accessing elements on tuples and arrays
 }
@@ -285,8 +265,8 @@ impl Hash for MemberType {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Type {
-    Var(VarType),
+pub enum Variant {
+    Var,
     Lam(LamType),
     Prim(PrimType),
     Lit(LitType),
@@ -299,65 +279,60 @@ pub enum Type {
     Member(MemberType),
 }
 
-impl Type {
-    pub fn frozen(&self) -> bool {
-        match self {
-            Type::Var(x) => x.frozen,
-            Type::Lam(x) => x.frozen,
-            Type::Prim(x) => x.frozen,
-            Type::Lit(x) => x.frozen,
-            Type::Union(x) => x.frozen,
-            Type::Intersection(x) => x.frozen,
-            Type::Object(x) => x.frozen,
-            Type::Alias(x) => x.frozen,
-            Type::Tuple(x) => x.frozen,
-            Type::Rest(x) => x.frozen,
-            Type::Member(x) => x.frozen,
+#[derive(Clone, Debug, Eq)]
+pub struct Type {
+    pub variant: Variant,
+    pub id: i32,
+    pub frozen: bool,
+}
+
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
+        match &self.variant {
+            Variant::Var => self.id == other.id,
+            _ => self.variant == other.variant,
         }
     }
+}
 
-    pub fn id(&self) -> i32 {
-        match self {
-            Type::Var(x) => x.id,
-            Type::Lam(x) => x.id,
-            Type::Prim(x) => x.id,
-            Type::Lit(x) => x.id,
-            Type::Union(x) => x.id,
-            Type::Intersection(x) => x.id,
-            Type::Object(x) => x.id,
-            Type::Alias(x) => x.id,
-            Type::Tuple(x) => x.id,
-            Type::Rest(x) => x.id,
-            Type::Member(x) => x.id,
+impl Hash for Type {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match &self.variant {
+            Variant::Var => self.id.hash(state),
+            _ => self.variant.hash(state),
         }
     }
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Type::Var(VarType { id, .. }) => {
+        match &self.variant {
+            Variant::Var => {
                 let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                     .chars()
                     .collect();
-                let id = chars.get(id.to_owned() as usize).unwrap();
+                let id = chars.get(self.id as usize).unwrap();
                 write!(f, "{}", id)
             }
-            Type::Lam(LamType { params, ret, .. }) => write!(f, "({}) => {}", join(params, ", "), ret),
-            Type::Prim(PrimType { prim, .. }) => write!(f, "{}", prim),
-            Type::Lit(LitType { lit, .. }) => write!(f, "{}", lit),
-            Type::Union(UnionType { types, .. }) => write!(f, "{}", join(types, " | ")),
-            Type::Intersection(IntersectionType { types, .. }) => write!(f, "{}", join(types, " & ")),
-            Type::Object(ObjectType { props, .. }) => write!(f, "{{{}}}", join(props, ", ")),
-            Type::Alias(AliasType {
+            Variant::Lam(LamType { params, ret, .. }) => {
+                write!(f, "({}) => {}", join(params, ", "), ret)
+            }
+            Variant::Prim(PrimType { prim, .. }) => write!(f, "{}", prim),
+            Variant::Lit(LitType { lit, .. }) => write!(f, "{}", lit),
+            Variant::Union(UnionType { types, .. }) => write!(f, "{}", join(types, " | ")),
+            Variant::Intersection(IntersectionType { types, .. }) => {
+                write!(f, "{}", join(types, " & "))
+            }
+            Variant::Object(ObjectType { props, .. }) => write!(f, "{{{}}}", join(props, ", ")),
+            Variant::Alias(AliasType {
                 name, type_params, ..
             }) => match type_params {
                 Some(params) => write!(f, "{name}<{}>", join(params, ", ")),
                 None => write!(f, "{name}"),
             },
-            Type::Tuple(TupleType { types, .. }) => write!(f, "[{}]", join(types, ", ")),
-            Type::Rest(RestType { ty, .. }) => write!(f, "...{ty}"),
-            Type::Member(MemberType { obj, prop, .. }) => write!(f, "{obj}[\"{prop}\"]"),
+            Variant::Tuple(TupleType { types, .. }) => write!(f, "[{}]", join(types, ", ")),
+            Variant::Rest(RestType { ty, .. }) => write!(f, "...{ty}"),
+            Variant::Member(MemberType { obj, prop, .. }) => write!(f, "{obj}[\"{prop}\"]"),
         }
     }
 }
@@ -398,37 +373,21 @@ impl fmt::Display for Scheme {
 
 // TODO: make this recursive
 pub fn freeze(ty: Type) -> Type {
-    match ty {
-        Type::Var(var) => Type::Var(VarType {
-            frozen: true,
-            ..var
-        }),
-        Type::Lam(lam) => Type::Lam(LamType {
-            frozen: true,
+    let variant = match ty.variant {
+        Variant::Var => Variant::Var,
+        Variant::Lam(lam) => Variant::Lam(LamType {
             params: lam.params.into_iter().map(freeze).collect(),
             ret: Box::from(freeze(lam.ret.as_ref().clone())),
-            ..lam
         }),
-        Type::Prim(prim) => Type::Prim(PrimType {
-            frozen: true,
-            ..prim
-        }),
-        Type::Lit(lit) => Type::Lit(LitType {
-            frozen: true,
-            ..lit
-        }),
-        Type::Union(union) => Type::Union(UnionType {
-            frozen: true,
+        Variant::Prim(prim) => Variant::Prim(prim),
+        Variant::Lit(lit) => Variant::Lit(lit),
+        Variant::Union(union) => Variant::Union(UnionType {
             types: union.types.into_iter().map(freeze).collect(),
-            ..union
         }),
-        Type::Intersection(intersection) => Type::Intersection(IntersectionType {
-            frozen: true,
+        Variant::Intersection(intersection) => Variant::Intersection(IntersectionType {
             types: intersection.types.into_iter().map(freeze).collect(),
-            ..intersection
         }),
-        Type::Object(obj) => Type::Object(ObjectType {
-            frozen: true,
+        Variant::Object(obj) => Variant::Object(ObjectType {
             props: obj
                 .props
                 .into_iter()
@@ -437,29 +396,24 @@ pub fn freeze(ty: Type) -> Type {
                     ..prop
                 })
                 .collect(),
-            ..obj
+            widen_flag: obj.widen_flag,
         }),
-        Type::Alias(alias) => Type::Alias(AliasType {
-            frozen: true,
+        Variant::Alias(alias) => Variant::Alias(AliasType {
+            name: alias.name,
             type_params: alias
                 .type_params
                 .map(|type_params| type_params.into_iter().map(freeze).collect()),
-            ..alias
         }),
-        Type::Tuple(tuple) => Type::Tuple(TupleType {
-            frozen: true,
+        Variant::Tuple(tuple) => Variant::Tuple(TupleType {
             types: tuple.types.into_iter().map(freeze).collect(),
-            ..tuple
         }),
-        Type::Rest(rest) => Type::Rest(RestType {
-            frozen: true,
+        Variant::Rest(rest) => Variant::Rest(RestType {
             ty: Box::from(freeze(rest.ty.as_ref().clone())),
-            ..rest
         }),
-        Type::Member(member) => Type::Member(MemberType {
-            frozen: true,
+        Variant::Member(member) => Variant::Member(MemberType {
             obj: Box::from(freeze(member.obj.as_ref().clone())),
-            ..member
+            prop: member.prop,
         }),
-    }
+    };
+    Type { variant, id: ty.id, frozen: true }
 }

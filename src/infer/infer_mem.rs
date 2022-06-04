@@ -1,6 +1,6 @@
 use super::constraint_solver::Constraint;
 use crate::ast::*;
-use crate::types::{self, Type, WidenFlag};
+use crate::types::{self, Type, WidenFlag, Variant};
 
 use super::context::Context;
 use super::infer::InferResult;
@@ -27,8 +27,8 @@ fn type_of_property_on_type(
     prop: &MemberProp,
     ctx: &Context,
 ) -> Result<InferResult, String> {
-    match &ty {
-        Type::Var(_) => {
+    match &ty.variant {
+        Variant::Var => {
             // TODO: implementing this correctly should allow for the following
             // expression to be inferred:
             // let mag_square = (point) => point.x * point.x + point.y * point.y
@@ -55,17 +55,17 @@ fn type_of_property_on_type(
                 ],
             ))
         }
-        Type::Lam(_) => todo!(),
-        Type::Prim(_) => todo!(),
-        Type::Lit(_) => todo!(),
-        Type::Union(_) => {
+        Variant::Lam(_) => todo!(),
+        Variant::Prim(_) => todo!(),
+        Variant::Lit(_) => todo!(),
+        Variant::Union(_) => {
             // Check if the property name exists on all elements in the union
             // It should fail if any of the elements in the union are not objects
             // This is also where we'd handle optional chaining
             todo!()
         },
-        Type::Intersection(_) => todo!(),
-        Type::Object(obj) => {
+        Variant::Intersection(_) => todo!(),
+        Variant::Object(obj) => {
             // TODO: allow the use of string literals to access properties on
             // object types.
             let mem = ctx.mem(ty.clone(), &prop.name());
@@ -77,7 +77,7 @@ fn type_of_property_on_type(
                 None => Err(String::from("Record literal doesn't contain property")),
             }
         }
-        Type::Alias(alias) => {
+        Variant::Alias(alias) => {
             match ctx.types.get(&alias.name) {
                 Some(scheme) => {
                     // TODO: handle schemes with qualifiers
@@ -87,16 +87,16 @@ fn type_of_property_on_type(
                 None => Err(String::from("Can't find alias in context")),
             }
         }
-        Type::Tuple(_) => todo!(),
-        Type::Rest(_) => todo!(),
-        Type::Member(_) => todo!(),
+        Variant::Tuple(_) => todo!(),
+        Variant::Rest(_) => todo!(),
+        Variant::Member(_) => todo!(),
     }
 }
 
 fn unwrap_member_type(ty: &Type, ctx: &Context) -> Type {
-    match ty {
-        Type::Member(member) => match member.obj.as_ref() {
-            Type::Object(obj) => {
+    match &ty.variant {
+        Variant::Member(member) => match &member.obj.as_ref().variant {
+            Variant::Object(obj) => {
                 let prop = obj.props.iter().find(|prop| prop.name == member.prop);
                 match prop {
                     Some(prop) => match prop.optional {

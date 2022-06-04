@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::collections::HashMap;
 
 use crate::ast::literal::Lit;
-use crate::types::{self, Scheme, Type, WidenFlag};
+use crate::types::{self, Scheme, Type, Variant, WidenFlag};
 
 use super::substitutable::*;
 
@@ -55,67 +55,70 @@ impl Context {
     }
 
     pub fn fresh_var(&self) -> Type {
-        Type::Var(types::VarType {
+        Type {
             id: self.fresh_id(),
             frozen: false,
-        })
+            variant: Variant::Var,
+        }
     }
     pub fn lam(&self, params: Vec<Type>, ret: Box<Type>) -> Type {
-        Type::Lam(types::LamType {
+        Type {
             id: self.fresh_id(),
             frozen: false,
-            params,
-            ret,
-        })
+            variant: Variant::Lam(types::LamType { params, ret }),
+        }
     }
     pub fn prim(&self, prim: types::Primitive) -> Type {
-        Type::Prim(types::PrimType {
+        Type {
             id: self.fresh_id(),
             frozen: false,
-            prim,
-        })
+            variant: Variant::Prim(types::PrimType { prim }),
+        }
     }
     pub fn lit(&self, lit: Lit) -> Type {
-        Type::Lit(types::LitType {
+        let lit = match lit {
+            Lit::Num(n) => types::Lit::Num(n.value),
+            Lit::Bool(b) => types::Lit::Bool(b.value),
+            Lit::Str(s) => types::Lit::Str(s.value),
+            Lit::Null(_) => types::Lit::Null,
+            Lit::Undefined(_) => types::Lit::Undefined,
+        };
+        Type {
             id: self.fresh_id(),
             frozen: false,
-            lit: match lit {
-                Lit::Num(n) => types::Lit::Num(n.value),
-                Lit::Bool(b) => types::Lit::Bool(b.value),
-                Lit::Str(s) => types::Lit::Str(s.value),
-                Lit::Null(_) => types::Lit::Null,
-                Lit::Undefined(_) => types::Lit::Undefined,
-            },
-        })
+            variant: Variant::Lit(types::LitType { lit }),
+        }
     }
     pub fn lit_type(&self, lit: types::Lit) -> Type {
-        Type::Lit(types::LitType {
+        Type {
             id: self.fresh_id(),
             frozen: false,
-            lit,
-        })
+            variant: Variant::Lit(types::LitType { lit }),
+        }
     }
     pub fn union(&self, types: Vec<Type>) -> Type {
-        Type::Union(types::UnionType {
+        Type {
             id: self.fresh_id(),
             frozen: false,
-            types,
-        })
+            variant: Variant::Union(types::UnionType { types }),
+        }
     }
     pub fn intersection(&self, types: Vec<Type>) -> Type {
-        Type::Intersection(types::IntersectionType {
+        Type {
             id: self.fresh_id(),
             frozen: false,
-            types,
-        })
+            variant: Variant::Intersection(types::IntersectionType { types }),
+        }
     }
     pub fn object(&self, props: &[types::TProp], widen_flag: Option<WidenFlag>) -> Type {
-        Type::Object(types::ObjectType {
+        Type {
             id: self.fresh_id(),
             frozen: false,
-            props: props.to_vec(),
-            widen_flag,
-        })
+            variant: Variant::Object(types::ObjectType {
+                props: props.to_vec(),
+                widen_flag,
+            }),
+        }
     }
     pub fn prop(&self, name: &str, ty: Type, optional: bool) -> types::TProp {
         types::TProp {
@@ -125,33 +128,37 @@ impl Context {
         }
     }
     pub fn alias(&self, name: &str, type_params: Option<Vec<Type>>) -> Type {
-        Type::Alias(types::AliasType {
+        Type {
             id: self.fresh_id(),
             frozen: false,
-            name: name.to_owned(),
-            type_params,
-        })
+            variant: Variant::Alias(types::AliasType {
+                name: name.to_owned(),
+                type_params,
+            }),
+        }
     }
     pub fn tuple(&self, types: Vec<Type>) -> Type {
-        Type::Tuple(types::TupleType {
+        Type {
             id: self.fresh_id(),
             frozen: false,
-            types,
-        })
+            variant: Variant::Tuple(types::TupleType { types }),
+        }
     }
     pub fn rest(&self, ty: Type) -> Type {
-        Type::Rest(types::RestType {
+        Type {
             id: self.fresh_id(),
             frozen: false,
-            ty: Box::from(ty),
-        })
+            variant: Variant::Rest(types::RestType { ty: Box::from(ty) }),
+        }
     }
     pub fn mem(&self, obj: Type, prop: &str) -> Type {
-        Type::Member(types::MemberType {
+        Type {
             id: self.fresh_id(),
             frozen: false,
-            obj: Box::from(obj),
-            prop: prop.to_owned(),
-        })
+            variant: Variant::Member(types::MemberType {
+                obj: Box::from(obj),
+                prop: prop.to_owned(),
+            }),
+        }
     }
 }

@@ -7,7 +7,7 @@ use swc_ecma_codegen::*;
 
 use crate::ast;
 use crate::infer::Context;
-use crate::types::{self, Scheme, Type};
+use crate::types::{self, Scheme, Type, Variant};
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -168,12 +168,12 @@ pub fn build_type(
     expr: Option<&ast::Expr>,
     type_params: Option<TsTypeParamDecl>,
 ) -> TsType {
-    match ty {
-        Type::Var(types::VarType { id, .. }) => {
+    match &ty.variant {
+        Variant::Var => {
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                 .chars()
                 .collect();
-            let id = chars.get(id.to_owned() as usize).unwrap();
+            let id = chars.get(ty.id.to_owned() as usize).unwrap();
 
             TsType::TsTypeRef(TsTypeRef {
                 span: DUMMY_SP,
@@ -185,7 +185,7 @@ pub fn build_type(
                 type_params: None,
             })
         }
-        Type::Prim(types::PrimType { prim, .. }) => {
+        Variant::Prim(types::PrimType { prim, .. }) => {
             let kind = match prim {
                 crate::types::Primitive::Num => TsKeywordTypeKind::TsNumberKeyword,
                 crate::types::Primitive::Bool => TsKeywordTypeKind::TsBooleanKeyword,
@@ -199,7 +199,7 @@ pub fn build_type(
                 kind,
             })
         }
-        Type::Lit(types::LitType { lit, .. }) => {
+        Variant::Lit(types::LitType { lit, .. }) => {
             let lit = match lit {
                 crate::types::Lit::Num(n) => TsLit::Number(Number {
                     span: DUMMY_SP,
@@ -229,7 +229,7 @@ pub fn build_type(
         }
         // This is used to copy the names of args from the expression
         // over to the lambda's type.
-        Type::Lam(types::LamType { params, ret, .. }) => {
+        Variant::Lam(types::LamType { params, ret, .. }) => {
             match expr {
                 // TODO: handle is_async
                 Some(ast::Expr::Lambda(ast::Lambda {
@@ -322,7 +322,7 @@ pub fn build_type(
                 _ => panic!("mismatch"),
             }
         }
-        Type::Union(types::UnionType { types, .. }) => {
+        Variant::Union(types::UnionType { types, .. }) => {
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
                 span: DUMMY_SP,
                 types: types
@@ -331,7 +331,7 @@ pub fn build_type(
                     .collect(),
             }))
         }
-        Type::Intersection(types::IntersectionType { types, .. }) => {
+        Variant::Intersection(types::IntersectionType { types, .. }) => {
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsIntersectionType(
                 TsIntersectionType {
                     span: DUMMY_SP,
@@ -342,7 +342,7 @@ pub fn build_type(
                 },
             ))
         }
-        Type::Object(types::ObjectType { props, .. }) => {
+        Variant::Object(types::ObjectType { props, .. }) => {
             let members: Vec<TsTypeElement> = props
                 .iter()
                 .map(|prop| {
@@ -372,7 +372,7 @@ pub fn build_type(
                 members,
             })
         }
-        Type::Alias(types::AliasType {
+        Variant::Alias(types::AliasType {
             name, type_params, ..
         }) => TsType::TsTypeRef(TsTypeRef {
             span: DUMMY_SP,
@@ -389,7 +389,7 @@ pub fn build_type(
                     .collect(),
             }),
         }),
-        Type::Tuple(types::TupleType { types, .. }) => TsType::TsTupleType(TsTupleType {
+        Variant::Tuple(types::TupleType { types, .. }) => TsType::TsTupleType(TsTupleType {
             span: DUMMY_SP,
             elem_types: types
                 .iter()
@@ -400,7 +400,7 @@ pub fn build_type(
                 })
                 .collect(),
         }),
-        Type::Rest(_) => todo!(),
-        Type::Member(_) => todo!(),
+        Variant::Rest(_) => todo!(),
+        Variant::Member(_) => todo!(),
     }
 }

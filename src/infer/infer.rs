@@ -3,13 +3,13 @@ use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, freeze, Primitive, Scheme, Type};
+use crate::types::{self, freeze, Primitive, Scheme, Type, Variant};
 
 use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::{Context, Env};
 use super::infer_mem::infer_mem;
+use super::infer_pattern::infer_pattern as infer_pattern2;
 use super::substitutable::Substitutable;
-use super::infer_pattern::{infer_pattern as infer_pattern2};
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
@@ -109,10 +109,11 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
         .map(|(index, key)| {
             (
                 key.to_owned(),
-                Type::Var(types::VarType {
+                Type {
                     id: index as i32,
                     frozen: false,
-                }),
+                    variant: Variant::Var,
+                },
             )
         })
         .collect();
@@ -121,28 +122,24 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
     fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
         // let id = ty.id;
         // let frozen = ty.frozen;
-        match ty {
-            Type::Var(types::VarType { id, .. }) => mapping.get(id).unwrap().to_owned(),
-            Type::Lam(types::LamType {
-                id,
-                frozen,
-                params,
-                ret,
-            }) => {
+        match &ty.variant {
+            Variant::Var => mapping.get(&ty.id).unwrap().to_owned(),
+            Variant::Lam(types::LamType { params, ret }) => {
                 let params: Vec<_> = params
                     .iter()
                     .map(|param| norm_type(param, mapping, ctx))
                     .collect();
-                Type::Lam(types::LamType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
-                    params,
-                    ret: Box::from(norm_type(ret, mapping, ctx)),
-                })
+                Type {
+                    variant: Variant::Lam(types::LamType {
+                        params,
+                        ret: Box::from(norm_type(ret, mapping, ctx)),
+                    }),
+                    ..ty.to_owned()
+                }
             }
-            Type::Prim(_) => ty.to_owned(),
-            Type::Lit(_) => ty.to_owned(),
-            Type::Union(union) => {
+            Variant::Prim(_) => ty.to_owned(),
+            Variant::Lit(_) => ty.to_owned(),
+            Variant::Union(union) => {
                 // TODO: update union_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
                 let types = union
@@ -150,12 +147,12 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .iter()
                     .map(|ty| norm_type(ty, mapping, ctx))
                     .collect();
-                Type::Union(types::UnionType {
-                    types,
-                    ..union.to_owned()
-                })
+                Type {
+                    variant: Variant::Union(types::UnionType { types }),
+                    ..ty.to_owned()
+                }
             }
-            Type::Intersection(intersection) => {
+            Variant::Intersection(intersection) => {
                 // TODO: update intersection_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
                 let types = intersection
@@ -166,12 +163,11 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 simplify_intersection(
                     types::IntersectionType {
                         types,
-                        ..intersection.to_owned()
                     },
                     ctx,
                 )
             }
-            Type::Object(object) => {
+            Variant::Object(object) => {
                 let props = object
                     .props
                     .iter()
@@ -181,55 +177,49 @@ fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                         ty: norm_type(&prop.ty, mapping, ctx),
                     })
                     .collect();
-                Type::Object(types::ObjectType {
-                    props,
-                    ..object.to_owned()
-                })
+                Type {
+                    variant: Variant::Object(types::ObjectType {
+                        props,
+                        widen_flag: object.widen_flag.to_owned(),
+                    }),
+                    ..ty.to_owned()
+                }
             }
-            Type::Alias(types::AliasType {
-                id,
-                frozen,
-                name,
-                type_params,
-            }) => {
+            Variant::Alias(types::AliasType { name, type_params }) => {
                 let type_params = type_params.clone().map(|params| {
                     params
                         .iter()
                         .map(|ty| norm_type(ty, mapping, ctx))
                         .collect()
                 });
-                Type::Alias(types::AliasType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
-                    name: name.to_owned(),
-                    type_params,
-                })
+                Type {
+                    variant: Variant::Alias(types::AliasType {
+                        name: name.to_owned(),
+                        type_params,
+                    }),
+                    ..ty.to_owned()
+                }
             }
-            Type::Tuple(types::TupleType { id, frozen, types }) => {
+            Variant::Tuple(types::TupleType { types }) => {
                 let types = types.iter().map(|ty| norm_type(ty, mapping, ctx)).collect();
-                Type::Tuple(types::TupleType {
-                    id: id.to_owned(),
-                    frozen: frozen.to_owned(),
-                    types,
-                })
+                Type {
+                    variant: Variant::Tuple(types::TupleType { types }),
+                    ..ty.to_owned()
+                }
             }
-            Type::Rest(rest) => {
-                Type::Rest(types::RestType {
-                    ty: Box::from(norm_type(rest.ty.as_ref(), mapping, ctx)),
-                    ..rest.to_owned()
-                })
-            }
-            Type::Member(types::MemberType {
-                id,
-                frozen,
-                obj,
-                prop,
-            }) => Type::Member(types::MemberType {
-                id: id.to_owned(),
-                frozen: frozen.to_owned(),
-                obj: Box::from(norm_type(obj, mapping, ctx)),
-                prop: prop.to_owned(),
-            }),
+            Variant::Rest(rest) => Type {
+                variant: Variant::Rest(types::RestType {
+                    ty: Box::from(norm_type(&rest.ty, mapping, ctx)),
+                }),
+                ..ty.to_owned()
+            },
+            Variant::Member(types::MemberType { obj, prop }) => Type {
+                variant: Variant::Member(types::MemberType {
+                    obj: Box::from(norm_type(obj, mapping, ctx)),
+                    prop: prop.to_owned(),
+                }),
+                ..ty.to_owned()
+            },
         }
     }
 
@@ -253,7 +243,7 @@ fn generalize(env: &Env, ty: &Type) -> Scheme {
 pub type InferResult = (Type, Vec<Constraint>);
 
 fn is_promise(ty: &Type) -> bool {
-    matches!(ty, Type::Alias(types::AliasType { name, .. }) if name == "Promise")
+    matches!(&ty.variant, Variant::Alias(types::AliasType { name, .. }) if name == "Promise")
 }
 
 fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
@@ -396,7 +386,7 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                     ctx.state.count.set(new_ctx.state.count.get());
                     cs.extend(cs2.apply(&subs));
                     t2
-                },
+                }
                 // handles: let _ = ...
                 None => {
                     let (t2, cs2) = infer(body, ctx)?;
@@ -642,8 +632,8 @@ fn simplify_intersection(intersection: types::IntersectionType, ctx: &Context) -
     let obj_types: Vec<_> = intersection
         .types
         .iter()
-        .filter_map(|ty| match ty {
-            types::Type::Object(object) => Some(object),
+        .filter_map(|ty| match &ty.variant {
+            Variant::Object(object) => Some(object),
             _ => None,
         })
         .collect();
@@ -682,14 +672,14 @@ fn simplify_intersection(intersection: types::IntersectionType, ctx: &Context) -
     let mut not_obj_types: Vec<_> = intersection
         .types
         .iter()
-        .filter(|ty| !matches!(ty, types::Type::Object(_)))
+        .filter(|ty| !matches!(ty.variant, Variant::Object(_)))
         .cloned()
         .collect();
 
     let mut types = vec![];
     types.append(&mut not_obj_types);
     types.push(obj_type);
-    types.sort_by_key(|ty| ty.id()); // ensure a stable order
+    types.sort_by_key(|ty| ty.id); // ensure a stable order
 
     if types.len() == 1 {
         types[0].clone()
