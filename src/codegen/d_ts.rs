@@ -185,7 +185,7 @@ pub fn build_type(
                 type_params: None,
             })
         }
-        Variant::Prim(types::PrimType { prim, .. }) => {
+        Variant::Prim(prim) => {
             let kind = match prim {
                 crate::types::Primitive::Num => TsKeywordTypeKind::TsNumberKeyword,
                 crate::types::Primitive::Bool => TsKeywordTypeKind::TsBooleanKeyword,
@@ -199,7 +199,7 @@ pub fn build_type(
                 kind,
             })
         }
-        Variant::Lit(types::LitType { lit, .. }) => {
+        Variant::Lit(lit) => {
             let lit = match lit {
                 crate::types::Lit::Num(n) => TsLit::Number(Number {
                     span: DUMMY_SP,
@@ -322,7 +322,7 @@ pub fn build_type(
                 _ => panic!("mismatch"),
             }
         }
-        Variant::Union(types::UnionType { types, .. }) => {
+        Variant::Union(types) => {
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
                 span: DUMMY_SP,
                 types: types
@@ -331,7 +331,7 @@ pub fn build_type(
                     .collect(),
             }))
         }
-        Variant::Intersection(types::IntersectionType { types, .. }) => {
+        Variant::Intersection(types) => {
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsIntersectionType(
                 TsIntersectionType {
                     span: DUMMY_SP,
@@ -342,7 +342,7 @@ pub fn build_type(
                 },
             ))
         }
-        Variant::Object(types::ObjectType { props, .. }) => {
+        Variant::Object(props) => {
             let members: Vec<TsTypeElement> = props
                 .iter()
                 .map(|prop| {
@@ -389,7 +389,7 @@ pub fn build_type(
                     .collect(),
             }),
         }),
-        Variant::Tuple(types::TupleType { types, .. }) => TsType::TsTupleType(TsTupleType {
+        Variant::Tuple(types) => TsType::TsTupleType(TsTupleType {
             span: DUMMY_SP,
             elem_types: types
                 .iter()

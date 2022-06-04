@@ -59,6 +59,7 @@ impl Context {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Var,
+            widen_flag: None,
         }
     }
     pub fn lam(&self, params: Vec<Type>, ret: Box<Type>) -> Type {
@@ -66,13 +67,15 @@ impl Context {
             id: self.fresh_id(),
             frozen: false,
             variant: Variant::Lam(types::LamType { params, ret }),
+            widen_flag: None,
         }
     }
     pub fn prim(&self, prim: types::Primitive) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Prim(types::PrimType { prim }),
+            variant: Variant::Prim(prim),
+            widen_flag: None,
         }
     }
     pub fn lit(&self, lit: Lit) -> Type {
@@ -86,38 +89,40 @@ impl Context {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Lit(types::LitType { lit }),
+            variant: Variant::Lit(lit),
+            widen_flag: None,
         }
     }
     pub fn lit_type(&self, lit: types::Lit) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Lit(types::LitType { lit }),
+            variant: Variant::Lit(lit),
+            widen_flag: None,
         }
     }
     pub fn union(&self, types: Vec<Type>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Union(types::UnionType { types }),
+            variant: Variant::Union(types),
+            widen_flag: None,
         }
     }
     pub fn intersection(&self, types: Vec<Type>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Intersection(types::IntersectionType { types }),
+            variant: Variant::Intersection(types),
+            widen_flag: None,
         }
     }
     pub fn object(&self, props: &[types::TProp], widen_flag: Option<WidenFlag>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Object(types::ObjectType {
-                props: props.to_vec(),
-                widen_flag,
-            }),
+            variant: Variant::Object(props.to_vec()),
+            widen_flag,
         }
     }
     pub fn prop(&self, name: &str, ty: Type, optional: bool) -> types::TProp {
@@ -135,20 +140,23 @@ impl Context {
                 name: name.to_owned(),
                 type_params,
             }),
+            widen_flag: None,
         }
     }
     pub fn tuple(&self, types: Vec<Type>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Tuple(types::TupleType { types }),
+            variant: Variant::Tuple(types),
+            widen_flag: None,
         }
     }
-    pub fn rest(&self, ty: Type) -> Type {
+    pub fn rest(&self, arg: Type) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Rest(types::RestType { ty: Box::from(ty) }),
+            variant: Variant::Rest(Box::from(arg)),
+            widen_flag: None,
         }
     }
     pub fn mem(&self, obj: Type, prop: &str) -> Type {
@@ -159,6 +167,7 @@ impl Context {
                 obj: Box::from(obj),
                 prop: prop.to_owned(),
             }),
+            widen_flag: None,
         }
     }
 }

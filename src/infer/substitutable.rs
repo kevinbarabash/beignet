@@ -42,25 +42,17 @@ impl Substitutable for Type {
                     }),
                     Variant::Prim(_) => self.variant.to_owned(),
                     Variant::Lit(_) => self.variant.to_owned(),
-                    Variant::Union(UnionType { types }) => Variant::Union(UnionType {
-                        types: types.apply(sub),
-                    }),
-                    Variant::Intersection(IntersectionType { types }) => {
-                        Variant::Intersection(IntersectionType {
-                            types: types.apply(sub),
-                        })
-                    }
-                    Variant::Object(object) => Variant::Object(ObjectType {
-                        props: object
-                            .props
+                    Variant::Union(types) => Variant::Union(types.apply(sub)),
+                    Variant::Intersection(types) => Variant::Intersection(types.apply(sub)),
+                    Variant::Object(props) => Variant::Object(
+                        props
                             .iter()
                             .map(|prop| TProp {
                                 ty: prop.ty.apply(sub),
                                 ..prop.to_owned()
                             })
                             .collect(),
-                        ..object.to_owned()
-                    }),
+                    ),
                     Variant::Alias(alias) => Variant::Alias(AliasType {
                         type_params: alias
                             .type_params
@@ -68,12 +60,10 @@ impl Substitutable for Type {
                             .map(|params| params.iter().map(|ty| ty.apply(sub)).collect()),
                         ..alias.to_owned()
                     }),
-                    Variant::Tuple(tuple) => Variant::Tuple(TupleType {
-                        types: tuple.types.iter().map(|ty| ty.apply(sub)).collect(),
-                    }),
-                    Variant::Rest(rest) => Variant::Rest(RestType {
-                        ty: Box::from(rest.ty.apply(sub)),
-                    }),
+                    Variant::Tuple(types) => {
+                        Variant::Tuple(types.iter().map(|ty| ty.apply(sub)).collect())
+                    }
+                    Variant::Rest(arg) => Variant::Rest(Box::from(arg.apply(sub))),
                     Variant::Member(member) => Variant::Member(MemberType {
                         obj: Box::from(member.obj.apply(sub)),
                         ..member.to_owned()
@@ -97,9 +87,9 @@ impl Substitutable for Type {
             }
             Variant::Prim(_) => HashSet::new(),
             Variant::Lit(_) => HashSet::new(),
-            Variant::Union(UnionType { types, .. }) => types.ftv(),
-            Variant::Intersection(IntersectionType { types, .. }) => types.ftv(),
-            Variant::Object(ObjectType { props, .. }) => {
+            Variant::Union(types) => types.ftv(),
+            Variant::Intersection(types) => types.ftv(),
+            Variant::Object(props) => {
                 // TODO: implement Substitutable fro TProp
                 props.iter().flat_map(|prop| prop.ty.ftv()).collect()
             }
@@ -107,8 +97,8 @@ impl Substitutable for Type {
                 // TODO: implement Substitutable fro Option
                 type_params.iter().flat_map(|ty| ty.ftv()).collect()
             }
-            Variant::Tuple(TupleType { types, .. }) => types.ftv(),
-            Variant::Rest(RestType { ty, .. }) => ty.ftv(),
+            Variant::Tuple(types) => types.ftv(),
+            Variant::Rest(arg) => arg.ftv(),
             Variant::Member(MemberType { obj, .. }) => obj.ftv(),
         }
     }
@@ -153,30 +143,34 @@ where
 
 fn norm_type(ty: Type) -> Type {
     match &ty.variant {
-        Variant::Union(union) => {
-            let types: HashSet<_> = union.to_owned().types.into_iter().collect();
-            let mut types: Vec<_> = types.into_iter().collect();
+        Variant::Union(types) => {
+            // Removes duplicates
+            let types: HashSet<Type> = types.clone().into_iter().collect();
+            // Converts set back to an array
+            let mut types: Vec<Type> = types.into_iter().collect();
             types.sort_by_key(|k| k.id);
 
             if types.len() == 1 {
                 types.get(0).unwrap().to_owned()
             } else {
                 Type {
-                    variant: Variant::Union(UnionType { types }),
+                    variant: Variant::Union(types),
                     ..ty.to_owned()
                 }
             }
         }
-        Variant::Intersection(intersection) => {
-            let types: HashSet<_> = intersection.to_owned().types.into_iter().collect();
-            let mut types: Vec<_> = types.into_iter().collect();
+        Variant::Intersection(types) => {
+            // Removes duplicates
+            let types: HashSet<Type> = types.clone().into_iter().collect();
+            // Converts set back to an array
+            let mut types: Vec<Type> = types.into_iter().collect();
             types.sort_by_key(|k| k.id);
 
             if types.len() == 1 {
                 types.get(0).unwrap().to_owned()
             } else {
                 Type {
-                    variant: Variant::Intersection(IntersectionType { types }),
+                    variant: Variant::Intersection(types),
                     ..ty.to_owned()
                 }
             }
