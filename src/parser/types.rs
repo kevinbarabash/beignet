@@ -57,15 +57,15 @@ pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
         });
 
     let parser = recursive(|type_ann| {
-        let alias_params = type_ann
+        let type_params = type_ann
             .clone()
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("<"), just_with_padding(">"));
 
-        let alias =
+        let type_ref =
             text::ident()
-                .then(alias_params.or_not())
+                .then(type_params.or_not())
                 .map_with_span(|(name, type_params), span| {
                     TypeAnn::TypeRef(TypeRef {
                         span,
@@ -122,7 +122,7 @@ pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
             prim,
             obj,
             tuple,
-            alias,
+            type_ref,
             type_ann
                 .clone()
                 .delimited_by(just_with_padding("("), just_with_padding(")")),

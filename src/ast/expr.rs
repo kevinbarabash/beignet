@@ -3,7 +3,7 @@ use crate::ast::jsx::JSXElement;
 use crate::ast::literal::Lit;
 use crate::ast::pattern::Pattern;
 use crate::ast::span::Span;
-use crate::ast::types::TypeAnn;
+use crate::ast::types::{TypeAnn, TypeParam};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
@@ -22,7 +22,8 @@ pub enum Statement {
         span: Span,
         declare: bool,
         id: Ident,
-        type_ann: TypeAnn,        
+        type_ann: TypeAnn,    
+        type_params: Option<Vec<TypeParam>>,    
     },
     Expr {
         span: Span,

@@ -70,18 +70,43 @@ pub fn decl_parser() -> impl Parser<char, Statement, Error = Simple<char>> {
             }
         });
 
+    choice((type_decl(), var_decl_with_init, var_decl))
+}
+
+fn type_decl() -> impl Parser<char, Statement, Error = Simple<char>> {
     let type_ann = type_parser();
+    let ident = text::ident().map_with_span(|name, span: Span| Ident { name, span });
+
+    let type_param = ident
+        .then(just_with_padding("extends").ignore_then(type_ann.clone()).or_not())
+        .then(just_with_padding("=").ignore_then(type_ann.clone()).or_not())
+        .map_with_span(|((name, constraint), default), span| TypeParam {
+            span,
+            name,
+            constraint: constraint.map(Box::from),
+            default: default.map(Box::from),
+        });
+
+    let type_params = type_param
+        .separated_by(just_with_padding(","))
+        .allow_trailing()
+        .delimited_by(just_with_padding("<"), just_with_padding(">"));
+
     let type_decl = just("declare")
         .or_not()
         .then_ignore(just_with_padding("type"))
-        .then(text::ident().map_with_span(|name, span| Ident { name, span }))
+        .then(ident)
+        .then(type_params.or_not())
         .then(just_with_padding("=").ignore_then(type_ann))
-        .map_with_span(|((declare, id), type_ann), span| Statement::TypeDecl {
-            span,
-            declare: declare.is_some(),
-            id,
-            type_ann,
-        });
+        .map_with_span(
+            |(((declare, id), type_params), type_ann), span| Statement::TypeDecl {
+                span,
+                declare: declare.is_some(),
+                id,
+                type_ann,
+                type_params,
+            },
+        );
 
-    choice((type_decl, var_decl_with_init, var_decl))
+    type_decl
 }

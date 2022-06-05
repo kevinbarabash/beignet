@@ -156,7 +156,10 @@ mod tests {
     fn type_decls() {
         insta::assert_debug_snapshot!(parse("type Num = number"));
         insta::assert_debug_snapshot!(parse("type Point = {x: number, y: number}"));
-        // TODO: add support for type params
+        insta::assert_debug_snapshot!(parse("type Foo<T> = {bar: T}"));
+        insta::assert_debug_snapshot!(parse("type Foo<T extends string> = {bar: T}"));
+        insta::assert_debug_snapshot!(parse(r#"type Foo<T = "foo"> = {bar: T}"#));
+        insta::assert_debug_snapshot!(parse(r#"type Foo<T extends string = "foo"> = {bar: T}"#));
     }
 
     #[test]

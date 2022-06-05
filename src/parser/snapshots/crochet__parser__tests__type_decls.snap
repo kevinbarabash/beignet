@@ -17,6 +17,7 @@ Program {
                     prim: Num,
                 },
             ),
+            type_params: None,
         },
     ],
 }
