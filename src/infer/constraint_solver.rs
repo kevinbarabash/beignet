@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::convert::identity;
 use std::panic;
 
 use crate::types::*;
@@ -111,7 +112,7 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 }
 
 fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
-    if is_subtype(t1, t2, ctx) {
+    if is_subtype(t1, t2, ctx)? {
         match t2.flag {
             Some(Flag::SubtypeWins) => {
                 return Ok(Subst::from([(t2.id, t1.to_owned())]));
@@ -223,38 +224,57 @@ fn unify_many(cs: &[Constraint], ctx: &Context) -> Result<Subst, String> {
 }
 
 // Returns true if t2 admits all values from t1.
-// TODO: figure out how to make this return a Result<bool, String>
-pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> bool {
+pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<bool, String> {
     match (&t1.variant, &t2.variant) {
-        (Variant::Lit(lit), Variant::Prim(prim)) => {
-            matches!(
-                (lit, prim),
-                (Lit::Num(_), Primitive::Num)
-                    | (Lit::Str(_), Primitive::Str)
-                    | (Lit::Bool(_), Primitive::Bool)
-            )
-        }
+        (Variant::Lit(lit), Variant::Prim(prim)) => Ok(matches!(
+            (lit, prim),
+            (Lit::Num(_), Primitive::Num)
+                | (Lit::Str(_), Primitive::Str)
+                | (Lit::Bool(_), Primitive::Bool)
+        )),
         (Variant::Object(props1), Variant::Object(props2)) => {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
-            props2.iter().all(|prop2| {
-                prop2.optional
-                    || props1.iter().any(|prop1| {
-                        prop1.name == prop2.name && is_subtype(&prop1.ty, &prop2.ty, ctx)
-                    })
-            })
+            let result: Result<Vec<_>, String> = props2
+                .iter()
+                .map(|prop2| {
+                    if prop2.optional {
+                        Ok(true)
+                    } else {
+                        let inner_result: Result<Vec<_>, String> = props1
+                            .iter()
+                            .map(|prop1| {
+                                Ok(prop1.name == prop2.name
+                                    && is_subtype(&prop1.ty, &prop2.ty, ctx)?)
+                            })
+                            .collect();
+                        Ok(inner_result?.into_iter().any(identity))
+                    }
+                })
+                .collect();
+            Ok(result?.into_iter().all(identity))
         }
         (Variant::Tuple(types1), Variant::Tuple(types2)) => {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
             if types1.len() < types2.len() {
                 panic!("t1 contain at least the same number of elements as t2");
             }
-            types1
+            let result: Result<Vec<_>, _> = types1
                 .iter()
                 .zip(types2.iter())
-                .all(|(t1, t2)| is_subtype(t1, t2, ctx))
+                .map(|(t1, t2)| is_subtype(t1, t2, ctx))
+                .collect();
+            Ok(result?.into_iter().all(identity))
         }
-        (Variant::Union(types), _) => types.iter().all(|t1| is_subtype(t1, t2, ctx)),
-        (_, Variant::Union(types)) => types.iter().any(|t2| is_subtype(t1, t2, ctx)),
+        (Variant::Union(types), _) => {
+            let result: Result<Vec<_>, _> =
+                types.iter().map(|t1| is_subtype(t1, t2, ctx)).collect();
+            Ok(result?.into_iter().all(identity))
+        }
+        (_, Variant::Union(types)) => {
+            let result: Result<Vec<_>, _> =
+                types.iter().map(|t2| is_subtype(t1, t2, ctx)).collect();
+            Ok(result?.into_iter().any(identity))
+        }
         (_, Variant::Alias(alias)) => {
             match ctx.types.get(&alias.name) {
                 Some(scheme) => {
@@ -265,7 +285,7 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> bool {
                 None => panic!("Can't find alias in context"),
             }
         }
-        (t1, t2) => t1 == t2,
+        (t1, t2) => Ok(t1 == t2),
     }
 }
 
@@ -471,7 +491,10 @@ mod tests {
         let t2 = ctx.lit_type(Lit::Num(String::from("10")));
         let union = ctx.union(vec![t1, t2]);
 
-        assert!(is_subtype(&union, &ctx.prim(Primitive::Num), &ctx));
+        assert_eq!(
+            is_subtype(&union, &ctx.prim(Primitive::Num), &ctx),
+            Ok(true)
+        );
     }
 
     #[test]
@@ -485,7 +508,7 @@ mod tests {
             ctx.prim(Primitive::Bool),
         ]);
 
-        assert!(is_subtype(&union1, &union2, &ctx));
+        assert_eq!(is_subtype(&union1, &union2, &ctx), Ok(true));
     }
 
     #[test]
@@ -499,6 +522,6 @@ mod tests {
         ]);
         let union2 = ctx.union(vec![ctx.prim(Primitive::Num), ctx.prim(Primitive::Str)]);
 
-        assert!(!is_subtype(&union1, &union2, &ctx));
+        assert_eq!(is_subtype(&union1, &union2, &ctx), Ok(false));
     }
 }

@@ -48,7 +48,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                                 let scheme = match type_ann {
                                     Some(type_ann) => {
                                         let type_ann_ty = infer_type_ann(type_ann, &ctx);
-                                        match is_subtype(&inferred_scheme.ty, &type_ann_ty, &ctx) {
+                                        match is_subtype(&inferred_scheme.ty, &type_ann_ty, &ctx)? {
                                             true => Ok(type_to_scheme(&type_ann_ty)),
                                             false => Err(String::from(
                                                 "value is not a subtype of decl's declared type",
