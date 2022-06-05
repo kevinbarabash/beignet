@@ -860,3 +860,30 @@ fn codegen_block_with_multiple_non_let_lines() {
     insta::assert_snapshot!(result, @"export declare const result: 5;
 ");
 }
+
+#[test]
+fn infer_type_alias_with_param() {
+    let src = r#"
+    type Foo<T> = {bar: T}
+    declare let foo: Foo<string>
+    let bar = foo.bar
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("bar").unwrap());
+    assert_eq!(result, "string");
+}
+
+#[test]
+#[ignore]
+fn infer_fn_param_with_type_alias_with_param() {
+    let src = r#"
+    type Foo<T> = {bar: T}
+    let get_bar = <T>(foo: Foo<T>) => foo.bar
+    let bar = get_bar({bar: "hello"})
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("bar").unwrap());
+    assert_eq!(result, "string");
+}

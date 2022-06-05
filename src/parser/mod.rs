@@ -133,6 +133,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let x = 5"));
         insta::assert_debug_snapshot!(parse("   let x = 5")); // with leading whitespace
         insta::assert_debug_snapshot!(parse("declare let x: number"));
+        insta::assert_debug_snapshot!(parse("declare let foo: Foo<string>"));
     }
 
     #[test]
@@ -184,5 +185,11 @@ mod tests {
         // TODO: type annotations
         // TODO: function params
         // TODO: disallowed patterns, e.g. top-level rest, non-top-level type annotations
+    }
+
+    #[test]
+    #[ignore]
+    fn types() {
+        insta::assert_debug_snapshot!(parse("let get_bar = <T>(foo: Foo<T>) => foo.bar"));
     }
 }
