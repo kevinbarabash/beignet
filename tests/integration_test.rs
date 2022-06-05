@@ -875,11 +875,10 @@ fn infer_type_alias_with_param() {
 }
 
 #[test]
-#[ignore]
 fn infer_fn_param_with_type_alias_with_param() {
     let src = r#"
     type Foo<T> = {bar: T}
-    let get_bar = <T>(foo: Foo<T>) => foo.bar
+    let get_bar = (foo: Foo<string>) => foo.bar
     let bar = get_bar({bar: "hello"})
     "#;
     let (_, ctx) = infer_prog(src);

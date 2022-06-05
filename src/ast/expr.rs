@@ -65,6 +65,7 @@ pub struct Lambda {
     pub body: Box<Expr>,
     pub is_async: bool,
     pub return_type: Option<TypeAnn>,
+    pub type_params: Option<Vec<TypeParam>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

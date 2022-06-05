@@ -188,7 +188,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn types() {
         insta::assert_debug_snapshot!(parse("let get_bar = <T>(foo: Foo<T>) => foo.bar"));
     }

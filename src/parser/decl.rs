@@ -37,6 +37,7 @@ pub fn decl_parser() -> impl Parser<char, Statement, Error = Simple<char>> {
                                 body: Box::from(init),
                                 is_async: false,
                                 return_type: None,
+                                type_params: None, // TODO: support type params on VarDecls
                             })),
                         });
 
@@ -77,6 +78,7 @@ fn type_decl() -> impl Parser<char, Statement, Error = Simple<char>> {
     let type_ann = type_parser();
     let ident = text::ident().map_with_span(|name, span: Span| Ident { name, span });
 
+    // TODO: dedupe with expr.rs
     let type_param = ident
         .then(just_with_padding("extends").ignore_then(type_ann.clone()).or_not())
         .then(just_with_padding("=").ignore_then(type_ann.clone()).or_not())
@@ -87,6 +89,7 @@ fn type_decl() -> impl Parser<char, Statement, Error = Simple<char>> {
             default: default.map(Box::from),
         });
 
+    // TODO: dedupe with expr.rs
     let type_params = type_param
         .separated_by(just_with_padding(","))
         .allow_trailing()

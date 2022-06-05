@@ -1,0 +1,91 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"let get_bar = <T>(foo: Foo<T>) => foo.bar\")"
+---
+Program {
+    body: [
+        VarDecl {
+            span: 0..41,
+            pattern: Ident(
+                BindingIdent {
+                    span: 4..11,
+                    id: Ident {
+                        span: 4..11,
+                        name: "get_bar",
+                    },
+                    type_ann: None,
+                },
+            ),
+            init: Some(
+                Lambda(
+                    Lambda {
+                        span: 14..41,
+                        params: [
+                            Ident(
+                                BindingIdent {
+                                    span: 18..29,
+                                    id: Ident {
+                                        span: 18..21,
+                                        name: "foo",
+                                    },
+                                    type_ann: Some(
+                                        TypeRef(
+                                            TypeRef {
+                                                span: 23..29,
+                                                name: "Foo",
+                                                type_params: Some(
+                                                    [
+                                                        TypeRef(
+                                                            TypeRef {
+                                                                span: 27..28,
+                                                                name: "T",
+                                                                type_params: None,
+                                                            },
+                                                        ),
+                                                    ],
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                },
+                            ),
+                        ],
+                        body: Member(
+                            Member {
+                                span: 34..41,
+                                obj: Ident(
+                                    Ident {
+                                        span: 34..37,
+                                        name: "foo",
+                                    },
+                                ),
+                                prop: Ident(
+                                    Ident {
+                                        span: 37..41,
+                                        name: "bar",
+                                    },
+                                ),
+                            },
+                        ),
+                        is_async: false,
+                        return_type: None,
+                        type_params: Some(
+                            [
+                                TypeParam {
+                                    span: 15..16,
+                                    name: Ident {
+                                        span: 15..16,
+                                        name: "T",
+                                    },
+                                    constraint: None,
+                                    default: None,
+                                },
+                            ],
+                        ),
+                    },
+                ),
+            ),
+            declare: false,
+        },
+    ],
+}
