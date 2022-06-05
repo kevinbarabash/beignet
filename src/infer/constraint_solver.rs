@@ -98,6 +98,14 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
             Err(String::from("unification failed"))
         }
+        (Variant::Alias(alias), _) => {
+            let aliased_type = ctx.lookup_type(&alias.name);
+            unifies(&aliased_type, t2, ctx)
+        }
+        (_, Variant::Alias(alias)) => {
+            let aliased_type = ctx.lookup_type(&alias.name);
+            unifies(t1, &aliased_type, ctx)
+        }
         _ => unify_mismatched_types(t1, t2, ctx),
     }
 }
@@ -107,37 +115,56 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
         match t2.flag {
             Some(Flag::SubtypeWins) => {
                 return Ok(Subst::from([(t2.id, t1.to_owned())]));
-            },
+            }
             Some(Flag::SupertypeWins) => {
                 return Ok(Subst::from([(t1.id, t2.to_owned())]));
-            }, 
-            _ => ()
+            }
+            Some(Flag::MemberAccess) => (),
+            None => (),
+        }
+    }
+
+    if let (Variant::Object(props1), Variant::Object(props2)) = (&t1.variant, &t2.variant) {
+        if t2.flag == Some(Flag::MemberAccess) {
+            if t1.frozen {
+                // TODO: propagate errors instead of unwrap()-ing
+                let prop2 = props2.get(0).unwrap();
+                let prop1 = props1.iter().find(|p| p.name == prop2.name).unwrap();
+                return unifies(&prop1.ty, &prop2.ty, ctx);
+            } else {
+                let new_type = intersect_types(t1, t2, ctx);
+                // We should never widen object types with the MemberAccess flag
+                // because we may need to grab its only property in other cirucmstances.
+                let result = Subst::from([(t1.id, new_type)]);
+                return Ok(result);
+            }
+        }
+
+        if t1.flag == Some(Flag::MemberAccess) {
+            if t2.frozen {
+                // TODO: propagate errors instead of unwrap()-ing
+                let prop1 = props1.get(0).unwrap();
+                let prop2 = props2.iter().find(|p| p.name == prop1.name).unwrap();
+                return unifies(&prop1.ty, &prop2.ty, ctx);
+            } else {
+                let new_type = intersect_types(t1, t2, ctx);
+                // We should never widen object types with the MemberAccess flag
+                // because we may need to grab its only property in other cirucmstances.
+                let result = Subst::from([(t2.id, new_type)]);
+                return Ok(result);
+            }
         }
     }
 
     if !t1.frozen && !t2.frozen {
-        return widen_types(t1, t2, ctx);
-    }
+        let new_type = union_types(t1, t2, ctx);
 
-    // If we run into an alias, unwrap it an try again
-    // TODO: move this into `unifies`
-    if let Variant::Alias(alias) = &t1.variant {
-        if let Some(scheme) = ctx.types.get(&alias.name) {
-            // TODO: handle schemes with qualifiers
-            let aliased_def = scheme.ty.to_owned();
-            return unifies(&aliased_def, t2, ctx)
-        }
-    }
+        let mut result = Subst::new();
 
-    // TODO: move `widen_types` into this method so that all of our logic for dealing with
-    // MemberAccess is together.
-    if let (Variant::Object(props1), Variant::Object(props2)) = (&t1.variant, &t2.variant) {
-        if t2.flag == Some(Flag::MemberAccess) {
-            // TODO: propagate errors instead of unwrap()-ing
-            let prop2 = props2.get(0).unwrap();
-            let prop1 = props1.iter().find(|p| p.name == prop2.name).unwrap();
-            return unifies(&prop1.ty, &prop2.ty, ctx);
-        }
+        result.insert(t1.id, new_type.clone());
+        result.insert(t2.id, new_type);
+
+        return Ok(result);
     }
 
     println!("unifcation failed: {:?} {:?}", t1, t2);
@@ -352,54 +379,6 @@ fn intersect_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
             ctx.object(&props)
         }
         (_, _) => ctx.intersection(vec![t1.to_owned(), t2.to_owned()]),
-    }
-}
-
-fn widen_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
-    match (&t1.variant, &t2.variant) {
-        // TODO: Figure out if we need both to have the same flag or if it's okay
-        // if only one has the flag?
-        (Variant::Object(_), Variant::Object(_))
-            // Accessing a property on an object indicates that that property
-            // exists on the object, but there may be other properties on the
-            // object as well.  For object types with the flag, we widen the
-            // type by replacing the types with their intersection which merges
-            // the properties and any shared properties are also intersected
-            // recursively.
-            if t1.flag == Some(Flag::MemberAccess) =>
-        {
-            let new_type = intersect_types(t1, t2, ctx);
-
-            // We should never widen object types with the MemberAccess flag
-            // because we may need to grab its only property in other cirucmstances.
-            let result = Subst::from([(t2.id, new_type)]);
-            Ok(result)
-        },
-        (Variant::Object(_), Variant::Object(_))
-            // Accessing a property on an object indicates that that property
-            // exists on the object, but there may be other properties on the
-            // object as well.  For object types with the flag, we widen the
-            // type by replacing the types with their intersection which merges
-            // the properties and any shared properties are also intersected
-            // recursively.
-            if t2.flag == Some(Flag::MemberAccess) =>
-        {
-            let new_type = intersect_types(t1, t2, ctx);
-            // We should never widen object types with the MemberAccess flag
-            // because we may need to grab its only property in other cirucmstances.
-            let result = Subst::from([(t1.id, new_type)]);
-            Ok(result)
-        },
-        (_, _) => {
-            let new_type = union_types(t1, t2, ctx);
-
-            let mut result = Subst::new();
-
-            result.insert(t1.id, new_type.clone());
-            result.insert(t2.id, new_type);
-
-            Ok(result)
-        }
     }
 }
 
