@@ -3,7 +3,8 @@ use crate::ast::*;
 use crate::types::{self, Type, Flag, Variant};
 
 use super::context::Context;
-use super::infer::InferResult;
+
+pub type InferResult = (Type, Vec<Constraint>);
 
 pub fn infer_mem(
     infer: fn(expr: &Expr, ctx: &Context) -> Result<InferResult, String>,

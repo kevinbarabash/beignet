@@ -1,6 +1,6 @@
 use chumsky::prelude::*;
 
-use crochet::ast::Program;
+use crochet::ast::{Program, Statement};
 use crochet::codegen::*;
 use crochet::infer::*;
 use crochet::parser::parser;
@@ -9,8 +9,11 @@ fn infer(input: &str) -> String {
     let ctx = Context::default();
     let prog = parser().parse(input).unwrap();
     let stmt = prog.body.get(0).unwrap();
-    let result = infer_stmt(&ctx, stmt).unwrap();
-    format!("{}", result)
+    let result = match stmt {
+        Statement::Expr { expr, .. } => infer_expr(&ctx, expr),
+        _ => Err(String::from("We can't infer decls yet")),
+    };
+    format!("{}", result.unwrap())
 }
 
 fn infer_prog(src: &str) -> (Program, Context) {
