@@ -288,50 +288,22 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
             ..
         }) => {
             // Creates a new type variable for each arg
+            let mut pat_cs: Vec<Constraint> = vec![];
+            let mut new_ctx = ctx.clone();
             let param_tvs: Vec<_> = params
                 .iter()
-                .map(|param| match param {
-                    Pattern::Ident(BindingIdent { type_ann, .. }) => match type_ann {
-                        Some(type_ann) => infer_type_ann(type_ann, ctx),
-                        None => ctx.fresh_var(),
-                    },
-                    Pattern::Rest(RestPat { type_ann, .. }) => {
-                        match type_ann {
-                            Some(type_ann) => {
-                                // TODO: check that type_ann is an array
-                                infer_type_ann(type_ann, ctx)
-                            }
-                            None => ctx.alias("Array", Some(vec![ctx.fresh_var()])),
-                        }
-                    }
-                    Pattern::Object(_) => todo!(),
-                    Pattern::Array(_) => todo!(),
+                .map(|param| {
+                    let mut param_type = infer_pattern(param, &mut new_ctx, &mut pat_cs);
+                    // NOTE: We may not actually need to do this.  The tests pass without it.
+                    // That may change as we add more test cases though so I'm going to leave
+                    // it here for now.
+                    param_type.flag = Some(Flag::SupertypeWins);
+                    param_type
                 })
                 .collect();
-            let mut new_ctx = ctx.clone();
-            // TODO: try to do this without iterating over `params` twice.
-            for (arg, tv) in params.iter().zip(param_tvs.clone().into_iter()) {
-                let scheme = Scheme {
-                    // When would qualifiers not be an empty vector here?
-                    qualifiers: vec![],
-                    ty: tv.clone(),
-                };
-                match arg {
-                    Pattern::Ident(BindingIdent { id, .. }) => {
-                        new_ctx.values.insert(id.name.to_string(), scheme)
-                    }
-                    Pattern::Rest(RestPat { arg, .. }) => match arg.as_ref() {
-                        Pattern::Ident(BindingIdent { id, .. }) => {
-                            new_ctx.values.insert(id.name.to_string(), scheme)
-                        }
-                        _ => todo!(),
-                    },
-                    Pattern::Object(_) => todo!(),
-                    Pattern::Array(_) => todo!(),
-                };
-            }
+
             new_ctx.is_async = is_async.to_owned();
-            let (ret, cs) = infer(body, &new_ctx)?;
+            let (ret, mut body_cs) = infer(body, &new_ctx)?;
             ctx.state.count.set(new_ctx.state.count.get());
 
             let ret = if !is_async || is_promise(&ret) {
@@ -342,6 +314,9 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
 
             let lam_ty = ctx.lam(param_tvs, Box::new(ret));
 
+            let mut cs: Vec<Constraint> = vec![];
+            cs.append(&mut pat_cs);
+            cs.append(&mut body_cs);
             Ok((lam_ty, cs))
         }
         Expr::Let(Let {
@@ -361,12 +336,8 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                     let mut pattern_type = infer_pattern(pattern, &mut new_ctx, &mut cs);
                     pattern_type.flag = Some(Flag::SupertypeWins);
                     cs.push(Constraint {
-                        // order matters here
-                        // Instead of relying on order, we should tag all types so that the 
-                        // constraint solver has more information when deciding on how to resolve
-                        // a sub type relationship.  Possible resolutions include:
-                        // - letting one of the types win
-                        // - widening the type via a union
+                        // Order matters here: value_type appearing first indicates that
+                        // it should be treated as a sub-type of pattern_type.
                         types: (value_type, pattern_type),
                     });
                     let (t2, cs2) = infer(body, &new_ctx)?;

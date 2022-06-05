@@ -39,6 +39,10 @@ impl Context {
         let scheme = self.values.get(name).unwrap();
         self.instantiate(scheme)
     }
+    pub fn lookup_type(&self, name: &str) -> Type {
+        let scheme = self.types.get(name).unwrap();
+        self.instantiate(scheme)
+    }
 
     fn instantiate(&self, scheme: &Scheme) -> Type {
         let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
