@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
-use crate::types::Scheme;
+use crate::types::{Scheme, Type};
 
 use super::constraint_solver::is_subtype;
 use super::context::Context;
@@ -74,24 +74,22 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                 type_params,
                 ..
             } => {
-                // Maps type param names to integers: 0, 1, ...
-                let mapping: HashMap<String, i32> = match type_params {
+                let type_param_map: HashMap<String, Type> = match type_params {
                     Some(params) => params
                         .iter()
-                        .enumerate()
-                        .map(|(index, param)| (param.name.name.to_owned(), index as i32))
+                        .map(|param| (param.name.name.to_owned(), ctx.fresh_var()))
                         .collect(),
                     None => HashMap::default(),
                 };
 
                 // Infers the type from type annotation and replaces all type references whose names
                 // appear in `mapping` with a type variable whose `id` is the value in the mapping.
-                let type_ann_ty = infer_type_ann_with_params(type_ann, &ctx, &mapping);
+                let type_ann_ty = infer_type_ann_with_params(type_ann, &ctx, &type_param_map);
 
                 // Creates a Scheme with the correct qualifiers for the type references that were
                 // replaced with type variables.
                 let scheme = Scheme {
-                    qualifiers: mapping.values().cloned().collect(),
+                    qualifiers: type_param_map.values().map(|tv| tv.id).collect(),
                     ty: type_ann_ty.clone(),
                 };
 

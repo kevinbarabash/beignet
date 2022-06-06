@@ -8,11 +8,14 @@ use super::context::Context;
 
 // TODO: dedupe with infer_prog.rs
 pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Scheme {
-    let mapping: HashMap<String, i32> = match type_ann {
+    // NOTE: There's a scoping issue when using this mapping hash map.
+    // <T>(arg: T, cb: <T>(T) => T) => T
+    // The <T> type param list for `cb` shadows the outer `T`
+    let type_param_map: HashMap<String, Type> = match type_ann {
         TypeAnn::Lam(LamType { type_params, .. }) => {
-            let mapping: HashMap<String, i32> = match type_params {
-                Some(params) => params.iter().enumerate().map(|(index, param)| {
-                    (param.name.name.to_owned(), index as i32)
+            let mapping: HashMap<String, Type> = match type_params {
+                Some(params) => params.iter().map(|param| {
+                    (param.name.name.to_owned(), ctx.fresh_var())
                 }).collect(),
                 None => HashMap::default(),
             };
@@ -23,12 +26,12 @@ pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Scheme {
 
     // Infers the type from type annotation and replaces all type references whose names
     // appear in `mapping` with a type variable whose `id` is the value in the mapping.
-    let type_ann_ty = infer_type_ann_with_params(type_ann, ctx, &mapping);
+    let type_ann_ty = infer_type_ann_with_params(type_ann, ctx, &type_param_map);
 
     // Creates a Scheme with the correct qualifiers for the type references that were
     // replaced with type variables.
     Scheme {
-        qualifiers: mapping.values().cloned().collect(),
+        qualifiers: type_param_map.values().map(|tv| tv.id).collect(),
         ty: type_ann_ty,
     }
 }
@@ -40,23 +43,23 @@ pub fn infer_type_ann(type_ann: &TypeAnn, ctx: &Context) -> Type {
 pub fn infer_type_ann_with_params(
     type_ann: &TypeAnn,
     ctx: &Context,
-    mapping: &HashMap<String, i32>,
+    type_param_map: &HashMap<String, Type>,
 ) -> Type {
-    freeze(infer_type_ann_rec(type_ann, ctx, mapping))
+    freeze(infer_type_ann_rec(type_ann, ctx, type_param_map))
 }
 
-fn infer_type_ann_rec(type_ann: &TypeAnn, ctx: &Context, mapping: &HashMap<String, i32>) -> Type {
+fn infer_type_ann_rec(type_ann: &TypeAnn, ctx: &Context, type_param_map: &HashMap<String, Type>) -> Type {
     match type_ann {
         TypeAnn::Lam(LamType { params, ret, .. }) => {
             let params: Vec<_> = params
                 .iter()
                 .map(|arg| {
-                    let mut ty = infer_type_ann_rec(arg, ctx, mapping);
+                    let mut ty = infer_type_ann_rec(arg, ctx, type_param_map);
                     ty.flag = Some(Flag::SubtypeWins);
                     ty
                 })
                 .collect();
-            let ret = Box::from(infer_type_ann_rec(ret.as_ref(), ctx, mapping));
+            let ret = Box::from(infer_type_ann_rec(ret.as_ref(), ctx, type_param_map));
             ctx.lam(params, ret)
         }
         TypeAnn::Lit(LitType { lit, .. }) => ctx.lit(lit.to_owned()),
@@ -67,7 +70,7 @@ fn infer_type_ann_rec(type_ann: &TypeAnn, ctx: &Context, mapping: &HashMap<Strin
                 .map(|prop| types::TProp {
                     name: prop.name.to_owned(),
                     optional: prop.optional,
-                    ty: infer_type_ann_rec(prop.type_ann.as_ref(), ctx, mapping),
+                    ty: infer_type_ann_rec(prop.type_ann.as_ref(), ctx, type_param_map),
                 })
                 .collect();
             ctx.object(&props)
@@ -75,18 +78,13 @@ fn infer_type_ann_rec(type_ann: &TypeAnn, ctx: &Context, mapping: &HashMap<Strin
         TypeAnn::TypeRef(TypeRef {
             name, type_params, ..
         }) => {
-            match mapping.get(name) {
-                Some(id) => Type {
-                    variant: types::Variant::Var,
-                    id: id.to_owned(),
-                    frozen: false,
-                    flag: None,
-                },
+            match type_param_map.get(name) {
+                Some(tv) => tv.to_owned(),
                 None => {
                     let type_params = type_params.clone().map(|params| {
                         params
                             .iter()
-                            .map(|param| infer_type_ann_rec(param, ctx, mapping))
+                            .map(|param| infer_type_ann_rec(param, ctx, type_param_map))
                             .collect()
                     });
                     ctx.alias(name, type_params)
@@ -96,19 +94,19 @@ fn infer_type_ann_rec(type_ann: &TypeAnn, ctx: &Context, mapping: &HashMap<Strin
         TypeAnn::Union(UnionType { types, .. }) => ctx.union(
             types
                 .iter()
-                .map(|ty| infer_type_ann_rec(ty, ctx, mapping))
+                .map(|ty| infer_type_ann_rec(ty, ctx, type_param_map))
                 .collect(),
         ),
         TypeAnn::Intersection(IntersectionType { types, .. }) => ctx.intersection(
             types
                 .iter()
-                .map(|ty| infer_type_ann_rec(ty, ctx, mapping))
+                .map(|ty| infer_type_ann_rec(ty, ctx, type_param_map))
                 .collect(),
         ),
         TypeAnn::Tuple(TupleType { types, .. }) => ctx.tuple(
             types
                 .iter()
-                .map(|ty| infer_type_ann_rec(ty, ctx, mapping))
+                .map(|ty| infer_type_ann_rec(ty, ctx, type_param_map))
                 .collect(),
         ),
     }
