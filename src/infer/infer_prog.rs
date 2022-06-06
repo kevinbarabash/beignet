@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
-use crate::types::{Scheme};
+use crate::types::Scheme;
 
 use super::constraint_solver::is_subtype;
 use super::context::Context;
-use super::infer_expr::{type_to_scheme, infer_expr};
+use super::infer_expr::{infer_expr, type_to_scheme};
 use super::infer_type_ann::*;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
@@ -15,7 +15,6 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
 
     // TODO: figure out how report multiple errors
     for stmt in &prog.body {
-        println!("stmt = {:#?}", stmt);
         match stmt {
             Statement::VarDecl {
                 declare,
@@ -27,14 +26,18 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                     true => {
                         match pattern {
                             Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
-                                // A type annotation should always be provided when using `declare`
-                                println!("type_ann = {:#?}", type_ann);
-                                let type_ann = type_ann.as_ref().unwrap();
-                                let type_ann_ty = infer_type_ann(type_ann, &ctx);
-                                println!("type_ann_ty = {:#?}", type_ann_ty);
-                                let scheme = type_to_scheme(&type_ann_ty);
-                                println!("scheme = {:#?}", scheme);
-                                ctx.values.insert(id.name.to_owned(), scheme);
+                                match type_ann {
+                                    Some(type_ann) => {
+                                        let scheme = infer_scheme(type_ann, &ctx);
+                                        ctx.values.insert(id.name.to_owned(), scheme);
+                                    }
+                                    None => {
+                                        // A type annotation should always be provided when using `declare`
+                                        return Err(String::from(
+                                            "missing type annotation in declare statement",
+                                        ))
+                                    },
+                                }
                             }
                             _ => todo!(),
                         }
@@ -64,12 +67,20 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                     }
                 };
             }
-            Statement::TypeDecl { id, type_ann, type_params, .. } => {
+            // TODO: dedupe with infer_type_ann.rs
+            Statement::TypeDecl {
+                id,
+                type_ann,
+                type_params,
+                ..
+            } => {
                 // Maps type param names to integers: 0, 1, ...
                 let mapping: HashMap<String, i32> = match type_params {
-                    Some(params) => params.iter().enumerate().map(|(index, param)| {
-                        (param.name.name.to_owned(), index as i32)
-                    }).collect(),
+                    Some(params) => params
+                        .iter()
+                        .enumerate()
+                        .map(|(index, param)| (param.name.name.to_owned(), index as i32))
+                        .collect(),
                     None => HashMap::default(),
                 };
 

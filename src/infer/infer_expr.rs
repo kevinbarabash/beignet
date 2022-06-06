@@ -207,8 +207,11 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
             params,
             body,
             is_async,
+            type_params,
             ..
         }) => {
+            // TODO: turn type_params into type variables
+
             // Creates a new type variable for each arg
             let mut pat_cs: Vec<Constraint> = vec![];
             let mut new_ctx = ctx.clone();

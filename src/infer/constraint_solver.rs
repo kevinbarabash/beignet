@@ -29,14 +29,14 @@ fn solver(u: Unifier, ctx: &Context) -> Result<Subst, String> {
 
     let rest = &cs[1..]; // const [_ , ...rest] = cs;
 
-    // println!("-----------");
-    // println!("constraints:");
-    // for Constraint {
-    //     types: (left, right),
-    // } in cs.iter()
-    // {
-    //     println!("{left} = {right}")
-    // }
+    println!("-----------");
+    println!("constraints:");
+    for Constraint {
+        types: (left, right),
+    } in cs.iter()
+    {
+        println!("{left} = {right}")
+    }
 
     match cs.get(0) {
         Some(Constraint { types: (t1, t2) }) => {
@@ -128,6 +128,7 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 }
 
 fn get_aliased_type(alias: &AliasType, ctx: &Context) -> Type {
+    println!("get_aliased_type: {:#?}", alias);
     let scheme = ctx.types.get(&alias.name).unwrap();
     let subs: Subst = match &alias.type_params {
         Some(params) => {

@@ -2,9 +2,36 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, freeze, Flag, Type};
+use crate::types::{self, freeze, Flag, Type, Scheme};
 
 use super::context::Context;
+
+// TODO: dedupe with infer_prog.rs
+pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Scheme {
+    let mapping: HashMap<String, i32> = match type_ann {
+        TypeAnn::Lam(LamType { type_params, .. }) => {
+            let mapping: HashMap<String, i32> = match type_params {
+                Some(params) => params.iter().enumerate().map(|(index, param)| {
+                    (param.name.name.to_owned(), index as i32)
+                }).collect(),
+                None => HashMap::default(),
+            };
+            mapping
+        },
+        _ => HashMap::new(),
+    };
+
+    // Infers the type from type annotation and replaces all type references whose names
+    // appear in `mapping` with a type variable whose `id` is the value in the mapping.
+    let type_ann_ty = infer_type_ann_with_params(type_ann, ctx, &mapping);
+
+    // Creates a Scheme with the correct qualifiers for the type references that were
+    // replaced with type variables.
+    Scheme {
+        qualifiers: mapping.values().cloned().collect(),
+        ty: type_ann_ty,
+    }
+}
 
 pub fn infer_type_ann(type_ann: &TypeAnn, ctx: &Context) -> Type {
     freeze(infer_type_ann_rec(type_ann, ctx, &HashMap::default()))

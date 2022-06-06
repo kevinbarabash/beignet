@@ -896,15 +896,28 @@ fn infer_fn_param_with_type_alias_with_param_2() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.values.get("get_bar").unwrap());
-    assert_eq!(result, "(Foo<T>) => T");
+    assert_eq!(result, "<A>(Foo<A>) => A");
 }
 
 #[test]
-#[ignore]
 fn infer_fn_param_with_type_alias_with_param_3() {
     let src = r#"
     type Foo<T> = {bar: T}
     declare let get_bar: <T>(Foo<T>) => T
+    let bar = get_bar({bar: "hello"})
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("bar").unwrap());
+    assert_eq!(result, "\"hello\"");
+}
+
+#[test]
+#[ignore]
+fn infer_fn_param_with_type_alias_with_param_4() {
+    let src = r#"
+    type Foo<T> = {bar: T}
+    let get_bar = <T>(foo: Foo<T>) => foo.bar
     let bar = get_bar({bar: "hello"})
     "#;
     let (_, ctx) = infer_prog(src);
