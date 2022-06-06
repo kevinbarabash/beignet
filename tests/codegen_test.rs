@@ -284,6 +284,7 @@ fn codegen_jsx() {
 }
 
 #[test]
+#[ignore]
 fn js_print_member_access() {
     insta::assert_snapshot!(compile("a.b.c"), @"a.b.c;");
 }

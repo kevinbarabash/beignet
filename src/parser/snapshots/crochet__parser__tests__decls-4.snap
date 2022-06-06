@@ -1,0 +1,40 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"declare let foo: Foo<string>\")"
+---
+Program {
+    body: [
+        VarDecl {
+            span: 0..28,
+            pattern: Ident(
+                BindingIdent {
+                    span: 12..28,
+                    id: Ident {
+                        span: 12..15,
+                        name: "foo",
+                    },
+                    type_ann: Some(
+                        TypeRef(
+                            TypeRef {
+                                span: 17..28,
+                                name: "Foo",
+                                type_params: Some(
+                                    [
+                                        Prim(
+                                            PrimType {
+                                                span: 21..27,
+                                                prim: Str,
+                                            },
+                                        ),
+                                    ],
+                                ),
+                            },
+                        ),
+                    ),
+                },
+            ),
+            init: None,
+            declare: true,
+        },
+    ],
+}

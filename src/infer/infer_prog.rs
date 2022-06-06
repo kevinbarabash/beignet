@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use crate::ast::*;
+use crate::types::{Scheme};
 
 use super::constraint_solver::is_subtype;
 use super::context::Context;
 use super::infer_expr::{type_to_scheme, infer_expr};
-use super::infer_type_ann::infer_type_ann;
+use super::infer_type_ann::*;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
@@ -57,9 +60,26 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                     }
                 };
             }
-            Statement::TypeDecl { id, type_ann, .. } => {
-                let type_ann_ty = infer_type_ann(type_ann, &ctx);
-                let scheme = type_to_scheme(&type_ann_ty);
+            Statement::TypeDecl { id, type_ann, type_params, .. } => {
+                // Maps type param names to integers: 0, 1, ...
+                let mapping: HashMap<String, i32> = match type_params {
+                    Some(params) => params.iter().enumerate().map(|(index, param)| {
+                        (param.name.name.to_owned(), index as i32)
+                    }).collect(),
+                    None => HashMap::default(),
+                };
+
+                // Infers the type from type annotation and replaces all type references whose names
+                // appear in `mapping` with a type variable whose `id` is the value in the mapping.
+                let type_ann_ty = infer_type_ann_with_params(type_ann, &ctx, &mapping);
+
+                // Creates a Scheme with the correct qualifiers for the type references that were
+                // replaced with type variables.
+                let scheme = Scheme {
+                    qualifiers: mapping.values().cloned().collect(),
+                    ty: type_ann_ty.clone(),
+                };
+
                 ctx.types.insert(id.name.to_owned(), scheme);
             }
             Statement::Expr { expr, .. } => {

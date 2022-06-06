@@ -3,6 +3,7 @@ use crate::ast::*;
 use crate::types::{self, Type, Flag, Variant};
 
 use super::context::Context;
+use super::substitutable::*;
 
 pub type InferResult = (Type, Vec<Constraint>);
 
@@ -81,8 +82,26 @@ fn type_of_property_on_type(
         Variant::Alias(alias) => {
             match ctx.types.get(&alias.name) {
                 Some(scheme) => {
-                    // TODO: handle schemes with qualifiers
-                    let aliased_def = scheme.ty.to_owned();
+                    // Replaces qualifiers in the scheme with the corresponding type params
+                    // from the alias type.
+                    let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
+                    let subs: Subst = match &alias.type_params {
+                        Some(type_params) => {
+                            if scheme.qualifiers.len() != type_params.len() {
+                                return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                            }
+                            ids.zip(type_params.iter().cloned()).collect()
+                        },
+                        None => {
+                            if !scheme.qualifiers.is_empty() {
+                                return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                            }
+                            ids.zip(scheme.qualifiers.iter().map(|_| ctx.fresh_var())).collect()
+                        },
+                    };
+                    let aliased_def = scheme.ty.apply(&subs);
+
+                    // Recurses to get the prop on the underlying type.
                     type_of_property_on_type(aliased_def, prop, ctx)
                 }
                 None => Err(String::from("Can't find alias in context")),

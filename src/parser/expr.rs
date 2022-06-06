@@ -10,7 +10,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
     let type_ann = type_parser();
     let pattern = pattern_parser();
     
-    let ident = text::ident().map_with_span(|name, span| Expr::Ident(Ident { span, name }));
+    let ident = text::ident().map_with_span(|name, span| Ident { span, name });
 
     let r#true =
         just_with_padding("true").map_with_span(|_, span| Expr::Lit(Lit::bool(true, span)));
@@ -114,7 +114,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             r#bool,
             num,
             r#str,
-            ident,
+            ident.map(Expr::Ident),
             obj,
             tuple,
             jsx_parser(expr.clone().boxed()),
@@ -257,19 +257,38 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .allow_trailing()
             .delimited_by(just_with_padding("("), just_with_padding(")"));
 
+        // TODO: dedupe with decl.rs
+        let type_param = ident
+            .then(just_with_padding("extends").ignore_then(type_ann.clone()).or_not())
+            .then(just_with_padding("=").ignore_then(type_ann.clone()).or_not())
+            .map_with_span(|((name, constraint), default), span| TypeParam {
+                span,
+                name,
+                constraint: constraint.map(Box::from),
+                default: default.map(Box::from),
+            });
+
+        // TODO: dedupe with decl.rs
+        let type_params = type_param
+            .separated_by(just_with_padding(","))
+            .allow_trailing()
+            .delimited_by(just_with_padding("<"), just_with_padding(">"));
+
         let lam = just_with_padding("async")
             .or_not()
+            .then(type_params.or_not())
             .then(param_list)
             .then(just_with_padding(":").ignore_then(type_ann).or_not())
             .then_ignore(just_with_padding("=>"))
             .then(choice((block.clone(), expr.clone())))
-            .map_with_span(|(((is_async, args), return_type), body), span: Span| {
+            .map_with_span(|((((is_async, type_params), args), return_type), body), span: Span| {
                 Expr::Lambda(Lambda {
                     span,
                     params: args,
                     body: Box::new(body),
                     is_async: is_async.is_some(),
                     return_type,
+                    type_params,
                 })
             });
 

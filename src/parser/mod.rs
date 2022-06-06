@@ -133,6 +133,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let x = 5"));
         insta::assert_debug_snapshot!(parse("   let x = 5")); // with leading whitespace
         insta::assert_debug_snapshot!(parse("declare let x: number"));
+        insta::assert_debug_snapshot!(parse("declare let foo: Foo<string>"));
     }
 
     #[test]
@@ -156,7 +157,10 @@ mod tests {
     fn type_decls() {
         insta::assert_debug_snapshot!(parse("type Num = number"));
         insta::assert_debug_snapshot!(parse("type Point = {x: number, y: number}"));
-        // TODO: add support for type params
+        insta::assert_debug_snapshot!(parse("type Foo<T> = {bar: T}"));
+        insta::assert_debug_snapshot!(parse("type Foo<T extends string> = {bar: T}"));
+        insta::assert_debug_snapshot!(parse(r#"type Foo<T = "foo"> = {bar: T}"#));
+        insta::assert_debug_snapshot!(parse(r#"type Foo<T extends string = "foo"> = {bar: T}"#));
     }
 
     #[test]
@@ -181,5 +185,10 @@ mod tests {
         // TODO: type annotations
         // TODO: function params
         // TODO: disallowed patterns, e.g. top-level rest, non-top-level type annotations
+    }
+
+    #[test]
+    fn types() {
+        insta::assert_debug_snapshot!(parse("let get_bar = <T>(foo: Foo<T>) => foo.bar"));
     }
 }

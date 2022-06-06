@@ -1,6 +1,7 @@
 use crate::ast::span::Span;
 use crate::ast::literal::Lit;
-use crate::types::{Primitive};
+use crate::ast::ident::Ident;
+use crate::types::Primitive;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LamType {
@@ -70,4 +71,12 @@ pub enum TypeAnn {
     Union(UnionType),
     Intersection(IntersectionType),
     Tuple(TupleType),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeParam {
+    pub span: Span,
+    pub name: Ident,
+    pub constraint: Option<Box<TypeAnn>>,
+    pub default: Option<Box<TypeAnn>>,
 }

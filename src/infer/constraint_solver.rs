@@ -90,6 +90,22 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         (Variant::Member(mem1), Variant::Member(mem2)) if mem1.prop == mem2.prop => {
             unifies(mem1.obj.as_ref(), mem2.obj.as_ref(), ctx)
         }
+        (Variant::Object(props1), Variant::Object(props2)) => {
+            let keys1: HashSet<_> = props1.iter().map(|p| p.name.to_owned()).collect();
+            let keys2: HashSet<_> = props2.iter().map(|p| p.name.to_owned()).collect();
+            if keys1 == keys2 {
+                let mut cs: Vec<Constraint> = vec![];
+                for p1 in props1 {
+                    let p2 = props2.iter().find(|p2| p1.name == p2.name).unwrap();
+                    cs.push(Constraint {
+                        types: (p1.ty.clone(), p2.ty.clone()),
+                    });
+                }
+                unify_many(&cs, ctx)
+            } else {
+                unify_mismatched_types(t1, t2, ctx)
+            }
+        }
         (_, Variant::Intersection(types)) => {
             for ty in types {
                 let result = unifies(t1, ty, ctx);
@@ -100,15 +116,28 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             Err(String::from("unification failed"))
         }
         (Variant::Alias(alias), _) => {
-            let aliased_type = ctx.lookup_type(&alias.name);
+            let aliased_type = get_aliased_type(alias, ctx);
             unifies(&aliased_type, t2, ctx)
         }
         (_, Variant::Alias(alias)) => {
-            let aliased_type = ctx.lookup_type(&alias.name);
+            let aliased_type = get_aliased_type(alias, ctx);
             unifies(t1, &aliased_type, ctx)
         }
         _ => unify_mismatched_types(t1, t2, ctx),
     }
+}
+
+fn get_aliased_type(alias: &AliasType, ctx: &Context) -> Type {
+    let scheme = ctx.types.get(&alias.name).unwrap();
+    let subs: Subst = match &alias.type_params {
+        Some(params) => {
+            let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
+            ids.zip(params.iter().cloned()).collect()
+        },
+        None => Subst::new(),
+    };
+
+    scheme.ty.apply(&subs)
 }
 
 fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
@@ -121,7 +150,16 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
                 return Ok(Subst::from([(t1.id, t2.to_owned())]));
             }
             Some(Flag::MemberAccess) => (),
-            None => (),
+            None => {
+                if !t1.frozen {
+                    // TODO: we hsould be using an explicit flag so that we're only 
+                    // doing this when it makes sense to.  Right now the following test
+                    // is using this: infer_fn_param_with_type_alias_with_param.
+                    // We should create more tests that involving passing subtypes to
+                    // to functions.
+                    return Ok(Subst::new());
+                }
+            },
         }
     }
 

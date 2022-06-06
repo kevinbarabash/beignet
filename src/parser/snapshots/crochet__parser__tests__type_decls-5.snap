@@ -1,0 +1,60 @@
+---
+source: src/parser/mod.rs
+expression: "parse(r#\"type Foo<T = \"foo\"> = {bar: T}\"#)"
+---
+Program {
+    body: [
+        TypeDecl {
+            span: 0..30,
+            declare: false,
+            id: Ident {
+                span: 5..8,
+                name: "Foo",
+            },
+            type_ann: Object(
+                ObjectType {
+                    span: 22..30,
+                    props: [
+                        TProp {
+                            span: 23..29,
+                            name: "bar",
+                            optional: false,
+                            type_ann: TypeRef(
+                                TypeRef {
+                                    span: 28..29,
+                                    name: "T",
+                                    type_params: None,
+                                },
+                            ),
+                        },
+                    ],
+                },
+            ),
+            type_params: Some(
+                [
+                    TypeParam {
+                        span: 9..18,
+                        name: Ident {
+                            span: 9..10,
+                            name: "T",
+                        },
+                        constraint: None,
+                        default: Some(
+                            Lit(
+                                LitType {
+                                    span: 13..18,
+                                    lit: Str(
+                                        Str {
+                                            span: 13..18,
+                                            value: "foo",
+                                        },
+                                    ),
+                                },
+                            ),
+                        ),
+                    },
+                ],
+            ),
+        },
+    ],
+}
