@@ -78,25 +78,6 @@ pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
                     })
                 });
 
-        let lam_params = type_ann
-            .clone()
-            .separated_by(just_with_padding(","))
-            .allow_trailing()
-            .delimited_by(just_with_padding("("), just_with_padding(")"));
-
-        let lam = type_params(type_ann.clone().boxed()).or_not()
-            .then(lam_params)
-            .then_ignore(just_with_padding("=>"))
-            .then(type_ann.clone())
-            .map_with_span(|((type_params, params), ret), span| {
-                TypeAnn::Lam(LamType {
-                    span,
-                    params,
-                    ret: Box::from(ret),
-                    type_params,
-                })
-            });
-
         let prop = text::ident()
             .then(just("?").or_not())
             .then_ignore(just_with_padding(":"))
@@ -149,6 +130,26 @@ pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
             .map_with_span(|types, span| match types.len() {
                 1 => types[0].clone(),
                 _ => TypeAnn::Union(UnionType { span, types }),
+            });
+
+        // TODO: support optional lambda param names
+        let lam_params = type_ann
+            .clone()
+            .separated_by(just_with_padding(","))
+            .allow_trailing()
+            .delimited_by(just_with_padding("("), just_with_padding(")"));
+
+        let lam = type_params(type_ann.clone().boxed()).or_not()
+            .then(lam_params)
+            .then_ignore(just_with_padding("=>"))
+            .then(type_ann.clone())
+            .map_with_span(|((type_params, params), ret), span| {
+                TypeAnn::Lam(LamType {
+                    span,
+                    params,
+                    ret: Box::from(ret),
+                    type_params,
+                })
             });
 
         choice((

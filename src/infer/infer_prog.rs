@@ -15,6 +15,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
 
     // TODO: figure out how report multiple errors
     for stmt in &prog.body {
+        println!("stmt = {:#?}", stmt);
         match stmt {
             Statement::VarDecl {
                 declare,
@@ -27,9 +28,12 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                         match pattern {
                             Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
                                 // A type annotation should always be provided when using `declare`
+                                println!("type_ann = {:#?}", type_ann);
                                 let type_ann = type_ann.as_ref().unwrap();
                                 let type_ann_ty = infer_type_ann(type_ann, &ctx);
+                                println!("type_ann_ty = {:#?}", type_ann_ty);
                                 let scheme = type_to_scheme(&type_ann_ty);
+                                println!("scheme = {:#?}", scheme);
                                 ctx.values.insert(id.name.to_owned(), scheme);
                             }
                             _ => todo!(),
