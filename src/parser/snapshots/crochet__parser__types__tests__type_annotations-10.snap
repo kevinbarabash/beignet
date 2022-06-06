@@ -42,5 +42,6 @@ Lam(
                 ],
             },
         ),
+        type_params: None,
     },
 )

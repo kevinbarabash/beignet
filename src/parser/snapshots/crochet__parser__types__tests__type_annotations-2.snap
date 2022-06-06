@@ -25,5 +25,6 @@ Lam(
                 prim: Bool,
             },
         ),
+        type_params: None,
     },
 )

@@ -32,6 +32,7 @@ Union(
                             type_params: None,
                         },
                     ),
+                    type_params: None,
                 },
             ),
             TypeRef(

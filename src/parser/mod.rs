@@ -3,6 +3,7 @@ pub mod decl;
 pub mod jsx;
 pub mod pattern;
 pub mod types;
+pub mod type_params;
 pub mod util;
 
 use expr::expr_parser;
@@ -190,5 +191,6 @@ mod tests {
     #[test]
     fn types() {
         insta::assert_debug_snapshot!(parse("let get_bar = <T>(foo: Foo<T>) => foo.bar"));
+        insta::assert_debug_snapshot!(parse("declare let get_bar: <T>(foo: Foo<T>) => T"));
     }
 }

@@ -8,6 +8,7 @@ pub struct LamType {
     pub span: Span,
     pub params: Vec<TypeAnn>,
     pub ret: Box<TypeAnn>,
+    pub type_params: Option<Vec<TypeParam>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

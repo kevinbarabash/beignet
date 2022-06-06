@@ -5,6 +5,7 @@ use crate::parser::jsx::jsx_parser;
 use crate::parser::pattern::pattern_parser;
 use crate::parser::types::type_parser;
 use crate::parser::util::just_with_padding;
+use crate::parser::type_params::type_params;
 
 pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
     let type_ann = type_parser();
@@ -257,26 +258,9 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .allow_trailing()
             .delimited_by(just_with_padding("("), just_with_padding(")"));
 
-        // TODO: dedupe with decl.rs
-        let type_param = ident
-            .then(just_with_padding("extends").ignore_then(type_ann.clone()).or_not())
-            .then(just_with_padding("=").ignore_then(type_ann.clone()).or_not())
-            .map_with_span(|((name, constraint), default), span| TypeParam {
-                span,
-                name,
-                constraint: constraint.map(Box::from),
-                default: default.map(Box::from),
-            });
-
-        // TODO: dedupe with decl.rs
-        let type_params = type_param
-            .separated_by(just_with_padding(","))
-            .allow_trailing()
-            .delimited_by(just_with_padding("<"), just_with_padding(">"));
-
         let lam = just_with_padding("async")
             .or_not()
-            .then(type_params.or_not())
+            .then(type_params(type_ann.clone().boxed()).or_not())
             .then(param_list)
             .then(just_with_padding(":").ignore_then(type_ann).or_not())
             .then_ignore(just_with_padding("=>"))

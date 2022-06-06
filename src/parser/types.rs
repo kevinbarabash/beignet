@@ -4,6 +4,8 @@ use crate::ast::*;
 use crate::parser::util::just_with_padding;
 use crate::types::Primitive;
 
+use super::type_params::type_params;
+
 pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
     let prim = choice((
         just("number").to(Primitive::Num),
@@ -15,16 +17,18 @@ pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
     .map_with_span(|prim, span| TypeAnn::Prim(PrimType { span, prim }))
     .padded();
 
-    let r#true =
-        just_with_padding("true").map_with_span(|_, span: Span| TypeAnn::Lit(LitType {
+    let r#true = just_with_padding("true").map_with_span(|_, span: Span| {
+        TypeAnn::Lit(LitType {
             span: span.clone(),
             lit: Lit::bool(true, span),
-        }));
-    let r#false =
-        just_with_padding("false").map_with_span(|_, span: Span| TypeAnn::Lit(LitType {
+        })
+    });
+    let r#false = just_with_padding("false").map_with_span(|_, span: Span| {
+        TypeAnn::Lit(LitType {
             span: span.clone(),
             lit: Lit::bool(false, span),
-        }));
+        })
+    });
     let r#bool = choice((r#true, r#false));
 
     let int = text::int::<char, Simple<char>>(10).map_with_span(|value, span: Span| {
@@ -57,7 +61,7 @@ pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
         });
 
     let parser = recursive(|type_ann| {
-        let type_params = type_ann
+        let type_args = type_ann
             .clone()
             .separated_by(just_with_padding(","))
             .allow_trailing()
@@ -65,7 +69,7 @@ pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
 
         let type_ref =
             text::ident()
-                .then(type_params.or_not())
+                .then(type_args.or_not())
                 .map_with_span(|(name, type_params), span| {
                     TypeAnn::TypeRef(TypeRef {
                         span,
@@ -80,14 +84,16 @@ pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
             .allow_trailing()
             .delimited_by(just_with_padding("("), just_with_padding(")"));
 
-        let lam = lam_params
+        let lam = type_params(type_ann.clone().boxed()).or_not()
+            .then(lam_params)
             .then_ignore(just_with_padding("=>"))
             .then(type_ann.clone())
-            .map_with_span(|(params, ret), span| {
+            .map_with_span(|((type_params, params), ret), span| {
                 TypeAnn::Lam(LamType {
                     span,
                     params,
                     ret: Box::from(ret),
+                    type_params,
                 })
             });
 
@@ -133,20 +139,16 @@ pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
         let intersection = atom
             .clone()
             .separated_by(just_with_padding("&"))
-            .map_with_span(|types, span| {
-                match types.len() {
-                    1 => types[0].clone(),
-                    _ => TypeAnn::Intersection(IntersectionType { span, types }),
-                }
+            .map_with_span(|types, span| match types.len() {
+                1 => types[0].clone(),
+                _ => TypeAnn::Intersection(IntersectionType { span, types }),
             });
 
         let union = intersection
             .separated_by(just_with_padding("|"))
-            .map_with_span(|types, span| {
-                match types.len() {
-                    1 => types[0].clone(),
-                    _ => TypeAnn::Union(UnionType { span, types })
-                }
+            .map_with_span(|types, span| match types.len() {
+                1 => types[0].clone(),
+                _ => TypeAnn::Union(UnionType { span, types }),
             });
 
         choice((
