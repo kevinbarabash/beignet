@@ -36,12 +36,12 @@ fn _infer_pattern_rec(
                     // Infers the type from type annotation and replaces all type references whose names
                     // appear in `mapping` with a type variable whose `id` is the value in the mapping.
                     let type_ann_ty = infer_type_ann_with_params(type_ann, ctx, type_param_map);
-                    ctx.values.insert(id.name.to_owned(), type_to_scheme(&type_ann_ty));
+                    ctx.values.insert(id.name.to_owned(), Scheme::from(&type_ann_ty));
                     type_ann_ty
                 }
                 None => {
                     let tv = ctx.fresh_var();
-                    ctx.values.insert(id.name.to_owned(), type_to_scheme(&tv));
+                    ctx.values.insert(id.name.to_owned(), Scheme::from(&tv));
                     tv
                 }
             }
@@ -81,7 +81,7 @@ fn _infer_pattern_rec(
                             // default values.
 
                             let tv = ctx.fresh_var();
-                            let scheme = type_to_scheme(&tv);
+                            let scheme = Scheme::from(&tv);
                             ctx.values.insert(key.name.to_owned(), scheme);
 
                             Some(types::TProp {
@@ -95,7 +95,7 @@ fn _infer_pattern_rec(
                             // default values.
 
                             let tv = ctx.fresh_var();
-                            let scheme = type_to_scheme(&tv);
+                            let scheme = Scheme::from(&tv);
                             ctx.values.insert(key.name.to_owned(), scheme);
 
                             Some(types::TProp {
@@ -130,12 +130,5 @@ fn _infer_pattern_rec(
                 None => obj_type,
             }
         }
-    }
-}
-
-fn type_to_scheme(ty: &Type) -> Scheme {
-    Scheme {
-        qualifiers: vec![],
-        ty: ty.clone(),
     }
 }

@@ -1,8 +1,9 @@
 use crate::ast::*;
+use crate::types::Scheme;
 
 use super::constraint_solver::is_subtype;
 use super::context::Context;
-use super::infer_expr::{infer_expr, type_to_scheme};
+use super::infer_expr::infer_expr;
 use super::infer_type_ann::*;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
@@ -49,7 +50,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                                     Some(type_ann) => {
                                         let type_ann_ty = infer_type_ann(type_ann, &ctx);
                                         match is_subtype(&inferred_scheme.ty, &type_ann_ty, &ctx)? {
-                                            true => Ok(type_to_scheme(&type_ann_ty)),
+                                            true => Ok(Scheme::from(type_ann_ty)),
                                             false => Err(String::from(
                                                 "value is not a subtype of decl's declared type",
                                             )),

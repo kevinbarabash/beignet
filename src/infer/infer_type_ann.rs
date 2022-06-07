@@ -5,14 +5,13 @@ use crate::ast::*;
 use crate::types::{self, freeze, Flag, Scheme, Type};
 
 use super::context::Context;
-use super::infer_expr::type_to_scheme;
 
 pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Scheme {
     match type_ann {
         TypeAnn::Lam(LamType { type_params, .. }) => {
             infer_scheme_with_type_params(type_ann, type_params, ctx)
         }
-        _ => type_to_scheme(&infer_type_ann(type_ann, ctx)),
+        _ => Scheme::from(infer_type_ann(type_ann, ctx)),
     }
 }
 

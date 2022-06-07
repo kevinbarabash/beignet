@@ -412,13 +412,6 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
     }
 }
 
-pub fn type_to_scheme(ty: &Type) -> Scheme {
-    Scheme {
-        qualifiers: vec![],
-        ty: ty.clone(),
-    }
-}
-
 fn infer_many(exprs: &[Expr], ctx: &Context) -> Result<(Vec<Type>, Vec<Constraint>), String> {
     let mut ts: Vec<Type> = Vec::new();
     let mut all_cs: Vec<Constraint> = Vec::new();

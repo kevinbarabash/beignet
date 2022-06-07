@@ -225,6 +225,24 @@ pub struct Scheme {
     pub ty: Type,
 }
 
+impl From<Type> for Scheme {
+    fn from(ty: Type) -> Self {
+        Scheme {
+            qualifiers: vec![],
+            ty,
+        }
+    }
+}
+
+impl From<&Type> for Scheme {
+    fn from(ty: &Type) -> Self {
+        Scheme {
+            qualifiers: vec![],
+            ty: ty.clone(),
+        }
+    }
+}
+
 impl fmt::Display for Scheme {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Scheme { qualifiers, ty } = self;
