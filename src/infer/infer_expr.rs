@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, Primitive, Scheme, Type, Variant, Flag};
+use crate::types::{self, Flag, Primitive, Scheme, Type, Variant};
 
 use super::constraint_solver::{run_solve, Constraint};
 use super::context::{Context, Env};
@@ -207,15 +207,28 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
             params,
             body,
             is_async,
+            type_params,
             ..
         }) => {
+            // TODO: turn type_params into type variables
+
             // Creates a new type variable for each arg
             let mut pat_cs: Vec<Constraint> = vec![];
             let mut new_ctx = ctx.clone();
+
+            let type_params_map: HashMap<String, Type> = match type_params {
+                Some(params) => params
+                    .iter()
+                    .map(|param| (param.name.name.to_owned(), new_ctx.fresh_var()))
+                    .collect(),
+                None => HashMap::default(),
+            };
+
             let param_tvs: Vec<_> = params
                 .iter()
                 .map(|param| {
-                    let mut param_type = infer_pattern(param, &mut new_ctx, &mut pat_cs);
+                    let mut param_type =
+                        infer_pattern(param, &mut new_ctx, &mut pat_cs, &type_params_map);
                     // NOTE: We may not actually need to do this.  The tests pass without it.
                     // That may change as we add more test cases though so I'm going to leave
                     // it here for now.
@@ -255,7 +268,8 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
             let t2 = match pattern {
                 Some(pattern) => {
                     let mut new_ctx = ctx.clone();
-                    let mut pattern_type = infer_pattern(pattern, &mut new_ctx, &mut cs);
+                    let mut pattern_type =
+                        infer_pattern(pattern, &mut new_ctx, &mut cs, &HashMap::new());
                     pattern_type.flag = Some(Flag::SupertypeWins);
                     cs.push(Constraint {
                         // Order matters here: value_type appearing first indicates that
