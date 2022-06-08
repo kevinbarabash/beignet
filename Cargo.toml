@@ -26,3 +26,5 @@ defaultmap = "0.5.0"
 
 [dev-dependencies]
 insta = "1.13.0"
+pretty_assertions = "1.2.1"
+testing_macros = "0.2.5"
