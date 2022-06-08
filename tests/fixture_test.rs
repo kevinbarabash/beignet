@@ -11,11 +11,6 @@ use crochet::codegen::js::*;
 use crochet::codegen::d_ts::*;
 use crochet::parser::parser;
 
-#[test]
-fn basic_addition() {
-    assert_eq!(2 + 2, 4);
-}
-
 enum Mode {
     Check,
     Write,
@@ -23,7 +18,7 @@ enum Mode {
 
 #[testing_macros::fixture("tests/fixtures/*.crochet")]
 fn read_file(in_path: PathBuf) {
-    let mode = match env::var("UPDATE_FIXTURES") {
+    let mode = match env::var("UPDATE") {
         Ok(_) => Mode::Write,
         Err(_) => Mode::Check,
     };
