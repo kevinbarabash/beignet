@@ -1,0 +1,5 @@
+let i = (x) => x
+let k = (x) => (y) => x
+let s = (f) => (g) => (x) => f(x)(g(x))
+
+let skk = s(k)(k)

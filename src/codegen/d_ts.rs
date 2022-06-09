@@ -288,7 +288,7 @@ pub fn build_type(
                     }
                     _ => panic!("mismatch"),
                 },
-                None => {
+                _ => {
                     let params: Vec<TsFnParam> = params
                         .iter()
                         .enumerate()
@@ -319,7 +319,6 @@ pub fn build_type(
                         },
                     }))
                 }
-                _ => panic!("mismatch"),
             }
         }
         Variant::Union(types) => {
