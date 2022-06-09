@@ -1,1 +1,0 @@
-let sub = (a, b) => a - b

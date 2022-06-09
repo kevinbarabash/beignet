@@ -16,8 +16,8 @@ enum Mode {
     Write,
 }
 
-#[testing_macros::fixture("tests/fixtures/*.crochet")]
-fn read_file(in_path: PathBuf) {
+#[testing_macros::fixture("tests/pass/*.crochet")]
+fn pass(in_path: PathBuf) {
     let mode = match env::var("UPDATE") {
         Ok(_) => Mode::Write,
         Err(_) => Mode::Check,

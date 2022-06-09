@@ -190,11 +190,8 @@ impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.variant {
             Variant::Var => {
-                let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-                    .chars()
-                    .collect();
-                let id = chars.get(self.id as usize).unwrap();
-                write!(f, "{}", id)
+                let id = self.id;
+                write!(f, "t{id}")
             }
             Variant::Lam(LamType { params, ret, .. }) => {
                 write!(f, "({}) => {}", join(params, ", "), ret)
