@@ -39,7 +39,7 @@ fn infer_number_literal() {
 
 #[test]
 fn infer_lam() {
-    assert_eq!(infer("(x) => x"), "<A>(A) => A");
+    insta::assert_snapshot!(infer("(x) => x"), @"<t0>(t0) => t0");
 }
 
 #[test]
@@ -89,9 +89,9 @@ fn infer_let_fn_with_incorrect_param_types() {
 
 #[test]
 fn infer_fn_param_used_with_multiple_other_params() {
-    assert_eq!(
+    insta::assert_snapshot!(
         infer("(f, x, y) => f(x) + f(y)"),
-        "<A>((A) => number, A, A) => number"
+        @"<t0>((t0) => number, t0, t0) => number"
     );
 }
 
@@ -99,14 +99,14 @@ fn infer_fn_param_used_with_multiple_other_params() {
 fn infer_i_combinator() {
     let (_, ctx) = infer_prog("let I = (x) => x");
     let result = format!("{}", ctx.values.get("I").unwrap());
-    assert_eq!(result, "<A>(A) => A");
+    insta::assert_snapshot!(result, @"<t0>(t0) => t0");
 }
 
 #[test]
 fn infer_k_combinator_not_curried() {
     let (program, ctx) = infer_prog("let K = (x, y) => x");
     let result = format!("{}", ctx.values.get("K").unwrap());
-    assert_eq!(result, "<A, B>(A, B) => A");
+    insta::assert_snapshot!(result, @"<t0, t1>(t0, t1) => t0");
 
     let result = codegen_d_ts(&program, &ctx);
     insta::assert_snapshot!(result, @"export declare const K: <A, B>(x: A, y: B) => A;\n");
@@ -116,23 +116,23 @@ fn infer_k_combinator_not_curried() {
 fn infer_s_combinator_not_curried() {
     let (_, ctx) = infer_prog("let S = (f, g, x) => f(x, g(x))");
     let result = format!("{}", ctx.values.get("S").unwrap());
-    assert_eq!(result, "<A, B, C>((A, B) => C, (A) => B, A) => C");
+    insta::assert_snapshot!(result, @"<t0, t1, t2>((t0, t1) => t2, (t0) => t1, t0) => t2");
 }
 
 #[test]
 fn infer_k_combinator_curried() {
     let (_, ctx) = infer_prog("let K = (x) => (y) => x");
     let result = format!("{}", ctx.values.get("K").unwrap());
-    assert_eq!(result, "<A, B>(A) => (B) => A");
+    insta::assert_snapshot!(result, @"<t0, t1>(t0) => (t1) => t0");
 }
 
 #[test]
 fn infer_s_combinator_curried() {
     let (_, ctx) = infer_prog("let S = (f) => (g) => (x) => f(x)(g(x))");
     let result = format!("{}", ctx.values.get("S").unwrap());
-    assert_eq!(
+    insta::assert_snapshot!(
         result,
-        "<A, B, C>((A) => (B) => C) => ((A) => B) => (A) => C"
+        @"<t0, t1, t2>((t0) => (t1) => t2) => ((t0) => t1) => (t0) => t2"
     );
 }
 
@@ -145,7 +145,7 @@ fn infer_skk() {
     "#;
     let (_, ctx) = infer_prog(src);
     let result = format!("{}", ctx.values.get("I").unwrap());
-    assert_eq!(result, "<A>(A) => A");
+    insta::assert_snapshot!(result, @"<t0>(t0) => t0");
 }
 
 #[test]
@@ -232,7 +232,7 @@ fn infer_equal_with_numbers() {
 fn infer_not_equal_with_variables() {
     let (_, ctx) = infer_prog("let neq = (a, b) => a != b");
     let result = format!("{}", ctx.values.get("neq").unwrap());
-    assert_eq!(result, "<A>(A, A) => boolean");
+    insta::assert_snapshot!(result, @"<t0>(t0, t0) => boolean");
 }
 
 #[test]
@@ -267,7 +267,7 @@ fn infer_let_rec_until() {
     let src = "let rec until = (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) }";
     let (program, ctx) = infer_prog(src);
     let result = format!("{}", ctx.values.get("until").unwrap());
-    assert_eq!(result, "<A>((A) => boolean, (A) => A, A) => A");
+    insta::assert_snapshot!(result, @"<t0>((t0) => boolean, (t0) => t0, t0) => t0");
 
     let result = codegen_d_ts(&program, &ctx);
     insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A;\n");
@@ -897,7 +897,7 @@ fn infer_fn_param_with_type_alias_with_param_2() {
 
     let result = format!("{}", ctx.values.get("get_bar").unwrap());
     // TODO: normalize the scheme before inserting it into the context
-    assert_eq!(result, "<D>(Foo<D>) => D");
+    insta::assert_snapshot!(result, @"<t3>(Foo<t3>) => t3");
 }
 
 #[test]
@@ -923,7 +923,7 @@ fn infer_fn_param_with_type_alias_with_param_4() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.values.get("get_bar").unwrap());
-    assert_eq!(result, "<A>(Foo<A>) => A");
+    insta::assert_snapshot!(result, @"<t0>(Foo<t0>) => t0");
 
     let result = format!("{}", ctx.values.get("bar").unwrap());
     assert_eq!(result, "\"hello\"");

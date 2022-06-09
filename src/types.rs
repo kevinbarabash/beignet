@@ -243,9 +243,6 @@ impl From<&Type> for Scheme {
 impl fmt::Display for Scheme {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Scheme { qualifiers, ty } = self;
-        let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-            .chars()
-            .collect();
 
         if qualifiers.is_empty() {
             write!(f, "{}", ty)
@@ -257,8 +254,7 @@ impl fmt::Display for Scheme {
                 "<{}>{}",
                 join(
                     quals.iter().map(|id| {
-                        let id = chars.get(id.to_owned() as usize).unwrap();
-                        format!("{id}")
+                        format!("t{id}")
                     }),
                     ", "
                 ),
