@@ -928,3 +928,68 @@ fn infer_fn_param_with_type_alias_with_param_4() {
     let result = format!("{}", ctx.values.get("bar").unwrap());
     assert_eq!(result, "\"hello\"");
 }
+
+#[test]
+fn infer_destructure_object() {
+    let src = r#"
+    let point = {x: 5, y: 10}
+    let {x, y} = point
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("x").unwrap());
+    assert_eq!(result, "5");
+}
+
+#[test]
+fn infer_destructure_object_with_type_alias() {
+    let src = r#"
+    type Point = {x: number, y: number}
+    let point: Point = {x: 5, y: 10}
+    let {x, y} = point
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("x").unwrap());
+    assert_eq!(result, "number");
+}
+
+#[test]
+fn infer_destructure_object_inside_fn() {
+    let src = r#"
+    type FooBar = {foo: number, bar: string}
+    let get_foo = (x: FooBar) => {
+        let {foo, bar} = x;
+        foo
+    }
+    let foo = get_foo({foo: 5, bar: "hello"})
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("foo").unwrap());
+    assert_eq!(result, "number");
+}
+
+#[test]
+#[ignore]
+// NOTE: this test fails because infer_expr doesn't handle
+// the sub-type relationship between `{foo}` and `x` correctly
+// Any value being assigned to a pattern should be a supertype
+// of that pattern.  For example:
+// let x: number = 5   // 5 is a supertype of number
+// let p: Point = {x: 5, y: 10}   // {x: 5, y: 10} is a super type of Point
+// let {x} = p   // {x: t1} is a super type of Point but only if t1 is a number
+fn infer_destructure_object_inside_fn_2() {
+    let src = r#"
+    type FooBar = {foo: number, bar: string}
+    let get_foo = (x: FooBar) => {
+        let {foo} = x;
+        foo
+    }
+    let foo = get_foo({foo: 5, bar: "hello"})
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("foo").unwrap());
+    assert_eq!(result, "number");
+}
