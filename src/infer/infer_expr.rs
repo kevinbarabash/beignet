@@ -95,7 +95,7 @@ pub fn infer(
 
                     let (mut pat_type, new_vars) =
                         infer_pattern(pattern, &mut new_ctx, constraints, &HashMap::new())?;
-                    pat_type.flag = Some(Flag::SupertypeWins);
+                    pat_type.flag = Some(Flag::Pattern);
 
                     for (name, scheme) in new_vars {
                         new_ctx.values.insert(name, scheme);
@@ -164,12 +164,13 @@ pub fn infer(
                         ),
                     ),
                 },
+                // This is essential the same as a call or application
                 BinOp::Add | BinOp::Sub | BinOp::Div | BinOp::Mul => {
                     let inf_type = ctx.lam(args_types, Box::from(ret_type.clone()));
                     let def_type = ctx.lam(
                         vec![
-                            ctx.prim_with_flag(Primitive::Num, Flag::SubtypeWins),
-                            ctx.prim_with_flag(Primitive::Num, Flag::SubtypeWins),
+                            ctx.prim_with_flag(Primitive::Num, Flag::Argument),
+                            ctx.prim_with_flag(Primitive::Num, Flag::Argument),
                         ],
                         Box::from(ctx.prim(Primitive::Num)),
                     );

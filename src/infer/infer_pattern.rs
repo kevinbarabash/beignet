@@ -3,7 +3,7 @@ use std::iter::Iterator;
 
 use crate::ast::*;
 use crate::infer::constraint_solver::Constraint;
-use crate::types::{self, Scheme, Type};
+use crate::types::{self, Scheme, Type, Flag};
 
 use super::context::Context;
 use super::infer_type_ann::infer_type_ann_with_params;
@@ -21,18 +21,23 @@ pub fn infer_pattern(
     // Keeps track of all of the variables the need to be introduced by this pattern.
     let mut new_vars: HashMap<String, Scheme> = HashMap::new();
 
-    let pat_ty = infer_pattern_rec(pat, ctx, constraints, &mut new_vars)?;
+    let pat_type = infer_pattern_rec(pat, ctx, constraints, &mut new_vars)?;
 
     // If the pattern had a type annotation associated with it, we infer type of the
     // type annotation and add a constraint between the types of the pattern and its
     // type annotation.
     match get_type_ann(pat) {
         Some(type_ann) => {
-            let type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
-            constraints.push(Constraint::from((type_ann_ty.clone(), pat_ty)));
+            let mut type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
+            type_ann_ty.flag = Some(Flag::Pattern);
+            constraints.push(Constraint::from((type_ann_ty.clone(), pat_type)));
             Ok((type_ann_ty, new_vars))
         }
-        None => Ok((pat_ty, new_vars)),
+        None => {
+            let mut pat_type = pat_type;
+            pat_type.flag = Some(Flag::Pattern);
+            Ok((pat_type, new_vars))
+        },
     }
 }
 

@@ -103,8 +103,9 @@ impl Hash for LamType {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Flag {
     MemberAccess,
-    SubtypeWins,
-    SupertypeWins,
+    Parameter,
+    Argument,
+    Pattern,
 }
 
 #[derive(Clone, Debug, Eq)]
