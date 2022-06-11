@@ -68,7 +68,9 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .map(|prop| TProp {
                         name: prop.name.clone(),
                         optional: prop.optional,
-                        ty: norm_type(&prop.get_type(ctx), mapping, ctx),
+                        // NOTE: we don't use prop.get_type(ctx) here because we're tracking
+                        // the optionality of the property in the TProp that's returned.
+                        ty: norm_type(&prop.ty, mapping, ctx),
                     })
                     .collect();
                 Type {
@@ -130,6 +132,9 @@ pub fn generalize(env: &Env, ty: &Type) -> Scheme {
 }
 
 // TODO: make this recursive
+// TODO: handle optional properties correctly
+// Maybe we can have a function that will canonicalize objects by converting 
+// `x: T | undefined` to `x?: T`
 pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
     let obj_types: Vec<_> = in_types
         .iter()
@@ -143,7 +148,7 @@ pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
     let mut props_map: DefaultHashMap<String, HashSet<Type>> = defaulthashmap!();
     for props in obj_types {
         for prop in props {
-            props_map[prop.name.clone()].insert(prop.get_type(ctx));
+            props_map[prop.name.clone()].insert(prop.ty.clone());
         }
     }
 
