@@ -150,16 +150,16 @@ fn get_aliased_type(alias: &AliasType, ctx: &Context) -> Type {
 fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     if is_subtype(t1, t2, ctx)? {
         match t2.flag {
-            Some(Flag::SubtypeWins) => {
+            Some(Flag::Argument) => {
                 return Ok(Subst::from([(t2.id, t1.to_owned())]));
             }
-            Some(Flag::SupertypeWins) => {
+            Some(Flag::Parameter) | Some(Flag::Pattern) => {
                 return Ok(Subst::from([(t1.id, t2.to_owned())]));
             }
             Some(Flag::MemberAccess) => (),
             None => {
                 if !t1.frozen {
-                    // TODO: we hsould be using an explicit flag so that we're only
+                    // TODO: we should be using an explicit flag so that we're only
                     // doing this when it makes sense to.  Right now the following test
                     // is using this: infer_fn_param_with_type_alias_with_param.
                     // We should create more tests that involving passing subtypes to
@@ -182,21 +182,6 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
                 // We should never widen object types with the MemberAccess flag
                 // because we may need to grab its only property in other cirucmstances.
                 let result = Subst::from([(t1.id, new_type)]);
-                return Ok(result);
-            }
-        }
-
-        if t1.flag == Some(Flag::MemberAccess) {
-            if t2.frozen {
-                // TODO: propagate errors instead of unwrap()-ing
-                let prop1 = props1.get(0).unwrap();
-                let prop2 = props2.iter().find(|p| p.name == prop1.name).unwrap();
-                return unifies(&prop1.ty, &prop2.ty, ctx);
-            } else {
-                let new_type = intersect_types(t1, t2, ctx);
-                // We should never widen object types with the MemberAccess flag
-                // because we may need to grab its only property in other cirucmstances.
-                let result = Subst::from([(t2.id, new_type)]);
                 return Ok(result);
             }
         }

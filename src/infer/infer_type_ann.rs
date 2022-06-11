@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, freeze, Flag, Scheme, Type};
+use crate::types::{self, freeze, Scheme, Type};
 
 use super::context::Context;
 
@@ -64,11 +64,7 @@ fn infer_type_ann_rec(
         TypeAnn::Lam(LamType { params, ret, .. }) => {
             let params: Vec<_> = params
                 .iter()
-                .map(|arg| {
-                    let mut ty = infer_type_ann_rec(arg, ctx, type_param_map);
-                    ty.flag = Some(Flag::SubtypeWins);
-                    ty
-                })
+                .map(|arg| infer_type_ann_rec(arg, ctx, type_param_map))
                 .collect();
             let ret = Box::from(infer_type_ann_rec(ret.as_ref(), ctx, type_param_map));
             ctx.lam(params, ret)

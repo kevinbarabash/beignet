@@ -51,7 +51,7 @@ pub fn infer_lambda(
             // TODO: set the flag to Flag::Param so that we have more semantic
             // information if and when we need to resolve conflicts in the constraint
             // solver.
-            param_type.flag = Some(Flag::SupertypeWins);
+            param_type.flag = Some(Flag::Parameter);
 
             // Inserts any new variables introduced by infer_pattern() into
             // the current context.
