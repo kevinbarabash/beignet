@@ -546,7 +546,7 @@ pub fn let_to_children(r#let: &ast::Let) -> Vec<Stmt> {
 }
 
 fn let_to_child(r#let: &ast::Let) -> Stmt {
-    let ast::Let {pattern, value, ..} = r#let;
+    let ast::Let {pattern, init, ..} = r#let;
 
     // TODO: handle shadowed variables in the same scope by introducing
     // unique identifiers.
@@ -558,13 +558,13 @@ fn let_to_child(r#let: &ast::Let) -> Stmt {
             decls: vec![VarDeclarator {
                 span: DUMMY_SP,
                 name: build_pattern(pattern),
-                init: Some(Box::from(build_expr(value))),
+                init: Some(Box::from(build_expr(init))),
                 definite: false,
             }],
         })),
         None => Stmt::Expr(ExprStmt {
             span: DUMMY_SP,
-            expr: Box::from(build_expr(value)),
+            expr: Box::from(build_expr(init)),
         }),
     }
 }

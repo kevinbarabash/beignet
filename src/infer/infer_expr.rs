@@ -79,12 +79,12 @@ pub fn infer(
 
         Expr::Let(Let {
             pattern,
-            value,
+            init,
             body,
             ..
         }) => {
             let mut init_cs = vec![];
-            let init_type = infer(value, ctx, &mut init_cs)?;
+            let init_type = infer(init, ctx, &mut init_cs)?;
             constraints.append(&mut init_cs);
 
             let subs = run_solve(&init_cs, ctx)?;

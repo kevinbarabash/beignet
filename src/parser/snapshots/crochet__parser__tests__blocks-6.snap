@@ -21,7 +21,7 @@ Program {
                     Let {
                         span: 11..28,
                         pattern: None,
-                        value: App(
+                        init: App(
                             App {
                                 span: 11..25,
                                 lam: Member(

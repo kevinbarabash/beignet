@@ -21,7 +21,7 @@ Program {
                             },
                         ),
                     ),
-                    value: Let(
+                    init: Let(
                         Let {
                             span: 16..40,
                             pattern: Some(
@@ -36,7 +36,7 @@ Program {
                                     },
                                 ),
                             ),
-                            value: Lit(
+                            init: Lit(
                                 Num(
                                     Num {
                                         span: 20..21,
@@ -59,7 +59,7 @@ Program {
                                             },
                                         ),
                                     ),
-                                    value: Lit(
+                                    init: Lit(
                                         Num(
                                             Num {
                                                 span: 31..33,

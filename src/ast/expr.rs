@@ -72,7 +72,7 @@ pub struct Lambda {
 pub struct Let {
     pub span: Span,
     pub pattern: Option<Pattern>,
-    pub value: Box<Expr>,
+    pub init: Box<Expr>,
     pub body: Box<Expr>,
 }
 
