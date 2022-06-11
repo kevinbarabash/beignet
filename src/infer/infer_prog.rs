@@ -68,9 +68,12 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                             _ => {
                                 let mut constraints: Vec<Constraint> = vec![];
 
-                                let (pat_type, mut pat_cs, new_vars) =
-                                    infer_pattern(pattern, &mut ctx, &HashMap::new())?;
-                                constraints.append(&mut pat_cs);
+                                let (pat_type, new_vars) = infer_pattern(
+                                    pattern,
+                                    &mut ctx,
+                                    &mut constraints,
+                                    &HashMap::new(),
+                                )?;
 
                                 let init_ty = infer(init, &ctx, &mut constraints)?;
 

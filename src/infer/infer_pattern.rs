@@ -8,19 +8,20 @@ use crate::types::{self, Scheme, Type};
 use super::context::Context;
 use super::infer_type_ann::infer_type_ann_with_params;
 
-type PatInfData = (Type, Vec<Constraint>, HashMap<String, Scheme>);
+type PatInfData = (Type, HashMap<String, Scheme>);
 
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
 pub fn infer_pattern(
     pat: &Pattern,
     ctx: &mut Context,
+    constraints: &mut Vec<Constraint>,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<PatInfData, String> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
     let mut new_vars: HashMap<String, Scheme> = HashMap::new();
 
-    let pat_ty = infer_pattern_rec(pat, ctx, &mut new_vars)?;
+    let pat_ty = infer_pattern_rec(pat, ctx, constraints, &mut new_vars)?;
 
     // If the pattern had a type annotation associated with it, we infer type of the
     // type annotation and add a constraint between the types of the pattern and its
@@ -28,12 +29,10 @@ pub fn infer_pattern(
     match get_type_ann(pat) {
         Some(type_ann) => {
             let type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
-            let cs = vec![Constraint {
-                types: (type_ann_ty.clone(), pat_ty),
-            }];
-            Ok((type_ann_ty, cs, new_vars))
+            constraints.push(Constraint::from((type_ann_ty.clone(), pat_ty)));
+            Ok((type_ann_ty, new_vars))
         }
-        None => Ok((pat_ty, vec![], new_vars)),
+        None => Ok((pat_ty, new_vars)),
     }
 }
 
@@ -49,6 +48,7 @@ fn get_type_ann(pat: &Pattern) -> Option<TypeAnn> {
 fn infer_pattern_rec(
     pattern: &Pattern,
     ctx: &mut Context,
+    constraints: &mut Vec<Constraint>,
     new_vars: &mut HashMap<String, Scheme>,
 ) -> Result<Type, String> {
     match pattern {
@@ -60,7 +60,7 @@ fn infer_pattern_rec(
             }
             Ok(tv)
         }
-        Pattern::Rest(RestPat { arg, .. }) => infer_pattern_rec(arg.as_ref(), ctx, new_vars),
+        Pattern::Rest(RestPat { arg, .. }) => infer_pattern_rec(arg.as_ref(), ctx, constraints, new_vars),
         Pattern::Array(ArrayPat { elems, .. }) => {
             let elems: Result<Vec<Type>, String> = elems
                 .iter()
@@ -68,10 +68,10 @@ fn infer_pattern_rec(
                     match elem {
                         Some(elem) => match elem {
                             Pattern::Rest(rest) => {
-                                let rest_ty = infer_pattern_rec(rest.arg.as_ref(), ctx, new_vars)?;
+                                let rest_ty = infer_pattern_rec(rest.arg.as_ref(), ctx, constraints, new_vars)?;
                                 Ok(ctx.rest(rest_ty))
                             }
-                            _ => infer_pattern_rec(elem, ctx, new_vars),
+                            _ => infer_pattern_rec(elem, ctx, constraints, new_vars),
                         },
                         None => {
                             // TODO: figure how to ignore gaps in the array
@@ -139,7 +139,7 @@ fn infer_pattern_rec(
                             // failed to ensure that there's only one rest pattern in an object pattern
 
                             // TODO: bubble the error up from infer_patter_rec() if there is one.
-                            rest_opt_ty = infer_pattern_rec(rest.arg.as_ref(), ctx, new_vars).ok();
+                            rest_opt_ty = infer_pattern_rec(rest.arg.as_ref(), ctx, constraints, new_vars).ok();
                             None
                         }
                     }

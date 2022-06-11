@@ -8,11 +8,8 @@ use super::constraint_solver::Constraint;
 use super::context::Context;
 use super::infer_pattern::infer_pattern;
 
-type InferFn = fn(
-    expr: &Expr,
-    ctx: &Context,
-    constraints: &mut Vec<Constraint>,
-) -> Result<Type, String>;
+type InferFn =
+    fn(expr: &Expr, ctx: &Context, constraints: &mut Vec<Constraint>) -> Result<Type, String>;
 
 pub fn infer_lambda(
     infer: InferFn,
@@ -45,9 +42,8 @@ pub fn infer_lambda(
     let param_tvs: Result<Vec<_>, String> = params
         .iter()
         .map(|param| {
-            let (mut param_type, mut param_cs, new_vars) =
-                infer_pattern(param, &mut new_ctx, &type_params_map)?;
-            constraints.append(&mut param_cs);
+            let (mut param_type, new_vars) =
+                infer_pattern(param, &mut new_ctx, constraints, &type_params_map)?;
 
             // NOTE: We may not actually need to do this.  The tests pass without it.
             // That may change as we add more test cases though so I'm going to leave
