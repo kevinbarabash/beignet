@@ -145,13 +145,11 @@ fn generalize(env: &Env, ty: &Type) -> Scheme {
     }
 }
 
-pub type InferResult = (Type, Vec<Constraint>);
-
 fn is_promise(ty: &Type) -> bool {
     matches!(&ty.variant, Variant::Alias(types::AliasType { name, .. }) if name == "Promise")
 }
 
-fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
+pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), String> {
     match expr {
         Expr::Ident(Ident { name, .. }) => {
             let ty = ctx.lookup_value(name);
@@ -224,16 +222,22 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                 None => HashMap::default(),
             };
 
-            let param_tvs: Vec<_> = params
+            let param_tvs: Result<Vec<_>, String> = params
                 .iter()
                 .map(|param| {
-                    let mut param_type =
-                        infer_pattern(param, &mut new_ctx, &mut pat_cs, &type_params_map);
+                    let (mut param_type, mut param_cs, new_vars) =
+                        infer_pattern(param, &mut new_ctx, &type_params_map)?;
+                    pat_cs.append(&mut param_cs);
                     // NOTE: We may not actually need to do this.  The tests pass without it.
                     // That may change as we add more test cases though so I'm going to leave
                     // it here for now.
                     param_type.flag = Some(Flag::SupertypeWins);
-                    param_type
+
+                    for (name, scheme) in new_vars {
+                        new_ctx.values.insert(name, scheme);
+                    }
+
+                    Ok(param_type)
                 })
                 .collect();
 
@@ -247,7 +251,7 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
                 ctx.alias("Promise", Some(vec![ret]))
             };
 
-            let lam_ty = ctx.lam(param_tvs, Box::new(ret));
+            let lam_ty = ctx.lam(param_tvs?, Box::new(ret));
 
             let mut cs: Vec<Constraint> = vec![];
             cs.append(&mut pat_cs);
@@ -268,13 +272,20 @@ fn infer(expr: &Expr, ctx: &Context) -> Result<InferResult, String> {
             let t2 = match pattern {
                 Some(pattern) => {
                     let mut new_ctx = ctx.clone();
-                    let mut pattern_type =
-                        infer_pattern(pattern, &mut new_ctx, &mut cs, &HashMap::new());
-                    pattern_type.flag = Some(Flag::SupertypeWins);
+                    let (mut pat_type, mut pat_cs, new_vars) =
+                        infer_pattern(pattern, &mut new_ctx, &HashMap::new())?;
+                    pat_type.flag = Some(Flag::SupertypeWins);
+
+                    for (name, scheme) in new_vars {
+                        new_ctx.values.insert(name, scheme);
+                    }
+
+                    println!("pattern_type = {:#}", pat_type);
+                    cs.append(&mut pat_cs);
                     cs.push(Constraint {
                         // Order matters here: value_type appearing first indicates that
                         // it should be treated as a sub-type of pattern_type.
-                        types: (value_type, pattern_type),
+                        types: (value_type, pat_type),
                     });
                     let (t2, cs2) = infer(body, &new_ctx)?;
                     ctx.state.count.set(new_ctx.state.count.get());
