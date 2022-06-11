@@ -189,7 +189,10 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
                 // TODO: propagate errors instead of unwrap()-ing
                 let prop2 = props2.get(0).unwrap();
                 let prop1 = props1.iter().find(|p| p.name == prop2.name).unwrap();
-                return unifies(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx);
+                return unifies(&prop1.ty.to_owned(), &prop2.ty.to_owned(), ctx);
+                // TODO: check if either of the properties is optional and resolve
+                // the mismatch accordingly using .get_type(ctx) to convert an optional
+                // prop with type T to T | undefined.
             } else {
                 let new_type = intersect_types(t1, t2, ctx);
                 // We should never widen object types with the MemberAccess flag
