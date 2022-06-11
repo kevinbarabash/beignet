@@ -108,6 +108,24 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     });
                 }
                 unify_many(&cs, ctx)
+            } else if t2.flag == Some(Flag::Pattern) {
+                // NOTE: Patterns appear as the LHS of a let-binding or as the type of a function param.
+                // As such, the pattern must be a super type of the initializer in the let-binding or the
+                // argument passed to a function during a call/application.
+                let mut cs: Vec<Constraint> = vec![];
+                for p2 in props2 {
+                    let p1_type = match p2.optional {
+                        true => match props1.iter().find(|p1| p1.name == p2.name) {
+                            Some(prop) => prop.ty.clone(),
+                            None => continue,
+                        },
+                        false => props1.iter().find(|p1| p1.name == p2.name).unwrap().ty.clone(),
+                    };
+                    cs.push(Constraint {
+                        types: (p1_type, p2.ty.clone()),
+                    });
+                }
+                unify_many(&cs, ctx)
             } else {
                 unify_mismatched_types(t1, t2, ctx)
             }
@@ -134,7 +152,6 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 }
 
 fn get_aliased_type(alias: &AliasType, ctx: &Context) -> Type {
-    println!("get_aliased_type: {:#?}", alias);
     let scheme = ctx.types.get(&alias.name).unwrap();
     let subs: Subst = match &alias.type_params {
         Some(params) => {
@@ -198,7 +215,7 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
         return Ok(result);
     }
 
-    println!("unifcation failed: {:?} {:?}", t1, t2);
+    println!("unifcation failed");
 
     Err(String::from("unification failed"))
 }
@@ -309,8 +326,16 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<bool, String> {
             match ctx.types.get(&alias.name) {
                 Some(scheme) => {
                     // TODO: handle schemes with qualifiers
-                    let aliased_def = scheme.ty.to_owned();
-                    is_subtype(t1, &aliased_def, ctx)
+                    is_subtype(t1, &scheme.ty, ctx)
+                }
+                None => panic!("Can't find alias in context"),
+            }
+        }
+        (Variant::Alias(alias), _) => {
+            match ctx.types.get(&alias.name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    is_subtype(&scheme.ty, t2, ctx)
                 }
                 None => panic!("Can't find alias in context"),
             }

@@ -39,6 +39,12 @@ pub fn infer(
         Expr::App(App { lam, args, .. }) => {
             let fn_type = infer(lam, ctx, constraints)?;
             let args_types = infer_many(args, ctx, constraints)?;
+            let args_types = args_types.iter().map(|arg| {
+                let mut arg = arg.to_owned();
+                arg.flag = Some(Flag::Argument);
+                arg
+            }).collect();
+            println!("args_types = {:#?}", args_types);
             let ret_type = ctx.fresh_var();
 
             constraints.push(Constraint::from((
