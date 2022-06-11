@@ -33,7 +33,7 @@ fn type_of_property_on_type(
             // let mag_square = (point) => point.x * point.x + point.y * point.y
             let tv = ctx.fresh_var();
             let obj = ctx.object_with_flag(
-                &[types::TProp {
+                vec![types::TProp {
                     name: prop.name(),
                     // We assume the property is not optional when inferring an
                     // object from a member access.

@@ -146,7 +146,7 @@ fn infer_pattern_rec(
                 })
                 .collect();
 
-            let obj_type = ctx.object(&props);
+            let obj_type = ctx.object(props);
 
             match rest_opt_ty {
                 Some(rest_ty) => Ok(ctx.intersection(vec![obj_type, rest_ty])),

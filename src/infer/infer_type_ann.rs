@@ -84,7 +84,7 @@ fn infer_type_ann_rec(
                     ty: infer_type_ann_rec(prop.type_ann.as_ref(), ctx, type_param_map),
                 })
                 .collect();
-            ctx.object(&props)
+            ctx.object(props)
         }
         TypeAnn::TypeRef(TypeRef {
             name, type_params, ..

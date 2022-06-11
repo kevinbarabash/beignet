@@ -441,7 +441,7 @@ fn intersect_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
     match (&t1.variant, &t2.variant) {
         (Variant::Object(props1), Variant::Object(props2)) => {
             let props = intersect_properties(props1, props2, ctx);
-            ctx.object(&props)
+            ctx.object(props)
         }
         (_, _) => ctx.intersection(vec![t1.to_owned(), t2.to_owned()]),
     }

@@ -7,6 +7,7 @@ mod infer_pattern;
 mod infer_prog;
 mod infer_type_ann;
 mod substitutable;
+mod util;
 
 pub use context::*;
 pub use infer_expr::*;
