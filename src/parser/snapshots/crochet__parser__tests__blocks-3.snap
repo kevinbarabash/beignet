@@ -21,7 +21,7 @@ Program {
                             },
                         ),
                     ),
-                    value: Lit(
+                    init: Lit(
                         Num(
                             Num {
                                 span: 9..10,
@@ -44,7 +44,7 @@ Program {
                                     },
                                 ),
                             ),
-                            value: Lit(
+                            init: Lit(
                                 Num(
                                     Num {
                                         span: 20..22,

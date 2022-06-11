@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::collections::HashMap;
 
 use crate::ast::literal::Lit;
-use crate::types::{self, Flag, Scheme, Type, Variant};
+use crate::types::{self, Flag, Scheme, Type, Variant, TProp};
 
 use super::substitutable::*;
 
@@ -158,17 +158,17 @@ impl Context {
         }
     }
 
-    pub fn object(&self, props: &[types::TProp]) -> Type {
+    pub fn object(&self, props: Vec<TProp>) -> Type {
         self.object_with_option_flag(props, None)
     }
-    pub fn object_with_flag(&self, props: &[types::TProp], flag: Flag) -> Type {
+    pub fn object_with_flag(&self, props: Vec<TProp>, flag: Flag) -> Type {
         self.object_with_option_flag(props, Some(flag))
     }
-    fn object_with_option_flag(&self, props: &[types::TProp], flag: Option<Flag>) -> Type {
+    fn object_with_option_flag(&self, props: Vec<TProp>, flag: Option<Flag>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Object(props.to_vec()),
+            variant: Variant::Object(props),
             flag,
         }
     }

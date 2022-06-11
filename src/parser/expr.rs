@@ -64,7 +64,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                     Expr::Let(Let {
                         span: start..end,
                         pattern: pattern.to_owned(),
-                        value: Box::new(value.to_owned()),
+                        init: Box::new(value.to_owned()),
                         body: Box::new(body),
                     })
                 });

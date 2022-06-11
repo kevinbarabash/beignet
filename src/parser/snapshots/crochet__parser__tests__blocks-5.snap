@@ -32,7 +32,7 @@ Program {
                                 },
                             ),
                         ),
-                        value: Lit(
+                        init: Lit(
                             Num(
                                 Num {
                                     span: 19..20,
@@ -44,7 +44,7 @@ Program {
                             Let {
                                 span: 22..39,
                                 pattern: None,
-                                value: App(
+                                init: App(
                                     App {
                                         span: 22..36,
                                         lam: Member(
