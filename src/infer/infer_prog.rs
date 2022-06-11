@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use crate::ast::*;
 use crate::types::Scheme;
 
-use super::constraint_solver::{Constraint, run_solve, is_subtype};
+use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::Context;
-use super::substitutable::*;
-use super::infer_expr::{infer_expr, infer};
+use super::infer_expr::{infer, infer_expr, normalize};
 use super::infer_pattern::infer_pattern;
 use super::infer_type_ann::*;
+use super::substitutable::*;
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
@@ -47,7 +47,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                     false => {
                         // An initial value should always be used when using a normal `let` statement
                         let init = init.as_ref().unwrap();
-                    
+
                         match pattern {
                             Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
                                 let inferred_scheme = infer_expr(&ctx, init)?;
@@ -66,26 +66,22 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                                 ctx.values.insert(id.name.to_owned(), scheme?);
                             }
                             _ => {
+                                let mut constraints: Vec<Constraint> = vec![];
+
                                 let (pat_type, mut pat_cs, new_vars) =
                                     infer_pattern(pattern, &mut ctx, &HashMap::new())?;
-                                println!("pattern_type: {}", pat_type);
-                                let (init_ty, mut cs) = infer(init, &ctx)?;
-                                cs.append(&mut pat_cs);
-                                cs.push(Constraint { types: (init_ty, pat_type.clone()) });
-                                let subs = run_solve(&cs, &ctx)?;
-                                // TODO: call close_over() so that we can get a scheme out of this
-                                let pat_type = pat_type.apply(&subs);
-                                println!("pattern_type: {}", pat_type);
-                                println!("new_vars = {:#?}", new_vars);
+                                constraints.append(&mut pat_cs);
+
+                                let (init_ty, mut init_cs) = infer(init, &ctx)?;
+                                constraints.append(&mut init_cs);
+
+                                constraints.push(Constraint::from((init_ty, pat_type.clone())));
+                                let subs = run_solve(&constraints, &ctx)?;
 
                                 for (name, scheme) in new_vars {
-                                    println!("{name} = {scheme}");
-                                    let scheme = scheme.apply(&subs);
-                                    println!("{name} = {scheme}");
+                                    let scheme = normalize(&scheme.apply(&subs), &ctx);
                                     ctx.values.insert(name, scheme);
                                 }
-                                
-                                // TODO: 
                             }
                         }
                     }

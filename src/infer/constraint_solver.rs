@@ -12,6 +12,12 @@ pub struct Constraint {
     pub types: (Type, Type),
 }
 
+impl From<(Type, Type)> for Constraint {
+    fn from(types: (Type, Type)) -> Self {
+        Constraint { types }
+    }
+}
+
 type Unifier = (Subst, Vec<Constraint>);
 
 pub fn run_solve(cs: &[Constraint], ctx: &Context) -> Result<Subst, String> {
@@ -134,7 +140,7 @@ fn get_aliased_type(alias: &AliasType, ctx: &Context) -> Type {
         Some(params) => {
             let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
             ids.zip(params.iter().cloned()).collect()
-        },
+        }
         None => Subst::new(),
     };
 
@@ -153,14 +159,14 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
             Some(Flag::MemberAccess) => (),
             None => {
                 if !t1.frozen {
-                    // TODO: we hsould be using an explicit flag so that we're only 
+                    // TODO: we hsould be using an explicit flag so that we're only
                     // doing this when it makes sense to.  Right now the following test
                     // is using this: infer_fn_param_with_type_alias_with_param.
                     // We should create more tests that involving passing subtypes to
                     // to functions.
                     return Ok(Subst::new());
                 }
-            },
+            }
         }
     }
 

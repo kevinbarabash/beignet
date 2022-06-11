@@ -7,9 +7,9 @@ use crate::types::{self, Flag, Primitive, Scheme, Type, Variant};
 
 use super::constraint_solver::{run_solve, Constraint};
 use super::context::{Context, Env};
+use super::infer_lambda::infer_lambda;
 use super::infer_mem::infer_mem;
 use super::infer_pattern::infer_pattern;
-use super::infer_lambda::infer_lambda;
 use super::substitutable::Substitutable;
 
 pub fn infer_expr(ctx: &Context, expr: &Expr) -> Result<Scheme, String> {
@@ -24,7 +24,7 @@ fn close_over(ty: &Type, ctx: &Context) -> Scheme {
     normalize(&generalize(&empty_env, ty), ctx)
 }
 
-fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
+pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
     let body = &sc.ty;
     let keys = body.ftv();
     let mut keys: Vec<_> = keys.iter().cloned().collect();
@@ -147,33 +147,38 @@ fn generalize(env: &Env, ty: &Type) -> Scheme {
 }
 
 pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), String> {
+    let mut constraints = Vec::new();
+
     match expr {
         Expr::Ident(Ident { name, .. }) => {
             let ty = ctx.lookup_value(name);
             Ok((ty, vec![]))
         }
         Expr::App(App { lam, args, .. }) => {
-            let (t_fn, cs_fn) = infer(lam, ctx)?;
-            let (t_args, cs_args) = infer_many(args, ctx)?;
+            let (fn_type, mut fn_cs) = infer(lam, ctx)?;
+            constraints.append(&mut fn_cs);
+
+            let (args_types, mut args_cs) = infer_many(args, ctx)?;
+            constraints.append(&mut args_cs);
+
             let tv = ctx.fresh_var();
 
-            let mut constraints = Vec::new();
-            constraints.extend(cs_fn);
-            constraints.extend(cs_args);
-            constraints.push(Constraint {
-                types: (ctx.lam(t_args, Box::new(tv.clone())), t_fn),
-            });
+            constraints.push(Constraint::from((
+                ctx.lam(args_types, Box::new(tv.clone())),
+                fn_type,
+            )));
 
             Ok((tv, constraints))
         }
         Expr::Fix(Fix { expr, .. }) => {
-            let (t, cs) = infer(expr, ctx)?;
+            let (expr_type, mut expr_cs) = infer(expr, ctx)?;
+            constraints.append(&mut expr_cs);
+
             let tv = ctx.fresh_var();
-            let mut constraints = Vec::new();
-            constraints.extend(cs);
-            constraints.push(Constraint {
-                types: (ctx.lam(vec![tv.clone()], Box::new(tv.clone())), t),
-            });
+            constraints.push(Constraint::from((
+                ctx.lam(vec![tv.clone()], Box::new(tv.clone())),
+                expr_type,
+            )));
 
             Ok((tv, constraints))
         }
@@ -183,20 +188,19 @@ pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), Stri
             alternate,
             ..
         }) => {
-            let (t1, cs1) = infer(cond, ctx)?;
-            let (t2, cs2) = infer(consequent, ctx)?;
-            let (t3, cs3) = infer(alternate, ctx)?;
-            let bool = ctx.prim(Primitive::Bool);
+            let (cond_type, mut cond_cs) = infer(cond, ctx)?;
+            constraints.append(&mut cond_cs);
 
-            let result_type = t2.clone();
-            let mut constraints = Vec::new();
-            constraints.extend(cs1);
-            constraints.extend(cs2);
-            constraints.extend(cs3);
-            constraints.push(Constraint { types: (t1, bool) });
-            constraints.push(Constraint { types: (t2, t3) });
+            let (cons_type, mut cons_cs) = infer(consequent, ctx)?;
+            constraints.append(&mut cons_cs);
 
-            Ok((result_type, constraints))
+            let (alt_type, mut alt_cs) = infer(alternate, ctx)?;
+            constraints.append(&mut alt_cs);
+
+            constraints.push(Constraint::from((cond_type, ctx.prim(Primitive::Bool))));
+            constraints.push(Constraint::from((cons_type.clone(), alt_type)));
+
+            Ok((cons_type, constraints))
         }
         Expr::Lambda(lambda) => infer_lambda(lambda, ctx, infer),
         Expr::Let(Let {
@@ -205,14 +209,15 @@ pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), Stri
             body,
             ..
         }) => {
-            let mut constraints: Vec<Constraint> = Vec::new();
-            let (value_type, cs1) = infer(value, ctx)?;
-            let subs = run_solve(&cs1, ctx)?;
-            constraints.extend(cs1);
+            let (init_type, mut init_cs) = infer(value, ctx)?;
+            constraints.append(&mut init_cs);
 
-            let t2 = match pattern {
+            let subs = run_solve(&init_cs, ctx)?;
+
+            let body_type = match pattern {
                 Some(pattern) => {
                     let mut new_ctx = ctx.clone();
+
                     let (mut pat_type, mut pat_cs, new_vars) =
                         infer_pattern(pattern, &mut new_ctx, &HashMap::new())?;
                     pat_type.flag = Some(Flag::SupertypeWins);
@@ -221,27 +226,31 @@ pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), Stri
                         new_ctx.values.insert(name, scheme);
                     }
 
-                    println!("pattern_type = {:#}", pat_type);
                     constraints.append(&mut pat_cs);
-                    constraints.push(Constraint {
-                        // Order matters here: value_type appearing first indicates that
-                        // it should be treated as a sub-type of pattern_type.
-                        types: (value_type, pat_type),
-                    });
-                    let (t2, cs2) = infer(body, &new_ctx)?;
+                    // Order matters here: value_type appearing first indicates that
+                    // it should be treated as a sub-type of pattern_type.
+                    constraints.push(Constraint::from((init_type, pat_type)));
+
+                    let (body_type, body_cs) = infer(body, &new_ctx)?;
+                    let mut body_cs = body_cs.apply(&subs);
+                    constraints.append(&mut body_cs);
+
+                    // Ensures that type variable ids are unique.
                     ctx.state.count.set(new_ctx.state.count.get());
-                    constraints.extend(cs2.apply(&subs));
-                    t2
+
+                    body_type
                 }
                 // handles: let _ = ...
                 None => {
-                    let (t2, cs2) = infer(body, ctx)?;
-                    constraints.extend(cs2.apply(&subs));
-                    t2
+                    let (body_type, body_cs) = infer(body, ctx)?;
+                    let mut body_cs = body_cs.apply(&subs);
+                    constraints.append(&mut body_cs);
+
+                    body_type
                 }
             };
 
-            Ok((t2.apply(&subs), constraints))
+            Ok((body_type.apply(&subs), constraints))
         }
         Expr::Lit(literal) => Ok((ctx.lit(literal.to_owned()), vec![])),
         // TODO: consider introduce functions for each operator and rewrite Ops as Apps
@@ -250,17 +259,18 @@ pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), Stri
         }) => {
             let left = Box::as_ref(left);
             let right = Box::as_ref(right);
-            let (ts, cs) = infer_many(&[left.clone(), right.clone()], ctx)?;
-            let tv = ctx.fresh_var();
 
-            let mut constraints = cs;
+            let (args_types, mut args_cs) = infer_many(&[left.clone(), right.clone()], ctx)?;
+            constraints.append(&mut args_cs);
+
+            let tv = ctx.fresh_var();
 
             let c = match op {
                 BinOp::EqEq | BinOp::NotEq => {
                     let arg_tv = ctx.fresh_var();
                     Constraint {
                         types: (
-                            ctx.lam(ts, Box::from(tv.clone())),
+                            ctx.lam(args_types, Box::from(tv.clone())),
                             // equivalent to <T>(arg0: T, arg1: T) => bool
                             ctx.lam(
                                 vec![arg_tv.clone(), arg_tv],
@@ -273,7 +283,7 @@ pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), Stri
                 // strings and potentially user defined types.
                 BinOp::Lt | BinOp::LtEq | BinOp::Gt | BinOp::GtEq => Constraint {
                     types: (
-                        ctx.lam(ts, Box::from(tv.clone())),
+                        ctx.lam(args_types, Box::from(tv.clone())),
                         ctx.lam(
                             vec![ctx.prim(Primitive::Num), ctx.prim(Primitive::Num)],
                             Box::from(ctx.prim(Primitive::Bool)),
@@ -281,7 +291,7 @@ pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), Stri
                     ),
                 },
                 BinOp::Add | BinOp::Sub | BinOp::Div | BinOp::Mul => {
-                    let inf_type = ctx.lam(ts, Box::from(tv.clone()));
+                    let inf_type = ctx.lam(args_types, Box::from(tv.clone()));
                     let def_type = ctx.lam(
                         vec![
                             ctx.prim_with_flag(Primitive::Num, Flag::SubtypeWins),
@@ -290,9 +300,7 @@ pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), Stri
                         Box::from(ctx.prim(Primitive::Num)),
                     );
 
-                    Constraint {
-                        types: (inf_type, def_type),
-                    }
+                    Constraint::from((inf_type, def_type))
                 }
             };
             constraints.push(c);
@@ -300,37 +308,35 @@ pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), Stri
             Ok((tv, constraints))
         }
         Expr::Obj(Obj { props, .. }) => {
-            let mut constraints: Vec<Constraint> = Vec::new();
             let props: Result<Vec<types::TProp>, String> = props
                 .iter()
                 .map(|p| {
-                    let (ty, cs) = infer(&p.value, ctx)?;
-                    constraints.extend(cs);
+                    let (prop_type, mut prop_cs) = infer(&p.value, ctx)?;
+                    constraints.append(&mut prop_cs);
+
                     // The property is not optional in the type we infer from
                     // an object literal, because the property has a value.
-                    Ok(ctx.prop(&p.name, ty, false))
+                    Ok(ctx.prop(&p.name, prop_type, false))
                 })
                 .collect();
 
-            let obj_ty = ctx.object(&props?);
+            let obj_type = ctx.object(&props?);
 
-            Ok((obj_ty, constraints))
+            Ok((obj_type, constraints))
         }
         Expr::Await(Await { expr, .. }) => {
             if !ctx.is_async {
                 return Err(String::from("Can't use `await` inside non-async lambda"));
             }
 
-            let (promise_ty, promise_cs) = infer(expr, ctx)?;
+            let (promise_ty, mut promise_cs) = infer(expr, ctx)?;
             let tv = ctx.fresh_var();
 
-            let c = Constraint {
-                types: (promise_ty, ctx.alias("Promise", Some(vec![tv.clone()]))),
-            };
-
-            let mut constraints: Vec<Constraint> = Vec::new();
-            constraints.extend(promise_cs);
-            constraints.push(c);
+            constraints.append(&mut promise_cs);
+            constraints.push(Constraint::from((
+                promise_ty,
+                ctx.alias("Promise", Some(vec![tv.clone()])),
+            )));
 
             Ok((tv, constraints))
         }
@@ -351,11 +357,11 @@ pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), Stri
         }
         Expr::Tuple(Tuple { elems, .. }) => {
             let mut types: Vec<Type> = vec![];
-            let mut constraints: Vec<Constraint> = Vec::new();
+
             for elem in elems {
-                let (ty, cs) = infer(elem, ctx)?;
-                types.push(ty);
-                constraints.extend(cs);
+                let (elem_type, mut elem_cs) = infer(elem, ctx)?;
+                constraints.append(&mut elem_cs);
+                types.push(elem_type);
             }
 
             Ok((ctx.tuple(types), constraints))
@@ -365,16 +371,16 @@ pub fn infer(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), Stri
 }
 
 fn infer_many(exprs: &[Expr], ctx: &Context) -> Result<(Vec<Type>, Vec<Constraint>), String> {
-    let mut ts: Vec<Type> = Vec::new();
-    let mut all_cs: Vec<Constraint> = Vec::new();
+    let mut types: Vec<Type> = Vec::new();
+    let mut constraints: Vec<Constraint> = Vec::new();
 
-    for elem in exprs {
-        let (ty, cs) = infer(elem, ctx)?;
-        ts.push(ty);
-        all_cs.extend(cs);
+    for expr in exprs {
+        let (expr_type, expr_cs) = infer(expr, ctx)?;
+        constraints.extend(expr_cs);
+        types.push(expr_type);
     }
 
-    Ok((ts, all_cs))
+    Ok((types, constraints))
 }
 
 // TODO: make this recursive
