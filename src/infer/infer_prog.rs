@@ -72,8 +72,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                                     infer_pattern(pattern, &mut ctx, &HashMap::new())?;
                                 constraints.append(&mut pat_cs);
 
-                                let (init_ty, mut init_cs) = infer(init, &ctx)?;
-                                constraints.append(&mut init_cs);
+                                let init_ty = infer(init, &ctx, &mut constraints)?;
 
                                 constraints.push(Constraint::from((init_ty, pat_type.clone())));
                                 let subs = run_solve(&constraints, &ctx)?;

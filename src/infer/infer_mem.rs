@@ -5,30 +5,27 @@ use crate::types::{self, Type, Flag, Variant};
 use super::context::Context;
 use super::substitutable::*;
 
-pub type InferResult = (Type, Vec<Constraint>);
-
 pub fn infer_mem(
-    infer: fn(expr: &Expr, ctx: &Context) -> Result<InferResult, String>,
+    infer: fn(expr: &Expr, ctx: &Context, constraints: &mut Vec<Constraint>) -> Result<Type, String>,
     mem: &Member,
     ctx: &Context,
-) -> Result<InferResult, String> {
+    constraints: &mut Vec<Constraint>,
+) -> Result<Type, String> {
     let Member { obj, prop, .. } = mem;
 
-    let (obj_type, mut obj_cs) = infer(obj, ctx)?;
+    let obj_type = infer(obj, ctx, constraints)?;
     let (prop_type, mut prop_cs) = type_of_property_on_type(obj_type, prop, ctx)?;
 
-    let mut constraints: Vec<Constraint> = vec![];
-    constraints.append(&mut obj_cs);
     constraints.append(&mut prop_cs);
 
-    Ok((unwrap_member_type(&prop_type, ctx), constraints))
+    Ok(unwrap_member_type(&prop_type, ctx))
 }
 
 fn type_of_property_on_type(
     ty: Type,
     prop: &MemberProp,
     ctx: &Context,
-) -> Result<InferResult, String> {
+) -> Result<(Type, Vec<Constraint>), String> {
     match &ty.variant {
         Variant::Var => {
             // TODO: implementing this correctly should allow for the following

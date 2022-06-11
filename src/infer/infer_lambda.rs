@@ -8,13 +8,18 @@ use super::constraint_solver::Constraint;
 use super::context::Context;
 use super::infer_pattern::infer_pattern;
 
-type InferFn = fn(expr: &Expr, ctx: &Context) -> Result<(Type, Vec<Constraint>), String>;
+type InferFn = fn(
+    expr: &Expr,
+    ctx: &Context,
+    constraints: &mut Vec<Constraint>,
+) -> Result<Type, String>;
 
 pub fn infer_lambda(
+    infer: InferFn,
     lambda: &Lambda,
     ctx: &Context,
-    infer: InferFn,
-) -> Result<(Type, Vec<Constraint>), String> {
+    constraints: &mut Vec<Constraint>,
+) -> Result<Type, String> {
     let Lambda {
         params,
         body,
@@ -24,7 +29,6 @@ pub fn infer_lambda(
     } = lambda;
 
     // Creates a new type variable for each arg
-    let mut constraints: Vec<Constraint> = vec![];
     let mut new_ctx = ctx.clone();
     new_ctx.is_async = is_async.to_owned();
 
@@ -63,8 +67,7 @@ pub fn infer_lambda(
         })
         .collect();
 
-    let (ret, mut body_cs) = infer(body, &new_ctx)?;
-    constraints.append(&mut body_cs);
+    let ret = infer(body, &new_ctx, constraints)?;
 
     // Ensures that type variable ids are unique.
     ctx.state.count.set(new_ctx.state.count.get());
@@ -78,7 +81,7 @@ pub fn infer_lambda(
 
     // TODO: add a constraint for the return type if it's specified
 
-    Ok((lam_ty, constraints))
+    Ok(lam_ty)
 }
 
 fn is_promise(ty: &Type) -> bool {
