@@ -1,6 +1,7 @@
 mod constraint_solver;
 mod context;
 mod infer_expr;
+mod infer_lambda;
 mod infer_mem;
 mod infer_pattern;
 mod infer_prog;

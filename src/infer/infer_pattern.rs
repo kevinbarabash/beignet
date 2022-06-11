@@ -10,6 +10,8 @@ use super::infer_type_ann::infer_type_ann_with_params;
 
 type PatInfData = (Type, Vec<Constraint>, HashMap<String, Scheme>);
 
+// NOTE: The caller is responsible for inserting any new variables introduced
+// into the appropriate context.
 pub fn infer_pattern(
     pat: &Pattern,
     ctx: &mut Context,

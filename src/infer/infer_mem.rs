@@ -17,11 +17,11 @@ pub fn infer_mem(
     let (obj_type, mut obj_cs) = infer(obj, ctx)?;
     let (prop_type, mut prop_cs) = type_of_property_on_type(obj_type, prop, ctx)?;
 
-    let mut cs: Vec<Constraint> = vec![];
-    cs.append(&mut obj_cs);
-    cs.append(&mut prop_cs);
+    let mut constraints: Vec<Constraint> = vec![];
+    constraints.append(&mut obj_cs);
+    constraints.append(&mut prop_cs);
 
-    Ok((unwrap_member_type(&prop_type, ctx), cs))
+    Ok((unwrap_member_type(&prop_type, ctx), constraints))
 }
 
 fn type_of_property_on_type(
