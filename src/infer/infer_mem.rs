@@ -116,6 +116,7 @@ fn unwrap_member_type(ty: &Type, ctx: &Context) -> Type {
             Variant::Object(props) => {
                 let prop = props.iter().find(|prop| prop.name == member.prop);
                 match prop {
+                    // TODO: figure out how to make TProp#get_type(ctx) work here
                     Some(prop) => match prop.optional {
                         true => ctx.union(vec![
                             unwrap_member_type(&prop.ty, ctx),

@@ -68,7 +68,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .map(|prop| TProp {
                         name: prop.name.clone(),
                         optional: prop.optional,
-                        ty: norm_type(&prop.ty, mapping, ctx),
+                        ty: norm_type(&prop.get_type(ctx), mapping, ctx),
                     })
                     .collect();
                 Type {
@@ -143,7 +143,7 @@ pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
     let mut props_map: DefaultHashMap<String, HashSet<Type>> = defaulthashmap!();
     for props in obj_types {
         for prop in props {
-            props_map[prop.name.clone()].insert(prop.ty.clone());
+            props_map[prop.name.clone()].insert(prop.get_type(ctx));
         }
     }
 
