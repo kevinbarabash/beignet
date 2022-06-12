@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
-    "build": "webpack",
+    "build": "webpack && cp scarf.png build",
     "serve": "webpack serve"
   },
   "devDependencies": {
