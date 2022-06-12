@@ -2,56 +2,18 @@ import * as React from "react";
 
 import * as m from "../pkg";
 
+import * as examples from "./examples";
+import githubMark from "./GitHub-Mark-32px.png";
+
 console.log(m);
 // @ts-expect-error
 window.m = m;
 
-const styles = {
-  app: {
-    display: "flex",
-    height: "100%",
-    "flex-direction": "column",
-  },
-  textArea: {
-    flexGrow: 1,
-  },
-};
-
 export const App = () => {
-  let [source, setSource] = React.useState(() => {
-    return [
-      "let add = (a, b) => a + b",
-      "let sub = (a, b) => a - b",
-      "let foo = (f, x) => f(x) + x",
-      "",
-      "let baz = if (true) {",
-      "  let x = 5;",
-      "  let y = 10;",
-      "  x + y",
-      "} else {",
-      "  10",
-      "}",
-      "",
-      "type Point = {x: number, y: number}",
-      "let point: Point = {x: 5, y: 10}",
-      "",
-      "let add = async (a, b) => await a() + await b()",
-      "",
-      "type JSXElement = {}",
-      "let msg = \"world\"",
-      "let elem = <div point={point} id=\"point\">Hello, {msg}</div>",
-      "",
-      "let rec fib = (n) => if (n == 0) {",
-      "  0",
-      "} else {",
-      "  if (n == 1) {",
-      "      1",
-      "  } else {",
-      "      fib(n - 1) + fib(n - 2)",
-      "  }",
-      "}",
-    ].join("\n");
-  });
+  let [example, setExample] = React.useState<keyof typeof examples>("basics");
+  let [source, setSource] = React.useState(() => examples[example]);
+
+  let [outputTab, setOutputTab] = React.useState<"js" | "dts">("js");
 
   let output = React.useMemo(() => {
     try {
@@ -66,19 +28,84 @@ export const App = () => {
     setSource(e.target.value);
   };
 
-  // TODO: use CSS Grid for this
+  const styles = {
+    grid: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gridTemplateRows: "min-content min-content min-content 1fr",
+      height: "100%",
+    },
+    label: {
+      fontFamily: "sans-serif",
+      fontWeight: "bold",
+    },
+    editor: {
+      fontFamily: "monospace",
+      fontSize: 14,
+    },
+    header: {
+      fontFamily: "sans-serif",
+      gridColumnStart: 1,
+      gridColumnEnd: 3,
+      margin: 0,
+    },
+    links: {
+      gridColumnStart: 1,
+      gridColumnEnd: 3,
+      alignSelf: "center",
+      marginBottom: 12,
+    }
+  };
+
+  const changeExample = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    let value = event.target.value;
+    switch (value) {
+      case "asyncAwait":
+      case "jsx":
+      case "fibonacci":
+      case "basics": {
+        setExample(value);
+        setSource(examples[value]);
+      }
+    }
+  };
+
+  const changeOutputTab = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    let value = event.target.value;
+    switch (value) {
+      case "js":
+      case "dts": {
+        setOutputTab(value);
+      }
+    }
+  };
+
   return (
-    <div style={styles.app}>
-      <h1>crochet demo</h1>
-      <div style={{ width: "100%", height: "100%", display: "flex" }}>
-        <textarea
-          style={styles.textArea}
-          value={source}
-          onChange={updateSource}
-        />
-        <textarea style={styles.textArea} value={output.js} />
-        <textarea style={styles.textArea} value={output.dts} />
+    <div style={styles.grid}>
+      <h1 style={styles.header}>crochet 🧣</h1>
+      <div style={styles.links}>
+        <a href="https://github.com/crochet-lang/crochet" target="_blank">
+          <img src={githubMark} width={16} height={16} style={{opacity: 0.7}} />
+        </a>
       </div>
+      <div>
+        <span style={styles.label}>Example:</span>
+        <select onChange={changeExample} value={example}>
+          <option value="basics">Basics</option>
+          <option value="asyncAwait">Async/Await</option>
+          <option value="jsx">JSX</option>
+          <option value="fibonacci">Fibonacci</option>
+        </select>
+      </div>
+      <div>
+        <span style={styles.label}>Output:</span>
+        <select onChange={changeOutputTab} value={outputTab}>
+          <option value="js">.js</option>
+          <option value="dts">.d.ts</option>
+        </select>
+      </div>
+      <textarea style={styles.editor} value={source} onChange={updateSource} />
+      <textarea style={styles.editor} value={output[outputTab]} />
     </div>
   );
 };

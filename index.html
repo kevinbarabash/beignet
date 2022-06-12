@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8"/>
+    <meta charset="utf-8" />
     <title><%= htmlWebpackPlugin.options.title %></title>
     <style>
-        body, html {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-        #container {
-            height: 100%;
-        }
+      body,
+      html {
+        height: calc(100% - 8px);
+      }
+      #container {
+        height: 100%;
+      }
+      textarea {
+        resize: none;
+      }
     </style>
   </head>
   <body>
