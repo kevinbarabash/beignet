@@ -87,7 +87,20 @@ pub struct Op {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Obj {
     pub span: Span,
-    pub props: Vec<Property>,
+    pub props: Vec<Prop>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Prop {
+    Shorthand(Ident),
+    KeyValue(KeyValueProp),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeyValueProp {
+    pub span: Span,
+    pub name: String,
+    pub value: Expr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -179,11 +192,4 @@ pub enum BinOp {
     GtEq,
     Lt,
     LtEq,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Property {
-    pub span: Span,
-    pub name: String,
-    pub value: Expr,
 }
