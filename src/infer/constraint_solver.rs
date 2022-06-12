@@ -126,6 +126,27 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 unify_mismatched_types(t1, t2, ctx)
             }
         }
+        (Variant::Tuple(elems1), Variant::Tuple(elems2)) => {
+            // We only try to unify tuples on an element by element basis when
+            // destructuring.
+            if t2.flag == Some(Flag::Pattern) && elems2.len() <= elems1.len() {
+                let cs: Vec<_> = elems1
+                    .iter()
+                    .zip(elems2.iter())
+                    .map(|(e1, e2)| Constraint::from((e1.to_owned(), e2.to_owned())))
+                    .collect();
+                unify_many(&cs, ctx)
+            } else if t1.flag == Some(Flag::Pattern) && elems1.len() <= elems2.len() {
+                let cs: Vec<_> = elems1
+                    .iter()
+                    .zip(elems2.iter())
+                    .map(|(e1, e2)| Constraint::from((e1.to_owned(), e2.to_owned())))
+                    .collect();
+                unify_many(&cs, ctx)
+            } else {
+                unify_mismatched_types(t1, t2, ctx)
+            }
+        }
         (_, Variant::Intersection(types)) => {
             for ty in types {
                 let result = unifies(t1, ty, ctx);
@@ -211,7 +232,9 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
         return Ok(result);
     }
 
-    println!("unifcation failed");
+    println!("unifcation failed: {t1} == {t2}");
+    println!("t1 = {:#?}", t1);
+    println!("t2 = {:#?}", t2);
 
     Err(String::from("unification failed"))
 }

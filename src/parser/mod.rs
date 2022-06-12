@@ -142,6 +142,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let x = []"));
         insta::assert_debug_snapshot!(parse("let x = [1, 2, 3]"));
         insta::assert_debug_snapshot!(parse("let x = [1, [a, b]]"));
+        insta::assert_debug_snapshot!(parse("let foo = () => [a, b]"));
     }
 
     #[test]
@@ -181,6 +182,10 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let {p0: {x, y}, p1: {x, y}} = line"));
         insta::assert_debug_snapshot!(parse("let [a, b, ...rest] = letters"));
         insta::assert_debug_snapshot!(parse("let [foo, ...[bar, ...rest]] = baz"));
+        insta::assert_debug_snapshot!(parse("let foo = ([a, b]) => a"));
+        insta::assert_debug_snapshot!(parse("let foo = ([a, b]: [string, number]) => a"));
+        insta::assert_debug_snapshot!(parse("let foo = ({a, b}) => b"));
+        insta::assert_debug_snapshot!(parse("let foo = ({a, b}: {a: string, b: number}) => b"));
         // TODO: renaming properties when destructuring objects
         // TODO: assigning defaults
         // TODO: type annotations

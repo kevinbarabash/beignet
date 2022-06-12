@@ -1003,6 +1003,66 @@ fn infer_destructure_object_inside_fn_2() {
 }
 
 #[test]
+fn infer_destructure_object_param() {
+    let src = r#"
+    let foo = ({a, b}: {a: string, b: number}) => a
+    let a = foo({a: "hello", b: 5})
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let a = format!("{}", ctx.values.get("a").unwrap());
+    assert_eq!(a, "string");
+}
+
+#[test]
+fn infer_destructure_object_param_2() {
+    let src = r#"
+    let foo = ({a, b}: {a: string, b: number}) => {
+        {a: a, b: b}
+    }
+    let {a, b} = foo({a: "hello", b: 5})
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let a = format!("{}", ctx.values.get("a").unwrap());
+    assert_eq!(a, "string");
+
+    let b = format!("{}", ctx.values.get("b").unwrap());
+    assert_eq!(b, "number");
+}
+
+#[test]
+fn return_an_object() {
+    let src = r#"
+    let foo = () => {
+        {a: "hello", b: 5}
+    }
+    let {a, b} = foo()
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let a = format!("{}", ctx.values.get("a").unwrap());
+    assert_eq!(a, "\"hello\"");
+
+    let b = format!("{}", ctx.values.get("b").unwrap());
+    assert_eq!(b, "5");
+}
+
+#[test]
+#[ignore]
+fn object_property_shorthand() {
+    let src = r#"
+    let a = "hello"
+    let b = 5
+    let c = {a, b}
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let c = format!("{}", ctx.values.get("c").unwrap());
+    assert_eq!(c, "\"hello\"");
+}
+
+#[test]
 #[ignore]
 fn infer_destructuring_with_optional_properties() {
     let src = r#"
@@ -1014,4 +1074,66 @@ fn infer_destructuring_with_optional_properties() {
     // TODO: ensure that the optionality of object properties in patterns is respected
     let x = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(x, "number | undefined");
+}
+
+#[test]
+fn infer_destructure_tuple() {
+    let src = r#"
+    let [a, b] = ["hello", 5]
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let a = format!("{}", ctx.values.get("a").unwrap());
+    assert_eq!(a, "\"hello\"");
+
+    let b = format!("{}", ctx.values.get("b").unwrap());
+    assert_eq!(b, "5");
+}
+
+#[test]
+#[should_panic = "t1 contain at least the same number of elements as t2"]
+fn infer_destructure_tuple_too_many_identifiers() {
+    let src = r#"
+    let [a, b, c] = ["hello", 5]
+    "#;
+    infer_prog(src);
+}
+
+#[test]
+fn infer_destructure_tuple_extra_values_are_ignored() {
+    let src = r#"
+    let [a, b] = ["hello", 5, true]
+    "#;
+    infer_prog(src);
+}
+
+#[test]
+fn lam_param_tuple() {
+    let src = r#"
+    let foo = (bar: [string, number]) => bar
+    let [a, b] = foo(["hello", 5])
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let a = format!("{}", ctx.values.get("a").unwrap());
+    assert_eq!(a, "string");
+
+    let b = format!("{}", ctx.values.get("b").unwrap());
+    assert_eq!(b, "number");
+}
+
+
+#[test]
+fn destructure_lam_param_tuple() {
+    let src = r#"
+    let foo = ([a, b]: [string, number]) => [a, b]
+    let [a, b] = foo(["hello", 5])
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let a = format!("{}", ctx.values.get("a").unwrap());
+    assert_eq!(a, "string");
+
+    let b = format!("{}", ctx.values.get("b").unwrap());
+    assert_eq!(b, "number");
 }
