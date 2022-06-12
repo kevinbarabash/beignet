@@ -37,6 +37,7 @@ impl Default for Context {
 impl Context {
     // TODO: Make this return a Result<Type, String>
     pub fn lookup_value(&self, name: &str) -> Type {
+        println!("lookup_value({name})");
         let scheme = self.values.get(name).unwrap();
         self.instantiate(scheme)
     }

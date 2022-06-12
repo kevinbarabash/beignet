@@ -1120,7 +1120,6 @@ fn lam_param_tuple() {
     assert_eq!(b, "number");
 }
 
-
 #[test]
 fn destructure_lam_param_tuple() {
     let src = r#"
@@ -1134,4 +1133,18 @@ fn destructure_lam_param_tuple() {
 
     let b = format!("{}", ctx.values.get("b").unwrap());
     assert_eq!(b, "number");
+}
+
+#[test]
+fn infer_jsx() {
+    let src = r#"
+    type JSXElement = {}
+    let point = {x: 5, y: 10}
+    let msg = "world"
+    let elem = <div point={point} id="point">Hello, {msg}</div>
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let elem = format!("{}", ctx.values.get("elem").unwrap());
+    assert_eq!(elem, "JSXElement");
 }

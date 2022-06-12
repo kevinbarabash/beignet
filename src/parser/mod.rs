@@ -119,6 +119,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("<Foo msg=\"hello\" bar={baz}></Foo>"));
         insta::assert_debug_snapshot!(parse("<Foo><Bar>{baz}</Bar></Foo>"));
         insta::assert_debug_snapshot!(parse("<Foo>hello<Bar/>{world}<Baz/></Foo>"));
+        insta::assert_debug_snapshot!(parse("let elem = <div point={point} id=\"point\">Hello, {msg}</div>"));
     }
 
     #[test]

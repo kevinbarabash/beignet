@@ -341,22 +341,22 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<bool, String> {
                 types.iter().map(|t2| is_subtype(t1, t2, ctx)).collect();
             Ok(result?.into_iter().any(identity))
         }
-        (_, Variant::Alias(alias)) => {
-            match ctx.types.get(&alias.name) {
+        (_, Variant::Alias(AliasType {name, ..})) => {
+            match ctx.types.get(name) {
                 Some(scheme) => {
                     // TODO: handle schemes with qualifiers
                     is_subtype(t1, &scheme.ty, ctx)
                 }
-                None => panic!("Can't find alias in context"),
+                None => panic!("Can't find alias '{name}' in context"),
             }
         }
-        (Variant::Alias(alias), _) => {
-            match ctx.types.get(&alias.name) {
+        (Variant::Alias(AliasType { name, .. }), _) => {
+            match ctx.types.get(name) {
                 Some(scheme) => {
                     // TODO: handle schemes with qualifiers
                     is_subtype(&scheme.ty, t2, ctx)
                 }
-                None => panic!("Can't find alias in context"),
+                None => panic!("Can't find alias '{name}' in context"),
             }
         }
         (t1, t2) => Ok(t1 == t2),

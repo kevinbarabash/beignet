@@ -37,6 +37,7 @@ export const App = () => {
       "",
       "let add = async (a, b) => await a() + await b()",
       "",
+      "type JSXElement = {}",
       "let msg = \"world\"",
       "let elem = <div point={point} id=\"point\">Hello, {msg}</div>",
       "",
