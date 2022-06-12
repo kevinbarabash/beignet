@@ -105,6 +105,7 @@ mod tests {
     #[test]
     fn objects() {
         insta::assert_debug_snapshot!(parse("{x: 5, y: 10}"));
+        insta::assert_debug_snapshot!(parse("let obj = {x, y}"));
     }
 
     #[test]

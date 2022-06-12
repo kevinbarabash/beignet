@@ -1049,7 +1049,6 @@ fn return_an_object() {
 }
 
 #[test]
-#[ignore]
 fn object_property_shorthand() {
     let src = r#"
     let a = "hello"
@@ -1059,11 +1058,10 @@ fn object_property_shorthand() {
     let (_, ctx) = infer_prog(src);
 
     let c = format!("{}", ctx.values.get("c").unwrap());
-    assert_eq!(c, "\"hello\"");
+    assert_eq!(c, "{a: \"hello\", b: 5}");
 }
 
 #[test]
-#[ignore]
 fn infer_destructuring_with_optional_properties() {
     let src = r#"
     let p: {x?: number, y: number} = {y: 10}

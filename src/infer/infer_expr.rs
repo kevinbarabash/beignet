@@ -194,11 +194,22 @@ pub fn infer(
             let props: Result<Vec<types::TProp>, String> = props
                 .iter()
                 .map(|p| {
-                    let prop_type = infer(&p.value, ctx, constraints)?;
+                    match p {
+                        Prop::Shorthand(Ident {name, ..}) => {
+                            let prop_type = ctx.lookup_value(name);
 
-                    // The property is not optional in the type we infer from
-                    // an object literal, because the property has a value.
-                    Ok(ctx.prop(&p.name, prop_type, false))
+                            // The property is not optional in the type we infer from
+                            // an object literal, because the property has a value.
+                            Ok(ctx.prop(name, prop_type, false))
+                        },
+                        Prop::KeyValue(KeyValueProp { name, value, .. }) => {
+                            let prop_type = infer(value, ctx, constraints)?;
+
+                            // The property is not optional in the type we infer from
+                            // an object literal, because the property has a value.
+                            Ok(ctx.prop(name, prop_type, false))
+                        },
+                    }
                 })
                 .collect();
 

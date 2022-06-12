@@ -3,14 +3,14 @@ use chumsky::prelude::*;
 use crate::ast::*;
 use crate::parser::jsx::jsx_parser;
 use crate::parser::pattern::pattern_parser;
+use crate::parser::type_params::type_params;
 use crate::parser::types::type_parser;
 use crate::parser::util::just_with_padding;
-use crate::parser::type_params::type_params;
 
 pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
     let type_ann = type_parser();
     let pattern = pattern_parser();
-    
+
     let ident = text::ident().map_with_span(|name, span| Ident { span, name });
 
     let r#true =
@@ -35,20 +35,20 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
         .map_with_span(|value, span| Expr::Lit(Lit::str(value, span)));
 
     let parser = recursive(|expr: Recursive<'_, char, Expr, Simple<char>>| {
-
         // TODO: support recursive functions to be declared within another function
         // let let_rec = ...
 
         let r#let = just("let")
             .ignore_then(pattern.clone())
-            .then_ignore(just_with_padding("=")).or_not()
+            .then_ignore(just_with_padding("="))
+            .or_not()
             .then(expr.clone())
             .separated_by(just_with_padding(";"))
             // .then_ignore(just_with_padding(";"))
             // .then(expr.clone())
             .map(|lets| {
                 let mut iter = lets.iter().rev();
-                
+
                 let first = match iter.next().unwrap() {
                     (Some(_), _) => panic!("Didn't expect `let` here"),
                     (_, expr) => expr.clone(),
@@ -71,7 +71,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
 
                 result
             });
-           
+
         let block = choice((r#let.clone(), expr.clone()))
             .delimited_by(just_with_padding("{"), just_with_padding("}"));
 
@@ -92,10 +92,19 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 })
             });
 
-        let prop = text::ident()
+        let key_value_prop = text::ident()
             .then_ignore(just_with_padding(":"))
             .then(expr.clone())
-            .map_with_span(|(name, value), span: Span| Property { span, name, value });
+            .map_with_span(|(name, value), span: Span| {
+                Prop::KeyValue(KeyValueProp { span, name, value })
+            });
+
+        let shorthand_prop = text::ident()
+            .map_with_span(|name, span: Span| {
+                Prop::Shorthand(Ident { span, name })
+            });
+
+        let prop = choice((key_value_prop, shorthand_prop));
 
         let obj = prop
             .separated_by(just_with_padding(","))
@@ -265,16 +274,18 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .then(just_with_padding(":").ignore_then(type_ann).or_not())
             .then_ignore(just_with_padding("=>"))
             .then(choice((block.clone(), expr.clone())))
-            .map_with_span(|((((is_async, type_params), args), return_type), body), span: Span| {
-                Expr::Lambda(Lambda {
-                    span,
-                    params: args,
-                    body: Box::new(body),
-                    is_async: is_async.is_some(),
-                    return_type,
-                    type_params,
-                })
-            });
+            .map_with_span(
+                |((((is_async, type_params), args), return_type), body), span: Span| {
+                    Expr::Lambda(Lambda {
+                        span,
+                        params: args,
+                        body: Box::new(body),
+                        is_async: is_async.is_some(),
+                        return_type,
+                        type_params,
+                    })
+                },
+            );
 
         choice((lam, block, comp))
     });

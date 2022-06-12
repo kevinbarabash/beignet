@@ -378,15 +378,24 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
         ast::Expr::Obj(ast::Obj { props, .. }) => {
             let props: Vec<PropOrSpread> = props
                 .iter()
-                .map(|prop| {
-                    PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
-                        key: PropName::from(Ident {
+                .map(|prop| match prop {
+                    ast::Prop::Shorthand(ast::ident::Ident {name, ..}) => {
+                        PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
                             span: DUMMY_SP,
-                            sym: JsWord::from(prop.name.clone()),
+                            sym: JsWord::from(name.clone()),
                             optional: false,
-                        }),
-                        value: Box::from(build_expr(&prop.value)),
-                    })))
+                        })))
+                    }
+                    ast::Prop::KeyValue(ast::KeyValueProp { name, value, .. }) => {
+                        PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
+                            key: PropName::from(Ident {
+                                span: DUMMY_SP,
+                                sym: JsWord::from(name.clone()),
+                                optional: false,
+                            }),
+                            value: Box::from(build_expr(value)),
+                        })))
+                    }
                 })
                 .collect();
 
@@ -531,8 +540,7 @@ pub fn let_to_children(r#let: &ast::Let) -> Vec<Stmt> {
     let mut children: Vec<Stmt> = vec![let_to_child(r#let)];
     let mut body = r#let.body.to_owned();
 
-    while let ast::Expr::Let(r#let) = body.as_ref()
-    {
+    while let ast::Expr::Let(r#let) = body.as_ref() {
         children.push(let_to_child(r#let));
         body = r#let.body.to_owned();
     }
@@ -546,7 +554,7 @@ pub fn let_to_children(r#let: &ast::Let) -> Vec<Stmt> {
 }
 
 fn let_to_child(r#let: &ast::Let) -> Stmt {
-    let ast::Let {pattern, init, ..} = r#let;
+    let ast::Let { pattern, init, .. } = r#let;
 
     // TODO: handle shadowed variables in the same scope by introducing
     // unique identifiers.

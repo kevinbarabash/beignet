@@ -35,10 +35,12 @@ impl Default for Context {
 }
 
 impl Context {
+    // TODO: Make this return a Result<Type, String>
     pub fn lookup_value(&self, name: &str) -> Type {
         let scheme = self.values.get(name).unwrap();
         self.instantiate(scheme)
     }
+    // TODO: Make this return a Result<Type, String>
     pub fn lookup_type(&self, name: &str) -> Type {
         let scheme = self.types.get(name).unwrap();
         self.instantiate(scheme)
