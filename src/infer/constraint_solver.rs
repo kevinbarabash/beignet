@@ -103,9 +103,23 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 let mut cs: Vec<Constraint> = vec![];
                 for p1 in props1 {
                     let p2 = props2.iter().find(|p2| p1.name == p2.name).unwrap();
-                    cs.push(Constraint {
-                        types: (p1.ty.clone(), p2.ty.clone()),
-                    });
+                    cs.push(Constraint::from((p1.get_type(ctx), p2.get_type(ctx))));
+                }
+                unify_many(&cs, ctx)
+            } else if t2.flag == Some(Flag::Pattern) {
+                // NOTE: Patterns appear as the LHS of a let-binding or as the type of a function param.
+                // As such, the pattern must be a super type of the initializer in the let-binding or the
+                // argument passed to a function during a call/application.
+                let mut cs: Vec<Constraint> = vec![];
+                for p2 in props2 {
+                    let p1 = match p2.optional {
+                        true => match props1.iter().find(|p1| p1.name == p2.name) {
+                            Some(prop) => prop,
+                            None => continue,
+                        },
+                        false => props1.iter().find(|p1| p1.name == p2.name).unwrap(),
+                    };
+                    cs.push(Constraint::from((p1.get_type(ctx), p2.get_type(ctx))));
                 }
                 unify_many(&cs, ctx)
             } else {
@@ -134,7 +148,6 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 }
 
 fn get_aliased_type(alias: &AliasType, ctx: &Context) -> Type {
-    println!("get_aliased_type: {:#?}", alias);
     let scheme = ctx.types.get(&alias.name).unwrap();
     let subs: Subst = match &alias.type_params {
         Some(params) => {
@@ -176,7 +189,7 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
                 // TODO: propagate errors instead of unwrap()-ing
                 let prop2 = props2.get(0).unwrap();
                 let prop1 = props1.iter().find(|p| p.name == prop2.name).unwrap();
-                return unifies(&prop1.ty, &prop2.ty, ctx);
+                return unifies(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx);
             } else {
                 let new_type = intersect_types(t1, t2, ctx);
                 // We should never widen object types with the MemberAccess flag
@@ -198,7 +211,7 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
         return Ok(result);
     }
 
-    println!("unifcation failed: {:?} {:?}", t1, t2);
+    println!("unifcation failed");
 
     Err(String::from("unification failed"))
 }
@@ -274,7 +287,7 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<bool, String> {
                             .iter()
                             .map(|prop1| {
                                 Ok(prop1.name == prop2.name
-                                    && is_subtype(&prop1.ty, &prop2.ty, ctx)?)
+                                    && is_subtype(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx)?)
                             })
                             .collect();
                         Ok(inner_result?.into_iter().any(identity))
@@ -309,8 +322,16 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<bool, String> {
             match ctx.types.get(&alias.name) {
                 Some(scheme) => {
                     // TODO: handle schemes with qualifiers
-                    let aliased_def = scheme.ty.to_owned();
-                    is_subtype(t1, &aliased_def, ctx)
+                    is_subtype(t1, &scheme.ty, ctx)
+                }
+                None => panic!("Can't find alias in context"),
+            }
+        }
+        (Variant::Alias(alias), _) => {
+            match ctx.types.get(&alias.name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    is_subtype(&scheme.ty, t2, ctx)
                 }
                 None => panic!("Can't find alias in context"),
             }
@@ -413,7 +434,7 @@ fn intersect_properties(props1: &[TProp], props2: &[TProp], ctx: &Context) -> Ve
             props2.iter().find(|p2| p1.name == p2.name).map(|p2| TProp {
                 name: p1.name.to_owned(),
                 optional: p1.optional && p2.optional,
-                ty: intersect_types(&p1.ty, &p2.ty, ctx),
+                ty: intersect_types(&p1.get_type(ctx), &p2.get_type(ctx), ctx),
             })
         })
         .collect();

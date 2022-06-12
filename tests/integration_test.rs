@@ -414,7 +414,9 @@ fn infer_let_decl_with_type_ann() {
 }
 
 #[test]
-#[should_panic = "value is not a subtype of decl's declared type"]
+// TODO: improve this error by checking the flags on the types before reporting
+// "unification failed".
+#[should_panic = "called `Result::unwrap()` on an `Err` value: \"unification failed\""]
 fn infer_let_decl_with_incorrect_type_ann() {
     let src = "let x: string = 10";
     let (_, ctx) = infer_prog(src);
@@ -518,7 +520,9 @@ fn infer_tuple_with_type_annotation_and_extra_element() {
 }
 
 #[test]
-#[should_panic = "value is not a subtype of decl's declared type"]
+// TODO: improve this error by checking the flags on the types before reporting
+// "unification failed".
+#[should_panic = "called `Result::unwrap()` on an `Err` value: \"unification failed\""]
 fn infer_tuple_with_type_annotation_and_incorrect_element() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two", 3]"#;
     infer_prog(src);
@@ -930,10 +934,22 @@ fn infer_fn_param_with_type_alias_with_param_4() {
 }
 
 #[test]
-fn infer_destructure_object() {
+fn infer_destructure_all_object_properties() {
     let src = r#"
     let point = {x: 5, y: 10}
     let {x, y} = point
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("x").unwrap());
+    assert_eq!(result, "5");
+}
+
+#[test]
+fn infer_destructure_some_object_properties() {
+    let src = r#"
+    let point = {x: 5, y: 10}
+    let {x} = point
     "#;
     let (_, ctx) = infer_prog(src);
 
@@ -971,14 +987,6 @@ fn infer_destructure_object_inside_fn() {
 }
 
 #[test]
-#[ignore]
-// NOTE: this test fails because infer_expr doesn't handle
-// the sub-type relationship between `{foo}` and `x` correctly
-// Any value being assigned to a pattern should be a supertype
-// of that pattern.  For example:
-// let x: number = 5   // 5 is a supertype of number
-// let p: Point = {x: 5, y: 10}   // {x: 5, y: 10} is a super type of Point
-// let {x} = p   // {x: t1} is a super type of Point but only if t1 is a number
 fn infer_destructure_object_inside_fn_2() {
     let src = r#"
     type FooBar = {foo: number, bar: string}
@@ -992,4 +1000,18 @@ fn infer_destructure_object_inside_fn_2() {
 
     let result = format!("{}", ctx.values.get("foo").unwrap());
     assert_eq!(result, "number");
+}
+
+#[test]
+#[ignore]
+fn infer_destructuring_with_optional_properties() {
+    let src = r#"
+    let p: {x?: number, y: number} = {y: 10}
+    let {x} = p
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    // TODO: ensure that the optionality of object properties in patterns is respected
+    let x = format!("{}", ctx.values.get("x").unwrap());
+    assert_eq!(x, "number | undefined");
 }

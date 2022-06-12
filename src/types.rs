@@ -2,6 +2,8 @@ use itertools::join;
 use std::fmt;
 use std::hash::Hash;
 
+use crate::infer::Context;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Lit {
     // We store all of the values as strings since f64 doesn't
@@ -51,6 +53,15 @@ pub struct TProp {
     pub name: String,
     pub optional: bool,
     pub ty: Type,
+}
+
+impl TProp {
+    pub fn get_type(&self, ctx: &Context) -> Type {
+        match self.optional {
+            true => ctx.union(vec![self.ty.to_owned(), ctx.prim(Primitive::Undefined)]),
+            false => self.ty.to_owned(),
+        }
+    }
 }
 
 impl fmt::Display for TProp {

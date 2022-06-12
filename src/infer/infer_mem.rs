@@ -23,7 +23,7 @@ pub fn infer_mem(
 
 fn type_of_property_on_type(
     ty: Type,
-    prop: &MemberProp,
+    mem_prop: &MemberProp, // property on a member access expression
     ctx: &Context,
 ) -> Result<(Type, Vec<Constraint>), String> {
     match &ty.variant {
@@ -34,7 +34,7 @@ fn type_of_property_on_type(
             let tv = ctx.fresh_var();
             let obj = ctx.object_with_flag(
                 vec![types::TProp {
-                    name: prop.name(),
+                    name: mem_prop.name(),
                     // We assume the property is not optional when inferring an
                     // object from a member access.
                     optional: false,
@@ -42,8 +42,8 @@ fn type_of_property_on_type(
                 }],
                 Flag::MemberAccess,
             );
-            let mem1 = ctx.mem(ty.clone(), &prop.name());
-            let mem2 = ctx.mem(obj.clone(), &prop.name());
+            let mem1 = ctx.mem(ty.clone(), &mem_prop.name());
+            let mem2 = ctx.mem(obj.clone(), &mem_prop.name());
             Ok((
                 tv,
                 vec![
@@ -67,8 +67,8 @@ fn type_of_property_on_type(
         Variant::Object(props) => {
             // TODO: allow the use of string literals to access properties on
             // object types.
-            let mem = ctx.mem(ty.clone(), &prop.name());
-            let prop = props.iter().find(|p| p.name == prop.name());
+            let mem = ctx.mem(ty.clone(), &mem_prop.name());
+            let prop = props.iter().find(|p| p.name == mem_prop.name());
 
             match prop {
                 Some(_) => Ok((mem, vec![])),
@@ -99,7 +99,7 @@ fn type_of_property_on_type(
                     let aliased_def = scheme.ty.apply(&subs);
 
                     // Recurses to get the prop on the underlying type.
-                    type_of_property_on_type(aliased_def, prop, ctx)
+                    type_of_property_on_type(aliased_def, mem_prop, ctx)
                 }
                 None => Err(String::from("Can't find alias in context")),
             }
@@ -116,13 +116,7 @@ fn unwrap_member_type(ty: &Type, ctx: &Context) -> Type {
             Variant::Object(props) => {
                 let prop = props.iter().find(|prop| prop.name == member.prop);
                 match prop {
-                    Some(prop) => match prop.optional {
-                        true => ctx.union(vec![
-                            unwrap_member_type(&prop.ty, ctx),
-                            ctx.prim(types::Primitive::Undefined),
-                        ]),
-                        false => unwrap_member_type(&prop.ty, ctx),
-                    },
+                    Some(prop) => prop.get_type(ctx),
                     None => ty.to_owned(),
                 }
             }

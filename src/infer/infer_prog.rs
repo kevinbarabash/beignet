@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
-use crate::types::Scheme;
 
 use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::Context;
@@ -49,43 +48,39 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                         // An initial value should always be used when using a normal `let` statement
                         let init = init.as_ref().unwrap();
 
-                        match pattern {
-                            Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
-                                let inferred_scheme = infer_expr(&ctx, init)?;
-                                let scheme = match type_ann {
-                                    Some(type_ann) => {
-                                        let type_ann_ty = infer_type_ann(type_ann, &ctx);
-                                        match is_subtype(&inferred_scheme.ty, &type_ann_ty, &ctx)? {
-                                            true => Ok(Scheme::from(type_ann_ty)),
-                                            false => Err(String::from(
-                                                "value is not a subtype of decl's declared type",
-                                            )),
-                                        }
-                                    }
-                                    None => Ok(inferred_scheme),
-                                };
-                                ctx.values.insert(id.name.to_owned(), scheme?);
-                            }
-                            _ => {
-                                let mut constraints: Vec<Constraint> = vec![];
+                        let mut constraints: Vec<Constraint> = vec![];
 
-                                let (pat_type, new_vars) = infer_pattern(
-                                    pattern,
-                                    &mut ctx,
-                                    &mut constraints,
-                                    &HashMap::new(),
-                                )?;
+                        let (pat_type, new_vars) = infer_pattern(
+                            pattern,
+                            &mut ctx,
+                            &mut constraints,
+                            &HashMap::new(),
+                        )?;
 
-                                let init_ty = infer(init, &ctx, &mut constraints)?;
+                        let init_type = infer(init, &ctx, &mut constraints)?;
 
-                                constraints.push(Constraint::from((init_ty, pat_type.clone())));
-                                let subs = run_solve(&constraints, &ctx)?;
+                        constraints.push(Constraint::from((init_type.clone(), pat_type.clone())));
+                        let subs = run_solve(&constraints, &ctx)?;
 
-                                for (name, scheme) in new_vars {
-                                    let scheme = normalize(&scheme.apply(&subs), &ctx);
-                                    ctx.values.insert(name, scheme);
-                                }
-                            }
+                        // We need to apply the substitutions from the constraint solver to the
+                        // pattern and initializer types before checking if they're subtypes since
+                        // since is_subtype() ignores type variables.
+                        let pat_type = pat_type.apply(&subs);
+                        let init_type = init_type.apply(&subs);
+
+                        // If the initializer is not a subtype of what we're assigning it
+                        // to, return an error.
+                        if !is_subtype(&init_type, &pat_type, &ctx)? {
+                            return Err(String::from(
+                                "value is not a subtype of decl's declared type",
+                            ));
+                        }
+
+                        // Inserts the new variables from infer_pattern() into the
+                        // current context.
+                        for (name, scheme) in new_vars {
+                            let scheme = normalize(&scheme.apply(&subs), &ctx);
+                            ctx.values.insert(name, scheme);
                         }
                     }
                 };

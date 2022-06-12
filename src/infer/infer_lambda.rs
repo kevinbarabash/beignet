@@ -39,7 +39,7 @@ pub fn infer_lambda(
         None => HashMap::default(),
     };
 
-    let param_tvs: Result<Vec<_>, String> = params
+    let param_types: Result<Vec<Type>, String> = params
         .iter()
         .map(|param| {
             let (mut param_type, new_vars) =
@@ -73,11 +73,11 @@ pub fn infer_lambda(
         false => ctx.alias("Promise", Some(vec![ret])),
     };
 
-    let lam_ty = ctx.lam(param_tvs?, Box::new(ret));
+    let lam_type = ctx.lam(param_types?, Box::new(ret));
 
     // TODO: add a constraint for the return type if it's specified
 
-    Ok(lam_ty)
+    Ok(lam_type)
 }
 
 fn is_promise(ty: &Type) -> bool {
