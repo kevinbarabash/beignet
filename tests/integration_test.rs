@@ -1015,6 +1015,23 @@ fn infer_destructure_object_param() {
 }
 
 #[test]
+fn infer_destructure_object_param_2() {
+    let src = r#"
+    let foo = ({a, b}: {a: string, b: number}) => {
+        {a: a, b: b}
+    }
+    let {a, b} = foo({a: "hello", b: 5})
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let a = format!("{}", ctx.values.get("a").unwrap());
+    assert_eq!(a, "string");
+
+    let b = format!("{}", ctx.values.get("b").unwrap());
+    assert_eq!(b, "number");
+}
+
+#[test]
 fn return_an_object() {
     let src = r#"
     let foo = () => {
