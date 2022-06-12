@@ -13,7 +13,7 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
     let parser = recursive(|pat| {
         let ident_pat = text::ident()
             .map_with_span(|name, span| Ident { name, span })
-            .then(just_with_padding(":").ignore_then(type_ann).or_not())
+            .then(just_with_padding(":").ignore_then(type_ann.clone()).or_not())
             .map_with_span(|(id, type_ann), span: Span| {
                 Pattern::Ident(BindingIdent { span, id, type_ann })
             })
@@ -34,7 +34,8 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
         let array_pat = pat.clone()
             .separated_by(just_with_padding(","))
             .delimited_by(just_with_padding("["), just_with_padding("]"))
-            .map_with_span(|elems, span| {
+            .then(just_with_padding(":").ignore_then(type_ann.clone()).or_not())
+            .map_with_span(|(elems, type_ann), span| {
                 Pattern::Array(ArrayPat {
                     span,
                     // The reason why each elem is wrapped in Some() is that
@@ -42,7 +43,7 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
                     // althought the parser doesn't support this yet.
                     elems: elems.iter().cloned().map(Some).collect(),
                     optional: false,
-                    type_ann: None,
+                    type_ann,
                 })
             });
 
@@ -76,12 +77,13 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
         ))
         .separated_by(just_with_padding(","))
         .delimited_by(just_with_padding("{"), just_with_padding("}"))
-        .map_with_span(|props, span| {
+        .then(just_with_padding(":").ignore_then(type_ann.clone()).or_not())
+        .map_with_span(|(props, type_ann), span| {
             Pattern::Object(ObjectPat {
                 span,
                 props,
                 optional: false,
-                type_ann: None,
+                type_ann,
             })
         });
 
