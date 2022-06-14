@@ -77,9 +77,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
 
         // TODO: handle chaining of if-else
         let if_else = just_with_padding("if")
-            // .ignore_then(just_with_padding("("))
             .ignore_then(expr.clone())
-            // .then_ignore(just_with_padding(")"))
             .then(block.clone())
             .then_ignore(just_with_padding("else"))
             .then(block.clone())
