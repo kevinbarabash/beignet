@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn if_else() {
-        insta::assert_debug_snapshot!(parse("if (true) { 5 } else { 10 }"));
+        insta::assert_debug_snapshot!(parse("if true { 5 } else { 10 }"));
     }
 
     #[test]

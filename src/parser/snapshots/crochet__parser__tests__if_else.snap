@@ -1,18 +1,18 @@
 ---
 source: src/parser/mod.rs
-expression: "parse(\"if (true) { 5 } else { 10 }\")"
+expression: "parse(\"if true { 5 } else { 10 }\")"
 ---
 Program {
     body: [
         Expr {
-            span: 0..27,
+            span: 0..25,
             expr: IfElse(
                 IfElse {
-                    span: 0..27,
+                    span: 0..25,
                     cond: Lit(
                         Bool(
                             Bool {
-                                span: 4..8,
+                                span: 3..8,
                                 value: true,
                             },
                         ),
@@ -20,7 +20,7 @@ Program {
                     consequent: Lit(
                         Num(
                             Num {
-                                span: 12..13,
+                                span: 10..11,
                                 value: "5",
                             },
                         ),
@@ -28,7 +28,7 @@ Program {
                     alternate: Lit(
                         Num(
                             Num {
-                                span: 23..25,
+                                span: 21..23,
                                 value: "10",
                             },
                         ),
