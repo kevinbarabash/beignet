@@ -192,7 +192,7 @@ fn infer_with_subtyping() {
 
 #[test]
 fn infer_if_else_without_widening() {
-    let (_, ctx) = infer_prog("let x = if (true) { 5 } else { 5 }");
+    let (_, ctx) = infer_prog("let x = if true { 5 } else { 5 }");
     let result = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(result, "5");
 }
@@ -207,8 +207,8 @@ fn infer_if_else_with_widening() {
 #[test]
 fn infer_if_else_with_multiple_widenings() {
     let src = r#"
-    let x = if (true) { 5 } else { 10 }
-    let y = if (false) { x } else { 15 }
+    let x = if true { 5 } else { 10 }
+    let y = if false { x } else { 15 }
     "#;
     let (program, ctx) = infer_prog(src);
     let result = format!("{}", ctx.values.get("y").unwrap());
@@ -264,7 +264,7 @@ fn infer_inequalities() {
 
 #[test]
 fn infer_let_rec_until() {
-    let src = "let rec until = (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) }";
+    let src = "let rec until = (p, f, x) => if p(x) { x } else { until(p, f, f(x)) }";
     let (program, ctx) = infer_prog(src);
     let result = format!("{}", ctx.values.get("until").unwrap());
     insta::assert_snapshot!(result, @"<t0>((t0) => boolean, (t0) => t0, t0) => t0");
@@ -276,10 +276,10 @@ fn infer_let_rec_until() {
 #[test]
 fn infer_fib() {
     let src = r###"
-    let rec fib = (n) => if (n == 0) {
+    let rec fib = (n) => if n == 0 {
         0
     } else {
-        if (n == 1) {
+        if n == 1 {
             1
         } else {
             fib(n - 1) + fib(n - 2)
@@ -342,7 +342,7 @@ fn codegen_let_rec() {
 fn codegen_if_else() {
     let src = r#"
     let cond = true
-    let result = if (cond) { 5 } else { 5 }
+    let result = if cond { 5 } else { 5 }
     "#;
     let (program, ctx) = infer_prog(src);
 
@@ -553,7 +553,7 @@ fn infer_var_with_union_type_annotation() {
 fn infer_widen_tuple_return() {
     let src = r#"
     let result = (cond) => {
-        if (cond) {
+        if cond {
             [1, 2]
         } else {
             [true, false]
@@ -581,7 +581,7 @@ fn infer_widen_tuple_return() {
 fn infer_widen_tuples_with_type_annotations() {
     let src = r#"
     let result = (cond) => {
-        if (cond) {
+        if cond {
             let x: [number, number] = [1, 2] in
             x
         } else {
