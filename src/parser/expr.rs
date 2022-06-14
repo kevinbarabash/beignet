@@ -75,20 +75,20 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
         let block = choice((r#let.clone(), expr.clone()))
             .delimited_by(just_with_padding("{"), just_with_padding("}"));
 
-        // TODO: handle chaining of if-else
-        let if_else = just_with_padding("if")
-            .ignore_then(expr.clone())
-            .then(block.clone())
-            .then_ignore(just_with_padding("else"))
-            .then(block.clone())
-            .map_with_span(|((cond, left), right), span: Span| {
-                Expr::IfElse(IfElse {
-                    span,
-                    cond: Box::from(cond),
-                    consequent: Box::from(left),
-                    alternate: Box::from(right),
+        let if_else = recursive(|if_else| {
+            just_with_padding("if")
+                .ignore_then(expr.clone())
+                .then(block.clone())
+                .then(just_with_padding("else").ignore_then(block.clone().or(if_else)))
+                .map_with_span(|((cond, cons), alt), span: Span| {
+                    Expr::IfElse(IfElse {
+                        span,
+                        cond: Box::from(cond),
+                        consequent: Box::from(cons),
+                        alternate: Box::from(alt),
+                    })
                 })
-            });
+        });
 
         let key_value_prop = text::ident()
             .then_ignore(just_with_padding(":"))
@@ -97,10 +97,8 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 Prop::KeyValue(KeyValueProp { span, name, value })
             });
 
-        let shorthand_prop = text::ident()
-            .map_with_span(|name, span: Span| {
-                Prop::Shorthand(Ident { span, name })
-            });
+        let shorthand_prop =
+            text::ident().map_with_span(|name, span: Span| Prop::Shorthand(Ident { span, name }));
 
         let prop = choice((key_value_prop, shorthand_prop));
 
