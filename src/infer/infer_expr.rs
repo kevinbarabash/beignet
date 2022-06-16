@@ -76,6 +76,9 @@ pub fn infer(
         }) => {
             let cond_type = infer(cond, ctx, constraints)?;
             let cons_type = infer(consequent, ctx, constraints)?;
+            // If the alternate isn't present, then the type of the 
+            // consequent should be inferred as the empty type
+            // TODO: add an empty type
             let alt_type = infer(alternate, ctx, constraints)?;
 
             constraints.push(Constraint::from((cond_type, ctx.prim(Primitive::Bool))));

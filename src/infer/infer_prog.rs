@@ -57,6 +57,11 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                             &HashMap::new(),
                         )?;
 
+                        let result = infer(init, &ctx, &mut constraints)?;
+                        if let foo = result {
+                            5;
+                        };
+
                         let init_type = infer(init, &ctx, &mut constraints)?;
 
                         constraints.push(Constraint::from((init_type.clone(), pat_type.clone())));

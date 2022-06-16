@@ -55,7 +55,14 @@ pub struct IfElse {
     pub span: Span,
     pub cond: Box<Expr>,
     pub consequent: Box<Expr>,
-    pub alternate: Box<Expr>,
+    pub alternate: Option<Box<Expr>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LetExpr {
+    pub span: Span,
+    pub pat: Pattern,
+    pub expr: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -152,6 +159,7 @@ pub enum Expr {
     JSXElement(JSXElement),
     Lambda(Lambda),
     Let(Let),
+    LetExpr(LetExpr), // should only be used in `if let` expressions
     Lit(Lit),
     Op(Op),
     Obj(Obj),
