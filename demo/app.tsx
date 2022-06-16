@@ -60,6 +60,7 @@ export const App = () => {
   const changeExample = (event: React.ChangeEvent<HTMLSelectElement>) => {
     let value = event.target.value;
     switch (value) {
+      case "functionOverloading":
       case "asyncAwait":
       case "jsx":
       case "fibonacci":
@@ -95,6 +96,7 @@ export const App = () => {
           <option value="asyncAwait">Async/Await</option>
           <option value="jsx">JSX</option>
           <option value="fibonacci">Fibonacci</option>
+          <option value="functionOverloading">Function Overloading</option>
         </select>
       </div>
       <div>

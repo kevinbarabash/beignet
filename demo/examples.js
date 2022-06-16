@@ -34,3 +34,10 @@ export const fibonacci = [
   "  fib(n - 1) + fib(n - 2)",
   "}",
 ].join("\n");
+
+export const functionOverloading = [
+  "declare let add: ((number, number) => number) & ((string, string) => string)",
+  "",
+  "let num = add(5, 10)",
+  'let str = add("hello, ", "world")',
+].join("\n");
