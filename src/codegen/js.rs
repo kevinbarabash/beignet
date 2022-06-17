@@ -347,9 +347,9 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                     span: DUMMY_SP,
                     test: Box::from(build_expr(cond.as_ref())),
                     cons: Box::from(Stmt::Block(build_return_block(consequent.as_ref()))),
-                    alt: Some(Box::from(Stmt::Block(build_return_block(
-                        alternate.as_ref(),
-                    )))),
+                    alt: alternate
+                        .as_ref()
+                        .map(|alt| Box::from(Stmt::Block(build_return_block(alt.as_ref())))),
                 })],
             });
 
@@ -379,7 +379,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             let props: Vec<PropOrSpread> = props
                 .iter()
                 .map(|prop| match prop {
-                    ast::Prop::Shorthand(ast::ident::Ident {name, ..}) => {
+                    ast::Prop::Shorthand(ast::ident::Ident { name, .. }) => {
                         PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
                             span: DUMMY_SP,
                             sym: JsWord::from(name.clone()),
@@ -436,6 +436,12 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 prop,
             })
         }
+        ast::Expr::Empty(_) => Expr::from(Ident {
+            span: DUMMY_SP,
+            sym: JsWord::from("undefined"),
+            optional: false,
+        }),
+        ast::Expr::LetExpr(_) => todo!(),
     }
 }
 

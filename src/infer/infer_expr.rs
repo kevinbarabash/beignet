@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, Flag, Primitive, Scheme, Type};
+use crate::types::{self, freeze, unfreeze, Flag, Primitive, Scheme, Type};
 
 use super::constraint_solver::{run_solve, Constraint};
 use super::context::{Context, Env};
@@ -40,11 +40,14 @@ pub fn infer(
             let fn_type = infer(lam, ctx, constraints)?;
 
             let args_types = infer_many(args, ctx, constraints)?;
-            let args_types = args_types.iter().map(|arg| {
-                let mut arg = arg.to_owned();
-                arg.flag = Some(Flag::Argument);
-                arg
-            }).collect();
+            let args_types = args_types
+                .iter()
+                .map(|arg| {
+                    let mut arg = arg.to_owned();
+                    arg.flag = Some(Flag::Argument);
+                    arg
+                })
+                .collect();
 
             let ret_type = ctx.fresh_var();
 
@@ -74,17 +77,37 @@ pub fn infer(
             alternate,
             ..
         }) => {
+            let result_type = ctx.fresh_var();
+
             let cond_type = infer(cond, ctx, constraints)?;
             let cons_type = infer(consequent, ctx, constraints)?;
-            // If the alternate isn't present, then the type of the 
-            // consequent should be inferred as the empty type
-            // TODO: add an empty type
-            let alt_type = infer(alternate, ctx, constraints)?;
 
-            constraints.push(Constraint::from((cond_type, ctx.prim(Primitive::Bool))));
-            constraints.push(Constraint::from((cons_type.clone(), alt_type)));
+            match alternate {
+                Some(alternate) => {
+                    constraints.push(Constraint::from((cond_type, ctx.prim(Primitive::Bool))));
 
-            Ok(cons_type)
+                    let alt_type = infer(alternate, ctx, constraints)?;
+                    // We use unfrozen copies of cons_type and alt_type so that they can
+                    // be widened if need be.  This does not affect the original frozen
+                    // type.
+                    constraints.push(Constraint::from((unfreeze(cons_type), result_type.clone())));
+                    constraints.push(Constraint::from((unfreeze(alt_type), result_type.clone())));
+
+                    Ok(result_type)
+                }
+                None => {
+                    constraints.push(Constraint::from((cond_type, ctx.prim(Primitive::Bool))));
+
+                    // The alternative must be undefined
+                    let alt_type = ctx.prim(Primitive::Undefined);
+                    // We freeze `cons_type` and `alt_type` to make sure that they're unified
+                    // with "undefined" exactly.
+                    constraints.push(Constraint::from((freeze(cons_type), result_type.clone())));
+                    constraints.push(Constraint::from((freeze(alt_type), result_type.clone())));
+
+                    Ok(result_type)
+                }
+            }
         }
 
         Expr::Let(Let {
@@ -198,20 +221,20 @@ pub fn infer(
                 .iter()
                 .map(|p| {
                     match p {
-                        Prop::Shorthand(Ident {name, ..}) => {
+                        Prop::Shorthand(Ident { name, .. }) => {
                             let prop_type = ctx.lookup_value(name);
 
                             // The property is not optional in the type we infer from
                             // an object literal, because the property has a value.
                             Ok(ctx.prop(name, prop_type, false))
-                        },
+                        }
                         Prop::KeyValue(KeyValueProp { name, value, .. }) => {
                             let prop_type = infer(value, ctx, constraints)?;
 
                             // The property is not optional in the type we infer from
                             // an object literal, because the property has a value.
                             Ok(ctx.prop(name, prop_type, false))
-                        },
+                        }
                     }
                 })
                 .collect();
@@ -247,9 +270,9 @@ pub fn infer(
             Ok(ctx.alias("JSXElement", None))
         }
 
-        Expr::Tuple(Tuple { elems, .. }) => {
-            Ok(ctx.tuple(infer_many(elems, ctx, constraints)?))
-        }
+        Expr::Tuple(Tuple { elems, .. }) => Ok(ctx.tuple(infer_many(elems, ctx, constraints)?)),
+        Expr::Empty(_) => Ok(ctx.prim(Primitive::Undefined)),
+        Expr::LetExpr(_) => todo!(), // should this be a literal maybe?
     }
 }
 

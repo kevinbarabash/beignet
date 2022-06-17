@@ -38,24 +38,43 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
         // TODO: support recursive functions to be declared within another function
         // let let_rec = ...
 
-        // This is really `let_or_expr`
-        // TODO: restructure this so that we aren't coupling parsing of a single `let`
-        // so tightly with parsing of a whole block.
-        let r#let = just("let")
+        let block = just("let")
             .ignore_then(pattern.clone())
             .then_ignore(just_with_padding("="))
             .or_not()
             .then(expr.clone())
             .separated_by(just_with_padding(";"))
-            .map(|lets| {
+            .then(just_with_padding(";").or_not())
+            .delimited_by(just_with_padding("{"), just_with_padding("}"))
+            .map(|(lets, trailing_semi)| {
                 let mut iter = lets.iter().rev();
 
-                let first = match iter.next().unwrap() {
-                    (Some(_), _) => panic!("Didn't expect `let` here"),
-                    (_, expr) => expr.clone(),
+                // TODO: if `lets` is empty then we should return the empty type
+                
+                let last = match trailing_semi {
+                    Some(_) => {
+                        Expr::Empty(Empty {
+                            span: 0..0,
+                        })
+                    }
+                    None => {
+                        match iter.next() {
+                            Some(term) => match term {
+                                // TODO: if we do get a `let` last, we should be able to type
+                                // is as `empty`
+                                (Some(_), _) => panic!("Didn't expect `let` here"),
+                                (_, expr) => expr.clone(),
+                            },
+                            None => {
+                                Expr::Empty(Empty {
+                                    span: 0..0,
+                                })
+                            },
+                        }
+                    }
                 };
 
-                let result: Expr = iter.fold(first, |body, (pattern, value)| {
+                let result: Expr = iter.fold(last, |body, (pattern, value)| {
                     let start = match pattern {
                         Some(pattern) => pattern.span().start,
                         None => value.span().start,
@@ -73,9 +92,6 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 result
             });
 
-        let block = choice((r#let.clone(), expr.clone()))
-            .delimited_by(just_with_padding("{"), just_with_padding("}"));
-
         let if_let = just_with_padding("if")
             .ignore_then(just_with_padding("let"))
             .ignore_then(pattern.clone())
@@ -85,7 +101,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .map_with_span(|((pat, expr), block), span: Span| {
                 let my_pat: Pattern = pat;
                 Expr::IfElse(IfElse {
-                    span,
+                    span: span.clone(),
                     cond: Box::from(Expr::LetExpr(LetExpr {
                         span, // FixMe
                         pat: my_pat,
@@ -100,13 +116,13 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             just_with_padding("if")
                 .ignore_then(expr.clone())
                 .then(block.clone())
-                .then(just_with_padding("else").ignore_then(block.clone().or(if_else)))
+                .then(just_with_padding("else").ignore_then(block.clone().or(if_else)).or_not())
                 .map_with_span(|((cond, cons), alt), span: Span| {
                     Expr::IfElse(IfElse {
                         span,
                         cond: Box::from(cond),
                         consequent: Box::from(cons),
-                        alternate: Some(Box::from(alt)),
+                        alternate: alt.map(Box::from)
                     })
                 })
         });

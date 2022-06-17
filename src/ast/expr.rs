@@ -151,6 +151,11 @@ pub struct ComputedPropName {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Empty {
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     App(App),
     Fix(Fix),
@@ -166,6 +171,7 @@ pub enum Expr {
     Await(Await),
     Tuple(Tuple),
     Member(Member),
+    Empty(Empty),
 }
 
 impl Expr {
@@ -184,6 +190,8 @@ impl Expr {
             Expr::Await(r#await) => r#await.span.to_owned(),
             Expr::Tuple(tuple) => tuple.span.to_owned(),
             Expr::Member(member) => member.span.to_owned(),
+            Expr::Empty(empty) => empty.span.to_owned(),
+            Expr::LetExpr(let_expr) => let_expr.span.to_owned(),
         }
     }
 }

@@ -276,8 +276,7 @@ impl fmt::Display for Scheme {
     }
 }
 
-// TODO: make this recursive
-pub fn freeze(ty: Type) -> Type {
+fn set_frozen(ty: Type, frozen: bool) -> Type {
     let variant = match ty.variant {
         Variant::Var => Variant::Var,
         Variant::Lam(lam) => Variant::Lam(LamType {
@@ -314,7 +313,22 @@ pub fn freeze(ty: Type) -> Type {
     };
     Type {
         variant,
-        frozen: true,
+        frozen,
         ..ty
     }
+}
+
+pub fn freeze(ty: Type) -> Type {
+    set_frozen(ty, true)
+}
+
+pub fn freeze_scheme(scheme: Scheme) -> Scheme {
+    Scheme { 
+        ty: freeze(scheme.ty),
+        ..scheme
+    }
+}
+
+pub fn unfreeze(ty: Type) -> Type {
+    set_frozen(ty, false)
 }
