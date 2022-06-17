@@ -436,6 +436,11 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 prop,
             })
         }
+        ast::Expr::Empty(_) => Expr::from(Ident {
+            span: DUMMY_SP,
+            sym: JsWord::from("undefined"),
+            optional: false,
+        }),
     }
 }
 

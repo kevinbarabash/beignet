@@ -1180,3 +1180,26 @@ fn top_level_inferred_types_are_frozen() {
     let add = ctx.values.get("add").unwrap();
     assert!(add.ty.frozen);
 }
+
+#[test]
+fn return_empty() {
+    let src = r#"
+    let foo = () => {}
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    assert_eq!(format!("{}", ctx.values.get("foo").unwrap()), "() => undefined");
+}
+
+#[test]
+#[ignore] // TODO: figure out how to parse this
+fn return_empty_with_body() {
+    let src = r#"
+    let foo = () => {
+        let a = 5;
+    }
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    assert_eq!(format!("{}", ctx.values.get("foo").unwrap()), "() => undefined");
+}
