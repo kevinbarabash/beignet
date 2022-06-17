@@ -38,20 +38,31 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
         // TODO: support recursive functions to be declared within another function
         // let let_rec = ...
 
-        let r#let = just("let")
+        let block = just("let")
             .ignore_then(pattern.clone())
             .then_ignore(just_with_padding("="))
             .or_not()
             .then(expr.clone())
             .separated_by(just_with_padding(";"))
-            // .then_ignore(just_with_padding(";"))
-            // .then(expr.clone())
+            .delimited_by(just_with_padding("{"), just_with_padding("}"))
             .map(|lets| {
                 let mut iter = lets.iter().rev();
 
-                let first = match iter.next().unwrap() {
-                    (Some(_), _) => panic!("Didn't expect `let` here"),
-                    (_, expr) => expr.clone(),
+                // TODO: if `lets` is empty then we should return the empty type
+                
+
+                let first = match iter.next() {
+                    Some(term) => match term {
+                        // TODO: if we do get a `let` last, we should be able to type
+                        // is as `empty`
+                        (Some(_), _) => panic!("Didn't expect `let` here"),
+                        (_, expr) => expr.clone(),
+                    },
+                    None => {
+                        Expr::Empty(Empty {
+                            span: 0..0,
+                        })
+                    },
                 };
 
                 let result: Expr = iter.fold(first, |body, (pattern, value)| {
@@ -71,9 +82,6 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
 
                 result
             });
-
-        let block = choice((r#let.clone(), expr.clone()))
-            .delimited_by(just_with_padding("{"), just_with_padding("}"));
 
         let if_else = recursive(|if_else| {
             just_with_padding("if")

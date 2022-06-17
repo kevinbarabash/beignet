@@ -253,6 +253,7 @@ pub fn infer(
         Expr::Tuple(Tuple { elems, .. }) => {
             Ok(ctx.tuple(infer_many(elems, ctx, constraints)?))
         }
+        Expr::Empty(_) => Ok(ctx.prim(Primitive::Undefined)), // should this be a literal maybe?
     }
 }
 
