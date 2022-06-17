@@ -205,6 +205,19 @@ fn infer_if_else_with_widening() {
 }
 
 #[test]
+fn infer_only_if_must_be_undefined() {
+    let (_, ctx) = infer_prog("let x = if true { let a = 5; }");
+    let result = format!("{}", ctx.values.get("x").unwrap());
+    assert_eq!(result, "undefined");
+}
+
+#[test]
+#[should_panic = "called `Result::unwrap()` on an `Err` value: \"unification failed\""]
+fn infer_only_if_must_be_undefined_error() {
+    infer_prog("let x = if true { let a = 5; a }");
+}
+
+#[test]
 fn infer_if_else_with_widening_of_top_level_vars() {
     let src = r#"
     let a = 5
@@ -1192,7 +1205,6 @@ fn return_empty() {
 }
 
 #[test]
-#[ignore] // TODO: figure out how to parse this
 fn return_empty_with_body() {
     let src = r#"
     let foo = () => {

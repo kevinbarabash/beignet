@@ -23,32 +23,36 @@ Program {
                             },
                         ),
                     ),
-                    alternate: IfElse(
-                        IfElse {
-                            span: 16..39,
-                            cond: Ident(
-                                Ident {
-                                    span: 19..20,
-                                    name: "b",
-                                },
-                            ),
-                            consequent: Lit(
-                                Num(
-                                    Num {
-                                        span: 23..25,
-                                        value: "10",
+                    alternate: Some(
+                        IfElse(
+                            IfElse {
+                                span: 16..39,
+                                cond: Ident(
+                                    Ident {
+                                        span: 19..20,
+                                        name: "b",
                                     },
                                 ),
-                            ),
-                            alternate: Lit(
-                                Num(
-                                    Num {
-                                        span: 35..37,
-                                        value: "20",
-                                    },
+                                consequent: Lit(
+                                    Num(
+                                        Num {
+                                            span: 23..25,
+                                            value: "10",
+                                        },
+                                    ),
                                 ),
-                            ),
-                        },
+                                alternate: Some(
+                                    Lit(
+                                        Num(
+                                            Num {
+                                                span: 35..37,
+                                                value: "20",
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                        ),
                     ),
                 },
             ),
