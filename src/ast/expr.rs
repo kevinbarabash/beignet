@@ -55,7 +55,7 @@ pub struct IfElse {
     pub span: Span,
     pub cond: Box<Expr>,
     pub consequent: Box<Expr>,
-    pub alternate: Box<Expr>,
+    pub alternate: Option<Box<Expr>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

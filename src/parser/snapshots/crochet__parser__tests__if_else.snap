@@ -25,12 +25,14 @@ Program {
                             },
                         ),
                     ),
-                    alternate: Lit(
-                        Num(
-                            Num {
-                                span: 21..23,
-                                value: "10",
-                            },
+                    alternate: Some(
+                        Lit(
+                            Num(
+                                Num {
+                                    span: 21..23,
+                                    value: "10",
+                                },
+                            ),
                         ),
                     ),
                 },

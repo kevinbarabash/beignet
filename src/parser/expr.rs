@@ -44,28 +44,37 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .or_not()
             .then(expr.clone())
             .separated_by(just_with_padding(";"))
+            .then(just_with_padding(";").or_not())
             .delimited_by(just_with_padding("{"), just_with_padding("}"))
-            .map(|lets| {
+            .map(|(lets, trailing_semi)| {
                 let mut iter = lets.iter().rev();
 
                 // TODO: if `lets` is empty then we should return the empty type
                 
-
-                let first = match iter.next() {
-                    Some(term) => match term {
-                        // TODO: if we do get a `let` last, we should be able to type
-                        // is as `empty`
-                        (Some(_), _) => panic!("Didn't expect `let` here"),
-                        (_, expr) => expr.clone(),
-                    },
-                    None => {
+                let last = match trailing_semi {
+                    Some(_) => {
                         Expr::Empty(Empty {
                             span: 0..0,
                         })
-                    },
+                    }
+                    None => {
+                        match iter.next() {
+                            Some(term) => match term {
+                                // TODO: if we do get a `let` last, we should be able to type
+                                // is as `empty`
+                                (Some(_), _) => panic!("Didn't expect `let` here"),
+                                (_, expr) => expr.clone(),
+                            },
+                            None => {
+                                Expr::Empty(Empty {
+                                    span: 0..0,
+                                })
+                            },
+                        }
+                    }
                 };
 
-                let result: Expr = iter.fold(first, |body, (pattern, value)| {
+                let result: Expr = iter.fold(last, |body, (pattern, value)| {
                     let start = match pattern {
                         Some(pattern) => pattern.span().start,
                         None => value.span().start,
@@ -87,13 +96,13 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             just_with_padding("if")
                 .ignore_then(expr.clone())
                 .then(block.clone())
-                .then(just_with_padding("else").ignore_then(block.clone().or(if_else)))
+                .then(just_with_padding("else").ignore_then(block.clone().or(if_else)).or_not())
                 .map_with_span(|((cond, cons), alt), span: Span| {
                     Expr::IfElse(IfElse {
                         span,
                         cond: Box::from(cond),
                         consequent: Box::from(cons),
-                        alternate: Box::from(alt),
+                        alternate: alt.map(Box::from)
                     })
                 })
         });
