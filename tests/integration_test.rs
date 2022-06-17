@@ -1215,3 +1215,68 @@ fn return_empty_with_body() {
 
     assert_eq!(format!("{}", ctx.values.get("foo").unwrap()), "() => undefined");
 }
+
+#[test]
+fn infer_if_let() {
+    let src = r#"
+    let p = {x: 5, y: 10}
+    if let {x, y} = p {
+        x + y;
+    }
+    "#;
+
+    let (_, ctx) = infer_prog(src);
+
+    assert_eq!(format!("{}", ctx.values.get("p").unwrap()), "{x: 5, y: 10}");
+    // Ensures we aren't polluting the outside context
+    assert!(ctx.values.get("x").is_none());
+    assert!(ctx.values.get("y").is_none());
+}
+
+#[test]
+fn codegen_if_let() {
+    let src = r#"
+    let p = {x: 5, y: 10}
+    if let {x, y} = p {
+        x + y;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    export const p = {
+        x: 5,
+        y: 10
+    };
+    (()=>{
+        const { x , y  } = p;
+        x + y;
+        return undefined;
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const p: {
+        x: 5;
+        y: 10;
+    };
+    ;
+    "###);
+}
+
+#[test]
+#[should_panic = "called `Result::unwrap()` on an `Err` value: \"unification failed\""]
+fn infer_if_let_with_type_error() {
+    let src = r#"
+    let p = {x: "hello", y: "world"}
+    if let {x, y} = p {
+        x + y;
+    }
+    "#;
+
+    infer_prog(src);
+}

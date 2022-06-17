@@ -98,6 +98,17 @@ fn build_js(program: &ast::Program) -> Program {
     })
 }
 
+// TODO: add implementations of From for more nodes
+impl From<&ast::Ident> for Ident {
+    fn from(ident: &ast::Ident) -> Self {
+        Ident {
+            span: DUMMY_SP,
+            sym: JsWord::from(ident.name.to_owned()),
+            optional: false,
+        }
+    }
+}
+
 pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
     match pattern {
         ast::Pattern::Ident(ast::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
@@ -109,7 +120,32 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
             type_ann: None,
         }),
         ast::Pattern::Rest(_) => todo!(),
-        ast::Pattern::Object(_) => todo!(),
+        ast::Pattern::Object(ast::ObjectPat {
+            props, optional, ..
+        }) => {
+            let props: Vec<ObjectPatProp> = props
+                .iter()
+                .map(|p| match p {
+                    ast::ObjectPatProp::KeyValue(kvp) => ObjectPatProp::KeyValue(KeyValuePatProp {
+                        key: PropName::Ident(Ident::from(&kvp.key)),
+                        value: Box::from(build_pattern(kvp.value.as_ref())),
+                    }),
+                    ast::ObjectPatProp::Assign(ap) => ObjectPatProp::Assign(AssignPatProp {
+                        span: DUMMY_SP,
+                        key: Ident::from(&ap.key),
+                        value: ap.value.clone().map(|value| Box::from(build_expr(value.as_ref()))),
+                    }),
+                    ast::ObjectPatProp::Rest(_) => todo!(),
+                })
+                .collect();
+
+            Pat::Object(ObjectPat {
+                span: DUMMY_SP,
+                optional: optional.to_owned(),
+                type_ann: None, // because we're generate .js
+                props,
+            })
+        }
         ast::Pattern::Array(_) => todo!(),
     }
 }
@@ -333,47 +369,98 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             alternate,
             ..
         }) => {
-            // Returns an IIFE that looks like:
-            // (() => {
-            //    if (cond) {
-            //        return consequent;
-            //    } else {
-            //        return alternate;
-            //    }
-            // })();
-            let body = BlockStmtOrExpr::BlockStmt(BlockStmt {
-                span: DUMMY_SP,
-                stmts: vec![Stmt::If(IfStmt {
-                    span: DUMMY_SP,
-                    test: Box::from(build_expr(cond.as_ref())),
-                    cons: Box::from(Stmt::Block(build_return_block(consequent.as_ref()))),
-                    alt: alternate
-                        .as_ref()
-                        .map(|alt| Box::from(Stmt::Block(build_return_block(alt.as_ref())))),
-                })],
-            });
+            match cond.as_ref() {
+                ast::Expr::LetExpr(ast::LetExpr { pat, expr, .. }) => {
+                    // TODO:
+                    // - handle refutable patterns, codegen the condition as the
+                    //   conjunction of all refutable sub-patterns, e.g. {x: 5, y}
+                    //   would check if `x === 5`
 
-            let arrow = Expr::Arrow(ArrowExpr {
-                span: DUMMY_SP,
-                params: vec![],
-                body,
-                is_async: false,
-                is_generator: false,
-                type_params: None,
-                return_type: None,
-            });
+                    // Assumes that the pattern is irrefutable for now.
+                    let destructure = Stmt::Decl(Decl::Var(VarDecl {
+                        span: DUMMY_SP,
+                        kind: VarDeclKind::Const,
+                        declare: false,
+                        decls: vec![VarDeclarator {
+                            span: DUMMY_SP,
+                            name: build_pattern(pat),
+                            init: Some(Box::from(build_expr(expr))),
+                            definite: false,
+                        }],
+                    }));
 
-            let callee = Callee::Expr(Box::from(Expr::Paren(ParenExpr {
-                span: DUMMY_SP,
-                expr: Box::from(arrow),
-            })));
+                    let mut block = build_return_block(consequent.as_ref());
+                    block.stmts.insert(0, destructure);
 
-            Expr::Call(CallExpr {
-                span: DUMMY_SP,
-                callee,
-                args: vec![],
-                type_args: None,
-            })
+                    let body = BlockStmtOrExpr::BlockStmt(block);
+
+                    let arrow = Expr::Arrow(ArrowExpr {
+                        span: DUMMY_SP,
+                        params: vec![],
+                        body,
+                        is_async: false,
+                        is_generator: false,
+                        type_params: None,
+                        return_type: None,
+                    });
+
+                    let callee = Callee::Expr(Box::from(Expr::Paren(ParenExpr {
+                        span: DUMMY_SP,
+                        expr: Box::from(arrow),
+                    })));
+
+                    Expr::Call(CallExpr {
+                        span: DUMMY_SP,
+                        callee,
+                        args: vec![],
+                        type_args: None,
+                    })
+                }
+                _ => {
+                    // Returns an IIFE that looks like:
+                    // (() => {
+                    //    if (cond) {
+                    //        return consequent;
+                    //    } else {
+                    //        return alternate;
+                    //    }
+                    // })();
+
+                    let body = BlockStmtOrExpr::BlockStmt(BlockStmt {
+                        span: DUMMY_SP,
+                        stmts: vec![Stmt::If(IfStmt {
+                            span: DUMMY_SP,
+                            test: Box::from(build_expr(cond.as_ref())),
+                            cons: Box::from(Stmt::Block(build_return_block(consequent.as_ref()))),
+                            alt: alternate.as_ref().map(|alt| {
+                                Box::from(Stmt::Block(build_return_block(alt.as_ref())))
+                            }),
+                        })],
+                    });
+
+                    let arrow = Expr::Arrow(ArrowExpr {
+                        span: DUMMY_SP,
+                        params: vec![],
+                        body,
+                        is_async: false,
+                        is_generator: false,
+                        type_params: None,
+                        return_type: None,
+                    });
+
+                    let callee = Callee::Expr(Box::from(Expr::Paren(ParenExpr {
+                        span: DUMMY_SP,
+                        expr: Box::from(arrow),
+                    })));
+
+                    Expr::Call(CallExpr {
+                        span: DUMMY_SP,
+                        callee,
+                        args: vec![],
+                        type_args: None,
+                    })
+                }
+            }
         }
         ast::Expr::Obj(ast::Obj { props, .. }) => {
             let props: Vec<PropOrSpread> = props
@@ -441,7 +528,9 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             sym: JsWord::from("undefined"),
             optional: false,
         }),
-        ast::Expr::LetExpr(_) => todo!(),
+        ast::Expr::LetExpr(_) => {
+            panic!("LetExpr should always be handled by the IfElse branch")
+        }
     }
 }
 

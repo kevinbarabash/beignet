@@ -228,7 +228,7 @@ impl fmt::Display for Type {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Scheme {
     pub qualifiers: Vec<i32>,
     pub ty: Type,
