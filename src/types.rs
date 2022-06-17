@@ -276,7 +276,7 @@ impl fmt::Display for Scheme {
     }
 }
 
-pub fn freeze(ty: Type) -> Type {
+fn set_frozen(ty: Type, frozen: bool) -> Type {
     let variant = match ty.variant {
         Variant::Var => Variant::Var,
         Variant::Lam(lam) => Variant::Lam(LamType {
@@ -313,9 +313,13 @@ pub fn freeze(ty: Type) -> Type {
     };
     Type {
         variant,
-        frozen: true,
+        frozen,
         ..ty
     }
+}
+
+pub fn freeze(ty: Type) -> Type {
+    set_frozen(ty, true)
 }
 
 pub fn freeze_scheme(scheme: Scheme) -> Scheme {
@@ -326,43 +330,5 @@ pub fn freeze_scheme(scheme: Scheme) -> Scheme {
 }
 
 pub fn unfreeze(ty: Type) -> Type {
-    let variant = match ty.variant {
-        Variant::Var => Variant::Var,
-        Variant::Lam(lam) => Variant::Lam(LamType {
-            params: lam.params.into_iter().map(unfreeze).collect(),
-            ret: Box::from(unfreeze(lam.ret.as_ref().clone())),
-        }),
-        Variant::Prim(prim) => Variant::Prim(prim),
-        Variant::Lit(lit) => Variant::Lit(lit),
-        Variant::Union(types) => Variant::Union(types.into_iter().map(unfreeze).collect()),
-        Variant::Intersection(types) => {
-            Variant::Intersection(types.into_iter().map(unfreeze).collect())
-        }
-        Variant::Object(props) => Variant::Object(
-            props
-                .into_iter()
-                .map(|prop| TProp {
-                    ty: unfreeze(prop.ty),
-                    ..prop
-                })
-                .collect(),
-        ),
-        Variant::Alias(alias) => Variant::Alias(AliasType {
-            name: alias.name,
-            type_params: alias
-                .type_params
-                .map(|type_params| type_params.into_iter().map(unfreeze).collect()),
-        }),
-        Variant::Tuple(types) => Variant::Tuple(types.into_iter().map(unfreeze).collect()),
-        Variant::Rest(arg) => Variant::Rest(Box::from(unfreeze(arg.as_ref().clone()))),
-        Variant::Member(member) => Variant::Member(MemberType {
-            obj: Box::from(unfreeze(member.obj.as_ref().clone())),
-            prop: member.prop,
-        }),
-    };
-    Type {
-        variant,
-        frozen: false,
-        ..ty
-    }
+    set_frozen(ty, false)
 }
