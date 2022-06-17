@@ -65,8 +65,8 @@ fn compose_subs(s1: &Subst, s2: &Subst) -> Result<Subst, String> {
 
 fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     match (&t1.variant, &t2.variant) {
-        (Variant::Var, _) => bind(&t1.id, t2, ctx),
-        (_, Variant::Var) => bind(&t2.id, t1, ctx),
+        (Variant::Var, _) => bind(&t1.id, t2),
+        (_, Variant::Var) => bind(&t2.id, t1),
         (Variant::Prim(p1), Variant::Prim(p2)) if p1 == p2 => Ok(Subst::new()),
         (Variant::Lit(l1), Variant::Lit(l2)) if l1 == l2 => Ok(Subst::new()),
         (Variant::Lam(lam1), Variant::Lam(lam2)) => unify_lams(lam1, lam2, ctx),
@@ -190,17 +190,10 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
             Some(Flag::Parameter) | Some(Flag::Pattern) => {
                 return Ok(Subst::from([(t1.id, t2.to_owned())]));
             }
-            Some(Flag::MemberAccess) => (),
             None => {
-                if !t1.frozen {
-                    // TODO: we should be using an explicit flag so that we're only
-                    // doing this when it makes sense to.  Right now the following test
-                    // is using this: infer_fn_param_with_type_alias_with_param.
-                    // We should create more tests that involving passing subtypes to
-                    // to functions.
-                    return Ok(Subst::new());
-                }
-            }
+                return Ok(Subst::new())
+            },
+            _ => ()
         }
     }
 
@@ -243,6 +236,9 @@ fn unify_lams(t1: &LamType, t2: &LamType, ctx: &Context) -> Result<Subst, String
     // TODO:
     // - varargs
     // - subtyping
+    println!("unify_lams");
+    println!("t1 = {:#?}", t1);
+    println!("t2 = {:#?}", t2);
 
     // Partial application
     if t1.params.len() < t2.params.len() {
@@ -363,10 +359,7 @@ pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<bool, String> {
     }
 }
 
-fn bind(tv_id: &i32, ty: &Type, _: &Context) -> Result<Subst, String> {
-    // TODO: Handle Variant::Mem once it's added
-    // NOTE: This will require the use of the &Context
-
+fn bind(tv_id: &i32, ty: &Type) -> Result<Subst, String> {
     match ty.variant {
         Variant::Var if &ty.id == tv_id => Ok(Subst::new()),
         _ if ty.ftv().contains(tv_id) => Err(String::from("type var appears in type")),

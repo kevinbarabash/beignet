@@ -205,19 +205,32 @@ fn infer_if_else_with_widening() {
 }
 
 #[test]
+fn infer_if_else_with_widening_of_top_level_vars() {
+    let src = r#"
+    let a = 5
+    let b = 10
+    let x = if true { a } else { b }
+    "#;
+    // Even though `a` and `b` have been frozen, we still allow
+    // clones of them to be widened when they're returned from an
+    // if-else.
+    let (_, ctx) = infer_prog(src);
+    let result = format!("{}", ctx.values.get("x").unwrap());
+    assert_eq!(result, "5 | 10");
+}
+
+#[test]
 fn infer_if_else_with_multiple_widenings() {
     let src = r#"
-    let x = if true { 5 } else { 10 }
-    let y = if false { x } else { 15 }
+    let x = if true { 5 } else if false { 10 } else { 15 }
     "#;
     let (program, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.values.get("y").unwrap());
+    let result = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(result, "5 | 10 | 15");
 
     let result = codegen_d_ts(&program, &ctx);
     insta::assert_snapshot!(result, @r###"
-    export declare const x: 5 | 10;
-    export declare const y: 5 | 10 | 15;
+    export declare const x: 5 | 10 | 15;
     "###);
 }
 
@@ -1145,4 +1158,25 @@ fn infer_jsx() {
 
     let elem = format!("{}", ctx.values.get("elem").unwrap());
     assert_eq!(elem, "JSXElement");
+}
+
+#[test]
+#[should_panic = "unification failed"]
+fn incorrect_args() {
+    let src = r#"
+    let add = (a, b) => a + b
+    add("hello", "world")
+    "#;
+    infer_prog(src);
+}
+
+#[test]
+fn top_level_inferred_types_are_frozen() {
+    let src = r#"
+    let add = (a, b) => a + b
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let add = ctx.values.get("add").unwrap();
+    assert!(add.ty.frozen);
 }

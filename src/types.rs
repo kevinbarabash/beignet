@@ -276,7 +276,6 @@ impl fmt::Display for Scheme {
     }
 }
 
-// TODO: make this recursive
 pub fn freeze(ty: Type) -> Type {
     let variant = match ty.variant {
         Variant::Var => Variant::Var,
@@ -315,6 +314,55 @@ pub fn freeze(ty: Type) -> Type {
     Type {
         variant,
         frozen: true,
+        ..ty
+    }
+}
+
+pub fn freeze_scheme(scheme: Scheme) -> Scheme {
+    Scheme { 
+        ty: freeze(scheme.ty),
+        ..scheme
+    }
+}
+
+pub fn unfreeze(ty: Type) -> Type {
+    let variant = match ty.variant {
+        Variant::Var => Variant::Var,
+        Variant::Lam(lam) => Variant::Lam(LamType {
+            params: lam.params.into_iter().map(unfreeze).collect(),
+            ret: Box::from(unfreeze(lam.ret.as_ref().clone())),
+        }),
+        Variant::Prim(prim) => Variant::Prim(prim),
+        Variant::Lit(lit) => Variant::Lit(lit),
+        Variant::Union(types) => Variant::Union(types.into_iter().map(unfreeze).collect()),
+        Variant::Intersection(types) => {
+            Variant::Intersection(types.into_iter().map(unfreeze).collect())
+        }
+        Variant::Object(props) => Variant::Object(
+            props
+                .into_iter()
+                .map(|prop| TProp {
+                    ty: unfreeze(prop.ty),
+                    ..prop
+                })
+                .collect(),
+        ),
+        Variant::Alias(alias) => Variant::Alias(AliasType {
+            name: alias.name,
+            type_params: alias
+                .type_params
+                .map(|type_params| type_params.into_iter().map(unfreeze).collect()),
+        }),
+        Variant::Tuple(types) => Variant::Tuple(types.into_iter().map(unfreeze).collect()),
+        Variant::Rest(arg) => Variant::Rest(Box::from(unfreeze(arg.as_ref().clone()))),
+        Variant::Member(member) => Variant::Member(MemberType {
+            obj: Box::from(unfreeze(member.obj.as_ref().clone())),
+            prop: member.prop,
+        }),
+    };
+    Type {
+        variant,
+        frozen: false,
         ..ty
     }
 }
