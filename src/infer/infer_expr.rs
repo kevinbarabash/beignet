@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, Flag, Primitive, Scheme, Type};
+use crate::types::{self, Flag, Primitive, Scheme, Type, unfreeze};
 
 use super::constraint_solver::{run_solve, Constraint};
 use super::context::{Context, Env};
@@ -78,10 +78,16 @@ pub fn infer(
             let cons_type = infer(consequent, ctx, constraints)?;
             let alt_type = infer(alternate, ctx, constraints)?;
 
-            constraints.push(Constraint::from((cond_type, ctx.prim(Primitive::Bool))));
-            constraints.push(Constraint::from((cons_type.clone(), alt_type)));
+            let result_type = ctx.fresh_var();
 
-            Ok(cons_type)
+            constraints.push(Constraint::from((cond_type, ctx.prim(Primitive::Bool))));
+            // We use unfrozen copies of cons_type and alt_type so that they can
+            // be widened if need be.  This does not affect the original frozen
+            // type.
+            constraints.push(Constraint::from((unfreeze(cons_type), result_type.clone())));
+            constraints.push(Constraint::from((unfreeze(alt_type), result_type.clone())));
+
+            Ok(result_type)
         }
 
         Expr::Let(Let {

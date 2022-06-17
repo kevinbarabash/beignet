@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
+use crate::types::freeze_scheme;
 
 use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::Context;
@@ -31,7 +32,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                                 match type_ann {
                                     Some(type_ann) => {
                                         let scheme = infer_scheme(type_ann, &ctx);
-                                        ctx.values.insert(id.name.to_owned(), scheme);
+                                        ctx.values.insert(id.name.to_owned(), freeze_scheme(scheme));
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
@@ -80,7 +81,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                         // current context.
                         for (name, scheme) in new_vars {
                             let scheme = normalize(&scheme.apply(&subs), &ctx);
-                            ctx.values.insert(name, scheme);
+                            ctx.values.insert(name, freeze_scheme(scheme));
                         }
                     }
                 };
@@ -92,7 +93,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                 ..
             } => {
                 let scheme = infer_scheme_with_type_params(type_ann, type_params, &ctx);
-                ctx.types.insert(id.name.to_owned(), scheme);
+                ctx.types.insert(id.name.to_owned(), freeze_scheme(scheme));
             }
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
