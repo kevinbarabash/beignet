@@ -967,6 +967,8 @@ fn infer_destructure_all_object_properties() {
 
     let result = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(result, "5");
+    let result = format!("{}", ctx.values.get("y").unwrap());
+    assert_eq!(result, "10");
 }
 
 #[test]
@@ -978,6 +980,18 @@ fn infer_destructure_some_object_properties() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.values.get("x").unwrap());
+    assert_eq!(result, "5");
+}
+
+#[test]
+fn infer_destructure_some_object_properties_with_renaming() {
+    let src = r#"
+    let point = {x: 5, y: 10}
+    let {x: a} = point
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.values.get("a").unwrap());
     assert_eq!(result, "5");
 }
 
@@ -1253,6 +1267,41 @@ fn codegen_if_let() {
     (()=>{
         const { x , y  } = p;
         x + y;
+        return undefined;
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const p: {
+        x: 5;
+        y: 10;
+    };
+    ;
+    "###);
+}
+
+#[test]
+fn codegen_if_let_with_rename() {
+    let src = r#"
+    let p = {x: 5, y: 10}
+    if let {x: a, y: b} = p {
+        a + b;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    export const p = {
+        x: 5,
+        y: 10
+    };
+    (()=>{
+        const { x: a , y: b  } = p;
+        a + b;
         return undefined;
     })();
     "###);

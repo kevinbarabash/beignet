@@ -8,7 +8,7 @@ use crate::types::{self, Scheme, Type, Flag};
 use super::context::Context;
 use super::infer_type_ann::infer_type_ann_with_params;
 
-type PatInfData = (Type, HashMap<String, Scheme>);
+type InferredPatternData = (Type, HashMap<String, Scheme>);
 
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
@@ -17,7 +17,7 @@ pub fn infer_pattern(
     ctx: &mut Context,
     constraints: &mut Vec<Constraint>,
     type_param_map: &HashMap<String, Type>,
-) -> Result<PatInfData, String> {
+) -> Result<InferredPatternData, String> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
     let mut new_vars: HashMap<String, Scheme> = HashMap::new();
 
@@ -95,21 +95,14 @@ fn infer_pattern_rec(
                 .filter_map(|prop| {
                     match prop {
                         // re-assignment, e.g. {x: new_x, y: new_y} = point
-                        ObjectPatProp::KeyValue(KeyValuePatProp { key, value: _ }) => {
-                            // We ignore the value for now, we can come back later to handle
-                            // default values.
-
-                            let tv = ctx.fresh_var();
-                            let scheme = Scheme::from(&tv);
-                            if new_vars.insert(key.name.to_owned(), scheme).is_some() {
-                                todo!("return an error");
-                            }
-                            // ctx.values.insert(key.name.to_owned(), scheme);
+                        ObjectPatProp::KeyValue(KeyValuePatProp { key, value }) => {
+                            // TODO: bubble the error up from infer_patter_rec() if there is one.
+                            let value_type = infer_pattern_rec(value, ctx, constraints, new_vars).unwrap();
 
                             Some(types::TProp {
                                 name: key.name.to_owned(),
                                 optional: false,
-                                ty: tv,
+                                ty: value_type,
                             })
                         }
                         ObjectPatProp::Assign(AssignPatProp { key, value: _, .. }) => {

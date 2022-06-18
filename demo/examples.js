@@ -48,4 +48,8 @@ export const ifLet = [
   "if let {x, y} = p {",
   "  let sum = x + y;",
   "}",
+  "",
+  "if let {x: a, y: b} = p {",
+  "  let sum = a + b;",
+  "}",
 ].join("\n");
