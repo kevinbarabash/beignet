@@ -387,18 +387,6 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
         }) => {
             match cond.as_ref() {
                 ast::Expr::LetExpr(ast::LetExpr { pat, expr, .. }) => {
-                    let destructure = Stmt::Decl(Decl::Var(VarDecl {
-                        span: DUMMY_SP,
-                        kind: VarDeclKind::Const,
-                        declare: false,
-                        decls: vec![VarDeclarator {
-                            span: DUMMY_SP,
-                            name: build_pattern(pat),
-                            init: Some(Box::from(build_expr(expr))),
-                            definite: false,
-                        }],
-                    }));
-
                     let body = if ast::is_refutable(pat) {
                         let id = Ident {
                             span: DUMMY_SP,
@@ -425,10 +413,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                             declare: false,
                             decls: vec![VarDeclarator {
                                 span: DUMMY_SP,
-                                name: Pat::Ident(BindingIdent {
-                                    id: id.clone(),
-                                    type_ann: None,
-                                }),
+                                name: Pat::Ident(BindingIdent::from(id.clone())),
                                 init: Some(Box::from(build_expr(expr))),
                                 definite: false,
                             }],

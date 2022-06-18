@@ -1359,13 +1359,13 @@ fn infer_if_let_refutable_pattern() {
     })();
     "###);
 
-    // let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx);
 
-    // insta::assert_snapshot!(result, @r###"
-    // export declare const p: {
-    //     x: 5;
-    //     y: 10;
-    // };
-    // ;
-    // "###);
+    insta::assert_snapshot!(result, @r###"
+    export declare const p: {
+        x: 5;
+        y: 10;
+    };
+    ;
+    "###);
 }
