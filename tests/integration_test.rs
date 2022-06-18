@@ -1329,3 +1329,162 @@ fn infer_if_let_with_type_error() {
 
     infer_prog(src);
 }
+
+#[test]
+fn infer_if_let_refutable_pattern_obj() {
+    let src = r#"
+    let p = {x: 5, y: 10}
+    if let {x: 5, y} = p {
+        y;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    assert_eq!(format!("{}", ctx.values.get("p").unwrap()), "{x: 5, y: 10}");
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    export const p = {
+        x: 5,
+        y: 10
+    };
+    (()=>{
+        const value = p;
+        if (value.x === 5) {
+            const { y  } = value;
+            y;
+            return undefined;
+        }
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const p: {
+        x: 5;
+        y: 10;
+    };
+    ;
+    "###);
+}
+
+#[test]
+fn infer_if_let_refutable_pattern_nested_obj() {
+    let src = r#"
+    let action = {type: "moveto", point: {x: 5, y: 10}}
+    if let {type: "moveto", point: {x, y}} = action {
+        x + y;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    export const action = {
+        type: "moveto",
+        point: {
+            x: 5,
+            y: 10
+        }
+    };
+    (()=>{
+        const value = action;
+        if (value.type === "moveto") {
+            const { point: { x , y  }  } = value;
+            x + y;
+            return undefined;
+        }
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const action: {
+        type: "moveto";
+        point: {
+            x: 5;
+            y: 10;
+        };
+    };
+    ;
+    "###);
+}
+
+#[test]
+fn infer_if_let_refutable_pattern_array() {
+    let src = r#"
+    let p = [5, 10]
+    if let [5, y] = p {
+        y;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    assert_eq!(format!("{}", ctx.values.get("p").unwrap()), "[5, 10]");
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    export const p = [
+        5,
+        10
+    ];
+    (()=>{
+        const value = p;
+        if (value[0] === 5) {
+            const [, y] = value;
+            y;
+            return undefined;
+        }
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const p: [5, 10];
+    ;
+    "###);
+}
+
+#[test]
+fn infer_if_let_refutable_pattern_nested_array() {
+    let src = r#"
+    let action = ["moveto", [5, 10]]
+    if let ["moveto", [x, y]] = action {
+        x + y;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    export const action = [
+        "moveto",
+        [
+            5,
+            10
+        ]
+    ];
+    (()=>{
+        const value = action;
+        if (value[0] === "moveto") {
+            const [, [x, y]] = value;
+            x + y;
+            return undefined;
+        }
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const action: ["moveto", [5, 10]];
+    ;
+    "###);
+}

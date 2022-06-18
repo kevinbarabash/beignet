@@ -205,5 +205,7 @@ mod tests {
     #[test]
     fn if_let() {
         insta::assert_debug_snapshot!(parse("if let {x, y} = p { x + y; }"));
+        insta::assert_debug_snapshot!(parse("if let {x: a, y: b} = p { a + b; }"));
+        insta::assert_debug_snapshot!(parse("if let {x: 5, y} = p { y; }"));
     }
 }

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, freeze, unfreeze, Flag, Primitive, Scheme, Type};
+use crate::types::{self, freeze, unfreeze, set_flag, Flag, Primitive, Scheme, Type};
 
 use super::constraint_solver::{run_solve, Constraint};
 use super::context::{Context, Env};
@@ -105,9 +105,9 @@ pub fn infer(
 
                             let subs = run_solve(&init_cs, ctx)?;
 
-                            let (mut pat_type, new_vars) =
+                            let (pat_type, new_vars) =
                                 infer_pattern(pat, &mut new_ctx, constraints, &HashMap::new())?;
-                            pat_type.flag = Some(Flag::Pattern);
+                            let pat_type = set_flag(pat_type, &Flag::Pattern);
 
                             // Add bindings for the new variables inside the consequent block.
                             for (name, scheme) in new_vars {
@@ -167,9 +167,9 @@ pub fn infer(
                 Some(pattern) => {
                     let mut new_ctx = ctx.clone();
 
-                    let (mut pat_type, new_vars) =
+                    let (pat_type, new_vars) =
                         infer_pattern(pattern, &mut new_ctx, constraints, &HashMap::new())?;
-                    pat_type.flag = Some(Flag::Pattern);
+                    let pat_type = set_flag(pat_type, &Flag::Pattern);
 
                     // Add bindings for the new variables inside the body.
                     for (name, scheme) in new_vars {

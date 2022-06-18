@@ -3,7 +3,7 @@ use std::iter::Iterator;
 
 use crate::ast::*;
 use crate::infer::constraint_solver::Constraint;
-use crate::types::{self, Scheme, Type, Flag};
+use crate::types::{self, Scheme, Type, Flag, set_flag};
 
 use super::context::Context;
 use super::infer_type_ann::infer_type_ann_with_params;
@@ -28,14 +28,13 @@ pub fn infer_pattern(
     // type annotation.
     match get_type_ann(pat) {
         Some(type_ann) => {
-            let mut type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
-            type_ann_ty.flag = Some(Flag::Pattern);
+            let type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
+            let type_ann_ty = set_flag(type_ann_ty, &Flag::Pattern);
             constraints.push(Constraint::from((type_ann_ty.clone(), pat_type)));
             Ok((type_ann_ty, new_vars))
         }
         None => {
-            let mut pat_type = pat_type;
-            pat_type.flag = Some(Flag::Pattern);
+            let pat_type = set_flag(pat_type, &Flag::Pattern);
             Ok((pat_type, new_vars))
         },
     }
@@ -47,6 +46,7 @@ fn get_type_ann(pat: &Pattern) -> Option<TypeAnn> {
         Pattern::Rest(RestPat { type_ann, .. }) => type_ann.to_owned(),
         Pattern::Object(ObjectPat { type_ann, .. }) => type_ann.to_owned(),
         Pattern::Array(ArrayPat { type_ann, .. }) => type_ann.to_owned(),
+        Pattern::Lit(_) => None,
     }
 }
 
@@ -65,6 +65,7 @@ fn infer_pattern_rec(
             }
             Ok(tv)
         }
+        Pattern::Lit(LitPat { lit, .. }) => Ok(ctx.lit(lit.to_owned())),
         Pattern::Rest(RestPat { arg, .. }) => infer_pattern_rec(arg.as_ref(), ctx, constraints, new_vars),
         Pattern::Array(ArrayPat { elems, .. }) => {
             let elems: Result<Vec<Type>, String> = elems

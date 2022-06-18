@@ -1,0 +1,102 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"if let {x: a, y: b} = p { a + b; }\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..34,
+            expr: IfElse(
+                IfElse {
+                    span: 0..34,
+                    cond: LetExpr(
+                        LetExpr {
+                            span: 0..34,
+                            pat: Object(
+                                ObjectPat {
+                                    span: 7..20,
+                                    props: [
+                                        KeyValue(
+                                            KeyValuePatProp {
+                                                key: Ident {
+                                                    span: 8..9,
+                                                    name: "x",
+                                                },
+                                                value: Ident(
+                                                    BindingIdent {
+                                                        span: 11..12,
+                                                        id: Ident {
+                                                            span: 11..12,
+                                                            name: "a",
+                                                        },
+                                                        type_ann: None,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                        KeyValue(
+                                            KeyValuePatProp {
+                                                key: Ident {
+                                                    span: 14..15,
+                                                    name: "y",
+                                                },
+                                                value: Ident(
+                                                    BindingIdent {
+                                                        span: 17..18,
+                                                        id: Ident {
+                                                            span: 17..18,
+                                                            name: "b",
+                                                        },
+                                                        type_ann: None,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ],
+                                    optional: false,
+                                    type_ann: None,
+                                },
+                            ),
+                            expr: Ident(
+                                Ident {
+                                    span: 22..23,
+                                    name: "p",
+                                },
+                            ),
+                        },
+                    ),
+                    consequent: Let(
+                        Let {
+                            span: 26..0,
+                            pattern: None,
+                            init: Op(
+                                Op {
+                                    span: 26..31,
+                                    op: Add,
+                                    left: Ident(
+                                        Ident {
+                                            span: 26..27,
+                                            name: "a",
+                                        },
+                                    ),
+                                    right: Ident(
+                                        Ident {
+                                            span: 30..31,
+                                            name: "b",
+                                        },
+                                    ),
+                                },
+                            ),
+                            body: Empty(
+                                Empty {
+                                    span: 0..0,
+                                },
+                            ),
+                        },
+                    ),
+                    alternate: None,
+                },
+            ),
+        },
+    ],
+}
