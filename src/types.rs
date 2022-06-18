@@ -332,3 +332,45 @@ pub fn freeze_scheme(scheme: Scheme) -> Scheme {
 pub fn unfreeze(ty: Type) -> Type {
     set_frozen(ty, false)
 }
+
+pub fn set_flag(ty: Type, flag: &Flag) -> Type {
+    let variant = match ty.variant {
+        Variant::Var => Variant::Var,
+        Variant::Lam(lam) => Variant::Lam(LamType {
+            params: lam.params.into_iter().map(|p| set_flag(p, flag)).collect(),
+            ret: Box::from(set_flag(lam.ret.as_ref().clone(), flag)),
+        }),
+        Variant::Prim(prim) => Variant::Prim(prim),
+        Variant::Lit(lit) => Variant::Lit(lit),
+        Variant::Union(types) => Variant::Union(types.into_iter().map(|t| set_flag(t, flag)).collect()),
+        Variant::Intersection(types) => {
+            Variant::Intersection(types.into_iter().map(|t| set_flag(t, flag)).collect())
+        }
+        Variant::Object(props) => Variant::Object(
+            props
+                .into_iter()
+                .map(|prop| TProp {
+                    ty: set_flag(prop.ty, flag),
+                    ..prop
+                })
+                .collect(),
+        ),
+        Variant::Alias(alias) => Variant::Alias(AliasType {
+            name: alias.name,
+            type_params: alias
+                .type_params
+                .map(|type_params| type_params.into_iter().map(|tp| set_flag(tp, flag)).collect()),
+        }),
+        Variant::Tuple(types) => Variant::Tuple(types.into_iter().map(|t| set_flag(t, flag)).collect()),
+        Variant::Rest(arg) => Variant::Rest(Box::from(set_flag(arg.as_ref().clone(), flag))),
+        Variant::Member(member) => Variant::Member(MemberType {
+            obj: Box::from(set_flag(member.obj.as_ref().clone(), flag)),
+            prop: member.prop,
+        }),
+    };
+    Type {
+        variant,
+        flag: Some(flag.to_owned()),
+        ..ty
+    }
+}
