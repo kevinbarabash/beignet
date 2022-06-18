@@ -201,4 +201,9 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let get_bar = <T>(foo: Foo<T>) => foo.bar"));
         insta::assert_debug_snapshot!(parse("declare let get_bar: (Foo) => T"));
     }
+
+    #[test]
+    fn if_let() {
+        insta::assert_debug_snapshot!(parse("if let {x, y} = p { x + y; }"));
+    }
 }

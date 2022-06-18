@@ -79,13 +79,12 @@ pub fn infer(
         }) => {
             let result_type = ctx.fresh_var();
 
-            let cond_type = infer(cond, ctx, constraints)?;
-            let cons_type = infer(consequent, ctx, constraints)?;
-
             match alternate {
                 Some(alternate) => {
+                    let cond_type = infer(cond, ctx, constraints)?;
                     constraints.push(Constraint::from((cond_type, ctx.prim(Primitive::Bool))));
 
+                    let cons_type = infer(consequent, ctx, constraints)?;
                     let alt_type = infer(alternate, ctx, constraints)?;
                     // We use unfrozen copies of cons_type and alt_type so that they can
                     // be widened if need be.  This does not affect the original frozen
@@ -96,6 +95,48 @@ pub fn infer(
                     Ok(result_type)
                 }
                 None => {
+                    let (cond_type, cons_type) = match cond.as_ref() {
+                        Expr::LetExpr(LetExpr { pat, expr, .. }) => {
+                            let mut new_ctx = ctx.clone();
+
+                            let mut init_cs = vec![];
+                            let init_type = infer(expr, ctx, &mut init_cs)?;
+                            constraints.append(&mut init_cs);
+
+                            let subs = run_solve(&init_cs, ctx)?;
+
+                            let (mut pat_type, new_vars) =
+                                infer_pattern(pat, &mut new_ctx, constraints, &HashMap::new())?;
+                            pat_type.flag = Some(Flag::Pattern);
+
+                            // Add bindings for the new variables inside the consequent block.
+                            for (name, scheme) in new_vars {
+                                new_ctx.values.insert(name, scheme);
+                            }
+
+                            // Order matters here: value_type appearing first indicates that
+                            // it should be treated as a sub-type of pattern_type.
+                            constraints.push(Constraint::from((init_type, pat_type)));
+
+                            let mut cons_cs = vec![];
+                            let cons_type = infer(consequent, &new_ctx, &mut cons_cs)?;
+                            let mut cons_cs = cons_cs.apply(&subs);
+                            constraints.append(&mut cons_cs);
+
+                            // Ensures that type variable ids are unique.
+                            ctx.state.count.set(new_ctx.state.count.get());
+
+                            let cond_type = ctx.prim(Primitive::Bool);
+
+                            (cond_type, cons_type)
+                        },
+                        _ => {
+                            let cond_type = infer(cond, ctx, constraints)?;
+                            let cons_type = infer(consequent, ctx, constraints)?;
+
+                            (cond_type, cons_type)
+                        },
+                    };
                     constraints.push(Constraint::from((cond_type, ctx.prim(Primitive::Bool))));
 
                     // The alternative must be undefined
@@ -130,6 +171,7 @@ pub fn infer(
                         infer_pattern(pattern, &mut new_ctx, constraints, &HashMap::new())?;
                     pat_type.flag = Some(Flag::Pattern);
 
+                    // Add bindings for the new variables inside the body.
                     for (name, scheme) in new_vars {
                         new_ctx.values.insert(name, scheme);
                     }
@@ -271,7 +313,8 @@ pub fn infer(
         }
 
         Expr::Tuple(Tuple { elems, .. }) => Ok(ctx.tuple(infer_many(elems, ctx, constraints)?)),
-        Expr::Empty(_) => Ok(ctx.prim(Primitive::Undefined)), // should this be a literal maybe?
+        Expr::Empty(_) => Ok(ctx.prim(Primitive::Undefined)),
+        Expr::LetExpr(_) => todo!(), // should this be a literal maybe?
     }
 }
 

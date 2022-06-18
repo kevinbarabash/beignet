@@ -59,6 +59,13 @@ pub struct IfElse {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LetExpr {
+    pub span: Span,
+    pub pat: Pattern,
+    pub expr: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lambda {
     pub span: Span,
     pub params: Vec<Pattern>,
@@ -157,6 +164,7 @@ pub enum Expr {
     JSXElement(JSXElement),
     Lambda(Lambda),
     Let(Let),
+    LetExpr(LetExpr), // should only be used in `if let` expressions
     Lit(Lit),
     Op(Op),
     Obj(Obj),
@@ -183,6 +191,7 @@ impl Expr {
             Expr::Tuple(tuple) => tuple.span.to_owned(),
             Expr::Member(member) => member.span.to_owned(),
             Expr::Empty(empty) => empty.span.to_owned(),
+            Expr::LetExpr(let_expr) => let_expr.span.to_owned(),
         }
     }
 }

@@ -41,3 +41,15 @@ export const functionOverloading = [
   "let num = add(5, 10)",
   'let str = add("hello, ", "world")',
 ].join("\n");
+
+export const ifLet = [
+  "let p = {x: 5, y: 10}",
+  "",
+  "if let {x, y} = p {",
+  "  let sum = x + y;",
+  "}",
+  "",
+  "if let {x: a, y: b} = p {",
+  "  let sum = a + b;",
+  "}",
+].join("\n");

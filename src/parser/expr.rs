@@ -92,6 +92,26 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 result
             });
 
+        let if_let = just_with_padding("if")
+            .ignore_then(just_with_padding("let"))
+            .ignore_then(pattern.clone())
+            .then_ignore(just_with_padding("="))
+            .then(expr.clone())
+            .then(block.clone())
+            .map_with_span(|((pat, expr), block), span: Span| {
+                let my_pat: Pattern = pat;
+                Expr::IfElse(IfElse {
+                    span: span.clone(),
+                    cond: Box::from(Expr::LetExpr(LetExpr {
+                        span, // FixMe
+                        pat: my_pat,
+                        expr: Box::from(expr),
+                    })),
+                    consequent: Box::from(block),
+                    alternate: None,
+                })
+            });
+
         let if_else = recursive(|if_else| {
             just_with_padding("if")
                 .ignore_then(expr.clone())
@@ -133,6 +153,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .map_with_span(|elems, span: Span| Expr::Tuple(Tuple { span, elems }));
 
         let atom = choice((
+            if_let,
             if_else,
             r#bool,
             num,
@@ -145,6 +166,8 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
 
+        // TODO: do a similar recursive thing to what we do with if_else.
+        // dotting on an if-else or a jsx node is a bit weird.
         let mem = atom
             .clone()
             .then(

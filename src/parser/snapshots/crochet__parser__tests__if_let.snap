@@ -1,0 +1,86 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"if let {x, y} = p { x + y; }\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..28,
+            expr: IfElse(
+                IfElse {
+                    span: 0..28,
+                    cond: LetExpr(
+                        LetExpr {
+                            span: 0..28,
+                            pat: Object(
+                                ObjectPat {
+                                    span: 7..14,
+                                    props: [
+                                        Assign(
+                                            AssignPatProp {
+                                                span: 8..9,
+                                                key: Ident {
+                                                    span: 8..9,
+                                                    name: "x",
+                                                },
+                                                value: None,
+                                            },
+                                        ),
+                                        Assign(
+                                            AssignPatProp {
+                                                span: 11..12,
+                                                key: Ident {
+                                                    span: 11..12,
+                                                    name: "y",
+                                                },
+                                                value: None,
+                                            },
+                                        ),
+                                    ],
+                                    optional: false,
+                                    type_ann: None,
+                                },
+                            ),
+                            expr: Ident(
+                                Ident {
+                                    span: 16..17,
+                                    name: "p",
+                                },
+                            ),
+                        },
+                    ),
+                    consequent: Let(
+                        Let {
+                            span: 20..0,
+                            pattern: None,
+                            init: Op(
+                                Op {
+                                    span: 20..25,
+                                    op: Add,
+                                    left: Ident(
+                                        Ident {
+                                            span: 20..21,
+                                            name: "x",
+                                        },
+                                    ),
+                                    right: Ident(
+                                        Ident {
+                                            span: 24..25,
+                                            name: "y",
+                                        },
+                                    ),
+                                },
+                            ),
+                            body: Empty(
+                                Empty {
+                                    span: 0..0,
+                                },
+                            ),
+                        },
+                    ),
+                    alternate: None,
+                },
+            ),
+        },
+    ],
+}
