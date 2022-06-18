@@ -47,6 +47,7 @@ fn get_type_ann(pat: &Pattern) -> Option<TypeAnn> {
         Pattern::Rest(RestPat { type_ann, .. }) => type_ann.to_owned(),
         Pattern::Object(ObjectPat { type_ann, .. }) => type_ann.to_owned(),
         Pattern::Array(ArrayPat { type_ann, .. }) => type_ann.to_owned(),
+        Pattern::Lit(_) => None,
     }
 }
 
@@ -65,6 +66,7 @@ fn infer_pattern_rec(
             }
             Ok(tv)
         }
+        Pattern::Lit(LitPat { lit, .. }) => Ok(ctx.lit(lit.to_owned())),
         Pattern::Rest(RestPat { arg, .. }) => infer_pattern_rec(arg.as_ref(), ctx, constraints, new_vars),
         Pattern::Array(ArrayPat { elems, .. }) => {
             let elems: Result<Vec<Type>, String> = elems

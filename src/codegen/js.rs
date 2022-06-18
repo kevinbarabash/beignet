@@ -9,7 +9,7 @@ use swc_ecma_codegen::*;
 use swc_ecma_transforms_react::{react, Options, Runtime};
 use swc_ecma_visit::*;
 
-use crate::ast;
+use crate::ast::{self, is_refutable};
 
 pub fn codegen_js(program: &ast::Program) -> String {
     let program = build_js(program);
@@ -109,6 +109,50 @@ impl From<&ast::Ident> for Ident {
     }
 }
 
+impl From<&ast::Lit> for Expr {
+    fn from(lit: &ast::Lit) -> Self {
+        match lit {
+            ast::Lit::Num(n) => {
+                let lit = Lit::Num(Number {
+                    span: DUMMY_SP,
+                    // TODO: include the parsed value in the source AST node
+                    value: n.value.parse().unwrap(),
+                    // Use `None` value only for transformations to avoid recalculate
+                    // characters in number literal
+                    raw: Some(JsWord::from(n.value.clone())),
+                });
+                Expr::Lit(lit)
+            }
+            ast::Lit::Bool(b) => {
+                let lit = Lit::Bool(Bool {
+                    span: DUMMY_SP,
+                    value: b.value,
+                });
+                Expr::Lit(lit)
+            }
+            ast::Lit::Str(s) => {
+                let lit = Lit::Str(Str {
+                    span: DUMMY_SP,
+                    value: JsWord::from(s.value.clone()),
+                    // Use `None` value only for transformations to avoid recalculate escaped
+                    // characters in strings
+                    raw: None,
+                });
+                Expr::Lit(lit)
+            }
+            ast::Lit::Null(_) => {
+                let lit = Lit::Null(Null { span: DUMMY_SP });
+                Expr::Lit(lit)
+            }
+            ast::Lit::Undefined(_) => Expr::from(Ident {
+                span: DUMMY_SP,
+                sym: JsWord::from("undefined"),
+                optional: false,
+            }),
+        }
+    }
+}
+
 pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
     match pattern {
         ast::Pattern::Ident(ast::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
@@ -126,14 +170,24 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
             let props: Vec<ObjectPatProp> = props
                 .iter()
                 .map(|p| match p {
-                    ast::ObjectPatProp::KeyValue(kvp) => ObjectPatProp::KeyValue(KeyValuePatProp {
-                        key: PropName::Ident(Ident::from(&kvp.key)),
-                        value: Box::from(build_pattern(kvp.value.as_ref())),
-                    }),
+                    ast::ObjectPatProp::KeyValue(kvp) => match kvp.value.as_ref() {
+                        ast::Pattern::Lit(_) => ObjectPatProp::Assign(AssignPatProp {
+                            span: DUMMY_SP,
+                            key: Ident::from(&kvp.key),
+                            value: None,
+                        }),
+                        _ => ObjectPatProp::KeyValue(KeyValuePatProp {
+                            key: PropName::Ident(Ident::from(&kvp.key)),
+                            value: Box::from(build_pattern(kvp.value.as_ref())),
+                        }),
+                    },
                     ast::ObjectPatProp::Assign(ap) => ObjectPatProp::Assign(AssignPatProp {
                         span: DUMMY_SP,
                         key: Ident::from(&ap.key),
-                        value: ap.value.clone().map(|value| Box::from(build_expr(value.as_ref()))),
+                        value: ap
+                            .value
+                            .clone()
+                            .map(|value| Box::from(build_expr(value.as_ref()))),
                     }),
                     ast::ObjectPatProp::Rest(_) => todo!(),
                 })
@@ -147,6 +201,7 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
             })
         }
         ast::Pattern::Array(_) => todo!(),
+        ast::Pattern::Lit(_) => todo!(),
     }
 }
 
@@ -205,6 +260,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                         ast::Pattern::Rest(_) => todo!(),
                         ast::Pattern::Object(_) => todo!(),
                         ast::Pattern::Array(_) => todo!(),
+                        ast::Pattern::Lit(_) => todo!(),
                     };
                     Pat::Ident(BindingIdent {
                         id: Ident {
@@ -263,47 +319,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 type_args: None,
             })
         }
-        ast::Expr::Lit(lit) => {
-            match lit {
-                ast::Lit::Num(n) => {
-                    let lit = Lit::Num(Number {
-                        span: DUMMY_SP,
-                        // TODO: include the parsed value in the source AST node
-                        value: n.value.parse().unwrap(),
-                        // Use `None` value only for transformations to avoid recalculate
-                        // characters in number literal
-                        raw: Some(JsWord::from(n.value.clone())),
-                    });
-                    Expr::Lit(lit)
-                }
-                ast::Lit::Bool(b) => {
-                    let lit = Lit::Bool(Bool {
-                        span: DUMMY_SP,
-                        value: b.value,
-                    });
-                    Expr::Lit(lit)
-                }
-                ast::Lit::Str(s) => {
-                    let lit = Lit::Str(Str {
-                        span: DUMMY_SP,
-                        value: JsWord::from(s.value.clone()),
-                        // Use `None` value only for transformations to avoid recalculate escaped
-                        // characters in strings
-                        raw: None,
-                    });
-                    Expr::Lit(lit)
-                }
-                ast::Lit::Null(_) => {
-                    let lit = Lit::Null(Null { span: DUMMY_SP });
-                    Expr::Lit(lit)
-                }
-                ast::Lit::Undefined(_) => Expr::from(Ident {
-                    span: DUMMY_SP,
-                    sym: JsWord::from("undefined"),
-                    optional: false,
-                }),
-            }
-        }
+        ast::Expr::Lit(lit) => Expr::from(lit),
         ast::Expr::Op(ast::Op {
             op, left, right, ..
         }) => {
@@ -371,12 +387,6 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
         }) => {
             match cond.as_ref() {
                 ast::Expr::LetExpr(ast::LetExpr { pat, expr, .. }) => {
-                    // TODO:
-                    // - handle refutable patterns, codegen the condition as the
-                    //   conjunction of all refutable sub-patterns, e.g. {x: 5, y}
-                    //   would check if `x === 5`
-
-                    // Assumes that the pattern is irrefutable for now.
                     let destructure = Stmt::Decl(Decl::Var(VarDecl {
                         span: DUMMY_SP,
                         kind: VarDeclKind::Const,
@@ -389,76 +399,95 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                         }],
                     }));
 
-                    let mut block = build_return_block(consequent.as_ref());
-                    block.stmts.insert(0, destructure);
+                    let body = if ast::is_refutable(pat) {
+                        let id = Ident {
+                            span: DUMMY_SP,
+                            sym: JsWord::from(String::from("value")),
+                            optional: false,
+                        };
 
-                    let body = BlockStmtOrExpr::BlockStmt(block);
+                        let destructure = Stmt::Decl(Decl::Var(VarDecl {
+                            span: DUMMY_SP,
+                            kind: VarDeclKind::Const,
+                            declare: false,
+                            decls: vec![VarDeclarator {
+                                span: DUMMY_SP,
+                                name: build_pattern(pat),
+                                init: Some(Box::from(Expr::from(id.clone()))),
+                                definite: false,
+                            }],
+                        }));
 
-                    let arrow = Expr::Arrow(ArrowExpr {
-                        span: DUMMY_SP,
-                        params: vec![],
-                        body,
-                        is_async: false,
-                        is_generator: false,
-                        type_params: None,
-                        return_type: None,
-                    });
+                        // TODO: only introduce a new decl, if expr isn't an Ident
+                        let decl = Stmt::Decl(Decl::Var(VarDecl {
+                            span: DUMMY_SP,
+                            kind: VarDeclKind::Const,
+                            declare: false,
+                            decls: vec![VarDeclarator {
+                                span: DUMMY_SP,
+                                name: Pat::Ident(BindingIdent {
+                                    id: id.clone(),
+                                    type_ann: None,
+                                }),
+                                init: Some(Box::from(build_expr(expr))),
+                                definite: false,
+                            }],
+                        }));
 
-                    let callee = Callee::Expr(Box::from(Expr::Paren(ParenExpr {
-                        span: DUMMY_SP,
-                        expr: Box::from(arrow),
-                    })));
+                        let cond = build_cond_for_pat(pat, &id).unwrap();
 
-                    Expr::Call(CallExpr {
-                        span: DUMMY_SP,
-                        callee,
-                        args: vec![],
-                        type_args: None,
-                    })
+                        let mut cons = build_return_block(consequent.as_ref());
+                        cons.stmts.insert(0, destructure);
+
+                        let stmts = vec![
+                            decl,
+                            Stmt::If(IfStmt {
+                                span: DUMMY_SP,
+                                test: Box::from(cond),
+                                cons: Box::from(Stmt::Block(cons)),
+                                alt: None, // TODO: handle chaining of if-let with else
+                            })
+                        ];
+
+                        BlockStmtOrExpr::BlockStmt(BlockStmt {
+                            span: DUMMY_SP,
+                            stmts,
+                        })
+                    } else {
+                        let destructure = Stmt::Decl(Decl::Var(VarDecl {
+                            span: DUMMY_SP,
+                            kind: VarDeclKind::Const,
+                            declare: false,
+                            decls: vec![VarDeclarator {
+                                span: DUMMY_SP,
+                                name: build_pattern(pat),
+                                init: Some(Box::from(build_expr(expr))),
+                                definite: false,
+                            }],
+                        }));
+
+                        let mut block = build_return_block(consequent.as_ref());
+                        block.stmts.insert(0, destructure);
+    
+                        BlockStmtOrExpr::BlockStmt(block)
+                    };
+
+                    build_iife(body)
                 }
                 _ => {
-                    // Returns an IIFE that looks like:
-                    // (() => {
-                    //    if (cond) {
-                    //        return consequent;
-                    //    } else {
-                    //        return alternate;
-                    //    }
-                    // })();
-
+                    let stmts = vec![Stmt::If(IfStmt {
+                        span: DUMMY_SP,
+                        test: Box::from(build_expr(cond.as_ref())),
+                        cons: Box::from(Stmt::Block(build_return_block(consequent.as_ref()))),
+                        alt: alternate.as_ref().map(|alt| {
+                            Box::from(Stmt::Block(build_return_block(alt.as_ref())))
+                        }),
+                    })];
                     let body = BlockStmtOrExpr::BlockStmt(BlockStmt {
                         span: DUMMY_SP,
-                        stmts: vec![Stmt::If(IfStmt {
-                            span: DUMMY_SP,
-                            test: Box::from(build_expr(cond.as_ref())),
-                            cons: Box::from(Stmt::Block(build_return_block(consequent.as_ref()))),
-                            alt: alternate.as_ref().map(|alt| {
-                                Box::from(Stmt::Block(build_return_block(alt.as_ref())))
-                            }),
-                        })],
+                        stmts,
                     });
-
-                    let arrow = Expr::Arrow(ArrowExpr {
-                        span: DUMMY_SP,
-                        params: vec![],
-                        body,
-                        is_async: false,
-                        is_generator: false,
-                        type_params: None,
-                        return_type: None,
-                    });
-
-                    let callee = Callee::Expr(Box::from(Expr::Paren(ParenExpr {
-                        span: DUMMY_SP,
-                        expr: Box::from(arrow),
-                    })));
-
-                    Expr::Call(CallExpr {
-                        span: DUMMY_SP,
-                        callee,
-                        args: vec![],
-                        type_args: None,
-                    })
+                    build_iife(body)
                 }
             }
         }
@@ -532,6 +561,30 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             panic!("LetExpr should always be handled by the IfElse branch")
         }
     }
+}
+
+fn build_iife(body: BlockStmtOrExpr) -> Expr {
+    let arrow = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body,
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+    });
+
+    let callee = Callee::Expr(Box::from(Expr::Paren(ParenExpr {
+        span: DUMMY_SP,
+        expr: Box::from(arrow),
+    })));
+
+    Expr::Call(CallExpr {
+        span: DUMMY_SP,
+        callee,
+        args: vec![],
+        type_args: None,
+    })
 }
 
 pub fn build_jsx_element(elem: &ast::JSXElement) -> JSXElement {
@@ -669,5 +722,129 @@ fn let_to_child(r#let: &ast::Let) -> Stmt {
             span: DUMMY_SP,
             expr: Box::from(build_expr(init)),
         }),
+    }
+}
+
+fn build_cond_for_pat(pat: &ast::Pattern, id: &Ident) -> Option<Expr> {
+    if is_refutable(pat) {
+        // Right now the only refutable pattern we support is LitPat.
+        // In the future there will be other refutable patterns such as
+        // array length, typeof, and instanceof checks.
+
+        let mut conds: Vec<Condition> = vec![];
+
+        get_conds_for_pat(pat, &mut conds, &mut vec![]);
+
+        let mut iter = conds.iter();
+
+        let first = match iter.next() {
+            Some(cond) => cond_to_expr(cond, id),
+            None => return None,
+        };
+
+        Some(iter.fold(first, |prev, next| {
+            Expr::Bin(BinExpr {
+                span: DUMMY_SP,
+                op: BinaryOp::LogicalOr,
+                left: Box::from(prev),
+                right: Box::from(cond_to_expr(next, id)),
+            })
+        }))
+    } else {
+        None
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum PathElem {
+    ObjProp(String),
+    ArrayIndex(u32),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Check {
+    EqualLit(ast::Lit),
+    Typeof(String), // limit this to primitives: "number", "string", "boolean"
+    Instanceof(ast::Ident),
+    // TODO: array length
+}
+
+type Path = Vec<PathElem>;
+
+// TODO: we also need to keep track of the path, i.e. the object properties and array indices
+// we've had to traverse to get to our current location
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Condition {
+    path: Path,
+    check: Check,
+}
+
+fn get_conds_for_pat(pat: &ast::Pattern, conds: &mut Vec<Condition>, path: &mut Path) {
+    match pat {
+        ast::Pattern::Ident(_) => (),
+        ast::Pattern::Rest(_) => (),
+        ast::Pattern::Object(ast::ObjectPat { props, .. }) => {
+            for prop in props {
+                match prop {
+                    ast::ObjectPatProp::KeyValue(ast::KeyValuePatProp { value, key, .. }) => {
+                        path.push(PathElem::ObjProp(key.name.clone()));
+                        get_conds_for_pat(value, conds, path);
+                        path.pop();
+                    }
+                    ast::ObjectPatProp::Rest(_) => (),
+                    ast::ObjectPatProp::Assign(_) => (),
+                }
+            }
+        }
+        ast::Pattern::Array(ast::ArrayPat { elems, .. }) => {
+            for (index, elem) in elems.iter().enumerate() {
+                path.push(PathElem::ArrayIndex(index as u32));
+                if let Some(elem) = elem {
+                    get_conds_for_pat(elem, conds, path);
+                }
+                path.pop();
+            }
+        }
+        ast::Pattern::Lit(ast::LitPat { lit, .. }) => {
+            conds.push(Condition {
+                path: path.to_owned(),
+                check: Check::EqualLit(lit.to_owned()),
+            });
+        }
+    }
+}
+
+fn cond_to_expr(cond: &Condition, id: &Ident) -> Expr {
+
+    let Condition {check, path} = cond;
+
+    let left = path.iter().fold(Expr::Ident(id.to_owned()), |prev, path_elem| {
+        let prop: MemberProp = match path_elem {
+            PathElem::ObjProp(name) => MemberProp::Ident(Ident {
+                span: DUMMY_SP,
+                sym: JsWord::from(name.to_owned()),
+                optional: false,
+            }),
+            PathElem::ArrayIndex(_) => todo!(),
+        };
+
+        Expr::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::from(prev),
+            prop,
+        })
+    });
+
+    match check {
+        Check::EqualLit(lit) => {
+            Expr::Bin(BinExpr {
+                span: DUMMY_SP,
+                op: BinaryOp::EqEqEq,
+                left: Box::from(left),
+                right: Box::from(Expr::from(lit)),
+            })
+        },
+        Check::Typeof(_) => todo!(),
+        Check::Instanceof(_) => todo!(),
     }
 }

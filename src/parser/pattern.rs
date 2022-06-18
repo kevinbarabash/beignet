@@ -10,10 +10,36 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
     let type_ann = type_parser();
     let mut top_level = true;
 
+    let r#true = just_with_padding("true").map_with_span(|_, span| Lit::bool(true, span));
+    let r#false = just_with_padding("false").map_with_span(|_, span| Lit::bool(false, span));
+    let r#bool = choice((r#true, r#false));
+
+    let int =
+        text::int::<char, Simple<char>>(10).map_with_span(Lit::num);
+    let real = text::int(10)
+        .chain(just('.'))
+        .chain::<char, _, _>(text::digits(10))
+        .collect::<String>()
+        .map_with_span(Lit::num);
+    let num = choice((real, int));
+
+    let r#str = just("\"")
+        .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
+        .then_ignore(just("\""))
+        .collect::<String>()
+        .map_with_span(Lit::str);
+
     let parser = recursive(|pat| {
+        let lit_pat = choice((r#bool, num, r#str))
+            .map_with_span(|lit, span| Pattern::Lit(LitPat { span, lit }));
+
         let ident_pat = text::ident()
             .map_with_span(|name, span| Ident { name, span })
-            .then(just_with_padding(":").ignore_then(type_ann.clone()).or_not())
+            .then(
+                just_with_padding(":")
+                    .ignore_then(type_ann.clone())
+                    .or_not(),
+            )
             .map_with_span(|(id, type_ann), span: Span| {
                 Pattern::Ident(BindingIdent { span, id, type_ann })
             })
@@ -31,10 +57,15 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
                 type_ann: None,
             });
 
-        let array_pat = pat.clone()
+        let array_pat = pat
+            .clone()
             .separated_by(just_with_padding(","))
             .delimited_by(just_with_padding("["), just_with_padding("]"))
-            .then(just_with_padding(":").ignore_then(type_ann.clone()).or_not())
+            .then(
+                just_with_padding(":")
+                    .ignore_then(type_ann.clone())
+                    .or_not(),
+            )
             .map_with_span(|(elems, type_ann), span| {
                 Pattern::Array(ArrayPat {
                     span,
@@ -77,7 +108,11 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
         ))
         .separated_by(just_with_padding(","))
         .delimited_by(just_with_padding("{"), just_with_padding("}"))
-        .then(just_with_padding(":").ignore_then(type_ann.clone()).or_not())
+        .then(
+            just_with_padding(":")
+                .ignore_then(type_ann.clone())
+                .or_not(),
+        )
         .map_with_span(|(props, type_ann), span| {
             Pattern::Object(ObjectPat {
                 span,
@@ -89,7 +124,13 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
 
         top_level = false;
 
-        choice((ident_pat, array_pat, obj_pat_prop, rest_pat.map(Pattern::Rest)))
+        choice((
+            lit_pat, // TODO: restrict lit_pat from being parsed at the top-level
+            ident_pat,
+            array_pat,
+            obj_pat_prop,
+            rest_pat.map(Pattern::Rest),
+        ))
     });
 
     parser.boxed()
