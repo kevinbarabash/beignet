@@ -1331,7 +1331,7 @@ fn infer_if_let_with_type_error() {
 }
 
 #[test]
-fn infer_if_let_refutable_pattern() {
+fn infer_if_let_refutable_pattern_obj() {
     let src = r#"
     let p = {x: 5, y: 10}
     if let {x: 5, y} = p {
@@ -1352,7 +1352,7 @@ fn infer_if_let_refutable_pattern() {
     (()=>{
         const value = p;
         if (value.x === 5) {
-            const { x , y  } = value;
+            const { y  } = value;
             y;
             return undefined;
         }
@@ -1366,6 +1366,43 @@ fn infer_if_let_refutable_pattern() {
         x: 5;
         y: 10;
     };
+    ;
+    "###);
+}
+
+#[test]
+fn infer_if_let_refutable_pattern_array() {
+    let src = r#"
+    let p = [5, 10]
+    if let [5, y] = p {
+        y;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    assert_eq!(format!("{}", ctx.values.get("p").unwrap()), "[5, 10]");
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    export const p = [
+        5,
+        10
+    ];
+    (()=>{
+        const value = p;
+        if (value[0] === 5) {
+            const [, y] = value;
+            y;
+            return undefined;
+        }
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const p: [5, 10];
     ;
     "###);
 }

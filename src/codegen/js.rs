@@ -169,26 +169,23 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
         }) => {
             let props: Vec<ObjectPatProp> = props
                 .iter()
-                .map(|p| match p {
+                .filter_map(|p| match p {
                     ast::ObjectPatProp::KeyValue(kvp) => match kvp.value.as_ref() {
-                        ast::Pattern::Lit(_) => ObjectPatProp::Assign(AssignPatProp {
-                            span: DUMMY_SP,
-                            key: Ident::from(&kvp.key),
-                            value: None,
-                        }),
-                        _ => ObjectPatProp::KeyValue(KeyValuePatProp {
+                        // Prevents literals from appearing in patterns during destructuring.
+                        ast::Pattern::Lit(_) => None,
+                        _ => Some(ObjectPatProp::KeyValue(KeyValuePatProp {
                             key: PropName::Ident(Ident::from(&kvp.key)),
                             value: Box::from(build_pattern(kvp.value.as_ref())),
-                        }),
+                        })),
                     },
-                    ast::ObjectPatProp::Assign(ap) => ObjectPatProp::Assign(AssignPatProp {
+                    ast::ObjectPatProp::Assign(ap) => Some(ObjectPatProp::Assign(AssignPatProp {
                         span: DUMMY_SP,
                         key: Ident::from(&ap.key),
                         value: ap
                             .value
                             .clone()
                             .map(|value| Box::from(build_expr(value.as_ref()))),
-                    }),
+                    })),
                     ast::ObjectPatProp::Rest(_) => todo!(),
                 })
                 .collect();
@@ -196,11 +193,34 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
             Pat::Object(ObjectPat {
                 span: DUMMY_SP,
                 optional: optional.to_owned(),
-                type_ann: None, // because we're generate .js
+                type_ann: None, // because we're generating .js
                 props,
             })
         }
-        ast::Pattern::Array(_) => todo!(),
+        ast::Pattern::Array(ast::ArrayPat {
+            elems, optional, ..
+        }) => {
+            let elems: Vec<Option<Pat>> = elems
+                .iter()
+                .map(|elem| match elem {
+                    Some(elem) => match elem {
+                        // Prevents literals from appearing in patterns during destructuring.
+                        ast::Pattern::Lit(_) => None,
+                        _ => Some(build_pattern(elem)),
+                    },
+                    None => None,
+                })
+                .collect();
+
+            // TODO: If all elems are None, we can drop the array pattern.
+
+            Pat::Array(ArrayPat {
+                span: DUMMY_SP,
+                elems,
+                optional: optional.to_owned(),
+                type_ann: None, // because we're generating .js.
+            })
+        }
         ast::Pattern::Lit(_) => todo!(),
     }
 }
@@ -394,6 +414,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                             optional: false,
                         };
 
+                        // TODO: ignore the refutuable patterns when destructuring
                         let destructure = Stmt::Decl(Decl::Var(VarDecl {
                             span: DUMMY_SP,
                             kind: VarDeclKind::Const,
@@ -431,7 +452,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                                 test: Box::from(cond),
                                 cons: Box::from(Stmt::Block(cons)),
                                 alt: None, // TODO: handle chaining of if-let with else
-                            })
+                            }),
                         ];
 
                         BlockStmtOrExpr::BlockStmt(BlockStmt {
@@ -453,7 +474,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
 
                         let mut block = build_return_block(consequent.as_ref());
                         block.stmts.insert(0, destructure);
-    
+
                         BlockStmtOrExpr::BlockStmt(block)
                     };
 
@@ -464,9 +485,9 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                         span: DUMMY_SP,
                         test: Box::from(build_expr(cond.as_ref())),
                         cons: Box::from(Stmt::Block(build_return_block(consequent.as_ref()))),
-                        alt: alternate.as_ref().map(|alt| {
-                            Box::from(Stmt::Block(build_return_block(alt.as_ref())))
-                        }),
+                        alt: alternate
+                            .as_ref()
+                            .map(|alt| Box::from(Stmt::Block(build_return_block(alt.as_ref())))),
                     })];
                     let body = BlockStmtOrExpr::BlockStmt(BlockStmt {
                         span: DUMMY_SP,
@@ -756,8 +777,6 @@ enum Check {
 
 type Path = Vec<PathElem>;
 
-// TODO: we also need to keep track of the path, i.e. the object properties and array indices
-// we've had to traverse to get to our current location
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Condition {
     path: Path,
@@ -800,35 +819,41 @@ fn get_conds_for_pat(pat: &ast::Pattern, conds: &mut Vec<Condition>, path: &mut 
 }
 
 fn cond_to_expr(cond: &Condition, id: &Ident) -> Expr {
+    let Condition { check, path } = cond;
 
-    let Condition {check, path} = cond;
+    let left = path
+        .iter()
+        .fold(Expr::Ident(id.to_owned()), |prev, path_elem| {
+            let prop: MemberProp = match path_elem {
+                PathElem::ObjProp(name) => MemberProp::Ident(Ident {
+                    span: DUMMY_SP,
+                    sym: JsWord::from(name.to_owned()),
+                    optional: false,
+                }),
+                PathElem::ArrayIndex(index) => MemberProp::Computed(ComputedPropName {
+                    span: DUMMY_SP,
+                    expr: Box::from(Expr::Lit(Lit::Num(Number {
+                        span: DUMMY_SP,
+                        value: index.to_owned() as f64,
+                        raw: None,
+                    }))),
+                }),
+            };
 
-    let left = path.iter().fold(Expr::Ident(id.to_owned()), |prev, path_elem| {
-        let prop: MemberProp = match path_elem {
-            PathElem::ObjProp(name) => MemberProp::Ident(Ident {
+            Expr::Member(MemberExpr {
                 span: DUMMY_SP,
-                sym: JsWord::from(name.to_owned()),
-                optional: false,
-            }),
-            PathElem::ArrayIndex(_) => todo!(),
-        };
-
-        Expr::Member(MemberExpr {
-            span: DUMMY_SP,
-            obj: Box::from(prev),
-            prop,
-        })
-    });
+                obj: Box::from(prev),
+                prop,
+            })
+        });
 
     match check {
-        Check::EqualLit(lit) => {
-            Expr::Bin(BinExpr {
-                span: DUMMY_SP,
-                op: BinaryOp::EqEqEq,
-                left: Box::from(left),
-                right: Box::from(Expr::from(lit)),
-            })
-        },
+        Check::EqualLit(lit) => Expr::Bin(BinExpr {
+            span: DUMMY_SP,
+            op: BinaryOp::EqEqEq,
+            left: Box::from(left),
+            right: Box::from(Expr::from(lit)),
+        }),
         Check::Typeof(_) => todo!(),
         Check::Instanceof(_) => todo!(),
     }
