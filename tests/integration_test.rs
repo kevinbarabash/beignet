@@ -1249,11 +1249,6 @@ fn infer_if_let() {
 
 #[test]
 fn infer_if_let_with_is() {
-    // NOTE:
-    // `if-let` should allow the LHS to be any sub type of the RHS
-    // this is the reverse of what `let` allows.
-    // TODO:
-    // - create separate flags for pattern matching for assignment
     let src = r#"
     declare let b: string | number
     if let a is string = b {
@@ -1507,5 +1502,95 @@ fn infer_if_let_refutable_pattern_nested_array() {
     insta::assert_snapshot!(result, @r###"
     export declare const action: ["moveto", [5, 10]];
     ;
+    "###);
+}
+
+#[test]
+fn codegen_if_let_with_is_prim() {
+    let src = r#"
+    declare let b: string | number
+    if let a is number = b {
+        a + 5;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    ;
+    (()=>{
+        const value = b;
+        if (typeof value === "number") {
+            const a = value;
+            a + 5;
+            return undefined;
+        }
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const b: string | number;
+    ;
+    "###);
+}
+
+#[test]
+fn codegen_if_let_with_is_class() {
+    // NOTE: TypeScript treats classes as both types and values.
+    // The type represents the type of an instance of the class.
+    let src = r#"
+    type Foo = {
+        getNum: () => number,
+    }
+    type Bar = {
+        getStr: () => string,
+    }
+    declare let foo: Foo
+    let Foo = {
+        constructor: () => foo,
+    }
+    declare let bar: Bar
+    let Bar = {
+        constructor: () => bar,
+    }
+    declare let b: Foo | Bar
+    if let a is Foo = b {
+        a.getNum() + 5;
+    }
+    "#;
+
+    let result = parser().parse(src);
+    let program = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    ;
+    ;
+    ;
+    export const Foo = {
+        constructor: ()=>foo
+    };
+    ;
+    export const Bar = {
+        constructor: ()=>bar
+    };
+    ;
+    (()=>{
+        const value = b;
+        if (value instanceof Foo) {
+            const a = value;
+            a.getNum() + 5;
+            return undefined;
+        }
+    })();
     "###);
 }
