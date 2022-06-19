@@ -11,6 +11,7 @@ pub enum Pattern {
     Object(ObjectPat),
     Array(ArrayPat),
     Lit(LitPat),
+    Is(IsPat),
     // This can't be used at the top level similar to rest
     // Assign(AssignPat),
 }
@@ -23,6 +24,7 @@ impl Pattern {
             Pattern::Object(obj) => obj.span.to_owned(),
             Pattern::Array(array) => array.span.to_owned(),
             Pattern::Lit(lit) => lit.span.to_owned(),
+            Pattern::Is(is) => is.span.to_owned(),
         }
     }
 }
@@ -38,6 +40,13 @@ pub struct BindingIdent {
 pub struct LitPat {
     pub span: Span,
     pub lit: Lit,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IsPat {
+    pub span: Span,
+    pub id: Ident,
+    pub is_id: Ident,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -103,5 +112,6 @@ pub fn is_refutable(pat: &Pattern) -> bool {
             })
         }
         Pattern::Lit(_) => true,
+        Pattern::Is(_) => true,
     }
 }

@@ -29,13 +29,24 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
         .collect::<String>()
         .map_with_span(Lit::str);
 
+    let ident = text::ident().map_with_span(|name, span| Ident { name, span });
+
     let parser = recursive(|pat| {
+        let is_pat = ident
+            .then_ignore(just_with_padding("is"))
+            .then(ident)
+            .map_with_span(|(id, is_id), span| {
+                Pattern::Is(IsPat {
+                    span,
+                    id,
+                    is_id,
+                })
+            });
+
         let lit_pat = choice((r#bool, num, r#str))
             .map_with_span(|lit, span| Pattern::Lit(LitPat { span, lit }));
 
-        let ident_pat = text::ident()
-            .map_with_span(|name, span| Ident { name, span })
-            .then(
+        let ident_pat = ident.then(
                 just_with_padding(":")
                     .ignore_then(type_ann.clone())
                     .or_not(),
@@ -125,6 +136,7 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
         top_level = false;
 
         choice((
+            is_pat,
             lit_pat, // TODO: restrict lit_pat from being parsed at the top-level
             ident_pat,
             array_pat,

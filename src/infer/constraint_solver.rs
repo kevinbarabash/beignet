@@ -106,7 +106,7 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     cs.push(Constraint::from((p1.get_type(ctx), p2.get_type(ctx))));
                 }
                 unify_many(&cs, ctx)
-            } else if t2.flag == Some(Flag::Pattern) {
+            } else if t2.flag == Some(Flag::AssignPattern) {
                 // NOTE: Patterns appear as the LHS of a let-binding or as the type of a function param.
                 // As such, the pattern must be a super type of the initializer in the let-binding or the
                 // argument passed to a function during a call/application.
@@ -129,20 +129,31 @@ fn unifies(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         (Variant::Tuple(elems1), Variant::Tuple(elems2)) => {
             // We only try to unify tuples on an element by element basis when
             // destructuring.
-            if t2.flag == Some(Flag::Pattern) && elems2.len() <= elems1.len() {
+            if t2.flag == Some(Flag::AssignPattern) && elems2.len() <= elems1.len() {
+                // This branch handles destructuring assignments
                 let cs: Vec<_> = elems1
                     .iter()
                     .zip(elems2.iter())
                     .map(|(e1, e2)| Constraint::from((e1.to_owned(), e2.to_owned())))
                     .collect();
                 unify_many(&cs, ctx)
-            } else if t1.flag == Some(Flag::Pattern) && elems1.len() <= elems2.len() {
+            } else if t1.flag == Some(Flag::AssignPattern) && elems1.len() <= elems2.len() {
+                // This branch is only hit by the `destructure_lam_param_tuple` test case
+                println!("destructure_lam_param_tuple: t1 = {t1}, t2 = {t2}");
                 let cs: Vec<_> = elems1
                     .iter()
                     .zip(elems2.iter())
                     .map(|(e1, e2)| Constraint::from((e1.to_owned(), e2.to_owned())))
                     .collect();
                 unify_many(&cs, ctx)
+            } else if t2.flag == Some(Flag::MatchPattern) && elems2.len() <= elems1.len() {
+                // This branch handles destructuring in if-let and pattern matching
+                let cs: Vec<_> = elems1
+                    .iter()
+                    .zip(elems2.iter())
+                    .map(|(e1, e2)| Constraint::from((e1.to_owned(), e2.to_owned())))
+                    .collect();
+            unify_many(&cs, ctx)
             } else {
                 unify_mismatched_types(t1, t2, ctx)
             }
@@ -187,13 +198,19 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
             Some(Flag::Argument) => {
                 return Ok(Subst::from([(t2.id, t1.to_owned())]));
             }
-            Some(Flag::Parameter) | Some(Flag::Pattern) => {
+            Some(Flag::Parameter) | Some(Flag::AssignPattern) => {
                 return Ok(Subst::from([(t1.id, t2.to_owned())]));
             }
             None => {
                 return Ok(Subst::new())
             },
             _ => ()
+        }
+    }
+
+    if is_subtype(t2, t1, ctx)? {
+        if let Some(Flag::MatchPattern) = t2.flag {
+            return Ok(Subst::new())
         }
     }
 

@@ -1248,6 +1248,27 @@ fn infer_if_let() {
 }
 
 #[test]
+fn infer_if_let_with_is() {
+    // NOTE:
+    // `if-let` should allow the LHS to be any sub type of the RHS
+    // this is the reverse of what `let` allows.
+    // TODO:
+    // - create separate flags for pattern matching for assignment
+    let src = r#"
+    declare let b: string | number
+    if let a is string = b {
+        a;
+    }
+    "#;
+
+    let (_, ctx) = infer_prog(src);
+
+    assert_eq!(format!("{}", ctx.values.get("b").unwrap()), "string | number");
+    // Ensures we aren't polluting the outside context
+    assert!(ctx.values.get("a").is_none());
+}
+
+#[test]
 fn codegen_if_let() {
     let src = r#"
     let p = {x: 5, y: 10}

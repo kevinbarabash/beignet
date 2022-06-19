@@ -29,12 +29,12 @@ pub fn infer_pattern(
     match get_type_ann(pat) {
         Some(type_ann) => {
             let type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
-            let type_ann_ty = set_flag(type_ann_ty, &Flag::Pattern);
+            let type_ann_ty = set_flag(type_ann_ty, &Flag::AssignPattern);
             constraints.push(Constraint::from((type_ann_ty.clone(), pat_type)));
             Ok((type_ann_ty, new_vars))
         }
         None => {
-            let pat_type = set_flag(pat_type, &Flag::Pattern);
+            let pat_type = set_flag(pat_type, &Flag::AssignPattern);
             Ok((pat_type, new_vars))
         },
     }
@@ -47,6 +47,7 @@ fn get_type_ann(pat: &Pattern) -> Option<TypeAnn> {
         Pattern::Object(ObjectPat { type_ann, .. }) => type_ann.to_owned(),
         Pattern::Array(ArrayPat { type_ann, .. }) => type_ann.to_owned(),
         Pattern::Lit(_) => None,
+        Pattern::Is(_) => None,
     }
 }
 
@@ -66,6 +67,22 @@ fn infer_pattern_rec(
             Ok(tv)
         }
         Pattern::Lit(LitPat { lit, .. }) => Ok(ctx.lit(lit.to_owned())),
+        Pattern::Is(IsPat { id, is_id, .. }) => {
+            let ty = match is_id.name.as_str() {
+                "string" => ctx.prim(types::Primitive::Str),
+                "number" => ctx.prim(types::Primitive::Num),
+                "boolean" => ctx.prim(types::Primitive::Bool),
+                // The alias type will be used for `instanceof` of checks, but 
+                // only if the definition of the alias is an object type with a
+                // `constructor` method.
+                name => ctx.alias(name, None),
+            };
+            let scheme = Scheme::from(&ty);
+            if new_vars.insert(id.name.to_owned(), scheme).is_some() {
+                return Err(String::from("Duplicate identifier in pattern"));
+            }
+            Ok(ty)
+        }
         Pattern::Rest(RestPat { arg, .. }) => infer_pattern_rec(arg.as_ref(), ctx, constraints, new_vars),
         Pattern::Array(ArrayPat { elems, .. }) => {
             let elems: Result<Vec<Type>, String> = elems

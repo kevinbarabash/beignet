@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
-use crate::types::freeze_scheme;
+use crate::types::{freeze_scheme, set_flag, Flag};
 
 use super::constraint_solver::{is_subtype, run_solve, Constraint};
 use super::context::Context;
@@ -57,6 +57,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                             &mut constraints,
                             &HashMap::new(),
                         )?;
+                        let pat_type = set_flag(pat_type, &Flag::AssignPattern);
                       
                         let init_type = infer(init, &ctx, &mut constraints)?;
 

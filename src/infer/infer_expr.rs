@@ -107,7 +107,7 @@ pub fn infer(
 
                             let (pat_type, new_vars) =
                                 infer_pattern(pat, &mut new_ctx, constraints, &HashMap::new())?;
-                            let pat_type = set_flag(pat_type, &Flag::Pattern);
+                            let pat_type = set_flag(pat_type, &Flag::MatchPattern);
 
                             // Add bindings for the new variables inside the consequent block.
                             for (name, scheme) in new_vars {
@@ -169,7 +169,7 @@ pub fn infer(
 
                     let (pat_type, new_vars) =
                         infer_pattern(pattern, &mut new_ctx, constraints, &HashMap::new())?;
-                    let pat_type = set_flag(pat_type, &Flag::Pattern);
+                    let pat_type = set_flag(pat_type, &Flag::AssignPattern);
 
                     // Add bindings for the new variables inside the body.
                     for (name, scheme) in new_vars {

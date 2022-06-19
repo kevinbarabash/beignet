@@ -222,6 +222,7 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
             })
         }
         ast::Pattern::Lit(_) => todo!(),
+        ast::Pattern::Is(_) => todo!(),
     }
 }
 
@@ -281,6 +282,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                         ast::Pattern::Object(_) => todo!(),
                         ast::Pattern::Array(_) => todo!(),
                         ast::Pattern::Lit(_) => todo!(),
+                        ast::Pattern::Is(_) => todo!(),
                     };
                     Pat::Ident(BindingIdent {
                         id: Ident {
@@ -815,6 +817,7 @@ fn get_conds_for_pat(pat: &ast::Pattern, conds: &mut Vec<Condition>, path: &mut 
                 check: Check::EqualLit(lit.to_owned()),
             });
         }
+        ast::Pattern::Is(_) => todo!(),
     }
 }
 
