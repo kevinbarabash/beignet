@@ -1,11 +1,10 @@
 use std::collections::HashSet;
-use std::convert::identity;
-use std::panic;
 
 use crate::types::*;
 
 use super::context::Context;
 use super::substitutable::*;
+use super::util::is_subtype;
 
 #[derive(Clone, Debug)]
 pub struct Constraint {
@@ -304,80 +303,6 @@ fn unify_many(cs: &[Constraint], ctx: &Context) -> Result<Subst, String> {
             compose_subs(&su_2, &su_1)
         }
         _ => Ok(Subst::new()),
-    }
-}
-
-// Returns true if t2 admits all values from t1.
-pub fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<bool, String> {
-    match (&t1.variant, &t2.variant) {
-        (Variant::Lit(lit), Variant::Prim(prim)) => Ok(matches!(
-            (lit, prim),
-            (Lit::Num(_), Primitive::Num)
-                | (Lit::Str(_), Primitive::Str)
-                | (Lit::Bool(_), Primitive::Bool)
-        )),
-        (Variant::Object(props1), Variant::Object(props2)) => {
-            // It's okay if t1 has extra properties, but it has to have all of t2's properties.
-            let result: Result<Vec<_>, String> = props2
-                .iter()
-                .map(|prop2| {
-                    if prop2.optional {
-                        Ok(true)
-                    } else {
-                        let inner_result: Result<Vec<_>, String> = props1
-                            .iter()
-                            .map(|prop1| {
-                                Ok(prop1.name == prop2.name
-                                    && is_subtype(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx)?)
-                            })
-                            .collect();
-                        Ok(inner_result?.into_iter().any(identity))
-                    }
-                })
-                .collect();
-            Ok(result?.into_iter().all(identity))
-        }
-        (Variant::Tuple(types1), Variant::Tuple(types2)) => {
-            // It's okay if t1 has extra properties, but it has to have all of t2's properties.
-            if types1.len() < types2.len() {
-                panic!("t1 contain at least the same number of elements as t2");
-            }
-            let result: Result<Vec<_>, _> = types1
-                .iter()
-                .zip(types2.iter())
-                .map(|(t1, t2)| is_subtype(t1, t2, ctx))
-                .collect();
-            Ok(result?.into_iter().all(identity))
-        }
-        (Variant::Union(types), _) => {
-            let result: Result<Vec<_>, _> =
-                types.iter().map(|t1| is_subtype(t1, t2, ctx)).collect();
-            Ok(result?.into_iter().all(identity))
-        }
-        (_, Variant::Union(types)) => {
-            let result: Result<Vec<_>, _> =
-                types.iter().map(|t2| is_subtype(t1, t2, ctx)).collect();
-            Ok(result?.into_iter().any(identity))
-        }
-        (_, Variant::Alias(AliasType {name, ..})) => {
-            match ctx.types.get(name) {
-                Some(scheme) => {
-                    // TODO: handle schemes with qualifiers
-                    is_subtype(t1, &scheme.ty, ctx)
-                }
-                None => panic!("Can't find alias '{name}' in context"),
-            }
-        }
-        (Variant::Alias(AliasType { name, .. }), _) => {
-            match ctx.types.get(name) {
-                Some(scheme) => {
-                    // TODO: handle schemes with qualifiers
-                    is_subtype(&scheme.ty, t2, ctx)
-                }
-                None => panic!("Can't find alias '{name}' in context"),
-            }
-        }
-        (t1, t2) => Ok(t1 == t2),
     }
 }
 

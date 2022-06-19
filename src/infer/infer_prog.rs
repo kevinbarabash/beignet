@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use crate::ast::*;
 use crate::types::{freeze_scheme, set_flag, Flag};
 
-use super::constraint_solver::{is_subtype, run_solve, Constraint};
+use super::constraint_solver::{run_solve, Constraint};
 use super::context::Context;
 use super::infer_expr::{infer, infer_expr};
 use super::infer_pattern::infer_pattern;
 use super::infer_type_ann::*;
 use super::substitutable::*;
-use super::util::normalize;
+use super::util::{normalize, is_subtype};
 
 // TODO: We need multiple Envs so that we can control things at differen scopes
 // e.g. global, module, function, ...
