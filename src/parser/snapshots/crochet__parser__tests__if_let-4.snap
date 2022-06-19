@@ -1,0 +1,42 @@
+---
+source: src/parser/mod.rs
+expression: "parse(\"if let a is string = value\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..2,
+            expr: Ident(
+                Ident {
+                    span: 0..2,
+                    name: "if",
+                },
+            ),
+        },
+        VarDecl {
+            span: 3..26,
+            pattern: Is(
+                IsPat {
+                    span: 7..18,
+                    id: Ident {
+                        span: 7..8,
+                        name: "a",
+                    },
+                    is_id: Ident {
+                        span: 12..18,
+                        name: "string",
+                    },
+                },
+            ),
+            init: Some(
+                Ident(
+                    Ident {
+                        span: 21..26,
+                        name: "value",
+                    },
+                ),
+            ),
+            declare: false,
+        },
+    ],
+}

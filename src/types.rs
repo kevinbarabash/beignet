@@ -116,7 +116,8 @@ pub enum Flag {
     MemberAccess,
     Parameter,
     Argument,
-    Pattern,
+    AssignPattern,
+    MatchPattern,
 }
 
 #[derive(Clone, Debug, Eq)]

@@ -1248,6 +1248,22 @@ fn infer_if_let() {
 }
 
 #[test]
+fn infer_if_let_with_is() {
+    let src = r#"
+    declare let b: string | number
+    if let a is string = b {
+        a;
+    }
+    "#;
+
+    let (_, ctx) = infer_prog(src);
+
+    assert_eq!(format!("{}", ctx.values.get("b").unwrap()), "string | number");
+    // Ensures we aren't polluting the outside context
+    assert!(ctx.values.get("a").is_none());
+}
+
+#[test]
 fn codegen_if_let() {
     let src = r#"
     let p = {x: 5, y: 10}
@@ -1414,6 +1430,54 @@ fn infer_if_let_refutable_pattern_nested_obj() {
     "###);
 }
 
+// TODO: we have to refine how matches are handled with if-let
+#[test]
+#[ignore]
+fn infer_if_let_refutable_pattern_with_disjoint_union() {
+    let src = r#"
+    type Point = {x: number, y: number}
+    type Action = {type: "moveto", point: Point} | {type: "lineto", point: Point}
+    declare let action: Action
+    if let {type: "moveto", point: {x, y}} = action {
+        x + y;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    export const action = {
+        type: "moveto",
+        point: {
+            x: 5,
+            y: 10
+        }
+    };
+    (()=>{
+        const value = action;
+        if (value.type === "moveto") {
+            const { point: { x , y  }  } = value;
+            x + y;
+            return undefined;
+        }
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const action: {
+        type: "moveto";
+        point: {
+            x: 5;
+            y: 10;
+        };
+    };
+    ;
+    "###);
+}
+
 #[test]
 fn infer_if_let_refutable_pattern_array() {
     let src = r#"
@@ -1486,5 +1550,129 @@ fn infer_if_let_refutable_pattern_nested_array() {
     insta::assert_snapshot!(result, @r###"
     export declare const action: ["moveto", [5, 10]];
     ;
+    "###);
+}
+
+#[test]
+fn codegen_if_let_with_is_prim() {
+    let src = r#"
+    declare let b: string | number
+    if let a is number = b {
+        a + 5;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    ;
+    (()=>{
+        const value = b;
+        if (typeof value === "number") {
+            const a = value;
+            a + 5;
+            return undefined;
+        }
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const b: string | number;
+    ;
+    "###);
+}
+
+// TODO: we have to refine how matches are handled with if-let
+#[test]
+#[ignore]
+fn codegen_if_let_with_is_prim_nested() {
+    let src = r#"
+    let tuple = ["hello", "world"]
+    if let [a is string, b] = tuple {
+        b;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    ;
+    (()=>{
+        const value = b;
+        if (typeof value === "number") {
+            const a = value;
+            a + 5;
+            return undefined;
+        }
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const b: string | number;
+    ;
+    "###);
+}
+
+#[test]
+fn codegen_if_let_with_is_class() {
+    // NOTE: TypeScript treats classes as both types and values.
+    // The type represents the type of an instance of the class.
+    let src = r#"
+    type Foo = {
+        getNum: () => number,
+    }
+    type Bar = {
+        getStr: () => string,
+    }
+    declare let foo: Foo
+    let Foo = {
+        constructor: () => foo,
+    }
+    declare let bar: Bar
+    let Bar = {
+        constructor: () => bar,
+    }
+    declare let b: Foo | Bar
+    if let a is Foo = b {
+        a.getNum() + 5;
+    }
+    "#;
+
+    let result = parser().parse(src);
+    let program = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    ;
+    ;
+    ;
+    export const Foo = {
+        constructor: ()=>foo
+    };
+    ;
+    export const Bar = {
+        constructor: ()=>bar
+    };
+    ;
+    (()=>{
+        const value = b;
+        if (value instanceof Foo) {
+            const a = value;
+            a.getNum() + 5;
+            return undefined;
+        }
+    })();
     "###);
 }

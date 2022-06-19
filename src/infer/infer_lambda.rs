@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crate::ast::*;
-use crate::types::{self, Flag, Type, Variant};
+use crate::types::{self, set_flag, Flag, Type, Variant};
 
 use super::constraint_solver::Constraint;
 use super::context::Context;
@@ -42,7 +42,7 @@ pub fn infer_lambda(
     let param_types: Result<Vec<Type>, String> = params
         .iter()
         .map(|param| {
-            let (mut param_type, new_vars) =
+            let (param_type, new_vars) =
                 infer_pattern(param, &mut new_ctx, constraints, &type_params_map)?;
 
             // NOTE: We may not actually need to do this.  The tests pass without it.
@@ -51,7 +51,7 @@ pub fn infer_lambda(
             // TODO: set the flag to Flag::Param so that we have more semantic
             // information if and when we need to resolve conflicts in the constraint
             // solver.
-            param_type.flag = Some(Flag::Parameter);
+            let param_type = set_flag(param_type, &Flag::Parameter);
 
             // Inserts any new variables introduced by infer_pattern() into
             // the current context.

@@ -222,6 +222,14 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
             })
         }
         ast::Pattern::Lit(_) => todo!(),
+        ast::Pattern::Is(ast::IsPat { id, .. }) => Pat::Ident(BindingIdent {
+            id: Ident {
+                span: DUMMY_SP,
+                sym: JsWord::from(id.name.to_owned()),
+                optional: false,
+            },
+            type_ann: None,
+        }),
     }
 }
 
@@ -281,6 +289,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                         ast::Pattern::Object(_) => todo!(),
                         ast::Pattern::Array(_) => todo!(),
                         ast::Pattern::Lit(_) => todo!(),
+                        ast::Pattern::Is(_) => todo!(),
                     };
                     Pat::Ident(BindingIdent {
                         id: Ident {
@@ -815,6 +824,21 @@ fn get_conds_for_pat(pat: &ast::Pattern, conds: &mut Vec<Condition>, path: &mut 
                 check: Check::EqualLit(lit.to_owned()),
             });
         }
+        ast::Pattern::Is(ast::IsPat { is_id, .. }) => match is_id.name.as_ref() {
+            "string" | "number" | "boolean" => {
+                conds.push(Condition {
+                    path: path.to_owned(),
+                    check: Check::Typeof(is_id.name.to_owned()),
+                });
+            }
+            _ => {
+                println!("adding Check::Instanceof condition");
+                conds.push(Condition {
+                    path: path.to_owned(),
+                    check: Check::Instanceof(is_id.to_owned()),
+                });
+            }
+        },
     }
 }
 
@@ -854,7 +878,25 @@ fn cond_to_expr(cond: &Condition, id: &Ident) -> Expr {
             left: Box::from(left),
             right: Box::from(Expr::from(lit)),
         }),
-        Check::Typeof(_) => todo!(),
-        Check::Instanceof(_) => todo!(),
+        Check::Typeof(str) => Expr::Bin(BinExpr {
+            span: DUMMY_SP,
+            op: BinaryOp::EqEqEq,
+            left: Box::from(Expr::Unary(UnaryExpr {
+                span: DUMMY_SP,
+                op: UnaryOp::TypeOf,
+                arg: Box::from(left),
+            })),
+            right: Box::from(Expr::Lit(Lit::Str(Str {
+                span: DUMMY_SP,
+                value: JsWord::from(str.to_owned()),
+                raw: None,
+            }))),
+        }),
+        Check::Instanceof(id) => Expr::Bin(BinExpr {
+            span: DUMMY_SP,
+            op: BinaryOp::InstanceOf,
+            left: Box::from(left),
+            right: Box::from(Expr::Ident(Ident::from(id))),
+        }),
     }
 }
