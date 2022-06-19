@@ -208,6 +208,11 @@ fn unify_mismatched_types(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, 
         }
     }
 
+    // TODO: just checking if it's a subtype is not sufficient when doing pattern
+    // matching or destructuring.  For refutable patterns such as `literals`, the
+    // sub-type check should be reversed.  Instead of using `is_subtype` for these
+    // checks, we should instead have a `matches` function to check if one type
+    // can be said to "match" another.
     if is_subtype(t2, t1, ctx)? {
         if let Some(Flag::MatchPattern) = t2.flag {
             return Ok(Subst::new())

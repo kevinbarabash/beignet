@@ -1430,6 +1430,54 @@ fn infer_if_let_refutable_pattern_nested_obj() {
     "###);
 }
 
+// TODO: we have to refine how matches are handled with if-let
+#[test]
+#[ignore]
+fn infer_if_let_refutable_pattern_with_disjoint_union() {
+    let src = r#"
+    type Point = {x: number, y: number}
+    type Action = {type: "moveto", point: Point} | {type: "lineto", point: Point}
+    declare let action: Action
+    if let {type: "moveto", point: {x, y}} = action {
+        x + y;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    export const action = {
+        type: "moveto",
+        point: {
+            x: 5,
+            y: 10
+        }
+    };
+    (()=>{
+        const value = action;
+        if (value.type === "moveto") {
+            const { point: { x , y  }  } = value;
+            x + y;
+            return undefined;
+        }
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const action: {
+        type: "moveto";
+        point: {
+            x: 5;
+            y: 10;
+        };
+    };
+    ;
+    "###);
+}
+
 #[test]
 fn infer_if_let_refutable_pattern_array() {
     let src = r#"
@@ -1511,6 +1559,40 @@ fn codegen_if_let_with_is_prim() {
     declare let b: string | number
     if let a is number = b {
         a + 5;
+    }
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    ;
+    (()=>{
+        const value = b;
+        if (typeof value === "number") {
+            const a = value;
+            a + 5;
+            return undefined;
+        }
+    })();
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const b: string | number;
+    ;
+    "###);
+}
+
+// TODO: we have to refine how matches are handled with if-let
+#[test]
+#[ignore]
+fn codegen_if_let_with_is_prim_nested() {
+    let src = r#"
+    let tuple = ["hello", "world"]
+    if let [a is string, b] = tuple {
+        b;
     }
     "#;
 
