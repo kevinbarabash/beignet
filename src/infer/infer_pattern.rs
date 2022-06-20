@@ -3,7 +3,7 @@ use std::iter::Iterator;
 
 use crate::ast::*;
 use crate::infer::constraint_solver::Constraint;
-use crate::types::{self, Scheme, Type, Flag, set_flag};
+use crate::types::{self, Scheme, Type};
 
 use super::context::Context;
 use super::infer_type_ann::infer_type_ann_with_params;
@@ -29,12 +29,10 @@ pub fn infer_pattern(
     match get_type_ann(pat) {
         Some(type_ann) => {
             let type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
-            let type_ann_ty = set_flag(type_ann_ty, &Flag::AssignPattern);
             constraints.push(Constraint::from((type_ann_ty.clone(), pat_type)));
             Ok((type_ann_ty, new_vars))
         }
         None => {
-            let pat_type = set_flag(pat_type, &Flag::AssignPattern);
             Ok((pat_type, new_vars))
         },
     }
