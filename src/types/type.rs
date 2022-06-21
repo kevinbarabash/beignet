@@ -3,50 +3,7 @@ use std::fmt;
 use std::hash::Hash;
 
 use crate::infer::Context;
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Lit {
-    // We store all of the values as strings since f64 doesn't
-    // support the Eq trait because NaN and 0.1 + 0.2 != 0.3.
-    Num(String),
-    Bool(bool),
-    Str(String),
-    Null,
-    Undefined,
-}
-
-impl fmt::Display for Lit {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Lit::Num(n) => write!(f, "{}", n),
-            Lit::Bool(b) => write!(f, "{}", b),
-            Lit::Str(s) => write!(f, "\"{}\"", s),
-            Lit::Null => write!(f, "null"),
-            Lit::Undefined => write!(f, "undefined"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Primitive {
-    Num,
-    Bool,
-    Str,
-    Undefined,
-    Null,
-}
-
-impl fmt::Display for Primitive {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Primitive::Num => write!(f, "number",),
-            Primitive::Bool => write!(f, "boolean"),
-            Primitive::Str => write!(f, "string"),
-            Primitive::Null => write!(f, "null"),
-            Primitive::Undefined => write!(f, "undefined"),
-        }
-    }
-}
+use crate::types::{Lit, Primitive};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TProp {
@@ -229,54 +186,6 @@ impl fmt::Display for Type {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Scheme {
-    pub qualifiers: Vec<i32>,
-    pub ty: Type,
-}
-
-impl From<Type> for Scheme {
-    fn from(ty: Type) -> Self {
-        Scheme {
-            qualifiers: vec![],
-            ty,
-        }
-    }
-}
-
-impl From<&Type> for Scheme {
-    fn from(ty: &Type) -> Self {
-        Scheme {
-            qualifiers: vec![],
-            ty: ty.clone(),
-        }
-    }
-}
-
-impl fmt::Display for Scheme {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Scheme { qualifiers, ty } = self;
-
-        if qualifiers.is_empty() {
-            write!(f, "{}", ty)
-        } else {
-            let mut quals = qualifiers.clone();
-            quals.sort_unstable();
-            write!(
-                f,
-                "<{}>{}",
-                join(
-                    quals.iter().map(|id| {
-                        format!("t{id}")
-                    }),
-                    ", "
-                ),
-                ty
-            )
-        }
-    }
-}
-
 fn set_frozen(ty: Type, frozen: bool) -> Type {
     let variant = match ty.variant {
         Variant::Var => Variant::Var,
@@ -321,13 +230,6 @@ fn set_frozen(ty: Type, frozen: bool) -> Type {
 
 pub fn freeze(ty: Type) -> Type {
     set_frozen(ty, true)
-}
-
-pub fn freeze_scheme(scheme: Scheme) -> Scheme {
-    Scheme { 
-        ty: freeze(scheme.ty),
-        ..scheme
-    }
 }
 
 pub fn unfreeze(ty: Type) -> Type {
