@@ -1,0 +1,53 @@
+---
+source: crates/crochet_parser/src/types.rs
+expression: "parse_type(\"(A | B) & (C | D)\")"
+---
+Intersection(
+    IntersectionType {
+        span: 0..17,
+        types: [
+            Union(
+                UnionType {
+                    span: 1..6,
+                    types: [
+                        TypeRef(
+                            TypeRef {
+                                span: 1..2,
+                                name: "A",
+                                type_params: None,
+                            },
+                        ),
+                        TypeRef(
+                            TypeRef {
+                                span: 5..6,
+                                name: "B",
+                                type_params: None,
+                            },
+                        ),
+                    ],
+                },
+            ),
+            Union(
+                UnionType {
+                    span: 11..16,
+                    types: [
+                        TypeRef(
+                            TypeRef {
+                                span: 11..12,
+                                name: "C",
+                                type_params: None,
+                            },
+                        ),
+                        TypeRef(
+                            TypeRef {
+                                span: 15..16,
+                                name: "D",
+                                type_params: None,
+                            },
+                        ),
+                    ],
+                },
+            ),
+        ],
+    },
+)

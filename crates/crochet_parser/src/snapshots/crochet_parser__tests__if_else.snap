@@ -1,0 +1,42 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"if true { 5 } else { 10 }\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..25,
+            expr: IfElse(
+                IfElse {
+                    span: 0..25,
+                    cond: Lit(
+                        Bool(
+                            Bool {
+                                span: 3..8,
+                                value: true,
+                            },
+                        ),
+                    ),
+                    consequent: Lit(
+                        Num(
+                            Num {
+                                span: 10..11,
+                                value: "5",
+                            },
+                        ),
+                    ),
+                    alternate: Some(
+                        Lit(
+                            Num(
+                                Num {
+                                    span: 21..23,
+                                    value: "10",
+                                },
+                            ),
+                        ),
+                    ),
+                },
+            ),
+        },
+    ],
+}

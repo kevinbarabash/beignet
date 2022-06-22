@@ -13,7 +13,7 @@ module.exports = {
       template: "index.html",
     }),
     new WasmPackPlugin({
-      crateDirectory: path.resolve(__dirname, "."),
+      crateDirectory: path.resolve(__dirname, "./crates/crochet"),
     }),
   ],
   module: {

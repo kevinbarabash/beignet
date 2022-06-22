@@ -1,0 +1,12 @@
+[package]
+name = "crochet_ast"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# TODO: hide these behind a feature and then only use that feature in the codegen crate
+swc_atoms = "0.2.11"
+swc_common = "0.18.2"
+swc_ecma_ast = "0.78.0"

@@ -1,0 +1,97 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"p.x * p.x + p.y * p.y\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..21,
+            expr: Op(
+                Op {
+                    span: 0..21,
+                    op: Add,
+                    left: Op(
+                        Op {
+                            span: 0..9,
+                            op: Mul,
+                            left: Member(
+                                Member {
+                                    span: 0..3,
+                                    obj: Ident(
+                                        Ident {
+                                            span: 0..1,
+                                            name: "p",
+                                        },
+                                    ),
+                                    prop: Ident(
+                                        Ident {
+                                            span: 1..3,
+                                            name: "x",
+                                        },
+                                    ),
+                                },
+                            ),
+                            right: Member(
+                                Member {
+                                    span: 6..9,
+                                    obj: Ident(
+                                        Ident {
+                                            span: 6..7,
+                                            name: "p",
+                                        },
+                                    ),
+                                    prop: Ident(
+                                        Ident {
+                                            span: 7..9,
+                                            name: "x",
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                    ),
+                    right: Op(
+                        Op {
+                            span: 12..21,
+                            op: Mul,
+                            left: Member(
+                                Member {
+                                    span: 12..15,
+                                    obj: Ident(
+                                        Ident {
+                                            span: 12..13,
+                                            name: "p",
+                                        },
+                                    ),
+                                    prop: Ident(
+                                        Ident {
+                                            span: 13..15,
+                                            name: "y",
+                                        },
+                                    ),
+                                },
+                            ),
+                            right: Member(
+                                Member {
+                                    span: 18..21,
+                                    obj: Ident(
+                                        Ident {
+                                            span: 18..19,
+                                            name: "p",
+                                        },
+                                    ),
+                                    prop: Ident(
+                                        Ident {
+                                            span: 19..21,
+                                            name: "y",
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                    ),
+                },
+            ),
+        },
+    ],
+}

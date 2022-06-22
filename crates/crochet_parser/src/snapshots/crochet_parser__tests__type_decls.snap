@@ -1,0 +1,23 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"type Num = number\")"
+---
+Program {
+    body: [
+        TypeDecl {
+            span: 0..17,
+            declare: false,
+            id: Ident {
+                span: 5..8,
+                name: "Num",
+            },
+            type_ann: Prim(
+                PrimType {
+                    span: 11..17,
+                    prim: Num,
+                },
+            ),
+            type_params: None,
+        },
+    ],
+}

@@ -1,0 +1,66 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let foo = {console.log(x); x}\")"
+---
+Program {
+    body: [
+        VarDecl {
+            span: 0..29,
+            pattern: Ident(
+                BindingIdent {
+                    span: 4..7,
+                    id: Ident {
+                        span: 4..7,
+                        name: "foo",
+                    },
+                    type_ann: None,
+                },
+            ),
+            init: Some(
+                Let(
+                    Let {
+                        span: 11..28,
+                        pattern: None,
+                        init: App(
+                            App {
+                                span: 11..25,
+                                lam: Member(
+                                    Member {
+                                        span: 11..22,
+                                        obj: Ident(
+                                            Ident {
+                                                span: 11..18,
+                                                name: "console",
+                                            },
+                                        ),
+                                        prop: Ident(
+                                            Ident {
+                                                span: 18..22,
+                                                name: "log",
+                                            },
+                                        ),
+                                    },
+                                ),
+                                args: [
+                                    Ident(
+                                        Ident {
+                                            span: 23..24,
+                                            name: "x",
+                                        },
+                                    ),
+                                ],
+                            },
+                        ),
+                        body: Ident(
+                            Ident {
+                                span: 27..28,
+                                name: "x",
+                            },
+                        ),
+                    },
+                ),
+            ),
+            declare: false,
+        },
+    ],
+}

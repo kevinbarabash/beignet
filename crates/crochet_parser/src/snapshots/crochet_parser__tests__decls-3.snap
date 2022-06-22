@@ -1,0 +1,30 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"declare let x: number\")"
+---
+Program {
+    body: [
+        VarDecl {
+            span: 0..21,
+            pattern: Ident(
+                BindingIdent {
+                    span: 12..21,
+                    id: Ident {
+                        span: 12..13,
+                        name: "x",
+                    },
+                    type_ann: Some(
+                        Prim(
+                            PrimType {
+                                span: 15..21,
+                                prim: Num,
+                            },
+                        ),
+                    ),
+                },
+            ),
+            init: None,
+            declare: true,
+        },
+    ],
+}

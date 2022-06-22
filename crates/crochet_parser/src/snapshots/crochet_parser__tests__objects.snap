@@ -1,0 +1,46 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"{x: 5, y: 10}\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..13,
+            expr: Obj(
+                Obj {
+                    span: 0..13,
+                    props: [
+                        KeyValue(
+                            KeyValueProp {
+                                span: 1..5,
+                                name: "x",
+                                value: Lit(
+                                    Num(
+                                        Num {
+                                            span: 4..5,
+                                            value: "5",
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        KeyValue(
+                            KeyValueProp {
+                                span: 7..12,
+                                name: "y",
+                                value: Lit(
+                                    Num(
+                                        Num {
+                                            span: 10..12,
+                                            value: "10",
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                    ],
+                },
+            ),
+        },
+    ],
+}

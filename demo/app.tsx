@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import * as m from "../pkg";
+import * as m from "../crates/crochet/pkg";
 
 import * as examples from "./examples";
 import githubMark from "./GitHub-Mark-32px.png";
