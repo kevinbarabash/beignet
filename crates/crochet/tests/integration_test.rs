@@ -1,10 +1,9 @@
 use chumsky::prelude::*;
 
+use crochet_codegen::*;
 use crochet_ast::{Program, Statement};
+use crochet_infer::*;
 use crochet_parser::parser;
-
-use crochet::codegen::*;
-use crochet::infer::*;
 
 fn infer(input: &str) -> String {
     let ctx = Context::default();
@@ -28,7 +27,7 @@ fn infer_prog(src: &str) -> (Program, Context) {
     };
     // println!("prog = {:#?}", &prog);
     // let prog = token_parser(&spans).parse(tokens).unwrap();
-    let ctx = crochet::infer::infer_prog(&prog).unwrap();
+    let ctx = crochet_infer::infer_prog(&prog).unwrap();
 
     (prog, ctx)
 }
@@ -620,7 +619,10 @@ fn infer_widen_tuples_with_type_annotations() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.values.get("result").unwrap());
-    assert_eq!(result, "(boolean) => [number | number] | [boolean | boolean]");
+    assert_eq!(
+        result,
+        "(boolean) => [number | number] | [boolean | boolean]"
+    );
 }
 
 #[test]
@@ -686,7 +688,10 @@ fn infer_obj_type_based_on_nested_member_access() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.values.get("slope").unwrap());
-    assert_eq!(result, "({p1: {x: number, y: number}, p0: {x: number, y: number}}) => number");
+    assert_eq!(
+        result,
+        "({p1: {x: number, y: number}, p0: {x: number, y: number}}) => number"
+    );
 }
 
 #[test]
@@ -1223,7 +1228,10 @@ fn return_empty() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    assert_eq!(format!("{}", ctx.values.get("foo").unwrap()), "() => undefined");
+    assert_eq!(
+        format!("{}", ctx.values.get("foo").unwrap()),
+        "() => undefined"
+    );
 }
 
 #[test]
@@ -1235,7 +1243,10 @@ fn return_empty_with_body() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    assert_eq!(format!("{}", ctx.values.get("foo").unwrap()), "() => undefined");
+    assert_eq!(
+        format!("{}", ctx.values.get("foo").unwrap()),
+        "() => undefined"
+    );
 }
 
 #[test]
@@ -1268,7 +1279,10 @@ fn infer_if_let_with_is() {
 
     let (_, ctx) = infer_prog(src);
 
-    assert_eq!(format!("{}", ctx.values.get("b").unwrap()), "string | number");
+    assert_eq!(
+        format!("{}", ctx.values.get("b").unwrap()),
+        "string | number"
+    );
     // Ensures we aren't polluting the outside context
     assert!(ctx.values.get("a").is_none());
 }

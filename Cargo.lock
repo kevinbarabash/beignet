@@ -183,17 +183,11 @@ version = "0.1.0"
 dependencies = [
  "chumsky",
  "crochet_ast",
+ "crochet_codegen",
+ "crochet_infer",
  "crochet_parser",
- "defaultmap",
  "insta",
- "itertools",
  "pretty_assertions",
- "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
- "swc_ecma_codegen",
- "swc_ecma_transforms_react",
- "swc_ecma_visit",
  "testing_macros",
  "wasm-bindgen",
 ]
@@ -205,6 +199,31 @@ dependencies = [
  "swc_atoms",
  "swc_common",
  "swc_ecma_ast",
+]
+
+[[package]]
+name = "crochet_codegen"
+version = "0.1.0"
+dependencies = [
+ "crochet_ast",
+ "crochet_infer",
+ "swc_atoms",
+ "swc_common",
+ "swc_ecma_ast",
+ "swc_ecma_codegen",
+ "swc_ecma_transforms_react",
+ "swc_ecma_visit",
+]
+
+[[package]]
+name = "crochet_infer"
+version = "0.1.0"
+dependencies = [
+ "chumsky",
+ "crochet_ast",
+ "crochet_parser",
+ "defaultmap",
+ "itertools",
 ]
 
 [[package]]
