@@ -1,7 +1,7 @@
 use chumsky::prelude::*;
 use crochet_parser::parser;
 
-use crochet::codegen::js::*;
+use crochet_codegen::js::*;
 
 fn compile(input: &str) -> String {
     let program = parser().parse(input).unwrap();

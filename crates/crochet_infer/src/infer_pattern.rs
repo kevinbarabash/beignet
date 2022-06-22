@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::*;
-use crate::infer::constraint_solver::Constraint;
+use crate::constraint_solver::Constraint;
 use crate::types::{self, Scheme, Type};
 
 use super::context::Context;

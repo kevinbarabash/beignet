@@ -1,5 +1,4 @@
 use chumsky::prelude::*;
-use crochet_parser::parser;
 use pretty_assertions::assert_eq;
 
 use std::env;
@@ -7,9 +6,10 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 
-use crochet::infer::*;
-use crochet::codegen::js::*;
-use crochet::codegen::d_ts::*;
+use crochet_codegen::d_ts::*;
+use crochet_codegen::js::*;
+use crochet_infer::*;
+use crochet_parser::parser;
 
 enum Mode {
     Check,
@@ -39,7 +39,8 @@ fn pass(in_path: PathBuf) {
         }
         Mode::Write => {
             let mut file = fs::File::create(js_path).unwrap();
-            file.write_all(js_output.as_bytes()).expect("unable to write data");
+            file.write_all(js_output.as_bytes())
+                .expect("unable to write data");
         }
     }
 
@@ -52,7 +53,8 @@ fn pass(in_path: PathBuf) {
         }
         Mode::Write => {
             let mut file = fs::File::create(d_ts_path).unwrap();
-            file.write_all(d_ts_output.as_bytes()).expect("unable to write data");
+            file.write_all(d_ts_output.as_bytes())
+                .expect("unable to write data");
         }
     }
 }

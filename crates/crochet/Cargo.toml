@@ -13,16 +13,10 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 chumsky = "0.8.0"
-itertools = "0.10.3"
 wasm-bindgen = "0.2.80"
-swc_atoms = "0.2.11"
-swc_common = "0.18.2"
-swc_ecma_ast = "0.78.0"
-swc_ecma_codegen = "0.108.2"
-swc_ecma_transforms_react = "0.114.1"
-swc_ecma_visit = "0.64.0"
-defaultmap = "0.5.0"
 crochet_ast = { version = "0.1.0", path = "../crochet_ast" }
+crochet_codegen = { version = "0.1.0", path = "../crochet_codegen" }
+crochet_infer = { version = "0.1.0", path = "../crochet_infer" }
 crochet_parser = { version = "0.1.0", path = "../crochet_parser" }
 
 [dev-dependencies]

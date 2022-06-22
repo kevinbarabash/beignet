@@ -6,8 +6,8 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
-use crate::infer::Context;
-use crate::types::{self, Scheme, Type, Variant};
+use crochet_infer::Context;
+use crochet_infer::types::{self, Scheme, Type, Variant};
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -191,11 +191,11 @@ pub fn build_type(
         }
         Variant::Prim(prim) => {
             let kind = match prim {
-                crate::types::Primitive::Num => TsKeywordTypeKind::TsNumberKeyword,
-                crate::types::Primitive::Bool => TsKeywordTypeKind::TsBooleanKeyword,
-                crate::types::Primitive::Str => TsKeywordTypeKind::TsStringKeyword,
-                crate::types::Primitive::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
-                crate::types::Primitive::Null => TsKeywordTypeKind::TsNullKeyword,
+                crochet_infer::types::Primitive::Num => TsKeywordTypeKind::TsNumberKeyword,
+                crochet_infer::types::Primitive::Bool => TsKeywordTypeKind::TsBooleanKeyword,
+                crochet_infer::types::Primitive::Str => TsKeywordTypeKind::TsStringKeyword,
+                crochet_infer::types::Primitive::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
+                crochet_infer::types::Primitive::Null => TsKeywordTypeKind::TsNullKeyword,
             };
 
             TsType::TsKeywordType(TsKeywordType {
@@ -205,24 +205,24 @@ pub fn build_type(
         }
         Variant::Lit(lit) => {
             let lit = match lit {
-                crate::types::Lit::Num(n) => TsLit::Number(Number {
+                crochet_infer::types::Lit::Num(n) => TsLit::Number(Number {
                     span: DUMMY_SP,
                     value: n.parse().unwrap(),
                     raw: Some(JsWord::from(n.to_owned())),
                 }),
-                crate::types::Lit::Bool(b) => TsLit::Bool(Bool {
+                crochet_infer::types::Lit::Bool(b) => TsLit::Bool(Bool {
                     span: DUMMY_SP,
                     value: b.to_owned(),
                 }),
-                crate::types::Lit::Str(s) => TsLit::Str(Str {
+                crochet_infer::types::Lit::Str(s) => TsLit::Str(Str {
                     span: DUMMY_SP,
                     value: JsWord::from(s.clone()),
                     raw: None,
                 }),
                 // TODO: remove these frmo types::Lit since they're covered
                 // by primitives.
-                // crate::types::Lit::Null => todo!(),
-                // crate::types::Lit::Undefined => todo!(),
+                // crochet_infer::types::Lit::Null => todo!(),
+                // crochet_infer::types::Lit::Undefined => todo!(),
                 _ => panic!("TODO: model null and undefined as keywords"),
             };
 

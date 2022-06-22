@@ -2,7 +2,7 @@ use itertools::join;
 use std::fmt;
 use std::hash::Hash;
 
-use crate::infer::Context;
+use crate::Context;
 use crate::types::{Lit, Primitive};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

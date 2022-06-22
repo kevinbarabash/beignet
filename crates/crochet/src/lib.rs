@@ -1,12 +1,7 @@
-pub mod codegen;
-pub mod infer;
-pub mod types;
-
 use chumsky::prelude::*;
+use crochet_infer::*;
 use crochet_parser::parser;
 use wasm_bindgen::prelude::*;
-
-use crate::infer::{infer_prog};
 
 #[wasm_bindgen]
 extern "C" {
@@ -53,11 +48,11 @@ impl CompileResult {
 pub fn compile(input: &str) -> CompileResult {
     let program = parser().parse(input).unwrap();
 
-    let js = codegen::js::codegen_js(&program);
+    let js = crochet_codegen::js::codegen_js(&program);
 
     // TODO: return errors as part of CompileResult
     let ctx = infer_prog(&program).unwrap();
-    let dts = codegen::d_ts::codegen_d_ts(&program, &ctx);
+    let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
 
     CompileResult { js, dts }
 }
