@@ -6,4 +6,5 @@ members = [
     "crates/crochet_codegen",
     "crates/crochet_infer",
     "crates/crochet_parser",
+    "crates/crochet_thih",
 ]
