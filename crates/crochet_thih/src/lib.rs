@@ -1,9 +1,14 @@
 pub mod assump;
 pub mod id;
 pub mod pred;
-pub mod r#type;
 pub mod scheme;
 pub mod subst;
+
+pub mod lit;
+pub mod prim;
+pub mod r#type;
+
+pub mod unify;
 
 // Definitions:
 // - Pred == InIn(ID, Type)
