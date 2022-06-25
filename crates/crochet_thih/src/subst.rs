@@ -21,6 +21,6 @@ pub fn at_at(s1: &Subst, s2: &Subst) -> Subst {
     s2.iter()
         .map(|(u, t)| (u.to_owned(), t.apply(s1)))
         .into_iter()
-        .chain(s2.iter().cloned())
+        .chain(s1.iter().cloned())
         .collect()
 }

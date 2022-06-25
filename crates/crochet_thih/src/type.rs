@@ -13,13 +13,25 @@ use super::subst::*;
 
 // data Type  = TVar Tyvar | TCon Tycon | TAp  Type Type | TGen Int
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Type {
+pub enum Variant {
     Var(ID),
     // Replaces TCon and TAp
     Lam(Box<Type>, Box<Type>), // TODO: support n-ary args in the future
     Lit(Lit),
     Prim(Prim),
     // TODO: support more data types
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Usage {
+    FnDecl,
+    FnCall,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Type {
+    pub usage: Option<Usage>,
+    pub variant: Variant,
 }
 
 // NOTES ON FLAGS:
@@ -43,28 +55,36 @@ fn lookup(u: &ID, s: &Subst) -> Option<Type> {
 
 impl Types for Type {
     fn apply(&self, s: &Subst) -> Type {
-        match self {
-            Type::Var(u) => {
+        match &self.variant {
+            Variant::Var(u) => {
                 match lookup(u, s) {
                     Some(t) => t,
-                    None => Type::Var(u.to_owned()),
+                    None => Type {
+                        usage: None,
+                        variant: Variant::Var(u.to_owned())
+                    },
                 }
             },
-            Type::Lam(arg, ret) => Type::Lam(
-                Box::from(arg.as_ref().apply(s)),
-                Box::from(ret.as_ref().apply(s)),
-            ),
-            t => t.to_owned(),
+            Variant::Lam(arg, ret) => {
+                Type {
+                    usage: None,
+                    variant: Variant::Lam(
+                        Box::from(arg.as_ref().apply(s)),
+                        Box::from(ret.as_ref().apply(s)),
+                    ),
+                }
+            },
+            _ => self.to_owned(),
         }
     }
     fn tv(&self) -> HashSet<ID> {
-        match self {
-            Type::Var(u) => {
+        match &self.variant {
+            Variant::Var(u) => {
                 let mut set = HashSet::new();
                 set.insert(u.to_owned());
                 set
             },
-            Type::Lam(arg, ret) => {
+            Variant::Lam(arg, ret) => {
                 arg.tv().union(&ret.tv()).cloned().collect()
             },
             _ => HashSet::new(),
