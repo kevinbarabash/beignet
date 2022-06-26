@@ -1,15 +1,7 @@
 use super::id::ID;
-use super::lit::Lit;
-use super::prim::Prim;
 use super::r#type::*;
 use super::subst::*;
-
-#[derive(PartialEq, Eq)]
-pub enum Rel {
-    Sub,
-    Sup,
-    Eql,
-}
+use super::subtyping::*;
 
 // mgu (TAp l r) (TAp l' r') = do s1 <- mgu l l'
 //                                s2 <- mgu (apply s1 r) (apply s1 r')
@@ -19,23 +11,36 @@ pub enum Rel {
 // mgu (TCon tc1) (TCon tc2)
 //            | tc1==tc2 = return nullSubst
 // mgu t1 t2             = fail "types do not unify"
-pub fn mgu(t1: &Type, t2: &Type, rel: &Rel) -> Subst {
-    if rel == &Rel::Sup {
-        return mgu(t2, t1, &Rel::Sub);
+pub fn mgu(t1: &Type, t2: &Type, rel: &Option<Rel>) -> Subst {
+    if rel == &Some(Rel::Supertype) {
+        return mgu(t2, t1, &Some(Rel::Subtype));
     }
 
     match (&t1.variant, &t2.variant) {
         (Variant::Var(u), _) => var_bind(u, t2),
         (_, Variant::Var(u)) => var_bind(u, t1),
         (Variant::Lam(args1, ret1), Variant::Lam(args2, ret2)) => {
-            if args1.len() != args2.len() {
-                panic!("arg counts don't match")
-            }
-
             let rel = match (&t1.usage, &t2.usage) {
-                (Some(Usage::FnCall), Some(Usage::FnDecl)) => Rel::Sub,
-                (Some(Usage::FnDecl), Some(Usage::FnCall)) => Rel::Sup,
-                (_, _) => Rel::Eql,
+                (Some(Usage::FnCall), Some(Usage::FnDecl)) => {
+                    if args1.len() < args2.len() {
+                        // TODO: implement partial application
+                        panic!("not enough args in function call")
+                    }
+                    Some(Rel::Subtype)
+                },
+                (Some(Usage::FnDecl), Some(Usage::FnCall)) => {
+                    if args1.len() > args2.len() {
+                        // TODO: implement partial application
+                        panic!("not enough args in function call")
+                    }
+                    Some(Rel::Supertype)
+                },
+                (_, _) => {
+                    if args1.len() != args2.len() {
+                        panic!("arg counts don't match")
+                    }
+                    None
+                },
             };
 
             let mut constraints: Vec<(Type, Type)> =
@@ -45,13 +50,13 @@ pub fn mgu(t1: &Type, t2: &Type, rel: &Rel) -> Subst {
         }
         (Variant::Lit(lit1), Variant::Lit(lit2)) if lit1 == lit2 => Subst::new(),
         (Variant::Prim(prim1), Variant::Prim(prim2)) if prim1 == prim2 => Subst::new(),
-        (v1, v2) if is_subtype(v1, v2) => Subst::new(),
+        (_, _) if is_subtype(t1, t2) => Subst::new(),
         // TODO: support more data types
         _ => panic!("types do not unify"),
     }
 }
 
-fn mgu_many(constraints: &[(Type, Type)], rel: &Rel) -> Subst {
+fn mgu_many(constraints: &[(Type, Type)], rel: &Option<Rel>) -> Subst {
     match constraints {
         [] => Subst::new(),
         [(t1, t2), tail @ ..] => {
@@ -66,23 +71,13 @@ fn mgu_many(constraints: &[(Type, Type)], rel: &Rel) -> Subst {
     }
 }
 
-fn is_subtype(v1: &Variant, v2: &Variant) -> bool {
-    if let (Variant::Lit(lit), Variant::Prim(prim)) = (v1, v2) {
-        matches!(
-            (lit, prim),
-            (Lit::Num(_), Prim::Num) | (Lit::Str(_), Prim::Str) | (Lit::Bool(_), Prim::Bool)
-        )
-    } else {
-        false
-    }
-}
-
 // varBind u t | t == TVar u      = return nullSubst
 //             | u `elem` tv t    = fail "occurs check fails"
 //             | kind u /= kind t = fail "kinds do not match"
 //             | otherwise        = return (u +-> t)
 // NOTE: the `kind` check is omitted since Kind is incompatible with Crochet's type system
 fn var_bind(id: &ID, t: &Type) -> Subst {
+    // TODO: figure out how to handle .usage when it appears on type variables
     if t.variant == Variant::Var(id.to_owned()) {
         Subst::new()
     } else if t.tv().contains(id) {
@@ -143,13 +138,13 @@ mod tests {
 
     #[test]
     fn bindings() {
-        let result = mgu(&num("5"), &var("v1"), &Rel::Eql);
+        let result = mgu(&num("5"), &var("v1"), &None);
         assert_eq!(result, vec![(String::from("v1"), num("5"))]);
 
         let result = mgu(
             &lam(&[prim(Prim::Str)], &var("v1")),
             &lam(&[var("v2")], &prim(Prim::Bool)),
-            &Rel::Eql,
+            &None,
         );
         assert_eq!(
             result,
@@ -162,50 +157,50 @@ mod tests {
 
     #[test]
     fn equal_lits() {
-        let result = mgu(&num("5"), &num("5"), &Rel::Eql);
+        let result = mgu(&num("5"), &num("5"), &None);
         assert_eq!(result, Subst::new());
     }
 
     #[test]
     #[should_panic = "types do not unify"]
     fn unequal_lits() {
-        mgu(&num("5"), &num("15"), &Rel::Eql);
+        mgu(&num("5"), &num("15"), &None);
     }
 
     #[test]
     fn equal_prims() {
-        let result = mgu(&prim(Prim::Num), &prim(Prim::Num), &Rel::Eql);
+        let result = mgu(&prim(Prim::Num), &prim(Prim::Num), &None);
         assert_eq!(result, Subst::new());
     }
 
     #[test]
     #[should_panic = "types do not unify"]
     fn unequal_prims() {
-        mgu(&prim(Prim::Str), &prim(Prim::Num), &Rel::Eql);
+        mgu(&prim(Prim::Str), &prim(Prim::Num), &None);
     }
 
     #[test]
     fn lit_and_prim_subtyping() {
-        assert_eq!(mgu(&num("5"), &prim(Prim::Num), &Rel::Sub), Subst::new());
+        assert_eq!(mgu(&num("5"), &prim(Prim::Num), &Some(Rel::Subtype)), Subst::new());
         assert_eq!(
-            mgu(&str("hello"), &prim(Prim::Str), &Rel::Sub),
+            mgu(&str("hello"), &prim(Prim::Str), &Some(Rel::Subtype)),
             Subst::new()
         );
         assert_eq!(
-            mgu(&bool(&true), &prim(Prim::Bool), &Rel::Sub),
+            mgu(&bool(&true), &prim(Prim::Bool), &Some(Rel::Subtype)),
             Subst::new()
         );
     }
 
     #[test]
     fn lit_and_prim_supertyping() {
-        assert_eq!(mgu(&prim(Prim::Num), &num("5"), &Rel::Sup), Subst::new());
+        assert_eq!(mgu(&prim(Prim::Num), &num("5"), &Some(Rel::Supertype)), Subst::new());
         assert_eq!(
-            mgu(&prim(Prim::Str), &str("hello"), &Rel::Sup),
+            mgu(&prim(Prim::Str), &str("hello"), &Some(Rel::Supertype)),
             Subst::new()
         );
         assert_eq!(
-            mgu(&prim(Prim::Bool), &bool(&true), &Rel::Sup),
+            mgu(&prim(Prim::Bool), &bool(&true), &Some(Rel::Supertype)),
             Subst::new()
         );
     }
@@ -215,7 +210,7 @@ mod tests {
         let result = mgu(
             &lam(&[prim(Prim::Num)], &prim(Prim::Num)),
             &lam(&[prim(Prim::Num)], &prim(Prim::Num)),
-            &Rel::Eql,
+            &None,
         );
         assert_eq!(result, Subst::new());
     }
@@ -225,7 +220,7 @@ mod tests {
         let result = mgu(
             &lam(&[prim(Prim::Num), prim(Prim::Str)], &prim(Prim::Bool)),
             &lam(&[prim(Prim::Num), prim(Prim::Str)], &prim(Prim::Bool)),
-            &Rel::Eql,
+            &None,
         );
         assert_eq!(result, Subst::new());
     }
@@ -236,7 +231,7 @@ mod tests {
         mgu(
             &lam(&[prim(Prim::Num)], &prim(Prim::Num)),
             &lam(&[prim(Prim::Str)], &prim(Prim::Str)),
-            &Rel::Eql,
+            &None,
         );
     }
 
@@ -247,7 +242,7 @@ mod tests {
         let mut decl = lam(&[prim(Prim::Num)], &prim(Prim::Num));
         decl.usage = Some(Usage::FnDecl);
 
-        assert_eq!(mgu(&call, &decl, &Rel::Eql), Subst::new());
+        assert_eq!(mgu(&call, &decl, &None), Subst::new());
     }
 
     #[test]
@@ -257,7 +252,7 @@ mod tests {
         let mut decl = lam(&[prim(Prim::Num)], &prim(Prim::Num));
         decl.usage = Some(Usage::FnDecl);
 
-        assert_eq!(mgu(&call, &decl, &Rel::Eql), Subst::new());
+        assert_eq!(mgu(&call, &decl, &None), Subst::new());
     }
 
     #[test]
@@ -268,17 +263,27 @@ mod tests {
         let mut decl = lam(&[num("5")], &num("10"));
         decl.usage = Some(Usage::FnDecl);
 
-        mgu(&call, &decl, &Rel::Eql);
+        mgu(&call, &decl, &None);
     }
 
     #[test]
-    #[should_panic = "arg counts don't match"]
-    fn call_and_decl_arg_count_mismatch() {
+    #[should_panic = "not enough args in function call"]
+    fn call_and_decl_insufficient_arg_count() {
         let mut call = lam(&[prim(Prim::Num)], &prim(Prim::Bool));
         call.usage = Some(Usage::FnCall);
         let mut decl = lam(&[prim(Prim::Num), prim(Prim::Str)], &prim(Prim::Bool));
         decl.usage = Some(Usage::FnDecl);
 
-        mgu(&call, &decl, &Rel::Eql);
+        mgu(&call, &decl, &None);
+    }
+
+    #[test]
+    fn call_and_decl_extra_call_args_allowed() {
+        let mut call = lam(&[prim(Prim::Num), prim(Prim::Str)], &prim(Prim::Bool));
+        call.usage = Some(Usage::FnCall);
+        let mut decl = lam(&[prim(Prim::Num)], &prim(Prim::Bool));
+        decl.usage = Some(Usage::FnDecl);
+
+        mgu(&call, &decl, &None);
     }
 }

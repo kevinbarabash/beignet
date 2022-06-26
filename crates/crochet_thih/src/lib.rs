@@ -8,6 +8,7 @@ pub mod lit;
 pub mod prim;
 pub mod r#type;
 
+pub mod subtyping;
 pub mod unify;
 
 // Definitions:
