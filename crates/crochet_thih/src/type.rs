@@ -70,7 +70,6 @@ impl Types for Type {
                     usage: None,
                     variant: Variant::Lam(
                         args.to_owned().apply(s),
-                        // Box::from(arg.as_ref().apply(s)),
                         Box::from(ret.as_ref().apply(s)),
                     ),
                 }
