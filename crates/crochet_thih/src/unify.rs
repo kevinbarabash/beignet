@@ -27,22 +27,42 @@ pub fn mgu(t1: &Type, t2: &Type, rel: &Rel) -> Subst {
     match (&t1.variant, &t2.variant) {
         (Variant::Var(u), _) => var_bind(u, t2),
         (_, Variant::Var(u)) => var_bind(u, t1),
-        (Variant::Lam(arg1, ret1), Variant::Lam(arg2, ret2)) => {
+        (Variant::Lam(args1, ret1), Variant::Lam(args2, ret2)) => {
+            if args1.len() != args2.len() {
+                panic!("arg counts don't match")
+            }
+
             let rel = match (&t1.usage, &t2.usage) {
                 (Some(Usage::FnCall), Some(Usage::FnDecl)) => Rel::Sub,
                 (Some(Usage::FnDecl), Some(Usage::FnCall)) => Rel::Sup,
                 (_, _) => Rel::Eql,
             };
 
-            let s1 = mgu(arg1.as_ref(), arg2.as_ref(), &rel);
-            let s2 = mgu(&ret1.apply(&s1), &ret2.apply(&s1), &rel);
-            at_at(&s2, &s1)
+            let mut constraints: Vec<(Type, Type)> =
+                args1.iter().cloned().zip(args2.iter().cloned()).collect();
+            constraints.push((ret1.as_ref().to_owned(), ret2.as_ref().to_owned()));
+            mgu_many(&constraints, &rel)
         }
         (Variant::Lit(lit1), Variant::Lit(lit2)) if lit1 == lit2 => Subst::new(),
         (Variant::Prim(prim1), Variant::Prim(prim2)) if prim1 == prim2 => Subst::new(),
         (v1, v2) if is_subtype(v1, v2) => Subst::new(),
         // TODO: support more data types
         _ => panic!("types do not unify"),
+    }
+}
+
+fn mgu_many(constraints: &[(Type, Type)], rel: &Rel) -> Subst {
+    match constraints {
+        [] => Subst::new(),
+        [(t1, t2), tail @ ..] => {
+            let s1 = mgu(t1, t2, rel);
+            let tail: Vec<_> = tail
+                .iter()
+                .map(|(t1, t2)| (t1.apply(&s1), t2.apply(&s1)))
+                .collect();
+            let s2 = mgu_many(&tail, rel);
+            at_at(&s1, &s2)
+        }
     }
 }
 
@@ -114,10 +134,10 @@ mod tests {
         }
     }
 
-    fn lam(arg: &Type, ret: &Type) -> Type {
+    fn lam(args: &[Type], ret: &Type) -> Type {
         Type {
             usage: None,
-            variant: Variant::Lam(Box::from(arg.to_owned()), Box::from(ret.to_owned())),
+            variant: Variant::Lam(args.to_owned(), Box::from(ret.to_owned())),
         }
     }
 
@@ -127,15 +147,15 @@ mod tests {
         assert_eq!(result, vec![(String::from("v1"), num("5"))]);
 
         let result = mgu(
-            &lam(&prim(Prim::Str), &var("v1")),
-            &lam(&var("v2"), &prim(Prim::Bool)),
+            &lam(&[prim(Prim::Str)], &var("v1")),
+            &lam(&[var("v2")], &prim(Prim::Bool)),
             &Rel::Eql,
         );
         assert_eq!(
             result,
             vec![
-                (String::from("v2"), prim(Prim::Str)),
                 (String::from("v1"), prim(Prim::Bool)),
+                (String::from("v2"), prim(Prim::Str)),
             ]
         );
     }
@@ -193,8 +213,18 @@ mod tests {
     #[test]
     fn equal_lams() {
         let result = mgu(
-            &lam(&prim(Prim::Num), &prim(Prim::Num)),
-            &lam(&prim(Prim::Num), &prim(Prim::Num)),
+            &lam(&[prim(Prim::Num)], &prim(Prim::Num)),
+            &lam(&[prim(Prim::Num)], &prim(Prim::Num)),
+            &Rel::Eql,
+        );
+        assert_eq!(result, Subst::new());
+    }
+
+    #[test]
+    fn equal_lams_multiple_args() {
+        let result = mgu(
+            &lam(&[prim(Prim::Num), prim(Prim::Str)], &prim(Prim::Bool)),
+            &lam(&[prim(Prim::Num), prim(Prim::Str)], &prim(Prim::Bool)),
             &Rel::Eql,
         );
         assert_eq!(result, Subst::new());
@@ -204,17 +234,17 @@ mod tests {
     #[should_panic = "types do not unify"]
     fn unequal_lams() {
         mgu(
-            &lam(&prim(Prim::Num), &prim(Prim::Num)),
-            &lam(&prim(Prim::Str), &prim(Prim::Str)),
+            &lam(&[prim(Prim::Num)], &prim(Prim::Num)),
+            &lam(&[prim(Prim::Str)], &prim(Prim::Str)),
             &Rel::Eql,
         );
     }
 
     #[test]
     fn call_and_decl_with_subtypes() {
-        let mut call = lam(&num("5"), &num("10"));
+        let mut call = lam(&[num("5")], &num("10"));
         call.usage = Some(Usage::FnCall);
-        let mut decl = lam(&prim(Prim::Num), &prim(Prim::Num));
+        let mut decl = lam(&[prim(Prim::Num)], &prim(Prim::Num));
         decl.usage = Some(Usage::FnDecl);
 
         assert_eq!(mgu(&call, &decl, &Rel::Eql), Subst::new());
@@ -222,9 +252,9 @@ mod tests {
 
     #[test]
     fn call_and_decl() {
-        let mut call = lam(&prim(Prim::Num), &prim(Prim::Num));
+        let mut call = lam(&[prim(Prim::Num)], &prim(Prim::Num));
         call.usage = Some(Usage::FnCall);
-        let mut decl = lam(&prim(Prim::Num), &prim(Prim::Num));
+        let mut decl = lam(&[prim(Prim::Num)], &prim(Prim::Num));
         decl.usage = Some(Usage::FnDecl);
 
         assert_eq!(mgu(&call, &decl, &Rel::Eql), Subst::new());
@@ -233,9 +263,20 @@ mod tests {
     #[test]
     #[should_panic = "types do not unify"]
     fn call_and_decl_supertype_failure() {
-        let mut call = lam(&prim(Prim::Num), &prim(Prim::Num));
+        let mut call = lam(&[prim(Prim::Num)], &prim(Prim::Num));
         call.usage = Some(Usage::FnCall);
-        let mut decl = lam(&num("5"), &num("10"));
+        let mut decl = lam(&[num("5")], &num("10"));
+        decl.usage = Some(Usage::FnDecl);
+
+        mgu(&call, &decl, &Rel::Eql);
+    }
+
+    #[test]
+    #[should_panic = "arg counts don't match"]
+    fn call_and_decl_arg_count_mismatch() {
+        let mut call = lam(&[prim(Prim::Num)], &prim(Prim::Bool));
+        call.usage = Some(Usage::FnCall);
+        let mut decl = lam(&[prim(Prim::Num), prim(Prim::Str)], &prim(Prim::Bool));
         decl.usage = Some(Usage::FnDecl);
 
         mgu(&call, &decl, &Rel::Eql);

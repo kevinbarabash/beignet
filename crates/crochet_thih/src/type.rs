@@ -16,7 +16,7 @@ use super::subst::*;
 pub enum Variant {
     Var(ID),
     // Replaces TCon and TAp
-    Lam(Box<Type>, Box<Type>), // TODO: support n-ary args in the future
+    Lam(Vec<Type>, Box<Type>), // TODO: support n-ary args in the future
     Lit(Lit),
     Prim(Prim),
     // TODO: support more data types
@@ -65,11 +65,12 @@ impl Types for Type {
                     },
                 }
             },
-            Variant::Lam(arg, ret) => {
+            Variant::Lam(args, ret) => {
                 Type {
                     usage: None,
                     variant: Variant::Lam(
-                        Box::from(arg.as_ref().apply(s)),
+                        args.to_owned().apply(s),
+                        // Box::from(arg.as_ref().apply(s)),
                         Box::from(ret.as_ref().apply(s)),
                     ),
                 }
@@ -89,5 +90,17 @@ impl Types for Type {
             },
             _ => HashSet::new(),
         }
+    }
+}
+
+impl<I> Types for Vec<I>
+where
+    I: Types,
+{
+    fn apply(&self, subs: &Subst) -> Vec<I> {
+        self.iter().map(|c| c.apply(subs)).collect()
+    }
+    fn tv(&self) -> HashSet<ID> {
+        self.iter().flat_map(|c| c.tv()).collect()
     }
 }
