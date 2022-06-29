@@ -1,8 +1,13 @@
 pub mod assump;
 pub mod id;
+pub mod kind;
 pub mod pred;
 pub mod scheme;
 pub mod subst;
+
+pub mod context;
+pub mod expr;
+pub mod pat;
 
 pub mod lit;
 pub mod prim;

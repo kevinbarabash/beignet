@@ -1,5 +1,8 @@
 use std::hash::Hash;
 
+use super::pred::*;
+use super::r#type::*;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Lit {
     // We store all of the values as strings since f64 doesn't
@@ -9,4 +12,12 @@ pub enum Lit {
     Str(String),
     // Null,
     // Undefined,
+}
+
+pub fn ti_lit(lit: &Lit) -> (Vec<Pred>, Type) {
+    let t = Type {
+        usage: None,
+        variant: Variant::Lit(lit.to_owned())
+    };
+    (vec![], t)
 }

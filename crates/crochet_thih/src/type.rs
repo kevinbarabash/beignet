@@ -19,11 +19,13 @@ pub enum Variant {
     Lam(Vec<Type>, Box<Type>), // TODO: support n-ary args in the future
     Lit(Lit),
     Prim(Prim),
+    // TODO: Gen(u32)
     // TODO: support more data types
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Usage {
+    Alt,
     FnDecl,
     FnCall,
 }
@@ -54,7 +56,7 @@ fn lookup(u: &ID, s: &Subst) -> Option<Type> {
 }
 
 impl Types for Type {
-    fn apply(&self, s: &Subst) -> Type {
+    fn apply(&self, s: &Subst) -> Self {
         match &self.variant {
             Variant::Var(u) => {
                 match lookup(u, s) {
@@ -96,7 +98,7 @@ impl<I> Types for Vec<I>
 where
     I: Types,
 {
-    fn apply(&self, subs: &Subst) -> Vec<I> {
+    fn apply(&self, subs: &Subst) -> Self {
         self.iter().map(|c| c.apply(subs)).collect()
     }
     fn tv(&self) -> HashSet<ID> {
