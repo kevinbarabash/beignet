@@ -19,7 +19,7 @@ pub enum Variant {
     Lam(Vec<Type>, Box<Type>), // TODO: support n-ary args in the future
     Lit(Lit),
     Prim(Prim),
-    // TODO: Gen(u32)
+    Gen(u32),
     // TODO: support more data types
 }
 

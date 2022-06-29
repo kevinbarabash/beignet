@@ -27,18 +27,22 @@ impl Types for Scheme {
 }
 
 // quantify      :: [Tyvar] -> Qual Type -> Scheme
-// quantify vs qt = Forall ks (apply s qt)
-//  where vs' = [ v | v <- tv qt, v `elem` vs ]
-//        ks  = map kind vs'
-//        s   = zip vs' (map TGen [0..])
 pub fn quantify(vs: &[ID], qt: &Qual<Type>) -> Scheme {
+    //  where vs' = [ v | v <- tv qt, v `elem` vs ]
     let vs_1: Vec<_> = qt.tv().iter().filter(|v| vs.contains(v)).cloned().collect();
+    //        ks  = map kind vs'
     let ks: Vec<_> = vs_1.iter().map(|_| Kind::Star).collect();
+    //        s   = zip vs' (map TGen [0..])
+    let s: Subst = vs_1.iter().enumerate().map(|(index, value)| {
+        let t = Type {
+            usage: None,
+            variant: Variant::Gen(index as u32)
+        };
+        (value.to_owned(), t)
+    }).collect();
 
-    // TODO: add Variant::Gen(u32) to type.rs
-    // let s: Subst = vs_1.iter().enumerate(|v, index| (v.to_owned(), )).collect();
-
-    todo!()
+    // quantify vs qt = Forall ks (apply s qt)
+    Scheme::Forall(ks, qt.apply(&s))
 }
 
 // toScheme      :: Type -> Scheme
