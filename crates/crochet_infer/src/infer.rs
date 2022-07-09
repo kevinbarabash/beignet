@@ -5,10 +5,103 @@ use crochet_ast::*;
 use crate::substitutable::Substitutable;
 
 use super::context::{Context, Env};
-use super::infer_type_ann::{infer_type_ann, infer_type_ann_with_params};
+use super::infer_type_ann::*;
 use super::substitutable::Subst;
-use super::types::{self, Scheme, Type, Variant};
+use super::types::{self, freeze_scheme, Scheme, Type, Variant};
 use super::util::{generalize, normalize};
+
+pub fn infer_prog(prog: &Program) -> Result<Context, String> {
+    let mut ctx: Context = Context::default();
+
+    // TODO: figure out how report multiple errors
+    for stmt in &prog.body {
+        match stmt {
+            Statement::VarDecl {
+                declare,
+                init,
+                pattern,
+                ..
+            } => {
+                match declare {
+                    true => {
+                        match pattern {
+                            Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
+                                match type_ann {
+                                    Some(type_ann) => {
+                                        let scheme = infer_scheme(type_ann, &ctx);
+                                        ctx.values
+                                            .insert(id.name.to_owned(), freeze_scheme(scheme));
+                                    }
+                                    None => {
+                                        // A type annotation should always be provided when using `declare`
+                                        return Err(String::from(
+                                            "missing type annotation in declare statement",
+                                        ));
+                                    }
+                                }
+                            }
+                            _ => todo!(),
+                        }
+                    }
+                    false => {
+                        // An initial value should always be used when using a normal `let` statement
+                        let init = init.as_ref().unwrap();
+
+                        let type_param_map = HashMap::new();
+                        let (ps, pa, pt) = infer_pattern(pattern, &ctx, &type_param_map)?;
+
+                        let (is, it) = infer(&ctx, init)?;
+
+                        // unifies initializer and pattern
+                        let s = unify(&pt, &it, &ctx)?;
+                        
+                        // infer_pattern can generate a non-empty Subst when the pattern includes
+                        // a type annotation.
+                        let s = compose_many_subs(&[is, ps, s]);
+
+                        // We need to apply the substitutions from the constraint solver to the
+                        // pattern and initializer types before checking if they're subtypes since
+                        // since is_subtype() ignores type variables.
+                        // let pt = pt.apply(&s);
+                        // let it = it.apply(&s);
+
+                        // If the initializer is not a subtype of what we're assigning it
+                        // to, return an error.
+                        // TODO: Add `is_subtype` check... or handle it as part of the `unify` call above.
+                        // if !is_subtype(&it, &pt, &ctx)? {
+                        //     return Err(String::from(
+                        //         "value is not a subtype of decl's declared type",
+                        //     ));
+                        // }
+
+                        // Inserts the new variables from infer_pattern() into the
+                        // current context.
+                        for (name, scheme) in pa {
+                            let scheme = normalize(&scheme.apply(&s), &ctx);
+                            ctx.values.insert(name, freeze_scheme(scheme));
+                        }
+                    }
+                };
+            }
+            Statement::TypeDecl {
+                id,
+                type_ann,
+                type_params,
+                ..
+            } => {
+                let scheme = infer_scheme_with_type_params(type_ann, type_params, &ctx);
+                ctx.types.insert(id.name.to_owned(), freeze_scheme(scheme));
+            }
+            Statement::Expr { expr, .. } => {
+                // We ignore the type that was inferred, we only care that
+                // it succeeds since we aren't assigning it to variable.
+                infer_expr(&ctx, expr)?;
+            }
+        };
+    }
+
+    Ok(ctx)
+}
 
 pub fn infer_expr(ctx: &Context, expr: &Expr) -> Result<Scheme, String> {
     let (s, t) = infer(ctx, expr)?;
@@ -26,19 +119,22 @@ fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Scheme {
 fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
     match expr {
         Expr::App(App { lam, args, .. }) => {
-            let (lam_s, lam_t) = infer(ctx, lam)?;
-            let (mut arg_ss, arg_ts): (Vec<_>, Vec<_>) =
+            let (s1, t1) = infer(ctx, lam)?;
+            let (mut args_ss, args_ts): (Vec<_>, Vec<_>) =
                 args.iter().filter_map(|arg| infer(ctx, arg).ok()).unzip();
 
             let tv = ctx.fresh_var();
             // Are we missing an `apply()` call here?
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
-            let s = unify(&ctx.lam(arg_ts, Box::from(tv.clone())), &lam_t, ctx)?;
+            let s3 = unify(&t1, &ctx.lam(args_ts, Box::from(tv.clone())), ctx)?;
 
-            arg_ss.push(s.clone());
-            arg_ss.push(lam_s);
+            // ss = [s3, ...args_ss, s1]
+            let mut ss = vec![s3.clone()];
+            ss.append(&mut args_ss);
+            ss.push(s1);
 
-            Ok((compose_many_subs(&arg_ss), tv.apply(&s)))
+            // return (s3 `compose` s2 `compose` s1, apply s3 tv)
+            Ok((compose_many_subs(&ss), tv.apply(&s3)))
             // TODO:
             // - partial application
             // - subtyping
@@ -51,9 +147,9 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
         }
         Expr::Ident(Ident { name, .. }) => {
             // TODO: return an error if the lookup fails
-            let ty = ctx.lookup_value(name);
-            let subst = Subst::new();
-            Ok((subst, ty))
+            let s = Subst::new();
+            let t = ctx.lookup_value(name);
+            Ok((s, t))
         }
         Expr::IfElse(IfElse {
             cond,
@@ -127,7 +223,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let t = ctx.lam(ts, Box::from(rt));
             let s = compose_subs(&s, &compose_subs(&rs, &compose_many_subs(&ss)));
 
-            Ok((s, t))
+            Ok((s.clone(), t.apply(&s)))
         }
         Expr::Let(Let {
             pattern,
@@ -228,6 +324,8 @@ fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
     result
 }
 
+// subs are composed from left to right with ones to the right
+// being applied to all of the ones to the left.
 fn compose_many_subs(subs: &[Subst]) -> Subst {
     subs.iter().fold(Subst::new(), |accum, next| {
         let mut result: Subst = compose_subs(&accum, next);

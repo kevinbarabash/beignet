@@ -29,22 +29,51 @@ mod tests {
         format!("{scheme}")
     }
 
+    fn infer_prog(input: &str) -> Context {
+        let prog = parser().parse(input).unwrap();
+        infer::infer_prog(&prog).unwrap()
+    }
+
+    fn get_type(name: &str, ctx: &Context) -> String {
+        let t = ctx.values.get(name).unwrap();
+        format!("{t}")
+    }
+
     #[test]
     fn infer_i_combinator() {
-        assert_eq!(infer("(x) => x"), "<t0>(t0) => t0");
+        let ctx = infer_prog("let I = (x) => x");
+        assert_eq!(get_type("I", &ctx), "<t0>(t0) => t0");
     }
 
     #[test]
     fn infer_k_combinator() {
-        assert_eq!(infer("(x, y) => x"), "<t0, t1>(t0, t1) => t0");
+        let ctx = infer_prog("let K = (x) => (y) => x");
+        assert_eq!(get_type("K", &ctx), "<t0, t1>(t0) => (t1) => t0");
     }
 
     #[test]
     fn infer_s_combinator() {
+        let ctx = infer_prog("let S = (f) => (g) => (x) => f(x)(g(x))");
         assert_eq!(
-            infer("(f, g, x) => f(x, g(x))"),
-            "<t0, t1, t2>((t0, t1) => t2, (t0) => t1, t0) => t2"
+            get_type("S", &ctx),
+            "<t0, t1, t2>((t0) => (t1) => t2) => ((t0) => t1) => (t0) => t2"
         );
+    }
+
+    #[test]
+    fn infer_skk() {
+        let src = r#"
+        let S = (f) => (g) => (x) => f(x)(g(x))
+        let K = (x) => (y) => x
+        let I = S(K)(K)
+        "#;
+        let ctx = infer_prog(src);
+        assert_eq!(get_type("K", &ctx), "<t0, t1>(t0) => (t1) => t0");
+        assert_eq!(
+            get_type("S", &ctx),
+            "<t0, t1, t2>((t0) => (t1) => t2) => ((t0) => t1) => (t0) => t2"
+        );
+        assert_eq!(get_type("I", &ctx), "<t0>(t0) => t0");
     }
 
     #[test]
