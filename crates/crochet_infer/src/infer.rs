@@ -182,16 +182,16 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let params: Result<Vec<(Subst, Type)>, String> = params
                 .iter()
                 .map(|param| {
-                    let (subst, assump, param_type) =
+                    let (ps, pa, pt) =
                         infer_pattern(param, &new_ctx, &type_params_map)?;
 
                     // Inserts any new variables introduced by infer_pattern() into
                     // the current context.
-                    for (name, scheme) in assump {
+                    for (name, scheme) in pa {
                         new_ctx.values.insert(name, scheme);
                     }
 
-                    Ok((subst, param_type))
+                    Ok((ps, pt))
                 })
                 .collect();
 
@@ -429,7 +429,9 @@ fn infer_pattern(
     match get_type_ann(pat) {
         Some(type_ann) => {
             let type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
-            let s = unify(&type_ann_ty, &pat_type, ctx, None)?;
+            // Allowing type_ann_ty to be a subtype of pat_type because
+            // only non-refutable patterns can have type annotations.
+            let s = unify(&type_ann_ty, &pat_type, ctx, Some(Rel::Subtype))?;
             Ok((s, new_vars, type_ann_ty))
         }
         None => Ok((Subst::new(), new_vars, pat_type)),

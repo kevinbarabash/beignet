@@ -178,6 +178,27 @@ mod tests {
     }
 
     #[test]
+    fn infer_destructuring_function_params() {
+        let result = infer("([x, y]) => x + y");
+
+        assert_eq!(result, "([number, number]) => number");
+    }
+
+    #[test]
+    fn infer_destructuring_function_params_with_type_annotations() {
+        let result = infer("([x, y]: [string, boolean]) => [x, y]");
+
+        assert_eq!(result, "([string, boolean]) => [string, boolean]");
+    }
+
+    #[test]
+    fn infer_incomplete_destructuring_function_params_with_type_annotations() {
+        let result = infer("([x]: [string, boolean]) => x");
+
+        assert_eq!(result, "([string, boolean]) => string");
+    }
+
+    #[test]
     #[should_panic="too many elements to unpack"]
     fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack() {
         let src = r#"
