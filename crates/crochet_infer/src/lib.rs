@@ -119,4 +119,34 @@ mod tests {
     fn infer_app_of_lam() {
         assert_eq!(infer("((x) => x)(5)"), "5");
     }
+
+    #[test]
+    fn infer_tuple() {
+        assert_eq!(infer("[5, true, \"hello\"]"), "[5, true, \"hello\"]");
+    }
+
+    #[test]
+    fn infer_destructuring_tuple() {
+        let src = r#"
+        let [a, b, c] = [5, true, "hello"]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "true");
+        assert_eq!(get_type("c", &ctx), "\"hello\"");
+    }
+
+    #[test]
+    #[ignore]
+    fn infer_destructuring_tuple_with_type_annotation() {
+        let src = r#"
+        let [a, b, c]: [number, boolean, string] = [5, true, "hello"]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "true");
+        assert_eq!(get_type("c", &ctx), "\"hello\"");
+    }
 }

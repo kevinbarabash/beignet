@@ -52,6 +52,11 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
 
                         let (is, it) = infer(&ctx, init)?;
 
+                        // match get_type_ann(pat) {
+                        //     Some(_) => todo!(),
+                        //     None => todo!(),
+                        // }
+
                         // unifies initializer and pattern
                         let s = unify(&pt, &it, &ctx)?;
                         
@@ -270,7 +275,9 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let t = ctx.lit(lit.to_owned());
             Ok((s, t))
         }
-        Expr::Op(Op {op, left, right, ..}) => {
+        Expr::Op(Op {
+            op, left, right, ..
+        }) => {
             // TODO: check what `op` is and handle comparison operators
             // differently from arithmetic operators
             let (s1, t1) = infer(ctx, left)?;
@@ -293,7 +300,15 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
         }
         Expr::Obj(_) => todo!(),
         Expr::Await(_) => todo!(),
-        Expr::Tuple(_) => todo!(),
+        Expr::Tuple(Tuple { elems, .. }) => {
+            let result: Result<Vec<(Subst, Type)>, String> =
+                elems.iter().map(|elem| infer(ctx, elem)).collect();
+            let (ss, ts): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
+
+            let s = compose_many_subs(&ss);
+            let t = ctx.tuple(ts);
+            Ok((s, t))
+        }
         Expr::Member(_) => todo!(),
         Expr::Empty(_) => todo!(),
     }
@@ -339,7 +354,21 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Err(format!("{lit} and {prim} do not unify"))
             }
         }
-        (_, _) => todo!(),
+        (Variant::Tuple(tuple1), Variant::Tuple(tuple2)) => {
+            if tuple1.len() != tuple2.len() {
+                return Err(String::from("lengths of tuples do not match"))
+            }
+            let mut s = Subst::new();
+            for (t1, t2) in tuple1.iter().zip(tuple2) {
+                let s1 = unify(&t1.apply(&s), &t2.apply(&s), ctx)?;
+                s = compose_subs(&s, &s1);
+            }
+            Ok(s)
+        },
+        (_, _) => {
+            println!("Unification failure: {t1} != {t2}");
+            todo!()
+        },
     }
 }
 
