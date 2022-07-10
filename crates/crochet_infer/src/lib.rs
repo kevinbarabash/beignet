@@ -77,6 +77,45 @@ mod tests {
     }
 
     #[test]
+    fn infer_adding_variables() {
+        let src = r#"
+        let x = 5
+        let y = 10
+        let z = x + y
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("z", &ctx), "number");
+    }
+
+    #[test]
+    fn infer_if_else() {
+        let src = r#"
+        let n = 0
+        let result = if n == 0 { 5 } else { 10 }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "5 | 10");
+    }
+
+    #[test]
+    fn infer_fib() {
+        let src = r###"
+        let rec fib = (n) => if n == 0 {
+            0
+        } else if n == 1 {
+            1
+        } else {
+            fib(n - 1) + fib(n - 2)
+        }
+        "###;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("fib", &ctx), "(number) => 0 | 1 | number");
+    }
+
+    #[test]
     fn infer_app_of_lam() {
         assert_eq!(infer("((x) => x)(5)"), "5");
     }

@@ -143,7 +143,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let (s1, t) = infer(ctx, expr)?;
             let tv = ctx.fresh_var();
             let s2 = unify(&ctx.lam(vec![tv.clone()], Box::from(tv.clone())), &t, ctx)?;
-            Ok((s2, tv.apply(&s1)))
+            Ok((compose_subs(&s2, &s1), tv.apply(&s2)))
         }
         Expr::Ident(Ident { name, .. }) => {
             // TODO: return an error if the lookup fails
@@ -162,9 +162,9 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 let (s2, t2) = infer(ctx, consequent)?;
                 let (s3, t3) = infer(ctx, alternate)?;
                 let s4 = unify(&t1, &ctx.prim(Primitive::Bool), ctx)?;
-                let s5 = unify(&t2, &t3, ctx)?;
-                let t = t2.apply(&s5);
-                Ok((compose_many_subs(&[s1, s2, s3, s4, s5]), t))
+                // TODO: normalize union type
+                let t = ctx.union(vec![t2, t3]);
+                Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
             }
             None => {
                 let (s1, t1) = infer(ctx, cond)?;
@@ -271,8 +271,26 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let t = ctx.lit(lit.to_owned());
             Ok((s, t))
         }
-        Expr::Op(_) => {
-            todo!()
+        Expr::Op(Op {op, left, right, ..}) => {
+            // TODO: check what `op` is and handle comparison operators
+            // differently from arithmetic operators
+            let (s1, t1) = infer(ctx, left)?;
+            let (s2, t2) = infer(ctx, right)?;
+            let s3 = unify(&t1, &ctx.prim(Primitive::Num), ctx)?;
+            let s4 = unify(&t2, &ctx.prim(Primitive::Num), ctx)?;
+            let t = match op {
+                BinOp::Add => ctx.prim(Primitive::Num),
+                BinOp::Sub => ctx.prim(Primitive::Num),
+                BinOp::Mul => ctx.prim(Primitive::Num),
+                BinOp::Div => ctx.prim(Primitive::Num),
+                BinOp::EqEq => ctx.prim(Primitive::Bool),
+                BinOp::NotEq => ctx.prim(Primitive::Bool),
+                BinOp::Gt => ctx.prim(Primitive::Bool),
+                BinOp::GtEq => ctx.prim(Primitive::Bool),
+                BinOp::Lt => ctx.prim(Primitive::Bool),
+                BinOp::LtEq => ctx.prim(Primitive::Bool),
+            };
+            Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
         }
         Expr::Obj(_) => todo!(),
         Expr::Await(_) => todo!(),
@@ -294,6 +312,33 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
             let s1 = unify(&lam1.ret.apply(&s), &lam2.ret, ctx)?;
             Ok(compose_subs(&s, &s1))
+        }
+        (Variant::Prim(prim1), Variant::Prim(prim2)) => {
+            if prim1 == prim2 {
+                Ok(Subst::default())
+            } else {
+                Err(format!("{prim1} and {prim2} do not unify"))
+            }
+        }
+        (Variant::Lit(lit1), Variant::Lit(lit2)) => {
+            if lit1 == lit2 {
+                Ok(Subst::default())
+            } else {
+                Err(format!("{lit1} and {lit2} do not unify"))
+            }
+        }
+        (Variant::Lit(lit), Variant::Prim(prim)) => {
+            let is_subtype = match (lit, prim) {
+                (types::Lit::Num(_), Primitive::Num) => true,
+                (types::Lit::Str(_), Primitive::Str) => true,
+                (types::Lit::Bool(_), Primitive::Bool) => true,
+                (_, _) => false,
+            };
+            if is_subtype {
+                Ok(Subst::default())
+            } else {
+                Err(format!("{lit} and {prim} do not unify"))
+            }
         }
         (_, _) => todo!(),
     }
