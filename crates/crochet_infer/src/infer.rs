@@ -204,7 +204,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
 
             let (rs, rt) = infer(&new_ctx, body)?;
 
-            // TODO: copy over the next_id from new_ctx
+            // Copies over the count from new_ctx so that it's unique across Contexts.
             ctx.state.count.set(new_ctx.state.count.get());
 
             let s = match return_type {
@@ -243,23 +243,18 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                     // infer_pattern can generate a non-empty Subst when the pattern includes
                     // a type annotation.
                     let s1 = compose_subs(&ps, &s);
-
                     let pa = pa.apply(&s1);
-                    println!("pa = {:#?}", pa);
 
                     for (k, v) in pa.iter() {
                         new_ctx.values.insert(k.to_owned(), v.to_owned());
                     }
 
                     let (s, t) = infer(&new_ctx, body.as_ref())?;
+                    
+                    // Copies over the count from new_ctx so that it's unique across Contexts.
                     ctx.state.count.set(new_ctx.state.count.get());
-
-                    println!("s = {:#?}", s);
-                    let pt = pt.apply(&s);
-                    println!("pt = {:#?}", pt);
-                    println!("t = {:#?}", t);
-
-                    Ok((s, t))
+                    
+                    Ok((compose_subs(&s, &s1), t))
                 }
                 // handles: let _ => ... and non-final non-let expressions
                 None => {
