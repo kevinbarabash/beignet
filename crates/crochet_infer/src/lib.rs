@@ -368,4 +368,37 @@ mod tests {
             "({x: number, y: number}) => number"
         );
     }
+
+    #[test]
+    fn infer_if_let() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        let sum = if let {x, y} = p {
+            x + y
+        }
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+
+        // Ensures we aren't polluting the outside context
+        assert!(ctx.values.get("x").is_none());
+        assert!(ctx.values.get("y").is_none());
+    }
+
+    #[test]
+    fn infer_if_let_inside_lambda() {
+        let src = r#"
+        let add = (p) => {
+            if let {x, y} = p {
+                x + y
+            }
+        }        
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("add", &ctx), "({x: number, y: number}) => number");
+    }
 }

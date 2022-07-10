@@ -160,6 +160,8 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
         }) => match alternate {
             Some(alternate) => {
                 let (s1, t1) = infer(ctx, cond)?;
+                // TODO: clone ctx so that we don't contaminate the parent
+                // context with new variables
                 let (s2, t2) = infer(ctx, consequent)?;
                 let (s3, t3) = infer(ctx, alternate)?;
                 let s4 = unify(&t1, &ctx.prim(Primitive::Bool), ctx, Some(Rel::Subtype))?;
@@ -167,11 +169,34 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
             }
             None => {
-                let (s1, t1) = infer(ctx, cond)?;
-                let (s2, t2) = infer(ctx, consequent)?;
-                let s3 = unify(&t1, &ctx.prim(Primitive::Bool), ctx, Some(Rel::Subtype))?;
-                let t = t2;
-                Ok((compose_many_subs(&[s1, s2, s3]), t))
+                match cond.as_ref() {
+                    Expr::LetExpr(LetExpr { pat, expr, .. }) => {
+                        let mut new_ctx = ctx.clone();
+                        let (pa, s1) = infer_pattern_and_init(pat, expr, &new_ctx)?;
+
+                        // Inserts the new variables from infer_pattern() into the
+                        // current context.
+                        for (name, scheme) in pa {
+                            new_ctx.values.insert(name.to_owned(), scheme.to_owned());
+                        }
+
+                        let (s2, t2) = infer(&new_ctx, consequent)?;
+
+                        // Copies over the count from new_ctx so that it's unique across Contexts.
+                        ctx.state.count.set(new_ctx.state.count.get());
+
+                        let t = t2;
+                        let s = compose_subs(&s2, &s1);
+                        Ok((s, t))
+                    },
+                    _ => {
+                        let (s1, t1) = infer(ctx, cond)?;
+                        let (s2, t2) = infer(ctx, consequent)?;
+                        let s3 = unify(&t1, &ctx.prim(Primitive::Bool), ctx, Some(Rel::Subtype))?;
+                        let t = t2;
+                        Ok((compose_many_subs(&[s1, s2, s3]), t))
+                    }
+                }
             }
         },
         Expr::JSXElement(_) => todo!(),
