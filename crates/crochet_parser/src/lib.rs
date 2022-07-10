@@ -6,8 +6,8 @@ pub mod type_params;
 pub mod types;
 pub mod util;
 
-use decl::decl_parser;
-use expr::expr_parser;
+pub use decl::decl_parser;
+pub use expr::expr_parser;
 
 use chumsky::prelude::*;
 use chumsky::primitive::*;
