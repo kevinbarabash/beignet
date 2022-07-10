@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crochet_ast::*;
 
 use crate::substitutable::Substitutable;
+use crate::util::is_subtype;
 
 use super::context::{Context, Env};
 use super::infer_type_ann::*;
@@ -334,25 +335,10 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
                 Err(format!("{lit1} and {lit2} do not unify"))
             }
         }
-        (Variant::Lit(lit), Variant::Prim(prim)) => {
-            let is_subtype = match (lit, prim) {
-                (types::Lit::Num(_), Primitive::Num) => true,
-                (types::Lit::Str(_), Primitive::Str) => true,
-                (types::Lit::Bool(_), Primitive::Bool) => true,
-                (_, _) => false,
-            };
-            if is_subtype {
-                Ok(Subst::default())
-            } else {
-                Err(format!("{lit} and {prim} do not unify"))
-            }
-        }
         (Variant::Tuple(tuple1), Variant::Tuple(tuple2)) => {
-            if rel == Some(Rel::Subtype) {
-                if tuple1.len() < tuple2.len() {
-                    return Err(String::from("too many elements to unpack"))
-                }
-            } else if tuple1.len() != tuple2.len() {
+            if rel == Some(Rel::Subtype) && tuple1.len() < tuple2.len() {
+                return Err(String::from("too many elements to unpack"))
+            } else if rel == None && tuple1.len() != tuple2.len() {
                 return Err(String::from("lengths of tuples do not match"))
             };
             let mut s = Subst::new();
@@ -364,9 +350,12 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
             Ok(s)
         },
         (_, _) => {
+            if rel == Some(Rel::Subtype) && is_subtype(t1, t2, ctx)? {
+                return Ok(Subst::default())
+            }
             println!("Unification failure: {t1} != {t2}");
             println!("rel = {:?}", rel);
-            todo!()
+            todo!("Unification failure")
         },
     }
 }
