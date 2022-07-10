@@ -268,10 +268,10 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 // handles: let _ => ... and non-final non-let expressions
                 None => todo!(),
             }
-
-            // let (subst, assump, param_type) = infer_pattern(param, &mut ctx, &type_params_map)?;
         }
-        Expr::LetExpr(_) => todo!(),
+        Expr::LetExpr(_) => {
+            panic!("Unexpected LetExpr.  All LetExprs should be handled by IfElse arm.")
+        },
         Expr::Lit(lit) => {
             let s = Subst::new();
             let t = ctx.lit(lit.to_owned());
