@@ -93,8 +93,11 @@ fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Scheme {
     normalize(&generalize(&empty_env, &t.to_owned().apply(s)), ctx)
 }
 
-fn infer_pattern_and_init(pat: &Pattern, init: &Expr, ctx: &Context) -> Result<(Assump, Subst), String> {
-
+fn infer_pattern_and_init(
+    pat: &Pattern,
+    init: &Expr,
+    ctx: &Context,
+) -> Result<(Assump, Subst), String> {
     let type_param_map = HashMap::new();
     let (ps, pa, pt) = infer_pattern(pat, ctx, &type_param_map)?;
 
@@ -110,6 +113,31 @@ fn infer_pattern_and_init(pat: &Pattern, init: &Expr, ctx: &Context) -> Result<(
     let s = compose_many_subs(&[is, ps, s]);
 
     Ok((pa, s))
+}
+
+fn infer_let(
+    pat: &Pattern,
+    init: &Expr,
+    body: &Expr,
+    ctx: &Context,
+) -> Result<(Subst, Type), String> {
+    let mut new_ctx = ctx.clone();
+    let (pa, s1) = infer_pattern_and_init(pat, init, &new_ctx)?;
+
+    // Inserts the new variables from infer_pattern() into the
+    // current context.
+    for (name, scheme) in pa {
+        new_ctx.values.insert(name.to_owned(), scheme.to_owned());
+    }
+
+    let (s2, t2) = infer(&new_ctx, body)?;
+
+    // Copies over the count from new_ctx so that it's unique across Contexts.
+    ctx.state.count.set(new_ctx.state.count.get());
+
+    let t = t2;
+    let s = compose_subs(&s2, &s1);
+    Ok((s, t))
 }
 
 fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
@@ -168,36 +196,16 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 let t = union_types(&t2, &t3, ctx);
                 Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
             }
-            None => {
-                match cond.as_ref() {
-                    Expr::LetExpr(LetExpr { pat, expr, .. }) => {
-                        let mut new_ctx = ctx.clone();
-                        let (pa, s1) = infer_pattern_and_init(pat, expr, &new_ctx)?;
-
-                        // Inserts the new variables from infer_pattern() into the
-                        // current context.
-                        for (name, scheme) in pa {
-                            new_ctx.values.insert(name.to_owned(), scheme.to_owned());
-                        }
-
-                        let (s2, t2) = infer(&new_ctx, consequent)?;
-
-                        // Copies over the count from new_ctx so that it's unique across Contexts.
-                        ctx.state.count.set(new_ctx.state.count.get());
-
-                        let t = t2;
-                        let s = compose_subs(&s2, &s1);
-                        Ok((s, t))
-                    },
-                    _ => {
-                        let (s1, t1) = infer(ctx, cond)?;
-                        let (s2, t2) = infer(ctx, consequent)?;
-                        let s3 = unify(&t1, &ctx.prim(Primitive::Bool), ctx, Some(Rel::Subtype))?;
-                        let t = t2;
-                        Ok((compose_many_subs(&[s1, s2, s3]), t))
-                    }
+            None => match cond.as_ref() {
+                Expr::LetExpr(LetExpr { pat, expr, .. }) => infer_let(pat, expr, consequent, ctx),
+                _ => {
+                    let (s1, t1) = infer(ctx, cond)?;
+                    let (s2, t2) = infer(ctx, consequent)?;
+                    let s3 = unify(&t1, &ctx.prim(Primitive::Bool), ctx, Some(Rel::Subtype))?;
+                    let t = t2;
+                    Ok((compose_many_subs(&[s1, s2, s3]), t))
                 }
-            }
+            },
         },
         Expr::JSXElement(_) => todo!(),
         Expr::Lambda(Lambda {
@@ -256,31 +264,9 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             ..
         }) => {
             match pattern {
-                Some(pat) => {
-                    // Creates a copy of the Context so that any new variables added
-                    // to the scope are limited to `body`.
-                    let mut new_ctx = ctx.clone();
-
-                    let (pa, s) = infer_pattern_and_init(pat, init, &new_ctx)?;
-
-                    // Inserts the new variables from infer_pattern() into the
-                    // current context.
-                    for (name, scheme) in pa {
-                        new_ctx.values.insert(name.to_owned(), scheme.to_owned());
-                    }
-
-                    // Infers the type of the body.
-                    let (s1, t) = infer(&new_ctx, body.as_ref())?;
-                    
-                    // Copies over the count from new_ctx so that it's unique across Contexts.
-                    ctx.state.count.set(new_ctx.state.count.get());
-                    
-                    Ok((compose_subs(&s1, &s), t))
-                }
+                Some(pat) => infer_let(pat, init, body, ctx),
                 // handles: let _ => ... and non-final non-let expressions
-                None => {
-                    todo!()
-                }
+                None => todo!(),
             }
 
             // let (subst, assump, param_type) = infer_pattern(param, &mut ctx, &type_params_map)?;
@@ -413,17 +399,15 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
                 // TODO: handle optional properties
                 .map(|p| (p.name.to_owned(), p.ty.to_owned()))
                 .collect();
-            
+
             let mut s = Subst::new();
             for (k, p2) in map2.iter() {
                 match map1.get(k) {
                     Some(p1) => {
                         let s1 = unify(p1, p2, ctx, rel.clone())?;
                         s = compose_subs(&s, &s1);
-                    },
-                    None => {
-                        return Err(format!("Property '{k}' missing in {t1}"))
                     }
+                    None => return Err(format!("Property '{k}' missing in {t1}")),
                 }
             }
 
