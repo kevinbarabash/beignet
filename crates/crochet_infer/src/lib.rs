@@ -112,7 +112,7 @@ mod tests {
         "###;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fib", &ctx), "(number) => 0 | 1 | number");
+        assert_eq!(get_type("fib", &ctx), "(number) => number");
     }
 
     #[test]

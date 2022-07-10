@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crochet_ast::*;
 
@@ -162,8 +162,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 let (s2, t2) = infer(ctx, consequent)?;
                 let (s3, t3) = infer(ctx, alternate)?;
                 let s4 = unify(&t1, &ctx.prim(Primitive::Bool), ctx)?;
-                // TODO: normalize union type
-                let t = ctx.union(vec![t2, t3]);
+                let t = union_types(&t2, &t3, ctx);
                 Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
             }
             None => {
@@ -532,5 +531,62 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                 None => Ok(obj_type),
             }
         }
+    }
+}
+
+// dedupe with constraint_solver.rs
+fn flatten_types(ty: &Type) -> Vec<Type> {
+    match &ty.variant {
+        Variant::Union(types) => types.iter().flat_map(flatten_types).collect(),
+        _ => vec![ty.to_owned()],
+    }
+}
+
+// dedupe with constraint_solver.rs
+fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
+    let mut types: Vec<Type> = vec![];
+    types.extend(flatten_types(t1));
+    types.extend(flatten_types(t2));
+
+    let types_set: HashSet<_> = types.iter().cloned().collect();
+
+    let prim_types: HashSet<_> = types_set
+        .iter()
+        .cloned()
+        .filter(|ty| matches!(ty.variant, Variant::Prim(_)))
+        .collect();
+    let lit_types: HashSet<_> = types_set
+        .iter()
+        .cloned()
+        .filter(|ty| match &ty.variant {
+            // Primitive types subsume corresponding literal types
+            Variant::Lit(lit) => match lit {
+                types::Lit::Num(_) => !prim_types.contains(&ctx.prim(Primitive::Num)),
+                types::Lit::Bool(_) => !prim_types.contains(&ctx.prim(Primitive::Bool)),
+                types::Lit::Str(_) => !prim_types.contains(&ctx.prim(Primitive::Str)),
+                types::Lit::Null => !prim_types.contains(&ctx.prim(Primitive::Null)),
+                types::Lit::Undefined => !prim_types.contains(&ctx.prim(Primitive::Undefined)),
+            },
+            _ => false,
+        })
+        .collect();
+    let rest_types: HashSet<_> = types_set
+        .iter()
+        .cloned()
+        .filter(|ty| !matches!(ty.variant, Variant::Prim(_) | Variant::Lit(_)))
+        .collect();
+
+    let mut types: Vec<_> = prim_types
+        .iter()
+        .chain(lit_types.iter())
+        .chain(rest_types.iter())
+        .cloned()
+        .collect();
+    types.sort_by_key(|k| k.id);
+
+    if types.len() > 1 {
+        ctx.union(types)
+    } else {
+        types[0].clone()
     }
 }
