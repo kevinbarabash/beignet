@@ -45,22 +45,11 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                         }
                     }
                     false => {
-                        // An initial value should always be used when using a normal `let` statement
+                        // An initial value should always be used when using a normal
+                        // `let` statement
                         let init = init.as_ref().unwrap();
 
-                        let type_param_map = HashMap::new();
-                        let (ps, pa, pt) = infer_pattern(pattern, &ctx, &type_param_map)?;
-
-                        let (is, it) = infer(&ctx, init)?;
-
-                        // Unifies initializer and pattern.
-                        // The inferred type of the init value must be a sub-type
-                        // of the pattern it's being assigned to.
-                        let s = unify(&it, &pt, &ctx, Some(Rel::Subtype))?;
-                        
-                        // infer_pattern can generate a non-empty Subst when the pattern includes
-                        // a type annotation.
-                        let s = compose_many_subs(&[is, ps, s]);
+                        let (pa, s) = infer_pattern_and_init(pattern, init, &ctx)?;
 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
@@ -104,6 +93,25 @@ fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Scheme {
     normalize(&generalize(&empty_env, &t.to_owned().apply(s)), ctx)
 }
 
+fn infer_pattern_and_init(pat: &Pattern, init: &Expr, ctx: &Context) -> Result<(Assump, Subst), String> {
+
+    let type_param_map = HashMap::new();
+    let (ps, pa, pt) = infer_pattern(pat, ctx, &type_param_map)?;
+
+    let (is, it) = infer(ctx, init)?;
+
+    // Unifies initializer and pattern.
+    // The inferred type of the init value must be a sub-type
+    // of the pattern it's being assigned to.
+    let s = unify(&it, &pt, ctx, Some(Rel::Subtype))?;
+
+    // infer_pattern can generate a non-empty Subst when the pattern includes
+    // a type annotation.
+    let s = compose_many_subs(&[is, ps, s]);
+
+    Ok((pa, s))
+}
+
 fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
     match expr {
         Expr::App(App { lam, args, .. }) => {
@@ -130,7 +138,12 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
         Expr::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer(ctx, expr)?;
             let tv = ctx.fresh_var();
-            let s2 = unify(&ctx.lam(vec![tv.clone()], Box::from(tv.clone())), &t, ctx, None)?;
+            let s2 = unify(
+                &ctx.lam(vec![tv.clone()], Box::from(tv.clone())),
+                &t,
+                ctx,
+                None,
+            )?;
             Ok((compose_subs(&s2, &s1), tv.apply(&s2)))
         }
         Expr::Ident(Ident { name, .. }) => {
@@ -183,8 +196,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let params: Result<Vec<(Subst, Type)>, String> = params
                 .iter()
                 .map(|param| {
-                    let (ps, pa, pt) =
-                        infer_pattern(param, &new_ctx, &type_params_map)?;
+                    let (ps, pa, pt) = infer_pattern(param, &new_ctx, &type_params_map)?;
 
                     // Inserts any new variables introduced by infer_pattern() into
                     // the current context.
@@ -200,7 +212,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
 
             let (rs, rt) = infer(&new_ctx, body)?;
 
-            // TODO: copy over the next_id from new_ctx
+            // Copies over the count from new_ctx so that it's unique across Contexts.
             ctx.state.count.set(new_ctx.state.count.get());
 
             let s = match return_type {
@@ -218,33 +230,27 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             body,
             ..
         }) => {
-            let (is, it) = infer(ctx, init)?;
-
             match pattern {
                 Some(pat) => {
+                    // Creates a copy of the Context so that any new variables added
+                    // to the scope are limited to `body`.
                     let mut new_ctx = ctx.clone();
-                    new_ctx.types = ctx.types.apply(&is);
-                    // TODO: update `infer_pattern` to generalize patterns
-                    // let t = generalize(&new_ctx.types, &it);
 
-                    let type_param_map = HashMap::new();
-                    let (ps, pa, pt) = infer_pattern(pat, &new_ctx, &type_param_map)?;
+                    let (pa, s) = infer_pattern_and_init(pat, init, &new_ctx)?;
 
-                    // Unifies initializer and pattern.
-                    // The inferred type of the init value must be a sub-type
-                    // of the pattern it's being assigned to.
-                    let s = unify(&it, &pt, &new_ctx, Some(Rel::Subtype))?;
-
-                    // infer_pattern can generate a non-empty Subst when the pattern includes
-                    // a type annotation.
-                    let s = compose_subs(&ps, &s);
-
-                    let pa = pa.apply(&s);
-                    for (k, v) in pa.iter() {
-                        new_ctx.values.insert(k.to_owned(), v.to_owned());
+                    // Inserts the new variables from infer_pattern() into the
+                    // current context.
+                    for (name, scheme) in pa {
+                        new_ctx.values.insert(name.to_owned(), scheme.to_owned());
                     }
 
-                    infer(&new_ctx, body.as_ref())
+                    // Infers the type of the body.
+                    let (s1, t) = infer(&new_ctx, body.as_ref())?;
+                    
+                    // Copies over the count from new_ctx so that it's unique across Contexts.
+                    ctx.state.count.set(new_ctx.state.count.get());
+                    
+                    Ok((compose_subs(&s1, &s), t))
                 }
                 // handles: let _ => ... and non-final non-let expressions
                 None => {
@@ -283,7 +289,29 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             };
             Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
         }
-        Expr::Obj(_) => todo!(),
+        Expr::Obj(Obj { props, .. }) => {
+            let mut ss: Vec<Subst> = vec![];
+            let mut ps: Vec<types::TProp> = vec![];
+            for p in props {
+                match p {
+                    Prop::Shorthand(_) => {
+                        // TODO: lookup the value in the current ctx
+                        todo!()
+                    }
+                    Prop::KeyValue(KeyValueProp { name, value, .. }) => {
+                        let (s, t) = infer(ctx, value)?;
+                        ss.push(s);
+                        // TODO: check if the inferred type is T | undefined and use that
+                        // determine the value of optional
+                        ps.push(ctx.prop(name, t, false));
+                    }
+                }
+            }
+
+            let s = compose_many_subs(&ss);
+            let t = ctx.object(ps);
+            Ok((s, t))
+        }
         Expr::Await(_) => todo!(),
         Expr::Tuple(Tuple { elems, .. }) => {
             let result: Result<Vec<(Subst, Type)>, String> =
@@ -337,9 +365,9 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
         }
         (Variant::Tuple(tuple1), Variant::Tuple(tuple2)) => {
             if rel == Some(Rel::Subtype) && tuple1.len() < tuple2.len() {
-                return Err(String::from("too many elements to unpack"))
+                return Err(String::from("too many elements to unpack"));
             } else if rel == None && tuple1.len() != tuple2.len() {
-                return Err(String::from("lengths of tuples do not match"))
+                return Err(String::from("lengths of tuples do not match"));
             };
             let mut s = Subst::new();
             for (t1, t2) in tuple1.iter().zip(tuple2) {
@@ -348,15 +376,42 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
                 s = compose_subs(&s, &s1);
             }
             Ok(s)
-        },
+        }
+        (Variant::Object(obj1), Variant::Object(obj2)) => {
+            let map1: HashMap<_, _> = obj1
+                .iter()
+                // TODO: handle optional properties
+                .map(|p| (p.name.to_owned(), p.ty.to_owned()))
+                .collect();
+            let map2: HashMap<_, _> = obj2
+                .iter()
+                // TODO: handle optional properties
+                .map(|p| (p.name.to_owned(), p.ty.to_owned()))
+                .collect();
+            
+            let mut s = Subst::new();
+            for (k, p2) in map2.iter() {
+                match map1.get(k) {
+                    Some(p1) => {
+                        let s1 = unify(p1, p2, ctx, rel.clone())?;
+                        s = compose_subs(&s, &s1);
+                    },
+                    None => {
+                        return Err(format!("Property '{k}' missing in {t1}"))
+                    }
+                }
+            }
+
+            Ok(s)
+        }
         (_, _) => {
             if rel == Some(Rel::Subtype) && is_subtype(t1, t2, ctx)? {
-                return Ok(Subst::default())
+                return Ok(Subst::default());
             }
             println!("Unification failure: {t1} != {t2}");
             println!("rel = {:?}", rel);
             todo!("Unification failure")
-        },
+        }
     }
 }
 
