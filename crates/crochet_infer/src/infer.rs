@@ -52,33 +52,14 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
 
                         let (is, it) = infer(&ctx, init)?;
 
-                        // let rel = if get_type_ann(pattern).is_some() {
-                        //     Some(Rel::Supertype)
-                        // } else {
-                        //     None
-                        // };
-
-                        // unifies initializer and pattern
-                        let s = unify(&pt, &it, &ctx, Some(Rel::Subtype))?;
+                        // Unifies initializer and pattern.
+                        // The inferred type of the init value must be a sub-type
+                        // of the pattern it's being assigned to.
+                        let s = unify(&it, &pt, &ctx, Some(Rel::Subtype))?;
                         
                         // infer_pattern can generate a non-empty Subst when the pattern includes
                         // a type annotation.
                         let s = compose_many_subs(&[is, ps, s]);
-
-                        // We need to apply the substitutions from the constraint solver to the
-                        // pattern and initializer types before checking if they're subtypes since
-                        // since is_subtype() ignores type variables.
-                        // let pt = pt.apply(&s);
-                        // let it = it.apply(&s);
-
-                        // If the initializer is not a subtype of what we're assigning it
-                        // to, return an error.
-                        // TODO: Add `is_subtype` check... or handle it as part of the `unify` call above.
-                        // if !is_subtype(&it, &pt, &ctx)? {
-                        //     return Err(String::from(
-                        //         "value is not a subtype of decl's declared type",
-                        //     ));
-                        // }
 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
@@ -248,8 +229,10 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                     let type_param_map = HashMap::new();
                     let (ps, pa, pt) = infer_pattern(pat, &new_ctx, &type_param_map)?;
 
-                    // unifies initializer and pattern
-                    let s = unify(&pt, &it, &new_ctx, None)?;
+                    // Unifies initializer and pattern.
+                    // The inferred type of the init value must be a sub-type
+                    // of the pattern it's being assigned to.
+                    let s = unify(&it, &pt, &new_ctx, Some(Rel::Subtype))?;
 
                     // infer_pattern can generate a non-empty Subst when the pattern includes
                     // a type annotation.
@@ -365,9 +348,8 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
             }
         }
         (Variant::Tuple(tuple1), Variant::Tuple(tuple2)) => {
-            println!("rel = {:?}", rel);
             if rel == Some(Rel::Subtype) {
-                if tuple1.len() > tuple2.len() {
+                if tuple1.len() < tuple2.len() {
                     return Err(String::from("too many elements to unpack"))
                 }
             } else if tuple1.len() != tuple2.len() {
@@ -375,10 +357,8 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
             };
             let mut s = Subst::new();
             for (t1, t2) in tuple1.iter().zip(tuple2) {
-                // The order of the element types is reversed to ensure the proper
-                // sub-typing relationship when destructuring.
                 // TODO: report all errors instead of just the first error
-                let s1 = unify(&t2.apply(&s), &t1.apply(&s), ctx, rel.clone())?;
+                let s1 = unify(&t1.apply(&s), &t2.apply(&s), ctx, rel.clone())?;
                 s = compose_subs(&s, &s1);
             }
             Ok(s)

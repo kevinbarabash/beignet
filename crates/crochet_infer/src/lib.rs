@@ -121,8 +121,25 @@ mod tests {
     }
 
     #[test]
+    fn inner_let() {
+        assert_eq!(infer("() => {let x = 5; x}"), "() => 5");
+    }
+
+    #[test]
+    fn inner_let_with_type_annotation() {
+        assert_eq!(infer("() => {let x: number = 5; x}"), "() => number");
+    }
+
+    #[test]
     fn infer_tuple() {
         assert_eq!(infer("[5, true, \"hello\"]"), "[5, true, \"hello\"]");
+    }
+
+    #[test]
+    fn basic_subtyping_assignment() {
+        let ctx = infer_prog("let a: number = 5");
+
+        assert_eq!(get_type("a", &ctx), "number");
     }
 
     #[test]
@@ -146,6 +163,18 @@ mod tests {
 
         assert_eq!(get_type("a", &ctx), "5");
         assert_eq!(get_type("b", &ctx), "true");
+    }
+
+    #[test]
+    fn infer_destructuring_nested_tuples() {
+        let src = r#"
+        let [[a, b], c] = [[5, true], "hello"]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "true");
+        assert_eq!(get_type("c", &ctx), "\"hello\"");
     }
 
     #[test]
