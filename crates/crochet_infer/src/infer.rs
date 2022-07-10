@@ -45,22 +45,11 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                         }
                     }
                     false => {
-                        // An initial value should always be used when using a normal `let` statement
+                        // An initial value should always be used when using a normal
+                        // `let` statement
                         let init = init.as_ref().unwrap();
 
-                        let type_param_map = HashMap::new();
-                        let (ps, pa, pt) = infer_pattern(pattern, &ctx, &type_param_map)?;
-
-                        let (is, it) = infer(&ctx, init)?;
-
-                        // Unifies initializer and pattern.
-                        // The inferred type of the init value must be a sub-type
-                        // of the pattern it's being assigned to.
-                        let s = unify(&it, &pt, &ctx, Some(Rel::Subtype))?;
-
-                        // infer_pattern can generate a non-empty Subst when the pattern includes
-                        // a type annotation.
-                        let s = compose_many_subs(&[is, ps, s]);
+                        let (pa, s) = infer_pattern_and_init(pattern, init, &ctx)?;
 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
@@ -102,6 +91,25 @@ pub fn infer_expr(ctx: &Context, expr: &Expr) -> Result<Scheme, String> {
 fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Scheme {
     let empty_env = Env::default();
     normalize(&generalize(&empty_env, &t.to_owned().apply(s)), ctx)
+}
+
+fn infer_pattern_and_init(pat: &Pattern, init: &Expr, ctx: &Context) -> Result<(Assump, Subst), String> {
+
+    let type_param_map = HashMap::new();
+    let (ps, pa, pt) = infer_pattern(pat, ctx, &type_param_map)?;
+
+    let (is, it) = infer(ctx, init)?;
+
+    // Unifies initializer and pattern.
+    // The inferred type of the init value must be a sub-type
+    // of the pattern it's being assigned to.
+    let s = unify(&it, &pt, ctx, Some(Rel::Subtype))?;
+
+    // infer_pattern can generate a non-empty Subst when the pattern includes
+    // a type annotation.
+    let s = compose_many_subs(&[is, ps, s]);
+
+    Ok((pa, s))
 }
 
 fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
@@ -222,39 +230,27 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             body,
             ..
         }) => {
-            let (is, it) = infer(ctx, init)?;
-
             match pattern {
                 Some(pat) => {
-                    println!("is = {:#?}", is);
+                    // Creates a copy of the Context so that any new variables added
+                    // to the scope are limited to `body`.
                     let mut new_ctx = ctx.clone();
-                    new_ctx.types = ctx.types.apply(&is);
-                    // TODO: update `infer_pattern` to generalize patterns
-                    // let t = generalize(&new_ctx.types, &it);
 
-                    let type_param_map = HashMap::new();
-                    let (ps, pa, pt) = infer_pattern(pat, &new_ctx, &type_param_map)?;
+                    let (pa, s) = infer_pattern_and_init(pat, init, &new_ctx)?;
 
-                    // Unifies initializer and pattern.
-                    // The inferred type of the init value must be a sub-type
-                    // of the pattern it's being assigned to.
-                    let s = unify(&it, &pt, &new_ctx, Some(Rel::Subtype))?;
-
-                    // infer_pattern can generate a non-empty Subst when the pattern includes
-                    // a type annotation.
-                    let s1 = compose_subs(&ps, &s);
-                    let pa = pa.apply(&s1);
-
-                    for (k, v) in pa.iter() {
-                        new_ctx.values.insert(k.to_owned(), v.to_owned());
+                    // Inserts the new variables from infer_pattern() into the
+                    // current context.
+                    for (name, scheme) in pa {
+                        new_ctx.values.insert(name.to_owned(), scheme.to_owned());
                     }
 
-                    let (s, t) = infer(&new_ctx, body.as_ref())?;
+                    // Infers the type of the body.
+                    let (s1, t) = infer(&new_ctx, body.as_ref())?;
                     
                     // Copies over the count from new_ctx so that it's unique across Contexts.
                     ctx.state.count.set(new_ctx.state.count.get());
                     
-                    Ok((compose_subs(&s, &s1), t))
+                    Ok((compose_subs(&s1, &s), t))
                 }
                 // handles: let _ => ... and non-final non-let expressions
                 None => {
