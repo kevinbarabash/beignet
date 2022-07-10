@@ -138,15 +138,67 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    fn infer_destructuring_tuple_extra_init_elems() {
+        let src = r#"
+        let [a, b] = [5, true, "hello"]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "true");
+    }
+
+    #[test]
+    #[should_panic="too many elements to unpack"]
+    fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack() {
+        let src = r#"
+        let [a, b, c, d] = [5, true, "hello"]
+        "#;
+        infer_prog(src);
+    }
+
+    #[test]
     fn infer_destructuring_tuple_with_type_annotation() {
         let src = r#"
         let [a, b, c]: [number, boolean, string] = [5, true, "hello"]
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "5");
-        assert_eq!(get_type("b", &ctx), "true");
-        assert_eq!(get_type("c", &ctx), "\"hello\"");
+        assert_eq!(get_type("a", &ctx), "number");
+        assert_eq!(get_type("b", &ctx), "boolean");
+        assert_eq!(get_type("c", &ctx), "string");
+    }
+
+    #[test]
+    #[should_panic="\\\"hello\\\" and boolean do not unify"]
+    fn infer_destructuring_tuple_with_incorrect_type_annotation() {
+        let src = r#"
+        let [a, b, c]: [number, boolean, string] = [5, "hello", true]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "number");
+        assert_eq!(get_type("b", &ctx), "boolean");
+        assert_eq!(get_type("c", &ctx), "string");
+    }
+
+    #[test]
+    fn infer_destructuring_tuple_extra_init_elems_with_type_annotation() {
+        let src = r#"
+        let [a, b]: [number, boolean] = [5, true, "hello"]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "number");
+        assert_eq!(get_type("b", &ctx), "boolean");
+    }
+
+    #[test]
+    #[should_panic="too many elements to unpack"]
+    fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack_with_type_annotation() {
+        let src = r#"
+        let [a, b, c, d]: [number, boolean, string, number] = [5, true, "hello"]
+        "#;
+        infer_prog(src);
     }
 }
