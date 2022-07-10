@@ -202,8 +202,14 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                     let (s1, t1) = infer(ctx, cond)?;
                     let (s2, t2) = infer(ctx, consequent)?;
                     let s3 = unify(&t1, &ctx.prim(Primitive::Bool), ctx, Some(Rel::Subtype))?;
+                    let s4 = match unify(&t2, &ctx.prim(Primitive::Undefined), ctx, None) {
+                        Ok(s) => Ok(s),
+                        Err(_) => Err(String::from(
+                            "Consequent for 'if' without 'else' must not return a value",
+                        )),
+                    }?;
                     let t = t2;
-                    Ok((compose_many_subs(&[s1, s2, s3]), t))
+                    Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
                 }
             },
         },
@@ -265,13 +271,15 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
         }) => {
             match pattern {
                 Some(pat) => infer_let(pat, init, body, ctx),
-                // handles: let _ => ... and non-final non-let expressions
-                None => todo!(),
+                None => {
+                    // TODO: warn about unused values
+                    infer(ctx, body)
+                }
             }
         }
         Expr::LetExpr(_) => {
             panic!("Unexpected LetExpr.  All LetExprs should be handled by IfElse arm.")
-        },
+        }
         Expr::Lit(lit) => {
             let s = Subst::new();
             let t = ctx.lit(lit.to_owned());
@@ -334,7 +342,11 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             Ok((s, t))
         }
         Expr::Member(_) => todo!(),
-        Expr::Empty(_) => todo!(),
+        Expr::Empty(_) => {
+            let t = ctx.prim(Primitive::Undefined);
+            let s = Subst::default();
+            Ok((s, t))
+        }
     }
 }
 
@@ -419,7 +431,7 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
             }
             println!("Unification failure: {t1} != {t2}");
             println!("rel = {:?}", rel);
-            todo!("Unification failure")
+            Err(String::from("Unification failure"))
         }
     }
 }
