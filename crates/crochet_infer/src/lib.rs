@@ -220,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="\\\"hello\\\" and boolean do not unify"]
+    #[should_panic="Unification failure"]
     fn infer_destructuring_tuple_with_incorrect_type_annotation() {
         let src = r#"
         let [a, b, c]: [number, boolean, string] = [5, "hello", true]
