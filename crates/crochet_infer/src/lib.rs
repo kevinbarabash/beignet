@@ -26,6 +26,7 @@ mod tests {
         let ctx = Context::default();
         let expr = expr_parser().parse(input).unwrap();
         let scheme = infer::infer_expr(&ctx, &expr).unwrap();
+        println!("scheme = {:#?}", scheme);
         format!("{scheme}")
     }
 
@@ -199,7 +200,14 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="too many elements to unpack"]
+    fn destructuring_tuple_inside_lambda() {
+        let result = infer("(p) => {let [x, y] = p; x + y}");
+
+        assert_eq!(result, "([number, number]) => number");
+    }
+
+    #[test]
+    #[should_panic = "too many elements to unpack"]
     fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack() {
         let src = r#"
         let [a, b, c, d] = [5, true, "hello"]
@@ -220,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn infer_destructuring_tuple_with_incorrect_type_annotation() {
         let src = r#"
         let [a, b, c]: [number, boolean, string] = [5, "hello", true]
@@ -244,11 +252,120 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="too many elements to unpack"]
-    fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack_with_type_annotation() {
+    #[should_panic = "too many elements to unpack"]
+    fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack_with_type_annotation()
+    {
         let src = r#"
         let [a, b, c, d]: [number, boolean, string, number] = [5, true, "hello"]
         "#;
         infer_prog(src);
+    }
+
+    #[test]
+    fn infer_obj() {
+        assert_eq!(infer("{x:5, y: 10}"), "{x: 5, y: 10}");
+    }
+
+    #[test]
+    fn infer_nested_obj() {
+        assert_eq!(
+            infer("{a: {b: {c: \"hello\"}}}"),
+            "{a: {b: {c: \"hello\"}}}"
+        );
+    }
+
+    #[test]
+    fn destructure_obj() {
+        let ctx = infer_prog("let {x, y} = {x: 5, y: 10}");
+
+        assert_eq!(get_type("x", &ctx), "5");
+        assert_eq!(get_type("y", &ctx), "10");
+    }
+
+    #[test]
+    fn nested_destructure_obj() {
+        let ctx = infer_prog("let {a: {b: {c}}} = {a: {b: {c: \"hello\"}}}");
+
+        assert_eq!(ctx.values.get("a"), None);
+        assert_eq!(ctx.values.get("b"), None);
+        assert_eq!(get_type("c", &ctx), "\"hello\"");
+    }
+
+    #[test]
+    fn partial_destructure_obj() {
+        let ctx = infer_prog("let {x} = {x: 5, y: 10}");
+
+        assert_eq!(get_type("x", &ctx), "5");
+    }
+
+    #[test]
+    #[should_panic = "Property 'foo' missing in {x: 5, y: 10}"]
+    fn missing_property_when_destructuring() {
+        infer_prog("let {foo} = {x: 5, y: 10}");
+    }
+
+    #[test]
+    fn obj_assignment() {
+        let ctx = infer_prog("let p = {x: 5, y: 10}");
+
+        assert_eq!(get_type("p", &ctx), "{x: 5, y: 10}");
+    }
+
+    #[test]
+    fn obj_assignment_with_type_annotation() {
+        let ctx = infer_prog("let p: {x: number, y: number} = {x: 5, y: 10}");
+
+        assert_eq!(get_type("p", &ctx), "{x: number, y: number}");
+    }
+
+    #[test]
+    fn obj_assignment_with_type_annotation_extra_properties() {
+        let ctx = infer_prog("let p: {x: number, y: number} = {x: 5, y: 10, z: 15}");
+
+        assert_eq!(get_type("p", &ctx), "{x: number, y: number}");
+    }
+
+    #[test]
+    #[should_panic = "Property 'y' missing in {x: 5}"]
+    fn obj_assignment_with_type_annotation_missing_properties() {
+        infer_prog("let p: {x: number, y: number} = {x: 5}");
+    }
+
+    #[test]
+    fn obj_param_destructuring() {
+        assert_eq!(
+            infer("({x, y}) => x + y"),
+            "({x: number, y: number}) => number"
+        );
+    }
+
+    #[test]
+    fn obj_param_destructuring_with_type_annotation() {
+        assert_eq!(
+            infer("({x, y}: {x: 5, y: 10}) => x + y"),
+            "({x: 5, y: 10}) => number"
+        );
+    }
+
+    #[test]
+    fn obj_param_partial_destructuring_with_type_annotation() {
+        assert_eq!(
+            infer("({a}: {a: string, b: boolean}) => a"),
+            "({a: string, b: boolean}) => string"
+        );
+    }
+
+    #[test]
+    #[should_panic = "Property 'c' missing in {a: string, b: boolean}"]
+    fn obj_destructuring_with_type_annotation_missing_param() {
+        infer("({c}: {a: string, b: boolean}) => c");
+    }
+
+    #[test]
+    fn destructuring_inside_lambda() {
+        assert_eq!(
+            infer("(p) => {let {x, y} = p; x + y}"),
+            "({x: number, y: number}) => number"
+        );
     }
 }
