@@ -52,27 +52,14 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
 
                         let (is, it) = infer(&ctx, init)?;
 
-                        // unifies initializer and pattern
-                        let s = unify(&pt, &it, &ctx)?;
+                        // Unifies initializer and pattern.
+                        // The inferred type of the init value must be a sub-type
+                        // of the pattern it's being assigned to.
+                        let s = unify(&it, &pt, &ctx, Some(Rel::Subtype))?;
                         
                         // infer_pattern can generate a non-empty Subst when the pattern includes
                         // a type annotation.
                         let s = compose_many_subs(&[is, ps, s]);
-
-                        // We need to apply the substitutions from the constraint solver to the
-                        // pattern and initializer types before checking if they're subtypes since
-                        // since is_subtype() ignores type variables.
-                        // let pt = pt.apply(&s);
-                        // let it = it.apply(&s);
-
-                        // If the initializer is not a subtype of what we're assigning it
-                        // to, return an error.
-                        // TODO: Add `is_subtype` check... or handle it as part of the `unify` call above.
-                        // if !is_subtype(&it, &pt, &ctx)? {
-                        //     return Err(String::from(
-                        //         "value is not a subtype of decl's declared type",
-                        //     ));
-                        // }
 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
@@ -126,7 +113,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let tv = ctx.fresh_var();
             // Are we missing an `apply()` call here?
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
-            let s3 = unify(&t1, &ctx.lam(args_ts, Box::from(tv.clone())), ctx)?;
+            let s3 = unify(&t1, &ctx.lam(args_ts, Box::from(tv.clone())), ctx, None)?;
 
             // ss = [s3, ...args_ss, s1]
             let mut ss = vec![s3.clone()];
@@ -142,7 +129,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
         Expr::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer(ctx, expr)?;
             let tv = ctx.fresh_var();
-            let s2 = unify(&ctx.lam(vec![tv.clone()], Box::from(tv.clone())), &t, ctx)?;
+            let s2 = unify(&ctx.lam(vec![tv.clone()], Box::from(tv.clone())), &t, ctx, None)?;
             Ok((compose_subs(&s2, &s1), tv.apply(&s2)))
         }
         Expr::Ident(Ident { name, .. }) => {
@@ -161,14 +148,14 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 let (s1, t1) = infer(ctx, cond)?;
                 let (s2, t2) = infer(ctx, consequent)?;
                 let (s3, t3) = infer(ctx, alternate)?;
-                let s4 = unify(&t1, &ctx.prim(Primitive::Bool), ctx)?;
+                let s4 = unify(&t1, &ctx.prim(Primitive::Bool), ctx, Some(Rel::Subtype))?;
                 let t = union_types(&t2, &t3, ctx);
                 Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
             }
             None => {
                 let (s1, t1) = infer(ctx, cond)?;
                 let (s2, t2) = infer(ctx, consequent)?;
-                let s3 = unify(&t1, &ctx.prim(Primitive::Bool), ctx)?;
+                let s3 = unify(&t1, &ctx.prim(Primitive::Bool), ctx, Some(Rel::Subtype))?;
                 let t = t2;
                 Ok((compose_many_subs(&[s1, s2, s3]), t))
             }
@@ -195,16 +182,16 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let params: Result<Vec<(Subst, Type)>, String> = params
                 .iter()
                 .map(|param| {
-                    let (subst, assump, param_type) =
+                    let (ps, pa, pt) =
                         infer_pattern(param, &new_ctx, &type_params_map)?;
 
                     // Inserts any new variables introduced by infer_pattern() into
                     // the current context.
-                    for (name, scheme) in assump {
+                    for (name, scheme) in pa {
                         new_ctx.values.insert(name, scheme);
                     }
 
-                    Ok((subst, param_type))
+                    Ok((ps, pt))
                 })
                 .collect();
 
@@ -216,7 +203,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             ctx.state.count.set(new_ctx.state.count.get());
 
             let s = match return_type {
-                Some(return_type) => unify(&rt, &infer_type_ann(return_type, ctx), ctx)?,
+                Some(return_type) => unify(&rt, &infer_type_ann(return_type, ctx), ctx, None)?,
                 None => Subst::default(),
             };
             let t = ctx.lam(ts, Box::from(rt));
@@ -242,8 +229,10 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                     let type_param_map = HashMap::new();
                     let (ps, pa, pt) = infer_pattern(pat, &new_ctx, &type_param_map)?;
 
-                    // unifies initializer and pattern
-                    let s = unify(&pt, &it, &new_ctx)?;
+                    // Unifies initializer and pattern.
+                    // The inferred type of the init value must be a sub-type
+                    // of the pattern it's being assigned to.
+                    let s = unify(&it, &pt, &new_ctx, Some(Rel::Subtype))?;
 
                     // infer_pattern can generate a non-empty Subst when the pattern includes
                     // a type annotation.
@@ -270,13 +259,15 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let t = ctx.lit(lit.to_owned());
             Ok((s, t))
         }
-        Expr::Op(Op {op, left, right, ..}) => {
+        Expr::Op(Op {
+            op, left, right, ..
+        }) => {
             // TODO: check what `op` is and handle comparison operators
             // differently from arithmetic operators
             let (s1, t1) = infer(ctx, left)?;
             let (s2, t2) = infer(ctx, right)?;
-            let s3 = unify(&t1, &ctx.prim(Primitive::Num), ctx)?;
-            let s4 = unify(&t2, &ctx.prim(Primitive::Num), ctx)?;
+            let s3 = unify(&t1, &ctx.prim(Primitive::Num), ctx, Some(Rel::Subtype))?;
+            let s4 = unify(&t2, &ctx.prim(Primitive::Num), ctx, Some(Rel::Subtype))?;
             let t = match op {
                 BinOp::Add => ctx.prim(Primitive::Num),
                 BinOp::Sub => ctx.prim(Primitive::Num),
@@ -293,23 +284,40 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
         }
         Expr::Obj(_) => todo!(),
         Expr::Await(_) => todo!(),
-        Expr::Tuple(_) => todo!(),
+        Expr::Tuple(Tuple { elems, .. }) => {
+            let result: Result<Vec<(Subst, Type)>, String> =
+                elems.iter().map(|elem| infer(ctx, elem)).collect();
+            let (ss, ts): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
+
+            let s = compose_many_subs(&ss);
+            let t = ctx.tuple(ts);
+            Ok((s, t))
+        }
         Expr::Member(_) => todo!(),
         Expr::Empty(_) => todo!(),
     }
 }
 
-fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Rel {
+    Subtype,
+    Supertype,
+}
+
+fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst, String> {
+    if rel == Some(Rel::Supertype) {
+        return unify(t2, t1, ctx, Some(Rel::Subtype));
+    }
     match (&t1.variant, &t2.variant) {
         (Variant::Var, _) => bind(&t1.id, t2),
         (_, Variant::Var) => bind(&t2.id, t1),
         (Variant::Lam(lam1), Variant::Lam(lam2)) => {
             let mut s = Subst::new();
             for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
-                let s1 = unify(&p1.apply(&s), &p2.apply(&s), ctx)?;
+                let s1 = unify(&p1.apply(&s), &p2.apply(&s), ctx, None)?;
                 s = compose_subs(&s, &s1);
             }
-            let s1 = unify(&lam1.ret.apply(&s), &lam2.ret, ctx)?;
+            let s1 = unify(&lam1.ret.apply(&s), &lam2.ret, ctx, None)?;
             Ok(compose_subs(&s, &s1))
         }
         (Variant::Prim(prim1), Variant::Prim(prim2)) => {
@@ -339,7 +347,27 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Err(format!("{lit} and {prim} do not unify"))
             }
         }
-        (_, _) => todo!(),
+        (Variant::Tuple(tuple1), Variant::Tuple(tuple2)) => {
+            if rel == Some(Rel::Subtype) {
+                if tuple1.len() < tuple2.len() {
+                    return Err(String::from("too many elements to unpack"))
+                }
+            } else if tuple1.len() != tuple2.len() {
+                return Err(String::from("lengths of tuples do not match"))
+            };
+            let mut s = Subst::new();
+            for (t1, t2) in tuple1.iter().zip(tuple2) {
+                // TODO: report all errors instead of just the first error
+                let s1 = unify(&t1.apply(&s), &t2.apply(&s), ctx, rel.clone())?;
+                s = compose_subs(&s, &s1);
+            }
+            Ok(s)
+        },
+        (_, _) => {
+            println!("Unification failure: {t1} != {t2}");
+            println!("rel = {:?}", rel);
+            todo!()
+        },
     }
 }
 
@@ -401,7 +429,9 @@ fn infer_pattern(
     match get_type_ann(pat) {
         Some(type_ann) => {
             let type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
-            let s = unify(&type_ann_ty, &pat_type, ctx)?;
+            // Allowing type_ann_ty to be a subtype of pat_type because
+            // only non-refutable patterns can have type annotations.
+            let s = unify(&type_ann_ty, &pat_type, ctx, Some(Rel::Subtype))?;
             Ok((s, new_vars, type_ann_ty))
         }
         None => Ok((Subst::new(), new_vars, pat_type)),

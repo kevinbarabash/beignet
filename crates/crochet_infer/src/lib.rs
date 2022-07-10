@@ -119,4 +119,136 @@ mod tests {
     fn infer_app_of_lam() {
         assert_eq!(infer("((x) => x)(5)"), "5");
     }
+
+    #[test]
+    fn inner_let() {
+        assert_eq!(infer("() => {let x = 5; x}"), "() => 5");
+    }
+
+    #[test]
+    fn inner_let_with_type_annotation() {
+        assert_eq!(infer("() => {let x: number = 5; x}"), "() => number");
+    }
+
+    #[test]
+    fn infer_tuple() {
+        assert_eq!(infer("[5, true, \"hello\"]"), "[5, true, \"hello\"]");
+    }
+
+    #[test]
+    fn basic_subtyping_assignment() {
+        let ctx = infer_prog("let a: number = 5");
+
+        assert_eq!(get_type("a", &ctx), "number");
+    }
+
+    #[test]
+    fn infer_destructuring_tuple() {
+        let src = r#"
+        let [a, b, c] = [5, true, "hello"]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "true");
+        assert_eq!(get_type("c", &ctx), "\"hello\"");
+    }
+
+    #[test]
+    fn infer_destructuring_tuple_extra_init_elems() {
+        let src = r#"
+        let [a, b] = [5, true, "hello"]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "true");
+    }
+
+    #[test]
+    fn infer_destructuring_nested_tuples() {
+        let src = r#"
+        let [[a, b], c] = [[5, true], "hello"]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "true");
+        assert_eq!(get_type("c", &ctx), "\"hello\"");
+    }
+
+    #[test]
+    fn infer_destructuring_function_params() {
+        let result = infer("([x, y]) => x + y");
+
+        assert_eq!(result, "([number, number]) => number");
+    }
+
+    #[test]
+    fn infer_destructuring_function_params_with_type_annotations() {
+        let result = infer("([x, y]: [string, boolean]) => [x, y]");
+
+        assert_eq!(result, "([string, boolean]) => [string, boolean]");
+    }
+
+    #[test]
+    fn infer_incomplete_destructuring_function_params_with_type_annotations() {
+        let result = infer("([x]: [string, boolean]) => x");
+
+        assert_eq!(result, "([string, boolean]) => string");
+    }
+
+    #[test]
+    #[should_panic="too many elements to unpack"]
+    fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack() {
+        let src = r#"
+        let [a, b, c, d] = [5, true, "hello"]
+        "#;
+        infer_prog(src);
+    }
+
+    #[test]
+    fn infer_destructuring_tuple_with_type_annotation() {
+        let src = r#"
+        let [a, b, c]: [number, boolean, string] = [5, true, "hello"]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "number");
+        assert_eq!(get_type("b", &ctx), "boolean");
+        assert_eq!(get_type("c", &ctx), "string");
+    }
+
+    #[test]
+    #[should_panic="\\\"hello\\\" and boolean do not unify"]
+    fn infer_destructuring_tuple_with_incorrect_type_annotation() {
+        let src = r#"
+        let [a, b, c]: [number, boolean, string] = [5, "hello", true]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "number");
+        assert_eq!(get_type("b", &ctx), "boolean");
+        assert_eq!(get_type("c", &ctx), "string");
+    }
+
+    #[test]
+    fn infer_destructuring_tuple_extra_init_elems_with_type_annotation() {
+        let src = r#"
+        let [a, b]: [number, boolean] = [5, true, "hello"]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "number");
+        assert_eq!(get_type("b", &ctx), "boolean");
+    }
+
+    #[test]
+    #[should_panic="too many elements to unpack"]
+    fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack_with_type_annotation() {
+        let src = r#"
+        let [a, b, c, d]: [number, boolean, string, number] = [5, true, "hello"]
+        "#;
+        infer_prog(src);
+    }
 }
