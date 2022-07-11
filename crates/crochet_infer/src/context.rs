@@ -10,12 +10,12 @@ use super::substitutable::*;
 // of (Id, Scheme) where Id was a String.
 pub type Env = HashMap<String, types::Scheme>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct State {
     pub count: Cell<i32>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Context {
     pub values: Env,
     pub types: Env,

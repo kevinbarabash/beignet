@@ -101,6 +101,27 @@ mod tests {
     }
 
     #[test]
+    fn infer_if() {
+        let src = r#"
+        let n = 0
+        let result = if n == 0 { 5; }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "undefined");
+    }
+
+    #[test]
+    #[should_panic="Consequent for 'if' without 'else' must not return a value"]
+    fn infer_if_must_be_undefined() {
+        let src = r#"
+        let n = 0
+        let result = if n == 0 { 5 }
+        "#;
+        infer_prog(src);
+    }
+
+    #[test]
     fn infer_fib() {
         let src = r###"
         let rec fib = (n) => if n == 0 {
@@ -400,5 +421,155 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(get_type("add", &ctx), "({x: number, y: number}) => number");
+    }
+
+    // TODO: handle refutable patterns in if-else
+    // TODO: handle irrefutable patterns with union types
+    // e.g. given the following type:
+    // foo: {a: number, b: number} | {x: string, y: string}
+    // or
+    // bar: {a: number, b: number} | {a: string, a: string}
+    // if we do:
+    // if let {a, b} = foo { ... }
+    // a and b will both be numbers
+    // if let {a, b} = bar { ... }
+    // a and b will both be number | string
+
+    #[test]
+    fn infer_let_ignore_result() {
+        assert_eq!(infer("() => {let _ = 5; 10}"), "() => 10");
+    }
+
+    #[test]
+    fn infer_expression_statements() {
+        assert_eq!(infer("() => {5; 10}"), "() => 10");
+    }
+
+    #[test]
+    fn type_decl() {
+        let src = r#"
+        type Point = {x: number, y: number}
+        let p: Point = {x: 5, y: 10}
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("p", &ctx), "Point");
+    }
+
+    #[test]
+    fn external_decl() {
+        let src = r#"
+        type Point = {x: number, y: number}
+        declare let p: Point
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("p", &ctx), "Point");
+    }
+
+    #[test]
+    fn lambda_with_type_param() {
+        let src = r#"
+        let fst = <T>(a: T, b: T): T => {
+            a
+        }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("fst", &ctx), "<t0>(t0, t0) => t0");
+    }
+
+    #[test]
+    fn lambda_with_multiple_type_params() {
+        let src = r#"
+        let fst = <A, B>(a: A, b: B): A => {
+            a
+        }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("fst", &ctx), "<t0, t1>(t0, t1) => t0");
+    }
+
+    #[test]
+    fn calling_a_generic_function() {
+        let src = r#"
+        let fst = <A, B>(a: A, b: B): A => {
+            a
+        }
+        let result = fst(5, 10)
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "5");
+    }
+
+    #[test]
+    fn calling_lambda_returning_generic_lambda() {
+        let src = r#"
+        let run = () => (a, b) => a
+        let fst = run()
+        let x = fst(5, 10)
+        let y = fst(true, false)
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("fst", &ctx), "<t0, t1>(t0, t1) => t0");
+        assert_eq!(get_type("x", &ctx), "5");
+        assert_eq!(get_type("y", &ctx), "true");
+    }
+    
+    #[test]
+    fn calling_generic_lambda_inside_lambda() {
+        let src = r#"
+        let run = () => {
+            let fst = (a, b) => a;
+            [fst(5, 10), fst(true, false)]
+        }
+        let result = run()
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "[5, true]");
+    }
+
+    #[test]
+    fn lambda_with_explicit_types() {
+        let src = r#"
+        let add = (a: number, b: number): number => {
+            a + b
+        }
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("add", &ctx), "(number, number) => number");
+    }
+
+    #[test]
+    #[should_panic="number and string do not unify"]
+    fn lambda_with_incorrect_return_type() {
+        let src = r#"
+        let add = (a: number, b: number): string => {
+            a + b
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    // TODO: make this test case return an error
+    #[test]
+    #[should_panic="string and number do not unify"]
+    fn lambda_with_incorrect_param_type() {
+        let src = r#"
+        let add = (a: number, b: string): number => {
+            a + b
+        }
+        "#;
+
+        infer_prog(src);
     }
 }
