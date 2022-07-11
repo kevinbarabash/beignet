@@ -112,7 +112,7 @@ fn infer_pattern_and_init(
     // a type annotation.
     let s = compose_many_subs(&[is, ps, s]);
 
-    Ok((pa, s))
+    Ok((pa.apply(&s), s))
 }
 
 fn infer_let(
@@ -255,13 +255,19 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             ctx.state.count.set(new_ctx.state.count.get());
 
             let s = match return_type {
-                Some(return_type) => unify(&rt, &infer_type_ann(return_type, ctx), ctx, None)?,
+                Some(return_type) => unify(
+                    &rt,
+                    &infer_type_ann_with_params(return_type, ctx, &type_params_map),
+                    ctx,
+                    None,
+                )?,
                 None => Subst::default(),
             };
             let t = ctx.lam(ts, Box::from(rt));
             let s = compose_subs(&s, &compose_subs(&rs, &compose_many_subs(&ss)));
+            let t = t.apply(&s);
 
-            Ok((s.clone(), t.apply(&s)))
+            Ok((s, t))
         }
         Expr::Let(Let {
             pattern,
@@ -369,7 +375,7 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
                 let s1 = unify(&p1.apply(&s), &p2.apply(&s), ctx, None)?;
                 s = compose_subs(&s, &s1);
             }
-            let s1 = unify(&lam1.ret.apply(&s), &lam2.ret, ctx, None)?;
+            let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx, None)?;
             Ok(compose_subs(&s, &s1))
         }
         (Variant::Prim(prim1), Variant::Prim(prim2)) => {
@@ -497,7 +503,11 @@ fn infer_pattern(
             // Allowing type_ann_ty to be a subtype of pat_type because
             // only non-refutable patterns can have type annotations.
             let s = unify(&type_ann_ty, &pat_type, ctx, Some(Rel::Subtype))?;
-            Ok((s, new_vars, type_ann_ty))
+
+            // Substs are applied to any new variables introduced.  This handles
+            // the situation where explicit types have be provided for function
+            // parameters.
+            Ok((s.clone(), new_vars.apply(&s), type_ann_ty))
         }
         None => Ok((Subst::new(), new_vars, pat_type)),
     }
