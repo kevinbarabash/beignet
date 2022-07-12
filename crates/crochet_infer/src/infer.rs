@@ -127,7 +127,6 @@ fn infer_pattern_and_init(
     Ok((pa.apply(&s), s))
 }
 
-// TODO: split this into separate methods.
 fn infer_let(
     pat: &Pattern,
     init: &Expr,
@@ -201,6 +200,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             ..
         }) => match alternate {
             Some(alternate) => {
+                // TODO: allow 'let' if if-else
                 let (s1, t1) = infer(ctx, cond)?;
                 // TODO: clone ctx so that we don't contaminate the parent
                 // context with new variables
@@ -212,6 +212,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             }
             None => match cond.as_ref() {
                 Expr::LetExpr(LetExpr { pat, expr, .. }) => {
+                    // TODO: require 'expr' to evaluate to 'undefined'
                     infer_let(pat, expr, consequent, ctx, &PatternUsage::Match)
                 }
                 _ => {
