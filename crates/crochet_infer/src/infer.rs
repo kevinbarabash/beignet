@@ -49,7 +49,8 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                         // `let` statement
                         let init = init.as_ref().unwrap();
 
-                        let (pa, s) = infer_pattern_and_init(pattern, init, &ctx)?;
+                        let (pa, s) =
+                            infer_pattern_and_init(pattern, init, &ctx, &PatternUsage::Assign)?;
 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
@@ -93,10 +94,16 @@ fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Scheme {
     normalize(&generalize(&empty_env, &t.to_owned().apply(s)), ctx)
 }
 
+enum PatternUsage {
+    Assign,
+    Match,
+}
+
 fn infer_pattern_and_init(
     pat: &Pattern,
     init: &Expr,
     ctx: &Context,
+    pu: &PatternUsage,
 ) -> Result<(Assump, Subst), String> {
     let type_param_map = HashMap::new();
     let (ps, pa, pt) = infer_pattern(pat, ctx, &type_param_map)?;
@@ -104,9 +111,14 @@ fn infer_pattern_and_init(
     let (is, it) = infer(ctx, init)?;
 
     // Unifies initializer and pattern.
-    // The inferred type of the init value must be a sub-type
-    // of the pattern it's being assigned to.
-    let s = unify(&it, &pt, ctx, Some(Rel::Subtype))?;
+    let s = match pu {
+        // Assign: The inferred type of the init value must be a sub-type
+        // of the pattern it's being assigned to.
+        PatternUsage::Assign => unify(&it, &pt, ctx, Some(Rel::Subtype))?,
+        // Matching: The pattern must be a sub-type of the expression
+        // it's being matched against
+        PatternUsage::Match => unify(&pt, &it, ctx, Some(Rel::Subtype))?,
+    };
 
     // infer_pattern can generate a non-empty Subst when the pattern includes
     // a type annotation.
@@ -120,9 +132,10 @@ fn infer_let(
     init: &Expr,
     body: &Expr,
     ctx: &Context,
+    pu: &PatternUsage,
 ) -> Result<(Subst, Type), String> {
     let mut new_ctx = ctx.clone();
-    let (pa, s1) = infer_pattern_and_init(pat, init, &new_ctx)?;
+    let (pa, s1) = infer_pattern_and_init(pat, init, &new_ctx, pu)?;
 
     // Inserts the new variables from infer_pattern() into the
     // current context.
@@ -187,6 +200,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             ..
         }) => match alternate {
             Some(alternate) => {
+                // TODO: allow 'let' if if-else
                 let (s1, t1) = infer(ctx, cond)?;
                 // TODO: clone ctx so that we don't contaminate the parent
                 // context with new variables
@@ -197,7 +211,10 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
             }
             None => match cond.as_ref() {
-                Expr::LetExpr(LetExpr { pat, expr, .. }) => infer_let(pat, expr, consequent, ctx),
+                Expr::LetExpr(LetExpr { pat, expr, .. }) => {
+                    // TODO: require 'expr' to evaluate to 'undefined'
+                    infer_let(pat, expr, consequent, ctx, &PatternUsage::Match)
+                }
                 _ => {
                     let (s1, t1) = infer(ctx, cond)?;
                     let (s2, t2) = infer(ctx, consequent)?;
@@ -276,7 +293,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             ..
         }) => {
             match pattern {
-                Some(pat) => infer_let(pat, init, body, ctx),
+                Some(pat) => infer_let(pat, init, body, ctx, &PatternUsage::Assign),
                 None => {
                     // TODO: warn about unused values
                     infer(ctx, body)
