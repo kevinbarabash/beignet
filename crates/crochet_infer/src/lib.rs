@@ -112,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Consequent for 'if' without 'else' must not return a value"]
+    #[should_panic = "Consequent for 'if' without 'else' must not return a value"]
     fn infer_if_must_be_undefined() {
         let src = r#"
         let n = 0
@@ -185,6 +185,15 @@ mod tests {
 
         assert_eq!(get_type("a", &ctx), "5");
         assert_eq!(get_type("b", &ctx), "true");
+    }
+
+    #[test]
+    #[should_panic="Duplicate identifier in pattern"]
+    fn infer_destructuring_tuple_reused_identifier() {
+        let src = r#"
+        let [a, a] = [5, true]
+        "#;
+        infer_prog(src);
     }
 
     #[test]
@@ -301,6 +310,24 @@ mod tests {
 
         assert_eq!(get_type("x", &ctx), "5");
         assert_eq!(get_type("y", &ctx), "10");
+    }
+
+    #[test]
+    fn destructure_obj_with_renaming() {
+        let src = "let {x: a, y: b} = {x: 5, y: 10}";
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "10");
+        assert_eq!(ctx.values.get("x"), None);
+        assert_eq!(ctx.values.get("y"), None);
+    }
+
+    #[test]
+    #[should_panic="Duplicate identifier in pattern"]
+    fn infer_destructuring_obj_reused_identifier() {
+        let src = "let {x: a, y: a} = {x: 5, y: 10}";
+        infer_prog(src);
     }
 
     #[test]
@@ -423,6 +450,96 @@ mod tests {
         assert_eq!(get_type("add", &ctx), "({x: number, y: number}) => number");
     }
 
+    #[test]
+    fn infer_if_let_refutable_is() {
+        let src = r#"
+        declare let a: string | number
+        let sum = if let x is number = a {
+            x + 5
+        }
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+
+        // Ensures we aren't polluting the outside context
+        assert!(ctx.values.get("x").is_none());
+    }
+
+    #[test]
+    #[should_panic="string and number do not unify"]
+    fn infer_if_let_refutable_is_unification_failure() {
+        let src = r#"
+        declare let a: string | number
+        let sum = if let x is string = a {
+            x + 5
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn infer_if_let_refutable_is_inside_obj() {
+        let src = r#"
+        declare let foo: {bar: string | number}
+        let sum = if let {bar: x is number} = foo {
+            x + 5
+        }
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+
+        // Ensures we aren't polluting the outside context
+        assert!(ctx.values.get("x").is_none());
+    }
+
+    // This test currently results in the following failure:
+    // Unification failure: {type: "foo", num: t10} != {type: "foo", num: number} | {type: "bar", str: string}
+    // TODO: update unify() and is_subtype() to check each element in a union when determining
+    // if something is a subtype or not.  If one of them is, then call unify with the t1 and
+    // element that matches.
+    // TODO: figure out what to do when there are multiple matches... it should be the same
+    // thing that happens when destructuring a union of objects (or union of tuples).
+    #[test]
+    #[ignore]
+    fn infer_if_let_disjoint_union() {
+        let src = r#"
+        declare let action: {type: "foo", num: number} | {type: "bar", str: string}
+        let sum = if let {type: "foo", num: x} = action {
+            x + 5
+        }
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+
+        // Ensures we aren't polluting the outside context
+        assert!(ctx.values.get("x").is_none());
+    }
+
+    #[test]
+    fn infer_if_let_refutable_is_inside_array() {
+        let src = r#"
+        declare let point: [string | number, string | number]
+        let sum = if let [x is number, y is number] = point {
+            x + y
+        }
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+
+        // Ensures we aren't polluting the outside context
+        assert!(ctx.values.get("x").is_none());
+        assert!(ctx.values.get("y").is_none());
+    }
+
     // TODO: handle refutable patterns in if-else
     // TODO: handle irrefutable patterns with union types
     // e.g. given the following type:
@@ -520,7 +637,7 @@ mod tests {
         assert_eq!(get_type("x", &ctx), "5");
         assert_eq!(get_type("y", &ctx), "true");
     }
-    
+
     #[test]
     fn calling_generic_lambda_inside_lambda() {
         let src = r#"
@@ -549,7 +666,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="number and string do not unify"]
+    #[should_panic = "number and string do not unify"]
     fn lambda_with_incorrect_return_type() {
         let src = r#"
         let add = (a: number, b: number): string => {
@@ -562,7 +679,7 @@ mod tests {
 
     // TODO: make this test case return an error
     #[test]
-    #[should_panic="string and number do not unify"]
+    #[should_panic = "string and number do not unify"]
     fn lambda_with_incorrect_param_type() {
         let src = r#"
         let add = (a: number, b: string): number => {
