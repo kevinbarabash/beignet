@@ -90,7 +90,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .then(expr.clone())
             .map_with_span(|(pat, expr), span: Span| {
                 Expr::LetExpr(LetExpr {
-                    span, // FixMe
+                    span,
                     pat,
                     expr: Box::from(expr),
                 })
@@ -141,7 +141,6 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .map_with_span(|elems, span: Span| Expr::Tuple(Tuple { span, elems }));
 
         let atom = choice((
-            // if_let,
             if_else,
             r#bool,
             num,
