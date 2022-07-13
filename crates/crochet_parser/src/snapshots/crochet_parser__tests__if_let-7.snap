@@ -1,14 +1,14 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"if let {x: 5, y} = p { y; }\")"
+expression: "parse(\"if let {x: 5, y} = p { y; } else if let {x} = p { x; }\")"
 ---
 Program {
     body: [
         Expr {
-            span: 0..27,
+            span: 0..54,
             expr: IfElse(
                 IfElse {
-                    span: 0..27,
+                    span: 0..54,
                     cond: LetExpr(
                         LetExpr {
                             span: 3..20,
@@ -75,7 +75,61 @@ Program {
                             ),
                         },
                     ),
-                    alternate: None,
+                    alternate: Some(
+                        IfElse(
+                            IfElse {
+                                span: 33..54,
+                                cond: LetExpr(
+                                    LetExpr {
+                                        span: 36..47,
+                                        pat: Object(
+                                            ObjectPat {
+                                                span: 40..44,
+                                                props: [
+                                                    Assign(
+                                                        AssignPatProp {
+                                                            span: 41..42,
+                                                            key: Ident {
+                                                                span: 41..42,
+                                                                name: "x",
+                                                            },
+                                                            value: None,
+                                                        },
+                                                    ),
+                                                ],
+                                                optional: false,
+                                                type_ann: None,
+                                            },
+                                        ),
+                                        expr: Ident(
+                                            Ident {
+                                                span: 46..47,
+                                                name: "p",
+                                            },
+                                        ),
+                                    },
+                                ),
+                                consequent: Let(
+                                    Let {
+                                        span: 50..0,
+                                        pattern: None,
+                                        init: Ident(
+                                            Ident {
+                                                span: 50..51,
+                                                name: "x",
+                                            },
+                                        ),
+                                        body: Empty(
+                                            Empty {
+                                                span: 0..0,
+                                            },
+                                        ),
+                                    },
+                                ),
+                                alternate: None,
+                            },
+                        ),
+                    ),
                 },
             ),
         },

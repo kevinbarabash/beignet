@@ -423,6 +423,8 @@ mod tests {
         let p = {x: 5, y: 10}
         let sum = if let {x, y} = p {
             x + y
+        } else {
+            0
         }
         "#;
 
@@ -436,11 +438,61 @@ mod tests {
     }
 
     #[test]
+    fn infer_if_let_without_else_no_return() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        if let {x, y} = p {
+            x + y;
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic="Consequent for 'if' without 'else' must not return a value"]
+    fn infer_if_let_without_else_errors_with_return() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        if let {x, y} = p {
+            x + y
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn infer_if_let_chaining() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        let c = {a: 0, b: 1}
+        let sum = if let {x, y} = p {
+            x
+        } else if let {a, b} = c {
+            b
+        } else {
+            0
+        }
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "5 | 1 | 0");
+
+        // Ensures we aren't polluting the outside context
+        assert!(ctx.values.get("x").is_none());
+        assert!(ctx.values.get("y").is_none());
+    }
+
+    #[test]
     fn infer_if_let_inside_lambda() {
         let src = r#"
         let add = (p) => {
             if let {x, y} = p {
                 x + y
+            } else {
+                0
             }
         }        
         "#;
@@ -456,6 +508,8 @@ mod tests {
         declare let a: string | number
         let sum = if let x is number = a {
             x + 5
+        } else {
+            0
         }
         "#;
 
@@ -465,6 +519,28 @@ mod tests {
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.values.get("x").is_none());
+    }
+
+    #[test]
+    fn infer_if_let_refutable_is_with_unreachable_code() {
+        let src = r#"
+        declare let a: string | number
+        let result = if let x is number = a {
+            x + 5
+        } else if let y is string = a {
+            y
+        } else {
+            true
+        }
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number | string | true");
+
+        // Ensures we aren't polluting the outside context
+        assert!(ctx.values.get("x").is_none());
+        assert!(ctx.values.get("y").is_none());
     }
 
     #[test]
@@ -486,6 +562,8 @@ mod tests {
         declare let foo: {bar: string | number}
         let sum = if let {bar: x is number} = foo {
             x + 5
+        } else {
+            0
         }
         "#;
 
@@ -528,6 +606,8 @@ mod tests {
         declare let point: [string | number, string | number]
         let sum = if let [x is number, y is number] = point {
             x + y
+        } else {
+            0
         }
         "#;
 

@@ -50,13 +50,9 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 let mut iter = lets.iter().rev();
 
                 // TODO: if `lets` is empty then we should return the empty type
-                
+
                 let last = match trailing_semi {
-                    Some(_) => {
-                        Expr::Empty(Empty {
-                            span: 0..0,
-                        })
-                    }
+                    Some(_) => Expr::Empty(Empty { span: 0..0 }),
                     None => {
                         match iter.next() {
                             Some(term) => match term {
@@ -65,11 +61,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                                 (Some(_), _) => panic!("Didn't expect `let` here"),
                                 (_, expr) => expr.clone(),
                             },
-                            None => {
-                                Expr::Empty(Empty {
-                                    span: 0..0,
-                                })
-                            },
+                            None => Expr::Empty(Empty { span: 0..0 }),
                         }
                     }
                 };
@@ -92,37 +84,33 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 result
             });
 
-        let if_let = just_with_padding("if")
-            .ignore_then(just_with_padding("let"))
+        let let_expr = just_with_padding("let")
             .ignore_then(pattern.clone())
             .then_ignore(just_with_padding("="))
             .then(expr.clone())
-            .then(block.clone())
-            .map_with_span(|((pat, expr), block), span: Span| {
-                let my_pat: Pattern = pat;
-                Expr::IfElse(IfElse {
-                    span: span.clone(),
-                    cond: Box::from(Expr::LetExpr(LetExpr {
-                        span, // FixMe
-                        pat: my_pat,
-                        expr: Box::from(expr),
-                    })),
-                    consequent: Box::from(block),
-                    alternate: None,
+            .map_with_span(|(pat, expr), span: Span| {
+                Expr::LetExpr(LetExpr {
+                    span,
+                    pat,
+                    expr: Box::from(expr),
                 })
             });
 
         let if_else = recursive(|if_else| {
             just_with_padding("if")
-                .ignore_then(expr.clone())
+                .ignore_then(choice((let_expr, expr.clone())))
                 .then(block.clone())
-                .then(just_with_padding("else").ignore_then(block.clone().or(if_else)).or_not())
+                .then(
+                    just_with_padding("else")
+                        .ignore_then(block.clone().or(if_else))
+                        .or_not(),
+                )
                 .map_with_span(|((cond, cons), alt), span: Span| {
                     Expr::IfElse(IfElse {
                         span,
                         cond: Box::from(cond),
                         consequent: Box::from(cons),
-                        alternate: alt.map(Box::from)
+                        alternate: alt.map(Box::from),
                     })
                 })
         });
@@ -153,7 +141,6 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .map_with_span(|elems, span: Span| Expr::Tuple(Tuple { span, elems }));
 
         let atom = choice((
-            if_let,
             if_else,
             r#bool,
             num,
