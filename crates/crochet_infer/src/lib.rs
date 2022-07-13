@@ -438,6 +438,31 @@ mod tests {
     }
 
     #[test]
+    fn infer_if_let_without_else_no_return() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        if let {x, y} = p {
+            x + y;
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic="Consequent for 'if' without 'else' must not return a value"]
+    fn infer_if_let_without_else_errors_with_return() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        if let {x, y} = p {
+            x + y
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
     fn infer_if_let_chaining() {
         let src = r#"
         let p = {x: 5, y: 10}
