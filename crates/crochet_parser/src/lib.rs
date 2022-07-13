@@ -209,6 +209,10 @@ mod tests {
         insta::assert_debug_snapshot!(parse("if let {x, y} = p { x + y; }"));
         insta::assert_debug_snapshot!(parse("if let {x: a, y: b} = p { a + b; }"));
         insta::assert_debug_snapshot!(parse("if let {x: 5, y} = p { y; }"));
+        // TODO: this should probably error since there's consequent
         insta::assert_debug_snapshot!(parse("if let a is string = value"));
+        insta::assert_debug_snapshot!(parse("if let {x: 5, y} = p { y; }"));
+        insta::assert_debug_snapshot!(parse("if let {x: 5, y} = p { y } else { 0 }"));
+        insta::assert_debug_snapshot!(parse("if let {x: 5, y} = p { y; } else if let {x} = p { x; }"));
     }
 }

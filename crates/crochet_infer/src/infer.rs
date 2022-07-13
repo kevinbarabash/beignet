@@ -148,8 +148,8 @@ fn infer_let(
     // Copies over the count from new_ctx so that it's unique across Contexts.
     ctx.state.count.set(new_ctx.state.count.get());
 
-    let t = t2;
     let s = compose_subs(&s2, &s1);
+    let t = t2;
     Ok((s, t))
 }
 
@@ -200,20 +200,41 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             ..
         }) => match alternate {
             Some(alternate) => {
-                // TODO: allow 'let' if if-else
-                let (s1, t1) = infer(ctx, cond)?;
-                // TODO: clone ctx so that we don't contaminate the parent
-                // context with new variables
-                let (s2, t2) = infer(ctx, consequent)?;
-                let (s3, t3) = infer(ctx, alternate)?;
-                let s4 = unify(&t1, &ctx.prim(Primitive::Bool), ctx, Some(Rel::Subtype))?;
-                let t = union_types(&t2, &t3, ctx);
-                Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
+                match cond.as_ref() {
+                    Expr::LetExpr(LetExpr { pat, expr, .. }) => {
+                        // TODO: warn if the pattern isn't refutable
+                        let (s1, t1) = infer_let(pat, expr, consequent, ctx, &PatternUsage::Match)?;
+                        let (s2, t2) = infer(ctx, alternate)?;
+
+                        let s = compose_many_subs(&[s1, s2]);
+                        let t = union_types(&t1, &t2, ctx);
+                        Ok((s, t))
+                    }
+                    _ => {
+                        let (s1, t1) = infer(ctx, cond)?;
+                        let (s2, t2) = infer(ctx, consequent)?;
+                        let (s3, t3) = infer(ctx, alternate)?;
+                        let s4 = unify(&t1, &ctx.prim(Primitive::Bool), ctx, Some(Rel::Subtype))?;
+
+                        let s = compose_many_subs(&[s1, s2, s3, s4]);
+                        let t = union_types(&t2, &t3, ctx);
+                        Ok((s, t))
+                    }
+                }
             }
             None => match cond.as_ref() {
                 Expr::LetExpr(LetExpr { pat, expr, .. }) => {
-                    // TODO: require 'expr' to evaluate to 'undefined'
-                    infer_let(pat, expr, consequent, ctx, &PatternUsage::Match)
+                    let (s1, t1) = infer_let(pat, expr, consequent, ctx, &PatternUsage::Match)?;
+                    let s2 = match unify(&t1, &ctx.prim(Primitive::Undefined), ctx, None) {
+                        Ok(s) => Ok(s),
+                        Err(_) => Err(String::from(
+                            "Consequent for 'if' without 'else' must not return a value",
+                        )),
+                    }?;
+
+                    let s = compose_subs(&s2, &s1);
+                    let t = t1;
+                    Ok((s, t))
                 }
                 _ => {
                     let (s1, t1) = infer(ctx, cond)?;
@@ -225,8 +246,10 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                             "Consequent for 'if' without 'else' must not return a value",
                         )),
                     }?;
+
+                    let s = compose_many_subs(&[s1, s2, s3, s4]);
                     let t = t2;
-                    Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
+                    Ok((s, t))
                 }
             },
         },
