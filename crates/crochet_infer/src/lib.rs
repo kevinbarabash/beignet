@@ -346,6 +346,32 @@ mod tests {
         assert_eq!(get_type("x", &ctx), "5");
     }
 
+    // TODO: make this pass
+    #[test]
+    #[ignore]
+    fn partial_destructure_disjoint_union_common_property() {
+        let src = r#"
+        declare let obj: {type: "foo", value: string} | {type: "bar", value: number}
+        let {value} = obj
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("value", &ctx), "string | number");
+    }
+
+    // TODO: make this pass
+    #[test]
+    #[ignore]
+    fn partial_destructure_disjoint_union_uncommon_property() {
+        let src = r#"
+        declare let obj: {type: "foo", value: string} | {type: "bar"}
+        let {value} = obj
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("value", &ctx), "string | undefined");
+    }
+
     #[test]
     #[should_panic = "Property 'foo' missing in {x: 5, y: 10}"]
     fn missing_property_when_destructuring() {
