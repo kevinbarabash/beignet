@@ -575,36 +575,98 @@ mod tests {
         assert!(ctx.values.get("x").is_none());
     }
 
-    // This test currently results in the following failure:
-    // Unification failure: {type: "foo", num: t10} != {type: "foo", num: number} | {type: "bar", str: string}
-    // TODO: update unify() and is_subtype() to check each element in a union when determining
-    // if something is a subtype or not.  If one of them is, then call unify with the t1 and
-    // element that matches.
+    #[test]
+    #[should_panic="number and string do not unify"]
+    fn infer_if_let_refutable_is_inside_obj_incorrect_type() {
+        let src = r#"
+        declare let foo: {bar: string}
+        let result = if let {bar: x is number} = foo {
+            x
+        } else {
+            0
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
     // TODO: figure out what to do when there are multiple matches... it should be the same
     // thing that happens when destructuring a union of objects (or union of tuples).
     #[test]
-    #[ignore]
     fn infer_if_let_disjoint_union() {
         let src = r#"
         declare let action: {type: "foo", num: number} | {type: "bar", str: string}
-        let sum = if let {type: "foo", num: x} = action {
-            x + 5
+        let result = if let {type: "foo", num} = action {
+            num + 5
+        } else {
+            0
         }
         "#;
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "number");
+        assert_eq!(get_type("result", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.values.get("x").is_none());
     }
 
     #[test]
+    fn infer_if_let_disjoint_union_chaining() {
+        let src = r#"
+        declare let action: {type: "foo", num: number} | {type: "bar", str: string}
+        let result = if let {type: "foo", num} = action {
+            num + 5
+        } else if let {type: "bar", str} = action {
+            str
+        } else {
+            true
+        }
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "string | number | true");
+
+        // Ensures we aren't polluting the outside context
+        assert!(ctx.values.get("x").is_none());
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn infer_if_let_disjoint_union_no_matches() {
+        let src = r#"
+        declare let action: {type: "foo", num: number} | {type: "bar", str: string}
+        let result = if let {type: "bar", num} = action {
+            num
+        } else {
+            0
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic="string and number do not unify"]
+    fn infer_if_let_disjoint_union_incorrect_match() {
+        let src = r#"
+        declare let action: {type: "foo", num: number} | {type: "bar", str: string}
+        let result = if let {type: "bar", str} = action {
+            str + 5
+        } else {
+            0
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
     fn infer_if_let_refutable_is_inside_array() {
         let src = r#"
         declare let point: [string | number, string | number]
-        let sum = if let [x is number, y is number] = point {
+        let result = if let [x is number, y is number] = point {
             x + y
         } else {
             0
@@ -613,7 +675,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "number");
+        assert_eq!(get_type("result", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.values.get("x").is_none());

@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
+use std::convert::identity;
 
 use crochet_ast::*;
 
 use crate::substitutable::Substitutable;
-use crate::util::is_subtype;
 
 use super::context::{Context, Env};
 use super::infer_type_ann::*;
@@ -472,8 +472,11 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
             Ok(s)
         }
         (_, _) => {
-            if rel == Some(Rel::Subtype) && is_subtype(t1, t2, ctx)? {
-                return Ok(Subst::default());
+            if rel == Some(Rel::Subtype) {
+                let (b, s) = is_subtype(t1, t2, ctx)?;
+                if b {
+                    return Ok(s);
+                }
             }
             println!("Unification failure: {t1} != {t2}");
             println!("rel = {:?}", rel);
@@ -634,7 +637,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                         ObjectPatProp::Assign(AssignPatProp { key, value: _, .. }) => {
                             // We ignore the value for now, we can come back later to handle
                             // default values.
-                            println!("AssignPatProp = {:#?}", key);
+                            // TODO: handle default values
 
                             let tv = ctx.fresh_var();
                             let scheme = Scheme::from(&tv);
@@ -733,5 +736,106 @@ fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
         ctx.union(types)
     } else {
         types[0].clone()
+    }
+}
+
+// Returns true if t2 admits all values from t1.
+fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<(bool, Subst), String> {
+    match (&t1.variant, &t2.variant) {
+        (Variant::Lit(lit), Variant::Prim(prim)) => {
+            let b = matches!(
+                (lit, prim),
+                (types::Lit::Num(_), Primitive::Num)
+                    | (types::Lit::Str(_), Primitive::Str)
+                    | (types::Lit::Bool(_), Primitive::Bool)
+            );
+            let s = Subst::default();
+            Ok((b, s))
+        },
+        (Variant::Object(props1), Variant::Object(props2)) => {
+            // It's okay if t1 has extra properties, but it has to have all of t2's properties.
+            let result: Result<Vec<_>, String> = props2
+                .iter()
+                .map(|prop2| {
+                    if prop2.optional {
+                        // TODO: check the type of optional props
+                        Ok((true, Subst::default()))
+                    } else {
+                        let inner_result: Result<Vec<_>, String> = props1
+                            .iter()
+                            .map(|prop1| {
+                                if prop1.name == prop2.name {
+                                    is_subtype(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx)
+                                } else {
+                                    Ok((false, Subst::default()))
+                                }                                
+                            })
+                            .collect();
+                        let (bs, ss): (Vec<_>, Vec<_>) = inner_result?.iter().cloned().unzip();
+                        let b = bs.into_iter().any(identity);
+                        // TODO: only compose the Substs where the corresponding bool is true
+                        let s = compose_many_subs(&ss);
+                        Ok((b, s))
+                    }
+                })
+                .collect();
+            let (bs, ss): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
+            Ok((bs.into_iter().all(identity), compose_many_subs(&ss)))
+        }
+        (Variant::Tuple(types1), Variant::Tuple(types2)) => {
+            // It's okay if t1 has extra properties, but it has to have all of t2's properties.
+            if types1.len() < types2.len() {
+                panic!("t1 contain at least the same number of elements as t2");
+            }
+            let result: Result<Vec<_>, _> = types1
+                .iter()
+                .zip(types2.iter())
+                .map(|(t1, t2)| is_subtype(t1, t2, ctx))
+                .collect();
+            let (bs, ss): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
+            Ok((bs.into_iter().all(identity), compose_many_subs(&ss)))
+        }
+        (Variant::Union(types), _) => {
+            let result: Result<Vec<_>, _> =
+                types.iter().map(|t1| is_subtype(t1, t2, ctx)).collect();
+            let (bs, ss): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
+            Ok((bs.into_iter().all(identity), compose_many_subs(&ss)))
+        }
+        (_, Variant::Union(types)) => {
+            let result: Result<Vec<_>, _> =
+                types.iter().map(|t2| is_subtype(t1, t2, ctx)).collect();
+            // TODO: only compose the Substs where the corresponding bool is true
+            let (bs, ss): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
+            Ok((bs.into_iter().any(identity), compose_many_subs(&ss)))
+        }
+        (_, Variant::Alias(types::AliasType {name, ..})) => {
+            match ctx.types.get(name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    is_subtype(t1, &scheme.ty, ctx)
+                }
+                None => panic!("Can't find alias '{name}' in context"),
+            }
+        }
+        (Variant::Alias(types::AliasType { name, .. }), _) => {
+            match ctx.types.get(name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    is_subtype(&scheme.ty, t2, ctx)
+                }
+                None => panic!("Can't find alias '{name}' in context"),
+            }
+        }
+        (Variant::Var, _) => {
+            // TODO: if we return true, we should also return a Subst from the type var
+            // to the type
+            let mut s = Subst::default();
+            s.insert(t1.id, t2.to_owned());
+            Ok((true, s))
+        },
+        (v1, v2) => {
+            // TODO: add t1 => t2 to the Subst that's returned
+            Ok((v1 == v2, Subst::new()))
+        },
     }
 }
