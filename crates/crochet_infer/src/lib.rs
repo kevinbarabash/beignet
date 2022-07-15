@@ -888,4 +888,105 @@ mod tests {
 
         infer_prog(src);
     }
+
+    #[test]
+    fn call_lam_with_subtypes() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let sum = add(5, 10)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn call_lam_with_wrong_types() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let sum = add("hello", true)
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn call_lam_with_extra_params() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let sum = add(5, 10, "hello")
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+    }
+
+    #[test]
+    fn call_lam_with_too_few_params_result_in_partial_application() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let sum = add(5)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "(number) => number");
+    }
+
+    #[test]
+    fn call_lam_multiple_times_with_too_few_params() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let sum = add(5)(10)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+    }
+
+    #[test]
+    fn pass_callback_with_too_few_params() {
+        let src = r#"
+        declare let fold_num: ((number, number) => boolean, number) => number
+        let result = fold_num((x) => x, 0)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    // TODO: TypeScript takes the union of the params when unifying them
+    #[test]
+    #[ignore]
+    fn call_generic_lam_with_subtypes() {
+        let src = r#"
+        declare let add: <T>(T, T) => T
+        let sum = add(5, 10)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "5 | 10");
+    }
+
+    #[test]
+    fn infer_generic_lam() {
+        // TODO: figure out how to handle parametric functions like this
+        let src = r#"
+        let add = <T>(x: T, y: T): T => {
+            x + y
+        }
+        let sum = add(5, 5)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("add", &ctx), "(number, number) => number");
+        assert_eq!(get_type("sum", &ctx), "number");
+    }
 }
