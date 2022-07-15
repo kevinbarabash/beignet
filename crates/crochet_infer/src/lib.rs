@@ -403,7 +403,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Property 'foo' missing in {x: 5, y: 10}"]
+    #[should_panic = "Unification failure"]
     fn missing_property_when_destructuring() {
         infer_prog("let {foo} = {x: 5, y: 10}");
     }
@@ -430,7 +430,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Property 'y' missing in {x: 5}"]
+    #[should_panic = "Unification failure"]
     fn obj_assignment_with_type_annotation_missing_properties() {
         infer_prog("let p: {x: number, y: number} = {x: 5}");
     }
@@ -460,7 +460,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Property 'c' missing in {a: string, b: boolean}"]
+    #[should_panic = "Unification failure"]
     fn obj_destructuring_with_type_annotation_missing_param() {
         infer("({c}: {a: string, b: boolean}) => c");
     }
@@ -600,7 +600,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="string and number do not unify"]
+    #[should_panic="Unification failure"]
     fn infer_if_let_refutable_is_unification_failure() {
         let src = r#"
         declare let a: string | number
@@ -632,7 +632,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="number and string do not unify"]
+    #[should_panic="Unification failure"]
     fn infer_if_let_refutable_is_inside_obj_incorrect_type() {
         let src = r#"
         declare let foo: {bar: string}
@@ -704,7 +704,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="string and number do not unify"]
+    #[should_panic="Unification failure"]
     fn infer_if_let_disjoint_union_incorrect_match() {
         let src = r#"
         declare let action: {type: "foo", num: number} | {type: "bar", str: string}
@@ -769,7 +769,8 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("p", &ctx), "Point");
+        // The Point aliases in unwrapped
+        assert_eq!(get_type("p", &ctx), "{x: number, y: number}");
     }
 
     #[test]
@@ -877,7 +878,7 @@ mod tests {
 
     // TODO: make this test case return an error
     #[test]
-    #[should_panic = "string and number do not unify"]
+    #[should_panic = "Unification failure"]
     fn lambda_with_incorrect_param_type() {
         let src = r#"
         let add = (a: number, b: string): number => {
