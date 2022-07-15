@@ -313,6 +313,17 @@ mod tests {
     }
 
     #[test]
+    fn destructure_obj_with_optional() {
+        let src = r#"
+        declare let point: {x: number, y: number, z?: number}
+        let {x, y, z} = point
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("z", &ctx), "number | undefined");
+    }
+
+    #[test]
     fn destructure_obj_with_renaming() {
         let src = "let {x: a, y: b} = {x: 5, y: 10}";
         let ctx = infer_prog(src);
@@ -346,20 +357,39 @@ mod tests {
         assert_eq!(get_type("x", &ctx), "5");
     }
 
-    // TODO: make this pass
     #[test]
-    #[ignore]
     fn partial_destructure_disjoint_union_common_property() {
         let src = r#"
-        declare let obj: {type: "foo", value: string} | {type: "bar", value: number}
+        declare let obj: {
+            type: "foo",
+            same: string,
+            diff: boolean,
+        } | {
+            type: "bar",
+            same: string,
+            diff: number,
+        }
+        let {same, diff} = obj
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("same", &ctx), "string");
+        assert_eq!(get_type("diff", &ctx), "boolean | number");
+    }
+
+    #[test]
+    fn partial_destructure_disjoint_union_common_optional_property() {
+        let src = r#"
+        declare let obj: {type: "foo", value?: string} | {type: "bar", value?: number}
         let {value} = obj
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("value", &ctx), "string | number");
+        assert_eq!(get_type("value", &ctx), "string | number | undefined");
     }
 
-    // TODO: make this pass
+    // TODO: In order for this to work, we need custom handling for unifying
+    // a union of objects with an object.
     #[test]
     #[ignore]
     fn partial_destructure_disjoint_union_uncommon_property() {

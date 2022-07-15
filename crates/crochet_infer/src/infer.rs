@@ -450,12 +450,12 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
             let map1: HashMap<_, _> = obj1
                 .iter()
                 // TODO: handle optional properties
-                .map(|p| (p.name.to_owned(), p.ty.to_owned()))
+                .map(|p| (p.name.to_owned(), p.get_type(ctx)))
                 .collect();
             let map2: HashMap<_, _> = obj2
                 .iter()
                 // TODO: handle optional properties
-                .map(|p| (p.name.to_owned(), p.ty.to_owned()))
+                .map(|p| (p.name.to_owned(), p.get_type(ctx)))
                 .collect();
 
             let mut s = Subst::new();
@@ -511,10 +511,29 @@ fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
 // subs are composed from left to right with ones to the right
 // being applied to all of the ones to the left.
 fn compose_many_subs(subs: &[Subst]) -> Subst {
+    subs.iter()
+        .fold(Subst::new(), |accum, next| compose_subs(&accum, next))
+}
+
+// If are multiple entries for the same type variable, this function merges
+// them into a union type (simplifying the type if possible).
+fn compose_subs_with_context(s1: &Subst, s2: &Subst, ctx: &Context) -> Subst {
+    let mut result: Subst = s2.iter().map(|(i, t)| (*i, t.apply(s1))).collect();
+    for (i, t) in s1 {
+        match result.get(i) {
+            Some(t1) => {
+                let t = union_types(t, t1, ctx);
+                result.insert(*i, t)
+            }
+            None => result.insert(*i, t.to_owned()),
+        };
+    }
+    result
+}
+
+fn compose_many_subs_with_context(subs: &[Subst], ctx: &Context) -> Subst {
     subs.iter().fold(Subst::new(), |accum, next| {
-        let mut result: Subst = compose_subs(&accum, next);
-        result.extend(accum);
-        result
+        compose_subs_with_context(&accum, next, ctx)
     })
 }
 
@@ -806,7 +825,10 @@ fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<(bool, Subst), Stri
             let result: Result<Vec<_>, _> =
                 types.iter().map(|t1| is_subtype(t1, t2, ctx)).collect();
             let (bs, ss): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
-            Ok((bs.into_iter().all(identity), compose_many_subs(&ss)))
+            Ok((
+                bs.into_iter().all(identity),
+                compose_many_subs_with_context(&ss, ctx),
+            ))
         }
         (_, Variant::Union(types)) => {
             let result: Result<Vec<_>, _> =
@@ -843,6 +865,10 @@ fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<(bool, Subst), Stri
         }
         (Variant::Var, _) => {
             let s = Subst::from([(t1.id, t2.to_owned())]);
+            Ok((true, s))
+        }
+        (_, Variant::Var) => {
+            let s = Subst::from([(t2.id, t1.to_owned())]);
             Ok((true, s))
         }
         (v1, v2) => {
