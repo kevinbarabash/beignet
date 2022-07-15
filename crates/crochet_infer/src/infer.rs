@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
+use std::convert::identity;
 
 use crochet_ast::*;
 
 use crate::substitutable::Substitutable;
-use crate::util::is_subtype;
 
 use super::context::{Context, Env};
 use super::infer_type_ann::*;
@@ -450,12 +450,12 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
             let map1: HashMap<_, _> = obj1
                 .iter()
                 // TODO: handle optional properties
-                .map(|p| (p.name.to_owned(), p.ty.to_owned()))
+                .map(|p| (p.name.to_owned(), p.get_type(ctx)))
                 .collect();
             let map2: HashMap<_, _> = obj2
                 .iter()
                 // TODO: handle optional properties
-                .map(|p| (p.name.to_owned(), p.ty.to_owned()))
+                .map(|p| (p.name.to_owned(), p.get_type(ctx)))
                 .collect();
 
             let mut s = Subst::new();
@@ -472,8 +472,11 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context, rel: Option<Rel>) -> Result<Subst,
             Ok(s)
         }
         (_, _) => {
-            if rel == Some(Rel::Subtype) && is_subtype(t1, t2, ctx)? {
-                return Ok(Subst::default());
+            if rel == Some(Rel::Subtype) {
+                let (b, s) = is_subtype(t1, t2, ctx)?;
+                if b {
+                    return Ok(s);
+                }
             }
             println!("Unification failure: {t1} != {t2}");
             println!("rel = {:?}", rel);
@@ -491,9 +494,7 @@ fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
     } else if occurs_check(id, t) {
         Err(String::from("InfiniteType"))
     } else {
-        let mut result = Subst::default();
-        result.insert(id.to_owned(), t.to_owned());
-        Ok(result)
+        Ok(Subst::from([(id.to_owned(), t.to_owned())]))
     }
 }
 
@@ -510,10 +511,29 @@ fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
 // subs are composed from left to right with ones to the right
 // being applied to all of the ones to the left.
 fn compose_many_subs(subs: &[Subst]) -> Subst {
+    subs.iter()
+        .fold(Subst::new(), |accum, next| compose_subs(&accum, next))
+}
+
+// If are multiple entries for the same type variable, this function merges
+// them into a union type (simplifying the type if possible).
+fn compose_subs_with_context(s1: &Subst, s2: &Subst, ctx: &Context) -> Subst {
+    let mut result: Subst = s2.iter().map(|(i, t)| (*i, t.apply(s1))).collect();
+    for (i, t) in s1 {
+        match result.get(i) {
+            Some(t1) => {
+                let t = union_types(t, t1, ctx);
+                result.insert(*i, t)
+            }
+            None => result.insert(*i, t.to_owned()),
+        };
+    }
+    result
+}
+
+fn compose_many_subs_with_context(subs: &[Subst], ctx: &Context) -> Subst {
     subs.iter().fold(Subst::new(), |accum, next| {
-        let mut result: Subst = compose_subs(&accum, next);
-        result.extend(accum);
-        result
+        compose_subs_with_context(&accum, next, ctx)
     })
 }
 
@@ -634,7 +654,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                         ObjectPatProp::Assign(AssignPatProp { key, value: _, .. }) => {
                             // We ignore the value for now, we can come back later to handle
                             // default values.
-                            println!("AssignPatProp = {:#?}", key);
+                            // TODO: handle default values
 
                             let tv = ctx.fresh_var();
                             let scheme = Scheme::from(&tv);
@@ -733,5 +753,215 @@ fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
         ctx.union(types)
     } else {
         types[0].clone()
+    }
+}
+
+// Returns true if t2 admits all values from t1.
+fn is_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<(bool, Subst), String> {
+    match (&t1.variant, &t2.variant) {
+        (Variant::Lit(lit), Variant::Prim(prim)) => {
+            let b = matches!(
+                (lit, prim),
+                (types::Lit::Num(_), Primitive::Num)
+                    | (types::Lit::Str(_), Primitive::Str)
+                    | (types::Lit::Bool(_), Primitive::Bool)
+            );
+            let s = Subst::default();
+            Ok((b, s))
+        }
+        (Variant::Object(props1), Variant::Object(props2)) => {
+            // It's okay if t1 has extra properties, but it has to have all of t2's properties.
+            let result: Result<Vec<_>, String> = props2
+                .iter()
+                .map(|prop2| {
+                    let inner_result: Result<Vec<_>, String> = props1
+                        .iter()
+                        .map(|prop1| {
+                            if prop1.name == prop2.name {
+                                is_subtype(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx)
+                            } else {
+                                Ok((false, Subst::default()))
+                            }
+                        })
+                        .collect();
+                    let mut b = false;
+                    let mut ss = vec![];
+                    for (ib, is) in inner_result? {
+                        if ib {
+                            ss.push(is);
+                        }
+                        b |= ib; // any
+                    }
+                    let s = compose_many_subs(&ss);
+                    // TODO: we need to make sure that there are no properties in props1
+                    // with this name
+                    if !b && prop2.optional {
+                        match props1.iter().find(|prop1| prop1.name == prop2.name) {
+                            Some(_) => Ok((false, s)),
+                            None => Ok((true, s)),
+                        }
+                    } else {
+                        Ok((b, s))
+                    }
+                })
+                .collect();
+            let (bs, ss): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
+            Ok((bs.into_iter().all(identity), compose_many_subs(&ss)))
+        }
+        (Variant::Tuple(types1), Variant::Tuple(types2)) => {
+            // It's okay if t1 has extra properties, but it has to have all of t2's properties.
+            if types1.len() < types2.len() {
+                panic!("t1 contain at least the same number of elements as t2");
+            }
+            let result: Result<Vec<_>, _> = types1
+                .iter()
+                .zip(types2.iter())
+                .map(|(t1, t2)| is_subtype(t1, t2, ctx))
+                .collect();
+            let (bs, ss): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
+            Ok((bs.into_iter().all(identity), compose_many_subs(&ss)))
+        }
+        (Variant::Union(types), _) => {
+            let result: Result<Vec<_>, _> =
+                types.iter().map(|t1| is_subtype(t1, t2, ctx)).collect();
+            let (bs, ss): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
+            Ok((
+                bs.into_iter().all(identity),
+                compose_many_subs_with_context(&ss, ctx),
+            ))
+        }
+        (_, Variant::Union(types)) => {
+            let result: Result<Vec<_>, _> =
+                types.iter().map(|t2| is_subtype(t1, t2, ctx)).collect();
+
+            let mut b = false;
+            let mut ss = vec![];
+            for (ib, is) in result? {
+                if ib {
+                    ss.push(is);
+                }
+                b |= ib; // any
+            }
+            let s = compose_many_subs(&ss);
+            Ok((b, s))
+        }
+        (_, Variant::Alias(types::AliasType { name, .. })) => {
+            match ctx.types.get(name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    is_subtype(t1, &scheme.ty, ctx)
+                }
+                None => panic!("Can't find alias '{name}' in context"),
+            }
+        }
+        (Variant::Alias(types::AliasType { name, .. }), _) => {
+            match ctx.types.get(name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    is_subtype(&scheme.ty, t2, ctx)
+                }
+                None => panic!("Can't find alias '{name}' in context"),
+            }
+        }
+        (Variant::Var, _) => {
+            let s = Subst::from([(t1.id, t2.to_owned())]);
+            Ok((true, s))
+        }
+        (_, Variant::Var) => {
+            let s = Subst::from([(t2.id, t1.to_owned())]);
+            Ok((true, s))
+        }
+        (v1, v2) => {
+            // TODO: add t1 => t2 to the Subst that's returned
+            Ok((v1 == v2, Subst::new()))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn num(val: &str) -> Lit {
+        Lit::num(val.to_owned(), 0..0)
+    }
+
+    fn str(val: &str) -> Lit {
+        Lit::str(val.to_owned(), 0..0)
+    }
+
+    fn bool(val: &bool) -> Lit {
+        Lit::bool(val.to_owned(), 0..0)
+    }
+
+    #[test]
+    fn literals_are_subtypes_of_corresponding_primitives() {
+        let ctx = Context::default();
+
+        let result = is_subtype(&ctx.lit(num("5")), &ctx.prim(Primitive::Num), &ctx);
+        assert_eq!(result, Ok((true, Subst::default())));
+
+        let result = is_subtype(&ctx.lit(str("hello")), &ctx.prim(Primitive::Str), &ctx);
+        assert_eq!(result, Ok((true, Subst::default())));
+
+        let result = is_subtype(&ctx.lit(bool(&true)), &ctx.prim(Primitive::Bool), &ctx);
+        assert_eq!(result, Ok((true, Subst::default())));
+    }
+
+    #[test]
+    fn object_subtypes() {
+        let ctx = Context::default();
+
+        let t1 = ctx.object(vec![
+            types::TProp {
+                name: String::from("foo"),
+                optional: false,
+                ty: ctx.lit(num("5")),
+            },
+            types::TProp {
+                name: String::from("bar"),
+                optional: false,
+                ty: ctx.lit(bool(&true)),
+            },
+            // Having extra properties is okay
+            types::TProp {
+                name: String::from("baz"),
+                optional: false,
+                ty: ctx.prim(Primitive::Str),
+            },
+            // It's okay for qux to not appear in the subtype since
+            // it's an optional property.
+        ]);
+        let t2 = ctx.object(vec![
+            types::TProp {
+                name: String::from("foo"),
+                optional: false,
+                ty: ctx.prim(Primitive::Num),
+            },
+            types::TProp {
+                name: String::from("bar"),
+                optional: true,
+                ty: ctx.prim(Primitive::Bool),
+            },
+            types::TProp {
+                name: String::from("qux"),
+                optional: true,
+                ty: ctx.prim(Primitive::Str),
+            },
+        ]);
+
+        let result = is_subtype(&t1, &t2, &ctx);
+        assert_eq!(result, Ok((true, Subst::default())));
+    }
+
+    // TODO: object subtype failure cases
+
+    #[test]
+    fn false_cases() {
+        let ctx = Context::default();
+
+        let result = is_subtype(&ctx.prim(Primitive::Num), &ctx.lit(num("5")), &ctx);
+
+        assert_eq!(result, Ok((false, Subst::default())))
     }
 }
