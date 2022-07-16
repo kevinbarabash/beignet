@@ -155,25 +155,25 @@ fn infer_let(
 fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
     match expr {
         Expr::App(App { lam, args, .. }) => {
-            let (s1, t1) = infer(ctx, lam)?;
+            let (s1, lam_type) = infer(ctx, lam)?;
             let (mut args_ss, args_ts): (Vec<_>, Vec<_>) =
                 args.iter().filter_map(|arg| infer(ctx, arg).ok()).unzip();
 
-            let tv = ctx.fresh_var();
+            let ret_type = ctx.fresh_var();
             // Are we missing an `apply()` call here?
             // Maybe, I could see us needing an apply to handle generic functions properly
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
-            let call = Type {
+            let call_type = Type {
                 id: ctx.fresh_id(),
                 frozen: false,
                 variant: Variant::Lam(types::LamType {
                     params: args_ts,
-                    ret: Box::from(tv.clone()),
+                    ret: Box::from(ret_type.clone()),
                     is_call: true,
                 }),
                 flag: None,
             };
-            let s3 = unify_subtype(&call, &t1, ctx)?;
+            let s3 = unify_subtype(&call_type, &lam_type, ctx)?;
 
             // ss = [s3, ...args_ss, s1]
             let mut ss = vec![s3.clone()];
@@ -181,10 +181,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             ss.push(s1);
 
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
-            Ok((compose_many_subs(&ss), tv.apply(&s3)))
-            // TODO:
-            // - partial application
-            // - subtyping
+            Ok((compose_many_subs(&ss), ret_type.apply(&s3)))
         }
         Expr::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer(ctx, expr)?;
