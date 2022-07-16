@@ -865,7 +865,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "number and string do not unify"]
+    #[should_panic = "Unification failure"]
     fn lambda_with_incorrect_return_type() {
         let src = r#"
         let add = (a: number, b: number): string => {
@@ -928,12 +928,24 @@ mod tests {
     fn call_lam_with_too_few_params_result_in_partial_application() {
         let src = r#"
         declare let add: (number, number) => number
-        let sum = add(5)
+        let add5 = add(5)
         "#;
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "(number) => number");
+        assert_eq!(get_type("add5", &ctx), "(number) => number");
+    }
+
+    #[test]
+    fn call_lam_with_too_few_params_result_in_partial_application_no_params() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let plus = add()
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("plus", &ctx), "(number, number) => number");
     }
 
     #[test]
@@ -953,6 +965,18 @@ mod tests {
         let src = r#"
         declare let fold_num: ((number, number) => boolean, number) => number
         let result = fold_num((x) => true, 0)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    #[test]
+    fn pass_callback_whose_params_are_supertypes_of_expected_callback() {
+        let src = r#"
+        declare let fold_num: ((5, 10) => boolean, number) => number
+        let result = fold_num((x: number, y: number) => true, 0)
         "#;
 
         let ctx = infer_prog(src);
