@@ -7,7 +7,7 @@ use crate::substitutable::Substitutable;
 use super::context::{Context, Env};
 use super::infer_type_ann::*;
 use super::substitutable::Subst;
-use super::types::{self, freeze_scheme, Flag, Scheme, Type, Variant};
+use super::types::{self, freeze_scheme, Scheme, Type, Variant};
 use super::util::{generalize, normalize};
 
 pub fn infer_prog(prog: &Program) -> Result<Context, String> {
@@ -411,25 +411,7 @@ fn infer_property_type(
     ctx: &Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t.variant {
-        Variant::Var => {
-            let t = ctx.fresh_var();
-            let obj = ctx.object_with_flag(
-                vec![types::TProp {
-                    name: prop.name(),
-                    // We assume the property is not optional when inferring an
-                    // object from a member access.
-                    optional: false,
-                    ty: t.clone(),
-                }],
-                Flag::MemberAccess,
-            );
-            let mem1 = ctx.mem(obj_t.clone(), &prop.name());
-            let mem2 = ctx.mem(obj.clone(), &prop.name());
-            let s1 = unify(&mem1, &mem2, ctx)?;
-            let s2 = unify(&t, &obj, ctx)?;
-            let s = compose_subs(&s2, &s1);
-            Ok((s, t))
-        }
+        Variant::Var => todo!(),
         Variant::Lam(_) => todo!(),
         Variant::Prim(_) => todo!(),
         Variant::Lit(_) => todo!(),
