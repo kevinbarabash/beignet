@@ -155,9 +155,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("a.b.c"));
         insta::assert_debug_snapshot!(parse("foo.bar()"));
         insta::assert_debug_snapshot!(parse("p.x * p.x + p.y * p.y"));
-        // TODO: rework the parser to allow this test case to pass
-        // This likely requires extracting `atom` out into its own recursive parser
-        // insta::assert_debug_snapshot!(parse("foo().bar()"));
+        insta::assert_debug_snapshot!(parse("foo().bar()"));
     }
 
     #[test]

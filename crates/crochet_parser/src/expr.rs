@@ -141,10 +141,13 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .map_with_span(|elems, span: Span| Expr::Tuple(Tuple { span, elems }));
 
         let atom = choice((
-            if_else,
+            // quarks (can't be broken down any further)
             r#bool,
             num,
             r#str,
+
+            // can be used as sub-expressions, but have the highest precedence
+            if_else,
             ident.map(Expr::Ident),
             obj,
             tuple,
@@ -153,60 +156,64 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
 
-        // TODO: do a similar recursive thing to what we do with if_else.
-        // dotting on an if-else or a jsx node is a bit weird.
-        let mem = atom
+        enum Suffix {
+            Member(MemberProp, Span),
+            Call(Vec<Expr>, Span),
+        }
+
+        // NOTE: We use this approach of parsing suffixes instead of using a recursive
+        // parser which would be left recursive (this causes a stack overflow).
+        let atom_with_suffix = atom
             .clone()
             .then(
-                just_with_padding(".")
-                    .ignore_then(text::ident())
-                    .map_with_span(|name, span: Span| {
-                        let prop = MemberProp::Ident(Ident {
-                            span: span.clone(),
-                            name,
-                        });
-                        (prop, span)
-                    })
-                    .repeated(),
+                choice((
+                    just_with_padding(".")
+                        .ignore_then(text::ident())
+                        .map_with_span(|name, span: Span| {
+                            let prop = MemberProp::Ident(Ident {
+                                span: span.clone(),
+                                name,
+                            });
+                            Suffix::Member(prop, span)
+                        }),
+                    expr.clone()
+                        .separated_by(just_with_padding(","))
+                        .allow_trailing()
+                        .delimited_by(just_with_padding("("), just_with_padding(")"))
+                        .map_with_span(|args, span: Span| {
+                            Suffix::Call(args, span)
+                        })
+                )).repeated()
             )
-            .foldl(|f, (prop, span)| {
-                let start = f.span().start;
-                let end = span.end;
-                let span = start..end;
-
-                Expr::Member(Member {
-                    span,
-                    obj: Box::new(f),
-                    prop,
-                })
-            });
-
-        let app = mem
-            .clone()
-            .then(
-                expr.clone()
-                    .separated_by(just_with_padding(","))
-                    .allow_trailing()
-                    .delimited_by(just_with_padding("("), just_with_padding(")"))
-                    .map_with_span(|args, span: Span| (args, span))
-                    .repeated(),
-            )
-            .foldl(|f, (args, span)| {
-                let start = f.span().start;
-                let end = span.end;
-                let span = start..end;
-
-                Expr::App(App {
-                    span,
-                    lam: Box::new(f),
-                    args,
-                })
+            .foldl(|f, suffix| {
+                match suffix {
+                    Suffix::Member(prop, span) => {
+                        let start = f.span().start;
+                        let end = span.end;
+                        
+                        Expr::Member(Member {
+                            span: start..end,
+                            obj: Box::new(f),
+                            prop,
+                        })
+                    },
+                    Suffix::Call(args, span) => {
+                        let start = f.span().start;
+                        let end = span.end;
+        
+                        Expr::App(App {
+                            span: start..end,
+                            lam: Box::new(f),
+                            args,
+                        })
+                    }
+                }
             });
 
         // Application is higher precedence than `await`
         let r#await = just_with_padding("await")
             .or_not()
-            .then(app.clone())
+            .then(atom_with_suffix)
             .map_with_span(|(option, arg), span: Span| match option {
                 Some(_) => Expr::Await(Await {
                     span,
