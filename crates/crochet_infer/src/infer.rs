@@ -163,7 +163,17 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             // Are we missing an `apply()` call here?
             // Maybe, I could see us needing an apply to handle generic functions properly
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
-            let s3 = unify_subtype(&ctx.lam(args_ts, Box::from(tv.clone())), &t1, ctx)?;
+            let call = Type {
+                id: ctx.fresh_id(),
+                frozen: false,
+                variant: Variant::Lam(types::LamType {
+                    params: args_ts,
+                    ret: Box::from(tv.clone()),
+                    is_call: true,
+                }),
+                flag: None,
+            };
+            let s3 = unify_subtype(&call, &t1, ctx)?;
 
             // ss = [s3, ...args_ss, s1]
             let mut ss = vec![s3.clone()];
@@ -179,11 +189,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
         Expr::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer(ctx, expr)?;
             let tv = ctx.fresh_var();
-            let s2 = unify(
-                &ctx.lam(vec![tv.clone()], Box::from(tv.clone())),
-                &t,
-                ctx,
-            )?;
+            let s2 = unify(&ctx.lam(vec![tv.clone()], Box::from(tv.clone())), &t, ctx)?;
             Ok((compose_subs(&s2, &s1), tv.apply(&s2)))
         }
         Expr::Ident(Ident { name, .. }) => {
@@ -755,23 +761,38 @@ fn unify_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         }
         (Variant::Lam(lam1), Variant::Lam(lam2)) => {
             let mut s = Subst::new();
-            if lam1.params.len() < lam2.params.len() {
-                // Partial application
-                let partial_ret = ctx.lam(lam2.params[lam1.params.len()..].to_vec(), lam2.ret.clone());
-                for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
-                    let s1 = unify_subtype(&p1.apply(&s), &p2.apply(&s), ctx)?;
-                    s = compose_subs(&s, &s1);
+            if lam1.is_call {
+                if lam1.params.len() < lam2.params.len() {
+                    // Partial application
+                    let partial_ret =
+                        ctx.lam(lam2.params[lam1.params.len()..].to_vec(), lam2.ret.clone());
+                    for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
+                        let s1 = unify_subtype(&p1.apply(&s), &p2.apply(&s), ctx)?;
+                        s = compose_subs(&s, &s1);
+                    }
+                    let s1 = unify_subtype(&lam1.ret.apply(&s), &partial_ret, ctx)?;
+                    Ok(compose_subs(&s, &s1))
+                } else {
+                    // Regular application
+                    for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
+                        let s1 = unify_subtype(&p1.apply(&s), &p2.apply(&s), ctx)?;
+                        s = compose_subs(&s, &s1);
+                    }
+                    let s1 = unify_subtype(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
+                    Ok(compose_subs(&s, &s1))
                 }
-                let s1 = unify_subtype(&lam1.ret.apply(&s), &partial_ret, ctx)?;
-                Ok(compose_subs(&s, &s1))
-            } else {
-                // Regular application
+            } else if lam1.params.len() <= lam2.params.len() {
+                // If `lam1` isn't being applied then it's okay if has fewer params
+                // than `lam2`.  This is because functions can be passed extra params
+                // meaning that any place `lam2` is used, `lam1` can be used as well.
                 for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
                     let s1 = unify_subtype(&p1.apply(&s), &p2.apply(&s), ctx)?;
                     s = compose_subs(&s, &s1);
                 }
                 let s1 = unify_subtype(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
+            } else {
+                Err(String::from("Couldn't unify lambdas"))
             }
         }
         (Variant::Object(props1), Variant::Object(props2)) => {
@@ -783,7 +804,9 @@ fn unify_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let mut ss = vec![];
                     for prop1 in props1.iter() {
                         if prop1.name == prop2.name {
-                            if let Ok(s) = unify_subtype(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx) {
+                            if let Ok(s) =
+                                unify_subtype(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx)
+                            {
                                 b = true;
                                 ss.push(s);
                             }
@@ -818,7 +841,7 @@ fn unify_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let result: Result<Vec<_>, _> =
                 types.iter().map(|t1| unify_subtype(t1, t2, ctx)).collect();
             let ss = result?; // This is only okay if all calls to is_subtype are okay
-                Ok(compose_many_subs_with_context(&ss, ctx))
+            Ok(compose_many_subs_with_context(&ss, ctx))
         }
         (_, Variant::Union(types)) => {
             let mut b = false;

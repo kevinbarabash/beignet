@@ -36,9 +36,10 @@ impl Substitutable for Type {
                 let variant = match &self.variant {
                     Variant::Var => self.variant.to_owned(),
                     // TODO: handle widening of lambdas
-                    Variant::Lam(LamType { params, ret }) => Variant::Lam(LamType {
-                        params: params.iter().map(|param| param.apply(sub)).collect(),
-                        ret: Box::from(ret.apply(sub)),
+                    Variant::Lam(lam) => Variant::Lam(LamType {
+                        is_call: lam.is_call,
+                        params: lam.params.iter().map(|param| param.apply(sub)).collect(),
+                        ret: Box::from(lam.ret.apply(sub)),
                     }),
                     Variant::Prim(_) => self.variant.to_owned(),
                     Variant::Lit(_) => self.variant.to_owned(),

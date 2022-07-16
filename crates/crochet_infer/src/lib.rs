@@ -952,12 +952,29 @@ mod tests {
     fn pass_callback_with_too_few_params() {
         let src = r#"
         declare let fold_num: ((number, number) => boolean, number) => number
-        let result = fold_num((x) => x, 0)
+        let result = fold_num((x) => true, 0)
         "#;
 
         let ctx = infer_prog(src);
 
         assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    #[test]
+    #[should_panic="Couldn't unify lambdas"]
+    fn pass_callback_with_too_many_params() {
+        // This is not allowed because `fold_num` can't provide all of the params
+        // that the callback is expecting and it would result in partial application
+        // when the `fold_num` is not expecting it.  While it's possible to conceive
+        // of a scenario where a callback returns a function and a partially applied
+        // calback results in correct function, allowing this in the type checker
+        // is bound to result in confusing and hard to understand code.
+        let src = r#"
+        declare let fold_num: ((number, number) => boolean, number) => number
+        let result = fold_num((x, y, z) => true, 0)
+        "#;
+
+        infer_prog(src);
     }
 
     // TODO: TypeScript takes the union of the params when unifying them
