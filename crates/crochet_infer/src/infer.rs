@@ -113,10 +113,10 @@ fn infer_pattern_and_init(
     let s = match pu {
         // Assign: The inferred type of the init value must be a sub-type
         // of the pattern it's being assigned to.
-        PatternUsage::Assign => unify_subtype(&it, &pt, ctx)?,
+        PatternUsage::Assign => unify(&it, &pt, ctx)?,
         // Matching: The pattern must be a sub-type of the expression
         // it's being matched against
-        PatternUsage::Match => unify_subtype(&pt, &it, ctx)?,
+        PatternUsage::Match => unify(&pt, &it, ctx)?,
     };
 
     // infer_pattern can generate a non-empty Subst when the pattern includes
@@ -173,7 +173,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 }),
                 flag: None,
             };
-            let s3 = unify_subtype(&call_type, &lam_type, ctx)?;
+            let s3 = unify(&call_type, &lam_type, ctx)?;
 
             // ss = [s3, ...args_ss, s1]
             let mut ss = vec![s3.clone()];
@@ -216,7 +216,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                         let (s1, t1) = infer(ctx, cond)?;
                         let (s2, t2) = infer(ctx, consequent)?;
                         let (s3, t3) = infer(ctx, alternate)?;
-                        let s4 = unify_subtype(&t1, &ctx.prim(Primitive::Bool), ctx)?;
+                        let s4 = unify(&t1, &ctx.prim(Primitive::Bool), ctx)?;
 
                         let s = compose_many_subs(&[s1, s2, s3, s4]);
                         let t = union_types(&t2, &t3, ctx);
@@ -227,7 +227,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             None => match cond.as_ref() {
                 Expr::LetExpr(LetExpr { pat, expr, .. }) => {
                     let (s1, t1) = infer_let(pat, expr, consequent, ctx, &PatternUsage::Match)?;
-                    let s2 = match unify_subtype(&t1, &ctx.prim(Primitive::Undefined), ctx) {
+                    let s2 = match unify(&t1, &ctx.prim(Primitive::Undefined), ctx) {
                         Ok(s) => Ok(s),
                         Err(_) => Err(String::from(
                             "Consequent for 'if' without 'else' must not return a value",
@@ -241,8 +241,8 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 _ => {
                     let (s1, t1) = infer(ctx, cond)?;
                     let (s2, t2) = infer(ctx, consequent)?;
-                    let s3 = unify_subtype(&t1, &ctx.prim(Primitive::Bool), ctx)?;
-                    let s4 = match unify_subtype(&t2, &ctx.prim(Primitive::Undefined), ctx) {
+                    let s3 = unify(&t1, &ctx.prim(Primitive::Bool), ctx)?;
+                    let s4 = match unify(&t2, &ctx.prim(Primitive::Undefined), ctx) {
                         Ok(s) => Ok(s),
                         Err(_) => Err(String::from(
                             "Consequent for 'if' without 'else' must not return a value",
@@ -339,8 +339,8 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             // differently from arithmetic operators
             let (s1, t1) = infer(ctx, left)?;
             let (s2, t2) = infer(ctx, right)?;
-            let s3 = unify_subtype(&t1, &ctx.prim(Primitive::Num), ctx)?;
-            let s4 = unify_subtype(&t2, &ctx.prim(Primitive::Num), ctx)?;
+            let s3 = unify(&t1, &ctx.prim(Primitive::Num), ctx)?;
+            let s4 = unify(&t2, &ctx.prim(Primitive::Num), ctx)?;
             let t = match op {
                 BinOp::Add => ctx.prim(Primitive::Num),
                 BinOp::Sub => ctx.prim(Primitive::Num),
@@ -393,78 +393,6 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let t = ctx.prim(Primitive::Undefined);
             let s = Subst::default();
             Ok((s, t))
-        }
-    }
-}
-
-fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
-    match (&t1.variant, &t2.variant) {
-        (Variant::Var, _) => bind(&t1.id, t2),
-        (_, Variant::Var) => bind(&t2.id, t1),
-        (Variant::Lam(lam1), Variant::Lam(lam2)) => {
-            let mut s = Subst::new();
-            for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
-                let s1 = unify(&p1.apply(&s), &p2.apply(&s), ctx)?;
-                s = compose_subs(&s, &s1);
-            }
-            let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
-            Ok(compose_subs(&s, &s1))
-        }
-        (Variant::Prim(prim1), Variant::Prim(prim2)) => {
-            if prim1 == prim2 {
-                Ok(Subst::default())
-            } else {
-                Err(format!("{prim1} and {prim2} do not unify"))
-            }
-        }
-        (Variant::Lit(lit1), Variant::Lit(lit2)) => {
-            if lit1 == lit2 {
-                Ok(Subst::default())
-            } else {
-                Err(format!("{lit1} and {lit2} do not unify"))
-            }
-        }
-        (Variant::Tuple(tuple1), Variant::Tuple(tuple2)) => {
-            if tuple1.len() != tuple2.len() {
-                return Err(String::from("lengths of tuples do not match"));
-            };
-            let mut s = Subst::new();
-            for (t1, t2) in tuple1.iter().zip(tuple2) {
-                // TODO: report all errors instead of just the first error
-                let s1 = unify(&t1.apply(&s), &t2.apply(&s), ctx)?;
-                s = compose_subs(&s, &s1);
-            }
-            Ok(s)
-        }
-        (Variant::Object(obj1), Variant::Object(obj2)) => {
-            let map1: HashMap<_, _> = obj1
-                .iter()
-                // TODO: handle optional properties
-                .map(|p| (p.name.to_owned(), p.get_type(ctx)))
-                .collect();
-            let map2: HashMap<_, _> = obj2
-                .iter()
-                // TODO: handle optional properties
-                .map(|p| (p.name.to_owned(), p.get_type(ctx)))
-                .collect();
-
-            let mut s = Subst::new();
-            for (k, p2) in map2.iter() {
-                match map1.get(k) {
-                    Some(p1) => {
-                        let s1 = unify(p1, p2, ctx)?;
-                        s = compose_subs(&s, &s1);
-                    }
-                    None => return Err(format!("Property '{k}' missing in {t1}")),
-                }
-            }
-
-            Ok(s)
-        }
-        // TODO: unwrap aliases the same way is_subtype does
-        (_, _) => {
-            println!("Unification failure: {t1} != {t2}");
-            Err(String::from("Unification failure"))
         }
     }
 }
@@ -546,7 +474,7 @@ fn infer_pattern(
             let type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
             // Allowing type_ann_ty to be a subtype of pat_type because
             // only non-refutable patterns can have type annotations.
-            let s = unify_subtype(&type_ann_ty, &pat_type, ctx)?;
+            let s = unify(&type_ann_ty, &pat_type, ctx)?;
 
             // Substs are applied to any new variables introduced.  This handles
             // the situation where explicit types have be provided for function
@@ -741,7 +669,7 @@ fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
 }
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
-fn unify_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
+fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     let result = match (&t1.variant, &t2.variant) {
         (Variant::Lit(lit), Variant::Prim(prim)) => {
             let b = matches!(
@@ -764,18 +692,18 @@ fn unify_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let partial_ret =
                         ctx.lam(lam2.params[lam1.params.len()..].to_vec(), lam2.ret.clone());
                     for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
-                        let s1 = unify_subtype(&p1.apply(&s), &p2.apply(&s), ctx)?;
+                        let s1 = unify(&p1.apply(&s), &p2.apply(&s), ctx)?;
                         s = compose_subs(&s, &s1);
                     }
-                    let s1 = unify_subtype(&lam1.ret.apply(&s), &partial_ret, ctx)?;
+                    let s1 = unify(&lam1.ret.apply(&s), &partial_ret, ctx)?;
                     Ok(compose_subs(&s, &s1))
                 } else {
                     // Regular application
                     for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
-                        let s1 = unify_subtype(&p1.apply(&s), &p2.apply(&s), ctx)?;
+                        let s1 = unify(&p1.apply(&s), &p2.apply(&s), ctx)?;
                         s = compose_subs(&s, &s1);
                     }
-                    let s1 = unify_subtype(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
+                    let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
                     Ok(compose_subs(&s, &s1))
                 }
             } else if lam1.params.len() <= lam2.params.len() {
@@ -783,10 +711,10 @@ fn unify_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 // than `lam2`.  This is because functions can be passed extra params
                 // meaning that any place `lam2` is used, `lam1` can be used as well.
                 for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
-                    let s1 = unify_subtype(&p1.apply(&s), &p2.apply(&s), ctx)?;
+                    let s1 = unify(&p1.apply(&s), &p2.apply(&s), ctx)?;
                     s = compose_subs(&s, &s1);
                 }
-                let s1 = unify_subtype(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
+                let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
             } else {
                 Err(String::from("Couldn't unify lambdas"))
@@ -802,7 +730,7 @@ fn unify_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     for prop1 in props1.iter() {
                         if prop1.name == prop2.name {
                             if let Ok(s) =
-                                unify_subtype(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx)
+                                unify(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx)
                             {
                                 b = true;
                                 ss.push(s);
@@ -829,14 +757,14 @@ fn unify_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let result: Result<Vec<_>, _> = types1
                 .iter()
                 .zip(types2.iter())
-                .map(|(t1, t2)| unify_subtype(t1, t2, ctx))
+                .map(|(t1, t2)| unify(t1, t2, ctx))
                 .collect();
             let ss = result?; // This is only okay if all calls to is_subtype are okay
             Ok(compose_many_subs(&ss))
         }
         (Variant::Union(types), _) => {
             let result: Result<Vec<_>, _> =
-                types.iter().map(|t1| unify_subtype(t1, t2, ctx)).collect();
+                types.iter().map(|t1| unify(t1, t2, ctx)).collect();
             let ss = result?; // This is only okay if all calls to is_subtype are okay
             Ok(compose_many_subs_with_context(&ss, ctx))
         }
@@ -844,7 +772,7 @@ fn unify_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let mut b = false;
             let mut ss = vec![];
             for t2 in types.iter() {
-                if let Ok(s) = unify_subtype(t1, t2, ctx) {
+                if let Ok(s) = unify(t1, t2, ctx) {
                     b = true;
                     ss.push(s);
                 }
@@ -859,7 +787,7 @@ fn unify_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             match ctx.types.get(name) {
                 Some(scheme) => {
                     // TODO: handle schemes with qualifiers
-                    unify_subtype(t1, &scheme.ty, ctx)
+                    unify(t1, &scheme.ty, ctx)
                 }
                 None => panic!("Can't find alias '{name}' in context"),
             }
@@ -868,19 +796,13 @@ fn unify_subtype(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             match ctx.types.get(name) {
                 Some(scheme) => {
                     // TODO: handle schemes with qualifiers
-                    unify_subtype(&scheme.ty, t2, ctx)
+                    unify(&scheme.ty, t2, ctx)
                 }
                 None => panic!("Can't find alias '{name}' in context"),
             }
         }
-        (Variant::Var, _) => {
-            let s = Subst::from([(t1.id, t2.to_owned())]);
-            Ok(s)
-        }
-        (_, Variant::Var) => {
-            let s = Subst::from([(t2.id, t1.to_owned())]);
-            Ok(s)
-        }
+        (Variant::Var, _) => bind(&t1.id, t2),
+        (_, Variant::Var) => bind(&t2.id, t1),
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())
@@ -915,13 +837,13 @@ mod tests {
     fn literals_are_subtypes_of_corresponding_primitives() {
         let ctx = Context::default();
 
-        let result = unify_subtype(&ctx.lit(num("5")), &ctx.prim(Primitive::Num), &ctx);
+        let result = unify(&ctx.lit(num("5")), &ctx.prim(Primitive::Num), &ctx);
         assert_eq!(result, Ok(Subst::default()));
 
-        let result = unify_subtype(&ctx.lit(str("hello")), &ctx.prim(Primitive::Str), &ctx);
+        let result = unify(&ctx.lit(str("hello")), &ctx.prim(Primitive::Str), &ctx);
         assert_eq!(result, Ok(Subst::default()));
 
-        let result = unify_subtype(&ctx.lit(bool(&true)), &ctx.prim(Primitive::Bool), &ctx);
+        let result = unify(&ctx.lit(bool(&true)), &ctx.prim(Primitive::Bool), &ctx);
         assert_eq!(result, Ok(Subst::default()));
     }
 
@@ -967,7 +889,7 @@ mod tests {
             },
         ]);
 
-        let result = unify_subtype(&t1, &t2, &ctx);
+        let result = unify(&t1, &t2, &ctx);
         assert_eq!(result, Err(String::from("Unification failure")));
     }
 
@@ -977,7 +899,7 @@ mod tests {
     fn failure_case() {
         let ctx = Context::default();
 
-        let result = unify_subtype(&ctx.prim(Primitive::Num), &ctx.lit(num("5")), &ctx);
+        let result = unify(&ctx.prim(Primitive::Num), &ctx.lit(num("5")), &ctx);
 
         assert_eq!(result, Err(String::from("Unification failure")))
     }

@@ -865,7 +865,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "number and string do not unify"]
+    #[should_panic = "Unification failure"]
     fn lambda_with_incorrect_return_type() {
         let src = r#"
         let add = (a: number, b: number): string => {
