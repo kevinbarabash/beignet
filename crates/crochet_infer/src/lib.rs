@@ -928,12 +928,24 @@ mod tests {
     fn call_lam_with_too_few_params_result_in_partial_application() {
         let src = r#"
         declare let add: (number, number) => number
-        let sum = add(5)
+        let add5 = add(5)
         "#;
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "(number) => number");
+        assert_eq!(get_type("add5", &ctx), "(number) => number");
+    }
+
+    #[test]
+    fn call_lam_with_too_few_params_result_in_partial_application_no_params() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let plus = add()
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("plus", &ctx), "(number, number) => number");
     }
 
     #[test]
