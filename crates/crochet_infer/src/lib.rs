@@ -1030,4 +1030,85 @@ mod tests {
         assert_eq!(get_type("add", &ctx), "(number, number) => number");
         assert_eq!(get_type("sum", &ctx), "number");
     }
+
+    #[test]
+    fn infer_member_access() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        let x = p.x
+        let y = p.y
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("x", &ctx), "5");
+        assert_eq!(get_type("y", &ctx), "10");
+    }
+
+    #[test]
+    fn infer_optional_member() {
+        let src = r#"
+        declare let obj: {a: string, b?: number}
+        let a = obj.a
+        let b = obj.b
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "string");
+        assert_eq!(get_type("b", &ctx), "number | undefined");
+    }
+
+    #[test]
+    fn infer_nested_member_access() {
+        let src = r#"
+        let obj = {a: {b: {c: "hello"}}}
+        let c = obj.a.b.c
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("c", &ctx), "\"hello\"");
+    }
+
+    #[test]
+    fn infer_calling_method_on_obj() {
+        let src = r#"
+        let obj = {add: (a, b) => a + b}
+        let sum = obj.add(5, 10)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+    }
+
+    #[test]
+    fn infer_combined_member_acces_and_method_call_result() {
+        let src = r#"
+        type Point = {x: number, y: number}
+        let obj = {add: (p: Point, q: Point) => {
+            let result = {x: p.x + q.x, y: p.y + q.y};
+            result
+        }}
+        let p = {x: 5, y: 10}
+        let q = {x: 0, y: 1}
+        let sum_x = obj.add(p, q).x
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum_x", &ctx), "number");
+    }
+
+    #[test]
+    #[should_panic="Record literal doesn't contain property"]
+    fn infer_missing_member() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        let z = p.z
+        "#;
+
+        infer_prog(src);
+    }
 }

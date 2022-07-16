@@ -388,13 +388,59 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let t = ctx.tuple(ts);
             Ok((s, t))
         }
-        Expr::Member(_) => todo!(),
+        Expr::Member(Member { obj, prop, .. }) => {
+            let (obj_s, obj_t) = infer(ctx, obj)?;
+            let (prop_s, prop_t) = infer_property_type(&obj_t, prop, ctx)?;
+
+            let s = compose_subs(&prop_s, &obj_s);
+            let t = unwrap_member_type(&prop_t, ctx);
+
+            Ok((s, t))
+        }
         Expr::Empty(_) => {
             let t = ctx.prim(Primitive::Undefined);
             let s = Subst::default();
             Ok((s, t))
         }
     }
+}
+
+fn infer_property_type(
+    obj_t: &Type,
+    prop: &MemberProp,
+    ctx: &Context,
+) -> Result<(Subst, Type), String> {
+    match &obj_t.variant {
+        Variant::Var => todo!(),
+        Variant::Lam(_) => todo!(),
+        Variant::Prim(_) => todo!(),
+        Variant::Lit(_) => todo!(),
+        Variant::Union(_) => todo!(),
+        Variant::Intersection(_) => todo!(),
+        Variant::Object(props) => {
+            let mem_t = ctx.mem(obj_t.clone(), &prop.name());
+            match props.iter().find(|p| p.name == prop.name()) {
+                Some(_) => Ok((Subst::default(), mem_t)),
+                None => Err(String::from("Record literal doesn't contain property")),
+            }
+        }
+        Variant::Alias(_) => todo!(),
+        Variant::Tuple(_) => todo!(),
+        Variant::Rest(_) => todo!(),
+        Variant::Member(_) => todo!(),
+    }
+}
+
+fn unwrap_member_type(t: &Type, ctx: &Context) -> Type {
+    if let Variant::Member(member) = &t.variant {
+        if let Variant::Object(props) = &member.obj.as_ref().variant {
+            let prop = props.iter().find(|prop| prop.name == member.prop);
+            if let Some(prop) = prop {
+                return prop.get_type(ctx)
+            }
+        }
+    }
+    t.to_owned()
 }
 
 fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
@@ -691,7 +737,7 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             if lam1.is_call {
                 if lam1.params.len() < lam2.params.len() {
                     // Partially application.
-                    // If there is fewer than expected by `lam2` we return an new 
+                    // If there is fewer than expected by `lam2` we return an new
                     // lambda that accepts the remaining params and returns the
                     // original return type.
                     let partial_ret =
@@ -744,9 +790,7 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let mut ss = vec![];
                     for prop1 in props1.iter() {
                         if prop1.name == prop2.name {
-                            if let Ok(s) =
-                                unify(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx)
-                            {
+                            if let Ok(s) = unify(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx) {
                                 b = true;
                                 ss.push(s);
                             }
@@ -778,8 +822,7 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             Ok(compose_many_subs(&ss))
         }
         (Variant::Union(types), _) => {
-            let result: Result<Vec<_>, _> =
-                types.iter().map(|t1| unify(t1, t2, ctx)).collect();
+            let result: Result<Vec<_>, _> = types.iter().map(|t1| unify(t1, t2, ctx)).collect();
             let ss = result?; // This is only okay if all calls to is_subtype are okay
             Ok(compose_many_subs_with_context(&ss, ctx))
         }
