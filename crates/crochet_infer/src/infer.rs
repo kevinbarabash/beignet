@@ -7,7 +7,7 @@ use crate::substitutable::Substitutable;
 use super::context::{Context, Env};
 use super::infer_type_ann::*;
 use super::substitutable::Subst;
-use super::types::{self, freeze_scheme, Scheme, Type, Variant};
+use super::types::{self, freeze_scheme, Flag, Scheme, Type, Variant};
 use super::util::{generalize, normalize};
 
 pub fn infer_prog(prog: &Program) -> Result<Context, String> {
@@ -388,12 +388,80 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let t = ctx.tuple(ts);
             Ok((s, t))
         }
-        Expr::Member(_) => todo!(),
+        Expr::Member(Member { obj, prop, .. }) => {
+            let (obj_s, obj_t) = infer(ctx, obj)?;
+            let (prop_s, prop_t) = infer_property_type(&obj_t, prop, ctx)?;
+
+            let s = compose_subs(&prop_s, &obj_s);
+            let t = unwrap_member_type(&prop_t, ctx);
+
+            Ok((s, t))
+        }
         Expr::Empty(_) => {
             let t = ctx.prim(Primitive::Undefined);
             let s = Subst::default();
             Ok((s, t))
         }
+    }
+}
+
+fn infer_property_type(
+    obj_t: &Type,
+    prop: &MemberProp,
+    ctx: &Context,
+) -> Result<(Subst, Type), String> {
+    match &obj_t.variant {
+        Variant::Var => {
+            let t = ctx.fresh_var();
+            let obj = ctx.object_with_flag(
+                vec![types::TProp {
+                    name: prop.name(),
+                    // We assume the property is not optional when inferring an
+                    // object from a member access.
+                    optional: false,
+                    ty: t.clone(),
+                }],
+                Flag::MemberAccess,
+            );
+            let mem1 = ctx.mem(obj_t.clone(), &prop.name());
+            let mem2 = ctx.mem(obj.clone(), &prop.name());
+            let s1 = unify(&mem1, &mem2, ctx)?;
+            let s2 = unify(&t, &obj, ctx)?;
+            let s = compose_subs(&s2, &s1);
+            Ok((s, t))
+        }
+        Variant::Lam(_) => todo!(),
+        Variant::Prim(_) => todo!(),
+        Variant::Lit(_) => todo!(),
+        Variant::Union(_) => todo!(),
+        Variant::Intersection(_) => todo!(),
+        Variant::Object(props) => {
+            let mem_t = ctx.mem(obj_t.clone(), &prop.name());
+            match props.iter().find(|p| p.name == prop.name()) {
+                Some(_) => Ok((Subst::default(), mem_t)),
+                None => Err(String::from("Record literal doesn't contain property")),
+            }
+        }
+        Variant::Alias(_) => todo!(),
+        Variant::Tuple(_) => todo!(),
+        Variant::Rest(_) => todo!(),
+        Variant::Member(_) => todo!(),
+    }
+}
+
+fn unwrap_member_type(ty: &Type, ctx: &Context) -> Type {
+    match &ty.variant {
+        Variant::Member(member) => match &member.obj.as_ref().variant {
+            Variant::Object(props) => {
+                let prop = props.iter().find(|prop| prop.name == member.prop);
+                match prop {
+                    Some(prop) => prop.get_type(ctx),
+                    None => ty.to_owned(),
+                }
+            }
+            _ => ty.to_owned(),
+        },
+        _ => ty.to_owned(),
     }
 }
 
@@ -691,7 +759,7 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             if lam1.is_call {
                 if lam1.params.len() < lam2.params.len() {
                     // Partially application.
-                    // If there is fewer than expected by `lam2` we return an new 
+                    // If there is fewer than expected by `lam2` we return an new
                     // lambda that accepts the remaining params and returns the
                     // original return type.
                     let partial_ret =
@@ -744,9 +812,7 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let mut ss = vec![];
                     for prop1 in props1.iter() {
                         if prop1.name == prop2.name {
-                            if let Ok(s) =
-                                unify(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx)
-                            {
+                            if let Ok(s) = unify(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx) {
                                 b = true;
                                 ss.push(s);
                             }
@@ -778,8 +844,7 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             Ok(compose_many_subs(&ss))
         }
         (Variant::Union(types), _) => {
-            let result: Result<Vec<_>, _> =
-                types.iter().map(|t1| unify(t1, t2, ctx)).collect();
+            let result: Result<Vec<_>, _> = types.iter().map(|t1| unify(t1, t2, ctx)).collect();
             let ss = result?; // This is only okay if all calls to is_subtype are okay
             Ok(compose_many_subs_with_context(&ss, ctx))
         }
@@ -818,6 +883,9 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         }
         (Variant::Var, _) => bind(&t1.id, t2),
         (_, Variant::Var) => bind(&t2.id, t1),
+        (Variant::Member(mem1), Variant::Member(mem2)) if mem1.prop == mem2.prop => {
+            unify(mem1.obj.as_ref(), mem2.obj.as_ref(), ctx)
+        }
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())

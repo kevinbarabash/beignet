@@ -1030,4 +1030,30 @@ mod tests {
         assert_eq!(get_type("add", &ctx), "(number, number) => number");
         assert_eq!(get_type("sum", &ctx), "number");
     }
+
+    #[test]
+    fn infer_member_access() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        let x = p.x
+        let y = p.y
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("x", &ctx), "5");
+        assert_eq!(get_type("y", &ctx), "10");
+    }
+
+    #[test]
+    fn infer_nested_member_access() {
+        let src = r#"
+        let obj = {a: {b: {c: "hello"}}}
+        let c = obj.a.b.c
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("c", &ctx), "\"hello\"");
+    }
 }
