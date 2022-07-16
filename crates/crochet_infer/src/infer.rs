@@ -686,21 +686,33 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         }
         (Variant::Lam(lam1), Variant::Lam(lam2)) => {
             let mut s = Subst::new();
+            // If `lam1` is a function call then we treat it differently.  Instead
+            // of checking if it's a subtype of `lam2`, we instead either:
             if lam1.is_call {
                 if lam1.params.len() < lam2.params.len() {
-                    // Partial application
+                    // Partially application.
+                    // If there is fewer than expected by `lam2` we return an new 
+                    // lambda that accepts the remaining params and returns the
+                    // original return type.
                     let partial_ret =
                         ctx.lam(lam2.params[lam1.params.len()..].to_vec(), lam2.ret.clone());
                     for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
-                        let s1 = unify(&p1.apply(&s), &p2.apply(&s), ctx)?;
+                        // Each argument must be a subtype of the corresponding param.
+                        let arg = p1.apply(&s);
+                        let param = p2.apply(&s);
+                        let s1 = unify(&arg, &param, ctx)?;
                         s = compose_subs(&s, &s1);
                     }
                     let s1 = unify(&lam1.ret.apply(&s), &partial_ret, ctx)?;
                     Ok(compose_subs(&s, &s1))
                 } else {
-                    // Regular application
+                    // Regular application.
+                    // Any extra params (args) that `lam1` has are ignored.
                     for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
-                        let s1 = unify(&p1.apply(&s), &p2.apply(&s), ctx)?;
+                        // Each argument must be a subtype of the corresponding param.
+                        let arg = p1.apply(&s);
+                        let param = p2.apply(&s);
+                        let s1 = unify(&arg, &param, ctx)?;
                         s = compose_subs(&s, &s1);
                     }
                     let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
@@ -711,7 +723,10 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 // than `lam2`.  This is because functions can be passed extra params
                 // meaning that any place `lam2` is used, `lam1` can be used as well.
                 for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
-                    let s1 = unify(&p1.apply(&s), &p2.apply(&s), ctx)?;
+                    // NOTE: The order of params is reverse.  This allows a callback
+                    // whose params can accept more values (are supertypes) than the
+                    // function will pass to the callback.
+                    let s1 = unify(&p2.apply(&s), &p1.apply(&s), ctx)?;
                     s = compose_subs(&s, &s1);
                 }
                 let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;

@@ -961,6 +961,18 @@ mod tests {
     }
 
     #[test]
+    fn pass_callback_whose_params_are_supertypes_of_expected_callback() {
+        let src = r#"
+        declare let fold_num: ((5, 10) => boolean, number) => number
+        let result = fold_num((x: number, y: number) => true, 0)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    #[test]
     #[should_panic="Couldn't unify lambdas"]
     fn pass_callback_with_too_many_params() {
         // This is not allowed because `fold_num` can't provide all of the params
