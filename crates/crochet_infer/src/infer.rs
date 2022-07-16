@@ -431,20 +431,16 @@ fn infer_property_type(
     }
 }
 
-fn unwrap_member_type(ty: &Type, ctx: &Context) -> Type {
-    match &ty.variant {
-        Variant::Member(member) => match &member.obj.as_ref().variant {
-            Variant::Object(props) => {
-                let prop = props.iter().find(|prop| prop.name == member.prop);
-                match prop {
-                    Some(prop) => prop.get_type(ctx),
-                    None => ty.to_owned(),
-                }
+fn unwrap_member_type(t: &Type, ctx: &Context) -> Type {
+    if let Variant::Member(member) = &t.variant {
+        if let Variant::Object(props) = &member.obj.as_ref().variant {
+            let prop = props.iter().find(|prop| prop.name == member.prop);
+            if let Some(prop) = prop {
+                return prop.get_type(ctx)
             }
-            _ => ty.to_owned(),
-        },
-        _ => ty.to_owned(),
+        }
     }
+    t.to_owned()
 }
 
 fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
@@ -865,9 +861,6 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         }
         (Variant::Var, _) => bind(&t1.id, t2),
         (_, Variant::Var) => bind(&t2.id, t1),
-        (Variant::Member(mem1), Variant::Member(mem2)) if mem1.prop == mem2.prop => {
-            unify(mem1.obj.as_ref(), mem2.obj.as_ref(), ctx)
-        }
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())
