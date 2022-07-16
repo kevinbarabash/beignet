@@ -57,7 +57,7 @@ impl Context {
         scheme.ty.apply(&subs)
     }
 
-    fn fresh_id(&self) -> i32 {
+    pub fn fresh_id(&self) -> i32 {
         let id = self.state.count.get() + 1;
         self.state.count.set(id);
         id
@@ -82,7 +82,7 @@ impl Context {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Lam(types::LamType { params, ret }),
+            variant: Variant::Lam(types::LamType { params, ret, is_call: false }),
             flag,
         }
     }

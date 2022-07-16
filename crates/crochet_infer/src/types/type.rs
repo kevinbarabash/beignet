@@ -53,6 +53,7 @@ impl Hash for VarType {
 pub struct LamType {
     pub params: Vec<Type>, // TOOD: rename this params
     pub ret: Box<Type>,
+    pub is_call: bool,
 }
 
 impl PartialEq for LamType {
@@ -188,6 +189,7 @@ fn set_frozen(ty: Type, frozen: bool) -> Type {
     let variant = match ty.variant {
         Variant::Var => Variant::Var,
         Variant::Lam(lam) => Variant::Lam(LamType {
+            is_call: lam.is_call,
             params: lam.params.into_iter().map(freeze).collect(),
             ret: Box::from(freeze(lam.ret.as_ref().clone())),
         }),
@@ -238,6 +240,7 @@ pub fn set_flag(ty: Type, flag: &Flag) -> Type {
     let variant = match ty.variant {
         Variant::Var => Variant::Var,
         Variant::Lam(lam) => Variant::Lam(LamType {
+            is_call: lam.is_call,
             params: lam.params.into_iter().map(|p| set_flag(p, flag)).collect(),
             ret: Box::from(set_flag(lam.ret.as_ref().clone(), flag)),
         }),

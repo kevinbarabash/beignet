@@ -888,4 +888,122 @@ mod tests {
 
         infer_prog(src);
     }
+
+    #[test]
+    fn call_lam_with_subtypes() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let sum = add(5, 10)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn call_lam_with_wrong_types() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let sum = add("hello", true)
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn call_lam_with_extra_params() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let sum = add(5, 10, "hello")
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+    }
+
+    #[test]
+    fn call_lam_with_too_few_params_result_in_partial_application() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let sum = add(5)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "(number) => number");
+    }
+
+    #[test]
+    fn call_lam_multiple_times_with_too_few_params() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let sum = add(5)(10)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "number");
+    }
+
+    #[test]
+    fn pass_callback_with_too_few_params() {
+        let src = r#"
+        declare let fold_num: ((number, number) => boolean, number) => number
+        let result = fold_num((x) => true, 0)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    #[test]
+    #[should_panic="Couldn't unify lambdas"]
+    fn pass_callback_with_too_many_params() {
+        // This is not allowed because `fold_num` can't provide all of the params
+        // that the callback is expecting and it would result in partial application
+        // when the `fold_num` is not expecting it.  While it's possible to conceive
+        // of a scenario where a callback returns a function and a partially applied
+        // calback results in correct function, allowing this in the type checker
+        // is bound to result in confusing and hard to understand code.
+        let src = r#"
+        declare let fold_num: ((number, number) => boolean, number) => number
+        let result = fold_num((x, y, z) => true, 0)
+        "#;
+
+        infer_prog(src);
+    }
+
+    // TODO: TypeScript takes the union of the params when unifying them
+    #[test]
+    #[ignore]
+    fn call_generic_lam_with_subtypes() {
+        let src = r#"
+        declare let add: <T>(T, T) => T
+        let sum = add(5, 10)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("sum", &ctx), "5 | 10");
+    }
+
+    #[test]
+    fn infer_generic_lam() {
+        // TODO: figure out how to handle parametric functions like this
+        let src = r#"
+        let add = <T>(x: T, y: T): T => {
+            x + y
+        }
+        let sum = add(5, 5)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("add", &ctx), "(number, number) => number");
+        assert_eq!(get_type("sum", &ctx), "number");
+    }
 }
