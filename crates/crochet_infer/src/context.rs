@@ -49,7 +49,7 @@ impl Context {
         self.instantiate(scheme)
     }
 
-    fn instantiate(&self, scheme: &Scheme) -> Type {
+    pub fn instantiate(&self, scheme: &Scheme) -> Type {
         let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
         let fresh_quals = scheme.qualifiers.iter().map(|_| self.fresh_var());
         let subs: Subst = ids.zip(fresh_quals).collect();

@@ -65,7 +65,9 @@ pub fn jsx_parser(
             .then(jsx_element_child.repeated())
             .then(jsx_tail)
             .map_with_span(|(((head, attrs), children), tail), span| {
-                assert_eq!(head, tail);
+                if head != tail {
+                    panic!("JSX head and tail elements must match")
+                }
 
                 JSXElementChild::JSXElement(Box::from(JSXElement {
                     span,
@@ -90,7 +92,9 @@ pub fn jsx_parser(
         .then(jsx_element_child.repeated())
         .then(jsx_tail)
         .map_with_span(|(((head, attrs), children), tail), span| {
-            assert_eq!(head, tail);
+            if head != tail {
+                panic!("JSX head and tail elements must match")
+            }
 
             Expr::JSXElement(JSXElement {
                 span,

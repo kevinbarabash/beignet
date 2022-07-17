@@ -127,6 +127,12 @@ mod tests {
     }
 
     #[test]
+    #[should_panic="JSX head and tail elements must match"]
+    fn jsx_head_and_tail_must_match() {
+        parse("<Foo>Hello</Bar>");
+    }
+
+    #[test]
     fn type_annotations() {
         insta::assert_debug_snapshot!(parse("let x: number = 5"));
         insta::assert_debug_snapshot!(parse("let msg: string = \"hello\""));

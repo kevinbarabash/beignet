@@ -1253,4 +1253,108 @@ mod tests {
         
         infer_prog(src);
     }
+
+    #[test]
+    fn jsx_element() {
+        let src = r#"
+        let elem = <div>Hello, world!</div>
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("elem", &ctx), "JSXElement");
+    }
+
+    #[test]
+    fn jsx_custom_element() {
+        let src = r#"
+        let Foo = () => <div>Hello, world!</div>
+        let elem = <Foo />
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("elem", &ctx), "JSXElement");
+    }
+
+
+    #[test]
+    fn jsx_custom_element_with_props() {
+        let src = r#"
+        type Props = {msg: string}
+        let Foo = (props: Props) => <div>{props.msg}</div>
+        let elem = <Foo msg="Hello, world!" />
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("elem", &ctx), "JSXElement");
+    }
+
+    // TODO: disallow extra props
+    #[test]
+    fn jsx_custom_element_with_extra_props() {
+        let src = r#"
+        type Props = {msg: string}
+        let Foo = (props: Props) => <div>{props.msg}</div>
+        let elem = <Foo msg="Hello, world!" bar={true} />
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("elem", &ctx), "JSXElement");
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn jsx_custom_element_with_incorrect_props() {
+        let src = r#"
+        type Props = {msg: string}
+        let Foo = (props: Props) => <div>{props.msg}</div>
+        let elem = <Foo msg={5} />
+        "#;
+        
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn jsx_custom_element_with_missing_prop() {
+        let src = r#"
+        type Props = {msg: string}
+        let Foo = (props: Props) => <div>{props.msg}</div>
+        let elem = <Foo />
+        "#;
+        
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic="Component 'Bar' is not in scope"]
+    fn jsx_custom_element_not_found() {
+        let src = r#"
+        let Foo = () => <div>Hello, world!</div>
+        let elem = <Bar />
+        "#;
+        
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic="Component must be a function"]
+    fn jsx_custom_element_not_a_function() {
+        let src = r#"
+        let Foo = "hello, world"
+        let elem = <Foo />
+        "#;
+        
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn jsx_custom_element_incorrect_return() {
+        let src = r#"
+        let Foo = () => {x: 5, y: 10}
+        let elem = <Foo />
+        "#;
+        
+        infer_prog(src);
+    }
 }

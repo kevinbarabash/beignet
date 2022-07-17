@@ -12,8 +12,25 @@ use super::util::{generalize, normalize, simplify_intersection};
 
 pub fn infer_prog(prog: &Program) -> Result<Context, String> {
     let mut ctx: Context = Context::default();
-    let promise_scheme = Scheme::from(ctx.object(vec![]));
+    // TODO: replace with Class type once it exists
+    // We use {_name: "Promise"} to differentiate it from other
+    // object types.
+    let promise_scheme = Scheme::from(ctx.object(vec![types::TProp {
+        name: String::from("_name"),
+        optional: false,
+        ty: ctx.lit(Lit::str(String::from("Promise"), 0..0)),
+    }]));
     ctx.types.insert(String::from("Promise"), promise_scheme);
+    // TODO: replace with Class type once it exists
+    // We use {_name: "JSXElement"} to differentiate it from other
+    // object types.
+    let jsx_element_scheme = Scheme::from(ctx.object(vec![types::TProp {
+        name: String::from("_name"),
+        optional: false,
+        ty: ctx.lit(Lit::str(String::from("JSXElement"), 0..0)),
+    }]));
+    ctx.types
+        .insert(String::from("JSXElement"), jsx_element_scheme);
 
     // TODO: figure out how report multiple errors
     for stmt in &prog.body {
@@ -261,8 +278,73 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 }
             },
         },
-        Expr::JSXElement(_) => {
-            todo!()
+        Expr::JSXElement(JSXElement {
+            name,
+            attrs,
+            children: _,
+            ..
+        }) => {
+            let first_char = name.chars().next().unwrap();
+            // JSXElement's starting with an uppercase char are user defined.
+            if first_char.is_uppercase() {
+                match ctx.values.get(name) {
+                    Some(scheme) => {
+                        let ct = ctx.instantiate(scheme);
+                        match &ct.variant {
+                            Variant::Lam(_) => {
+                                let mut ss: Vec<_> = vec![];
+                                let mut props: Vec<_> = vec![];
+                                for attr in attrs {
+                                    let (s, t) = match &attr.value {
+                                        JSXAttrValue::Lit(lit) => {
+                                            infer(ctx, &Expr::Lit(lit.to_owned()))?
+                                        },
+                                        JSXAttrValue::JSXExprContainer(JSXExprContainer {expr, ..}) => {
+                                            infer(ctx, expr)?
+                                        },
+                                    };
+                                    ss.push(s);
+
+                                    let prop = types::TProp {
+                                        name: attr.ident.name.to_owned(),
+                                        optional: false,
+                                        ty: t,
+                                    };
+                                    props.push(prop);
+                                }
+
+                                let ret_type = ctx.alias("JSXElement", None);
+
+                                let call_type = Type {
+                                    id: ctx.fresh_id(),
+                                    frozen: false,
+                                    variant: Variant::Lam(types::LamType {
+                                        params: vec![ctx.object(props)],
+                                        ret: Box::from(ret_type.clone()),
+                                        is_call: true,
+                                    }),
+                                    flag: None,
+                                };
+
+                                let s1 = compose_many_subs(&ss);
+                                let s2 = unify(&call_type, &ct, ctx)?;
+
+                                let s = compose_subs(&s2, &s1);
+
+                                return Ok((s, ret_type));
+                            }
+                            _ => return Err(String::from("Component must be a function")),
+                        }
+                    }
+                    None => return Err(format!("Component '{name}' is not in scope")),
+                }
+            }
+
+            let s = Subst::default();
+            // TODO: check props on JSXInstrinsics
+            let t = ctx.alias("JSXElement", None);
+
+            Ok((s, t))
         }
         Expr::Lambda(Lambda {
             params,
@@ -464,12 +546,6 @@ fn infer_property_type(
     ctx: &Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t.variant {
-        Variant::Var => todo!(),
-        Variant::Lam(_) => todo!(),
-        Variant::Prim(_) => todo!(),
-        Variant::Lit(_) => todo!(),
-        Variant::Union(_) => todo!(),
-        Variant::Intersection(_) => todo!(),
         Variant::Object(props) => {
             let mem_t = ctx.mem(obj_t.clone(), &prop.name());
             match props.iter().find(|p| p.name == prop.name()) {
@@ -481,9 +557,7 @@ fn infer_property_type(
             let t = lookup_alias(ctx, name)?;
             infer_property_type(&t, prop, ctx)
         }
-        Variant::Tuple(_) => todo!(),
-        Variant::Rest(_) => todo!(),
-        Variant::Member(_) => todo!(),
+        _ => todo!("Unhandled {obj_t} in infer_property_type"),
     }
 }
 
