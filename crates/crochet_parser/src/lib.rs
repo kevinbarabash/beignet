@@ -203,6 +203,12 @@ mod tests {
     }
 
     #[test]
+    #[should_panic="Rest should come last in object pattern"]
+    fn rest_that_isnt_last_is_invalid() {
+        insta::assert_debug_snapshot!(parse("let {...p, z} = point"));
+    }
+
+    #[test]
     fn types() {
         insta::assert_debug_snapshot!(parse("let get_bar = <T>(foo: Foo<T>) => foo.bar"));
         insta::assert_debug_snapshot!(parse("declare let get_bar: (Foo) => T"));
