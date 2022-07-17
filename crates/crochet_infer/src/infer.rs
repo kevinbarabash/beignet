@@ -643,6 +643,11 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                             })
                         }
                         ObjectPatProp::Rest(rest) => {
+                            if rest_opt_ty.is_some() {
+                                // TODO: return an Err() instead of panicking.
+                                // NOTE: This should be handled by the parser.
+                                panic!("Maximum one rest pattern allowed in object patterns")
+                            }
                             // TypeScript doesn't support spreading/rest in types so instead we
                             // need to turn:
                             // {x, y, ...rest}
@@ -892,16 +897,18 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
             let obj_type = simplify_intersection(&obj_types, ctx);
 
+            println!("rest_types.len() = {}", rest_types.len());
+
             match rest_types.len() {
                 0 => unify(t1, &obj_type, ctx),
                 1 => {
-                    let obj_props = match &obj_type.variant {
+                    let all_obj_props = match &obj_type.variant {
                         Variant::Object(props) => props.to_owned(),
                         _ => vec![],
                     };
         
                     let (obj_props, rest_props): (Vec<_>, Vec<_>) = props.iter().cloned()
-                        .partition(|p| obj_props.iter().any(|op| op.name == p.name));
+                        .partition(|p| all_obj_props.iter().any(|op| op.name == p.name));
         
                     let s1 = unify(&ctx.object(obj_props), &obj_type, ctx)?;
         
@@ -932,13 +939,13 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             match rest_types.len() {
                 0 => unify(&obj_type, t2, ctx),
                 1 => {
-                    let obj_props = match &obj_type.variant {
+                    let all_obj_props = match &obj_type.variant {
                         Variant::Object(props) => props.to_owned(),
                         _ => vec![],
                     };
 
                     let (obj_props, rest_props): (Vec<_>, Vec<_>) = props.iter().cloned()
-                        .partition(|p| obj_props.iter().any(|op| op.name == p.name));
+                        .partition(|p| all_obj_props.iter().any(|op| op.name == p.name));
 
                     let s_obj = unify(&obj_type, &ctx.object(obj_props), ctx)?;
 

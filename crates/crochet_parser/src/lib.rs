@@ -190,11 +190,16 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let foo = ([a, b]: [string, number]) => a"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}) => b"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}: {a: string, b: number}) => b"));
-        // TODO: renaming properties when destructuring objects
         // TODO: assigning defaults
         // TODO: type annotations
         // TODO: function params
         // TODO: disallowed patterns, e.g. top-level rest, non-top-level type annotations
+    }
+
+    #[test]
+    #[should_panic="Only one rest is allowed in an object pattern"]
+    fn multiple_rests_is_invalid() {
+        insta::assert_debug_snapshot!(parse("let {z, ...p, ...q} = point"));
     }
 
     #[test]

@@ -1124,6 +1124,18 @@ mod tests {
     }
 
     #[test]
+    #[should_panic="Only one rest is allowed in an object pattern"]
+    fn destructure_obj_with_rest_undecidable() {
+        let src = r#"
+        declare let point: {x: number, y: number, z?: number}
+        let {z, ...p, ...q} = point
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("q", &ctx), "{x: number, y: number}");
+    }
+
+    #[test]
     fn spread_an_object() {
         let src = r#"
         declare let point: {x: number, y: number}
@@ -1170,5 +1182,18 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(get_type("mag_2d", &ctx), "({x: number, y: number}) => number");
+    }
+
+    #[test]
+    #[should_panic="Unification is undecidable"]
+    fn infer_obj_from_spread_undecidable() {
+        let src = r#"
+        type Point = {x: number, y: number, z: number}
+        declare let mag: (Point) => number
+        let mag_2d = (p, q) => {
+            mag({...p, ...q, z: 0})
+        }
+        "#;
+        infer_prog(src);
     }
 }
