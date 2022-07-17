@@ -878,8 +878,6 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         (Variant::Var, _) => bind(&t1.id, t2),
         (_, Variant::Var) => bind(&t2.id, t1),
         (Variant::Object(props), Variant::Intersection(types)) => {
-            // NOTE: This assumes that the intersection has exactly two types and that
-            // one is an object type and the other is a type variable.
             let obj_types: Vec<_> = types
                 .iter()
                 .filter(|t| matches!(t.variant, Variant::Object(_)))
@@ -890,28 +888,31 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 .filter(|t| matches!(t.variant, Variant::Var))
                 .cloned()
                 .collect();
+            // TODO: check for other variants, if there are we should error
 
             let obj_type = simplify_intersection(&obj_types, ctx);
 
-            let s1 = unify(t1, &obj_type, ctx)?;
-
-            let obj_props = if let Variant::Object(props) = &obj_type.variant {
-                props.to_owned()
-            } else {
-                vec![]
-            };
-
-            let rest_props: Vec<_> = props
-                .iter()
-                .filter(|p| !obj_props.iter().any(|op| op.name == p.name))
-                .cloned()
-                .collect();
-
-            let rest_type = rest_types.get(0).unwrap();
-            let s2 = unify(&ctx.object(rest_props), rest_type, ctx)?;
-
-            let s = compose_subs(&s2, &s1);
-            Ok(s)
+            match rest_types.len() {
+                0 => unify(t1, &obj_type, ctx),
+                1 => {
+                    let obj_props = match &obj_type.variant {
+                        Variant::Object(props) => props.to_owned(),
+                        _ => vec![],
+                    };
+        
+                    let (obj_props, rest_props): (Vec<_>, Vec<_>) = props.iter().cloned()
+                        .partition(|p| obj_props.iter().any(|op| op.name == p.name));
+        
+                    let s1 = unify(&ctx.object(obj_props), &obj_type, ctx)?;
+        
+                    let rest_type = rest_types.get(0).unwrap();
+                    let s2 = unify(&ctx.object(rest_props), rest_type, ctx)?;
+        
+                    let s = compose_subs(&s2, &s1);
+                    Ok(s)
+                }
+                _ => Err(String::from("Unification is undecidable")),
+            }
         }
         (Variant::Intersection(types), Variant::Object(props)) => {
             let obj_types: Vec<_> = types
@@ -924,6 +925,7 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 .filter(|t| matches!(t.variant, Variant::Var))
                 .cloned()
                 .collect();
+            // TODO: check for other variants, if there are we should error
 
             let obj_type = simplify_intersection(&obj_types, ctx);
 
