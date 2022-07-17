@@ -450,6 +450,14 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
     }
 }
 
+fn lookup_alias(ctx: &Context, name: &str) -> Result<Type, String> {
+    match ctx.types.get(name) {
+        // TODO: handle schemes with qualifiers
+        Some(scheme) => Ok(scheme.ty.to_owned()),
+        None => Err(String::from("Can't find alias '{name}' in context")),
+    }
+}
+
 fn infer_property_type(
     obj_t: &Type,
     prop: &MemberProp,
@@ -470,13 +478,9 @@ fn infer_property_type(
             }
         }
         Variant::Alias(types::AliasType { name, .. }) => {
-            match ctx.types.get(name) {
-                Some(scheme) => {
-                    infer_property_type(&scheme.ty, prop, ctx)
-                }
-                None => panic!("Can't find alias '{name}' in context"),
-            }
-        },
+            let t = lookup_alias(ctx, name)?;
+            infer_property_type(&t, prop, ctx)
+        }
         Variant::Tuple(_) => todo!(),
         Variant::Rest(_) => todo!(),
         Variant::Member(_) => todo!(),
@@ -980,22 +984,12 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
         }
         (_, Variant::Alias(types::AliasType { name, .. })) => {
-            match ctx.types.get(name) {
-                Some(scheme) => {
-                    // TODO: handle schemes with qualifiers
-                    unify(t1, &scheme.ty, ctx)
-                }
-                None => panic!("Can't find alias '{name}' in context"),
-            }
+            let alias_t = lookup_alias(ctx, name)?;
+            unify(t1, &alias_t, ctx)
         }
         (Variant::Alias(types::AliasType { name, .. }), _) => {
-            match ctx.types.get(name) {
-                Some(scheme) => {
-                    // TODO: handle schemes with qualifiers
-                    unify(&scheme.ty, t2, ctx)
-                }
-                None => panic!("Can't find alias '{name}' in context"),
-            }
+            let alias_t = lookup_alias(ctx, name)?;
+            unify(&alias_t, t2, ctx)
         }
         (v1, v2) => {
             if v1 == v2 {
