@@ -188,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Duplicate identifier in pattern"]
+    #[should_panic = "Duplicate identifier in pattern"]
     fn infer_destructuring_tuple_reused_identifier() {
         let src = r#"
         let [a, a] = [5, true]
@@ -335,7 +335,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Duplicate identifier in pattern"]
+    #[should_panic = "Duplicate identifier in pattern"]
     fn infer_destructuring_obj_reused_identifier() {
         let src = "let {x: a, y: a} = {x: 5, y: 10}";
         infer_prog(src);
@@ -413,6 +413,29 @@ mod tests {
         let ctx = infer_prog("let p = {x: 5, y: 10}");
 
         assert_eq!(get_type("p", &ctx), "{x: 5, y: 10}");
+    }
+
+    #[test]
+    fn obj_assignment_shorthand() {
+        let src = r#"
+        let x = 5
+        let y = 10
+        let p = {x, y}
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("p", &ctx), "{x: 5, y: 10}");
+    }
+
+    #[test]
+    #[should_panic]
+    fn obj_assignment_shorthand_missing_variable() {
+        let src = r#"
+        let x = 5
+        let p = {x, y}
+        "#;
+
+        infer_prog(src);
     }
 
     #[test]
@@ -506,7 +529,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Consequent for 'if' without 'else' must not return a value"]
+    #[should_panic = "Consequent for 'if' without 'else' must not return a value"]
     fn infer_if_let_without_else_errors_with_return() {
         let src = r#"
         let p = {x: 5, y: 10}
@@ -600,7 +623,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn infer_if_let_refutable_is_unification_failure() {
         let src = r#"
         declare let a: string | number
@@ -632,7 +655,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn infer_if_let_refutable_is_inside_obj_incorrect_type() {
         let src = r#"
         declare let foo: {bar: string}
@@ -689,7 +712,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn infer_if_let_disjoint_union_no_matches() {
         let src = r#"
         declare let action: {type: "foo", num: number} | {type: "bar", str: string}
@@ -704,7 +727,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn infer_if_let_disjoint_union_incorrect_match() {
         let src = r#"
         declare let action: {type: "foo", num: number} | {type: "bar", str: string}
@@ -901,7 +924,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn call_lam_with_wrong_types() {
         let src = r#"
         declare let add: (number, number) => number
@@ -984,7 +1007,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Couldn't unify lambdas"]
+    #[should_panic = "Couldn't unify lambdas"]
     fn pass_callback_with_too_many_params() {
         // This is not allowed because `fold_num` can't provide all of the params
         // that the callback is expecting and it would result in partial application
@@ -1101,7 +1124,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Record literal doesn't contain property"]
+    #[should_panic = "Record literal doesn't contain property"]
     fn infer_missing_member() {
         let src = r#"
         let p = {x: 5, y: 10}
@@ -1123,7 +1146,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Only one rest is allowed in an object pattern"]
+    #[should_panic = "Only one rest is allowed in an object pattern"]
     fn destructure_obj_with_rest_undecidable() {
         let src = r#"
         declare let point: {x: number, y: number, z?: number}
@@ -1154,7 +1177,10 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("obj", &ctx), "{a: true, b: \"hello\", x: 5, y: 10}");
+        assert_eq!(
+            get_type("obj", &ctx),
+            "{a: true, b: \"hello\", x: 5, y: 10}"
+        );
     }
 
     #[test]
@@ -1166,7 +1192,10 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("obj", &ctx), "{a: true, b: \"hello\" & 5, c: false}");
+        assert_eq!(
+            get_type("obj", &ctx),
+            "{a: true, b: \"hello\" & 5, c: false}"
+        );
     }
 
     #[test]
@@ -1180,11 +1209,14 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("mag_2d", &ctx), "({x: number, y: number}) => number");
+        assert_eq!(
+            get_type("mag_2d", &ctx),
+            "({x: number, y: number}) => number"
+        );
     }
 
     #[test]
-    #[should_panic="Unification is undecidable"]
+    #[should_panic = "Unification is undecidable"]
     fn infer_obj_from_spread_undecidable() {
         let src = r#"
         type Point = {x: number, y: number, z: number}
@@ -1208,15 +1240,15 @@ mod tests {
         assert_eq!(get_type("str", &ctx), "string");
         assert_eq!(get_type("num", &ctx), "number");
     }
-    
+
     #[test]
-    #[should_panic="Couldn't unify lambda with intersection"]
+    #[should_panic = "Couldn't unify lambda with intersection"]
     fn call_overloaded_function_with_wrong_params() {
         let src = r#"
         declare let add: ((number, number) => number) & ((string, string) => string)
         add("hello", 10)
         "#;
-        
+
         infer_prog(src);
     }
 
@@ -1229,7 +1261,10 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("add_async", &ctx), "(Promise<number>, Promise<number>) => Promise<number>");
+        assert_eq!(
+            get_type("add_async", &ctx),
+            "(Promise<number>, Promise<number>) => Promise<number>"
+        );
     }
 
     #[test]
@@ -1239,19 +1274,55 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("passthrough", &ctx), "(Promise<string>) => Promise<string>");
+        assert_eq!(
+            get_type("passthrough", &ctx),
+            "(Promise<string>) => Promise<string>"
+        );
     }
 
     #[test]
-    #[should_panic="Can't use `await` inside non-async lambda"]
+    #[should_panic = "Can't use `await` inside non-async lambda"]
     fn await_only_works_in_async_functions() {
         let src = r#"
         let add_async = (a, b) => {
             await a + await b
         }
         "#;
-        
+
         infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "Can't use `await` inside non-async lambda"]
+    fn await_only_works_in_async_functions_nested() {
+        let src = r#"
+        let add_async = async (a, b) => {
+            let inner = (x, y) => {
+                await x + await y
+            };
+            await inner(a, b)
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn await_works_in_nested_async_functions() {
+        let src = r#"
+        let add_async = async (a, b) => {
+            let inner = async (x, y) => {
+                await x + await y
+            };
+            await inner(a, b)
+        }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(
+            get_type("add_async", &ctx),
+            "(Promise<number>, Promise<number>) => Promise<number>"
+        );
     }
 
     #[test]
@@ -1274,7 +1345,6 @@ mod tests {
 
         assert_eq!(get_type("elem", &ctx), "JSXElement");
     }
-
 
     #[test]
     fn jsx_custom_element_with_props() {
@@ -1302,59 +1372,59 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn jsx_custom_element_with_incorrect_props() {
         let src = r#"
         type Props = {msg: string}
         let Foo = (props: Props) => <div>{props.msg}</div>
         let elem = <Foo msg={5} />
         "#;
-        
+
         infer_prog(src);
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn jsx_custom_element_with_missing_prop() {
         let src = r#"
         type Props = {msg: string}
         let Foo = (props: Props) => <div>{props.msg}</div>
         let elem = <Foo />
         "#;
-        
+
         infer_prog(src);
     }
 
     #[test]
-    #[should_panic="Component 'Bar' is not in scope"]
+    #[should_panic = "Component 'Bar' is not in scope"]
     fn jsx_custom_element_not_found() {
         let src = r#"
         let Foo = () => <div>Hello, world!</div>
         let elem = <Bar />
         "#;
-        
+
         infer_prog(src);
     }
 
     #[test]
-    #[should_panic="Component must be a function"]
+    #[should_panic = "Component must be a function"]
     fn jsx_custom_element_not_a_function() {
         let src = r#"
         let Foo = "hello, world"
         let elem = <Foo />
         "#;
-        
+
         infer_prog(src);
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn jsx_custom_element_incorrect_return() {
         let src = r#"
         let Foo = () => {x: 5, y: 10}
         let elem = <Foo />
         "#;
-        
+
         infer_prog(src);
     }
 }
