@@ -769,8 +769,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        // The Point aliases in unwrapped
-        assert_eq!(get_type("p", &ctx), "{x: number, y: number}");
+        assert_eq!(get_type("p", &ctx), "Point");
     }
 
     #[test]
@@ -1216,6 +1215,40 @@ mod tests {
         let src = r#"
         declare let add: ((number, number) => number) & ((string, string) => string)
         add("hello", 10)
+        "#;
+        
+        infer_prog(src);
+    }
+
+    #[test]
+    fn async_await() {
+        let src = r#"
+        let add_async = async (a, b) => {
+            await a + await b
+        }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("add_async", &ctx), "(Promise<number>, Promise<number>) => Promise<number>");
+    }
+
+    #[test]
+    fn async_doesnt_rewrap_return_promise() {
+        let src = r#"
+        let passthrough = async (x: Promise<string>) => x
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("passthrough", &ctx), "(Promise<string>) => Promise<string>");
+    }
+
+    #[test]
+    #[should_panic="Can't use `await` inside non-async lambda"]
+    fn await_only_works_in_async_functions() {
+        let src = r#"
+        let add_async = (a, b) => {
+            await a + await b
+        }
         "#;
         
         infer_prog(src);
