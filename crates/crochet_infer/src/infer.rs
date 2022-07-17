@@ -460,9 +460,9 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 match p {
                     PropOrSpread::Prop(p) => {
                         match p.as_ref() {
-                            Prop::Shorthand(_) => {
-                                // TODO: lookup the value in the current ctx
-                                todo!()
+                            Prop::Shorthand(Ident {name, ..}) => {
+                                let t = ctx.lookup_value(name);
+                                ps.push(ctx.prop(name, t, false));
                             }
                             Prop::KeyValue(KeyValueProp { name, value, .. }) => {
                                 let (s, t) = infer(ctx, value)?;
@@ -486,8 +486,9 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 let t = ctx.object(ps);
                 Ok((s, t))
             } else {
-                spread_types.push(ctx.object(ps));
-                let t = simplify_intersection(&spread_types, ctx);
+                let mut all_types = spread_types;
+                all_types.push(ctx.object(ps));
+                let t = simplify_intersection(&all_types, ctx);
                 Ok((s, t))
             }
         }
@@ -1055,6 +1056,27 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     Ok(s)
                 }
                 _ => Err(String::from("Unification is undecidable")),
+            }
+        }
+        (Variant::Alias(alias1), Variant::Alias(alias2)) => {
+            if alias1.name == alias2.name {
+                match (&alias1.type_params, &alias2.type_params) {
+                    (Some(tp1), Some(tp2)) => {
+                        let result: Result<Vec<_>, _> = tp1
+                            .iter()
+                            .zip(tp2.iter())
+                            .map(|(t1, t2)| unify(t1, t2, ctx))
+                            .collect();
+                        let ss = result?; // This is only okay if all calls to is_subtype are okay
+                        Ok(compose_many_subs_with_context(&ss, ctx))
+                    },
+                    (None, None) => {
+                        Ok(Subst::default())
+                    },
+                    _ => Err(String::from("Alias type mismatch"))
+                }
+            } else {
+                todo!("unify(): handle aliases that point to another alias")
             }
         }
         (_, Variant::Alias(types::AliasType { name, .. })) => {
