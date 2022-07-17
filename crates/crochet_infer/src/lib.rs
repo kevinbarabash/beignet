@@ -1332,9 +1332,19 @@ mod tests {
         let Foo = () => <div>Hello, world!</div>
         let elem = <Bar />
         "#;
-        let ctx = infer_prog(src);
+        
+        infer_prog(src);
+    }
 
-        assert_eq!(get_type("elem", &ctx), "JSXElement");
+    #[test]
+    #[should_panic="Component must be a function"]
+    fn jsx_custom_element_not_a_function() {
+        let src = r#"
+        let Foo = "hello, world"
+        let elem = <Foo />
+        "#;
+        
+        infer_prog(src);
     }
 
     #[test]
@@ -1344,8 +1354,7 @@ mod tests {
         let Foo = () => {x: 5, y: 10}
         let elem = <Foo />
         "#;
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type("elem", &ctx), "JSXElement");
+        
+        infer_prog(src);
     }
 }

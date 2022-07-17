@@ -333,7 +333,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
 
                                 return Ok((s, ret_type));
                             }
-                            _ => return Err(format!("Component '{name}' is not in scope")),
+                            _ => return Err(String::from("Component must be a function")),
                         }
                     }
                     None => return Err(format!("Component '{name}' is not in scope")),
