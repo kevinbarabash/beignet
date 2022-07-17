@@ -1196,4 +1196,28 @@ mod tests {
         "#;
         infer_prog(src);
     }
+
+    #[test]
+    fn call_overloaded_function() {
+        let src = r#"
+        declare let add: ((number, number) => number) & ((string, string) => string)
+        let str = add("hello", "world")
+        let num = add(5, 10)
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("str", &ctx), "string");
+        assert_eq!(get_type("num", &ctx), "number");
+    }
+    
+    #[test]
+    #[should_panic="Couldn't unify lambda with intersection"]
+    fn call_overloaded_function_with_wrong_params() {
+        let src = r#"
+        declare let add: ((number, number) => number) & ((string, string) => string)
+        add("hello", 10)
+        "#;
+        
+        infer_prog(src);
+    }
 }
