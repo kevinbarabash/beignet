@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::iter::Iterator;
 
-use crochet_ast::*;
 use crate::types::{self, freeze, unfreeze, Flag, Primitive, Scheme, Type};
+use crochet_ast::*;
 
 use super::constraint_solver::{run_solve, Constraint};
 use super::context::{Context, Env};
@@ -142,13 +142,13 @@ pub fn infer(
                             let cond_type = ctx.prim(Primitive::Bool);
 
                             (cond_type, cons_type)
-                        },
+                        }
                         _ => {
                             let cond_type = infer(cond, ctx, constraints)?;
                             let cons_type = infer(consequent, ctx, constraints)?;
 
                             (cond_type, cons_type)
-                        },
+                        }
                     };
                     constraints.push(Constraint::from((cond_type, ctx.prim(Primitive::Bool))));
 
@@ -276,20 +276,23 @@ pub fn infer(
                 .iter()
                 .map(|p| {
                     match p {
-                        Prop::Shorthand(Ident { name, .. }) => {
-                            let prop_type = ctx.lookup_value(name);
+                        PropOrSpread::Prop(p) => match p.as_ref() {
+                            Prop::Shorthand(Ident { name, .. }) => {
+                                let prop_type = ctx.lookup_value(name);
 
-                            // The property is not optional in the type we infer from
-                            // an object literal, because the property has a value.
-                            Ok(ctx.prop(name, prop_type, false))
-                        }
-                        Prop::KeyValue(KeyValueProp { name, value, .. }) => {
-                            let prop_type = infer(value, ctx, constraints)?;
+                                // The property is not optional in the type we infer from
+                                // an object literal, because the property has a value.
+                                Ok(ctx.prop(name, prop_type, false))
+                            }
+                            Prop::KeyValue(KeyValueProp { name, value, .. }) => {
+                                let prop_type = infer(value, ctx, constraints)?;
 
-                            // The property is not optional in the type we infer from
-                            // an object literal, because the property has a value.
-                            Ok(ctx.prop(name, prop_type, false))
-                        }
+                                // The property is not optional in the type we infer from
+                                // an object literal, because the property has a value.
+                                Ok(ctx.prop(name, prop_type, false))
+                            }
+                        },
+                        PropOrSpread::Spread(_) => todo!(),
                     }
                 })
                 .collect();
@@ -344,8 +347,8 @@ fn infer_many(
 
 #[cfg(test)]
 mod tests {
-    use crochet_parser::expr::expr_parser;
     use chumsky::prelude::*;
+    use crochet_parser::expr::expr_parser;
 
     use super::*;
 

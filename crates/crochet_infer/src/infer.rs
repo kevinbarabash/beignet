@@ -8,7 +8,7 @@ use super::context::{Context, Env};
 use super::infer_type_ann::*;
 use super::substitutable::Subst;
 use super::types::{self, freeze_scheme, Scheme, Type, Variant};
-use super::util::{generalize, normalize};
+use super::util::{generalize, normalize, simplify_intersection};
 
 pub fn infer_prog(prog: &Program) -> Result<Context, String> {
     let mut ctx: Context = Context::default();
@@ -358,25 +358,41 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
         Expr::Obj(Obj { props, .. }) => {
             let mut ss: Vec<Subst> = vec![];
             let mut ps: Vec<types::TProp> = vec![];
+            let mut spread_types: Vec<_> = vec![];
             for p in props {
                 match p {
-                    Prop::Shorthand(_) => {
-                        // TODO: lookup the value in the current ctx
-                        todo!()
+                    PropOrSpread::Prop(p) => {
+                        match p.as_ref() {
+                            Prop::Shorthand(_) => {
+                                // TODO: lookup the value in the current ctx
+                                todo!()
+                            }
+                            Prop::KeyValue(KeyValueProp { name, value, .. }) => {
+                                let (s, t) = infer(ctx, value)?;
+                                ss.push(s);
+                                // TODO: check if the inferred type is T | undefined and use that
+                                // determine the value of optional
+                                ps.push(ctx.prop(name, t, false));
+                            }
+                        }
                     }
-                    Prop::KeyValue(KeyValueProp { name, value, .. }) => {
-                        let (s, t) = infer(ctx, value)?;
+                    PropOrSpread::Spread(SpreadElement { expr, .. }) => {
+                        let (s, t) = infer(ctx, expr)?;
                         ss.push(s);
-                        // TODO: check if the inferred type is T | undefined and use that
-                        // determine the value of optional
-                        ps.push(ctx.prop(name, t, false));
+                        spread_types.push(t);
                     }
                 }
             }
 
             let s = compose_many_subs(&ss);
-            let t = ctx.object(ps);
-            Ok((s, t))
+            if spread_types.is_empty() {
+                let t = ctx.object(ps);
+                Ok((s, t))
+            } else {
+                spread_types.push(ctx.object(ps));
+                let t = simplify_intersection(&spread_types, ctx);
+                Ok((s, t))
+            }
         }
         Expr::Await(_) => todo!(),
         Expr::Tuple(Tuple { elems, .. }) => {
@@ -436,7 +452,7 @@ fn unwrap_member_type(t: &Type, ctx: &Context) -> Type {
         if let Variant::Object(props) = &member.obj.as_ref().variant {
             let prop = props.iter().find(|prop| prop.name == member.prop);
             if let Some(prop) = prop {
-                return prop.get_type(ctx)
+                return prop.get_type(ctx);
             }
         }
     }
@@ -627,6 +643,11 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                             })
                         }
                         ObjectPatProp::Rest(rest) => {
+                            if rest_opt_ty.is_some() {
+                                // TODO: return an Err() instead of panicking.
+                                // NOTE: This should be handled by the parser.
+                                panic!("Maximum one rest pattern allowed in object patterns")
+                            }
                             // TypeScript doesn't support spreading/rest in types so instead we
                             // need to turn:
                             // {x, y, ...rest}
@@ -717,6 +738,24 @@ fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     let result = match (&t1.variant, &t2.variant) {
+        (_, Variant::Alias(types::AliasType { name, .. })) => {
+            match ctx.types.get(name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    unify(t1, &scheme.ty, ctx)
+                }
+                None => panic!("Can't find alias '{name}' in context"),
+            }
+        }
+        (Variant::Alias(types::AliasType { name, .. }), _) => {
+            match ctx.types.get(name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    unify(&scheme.ty, t2, ctx)
+                }
+                None => panic!("Can't find alias '{name}' in context"),
+            }
+        }
         (Variant::Lit(lit), Variant::Prim(prim)) => {
             let b = matches!(
                 (lit, prim),
@@ -841,26 +880,84 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 false => Err(String::from("Unification failure")),
             }
         }
-        (_, Variant::Alias(types::AliasType { name, .. })) => {
-            match ctx.types.get(name) {
-                Some(scheme) => {
-                    // TODO: handle schemes with qualifiers
-                    unify(t1, &scheme.ty, ctx)
-                }
-                None => panic!("Can't find alias '{name}' in context"),
-            }
-        }
-        (Variant::Alias(types::AliasType { name, .. }), _) => {
-            match ctx.types.get(name) {
-                Some(scheme) => {
-                    // TODO: handle schemes with qualifiers
-                    unify(&scheme.ty, t2, ctx)
-                }
-                None => panic!("Can't find alias '{name}' in context"),
-            }
-        }
         (Variant::Var, _) => bind(&t1.id, t2),
         (_, Variant::Var) => bind(&t2.id, t1),
+        (Variant::Object(props), Variant::Intersection(types)) => {
+            let obj_types: Vec<_> = types
+                .iter()
+                .filter(|t| matches!(t.variant, Variant::Object(_)))
+                .cloned()
+                .collect();
+            let rest_types: Vec<_> = types
+                .iter()
+                .filter(|t| matches!(t.variant, Variant::Var))
+                .cloned()
+                .collect();
+            // TODO: check for other variants, if there are we should error
+
+            let obj_type = simplify_intersection(&obj_types, ctx);
+
+            println!("rest_types.len() = {}", rest_types.len());
+
+            match rest_types.len() {
+                0 => unify(t1, &obj_type, ctx),
+                1 => {
+                    let all_obj_props = match &obj_type.variant {
+                        Variant::Object(props) => props.to_owned(),
+                        _ => vec![],
+                    };
+        
+                    let (obj_props, rest_props): (Vec<_>, Vec<_>) = props.iter().cloned()
+                        .partition(|p| all_obj_props.iter().any(|op| op.name == p.name));
+        
+                    let s1 = unify(&ctx.object(obj_props), &obj_type, ctx)?;
+        
+                    let rest_type = rest_types.get(0).unwrap();
+                    let s2 = unify(&ctx.object(rest_props), rest_type, ctx)?;
+        
+                    let s = compose_subs(&s2, &s1);
+                    Ok(s)
+                }
+                _ => Err(String::from("Unification is undecidable")),
+            }
+        }
+        (Variant::Intersection(types), Variant::Object(props)) => {
+            let obj_types: Vec<_> = types
+                .iter()
+                .filter(|t| matches!(t.variant, Variant::Object(_)))
+                .cloned()
+                .collect();
+            let rest_types: Vec<_> = types
+                .iter()
+                .filter(|t| matches!(t.variant, Variant::Var))
+                .cloned()
+                .collect();
+            // TODO: check for other variants, if there are we should error
+
+            let obj_type = simplify_intersection(&obj_types, ctx);
+
+            match rest_types.len() {
+                0 => unify(&obj_type, t2, ctx),
+                1 => {
+                    let all_obj_props = match &obj_type.variant {
+                        Variant::Object(props) => props.to_owned(),
+                        _ => vec![],
+                    };
+
+                    let (obj_props, rest_props): (Vec<_>, Vec<_>) = props.iter().cloned()
+                        .partition(|p| all_obj_props.iter().any(|op| op.name == p.name));
+
+                    let s_obj = unify(&obj_type, &ctx.object(obj_props), ctx)?;
+
+                    let rest_type = rest_types.get(0).unwrap();
+                    let s_rest = unify(rest_type, &ctx.object(rest_props), ctx)?;
+
+                    let s = compose_subs(&s_rest, &s_obj);
+                    Ok(s)
+                }
+                _ => Err(String::from("Unification is undecidable")),
+            }
+        }
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())

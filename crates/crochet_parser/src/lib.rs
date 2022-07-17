@@ -107,6 +107,7 @@ mod tests {
     fn objects() {
         insta::assert_debug_snapshot!(parse("{x: 5, y: 10}"));
         insta::assert_debug_snapshot!(parse("let obj = {x, y}"));
+        insta::assert_debug_snapshot!(parse("let obj = {a, b, ...others}"));
     }
 
     #[test]
@@ -189,11 +190,22 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let foo = ([a, b]: [string, number]) => a"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}) => b"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}: {a: string, b: number}) => b"));
-        // TODO: renaming properties when destructuring objects
         // TODO: assigning defaults
         // TODO: type annotations
         // TODO: function params
         // TODO: disallowed patterns, e.g. top-level rest, non-top-level type annotations
+    }
+
+    #[test]
+    #[should_panic="Only one rest is allowed in an object pattern"]
+    fn multiple_rests_is_invalid() {
+        insta::assert_debug_snapshot!(parse("let {z, ...p, ...q} = point"));
+    }
+
+    #[test]
+    #[should_panic="Rest should come last in object pattern"]
+    fn rest_that_isnt_last_is_invalid() {
+        insta::assert_debug_snapshot!(parse("let {...p, z} = point"));
     }
 
     #[test]

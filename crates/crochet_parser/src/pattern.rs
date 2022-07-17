@@ -105,7 +105,6 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
                 })
             });
 
-        // NOTE: There can only be a single rest element and it must be last
         let obj_pat_prop = choice((
             rest_pat.clone().map(ObjectPatProp::Rest),
             key_value_pat_prop,
@@ -118,13 +117,35 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
                 .ignore_then(type_ann.clone())
                 .or_not(),
         )
-        .map_with_span(|(props, type_ann), span| {
-            Pattern::Object(ObjectPat {
-                span,
-                props,
-                optional: false,
-                type_ann,
-            })
+        .map_with_span(|(props, type_ann), span| -> Pattern {
+            let rest_count = props
+                .iter()
+                .filter(|p| matches!(p, ObjectPatProp::Rest(_)))
+                .count();
+
+            match rest_count {
+                0 => Pattern::Object(ObjectPat {
+                    span,
+                    props,
+                    optional: false,
+                    type_ann,
+                }),
+                1 => match props.last() {
+                    Some(last) => match last {
+                        ObjectPatProp::Rest(_) => Pattern::Object(ObjectPat {
+                            span,
+                            props,
+                            optional: false,
+                            type_ann,
+                        }),
+                        _ => {
+                            panic!("Rest should come last in object pattern")
+                        }
+                    },
+                    None => panic!("This should never happen"),
+                },
+                _ => panic!("Only one rest is allowed in an object pattern"),
+            }
         });
 
         top_level = false;

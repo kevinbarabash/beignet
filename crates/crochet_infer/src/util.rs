@@ -177,8 +177,6 @@ pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
         .collect();
     props.sort_by_key(|prop| prop.name.clone()); // ensure a stable order
 
-    let obj_type = ctx.object(props);
-
     let mut not_obj_types: Vec<_> = in_types
         .iter()
         .filter(|ty| !matches!(ty.variant, Variant::Object(_)))
@@ -187,7 +185,9 @@ pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
 
     let mut out_types = vec![];
     out_types.append(&mut not_obj_types);
-    out_types.push(obj_type);
+    if !props.is_empty() {
+        out_types.push(ctx.object(props));
+    }
     out_types.sort_by_key(|ty| ty.id); // ensure a stable order
 
     if out_types.len() == 1 {
