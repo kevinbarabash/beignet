@@ -1111,4 +1111,64 @@ mod tests {
 
         infer_prog(src);
     }
+
+    #[test]
+    fn destructure_obj_with_rest() {
+        let src = r#"
+        declare let point: {x: number, y: number, z?: number}
+        let {z, ...rest} = point
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("rest", &ctx), "{x: number, y: number}");
+    }
+
+    #[test]
+    fn spread_an_object() {
+        let src = r#"
+        declare let point: {x: number, y: number}
+        let point_3d = {...point, z: 15}
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("point_3d", &ctx), "{x: number, y: number, z: 15}");
+    }
+
+    #[test]
+    fn spread_multiple_objects_no_overlap() {
+        let src = r#"
+        let foo = {a: true, b: "hello"}
+        let bar = {x: 5, y: 10}
+        let obj = {...foo, ...bar}
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("obj", &ctx), "{a: true, b: \"hello\", x: 5, y: 10}");
+    }
+
+    #[test]
+    fn spread_multiple_objects_with_overlap() {
+        let src = r#"
+        let foo = {a: true, b: "hello"}
+        let bar = {b: 5, c: false}
+        let obj = {...foo, ...bar}
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("obj", &ctx), "{a: true, b: \"hello\" & 5, c: false}");
+    }
+
+    #[test]
+    fn infer_obj_from_spread() {
+        let src = r#"
+        type Point = {x: number, y: number, z: number}
+        declare let mag: (Point) => number
+        let mag_2d = (p) => {
+            mag({...p, z: 0})
+        }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("mag_2d", &ctx), "({x: number, y: number}) => number");
+    }
 }

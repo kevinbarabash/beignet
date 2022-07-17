@@ -119,13 +119,27 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .then_ignore(just_with_padding(":"))
             .then(expr.clone())
             .map_with_span(|(name, value), span: Span| {
-                Prop::KeyValue(KeyValueProp { span, name, value })
+                PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
+                    span,
+                    name,
+                    value,
+                })))
             });
 
-        let shorthand_prop =
-            text::ident().map_with_span(|name, span: Span| Prop::Shorthand(Ident { span, name }));
+        let shorthand_prop = text::ident().map_with_span(|name, span: Span| {
+            PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident { span, name })))
+        });
 
-        let prop = choice((key_value_prop, shorthand_prop));
+        let rest_prop = just_with_padding("...")
+            .ignore_then(expr.clone())
+            .map_with_span(|expr, span: Span| {
+                PropOrSpread::Spread(SpreadElement {
+                    span,
+                    expr: Box::from(expr),
+                })
+            });
+
+        let prop = choice((key_value_prop, shorthand_prop, rest_prop));
 
         let obj = prop
             .separated_by(just_with_padding(","))
@@ -145,7 +159,6 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             r#bool,
             num,
             r#str,
-
             // can be used as sub-expressions, but have the highest precedence
             if_else,
             ident.map(Expr::Ident),
@@ -180,27 +193,29 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                         .separated_by(just_with_padding(","))
                         .allow_trailing()
                         .delimited_by(just_with_padding("("), just_with_padding(")"))
-                        .map_with_span(|args, span: Span| {
-                            Suffix::Call(args, span)
-                        })
-                )).repeated()
+                        .map_with_span(Suffix::Call),
+                ))
+                .repeated(),
             )
             .foldl(|f, suffix| {
+                // TODO: check the type of `f` to verify if the current `suffix`
+                // makes sense for that type of node.  For instance, calling a
+                // method on a literal doesn't make sense.
                 match suffix {
                     Suffix::Member(prop, span) => {
                         let start = f.span().start;
                         let end = span.end;
-                        
+
                         Expr::Member(Member {
                             span: start..end,
                             obj: Box::new(f),
                             prop,
                         })
-                    },
+                    }
                     Suffix::Call(args, span) => {
                         let start = f.span().start;
                         let end = span.end;
-        
+
                         Expr::App(App {
                             span: start..end,
                             lam: Box::new(f),

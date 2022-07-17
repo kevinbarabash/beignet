@@ -96,7 +96,19 @@ pub struct Op {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Obj {
     pub span: Span,
-    pub props: Vec<Prop>,
+    pub props: Vec<PropOrSpread>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PropOrSpread {
+    Spread(SpreadElement),
+    Prop(Box<Prop>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpreadElement {
+    pub span: Span,
+    pub expr: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

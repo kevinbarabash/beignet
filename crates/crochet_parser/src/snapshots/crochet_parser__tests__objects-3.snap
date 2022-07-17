@@ -1,11 +1,11 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"let obj = {x, y}\")"
+expression: "parse(\"let obj = {a, b, ...others}\")"
 ---
 Program {
     body: [
         VarDecl {
-            span: 0..16,
+            span: 0..27,
             pattern: Ident(
                 BindingIdent {
                     span: 4..7,
@@ -19,13 +19,13 @@ Program {
             init: Some(
                 Obj(
                     Obj {
-                        span: 10..16,
+                        span: 10..27,
                         props: [
                             Prop(
                                 Shorthand(
                                     Ident {
                                         span: 11..12,
-                                        name: "x",
+                                        name: "a",
                                     },
                                 ),
                             ),
@@ -33,9 +33,20 @@ Program {
                                 Shorthand(
                                     Ident {
                                         span: 14..15,
-                                        name: "y",
+                                        name: "b",
                                     },
                                 ),
+                            ),
+                            Spread(
+                                SpreadElement {
+                                    span: 17..26,
+                                    expr: Ident(
+                                        Ident {
+                                            span: 20..26,
+                                            name: "others",
+                                        },
+                                    ),
+                                },
                             ),
                         ],
                     },
