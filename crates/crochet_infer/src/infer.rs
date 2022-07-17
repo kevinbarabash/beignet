@@ -820,6 +820,15 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Err(String::from("Couldn't unify lambdas"))
             }
         }
+        (Variant::Lam(_), Variant::Intersection(types)) => {
+            for t in types {
+                let result = unify(t1, t, ctx);
+                if result.is_ok() {
+                    return result
+                }
+            }
+            Err(String::from("Couldn't unify lambda with intersection"))
+        }
         (Variant::Object(props1), Variant::Object(props2)) => {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
             let result: Result<Vec<_>, String> = props2
