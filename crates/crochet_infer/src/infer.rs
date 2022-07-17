@@ -12,6 +12,8 @@ use super::util::{generalize, normalize, simplify_intersection};
 
 pub fn infer_prog(prog: &Program) -> Result<Context, String> {
     let mut ctx: Context = Context::default();
+    let promise_scheme = Scheme::from(ctx.object(vec![]));
+    ctx.types.insert(String::from("Promise"), promise_scheme);
 
     // TODO: figure out how report multiple errors
     for stmt in &prog.body {
@@ -152,6 +154,10 @@ fn infer_let(
     Ok((s, t))
 }
 
+fn is_promise(ty: &Type) -> bool {
+    matches!(&ty.variant, Variant::Alias(types::AliasType { name, .. }) if name == "Promise")
+}
+
 fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
     match expr {
         Expr::App(App { lam, args, .. }) => {
@@ -255,16 +261,19 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 }
             },
         },
-        Expr::JSXElement(_) => todo!(),
+        Expr::JSXElement(_) => {
+            todo!()
+        }
         Expr::Lambda(Lambda {
             params,
             body,
-            is_async: _,
-            return_type,
+            is_async,
+            return_type: rt_type_ann,
             type_params,
             ..
         }) => {
             let mut new_ctx = ctx.clone();
+            new_ctx.is_async = is_async.to_owned();
 
             let type_params_map: HashMap<String, Type> = match type_params {
                 Some(params) => params
@@ -296,10 +305,16 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             // Copies over the count from new_ctx so that it's unique across Contexts.
             ctx.state.count.set(new_ctx.state.count.get());
 
-            let s = match return_type {
-                Some(return_type) => unify(
+            let rt = if *is_async && !is_promise(&rt) {
+                ctx.alias("Promise", Some(vec![rt]))
+            } else {
+                rt
+            };
+
+            let s = match rt_type_ann {
+                Some(rt_type_ann) => unify(
                     &rt,
-                    &infer_type_ann_with_params(return_type, ctx, &type_params_map),
+                    &infer_type_ann_with_params(rt_type_ann, ctx, &type_params_map),
                     ctx,
                 )?,
                 None => Subst::default(),
@@ -394,7 +409,21 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                 Ok((s, t))
             }
         }
-        Expr::Await(_) => todo!(),
+        Expr::Await(Await { expr, .. }) => {
+            if !ctx.is_async {
+                return Err(String::from("Can't use `await` inside non-async lambda"));
+            }
+
+            let (s1, t1) = infer(ctx, expr)?;
+            let wrapped_type = ctx.fresh_var();
+            let promise_type = ctx.alias("Promise", Some(vec![wrapped_type.clone()]));
+
+            let s2 = unify(&t1, &promise_type, ctx)?;
+
+            let s = compose_subs(&s2, &s1);
+
+            Ok((s, wrapped_type))
+        }
         Expr::Tuple(Tuple { elems, .. }) => {
             let result: Result<Vec<(Subst, Type)>, String> =
                 elems.iter().map(|elem| infer(ctx, elem)).collect();
@@ -440,7 +469,14 @@ fn infer_property_type(
                 None => Err(String::from("Record literal doesn't contain property")),
             }
         }
-        Variant::Alias(_) => todo!(),
+        Variant::Alias(types::AliasType { name, .. }) => {
+            match ctx.types.get(name) {
+                Some(scheme) => {
+                    infer_property_type(&scheme.ty, prop, ctx)
+                }
+                None => panic!("Can't find alias '{name}' in context"),
+            }
+        },
         Variant::Tuple(_) => todo!(),
         Variant::Rest(_) => todo!(),
         Variant::Member(_) => todo!(),
@@ -476,9 +512,9 @@ fn occurs_check(id: &i32, t: &Type) -> bool {
     t.ftv().contains(id)
 }
 
-fn compose_subs(s1: &Subst, s2: &Subst) -> Subst {
-    let mut result: Subst = s2.iter().map(|(id, tv)| (*id, tv.apply(s1))).collect();
-    result.extend(s1.to_owned());
+fn compose_subs(s2: &Subst, s1: &Subst) -> Subst {
+    let mut result: Subst = s1.iter().map(|(id, tv)| (*id, tv.apply(s2))).collect();
+    result.extend(s2.to_owned());
     result
 }
 
@@ -645,21 +681,11 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                         ObjectPatProp::Rest(rest) => {
                             if rest_opt_ty.is_some() {
                                 // TODO: return an Err() instead of panicking.
-                                // NOTE: This should be handled by the parser.
                                 panic!("Maximum one rest pattern allowed in object patterns")
                             }
                             // TypeScript doesn't support spreading/rest in types so instead we
-                            // need to turn:
-                            // {x, y, ...rest}
-                            // into:
-                            // {x: A, y: B} & C
-                            // we also need some way to specify that C is an object type of some
-                            // sort... maybe it'll just fall out when we trying to unify some other
-                            // object type with an intersection type.
-                            // essentially C = other_object_type - {x: A, y: B}
-                            // TODO: panic if rest_opt_ty is not None, it means that the parser has
-                            // failed to ensure that there's only one rest pattern in an object pattern
-
+                            // do the following conversion:
+                            // {x, y, ...rest} -> {x: A, y: B} & C
                             // TODO: bubble the error up from infer_patter_rec() if there is one.
                             rest_opt_ty = infer_pattern_rec(rest.arg.as_ref(), ctx, assump).ok();
                             None
@@ -738,24 +764,6 @@ fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     let result = match (&t1.variant, &t2.variant) {
-        (_, Variant::Alias(types::AliasType { name, .. })) => {
-            match ctx.types.get(name) {
-                Some(scheme) => {
-                    // TODO: handle schemes with qualifiers
-                    unify(t1, &scheme.ty, ctx)
-                }
-                None => panic!("Can't find alias '{name}' in context"),
-            }
-        }
-        (Variant::Alias(types::AliasType { name, .. }), _) => {
-            match ctx.types.get(name) {
-                Some(scheme) => {
-                    // TODO: handle schemes with qualifiers
-                    unify(&scheme.ty, t2, ctx)
-                }
-                None => panic!("Can't find alias '{name}' in context"),
-            }
-        }
         (Variant::Lit(lit), Variant::Prim(prim)) => {
             let b = matches!(
                 (lit, prim),
@@ -824,7 +832,7 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             for t in types {
                 let result = unify(t1, t, ctx);
                 if result.is_ok() {
-                    return result
+                    return result;
                 }
             }
             Err(String::from("Couldn't unify lambda with intersection"))
@@ -915,15 +923,17 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         Variant::Object(props) => props.to_owned(),
                         _ => vec![],
                     };
-        
-                    let (obj_props, rest_props): (Vec<_>, Vec<_>) = props.iter().cloned()
+
+                    let (obj_props, rest_props): (Vec<_>, Vec<_>) = props
+                        .iter()
+                        .cloned()
                         .partition(|p| all_obj_props.iter().any(|op| op.name == p.name));
-        
+
                     let s1 = unify(&ctx.object(obj_props), &obj_type, ctx)?;
-        
+
                     let rest_type = rest_types.get(0).unwrap();
                     let s2 = unify(&ctx.object(rest_props), rest_type, ctx)?;
-        
+
                     let s = compose_subs(&s2, &s1);
                     Ok(s)
                 }
@@ -953,7 +963,9 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         _ => vec![],
                     };
 
-                    let (obj_props, rest_props): (Vec<_>, Vec<_>) = props.iter().cloned()
+                    let (obj_props, rest_props): (Vec<_>, Vec<_>) = props
+                        .iter()
+                        .cloned()
                         .partition(|p| all_obj_props.iter().any(|op| op.name == p.name));
 
                     let s_obj = unify(&obj_type, &ctx.object(obj_props), ctx)?;
@@ -965,6 +977,24 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     Ok(s)
                 }
                 _ => Err(String::from("Unification is undecidable")),
+            }
+        }
+        (_, Variant::Alias(types::AliasType { name, .. })) => {
+            match ctx.types.get(name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    unify(t1, &scheme.ty, ctx)
+                }
+                None => panic!("Can't find alias '{name}' in context"),
+            }
+        }
+        (Variant::Alias(types::AliasType { name, .. }), _) => {
+            match ctx.types.get(name) {
+                Some(scheme) => {
+                    // TODO: handle schemes with qualifiers
+                    unify(&scheme.ty, t2, ctx)
+                }
+                None => panic!("Can't find alias '{name}' in context"),
             }
         }
         (v1, v2) => {
