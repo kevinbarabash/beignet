@@ -215,7 +215,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
         Expr::Ident(Ident { name, .. }) => {
             // TODO: return an error if the lookup fails
             let s = Subst::new();
-            let t = ctx.lookup_value(name);
+            let t = ctx.lookup_value(name)?;
             Ok((s, t))
         }
         Expr::IfElse(IfElse {
@@ -461,7 +461,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
                     PropOrSpread::Prop(p) => {
                         match p.as_ref() {
                             Prop::Shorthand(Ident {name, ..}) => {
-                                let t = ctx.lookup_value(name);
+                                let t = ctx.lookup_value(name)?;
                                 ps.push(ctx.prop(name, t, false));
                             }
                             Prop::KeyValue(KeyValueProp { name, value, .. }) => {

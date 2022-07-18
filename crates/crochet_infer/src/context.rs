@@ -1,8 +1,8 @@
 use std::cell::Cell;
 use std::collections::HashMap;
 
+use crate::types::{self, Flag, Scheme, TProp, Type, Variant};
 use crochet_ast::literal::Lit;
-use crate::types::{self, Flag, Scheme, Type, Variant, TProp};
 
 use super::substitutable::*;
 
@@ -37,16 +37,20 @@ impl Default for Context {
 }
 
 impl Context {
-    // TODO: Make this return a Result<Type, String>
-    pub fn lookup_value(&self, name: &str) -> Type {
-        println!("lookup_value({name})");
-        let scheme = self.values.get(name).unwrap();
-        self.instantiate(scheme)
+    pub fn lookup_value(&self, name: &str) -> Result<Type, String> {
+        let scheme = self
+            .values
+            .get(name)
+            .ok_or(format!("Can't find type: {name}"))?;
+        Ok(self.instantiate(scheme))
     }
     // TODO: Make this return a Result<Type, String>
-    pub fn lookup_type(&self, name: &str) -> Type {
-        let scheme = self.types.get(name).unwrap();
-        self.instantiate(scheme)
+    pub fn lookup_type(&self, name: &str) -> Result<Type, String> {
+        let scheme = self
+            .types
+            .get(name)
+            .ok_or(format!("Can't find type: {name}"))?;
+        Ok(self.instantiate(scheme))
     }
 
     pub fn instantiate(&self, scheme: &Scheme) -> Type {
@@ -82,7 +86,11 @@ impl Context {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Lam(types::LamType { params, ret, is_call: false }),
+            variant: Variant::Lam(types::LamType {
+                params,
+                ret,
+                is_call: false,
+            }),
             flag,
         }
     }
