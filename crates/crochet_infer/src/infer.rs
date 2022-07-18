@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crochet_ast::*;
 
 use crate::substitutable::Substitutable;
+use crate::types::AliasType;
 
 use super::context::{Context, Env};
 use super::infer_type_ann::*;
@@ -68,7 +69,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                         let init = init.as_ref().unwrap();
 
                         let (pa, s) =
-                            infer_pattern_and_init(pattern, init, &ctx, &PatternUsage::Assign)?;
+                            infer_pattern_and_init(pattern, init, &mut ctx, &PatternUsage::Assign)?;
 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
@@ -91,7 +92,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
-                infer_expr(&ctx, expr)?;
+                infer_expr(&mut ctx, expr)?;
             }
         };
     }
@@ -99,7 +100,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
     Ok(ctx)
 }
 
-pub fn infer_expr(ctx: &Context, expr: &Expr) -> Result<Scheme, String> {
+pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<Scheme, String> {
     let (s, t) = infer(ctx, expr)?;
     Ok(close_over(&s, &t, ctx))
 }
@@ -120,7 +121,7 @@ enum PatternUsage {
 fn infer_pattern_and_init(
     pat: &Pattern,
     init: &Expr,
-    ctx: &Context,
+    ctx: &mut Context,
     pu: &PatternUsage,
 ) -> Result<(Assump, Subst), String> {
     let type_param_map = HashMap::new();
@@ -153,7 +154,7 @@ fn infer_let(
     pu: &PatternUsage,
 ) -> Result<(Subst, Type), String> {
     let mut new_ctx = ctx.clone();
-    let (pa, s1) = infer_pattern_and_init(pat, init, &new_ctx, pu)?;
+    let (pa, s1) = infer_pattern_and_init(pat, init, &mut new_ctx, pu)?;
 
     // Inserts the new variables from infer_pattern() into the
     // current context.
@@ -161,7 +162,7 @@ fn infer_let(
         new_ctx.values.insert(name.to_owned(), scheme.to_owned());
     }
 
-    let (s2, t2) = infer(&new_ctx, body)?;
+    let (s2, t2) = infer(&mut new_ctx, body)?;
 
     // Copies over the count from new_ctx so that it's unique across Contexts.
     ctx.state.count.set(new_ctx.state.count.get());
@@ -175,8 +176,8 @@ fn is_promise(ty: &Type) -> bool {
     matches!(&ty.variant, Variant::Alias(types::AliasType { name, .. }) if name == "Promise")
 }
 
-fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
-    match expr {
+fn infer(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), String> {
+    let result = match expr {
         Expr::App(App { lam, args, .. }) => {
             let (s1, lam_type) = infer(ctx, lam)?;
             let (mut args_ss, args_ts): (Vec<_>, Vec<_>) =
@@ -199,12 +200,15 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let s3 = unify(&call_type, &lam_type, ctx)?;
 
             // ss = [s3, ...args_ss, s1]
-            let mut ss = vec![s3.clone()];
+            let mut ss = vec![s3];
             ss.append(&mut args_ss);
             ss.push(s1);
 
+            let s = compose_many_subs(&ss);
+            let t = ret_type.apply(&s);
+
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
-            Ok((compose_many_subs(&ss), ret_type.apply(&s3)))
+            Ok((s, t))
         }
         Expr::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer(ctx, expr)?;
@@ -213,8 +217,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             Ok((compose_subs(&s2, &s1), tv.apply(&s2)))
         }
         Expr::Ident(Ident { name, .. }) => {
-            // TODO: return an error if the lookup fails
-            let s = Subst::new();
+            let s = Subst::default();
             let t = ctx.lookup_value(name)?;
             Ok((s, t))
         }
@@ -382,7 +385,7 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
 
             let (ss, ts): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-            let (rs, rt) = infer(&new_ctx, body)?;
+            let (rs, rt) = infer(&mut new_ctx, body)?;
 
             // Copies over the count from new_ctx so that it's unique across Contexts.
             ctx.state.count.set(new_ctx.state.count.get());
@@ -530,13 +533,41 @@ fn infer(ctx: &Context, expr: &Expr) -> Result<(Subst, Type), String> {
             let s = Subst::default();
             Ok((s, t))
         }
+    };
+
+    let (s, t) = result?;
+
+    // TODO: apply `s` to `ctx.values`
+    for (k, v) in ctx.values.clone() {
+        ctx.values.insert(k.to_owned(), v.apply(&s));
     }
+
+    Ok((s, t))
 }
 
-fn lookup_alias(ctx: &Context, name: &str) -> Result<Type, String> {
-    match ctx.types.get(name) {
-        // TODO: handle schemes with qualifiers
-        Some(scheme) => Ok(scheme.ty.to_owned()),
+fn lookup_alias(ctx: &Context, alias: &AliasType) -> Result<Type, String> {
+    match ctx.types.get(&alias.name) {
+        Some(scheme) => {
+            // Replaces qualifiers in the scheme with the corresponding type params
+            // from the alias type.
+            let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
+            let subs: Subst = match &alias.type_params {
+                Some(type_params) => {
+                    if scheme.qualifiers.len() != type_params.len() {
+                        return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                    }
+                    ids.zip(type_params.iter().cloned()).collect()
+                },
+                None => {
+                    if !scheme.qualifiers.is_empty() {
+                        return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                    }
+                    ids.zip(scheme.qualifiers.iter().map(|_| ctx.fresh_var())).collect()
+                },
+            };
+
+            Ok(scheme.ty.apply(&subs))
+        },
         None => Err(String::from("Can't find alias '{name}' in context")),
     }
 }
@@ -554,8 +585,8 @@ fn infer_property_type(
                 None => Err(String::from("Record literal doesn't contain property")),
             }
         }
-        Variant::Alias(types::AliasType { name, .. }) => {
-            let t = lookup_alias(ctx, name)?;
+        Variant::Alias(alias) => {
+            let t = lookup_alias(ctx, alias)?;
             infer_property_type(&t, prop, ctx)
         }
         _ => todo!("Unhandled {obj_t} in infer_property_type"),
@@ -946,7 +977,7 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
             if types1.len() < types2.len() {
                 // TODO: tweak this error message to include the types
-                return Err(String::from("too many elements to unpack"));
+                return Err(String::from("not enough elements to unpack"));
             }
             let result: Result<Vec<_>, _> = types1
                 .iter()
@@ -1079,12 +1110,12 @@ fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 todo!("unify(): handle aliases that point to another alias")
             }
         }
-        (_, Variant::Alias(types::AliasType { name, .. })) => {
-            let alias_t = lookup_alias(ctx, name)?;
+        (_, Variant::Alias(alias)) => {
+            let alias_t = lookup_alias(ctx, alias)?;
             unify(t1, &alias_t, ctx)
         }
-        (Variant::Alias(types::AliasType { name, .. }), _) => {
-            let alias_t = lookup_alias(ctx, name)?;
+        (Variant::Alias(alias), _) => {
+            let alias_t = lookup_alias(ctx, alias)?;
             unify(&alias_t, t2, ctx)
         }
         (v1, v2) => {

@@ -1,19 +1,12 @@
-mod constraint_solver;
 mod context;
 pub mod infer;
-mod infer_expr;
-mod infer_lambda;
-mod infer_mem;
-mod infer_pattern;
-mod infer_prog;
 mod infer_type_ann;
 mod substitutable;
 pub mod types;
 mod util;
 
 pub use context::*;
-pub use infer_expr::*;
-pub use infer_prog::*;
+pub use infer::*;
 
 #[cfg(test)]
 mod tests {
@@ -23,9 +16,9 @@ mod tests {
     use super::*;
 
     fn infer(input: &str) -> String {
-        let ctx = Context::default();
+        let mut ctx = Context::default();
         let expr = expr_parser().parse(input).unwrap();
-        let scheme = infer::infer_expr(&ctx, &expr).unwrap();
+        let scheme = infer::infer_expr(&mut ctx, &expr).unwrap();
         println!("scheme = {:#?}", scheme);
         format!("{scheme}")
     }
@@ -237,7 +230,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "too many elements to unpack"]
+    #[should_panic = "not enough elements to unpack"]
     fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack() {
         let src = r#"
         let [a, b, c, d] = [5, true, "hello"]
@@ -282,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "too many elements to unpack"]
+    #[should_panic = "not enough elements to unpack"]
     fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack_with_type_annotation()
     {
         let src = r#"
@@ -860,6 +853,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic = "Unification failure"]
     fn calling_generic_lambda_inside_lambda() {
         let src = r#"
         let run = () => {
@@ -1426,5 +1420,14 @@ mod tests {
         "#;
 
         infer_prog(src);
+    }
+
+    // let h = (f, x, y) => f(x) + f(y)
+    #[test]
+    fn this_should_work() {
+        let src = r#"let h = (f, x, y) => f(x) + f(y)"#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("h", &ctx), "<t0>((t0) => number, t0, t0) => number");
     }
 }
