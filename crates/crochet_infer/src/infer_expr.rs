@@ -45,7 +45,7 @@ pub fn infer(
     // - each call to runTI uses a fresh `Subst`
     // - `unify` only updates the substitutions in the monad with the result of `mgu`
     match expr {
-        Expr::Ident(Ident { name, .. }) => Ok(ctx.lookup_value(name)),
+        Expr::Ident(Ident { name, .. }) => ctx.lookup_value(name),
         Expr::Lambda(lambda) => infer_lambda(infer, lambda, ctx, constraints),
         Expr::Lit(literal) => Ok(ctx.lit(literal.to_owned())),
         Expr::Member(member) => infer_mem(infer, member, ctx, constraints),
@@ -278,7 +278,7 @@ pub fn infer(
                     match p {
                         PropOrSpread::Prop(p) => match p.as_ref() {
                             Prop::Shorthand(Ident { name, .. }) => {
-                                let prop_type = ctx.lookup_value(name);
+                                let prop_type = ctx.lookup_value(name)?;
 
                                 // The property is not optional in the type we infer from
                                 // an object literal, because the property has a value.
