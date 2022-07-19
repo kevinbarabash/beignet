@@ -575,9 +575,7 @@ fn infer_var_with_union_type_annotation() {
     assert_eq!(b, "number | string");
 }
 
-// TODO: Introduce Flag::Result so that the result is union
 #[test]
-#[ignore]
 fn infer_widen_tuple_return() {
     let src = r#"
     let result = (cond) => {
@@ -939,9 +937,7 @@ fn infer_destructure_all_object_properties() {
     assert_eq!(result, "10");
 }
 
-// TODO: allow this after refactoring if-let and implement pattern matching
 #[test]
-#[ignore]
 fn infer_destructure_some_object_properties() {
     let src = r#"
     let point = {x: 5, y: 10}
@@ -953,9 +949,7 @@ fn infer_destructure_some_object_properties() {
     assert_eq!(result, "5");
 }
 
-// TODO: allow this after refactoring if-let and implement pattern matching
 #[test]
-#[ignore]
 fn infer_destructure_some_object_properties_with_renaming() {
     let src = r#"
     let point = {x: 5, y: 10}
@@ -1109,7 +1103,6 @@ fn infer_destructure_tuple_too_many_identifiers() {
 }
 
 #[test]
-#[ignore]
 fn infer_destructure_tuple_extra_values_are_ignored() {
     let src = r#"
     let [a, b] = ["hello", 5, true]
@@ -1227,9 +1220,7 @@ fn infer_if_let() {
     assert!(ctx.values.get("y").is_none());
 }
 
-// TODO: re-enable after refactor if-let code
 #[test]
-#[ignore]
 fn infer_if_let_with_is() {
     let src = r#"
     declare let b: string | number
@@ -1370,7 +1361,9 @@ fn infer_if_let_refutable_pattern_obj() {
     "###);
 }
 
+// TODO: update codegen to handle LetExpr
 #[test]
+#[ignore]
 fn infer_if_let_refutable_pattern_nested_obj() {
     let src = r#"
     let action = {type: "moveto", point: {x: 5, y: 10}}
@@ -1414,7 +1407,7 @@ fn infer_if_let_refutable_pattern_nested_obj() {
     "###);
 }
 
-// TODO: we have to refine how matches are handled with if-let
+// TODO: update codegen to handle LetExpr
 #[test]
 #[ignore]
 fn infer_if_let_refutable_pattern_with_disjoint_union() {
@@ -1537,9 +1530,7 @@ fn infer_if_let_refutable_pattern_nested_array() {
     "###);
 }
 
-// TODO: re-enable after refactoring if-let code
 #[test]
-#[ignore]
 fn codegen_if_let_with_is_prim() {
     let src = r#"
     declare let b: string | number
@@ -1571,7 +1562,7 @@ fn codegen_if_let_with_is_prim() {
     "###);
 }
 
-// TODO: we have to refine how matches are handled with if-let
+// TODO: allow `a is string` to unify with "hello" string literal
 #[test]
 #[ignore]
 fn codegen_if_let_with_is_prim_nested() {
