@@ -3,6 +3,7 @@ pub mod infer;
 mod infer_type_ann;
 mod substitutable;
 pub mod types;
+mod unify;
 mod util;
 
 pub use context::*;

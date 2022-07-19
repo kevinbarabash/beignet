@@ -1,7 +1,7 @@
 use std::cell::Cell;
 use std::collections::HashMap;
 
-use crate::types::{self, Flag, Scheme, TProp, Type, Variant};
+use crate::types::{self, Flag, Scheme, TProp, Type, Variant, AliasType};
 use crochet_ast::literal::Lit;
 
 use super::substitutable::*;
@@ -263,5 +263,32 @@ impl Context {
             }),
             flag,
         }
+    }
+}
+
+pub fn lookup_alias(ctx: &Context, alias: &AliasType) -> Result<Type, String> {
+    match ctx.types.get(&alias.name) {
+        Some(scheme) => {
+            // Replaces qualifiers in the scheme with the corresponding type params
+            // from the alias type.
+            let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
+            let subs: Subst = match &alias.type_params {
+                Some(type_params) => {
+                    if scheme.qualifiers.len() != type_params.len() {
+                        return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                    }
+                    ids.zip(type_params.iter().cloned()).collect()
+                },
+                None => {
+                    if !scheme.qualifiers.is_empty() {
+                        return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                    }
+                    ids.zip(scheme.qualifiers.iter().map(|_| ctx.fresh_var())).collect()
+                },
+            };
+
+            Ok(scheme.ty.apply(&subs))
+        },
+        None => Err(String::from("Can't find alias '{name}' in context")),
     }
 }

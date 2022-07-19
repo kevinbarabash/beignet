@@ -6,7 +6,7 @@ use std::iter::Iterator;
 use crate::types::*;
 
 use super::context::{Context, Env};
-use super::substitutable::Substitutable;
+use super::substitutable::{Subst, Substitutable};
 
 pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
     let body = &sc.ty;
@@ -193,4 +193,95 @@ pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
     } else {
         ctx.intersection(out_types)
     }
+}
+
+
+fn flatten_types(ty: &Type) -> Vec<Type> {
+    match &ty.variant {
+        Variant::Union(types) => types.iter().flat_map(flatten_types).collect(),
+        _ => vec![ty.to_owned()],
+    }
+}
+
+pub fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
+    let mut types: Vec<Type> = vec![];
+    types.extend(flatten_types(t1));
+    types.extend(flatten_types(t2));
+
+    let types_set: HashSet<_> = types.iter().cloned().collect();
+
+    let prim_types: HashSet<_> = types_set
+        .iter()
+        .cloned()
+        .filter(|ty| matches!(ty.variant, Variant::Prim(_)))
+        .collect();
+    let lit_types: HashSet<_> = types_set
+        .iter()
+        .cloned()
+        .filter(|ty| match &ty.variant {
+            // Primitive types subsume corresponding literal types
+            Variant::Lit(lit) => match lit {
+                Lit::Num(_) => !prim_types.contains(&ctx.prim(Primitive::Num)),
+                Lit::Bool(_) => !prim_types.contains(&ctx.prim(Primitive::Bool)),
+                Lit::Str(_) => !prim_types.contains(&ctx.prim(Primitive::Str)),
+                Lit::Null => !prim_types.contains(&ctx.prim(Primitive::Null)),
+                Lit::Undefined => !prim_types.contains(&ctx.prim(Primitive::Undefined)),
+            },
+            _ => false,
+        })
+        .collect();
+    let rest_types: HashSet<_> = types_set
+        .iter()
+        .cloned()
+        .filter(|ty| !matches!(ty.variant, Variant::Prim(_) | Variant::Lit(_)))
+        .collect();
+
+    let mut types: Vec<_> = prim_types
+        .iter()
+        .chain(lit_types.iter())
+        .chain(rest_types.iter())
+        .cloned()
+        .collect();
+    types.sort_by_key(|k| k.id);
+
+    if types.len() > 1 {
+        ctx.union(types)
+    } else {
+        types[0].clone()
+    }
+}
+
+pub fn compose_subs(s2: &Subst, s1: &Subst) -> Subst {
+    let mut result: Subst = s1.iter().map(|(id, tv)| (*id, tv.apply(s2))).collect();
+    result.extend(s2.to_owned());
+    result
+}
+
+// subs are composed from left to right with ones to the right
+// being applied to all of the ones to the left.
+pub fn compose_many_subs(subs: &[Subst]) -> Subst {
+    subs.iter()
+        .fold(Subst::new(), |accum, next| compose_subs(&accum, next))
+}
+
+// If are multiple entries for the same type variable, this function merges
+// them into a union type (simplifying the type if possible).
+fn compose_subs_with_context(s1: &Subst, s2: &Subst, ctx: &Context) -> Subst {
+    let mut result: Subst = s2.iter().map(|(i, t)| (*i, t.apply(s1))).collect();
+    for (i, t) in s1 {
+        match result.get(i) {
+            Some(t1) => {
+                let t = union_types(t, t1, ctx);
+                result.insert(*i, t)
+            }
+            None => result.insert(*i, t.to_owned()),
+        };
+    }
+    result
+}
+
+pub fn compose_many_subs_with_context(subs: &[Subst], ctx: &Context) -> Subst {
+    subs.iter().fold(Subst::new(), |accum, next| {
+        compose_subs_with_context(&accum, next, ctx)
+    })
 }
