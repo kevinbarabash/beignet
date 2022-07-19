@@ -3,7 +3,6 @@ use std::collections::HashSet;
 
 use crate::types::*;
 
-use super::constraint_solver::Constraint;
 use super::context::Env;
 
 pub type Subst = HashMap<i32, Type>;
@@ -12,20 +11,6 @@ pub trait Substitutable {
     fn apply(&self, subs: &Subst) -> Self;
     // TODO: use an ordered set
     fn ftv(&self) -> HashSet<i32>;
-}
-
-impl Substitutable for Constraint {
-    fn apply(&self, sub: &Subst) -> Constraint {
-        Constraint {
-            types: (self.types.0.apply(sub), self.types.1.apply(sub)),
-        }
-    }
-    fn ftv(&self) -> HashSet<i32> {
-        let mut result = HashSet::new();
-        result.extend(self.types.0.ftv());
-        result.extend(self.types.1.ftv());
-        result
-    }
 }
 
 impl Substitutable for Type {
