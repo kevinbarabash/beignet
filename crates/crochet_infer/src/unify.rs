@@ -1,8 +1,7 @@
 use crochet_ast::*;
 
-use crate::substitutable::{Subst, Substitutable};
-
 use super::context::{Context, lookup_alias};
+use super::substitutable::{Subst, Substitutable};
 use super::types::{self, Type, Variant};
 use super::util::*;
 

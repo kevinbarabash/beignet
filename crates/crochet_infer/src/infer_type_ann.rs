@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::*;
-use crate::types::{self, freeze, Scheme, Type};
 
+use super::types::{freeze, Scheme, Type, TProp};
 use super::context::Context;
 
 pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Scheme {
@@ -74,7 +74,7 @@ fn infer_type_ann_rec(
         TypeAnn::Object(ObjectType { props, .. }) => {
             let props: Vec<_> = props
                 .iter()
-                .map(|prop| types::TProp {
+                .map(|prop| TProp {
                     name: prop.name.to_owned(),
                     optional: prop.optional,
                     ty: infer_type_ann_rec(prop.type_ann.as_ref(), ctx, type_param_map),

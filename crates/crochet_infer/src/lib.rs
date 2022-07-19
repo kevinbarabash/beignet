@@ -1,10 +1,13 @@
 mod context;
-pub mod infer;
+mod infer_expr;
+mod infer_pattern;
 mod infer_type_ann;
 mod substitutable;
-pub mod types;
 mod unify;
 mod util;
+
+pub mod infer;
+pub mod types;
 
 pub use context::*;
 pub use infer::*;
