@@ -1,14 +1,14 @@
 use std::cell::Cell;
 use std::collections::HashMap;
 
-use crate::types::{self, Flag, Scheme, TProp, Type, Variant, AliasType};
-use crochet_ast::literal::Lit;
+use crochet_ast::literal::Lit as AstLit;
 
 use super::substitutable::*;
+use super::types::*;
 
 // This maps to the Assump data type in THIH which was a tuple
 // of (Id, Scheme) where Id was a String.
-pub type Env = HashMap<String, types::Scheme>;
+pub type Env = HashMap<String, Scheme>;
 
 #[derive(Clone, Debug)]
 pub struct State {
@@ -86,7 +86,7 @@ impl Context {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Lam(types::LamType {
+            variant: Variant::Lam(LamType {
                 params,
                 ret,
                 is_call: false,
@@ -95,13 +95,13 @@ impl Context {
         }
     }
 
-    pub fn prim(&self, prim: types::Primitive) -> Type {
+    pub fn prim(&self, prim: Primitive) -> Type {
         self.prim_with_option_flag(prim, None)
     }
-    pub fn prim_with_flag(&self, prim: types::Primitive, flag: Flag) -> Type {
+    pub fn prim_with_flag(&self, prim: Primitive, flag: Flag) -> Type {
         self.prim_with_option_flag(prim, Some(flag))
     }
-    fn prim_with_option_flag(&self, prim: types::Primitive, flag: Option<Flag>) -> Type {
+    fn prim_with_option_flag(&self, prim: Primitive, flag: Option<Flag>) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
@@ -110,19 +110,19 @@ impl Context {
         }
     }
 
-    pub fn lit(&self, lit: Lit) -> Type {
+    pub fn lit(&self, lit: AstLit) -> Type {
         self.lit_with_option_flag(lit, None)
     }
-    pub fn lit_with_flag(&self, lit: Lit, flag: Flag) -> Type {
+    pub fn lit_with_flag(&self, lit: AstLit, flag: Flag) -> Type {
         self.lit_with_option_flag(lit, Some(flag))
     }
-    fn lit_with_option_flag(&self, lit: Lit, flag: Option<Flag>) -> Type {
+    fn lit_with_option_flag(&self, lit: AstLit, flag: Option<Flag>) -> Type {
         let lit = match lit {
-            Lit::Num(n) => types::Lit::Num(n.value),
-            Lit::Bool(b) => types::Lit::Bool(b.value),
-            Lit::Str(s) => types::Lit::Str(s.value),
-            Lit::Null(_) => types::Lit::Null,
-            Lit::Undefined(_) => types::Lit::Undefined,
+            AstLit::Num(n) => Lit::Num(n.value),
+            AstLit::Bool(b) => Lit::Bool(b.value),
+            AstLit::Str(s) => Lit::Str(s.value),
+            AstLit::Null(_) => Lit::Null,
+            AstLit::Undefined(_) => Lit::Undefined,
         };
         Type {
             id: self.fresh_id(),
@@ -132,7 +132,7 @@ impl Context {
         }
     }
 
-    pub fn lit_type(&self, lit: types::Lit) -> Type {
+    pub fn lit_type(&self, lit: Lit) -> Type {
         Type {
             id: self.fresh_id(),
             frozen: false,
@@ -186,8 +186,8 @@ impl Context {
         }
     }
 
-    pub fn prop(&self, name: &str, ty: Type, optional: bool) -> types::TProp {
-        types::TProp {
+    pub fn prop(&self, name: &str, ty: Type, optional: bool) -> TProp {
+        TProp {
             name: name.to_owned(),
             optional,
             ty,
@@ -209,7 +209,7 @@ impl Context {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Alias(types::AliasType {
+            variant: Variant::Alias(AliasType {
                 name: name.to_owned(),
                 type_params,
             }),
@@ -257,7 +257,7 @@ impl Context {
         Type {
             id: self.fresh_id(),
             frozen: false,
-            variant: Variant::Member(types::MemberType {
+            variant: Variant::Member(MemberType {
                 obj: Box::from(obj),
                 prop: prop.to_owned(),
             }),
