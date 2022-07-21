@@ -99,7 +99,13 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
                     match b {
                         true => Ok(compose_many_subs(&ss)),
-                        false => Err(String::from("Unification failure")),
+                        false => {
+                            if prop2.optional {
+                                Ok(Subst::default())
+                            } else {
+                                Err(String::from("Unification failure"))
+                            }
+                        },
                     }
                 })
                 .collect();
@@ -332,9 +338,8 @@ mod tests {
                 optional: false,
                 ty: ctx.prim(Primitive::Str),
             },
-            // It's okay for qux to not appear in the subtype since
-            // it's an optional property.
         ]);
+
         let t2 = ctx.object(vec![
             types::TProp {
                 name: String::from("foo"),
@@ -346,6 +351,8 @@ mod tests {
                 optional: true,
                 ty: ctx.prim(Primitive::Bool),
             },
+            // It's okay for qux to not appear in the subtype since
+            // it's an optional property.
             types::TProp {
                 name: String::from("qux"),
                 optional: true,
@@ -354,7 +361,7 @@ mod tests {
         ]);
 
         let result = unify(&t1, &t2, &ctx);
-        assert_eq!(result, Err(String::from("Unification failure")));
+        assert_eq!(result, Ok(Subst::default()));
     }
 
     // TODO: object subtype failure cases
