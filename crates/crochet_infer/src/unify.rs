@@ -1,6 +1,6 @@
-use crochet_ast::*;
+use crochet_ast::Primitive;
 
-use super::context::{Context, lookup_alias};
+use super::context::{lookup_alias, Context};
 use super::substitutable::{Subst, Substitutable};
 use super::types::{self, Type, Variant};
 use super::util::*;
@@ -105,7 +105,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             } else {
                                 Err(String::from("Unification failure"))
                             }
-                        },
+                        }
                     }
                 })
                 .collect();
@@ -290,6 +290,7 @@ fn occurs_check(id: &i32, t: &Type) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crochet_ast::Lit;
 
     fn num(val: &str) -> Lit {
         Lit::num(val.to_owned(), 0..0)

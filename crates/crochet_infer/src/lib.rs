@@ -668,6 +668,10 @@ mod tests {
     fn infer_if_let_is_string_with_literal() {
         // NOTE: This doesn't unify because `string` is not a subtype
         // of the string literal "hello".
+        // TODO: introduce Variant::Is(Type) so that we can allow this
+        // to unify.  The resulting type of `a` should be the "hello"
+        // literal in this case, but more generally it should be a subtype
+        // of string that matches the expression being matched against.
         let src = r#"
         let tuple = ["hello", "world"]
         if let [a is string, b] = tuple {
