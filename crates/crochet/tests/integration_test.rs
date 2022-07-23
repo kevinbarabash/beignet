@@ -736,7 +736,6 @@ fn recursive_mem_access_on_optional_prop_should_fail() {
 }
 
 #[test]
-#[ignore]
 fn infer_assigning_to_obj_with_optional_props() {
     let src = r#"
     let p: {x?: number, y: number} = {y: 10}
@@ -785,7 +784,6 @@ fn infer_function_overloading_with_incorrect_args() {
 }
 
 #[test]
-#[ignore]
 fn codegen_object_type_with_optional_property() {
     let src = r#"
     type Point = {x?: number, y: number}
@@ -1066,7 +1064,6 @@ fn object_property_shorthand() {
 }
 
 #[test]
-#[ignore]
 fn infer_destructuring_with_optional_properties() {
     let src = r#"
     let p: {x?: number, y: number} = {y: 10}
@@ -1074,9 +1071,9 @@ fn infer_destructuring_with_optional_properties() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    // TODO: ensure that the optionality of object properties in patterns is respected
     let x = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(x, "number | undefined");
+    assert_eq!(ctx.values.get("y"), None);
 }
 
 #[test]
@@ -1361,9 +1358,7 @@ fn infer_if_let_refutable_pattern_obj() {
     "###);
 }
 
-// TODO: update codegen to handle LetExpr
 #[test]
-#[ignore]
 fn infer_if_let_refutable_pattern_nested_obj() {
     let src = r#"
     let action = {type: "moveto", point: {x: 5, y: 10}}
@@ -1407,9 +1402,7 @@ fn infer_if_let_refutable_pattern_nested_obj() {
     "###);
 }
 
-// TODO: update codegen to handle LetExpr
 #[test]
-#[ignore]
 fn infer_if_let_refutable_pattern_with_disjoint_union() {
     let src = r#"
     type Point = {x: number, y: number}
@@ -1424,13 +1417,9 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
 
     let js = codegen_js(&program);
     insta::assert_snapshot!(js, @r###"
-    export const action = {
-        type: "moveto",
-        point: {
-            x: 5,
-            y: 10
-        }
-    };
+    ;
+    ;
+    ;
     (()=>{
         const value = action;
         if (value.type === "moveto") {
@@ -1444,13 +1433,18 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
-    export declare const action: {
-        type: "moveto";
-        point: {
-            x: 5;
-            y: 10;
-        };
+    type Point = {
+        x: number;
+        y: number;
     };
+    type Action = {
+        type: "moveto";
+        point: Point;
+    } | {
+        type: "lineto";
+        point: Point;
+    };
+    export declare const action: Action;
     ;
     "###);
 }
@@ -1536,40 +1530,6 @@ fn codegen_if_let_with_is_prim() {
     declare let b: string | number
     if let a is number = b {
         a + 5;
-    }
-    "#;
-
-    let (program, ctx) = infer_prog(src);
-
-    let js = codegen_js(&program);
-    insta::assert_snapshot!(js, @r###"
-    ;
-    (()=>{
-        const value = b;
-        if (typeof value === "number") {
-            const a = value;
-            a + 5;
-            return undefined;
-        }
-    })();
-    "###);
-
-    let result = codegen_d_ts(&program, &ctx);
-
-    insta::assert_snapshot!(result, @r###"
-    export declare const b: string | number;
-    ;
-    "###);
-}
-
-// TODO: allow `a is string` to unify with "hello" string literal
-#[test]
-#[ignore]
-fn codegen_if_let_with_is_prim_nested() {
-    let src = r#"
-    let tuple = ["hello", "world"]
-    if let [a is string, b] = tuple {
-        b;
     }
     "#;
 

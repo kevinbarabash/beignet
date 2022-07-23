@@ -456,6 +456,18 @@ mod tests {
     }
 
     #[test]
+    fn infer_assigning_to_obj_with_optional_props() {
+        let src = r#"
+        let p: {x?: number, y: number} = {y: 10}
+        let x = p.x
+        "#;
+        let ctx = infer_prog(src);
+    
+        let x = format!("{}", ctx.values.get("x").unwrap());
+        assert_eq!(x, "number | undefined");
+    }    
+
+    #[test]
     fn obj_param_destructuring() {
         assert_eq!(
             infer("({x, y}) => x + y"),
@@ -649,6 +661,25 @@ mod tests {
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.values.get("x").is_none());
+    }
+
+    #[test]
+    #[should_panic = "Unification failure"]
+    fn infer_if_let_is_string_with_literal() {
+        // NOTE: This doesn't unify because `string` is not a subtype
+        // of the string literal "hello".
+        // TODO: introduce Variant::Is(Type) so that we can allow this
+        // to unify.  The resulting type of `a` should be the "hello"
+        // literal in this case, but more generally it should be a subtype
+        // of string that matches the expression being matched against.
+        let src = r#"
+        let tuple = ["hello", "world"]
+        if let [a is string, b] = tuple {
+            b;
+        }
+        "#;
+
+        infer_prog(src);
     }
 
     #[test]
