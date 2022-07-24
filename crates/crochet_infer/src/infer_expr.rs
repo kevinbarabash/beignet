@@ -350,8 +350,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let mut ts: Vec<Type> = vec![];
 
             for elem in elems {
-                match elem {
-                    ExprOrSpread::Spread(SpreadElement { expr, .. }) => {
+                let expr = elem.expr.as_ref();
+                match elem.spread {
+                    Some(_) => {
                         let (s, t) = infer_expr(ctx, expr)?;
                         ss.push(s);
                         match &t.variant {
@@ -363,8 +364,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                             }
                         }
                     },
-                    ExprOrSpread::Expr(expr) => {
-                        let (s, t) = infer_expr(ctx, expr.as_ref())?;
+                    None => {
+                        let (s, t) = infer_expr(ctx, expr)?;
                         ss.push(s);
                         ts.push(t);
                     },

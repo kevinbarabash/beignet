@@ -137,9 +137,9 @@ pub struct Tuple {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ExprOrSpread {
-    Spread(SpreadElement),
-    Expr(Box<Expr>),
+pub struct ExprOrSpread {
+    pub spread: Option<Span>,
+    pub expr: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

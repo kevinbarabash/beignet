@@ -21,8 +21,9 @@ Program {
                     Tuple {
                         span: 8..19,
                         elems: [
-                            Expr(
-                                Lit(
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Lit(
                                     Num(
                                         Num {
                                             span: 9..10,
@@ -30,32 +31,35 @@ Program {
                                         },
                                     ),
                                 ),
-                            ),
-                            Expr(
-                                Tuple(
+                            },
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Tuple(
                                     Tuple {
                                         span: 12..18,
                                         elems: [
-                                            Expr(
-                                                Ident(
+                                            ExprOrSpread {
+                                                spread: None,
+                                                expr: Ident(
                                                     Ident {
                                                         span: 13..14,
                                                         name: "a",
                                                     },
                                                 ),
-                                            ),
-                                            Expr(
-                                                Ident(
+                                            },
+                                            ExprOrSpread {
+                                                spread: None,
+                                                expr: Ident(
                                                     Ident {
                                                         span: 16..17,
                                                         name: "b",
                                                     },
                                                 ),
-                                            ),
+                                            },
                                         ],
                                     },
                                 ),
-                            ),
+                            },
                         ],
                     },
                 ),

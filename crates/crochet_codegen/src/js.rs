@@ -492,14 +492,11 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             span: DUMMY_SP,
             elems: elems
                 .iter()
-                .map(|elem| match elem {
-                    ast::ExprOrSpread::Spread(ast::SpreadElement { expr, .. }) => {
-                        Some(ExprOrSpread {
-                            spread: Some(DUMMY_SP),
-                            expr: Box::from(build_expr(expr.as_ref())),
-                        })
-                    }
-                    ast::ExprOrSpread::Expr(expr) => Some(ExprOrSpread::from(build_expr(expr))),
+                .map(|ast::ExprOrSpread {spread, expr}| {
+                    Some(ExprOrSpread {
+                        spread: spread.to_owned().map(|_| DUMMY_SP),
+                        expr: Box::from(build_expr(expr.as_ref())),
+                    })
                 })
                 .collect(),
         }),

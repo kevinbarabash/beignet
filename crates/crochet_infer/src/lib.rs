@@ -1269,10 +1269,7 @@ mod tests {
         assert_eq!(get_type("b", &ctx), "[\"hello\", true]");
     }
 
-    // TODO: update this so that we can support rest at the start
-    // and in the middle was well.
     #[test]
-    #[should_panic="Rest must appear last"]
     fn infer_tuple_rest_at_start() {
         let src = r#"
         let tuple = [5, "hello", true]
@@ -1280,8 +1277,48 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
+        assert_eq!(get_type("a", &ctx), "[5, \"hello\"]");
+        assert_eq!(get_type("b", &ctx), "true");
+    }
+
+    #[test]
+    fn infer_tuple_rest_in_middle() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        let [a, ...b, c] = tuple
+        "#;
+        let ctx = infer_prog(src);
+
         assert_eq!(get_type("a", &ctx), "5");
-        assert_eq!(get_type("b", &ctx), "[\"hello\", true]");
+        assert_eq!(get_type("b", &ctx), "[\"hello\"]");
+        assert_eq!(get_type("c", &ctx), "true");
+    }
+
+    #[test]
+    fn infer_tuple_empty_rest() {
+        let src = r#"
+        let tuple = [5, true]
+        let [a, ...b, c] = tuple
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "[]");
+        assert_eq!(get_type("c", &ctx), "true");
+    }
+
+    #[test]
+    #[should_panic="not enough elements to unpack"]
+    fn infer_tuple_rest_no_enough_elements_to_unpack() {
+        let src = r#"
+        let tuple = [5]
+        let [a, ...b, c] = tuple
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "[]");
+        assert_eq!(get_type("c", &ctx), "true");
     }
 
     #[test]
@@ -1290,6 +1327,28 @@ mod tests {
         let a = 5
         let b = ["hello", true]
         let tuple = [a, ...b]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("tuple", &ctx), "[5, \"hello\", true]");
+    }
+
+    #[test]
+    fn infer_spread_tuple_literal() {
+        let src = r#"
+        let a = 5
+        let tuple = [a, ...["hello", true]]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("tuple", &ctx), "[5, \"hello\", true]");
+    }
+
+    #[test]
+    fn infer_nested_spread_tuple_literal() {
+        let src = r#"
+        let a = 5
+        let tuple = [a, ...["hello", ...[true]]]
         "#;
         let ctx = infer_prog(src);
 

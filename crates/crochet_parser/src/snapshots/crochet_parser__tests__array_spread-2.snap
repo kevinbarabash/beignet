@@ -21,25 +21,26 @@ Program {
                     Tuple {
                         span: 12..21,
                         elems: [
-                            Expr(
-                                Ident(
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Ident(
                                     Ident {
                                         span: 13..14,
                                         name: "a",
                                     },
                                 ),
-                            ),
-                            Spread(
-                                SpreadElement {
-                                    span: 16..20,
-                                    expr: Ident(
-                                        Ident {
-                                            span: 19..20,
-                                            name: "b",
-                                        },
-                                    ),
-                                },
-                            ),
+                            },
+                            ExprOrSpread {
+                                spread: Some(
+                                    16..20,
+                                ),
+                                expr: Ident(
+                                    Ident {
+                                        span: 19..20,
+                                        name: "b",
+                                    },
+                                ),
+                            },
                         ],
                     },
                 ),

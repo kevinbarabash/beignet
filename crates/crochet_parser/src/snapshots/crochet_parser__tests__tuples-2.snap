@@ -21,8 +21,9 @@ Program {
                     Tuple {
                         span: 8..17,
                         elems: [
-                            Expr(
-                                Lit(
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Lit(
                                     Num(
                                         Num {
                                             span: 9..10,
@@ -30,9 +31,10 @@ Program {
                                         },
                                     ),
                                 ),
-                            ),
-                            Expr(
-                                Lit(
+                            },
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Lit(
                                     Num(
                                         Num {
                                             span: 12..13,
@@ -40,9 +42,10 @@ Program {
                                         },
                                     ),
                                 ),
-                            ),
-                            Expr(
-                                Lit(
+                            },
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Lit(
                                     Num(
                                         Num {
                                             span: 15..16,
@@ -50,7 +53,7 @@ Program {
                                         },
                                     ),
                                 ),
-                            ),
+                            },
                         ],
                     },
                 ),
