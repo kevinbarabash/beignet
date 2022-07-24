@@ -26,14 +26,27 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             // If `lam1` is a function call then we treat it differently.  Instead
             // of checking if it's a subtype of `lam2`, we instead either:
             if lam1.is_call {
-                if lam1.params.len() < lam2.params.len() {
+                let mut params1: Vec<Type> = vec![];
+                for param in &lam1.params {
+                    match &param.variant {
+                        Variant::Rest(rest) => {
+                            match &rest.as_ref().variant {
+                                Variant::Tuple(types) => params1.extend(types.to_owned()),
+                                _ => return Err(format!("spread of type {rest} not allowed")),
+                            }
+                        },
+                        _ => params1.push(param.to_owned())
+                    }
+                }
+
+                if params1.len() < lam2.params.len() {
                     // Partially application.
                     // If there is fewer than expected by `lam2` we return an new
                     // lambda that accepts the remaining params and returns the
                     // original return type.
                     let partial_ret =
-                        ctx.lam(lam2.params[lam1.params.len()..].to_vec(), lam2.ret.clone());
-                    for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
+                        ctx.lam(lam2.params[params1.len()..].to_vec(), lam2.ret.clone());
+                    for (p1, p2) in params1.iter().zip(&lam2.params) {
                         // Each argument must be a subtype of the corresponding param.
                         let arg = p1.apply(&s);
                         let param = p2.apply(&s);
@@ -45,7 +58,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 } else {
                     // Regular application.
                     // Any extra params (args) that `lam1` has are ignored.
-                    for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
+                    for (p1, p2) in params1.iter().zip(&lam2.params) {
                         // Each argument must be a subtype of the corresponding param.
                         let arg = p1.apply(&s);
                         let param = p2.apply(&s);

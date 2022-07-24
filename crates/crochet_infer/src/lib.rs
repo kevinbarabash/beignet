@@ -1083,6 +1083,71 @@ mod tests {
     }
 
     #[test]
+    fn spread_param_tuple() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let args = [5, 10]
+        let result = add(...args)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    #[test]
+    fn spread_param_tuple_with_extra_elements() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let args = [5, 10, 15]
+        let result = add(...args)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    #[test]
+    fn spread_param_tuple_with_not_enough_elements_is_partial_application() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let args = [5]
+        let result = add(...args)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "(number) => number");
+    }
+
+    #[test]
+    fn spread_multiple_param_tuples() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let args1 = [5]
+        let args2 = [10]
+        let result = add(...args1, ...args2)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn spread_param_tuples_with_incorrect_types() {
+        let src = r#"
+        declare let add: (number, number) => number
+        let args = ["hello", true]
+        let result = add(...args)
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
     fn infer_member_access() {
         let src = r#"
         let p = {x: 5, y: 10}
