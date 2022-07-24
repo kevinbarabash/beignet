@@ -1,0 +1,73 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let tuple = [1, ...[2, 3]]\")"
+---
+Program {
+    body: [
+        VarDecl {
+            span: 0..26,
+            pattern: Ident(
+                BindingIdent {
+                    span: 4..9,
+                    id: Ident {
+                        span: 4..9,
+                        name: "tuple",
+                    },
+                    type_ann: None,
+                },
+            ),
+            init: Some(
+                Tuple(
+                    Tuple {
+                        span: 12..26,
+                        elems: [
+                            Expr(
+                                Lit(
+                                    Num(
+                                        Num {
+                                            span: 13..14,
+                                            value: "1",
+                                        },
+                                    ),
+                                ),
+                            ),
+                            Spread(
+                                SpreadElement {
+                                    span: 16..25,
+                                    expr: Tuple(
+                                        Tuple {
+                                            span: 19..25,
+                                            elems: [
+                                                Expr(
+                                                    Lit(
+                                                        Num(
+                                                            Num {
+                                                                span: 20..21,
+                                                                value: "2",
+                                                            },
+                                                        ),
+                                                    ),
+                                                ),
+                                                Expr(
+                                                    Lit(
+                                                        Num(
+                                                            Num {
+                                                                span: 23..24,
+                                                                value: "3",
+                                                            },
+                                                        ),
+                                                    ),
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                },
+                            ),
+                        ],
+                    },
+                ),
+            ),
+            declare: false,
+        },
+    ],
+}

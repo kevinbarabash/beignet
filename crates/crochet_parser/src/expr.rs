@@ -147,8 +147,16 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .delimited_by(just_with_padding("{"), just_with_padding("}"))
             .map_with_span(|props, span: Span| Expr::Obj(Obj { span, props }));
 
-        let tuple = expr
-            .clone()
+        let tuple = just_with_padding("...")
+            .or_not()
+            .then(expr.clone())
+            .map_with_span(|(spread, elem), span: Span| match spread {
+                Some(_) => ExprOrSpread::Spread(SpreadElement {
+                    span,
+                    expr: Box::from(elem),
+                }),
+                None => ExprOrSpread::Expr(Box::from(elem)),
+            })
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("["), just_with_padding("]"))

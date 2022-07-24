@@ -133,7 +133,13 @@ pub struct Await {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tuple {
     pub span: Span,
-    pub elems: Vec<Expr>,
+    pub elems: Vec<ExprOrSpread>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExprOrSpread {
+    Spread(SpreadElement),
+    Expr(Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

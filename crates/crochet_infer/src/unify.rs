@@ -119,10 +119,25 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 // TODO: tweak this error message to include the types
                 return Err(String::from("not enough elements to unpack"));
             }
+
+            // TODO: allow rest to appear at the start and in the middle
+            // TODO: check that there's only a single rest in the tuple
             let result: Result<Vec<_>, _> = types1
                 .iter()
                 .zip(types2.iter())
-                .map(|(t1, t2)| unify(t1, t2, ctx))
+                .enumerate()
+                .map(|(i, (t1, t2))| {
+                    match &t2.variant {
+                        Variant::Rest(rest_type) => {
+                            if i != types2.len() - 1 {
+                                return Err(String::from("Rest must appear last"));
+                            }
+                            let rest_tuple = ctx.tuple(types1[i..].to_vec());
+                            unify(&rest_tuple, rest_type, ctx)
+                        },
+                        _ => unify(t1, t2, ctx),
+                    }
+                })
                 .collect();
             let ss = result?; // This is only okay if all calls to is_subtype are okay
             Ok(compose_many_subs(&ss))

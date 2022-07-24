@@ -21,32 +21,40 @@ Program {
                     Tuple {
                         span: 8..19,
                         elems: [
-                            Lit(
-                                Num(
-                                    Num {
-                                        span: 9..10,
-                                        value: "1",
-                                    },
+                            Expr(
+                                Lit(
+                                    Num(
+                                        Num {
+                                            span: 9..10,
+                                            value: "1",
+                                        },
+                                    ),
                                 ),
                             ),
-                            Tuple(
-                                Tuple {
-                                    span: 12..18,
-                                    elems: [
-                                        Ident(
-                                            Ident {
-                                                span: 13..14,
-                                                name: "a",
-                                            },
-                                        ),
-                                        Ident(
-                                            Ident {
-                                                span: 16..17,
-                                                name: "b",
-                                            },
-                                        ),
-                                    ],
-                                },
+                            Expr(
+                                Tuple(
+                                    Tuple {
+                                        span: 12..18,
+                                        elems: [
+                                            Expr(
+                                                Ident(
+                                                    Ident {
+                                                        span: 13..14,
+                                                        name: "a",
+                                                    },
+                                                ),
+                                            ),
+                                            Expr(
+                                                Ident(
+                                                    Ident {
+                                                        span: 16..17,
+                                                        name: "b",
+                                                    },
+                                                ),
+                                            ),
+                                        ],
+                                    },
+                                ),
                             ),
                         ],
                     },

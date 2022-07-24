@@ -455,25 +455,23 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             let props: Vec<PropOrSpread> = props
                 .iter()
                 .map(|prop| match prop {
-                    ast::PropOrSpread::Prop(prop) => {
-                        match prop.as_ref() {
-                            ast::Prop::Shorthand(ast::ident::Ident { name, .. }) => {
-                                PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
+                    ast::PropOrSpread::Prop(prop) => match prop.as_ref() {
+                        ast::Prop::Shorthand(ast::ident::Ident { name, .. }) => {
+                            PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
+                                span: DUMMY_SP,
+                                sym: JsWord::from(name.clone()),
+                                optional: false,
+                            })))
+                        }
+                        ast::Prop::KeyValue(ast::KeyValueProp { name, value, .. }) => {
+                            PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
+                                key: PropName::from(Ident {
                                     span: DUMMY_SP,
                                     sym: JsWord::from(name.clone()),
                                     optional: false,
-                                })))
-                            }
-                            ast::Prop::KeyValue(ast::KeyValueProp { name, value, .. }) => {
-                                PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
-                                    key: PropName::from(Ident {
-                                        span: DUMMY_SP,
-                                        sym: JsWord::from(name.clone()),
-                                        optional: false,
-                                    }),
-                                    value: Box::from(build_expr(value)),
-                                })))
-                            }
+                                }),
+                                value: Box::from(build_expr(value)),
+                            })))
                         }
                     },
                     ast::PropOrSpread::Spread(_) => todo!(),
@@ -494,7 +492,15 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             span: DUMMY_SP,
             elems: elems
                 .iter()
-                .map(|elem| Some(ExprOrSpread::from(build_expr(elem))))
+                .map(|elem| match elem {
+                    ast::ExprOrSpread::Spread(ast::SpreadElement { expr, .. }) => {
+                        Some(ExprOrSpread {
+                            spread: Some(DUMMY_SP),
+                            expr: Box::from(build_expr(expr.as_ref())),
+                        })
+                    }
+                    ast::ExprOrSpread::Expr(expr) => Some(ExprOrSpread::from(build_expr(expr))),
+                })
                 .collect(),
         }),
         ast::Expr::Member(ast::Member { obj, prop, .. }) => {

@@ -346,9 +346,30 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             Ok((s, wrapped_type))
         }
         Expr::Tuple(Tuple { elems, .. }) => {
-            let result: Result<Vec<(Subst, Type)>, String> =
-                elems.iter().map(|elem| infer_expr(ctx, elem)).collect();
-            let (ss, ts): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
+            let mut ss: Vec<Subst> = vec![];
+            let mut ts: Vec<Type> = vec![];
+
+            for elem in elems {
+                match elem {
+                    ExprOrSpread::Spread(SpreadElement { expr, .. }) => {
+                        let (s, t) = infer_expr(ctx, expr)?;
+                        ss.push(s);
+                        match &t.variant {
+                            Variant::Tuple(types) => {
+                                ts.extend(types.to_owned());
+                            },
+                            _ => {
+                                return Err(String::from("Can only spread tuple types inside a tuple"))
+                            }
+                        }
+                    },
+                    ExprOrSpread::Expr(expr) => {
+                        let (s, t) = infer_expr(ctx, expr.as_ref())?;
+                        ss.push(s);
+                        ts.push(t);
+                    },
+                }
+            }
 
             let s = compose_many_subs(&ss);
             let t = ctx.tuple(ts);
