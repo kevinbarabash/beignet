@@ -1,13 +1,13 @@
 use chumsky::prelude::*;
 use crochet_ast::*;
 
-use crate::types::*;
+use crate::type_ann::*;
 use crate::util::just_with_padding;
 
 // NOTE: Destructuring assignments admits different patterns from destructuring
 // function params.  We'll need to have different parsers for those.
 pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
-    let type_ann = type_parser();
+    let type_ann = type_ann_parser();
     let mut top_level = true;
 
     let r#true = just_with_padding("true").map_with_span(|_, span| Lit::bool(true, span));

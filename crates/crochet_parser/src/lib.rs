@@ -3,7 +3,7 @@ pub mod expr;
 pub mod jsx;
 pub mod pattern;
 pub mod type_params;
-pub mod types;
+pub mod type_ann;
 pub mod util;
 
 pub use decl::decl_parser;

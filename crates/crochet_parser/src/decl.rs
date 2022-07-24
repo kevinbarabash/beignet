@@ -5,7 +5,7 @@ use crochet_ast::*;
 
 use super::expr::expr_parser;
 use super::pattern::pattern_parser;
-use super::types::type_parser;
+use super::type_ann::type_ann_parser;
 use super::type_params::type_params;
 
 pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>> {
@@ -75,7 +75,7 @@ pub fn decl_parser() -> impl Parser<char, Statement, Error = Simple<char>> {
 }
 
 fn type_decl() -> impl Parser<char, Statement, Error = Simple<char>> {
-    let type_ann = type_parser();
+    let type_ann = type_ann_parser();
     let ident = text::ident().map_with_span(|name, span: Span| Ident { name, span });
 
     let type_decl = just("declare")

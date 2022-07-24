@@ -4,11 +4,11 @@ use crochet_ast::*;
 use crate::jsx::jsx_parser;
 use crate::pattern::pattern_parser;
 use crate::type_params::type_params;
-use crate::types::type_parser;
+use crate::type_ann::type_ann_parser;
 use crate::util::just_with_padding;
 
 pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
-    let type_ann = type_parser();
+    let type_ann = type_ann_parser();
     let pattern = pattern_parser();
 
     let ident = text::ident().map_with_span(|name, span| Ident { span, name });

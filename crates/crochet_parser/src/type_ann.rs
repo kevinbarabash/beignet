@@ -2,11 +2,11 @@ use chumsky::prelude::*;
 use crochet_ast::*;
 
 use crate::util::just_with_padding;
-use crate::types::Primitive;
+use crate::type_ann::Primitive;
 
 use super::type_params::type_params;
 
-pub fn type_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
+pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
     let prim = choice((
         just("number").to(Primitive::Num),
         just("string").to(Primitive::Str),
@@ -168,7 +168,7 @@ mod tests {
     use super::*;
 
     fn parse_type(input: &str) -> TypeAnn {
-        type_parser().then_ignore(end()).parse(input).unwrap()
+        type_ann_parser().then_ignore(end()).parse(input).unwrap()
     }
 
     #[test]
