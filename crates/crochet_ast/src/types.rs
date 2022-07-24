@@ -62,6 +62,12 @@ pub struct TupleType {
     pub types: Vec<TypeAnn>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArrayType {
+    pub span: Span,
+    pub elem_type: Box<TypeAnn>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnn {
     Lam(LamType),
@@ -72,6 +78,7 @@ pub enum TypeAnn {
     Union(UnionType),
     Intersection(IntersectionType),
     Tuple(TupleType),
+    Array(ArrayType),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

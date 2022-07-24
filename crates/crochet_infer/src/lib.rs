@@ -1658,4 +1658,39 @@ mod tests {
         
         infer_prog(src);
     }
+
+    #[test]
+    fn assign_empty_tuple_to_array() {
+        let src = r#"let arr: string[] = []"#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("arr", &ctx), "string[]");
+    }
+
+    #[test]
+    fn assign_tuple_with_values_to_array() {
+        let src = r#"let arr: string[] = ["hello", "world"]"#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("arr", &ctx), "string[]");
+    }
+
+    #[test]
+    fn pass_tuple_as_array_param() {
+        let src = r#"
+        declare let concat: (string[]) => string
+        let result = concat(["hello", "world"])
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "string");
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn assign_tuple_with_to_array_with_incompatible_types() {
+        let src = r#"let arr: string[] = ["hello", 5]"#;
+        
+        infer_prog(src);
+    }
 }

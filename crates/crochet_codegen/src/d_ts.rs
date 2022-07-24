@@ -405,6 +405,10 @@ pub fn build_type(
                 })
                 .collect(),
         }),
+        Variant::Array(t) => TsType::TsArrayType(TsArrayType {
+            span: DUMMY_SP,
+            elem_type: Box::from(build_type(t, None, None)),
+        }),
         Variant::Rest(_) => todo!(),
         Variant::Member(_) => todo!(),
     }

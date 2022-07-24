@@ -1,6 +1,6 @@
 ---
-source: crates/crochet_parser/src/types.rs
-expression: "parse_type(\"(A, B) => C & D\")"
+source: crates/crochet_parser/src/type_ann.rs
+expression: "parse_type(\"(A, B) => C | D\")"
 ---
 Lam(
     LamType {
@@ -21,8 +21,8 @@ Lam(
                 },
             ),
         ],
-        ret: Intersection(
-            IntersectionType {
+        ret: Union(
+            UnionType {
                 span: 10..15,
                 types: [
                     TypeRef(

@@ -1,8 +1,8 @@
 use chumsky::prelude::*;
 use crochet_ast::*;
 
-use crate::util::just_with_padding;
 use crate::type_ann::Primitive;
+use crate::util::just_with_padding;
 
 use super::type_params::type_params;
 
@@ -115,9 +115,19 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
                 .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
 
+        let atom_with_suffix = atom
+            .clone()
+            .then(just_with_padding("[]").repeated())
+            .foldl(|accum, _| {
+                TypeAnn::Array(ArrayType {
+                    span: 0..0, // FIXME
+                    elem_type: Box::from(accum),
+                })
+            });
+
         // We have to use `atom` here instead of `type_ann` to avoid a stack
         // overflow.
-        let intersection = atom
+        let intersection = atom_with_suffix
             .clone()
             .separated_by(just_with_padding("&"))
             .map_with_span(|types, span| match types.len() {
@@ -139,7 +149,8 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
             .allow_trailing()
             .delimited_by(just_with_padding("("), just_with_padding(")"));
 
-        let lam = type_params(type_ann.clone().boxed()).or_not()
+        let lam = type_params(type_ann.clone().boxed())
+            .or_not()
             .then(lam_params)
             .then_ignore(just_with_padding("=>"))
             .then(type_ann.clone())

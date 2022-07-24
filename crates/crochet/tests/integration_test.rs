@@ -1613,3 +1613,25 @@ fn codegen_if_let_with_is_class() {
     })();
     "###);
 }
+
+
+#[test]
+fn codegen_array() {
+    let src = r#"
+    let arr: string[] = ["hello", "world"]
+    "#;
+
+    let (program, ctx) = infer_prog(src);
+
+    let js = codegen_js(&program);
+    insta::assert_snapshot!(js, @r###"
+    export const arr = [
+        "hello",
+        "world"
+    ];
+    "###);
+
+    let result = codegen_d_ts(&program, &ctx);
+    insta::assert_snapshot!(result, @"export declare const arr: string[];
+");
+}

@@ -3,8 +3,8 @@ use std::iter::Iterator;
 
 use crochet_ast::*;
 
-use super::types::{freeze, Scheme, Type, TProp};
 use super::context::Context;
+use super::types::{freeze, Scheme, TProp, Type};
 
 pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Scheme {
     match type_ann {
@@ -44,7 +44,8 @@ pub fn infer_scheme_with_type_params(
 }
 
 pub fn infer_type_ann(type_ann: &TypeAnn, ctx: &Context) -> Type {
-    freeze(infer_type_ann_rec(type_ann, ctx, &HashMap::default()))
+    let type_ann_ty = infer_type_ann_rec(type_ann, ctx, &HashMap::default());
+    freeze(type_ann_ty)
 }
 
 pub fn infer_type_ann_with_params(
@@ -99,20 +100,23 @@ fn infer_type_ann_rec(
         TypeAnn::Union(UnionType { types, .. }) => ctx.union(
             types
                 .iter()
-                .map(|ty| infer_type_ann_rec(ty, ctx, type_param_map))
+                .map(|t| infer_type_ann_rec(t, ctx, type_param_map))
                 .collect(),
         ),
         TypeAnn::Intersection(IntersectionType { types, .. }) => ctx.intersection(
             types
                 .iter()
-                .map(|ty| infer_type_ann_rec(ty, ctx, type_param_map))
+                .map(|t| infer_type_ann_rec(t, ctx, type_param_map))
                 .collect(),
         ),
         TypeAnn::Tuple(TupleType { types, .. }) => ctx.tuple(
             types
                 .iter()
-                .map(|ty| infer_type_ann_rec(ty, ctx, type_param_map))
+                .map(|t| infer_type_ann_rec(t, ctx, type_param_map))
                 .collect(),
         ),
+        TypeAnn::Array(ArrayType { elem_type, .. }) => {
+            ctx.array(infer_type_ann_rec(elem_type, ctx, type_param_map))
+        }
     }
 }
