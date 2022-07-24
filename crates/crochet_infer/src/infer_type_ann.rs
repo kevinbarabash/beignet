@@ -44,7 +44,8 @@ pub fn infer_scheme_with_type_params(
 }
 
 pub fn infer_type_ann(type_ann: &TypeAnn, ctx: &Context) -> Type {
-    freeze(infer_type_ann_rec(type_ann, ctx, &HashMap::default()))
+    let type_ann_ty = infer_type_ann_rec(type_ann, ctx, &HashMap::default());
+    freeze(type_ann_ty)
 }
 
 pub fn infer_type_ann_with_params(

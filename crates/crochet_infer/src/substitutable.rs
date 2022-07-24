@@ -34,7 +34,7 @@ impl Substitutable for Type {
                         ..alias.to_owned()
                     }),
                     Variant::Tuple(types) => Variant::Tuple(types.apply(sub)),
-                    Variant::Array(t) => Variant::Rest(Box::from(t.apply(sub))),
+                    Variant::Array(t) => Variant::Array(Box::from(t.apply(sub))),
                     Variant::Rest(arg) => Variant::Rest(Box::from(arg.apply(sub))),
                     Variant::Member(member) => Variant::Member(MemberType {
                         obj: Box::from(member.obj.apply(sub)),

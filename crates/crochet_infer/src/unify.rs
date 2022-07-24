@@ -169,6 +169,18 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
             Ok(compose_many_subs(&ss))
         }
+        (Variant::Tuple(tuple_types), Variant::Array(array_type)) => {
+            if tuple_types.is_empty() {
+                Ok(Subst::default())
+            } else {
+                let mut ss = vec![];
+                for t1 in tuple_types.iter() {
+                    let s = unify(t1, array_type.as_ref(), ctx)?;
+                    ss.push(s)
+                }
+                Ok(compose_many_subs(&ss))
+            }
+        }
         (Variant::Union(types), _) => {
             let result: Result<Vec<_>, _> = types.iter().map(|t1| unify(t1, t2, ctx)).collect();
             let ss = result?; // This is only okay if all calls to is_subtype are okay
