@@ -1308,24 +1308,24 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="not enough elements to unpack"]
+    #[should_panic = "not enough elements to unpack"]
     fn infer_tuple_rest_no_enough_elements_to_unpack() {
         let src = r#"
         let tuple = [5]
         let [a, ...b, c] = tuple
         "#;
-        
+
         infer_prog(src);
     }
 
     #[test]
-    #[should_panic="Only one rest pattern is allowed in a tuple"]
+    #[should_panic = "Only one rest pattern is allowed in a tuple"]
     fn infer_tuple_more_than_one_rest() {
         let src = r#"
         let tuple = [5, "hello", true]
         let [a, ...b, ...c, d] = tuple
         "#;
-        
+
         infer_prog(src);
     }
 
@@ -1400,8 +1400,7 @@ mod tests {
 
         assert_eq!(get_type("tuple", &ctx), "[5, \"hello\", true]");
     }
-    
-    
+
     #[test]
     fn infer_multiple_tuple_spreads() {
         let src = r#"
@@ -1415,7 +1414,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Can only spread tuple types inside a tuple"]
+    #[should_panic = "Can only spread tuple types inside a tuple"]
     fn spread_non_tuple_type_should_fail() {
         let src = r#"
         let p = {x: 5, y: 10}
@@ -1625,9 +1624,8 @@ mod tests {
         infer_prog(src);
     }
 
-    // let h = (f, x, y) => f(x) + f(y)
     #[test]
-    fn this_should_work() {
+    fn infer_fn_based_on_multiple_different_calls() {
         let src = r#"let h = (f, x, y) => f(x) + f(y)"#;
         let ctx = infer_prog(src);
 
@@ -1635,5 +1633,29 @@ mod tests {
             get_type("h", &ctx),
             "<t0>((t0) => number, t0, t0) => number"
         );
+    }
+
+    #[test]
+    fn infer_template_literal_as_string() {
+        let src = r#"let str = `hello, "world"!`"#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("str", &ctx), "string");
+    }
+
+    #[test]
+    fn infer_template_literal_with_expressions_as_string() {
+        let src = r#"let str = `hello, ${true}!`"#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("str", &ctx), "string");
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn detect_type_errors_inside_template_literal_expressions() {
+        let src = r#"let str = `hello, ${5 + true}!`"#;
+        
+        infer_prog(src);
     }
 }

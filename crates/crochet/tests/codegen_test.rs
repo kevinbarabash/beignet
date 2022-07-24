@@ -14,6 +14,19 @@ fn string_literal() {
 }
 
 #[test]
+fn template_literal() {
+    let src = r#"
+    let name = "world"
+    let msg = `hello, ${name}!`
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const name = "world";
+    export const msg = `hello, ${name}!`;
+    "###);
+}
+
+#[test]
 fn number_literal_whole() {
     insta::assert_snapshot!(compile("123"), @"123;");
 }

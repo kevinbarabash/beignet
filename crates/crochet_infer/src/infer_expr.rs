@@ -390,10 +390,22 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let s = Subst::default();
             Ok((s, t))
         }
-        Expr::TemplateLiteral(_) => {
-            todo!()
+        Expr::TemplateLiteral(TemplateLiteral { exprs, quasis: _, .. }) => {
+            let t = ctx.prim(Primitive::Str);
+            let result: Result<Vec<(Subst, Type)>, String> = exprs.iter().map(|expr| {
+                infer_expr(ctx, expr)
+            }).collect();
+            // We ignore the types of expressions if there are any because any expression
+            // in JavaScript has a string representation.
+            let (ss, _): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
+            let s = compose_many_subs(&ss);
+            Ok((s, t))
         }
         Expr::TaggedTemplateLiteral(_) => {
+            // TODO: treat this like a call/application
+            // NOTE: requires:
+            // - arrays
+            // - rest params
             todo!()
         }
     };
