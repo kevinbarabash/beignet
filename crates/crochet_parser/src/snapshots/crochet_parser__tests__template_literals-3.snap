@@ -1,0 +1,77 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"`(${x}, ${y})`\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..14,
+            expr: TemplateLiteral(
+                TemplateLiteral {
+                    span: 0..14,
+                    exprs: [
+                        Ident(
+                            Ident {
+                                span: 4..5,
+                                name: "x",
+                            },
+                        ),
+                        Ident(
+                            Ident {
+                                span: 10..11,
+                                name: "y",
+                            },
+                        ),
+                    ],
+                    quasis: [
+                        TemplateElem {
+                            span: 1..4,
+                            raw: Str(
+                                Str {
+                                    span: 1..4,
+                                    value: "(",
+                                },
+                            ),
+                            cooked: Str(
+                                Str {
+                                    span: 1..4,
+                                    value: "(",
+                                },
+                            ),
+                        },
+                        TemplateElem {
+                            span: 6..10,
+                            raw: Str(
+                                Str {
+                                    span: 6..10,
+                                    value: ", ",
+                                },
+                            ),
+                            cooked: Str(
+                                Str {
+                                    span: 6..10,
+                                    value: ", ",
+                                },
+                            ),
+                        },
+                        TemplateElem {
+                            span: 12..14,
+                            raw: Str(
+                                Str {
+                                    span: 12..14,
+                                    value: ")",
+                                },
+                            ),
+                            cooked: Str(
+                                Str {
+                                    span: 12..14,
+                                    value: ")",
+                                },
+                            ),
+                        },
+                    ],
+                },
+            ),
+        },
+    ],
+}

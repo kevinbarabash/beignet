@@ -1,0 +1,34 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"`Hello, \\\"world\\\"`\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..16,
+            expr: TemplateLiteral(
+                TemplateLiteral {
+                    span: 0..16,
+                    exprs: [],
+                    quasis: [
+                        TemplateElem {
+                            span: 1..16,
+                            raw: Str(
+                                Str {
+                                    span: 1..16,
+                                    value: "Hello, \"world\"",
+                                },
+                            ),
+                            cooked: Str(
+                                Str {
+                                    span: 1..16,
+                                    value: "Hello, \"world\"",
+                                },
+                            ),
+                        },
+                    ],
+                },
+            ),
+        },
+    ],
+}
