@@ -1,0 +1,42 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let str_arr: string[] = []\")"
+---
+Program {
+    body: [
+        VarDecl {
+            span: 0..26,
+            pattern: Ident(
+                BindingIdent {
+                    span: 4..22,
+                    id: Ident {
+                        span: 4..11,
+                        name: "str_arr",
+                    },
+                    type_ann: Some(
+                        Array(
+                            ArrayType {
+                                span: 0..0,
+                                elem_type: Prim(
+                                    PrimType {
+                                        span: 13..19,
+                                        prim: Str,
+                                    },
+                                ),
+                            },
+                        ),
+                    ),
+                },
+            ),
+            init: Some(
+                Tuple(
+                    Tuple {
+                        span: 24..26,
+                        elems: [],
+                    },
+                ),
+            ),
+            declare: false,
+        },
+    ],
+}

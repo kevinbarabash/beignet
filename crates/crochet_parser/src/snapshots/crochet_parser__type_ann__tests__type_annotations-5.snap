@@ -1,5 +1,5 @@
 ---
-source: crates/crochet_parser/src/types.rs
+source: crates/crochet_parser/src/type_ann.rs
 expression: "parse_type(\"((A, B) => C) | D\")"
 ---
 Union(

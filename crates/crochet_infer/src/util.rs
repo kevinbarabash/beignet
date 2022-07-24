@@ -101,6 +101,10 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     ..ty.to_owned()
                 }
             }
+            Variant::Array(t) => Type {
+                variant: Variant::Array(Box::from(norm_type(t, mapping, ctx))),
+                ..ty.to_owned()
+            },
             Variant::Rest(arg) => Type {
                 variant: Variant::Rest(Box::from(norm_type(arg, mapping, ctx))),
                 ..ty.to_owned()

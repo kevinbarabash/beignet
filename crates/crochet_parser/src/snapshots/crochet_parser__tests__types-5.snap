@@ -1,0 +1,60 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let arr: string[] | number[] = []\")"
+---
+Program {
+    body: [
+        VarDecl {
+            span: 0..33,
+            pattern: Ident(
+                BindingIdent {
+                    span: 4..29,
+                    id: Ident {
+                        span: 4..7,
+                        name: "arr",
+                    },
+                    type_ann: Some(
+                        Union(
+                            UnionType {
+                                span: 9..29,
+                                types: [
+                                    Array(
+                                        ArrayType {
+                                            span: 0..0,
+                                            elem_type: Prim(
+                                                PrimType {
+                                                    span: 9..15,
+                                                    prim: Str,
+                                                },
+                                            ),
+                                        },
+                                    ),
+                                    Array(
+                                        ArrayType {
+                                            span: 0..0,
+                                            elem_type: Prim(
+                                                PrimType {
+                                                    span: 20..26,
+                                                    prim: Num,
+                                                },
+                                            ),
+                                        },
+                                    ),
+                                ],
+                            },
+                        ),
+                    ),
+                },
+            ),
+            init: Some(
+                Tuple(
+                    Tuple {
+                        span: 31..33,
+                        elems: [],
+                    },
+                ),
+            ),
+            declare: false,
+        },
+    ],
+}

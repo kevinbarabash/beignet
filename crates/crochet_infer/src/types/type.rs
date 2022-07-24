@@ -125,6 +125,7 @@ pub enum Variant {
     Object(Vec<TProp>),
     Alias(AliasType),
     Tuple(Vec<Type>),
+    Array(Box<Type>),
     Rest(Box<Type>),
     Member(MemberType),
 }
@@ -156,6 +157,7 @@ impl Hash for Type {
 }
 
 impl fmt::Display for Type {
+    // TODO: add in parentheses where necessary to get the precedence right
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.variant {
             Variant::Var => {
@@ -179,6 +181,7 @@ impl fmt::Display for Type {
                 None => write!(f, "{name}"),
             },
             Variant::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
+            Variant::Array(t) => write!(f, "{t}[]"),
             Variant::Rest(arg) => write!(f, "...{arg}"),
             Variant::Member(MemberType { obj, prop, .. }) => write!(f, "{obj}[\"{prop}\"]"),
         }
@@ -215,6 +218,7 @@ fn set_frozen(ty: Type, frozen: bool) -> Type {
                 .map(|type_params| type_params.into_iter().map(freeze).collect()),
         }),
         Variant::Tuple(types) => Variant::Tuple(types.into_iter().map(freeze).collect()),
+        Variant::Array(t) => Variant::Array(Box::from(freeze(t.as_ref().clone()))),
         Variant::Rest(arg) => Variant::Rest(Box::from(freeze(arg.as_ref().clone()))),
         Variant::Member(member) => Variant::Member(MemberType {
             obj: Box::from(freeze(member.obj.as_ref().clone())),
@@ -266,6 +270,7 @@ pub fn set_flag(ty: Type, flag: &Flag) -> Type {
                 .map(|type_params| type_params.into_iter().map(|tp| set_flag(tp, flag)).collect()),
         }),
         Variant::Tuple(types) => Variant::Tuple(types.into_iter().map(|t| set_flag(t, flag)).collect()),
+        Variant::Array(t) => Variant::Array(Box::from(set_flag(t.as_ref().clone(), flag))),
         Variant::Rest(arg) => Variant::Rest(Box::from(set_flag(arg.as_ref().clone(), flag))),
         Variant::Member(member) => Variant::Member(MemberType {
             obj: Box::from(set_flag(member.obj.as_ref().clone(), flag)),

@@ -1,25 +1,25 @@
 ---
-source: crates/crochet_parser/src/types.rs
-expression: "parse_type(\"A & B | C & D\")"
+source: crates/crochet_parser/src/type_ann.rs
+expression: "parse_type(\"(A | B) & (C | D)\")"
 ---
-Union(
-    UnionType {
-        span: 0..13,
+Intersection(
+    IntersectionType {
+        span: 0..17,
         types: [
-            Intersection(
-                IntersectionType {
-                    span: 0..5,
+            Union(
+                UnionType {
+                    span: 1..6,
                     types: [
                         TypeRef(
                             TypeRef {
-                                span: 0..1,
+                                span: 1..2,
                                 name: "A",
                                 type_params: None,
                             },
                         ),
                         TypeRef(
                             TypeRef {
-                                span: 4..5,
+                                span: 5..6,
                                 name: "B",
                                 type_params: None,
                             },
@@ -27,20 +27,20 @@ Union(
                     ],
                 },
             ),
-            Intersection(
-                IntersectionType {
-                    span: 8..13,
+            Union(
+                UnionType {
+                    span: 11..16,
                     types: [
                         TypeRef(
                             TypeRef {
-                                span: 8..9,
+                                span: 11..12,
                                 name: "C",
                                 type_params: None,
                             },
                         ),
                         TypeRef(
                             TypeRef {
-                                span: 12..13,
+                                span: 15..16,
                                 name: "D",
                                 type_params: None,
                             },

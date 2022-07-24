@@ -232,6 +232,21 @@ impl Context {
         }
     }
 
+    pub fn array(&self, t: Type) -> Type {
+        self.array_with_option_flag(t, None)
+    }
+    pub fn array_with_flag(&self, t: Type, flag: Flag) -> Type {
+        self.array_with_option_flag(t, Some(flag))
+    }
+    fn array_with_option_flag(&self, t: Type, flag: Option<Flag>) -> Type {
+        Type {
+            id: self.fresh_id(),
+            frozen: false,
+            variant: Variant::Array(Box::from(t)),
+            flag,
+        }
+    }
+
     pub fn rest(&self, arg: Type) -> Type {
         self.rest_with_option_flag(arg, None)
     }
