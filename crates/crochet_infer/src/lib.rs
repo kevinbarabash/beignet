@@ -462,10 +462,10 @@ mod tests {
         let x = p.x
         "#;
         let ctx = infer_prog(src);
-    
+
         let x = format!("{}", ctx.values.get("x").unwrap());
         assert_eq!(x, "number | undefined");
-    }    
+    }
 
     #[test]
     fn obj_param_destructuring() {
@@ -1258,6 +1258,174 @@ mod tests {
     }
 
     #[test]
+    fn infer_tuple_rest_at_end() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        let [a, ...b] = tuple
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "[\"hello\", true]");
+    }
+
+    #[test]
+    fn infer_tuple_rest_at_start() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        let [...a, b] = tuple
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "[5, \"hello\"]");
+        assert_eq!(get_type("b", &ctx), "true");
+    }
+
+    #[test]
+    fn infer_tuple_rest_in_middle() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        let [a, ...b, c] = tuple
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "[\"hello\"]");
+        assert_eq!(get_type("c", &ctx), "true");
+    }
+
+    #[test]
+    fn infer_tuple_empty_rest() {
+        let src = r#"
+        let tuple = [5, true]
+        let [a, ...b, c] = tuple
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "5");
+        assert_eq!(get_type("b", &ctx), "[]");
+        assert_eq!(get_type("c", &ctx), "true");
+    }
+
+    #[test]
+    #[should_panic="not enough elements to unpack"]
+    fn infer_tuple_rest_no_enough_elements_to_unpack() {
+        let src = r#"
+        let tuple = [5]
+        let [a, ...b, c] = tuple
+        "#;
+        
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic="Only one rest pattern is allowed in a tuple"]
+    fn infer_tuple_more_than_one_rest() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        let [a, ...b, ...c, d] = tuple
+        "#;
+        
+        infer_prog(src);
+    }
+
+    #[test]
+    fn infer_spread_tuple_at_end() {
+        let src = r#"
+        let a = 5
+        let b = ["hello", true]
+        let tuple = [a, ...b]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("tuple", &ctx), "[5, \"hello\", true]");
+    }
+
+    #[test]
+    fn infer_spread_tuple_literal() {
+        let src = r#"
+        let a = 5
+        let tuple = [a, ...["hello", true]]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("tuple", &ctx), "[5, \"hello\", true]");
+    }
+
+    #[test]
+    fn infer_nested_spread_tuple_literal() {
+        let src = r#"
+        let a = 5
+        let tuple = [a, ...["hello", ...[true]]]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("tuple", &ctx), "[5, \"hello\", true]");
+    }
+
+    #[test]
+    fn infer_spread_tuple_at_start() {
+        let src = r#"
+        let a = 5
+        let b = ["hello", true]
+        let tuple = [...b, a]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("tuple", &ctx), "[\"hello\", true, 5]");
+    }
+
+    #[test]
+    fn infer_array_destructure_after_spread() {
+        let src = r#"
+        let a = 5
+        let b = ["hello", true]
+        let [x, ...y] = [...b, a]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("x", &ctx), "\"hello\"");
+        assert_eq!(get_type("y", &ctx), "[true, 5]");
+    }
+
+    #[test]
+    fn infer_spread_tuple_in_middle() {
+        let src = r#"
+        let a = 5
+        let b = ["hello"]
+        let c = true
+        let tuple = [a, ...b, c]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("tuple", &ctx), "[5, \"hello\", true]");
+    }
+    
+    
+    #[test]
+    fn infer_multiple_tuple_spreads() {
+        let src = r#"
+        let a = [5, 10]
+        let b = ["hello", true]
+        let tuple = [...a, ...b]
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("tuple", &ctx), "[5, 10, \"hello\", true]");
+    }
+
+    #[test]
+    #[should_panic="Can only spread tuple types inside a tuple"]
+    fn spread_non_tuple_type_should_fail() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        let b = ["hello", true]
+        let tuple = [...p, ...b]
+        "#;
+        infer_prog(src);
+    }
+
+    #[test]
     fn call_overloaded_function() {
         let src = r#"
         declare let add: ((number, number) => number) & ((string, string) => string)
@@ -1463,6 +1631,9 @@ mod tests {
         let src = r#"let h = (f, x, y) => f(x) + f(y)"#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("h", &ctx), "<t0>((t0) => number, t0, t0) => number");
+        assert_eq!(
+            get_type("h", &ctx),
+            "<t0>((t0) => number, t0, t0) => number"
+        );
     }
 }

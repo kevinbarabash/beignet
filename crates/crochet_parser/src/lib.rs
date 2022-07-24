@@ -203,6 +203,13 @@ mod tests {
     }
 
     #[test]
+    fn array_spread() {
+        insta::assert_debug_snapshot!(parse("let tuple = [...a, b]"));
+        insta::assert_debug_snapshot!(parse("let tuple = [a, ...b]"));
+        insta::assert_debug_snapshot!(parse("let tuple = [1, ...[2, 3]]"));
+    }
+
+    #[test]
     #[should_panic="Only one rest is allowed in an object pattern"]
     fn multiple_rests_is_invalid() {
         insta::assert_debug_snapshot!(parse("let {z, ...p, ...q} = point"));

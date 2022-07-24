@@ -25,18 +25,24 @@ Program {
                             Tuple {
                                 span: 16..22,
                                 elems: [
-                                    Ident(
-                                        Ident {
-                                            span: 17..18,
-                                            name: "a",
-                                        },
-                                    ),
-                                    Ident(
-                                        Ident {
-                                            span: 20..21,
-                                            name: "b",
-                                        },
-                                    ),
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Ident(
+                                            Ident {
+                                                span: 17..18,
+                                                name: "a",
+                                            },
+                                        ),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Ident(
+                                            Ident {
+                                                span: 20..21,
+                                                name: "b",
+                                            },
+                                        ),
+                                    },
                                 ],
                             },
                         ),

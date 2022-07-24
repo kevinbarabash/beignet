@@ -114,17 +114,59 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             Ok(compose_many_subs(&ss))
         }
         (Variant::Tuple(types1), Variant::Tuple(types2)) => {
+            let mut before2: Vec<Type> = vec![];
+            let mut after2: Vec<Type> = vec![];
+            let mut maybe_rest2: Option<Type> = None;
+
+            for t in types2 {
+                match &t.variant {
+                    Variant::Rest(rest_type) => {
+                        if maybe_rest2.is_some() {
+                            return Err(String::from("Only one rest pattern is allowed in a tuple"));
+                        }
+                        maybe_rest2 = Some(rest_type.as_ref().to_owned());
+                    }
+                    _ => match maybe_rest2 {
+                        Some(_) => after2.push(t.to_owned()),
+                        None => before2.push(t.to_owned()),
+                    },
+                }
+            }
+
+            let min_len = before2.len() + after2.len();
+
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
-            if types1.len() < types2.len() {
-                // TODO: tweak this error message to include the types
+            // If it doesn't, we return an error.
+            if types1.len() < min_len {
+                // TODO: include the types in the error message
                 return Err(String::from("not enough elements to unpack"));
             }
-            let result: Result<Vec<_>, _> = types1
-                .iter()
-                .zip(types2.iter())
-                .map(|(t1, t2)| unify(t1, t2, ctx))
-                .collect();
-            let ss = result?; // This is only okay if all calls to is_subtype are okay
+
+            let mut types1 = types1.to_owned();
+            let rest_len = types1.len() - min_len;
+
+            let before1: Vec<_> = types1.drain(0..before2.len()).collect();
+
+            let mut ss: Vec<Subst> = vec![];
+
+            for (t1, t2) in before1.iter().zip(before2.iter()) {
+                let s = unify(t1, t2, ctx)?;
+                ss.push(s);
+            }
+
+            if let Some(rest2) = maybe_rest2 {
+                let rest1: Vec<_> = types1.drain(0..rest_len).collect();
+                let after1: Vec<_> = types1;
+
+                let s = unify(&ctx.tuple(rest1), &rest2, ctx)?;
+                ss.push(s);
+
+                for (t1, t2) in after1.iter().zip(after2.iter()) {
+                    let s = unify(t1, t2, ctx)?;
+                    ss.push(s);
+                }
+            }
+
             Ok(compose_many_subs(&ss))
         }
         (Variant::Union(types), _) => {

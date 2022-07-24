@@ -21,30 +21,39 @@ Program {
                     Tuple {
                         span: 8..17,
                         elems: [
-                            Lit(
-                                Num(
-                                    Num {
-                                        span: 9..10,
-                                        value: "1",
-                                    },
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Lit(
+                                    Num(
+                                        Num {
+                                            span: 9..10,
+                                            value: "1",
+                                        },
+                                    ),
                                 ),
-                            ),
-                            Lit(
-                                Num(
-                                    Num {
-                                        span: 12..13,
-                                        value: "2",
-                                    },
+                            },
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Lit(
+                                    Num(
+                                        Num {
+                                            span: 12..13,
+                                            value: "2",
+                                        },
+                                    ),
                                 ),
-                            ),
-                            Lit(
-                                Num(
-                                    Num {
-                                        span: 15..16,
-                                        value: "3",
-                                    },
+                            },
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Lit(
+                                    Num(
+                                        Num {
+                                            span: 15..16,
+                                            value: "3",
+                                        },
+                                    ),
                                 ),
-                            ),
+                            },
                         ],
                     },
                 ),

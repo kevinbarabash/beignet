@@ -1,17 +1,17 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"let x = [1, [a, b]]\")"
+expression: "parse(\"let tuple = [1, ...[2, 3]]\")"
 ---
 Program {
     body: [
         VarDecl {
-            span: 0..19,
+            span: 0..26,
             pattern: Ident(
                 BindingIdent {
-                    span: 4..5,
+                    span: 4..9,
                     id: Ident {
-                        span: 4..5,
-                        name: "x",
+                        span: 4..9,
+                        name: "tuple",
                     },
                     type_ann: None,
                 },
@@ -19,41 +19,47 @@ Program {
             init: Some(
                 Tuple(
                     Tuple {
-                        span: 8..19,
+                        span: 12..26,
                         elems: [
                             ExprOrSpread {
                                 spread: None,
                                 expr: Lit(
                                     Num(
                                         Num {
-                                            span: 9..10,
+                                            span: 13..14,
                                             value: "1",
                                         },
                                     ),
                                 ),
                             },
                             ExprOrSpread {
-                                spread: None,
+                                spread: Some(
+                                    16..25,
+                                ),
                                 expr: Tuple(
                                     Tuple {
-                                        span: 12..18,
+                                        span: 19..25,
                                         elems: [
                                             ExprOrSpread {
                                                 spread: None,
-                                                expr: Ident(
-                                                    Ident {
-                                                        span: 13..14,
-                                                        name: "a",
-                                                    },
+                                                expr: Lit(
+                                                    Num(
+                                                        Num {
+                                                            span: 20..21,
+                                                            value: "2",
+                                                        },
+                                                    ),
                                                 ),
                                             },
                                             ExprOrSpread {
                                                 spread: None,
-                                                expr: Ident(
-                                                    Ident {
-                                                        span: 16..17,
-                                                        name: "b",
-                                                    },
+                                                expr: Lit(
+                                                    Num(
+                                                        Num {
+                                                            span: 23..24,
+                                                            value: "3",
+                                                        },
+                                                    ),
                                                 ),
                                             },
                                         ],
