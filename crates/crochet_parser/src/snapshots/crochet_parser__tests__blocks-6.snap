@@ -42,12 +42,15 @@ Program {
                                     },
                                 ),
                                 args: [
-                                    Ident(
-                                        Ident {
-                                            span: 23..24,
-                                            name: "x",
-                                        },
-                                    ),
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Ident(
+                                            Ident {
+                                                span: 23..24,
+                                                name: "x",
+                                            },
+                                        ),
+                                    },
                                 ],
                             },
                         ),

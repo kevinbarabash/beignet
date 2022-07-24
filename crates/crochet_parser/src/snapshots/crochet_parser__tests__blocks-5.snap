@@ -65,12 +65,15 @@ Program {
                                             },
                                         ),
                                         args: [
-                                            Ident(
-                                                Ident {
-                                                    span: 34..35,
-                                                    name: "x",
-                                                },
-                                            ),
+                                            ExprOrSpread {
+                                                spread: None,
+                                                expr: Ident(
+                                                    Ident {
+                                                        span: 34..35,
+                                                        name: "x",
+                                                    },
+                                                ),
+                                            },
                                         ],
                                     },
                                 ),

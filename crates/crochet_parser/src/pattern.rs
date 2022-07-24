@@ -50,10 +50,8 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
             })
             .padded();
 
-        // NOTE: rest patterns must appear instead of other patterns
-        // It's an error for them appear at the top-level, e.g.
-        // let ...x = [1,2,3];
-        // Also, type annotation can only appear at the top-level as well.
+        // NOTE: rest patterns are only valid in certain locations, for instance
+        // let ...foo = bar is not valid, but bar(...foo) is valid.
         let rest_pat = just("...")
             .ignore_then(pat.clone())
             .map_with_span(|arg, span| RestPat {

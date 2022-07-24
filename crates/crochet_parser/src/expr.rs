@@ -3,8 +3,8 @@ use crochet_ast::*;
 
 use crate::jsx::jsx_parser;
 use crate::pattern::pattern_parser;
-use crate::type_params::type_params;
 use crate::type_ann::type_ann_parser;
+use crate::type_params::type_params;
 use crate::util::just_with_padding;
 
 pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
@@ -165,7 +165,9 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .delimited_by(just_with_padding("["), just_with_padding("]"))
             .map_with_span(|elems, span: Span| Expr::Tuple(Tuple { span, elems }));
 
-        let template_str = ident.or_not().then_ignore(just("`"))
+        let template_str = ident
+            .or_not()
+            .then_ignore(just("`"))
             .then(
                 take_until(just("${"))
                     .map_with_span(|(chars, _), span: Span| {
@@ -206,7 +208,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                             tag,
                             template,
                         })
-                    },
+                    }
                     None => Expr::TemplateLiteral(template),
                 }
             });
@@ -229,7 +231,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
 
         enum Suffix {
             Member(MemberProp, Span),
-            Call(Vec<Expr>, Span),
+            Call(Vec<ExprOrSpread>, Span),
         }
 
         // NOTE: We use this approach of parsing suffixes instead of using a recursive
@@ -238,6 +240,18 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .clone()
             .then(
                 choice((
+                    just_with_padding("...")
+                        .map_with_span(|_, span: Span| span)
+                        .or_not()
+                        .then(expr.clone())
+                        .map_with_span(|(spread, arg), _: Span| ExprOrSpread {
+                            spread,
+                            expr: Box::from(arg),
+                        })
+                        .separated_by(just_with_padding(","))
+                        .allow_trailing()
+                        .delimited_by(just_with_padding("("), just_with_padding(")"))
+                        .map_with_span(Suffix::Call),
                     just_with_padding(".")
                         .ignore_then(text::ident())
                         .map_with_span(|name, span: Span| {
@@ -247,11 +261,6 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                             });
                             Suffix::Member(prop, span)
                         }),
-                    expr.clone()
-                        .separated_by(just_with_padding(","))
-                        .allow_trailing()
-                        .delimited_by(just_with_padding("("), just_with_padding(")"))
-                        .map_with_span(Suffix::Call),
                 ))
                 .repeated(),
             )
@@ -379,6 +388,13 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .then(choice((block.clone(), expr.clone())))
             .map_with_span(
                 |((((is_async, type_params), args), return_type), body), span: Span| {
+                    for (i, arg) in args.iter().enumerate() {
+                        if let Pattern::Rest(_) = arg {
+                            if i < args.len() - 1 {
+                                panic!("rest params must come last");
+                            };
+                        }
+                    }
                     Expr::Lambda(Lambda {
                         span,
                         params: args,

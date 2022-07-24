@@ -203,7 +203,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 .iter()
                 .map(|arg| ExprOrSpread {
                     spread: None,
-                    expr: Box::from(build_expr(arg)),
+                    expr: Box::from(build_expr(arg.expr.as_ref())),
                 })
                 .collect();
 

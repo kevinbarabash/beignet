@@ -1,14 +1,14 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"foo(a, b)\")"
+expression: "parse(\"foo(a, ...b)\")"
 ---
 Program {
     body: [
         Expr {
-            span: 0..9,
+            span: 0..12,
             expr: App(
                 App {
-                    span: 0..9,
+                    span: 0..12,
                     lam: Ident(
                         Ident {
                             span: 0..3,
@@ -26,10 +26,12 @@ Program {
                             ),
                         },
                         ExprOrSpread {
-                            spread: None,
+                            spread: Some(
+                                7..10,
+                            ),
                             expr: Ident(
                                 Ident {
-                                    span: 7..8,
+                                    span: 10..11,
                                     name: "b",
                                 },
                             ),

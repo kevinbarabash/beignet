@@ -15,7 +15,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         Expr::App(App { lam, args, .. }) => {
             let (s1, lam_type) = infer_expr(ctx, lam)?;
             let (mut args_ss, args_ts): (Vec<_>, Vec<_>) =
-                args.iter().filter_map(|arg| infer_expr(ctx, arg).ok()).unzip();
+                args.iter().filter_map(|arg| infer_expr(ctx, arg.expr.as_ref()).ok()).unzip();
 
             let ret_type = ctx.fresh_var();
             // Are we missing an `apply()` call here?

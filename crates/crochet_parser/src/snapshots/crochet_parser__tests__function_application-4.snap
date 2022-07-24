@@ -19,35 +19,44 @@ Program {
                                 },
                             ),
                             args: [
-                                Ident(
-                                    Ident {
-                                        span: 2..3,
-                                        name: "x",
-                                    },
-                                ),
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Ident(
+                                        Ident {
+                                            span: 2..3,
+                                            name: "x",
+                                        },
+                                    ),
+                                },
                             ],
                         },
                     ),
                     args: [
-                        App(
-                            App {
-                                span: 5..9,
-                                lam: Ident(
-                                    Ident {
-                                        span: 5..6,
-                                        name: "g",
-                                    },
-                                ),
-                                args: [
-                                    Ident(
+                        ExprOrSpread {
+                            spread: None,
+                            expr: App(
+                                App {
+                                    span: 5..9,
+                                    lam: Ident(
                                         Ident {
-                                            span: 7..8,
-                                            name: "x",
+                                            span: 5..6,
+                                            name: "g",
                                         },
                                     ),
-                                ],
-                            },
-                        ),
+                                    args: [
+                                        ExprOrSpread {
+                                            spread: None,
+                                            expr: Ident(
+                                                Ident {
+                                                    span: 7..8,
+                                                    name: "x",
+                                                },
+                                            ),
+                                        },
+                                    ],
+                                },
+                            ),
+                        },
                     ],
                 },
             ),
