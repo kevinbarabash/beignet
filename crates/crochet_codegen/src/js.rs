@@ -528,6 +528,12 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
         ast::Expr::LetExpr(_) => {
             panic!("LetExpr should always be handled by the IfElse branch")
         }
+        ast::Expr::TemplateLiteral(_) => {
+            todo!()
+        }
+        ast::Expr::TaggedTemplateLiteral(_) => {
+            todo!()
+        }
     }
 }
 

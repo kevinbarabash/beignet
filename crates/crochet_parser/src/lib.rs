@@ -47,6 +47,16 @@ mod tests {
     }
 
     #[test]
+    fn template_literals() {
+        insta::assert_debug_snapshot!(parse("`Hello, world`"));
+        insta::assert_debug_snapshot!(parse("`Hello, ${name}`"));
+        insta::assert_debug_snapshot!(parse("`(${x}, ${y})`"));
+        insta::assert_debug_snapshot!(parse("`Hello, \"world\"`"));
+        insta::assert_debug_snapshot!(parse("`foo ${`bar ${baz}`}`"));
+        insta::assert_debug_snapshot!(parse("sql`SELECT * FROM ${table} WHERE id = ${id}`"));
+    }
+
+    #[test]
     fn operations() {
         insta::assert_debug_snapshot!(parse("1 + 2 - 3"));
         insta::assert_debug_snapshot!(parse("x * y / z"));

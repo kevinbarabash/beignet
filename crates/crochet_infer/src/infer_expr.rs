@@ -390,6 +390,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let s = Subst::default();
             Ok((s, t))
         }
+        Expr::TemplateLiteral(_) => {
+            todo!()
+        }
+        Expr::TaggedTemplateLiteral(_) => {
+            todo!()
+        }
     };
 
     let (s, t) = result?;
