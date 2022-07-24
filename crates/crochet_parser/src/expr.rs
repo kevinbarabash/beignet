@@ -151,20 +151,73 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .or_not()
             .then(expr.clone())
             .map_with_span(|(spread, elem), span: Span| match spread {
-                Some(_) => ExprOrSpread { spread: Some(span), expr: Box::from(elem) },
-                None => ExprOrSpread { spread: None, expr: Box::from(elem) },
+                Some(_) => ExprOrSpread {
+                    spread: Some(span),
+                    expr: Box::from(elem),
+                },
+                None => ExprOrSpread {
+                    spread: None,
+                    expr: Box::from(elem),
+                },
             })
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("["), just_with_padding("]"))
             .map_with_span(|elems, span: Span| Expr::Tuple(Tuple { span, elems }));
 
+        let template_str = ident.or_not().then_ignore(just("`"))
+            .then(
+                take_until(just("${"))
+                    .map_with_span(|(chars, _), span: Span| {
+                        let lit = Lit::str(chars.iter().collect(), span.clone());
+                        TemplateElem {
+                            span,
+                            raw: lit.clone(),
+                            cooked: lit,
+                        }
+                    })
+                    .then(expr.clone())
+                    .then(just("}"))
+                    .map(|((te, expr), _)| (te, expr))
+                    .repeated()
+                    .then(
+                        take_until(just("`")).map_with_span(|(chars, _), span: Span| {
+                            let lit = Lit::str(chars.iter().collect(), span.clone());
+                            TemplateElem {
+                                span,
+                                raw: lit.clone(),
+                                cooked: lit,
+                            }
+                        }),
+                    ),
+            )
+            .map_with_span(|(tag, (body, tail)), span: Span| {
+                let (mut quasis, exprs): (Vec<_>, Vec<_>) = body.iter().cloned().unzip();
+                quasis.push(tail);
+                let template = TemplateLiteral {
+                    span: span.clone(),
+                    exprs,
+                    quasis,
+                };
+                match tag {
+                    Some(tag) => {
+                        Expr::TaggedTemplateLiteral(TaggedTemplateLiteral {
+                            span, // TODO: adjust this to include the tag
+                            tag,
+                            template,
+                        })
+                    },
+                    None => Expr::TemplateLiteral(template),
+                }
+            });
+
         let atom = choice((
             // quarks (can't be broken down any further)
             r#bool,
             num,
             r#str,
-            // can be used as sub-expressions, but have the highest precedence
+            // can contain sub-expressions, but have the highest precedence
+            template_str,
             if_else,
             ident.map(Expr::Ident),
             obj,

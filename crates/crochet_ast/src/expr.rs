@@ -176,6 +176,27 @@ pub struct Empty {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TemplateElem {
+    pub span: Span,
+    pub raw: Lit,
+    pub cooked: Lit,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TemplateLiteral {
+    pub span: Span,
+    pub exprs: Vec<Expr>,
+    pub quasis: Vec<TemplateElem>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaggedTemplateLiteral {
+    pub span: Span,
+    pub tag: Ident,
+    pub template: TemplateLiteral,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     App(App),
     Fix(Fix),
@@ -192,6 +213,8 @@ pub enum Expr {
     Tuple(Tuple),
     Member(Member),
     Empty(Empty),
+    TemplateLiteral(TemplateLiteral),
+    TaggedTemplateLiteral(TaggedTemplateLiteral),
 }
 
 impl Expr {
@@ -212,6 +235,8 @@ impl Expr {
             Expr::Member(member) => member.span.to_owned(),
             Expr::Empty(empty) => empty.span.to_owned(),
             Expr::LetExpr(let_expr) => let_expr.span.to_owned(),
+            Expr::TemplateLiteral(tl) => tl.span.to_owned(),
+            Expr::TaggedTemplateLiteral(ttl) => ttl.span.to_owned(),
         }
     }
 }

@@ -1,0 +1,56 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"`Hello, ${name}`\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..16,
+            expr: TemplateLiteral(
+                TemplateLiteral {
+                    span: 0..16,
+                    exprs: [
+                        Ident(
+                            Ident {
+                                span: 10..14,
+                                name: "name",
+                            },
+                        ),
+                    ],
+                    quasis: [
+                        TemplateElem {
+                            span: 1..10,
+                            raw: Str(
+                                Str {
+                                    span: 1..10,
+                                    value: "Hello, ",
+                                },
+                            ),
+                            cooked: Str(
+                                Str {
+                                    span: 1..10,
+                                    value: "Hello, ",
+                                },
+                            ),
+                        },
+                        TemplateElem {
+                            span: 15..16,
+                            raw: Str(
+                                Str {
+                                    span: 15..16,
+                                    value: "",
+                                },
+                            ),
+                            cooked: Str(
+                                Str {
+                                    span: 15..16,
+                                    value: "",
+                                },
+                            ),
+                        },
+                    ],
+                },
+            ),
+        },
+    ],
+}

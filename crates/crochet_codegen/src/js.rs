@@ -492,7 +492,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             span: DUMMY_SP,
             elems: elems
                 .iter()
-                .map(|ast::ExprOrSpread {spread, expr}| {
+                .map(|ast::ExprOrSpread { spread, expr }| {
                     Some(ExprOrSpread {
                         spread: spread.to_owned().map(|_| DUMMY_SP),
                         expr: Box::from(build_expr(expr.as_ref())),
@@ -527,6 +527,37 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
         }),
         ast::Expr::LetExpr(_) => {
             panic!("LetExpr should always be handled by the IfElse branch")
+        }
+        ast::Expr::TemplateLiteral(ast::TemplateLiteral { exprs, quasis, .. }) => {
+            Expr::Tpl(Tpl {
+                span: DUMMY_SP,
+                exprs: exprs
+                    .iter()
+                    .map(|expr| Box::from(build_expr(expr)))
+                    .collect(),
+                quasis: quasis
+                    .iter()
+                    .map(|quasi| {
+                        let cooked = match &quasi.cooked {
+                            ast::Lit::Str(ast::Str { value, .. }) => value,
+                            _ => panic!("quasi.cooked must be a string"),
+                        };
+                        let raw = match &quasi.raw {
+                            ast::Lit::Str(ast::Str { value, .. }) => value,
+                            _ => panic!("quasi.raw must be a string"),
+                        };
+                        TplElement {
+                            span: DUMMY_SP,
+                            cooked: Some(JsWord::from(cooked.to_owned())),
+                            raw: JsWord::from(raw.to_owned()),
+                            tail: false, // TODO: set this to `true` if it's the last quasi
+                        }
+                    })
+                    .collect(),
+            })
+        }
+        ast::Expr::TaggedTemplateLiteral(_) => {
+            todo!()
         }
     }
 }
