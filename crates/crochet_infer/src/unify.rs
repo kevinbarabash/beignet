@@ -114,12 +114,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             Ok(compose_many_subs(&ss))
         }
         (Variant::Tuple(types1), Variant::Tuple(types2)) => {
-            // It's okay if t1 has extra properties, but it has to have all of t2's properties.
-            // if types1.len() < types2.len() {
-            //     // TODO: tweak this error message to include the types
-            //     return Err(String::from("not enough elements to unpack"));
-            // }
-
             let mut before2: Vec<Type> = vec![];
             let mut after2: Vec<Type> = vec![];
             let mut maybe_rest2: Option<Type> = None;
@@ -139,17 +133,19 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 }
             }
 
-            if types1.len() < before2.len() + after2.len() {
-                // TODO: tweak this error message to include the types
+            let min_len = before2.len() + after2.len();
+
+            // It's okay if t1 has extra properties, but it has to have all of t2's properties.
+            // If it doesn't, we return an error.
+            if types1.len() < min_len {
+                // TODO: include the types in the error message
                 return Err(String::from("not enough elements to unpack"));
             }
 
             let mut types1 = types1.to_owned();
-            let rest_length = types1.len() - (before2.len() + after2.len());
+            let rest_len = types1.len() - min_len;
 
             let before1: Vec<_> = types1.drain(0..before2.len()).collect();
-            let rest1: Vec<_> = types1.drain(0..rest_length).collect();
-            let after1: Vec<_> = types1;
 
             let mut ss: Vec<Subst> = vec![];
 
@@ -159,13 +155,16 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
 
             if let Some(rest2) = maybe_rest2 {
+                let rest1: Vec<_> = types1.drain(0..rest_len).collect();
+                let after1: Vec<_> = types1;
+
                 let s = unify(&ctx.tuple(rest1), &rest2, ctx)?;
                 ss.push(s);
-            }
-            
-            for (t1, t2) in after1.iter().zip(after2.iter()) {
-                let s = unify(t1, t2, ctx)?;
-                ss.push(s);
+
+                for (t1, t2) in after1.iter().zip(after2.iter()) {
+                    let s = unify(t1, t2, ctx)?;
+                    ss.push(s);
+                }
             }
 
             Ok(compose_many_subs(&ss))

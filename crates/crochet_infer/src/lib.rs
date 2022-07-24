@@ -1314,11 +1314,19 @@ mod tests {
         let tuple = [5]
         let [a, ...b, c] = tuple
         "#;
-        let ctx = infer_prog(src);
+        
+        infer_prog(src);
+    }
 
-        assert_eq!(get_type("a", &ctx), "5");
-        assert_eq!(get_type("b", &ctx), "[]");
-        assert_eq!(get_type("c", &ctx), "true");
+    #[test]
+    #[should_panic="Only one rest pattern is allowed in a tuple"]
+    fn infer_tuple_more_than_one_rest() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        let [a, ...b, ...c, d] = tuple
+        "#;
+        
+        infer_prog(src);
     }
 
     #[test]
