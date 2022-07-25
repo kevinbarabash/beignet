@@ -39,14 +39,17 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     }
                 }
                 let last_param_2 = lam2.params.last();
-                let has_rest_param = if let Some(param) = last_param_2 {
-                    matches!(param.variant, Variant::Rest(_))
+                let maybe_rest_param = if let Some(param) = last_param_2 {
+                    match &param.variant {
+                        Variant::Rest(rest) => Some(rest.as_ref()),
+                        _ => None
+                    }
                 } else {
-                    false
+                    None
                 };
 
                 // TODO: add a `variadic` boolean to the Lambda type
-                if has_rest_param {
+                if let Some(rest_param) = maybe_rest_param {
                     let regular_param_count = lam2.params.len() - 1;
                     
                     let mut args = lam1.params.clone();
@@ -54,7 +57,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let rest_arg = ctx.tuple(args);
 
                     let mut params = lam2.params.clone();
-                    let rest_param = lam2.params.last().unwrap();
                     let regular_params: Vec<_> = params.drain(0..regular_param_count).collect();
 
                     // unify regular args and params
@@ -67,10 +69,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     }
 
                     // unify remaining args with the rest param
-                    let s1 = match &rest_param.variant {
-                        Variant::Rest(rest_param) => unify(&rest_arg, rest_param, ctx)?,
-                        _ => panic!("This should never happen because we checked above")
-                    };
+                    let s1 = unify(&rest_arg, rest_param, ctx)?;
 
                     // unify return types
                     let s2 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
