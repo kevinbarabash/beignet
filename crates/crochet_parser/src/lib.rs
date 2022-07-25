@@ -75,6 +75,13 @@ mod tests {
         insta::assert_debug_snapshot!(parse("(a, b) => c"));
         insta::assert_debug_snapshot!(parse("() => 10"));
         insta::assert_debug_snapshot!(parse("(a) => \"hello\""));
+        insta::assert_debug_snapshot!(parse("(a, ...b) => true"));
+    }
+
+    #[test]
+    #[should_panic="rest params must come last"]
+    fn multiple_rest_params() {
+        parse("(...a, ...b) => true");
     }
 
     #[test]
@@ -91,6 +98,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("foo(a, b)"));
         insta::assert_debug_snapshot!(parse("foo(10, \"hello\")"));
         insta::assert_debug_snapshot!(parse("f(x)(g(x))"));
+        insta::assert_debug_snapshot!(parse("foo(a, ...b)"));
     }
 
     #[test]

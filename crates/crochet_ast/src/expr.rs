@@ -43,7 +43,7 @@ pub enum Statement {
 pub struct App {
     pub span: Span,
     pub lam: Box<Expr>,
-    pub args: Vec<Expr>,
+    pub args: Vec<ExprOrSpread>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

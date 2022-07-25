@@ -13,9 +13,24 @@ use super::util::*;
 pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), String> {
     let result = match expr {
         Expr::App(App { lam, args, .. }) => {
+            let mut ss: Vec<Subst> = vec![];
+            let mut arg_types: Vec<Type> = vec![];
+
             let (s1, lam_type) = infer_expr(ctx, lam)?;
-            let (mut args_ss, args_ts): (Vec<_>, Vec<_>) =
-                args.iter().filter_map(|arg| infer_expr(ctx, arg).ok()).unzip();
+            ss.push(s1);
+
+            for arg in args {
+                let (arg_s, arg_t) = infer_expr(ctx, arg.expr.as_ref())?;
+                ss.push(arg_s);
+                if arg.spread.is_some() {
+                    match arg_t.variant {
+                        Variant::Tuple(types) => arg_types.extend(types.to_owned()),
+                        _ => arg_types.push(ctx.rest(arg_t))
+                    }
+                } else {
+                    arg_types.push(arg_t);
+                }
+            }
 
             let ret_type = ctx.fresh_var();
             // Are we missing an `apply()` call here?
@@ -25,7 +40,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 id: ctx.fresh_id(),
                 frozen: false,
                 variant: Variant::Lam(types::LamType {
-                    params: args_ts,
+                    params: arg_types,
                     ret: Box::from(ret_type.clone()),
                     is_call: true,
                 }),
@@ -33,10 +48,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             };
             let s3 = unify(&call_type, &lam_type, ctx)?;
 
-            // ss = [s3, ...args_ss, s1]
-            let mut ss = vec![s3];
-            ss.append(&mut args_ss);
-            ss.push(s1);
+            ss.push(s3);
 
             let s = compose_many_subs(&ss);
             let t = ret_type.apply(&s);
