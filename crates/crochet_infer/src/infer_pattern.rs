@@ -83,7 +83,16 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
             }
             Ok(ty)
         }
-        Pattern::Rest(RestPat { arg, .. }) => infer_pattern_rec(arg.as_ref(), ctx, assump),
+        Pattern::Rest(RestPat { arg, .. }) => {
+            let t = match get_type_ann(arg) {
+                Some(type_ann) => infer_type_ann(&type_ann, ctx),
+                None => {
+                    // TODO: wrap this in an array type
+                    infer_pattern_rec(arg.as_ref(), ctx, assump)?
+                },
+            };
+            Ok(ctx.rest(t))
+        }
         Pattern::Array(ArrayPat { elems, .. }) => {
             let elems: Result<Vec<Type>, String> = elems
                 .iter()

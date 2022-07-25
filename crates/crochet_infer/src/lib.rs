@@ -1148,6 +1148,82 @@ mod tests {
     }
 
     #[test]
+    fn rest_param() {
+        let src = r#"
+        let fst = (a: number, ...b: number[]) => a
+        let result = fst(5, 10, 15)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    #[test]
+    fn rest_param_with_arg_spread() {
+        // TODO: handle the spread directly in infer_expr()
+        let src = r#"
+        let fst = (a: number, ...b: number[]) => a
+        let nums = [10, 15]
+        let result = fst(5, ...nums)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn rest_param_with_arg_spread_and_incorrect_type() {
+        // TODO: handle the spread directly in infer_expr()
+        let src = r#"
+        let fst = (a: number, ...b: number[]) => a
+        let mixed = [10, "hello"]
+        let result = fst(5, ...mixed)
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn empty_rest_param() {
+        let src = r#"
+        let fst = (a: number, ...b: number[]) => a
+        let result = fst(5)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn rest_param_with_incorrect_arg_type() {
+        let src = r#"
+        let fst = (a: number, ...b: number[]) => a
+        let result = fst(5, 10, "hello")
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[ignore]
+    fn rest_param_decl() {
+        // TODO: update the parser to handle this test case
+        let src = r#"
+        declare let add: (number, ...number[]) => number
+        let result = add(5, 10)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+    }
+
+    #[test]
     fn infer_member_access() {
         let src = r#"
         let p = {x: 5, y: 10}

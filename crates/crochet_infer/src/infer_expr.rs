@@ -23,7 +23,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 let (arg_s, arg_t) = infer_expr(ctx, arg.expr.as_ref())?;
                 ss.push(arg_s);
                 if arg.spread.is_some() {
-                    arg_types.push(ctx.rest(arg_t));
+                    match arg_t.variant {
+                        Variant::Tuple(types) => arg_types.extend(types.to_owned()),
+                        _ => arg_types.push(ctx.rest(arg_t))
+                    }
                 } else {
                     arg_types.push(arg_t);
                 }
