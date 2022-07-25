@@ -1,28 +1,28 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"`Hello, \\\"world\\\"`\")"
+expression: "parse(\"`a \\\\u{2212} b`\")"
 ---
 Program {
     body: [
         Expr {
-            span: 0..16,
+            span: 0..14,
             expr: TemplateLiteral(
                 TemplateLiteral {
-                    span: 0..16,
+                    span: 0..14,
                     exprs: [],
                     quasis: [
                         TemplateElem {
-                            span: 1..16,
+                            span: 1..14,
                             raw: Str(
                                 Str {
-                                    span: 1..16,
-                                    value: "Hello, \"world\"",
+                                    span: 1..14,
+                                    value: "a \\u{2212} b",
                                 },
                             ),
                             cooked: Str(
                                 Str {
-                                    span: 1..16,
-                                    value: "Hello, world",
+                                    span: 1..14,
+                                    value: "a − b",
                                 },
                             ),
                         },

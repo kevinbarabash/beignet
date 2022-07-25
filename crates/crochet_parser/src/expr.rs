@@ -1,5 +1,6 @@
 use chumsky::prelude::*;
 use crochet_ast::*;
+use snailquote::unescape;
 
 use crate::jsx::jsx_parser;
 use crate::pattern::pattern_parser;
@@ -29,10 +30,15 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
     let num = choice((real, int));
 
     let r#str = just("\"")
-        .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
+        .ignore_then(filter(|c| *c != '"').repeated())
         .then_ignore(just("\""))
         .collect::<String>()
-        .map_with_span(|value, span| Expr::Lit(Lit::str(value, span)));
+        .map_with_span(|raw, span| {
+            // unescape needs to know whether the string is contained in single quotes
+            // or double quotes so that it can unescape quote characters correctly.
+            let cooked = unescape(&format!("\"{raw}\"")).unwrap();
+            Expr::Lit(Lit::str(cooked, span))
+        });
 
     let parser = recursive(|expr: Recursive<'_, char, Expr, Simple<char>>| {
         // TODO: support recursive functions to be declared within another function
@@ -171,11 +177,12 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .then(
                 take_until(just("${"))
                     .map_with_span(|(chars, _), span: Span| {
-                        let lit = Lit::str(chars.iter().collect(), span.clone());
+                        let raw = chars.iter().collect::<String>();
+                        let cooked = unescape(&format!("\"{raw}\"")).unwrap();
                         TemplateElem {
-                            span,
-                            raw: lit.clone(),
-                            cooked: lit,
+                            span: span.clone(),
+                            raw: Lit::str(raw, span.clone()),
+                            cooked: Lit::str(cooked, span),
                         }
                     })
                     .then(expr.clone())
@@ -184,11 +191,12 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                     .repeated()
                     .then(
                         take_until(just("`")).map_with_span(|(chars, _), span: Span| {
-                            let lit = Lit::str(chars.iter().collect(), span.clone());
+                            let raw = chars.iter().collect::<String>();
+                            let cooked = unescape(&format!("\"{raw}\"")).unwrap();
                             TemplateElem {
-                                span,
-                                raw: lit.clone(),
-                                cooked: lit,
+                                span: span.clone(),
+                                raw: Lit::str(raw, span.clone()),
+                                cooked: Lit::str(cooked, span),
                             }
                         }),
                     ),

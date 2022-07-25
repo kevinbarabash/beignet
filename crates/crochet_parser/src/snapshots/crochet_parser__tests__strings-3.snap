@@ -1,16 +1,16 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"\\\"hello\\\"\")"
+expression: "parse(\"\\\"line 1\\\\nline 2\\\\nline 3\\\"\")"
 ---
 Program {
     body: [
         Expr {
-            span: 0..7,
+            span: 0..24,
             expr: Lit(
                 Str(
                     Str {
-                        span: 0..7,
-                        value: "hello",
+                        span: 0..24,
+                        value: "line 1\nline 2\nline 3",
                     },
                 ),
             ),
