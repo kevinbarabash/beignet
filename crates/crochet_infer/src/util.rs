@@ -22,7 +22,6 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     id: index as i32,
                     frozen: false,
                     variant: Variant::Var,
-                    flag: None,
                 },
             )
         })

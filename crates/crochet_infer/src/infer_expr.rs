@@ -44,7 +44,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                     ret: Box::from(ret_type.clone()),
                     is_call: true,
                 }),
-                flag: None,
             };
             let s3 = unify(&call_type, &lam_type, ctx)?;
 
@@ -173,7 +172,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                         ret: Box::from(ret_type.clone()),
                                         is_call: true,
                                     }),
-                                    flag: None,
                                 };
 
                                 let s1 = compose_many_subs(&ss);

@@ -69,13 +69,6 @@ impl Hash for LamType {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Flag {
-    MemberAccess,
-    Parameter,
-    Argument,
-}
-
 #[derive(Clone, Debug, Eq)]
 pub struct AliasType {
     pub name: String,
@@ -135,7 +128,6 @@ pub struct Type {
     pub variant: Variant,
     pub id: i32,
     pub frozen: bool,
-    pub flag: Option<Flag>,
 }
 
 impl PartialEq for Type {
@@ -238,48 +230,4 @@ pub fn freeze(ty: Type) -> Type {
 
 pub fn unfreeze(ty: Type) -> Type {
     set_frozen(ty, false)
-}
-
-pub fn set_flag(ty: Type, flag: &Flag) -> Type {
-    let variant = match ty.variant {
-        Variant::Var => Variant::Var,
-        Variant::Lam(lam) => Variant::Lam(LamType {
-            is_call: lam.is_call,
-            params: lam.params.into_iter().map(|p| set_flag(p, flag)).collect(),
-            ret: Box::from(set_flag(lam.ret.as_ref().clone(), flag)),
-        }),
-        Variant::Prim(prim) => Variant::Prim(prim),
-        Variant::Lit(lit) => Variant::Lit(lit),
-        Variant::Union(types) => Variant::Union(types.into_iter().map(|t| set_flag(t, flag)).collect()),
-        Variant::Intersection(types) => {
-            Variant::Intersection(types.into_iter().map(|t| set_flag(t, flag)).collect())
-        }
-        Variant::Object(props) => Variant::Object(
-            props
-                .into_iter()
-                .map(|prop| TProp {
-                    ty: set_flag(prop.ty, flag),
-                    ..prop
-                })
-                .collect(),
-        ),
-        Variant::Alias(alias) => Variant::Alias(AliasType {
-            name: alias.name,
-            type_params: alias
-                .type_params
-                .map(|type_params| type_params.into_iter().map(|tp| set_flag(tp, flag)).collect()),
-        }),
-        Variant::Tuple(types) => Variant::Tuple(types.into_iter().map(|t| set_flag(t, flag)).collect()),
-        Variant::Array(t) => Variant::Array(Box::from(set_flag(t.as_ref().clone(), flag))),
-        Variant::Rest(arg) => Variant::Rest(Box::from(set_flag(arg.as_ref().clone(), flag))),
-        Variant::Member(member) => Variant::Member(MemberType {
-            obj: Box::from(set_flag(member.obj.as_ref().clone(), flag)),
-            prop: member.prop,
-        }),
-    };
-    Type {
-        variant,
-        flag: Some(flag.to_owned()),
-        ..ty
-    }
 }
