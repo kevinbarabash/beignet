@@ -33,7 +33,6 @@ pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
 
 #[cfg(test)]
 mod tests {
-    use snailquote::unescape;
     use super::*;
 
     fn parse(input: &str) -> Program {
@@ -48,13 +47,10 @@ mod tests {
 
     #[test]
     fn strings() {
-        let newlines = "\"line 1\\nline 2\\nline 3\"";
-        println!("{}", newlines);
-        println!("{}", unescape(newlines).unwrap());
         insta::assert_debug_snapshot!(parse(r#""""#));
         insta::assert_debug_snapshot!(parse(r#""hello""#));
         insta::assert_debug_snapshot!(parse("\"line 1\\nline 2\\nline 3\""));
-        insta::assert_debug_snapshot!(parse("\"a \\u{2212} b\""));
+        insta::assert_debug_snapshot!(parse("\"a \\u2212 b\""));
         // TODO: fix this once I figure out how to handle escaped double quotes
         // insta::assert_debug_snapshot!(parse("\"hello, \\\"world\\\"!\""));
     }
@@ -71,7 +67,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("`foo ${`bar ${baz}`}`"));
         insta::assert_debug_snapshot!(parse("sql`SELECT * FROM ${table} WHERE id = ${id}`"));
         insta::assert_debug_snapshot!(parse("`line 1\\nline 2\\nline 3`"));
-        insta::assert_debug_snapshot!(parse("`a \\u{2212} b`"));
+        insta::assert_debug_snapshot!(parse("`a \\u2212 b`"));
     }
 
     #[test]

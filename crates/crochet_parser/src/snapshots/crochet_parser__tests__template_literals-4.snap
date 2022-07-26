@@ -22,7 +22,7 @@ Program {
                             cooked: Str(
                                 Str {
                                     span: 1..16,
-                                    value: "Hello, world",
+                                    value: "Hello, \"world\"",
                                 },
                             ),
                         },

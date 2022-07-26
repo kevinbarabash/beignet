@@ -1,6 +1,6 @@
 use chumsky::prelude::*;
 use crochet_ast::*;
-use snailquote::unescape;
+use unescape::unescape;
 
 use crate::jsx::jsx_parser;
 use crate::pattern::pattern_parser;
@@ -36,7 +36,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
         .map_with_span(|raw, span| {
             // unescape needs to know whether the string is contained in single quotes
             // or double quotes so that it can unescape quote characters correctly.
-            let cooked = unescape(&format!("\"{raw}\"")).unwrap();
+            let cooked = unescape(&raw).unwrap();
             Expr::Lit(Lit::str(cooked, span))
         });
 
@@ -178,7 +178,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 take_until(just("${"))
                     .map_with_span(|(chars, _), span: Span| {
                         let raw = chars.iter().collect::<String>();
-                        let cooked = unescape(&format!("\"{raw}\"")).unwrap();
+                        let cooked = unescape(&raw).unwrap();
                         TemplateElem {
                             span: span.clone(),
                             raw: Lit::str(raw, span.clone()),
@@ -192,7 +192,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                     .then(
                         take_until(just("`")).map_with_span(|(chars, _), span: Span| {
                             let raw = chars.iter().collect::<String>();
-                            let cooked = unescape(&format!("\"{raw}\"")).unwrap();
+                            let cooked = unescape(&raw).unwrap();
                             TemplateElem {
                                 span: span.clone(),
                                 raw: Lit::str(raw, span.clone()),
