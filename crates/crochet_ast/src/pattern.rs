@@ -98,7 +98,7 @@ pub fn is_refutable(pat: &Pattern) -> bool {
         Pattern::Rest(_) => false,
         Pattern::Object(ObjectPat { props, .. }) => props.iter().any(|prop| match prop {
             ObjectPatProp::KeyValue(KeyValuePatProp { value, .. }) => is_refutable(value),
-            ObjectPatProp::Rest(RestPat { arg, ..}) => is_refutable(arg),
+            ObjectPatProp::Rest(RestPat { arg, .. }) => is_refutable(arg),
             ObjectPatProp::Assign(_) => false, // corresponds to {x = 5}
         }),
         Pattern::Array(ArrayPat { elems, .. }) => {
@@ -113,5 +113,124 @@ pub fn is_refutable(pat: &Pattern) -> bool {
         }
         Pattern::Lit(_) => true,
         Pattern::Is(_) => true,
+    }
+}
+
+pub fn is_irrefutable(pat: &Pattern) -> bool {
+    !is_refutable(pat)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ident(name: &str) -> Ident {
+        Ident {
+            span: 0..0,
+            name: name.to_owned(),
+        }
+    }
+
+    fn ident_pattern(name: &str) -> Pattern {
+        Pattern::Ident(BindingIdent {
+            span: 0..0,
+            id: ident(name),
+            type_ann: None,
+        })
+    }
+
+    fn num_lit_pat(value: &str) -> Pattern {
+        Pattern::Lit(LitPat {
+            span: 0..0,
+            lit: Lit::num(String::from(value), 0..0),
+        })
+    }
+
+    #[test]
+    fn ident_is_irrefutable() {
+        let ident = ident_pattern("foo");
+        assert!(is_irrefutable(&ident));
+    }
+
+    #[test]
+    fn rest_is_irrefutable() {
+        let ident = ident_pattern("foo");
+        let rest = Pattern::Rest(RestPat {
+            span: 0..0,
+            arg: Box::from(ident),
+            type_ann: None,
+        });
+        assert!(is_irrefutable(&rest));
+    }
+
+    #[test]
+    fn obj_with_all_irrefutable_props_is_irrefutable() {
+        let obj = Pattern::Object(ObjectPat {
+            props: vec![ObjectPatProp::KeyValue(KeyValuePatProp {
+                key: ident("foo"),
+                value: Box::from(ident_pattern("foo")),
+            })],
+            optional: false,
+            type_ann: None,
+            span: 0..0,
+        });
+        assert!(is_irrefutable(&obj));
+    }
+
+    #[test]
+    fn obj_with_one_refutable_prop_is_refutable() {
+        let obj = Pattern::Object(ObjectPat {
+            props: vec![
+                ObjectPatProp::KeyValue(KeyValuePatProp {
+                    key: ident("foo"),
+                    value: Box::from(ident_pattern("foo")),
+                }),
+                ObjectPatProp::KeyValue(KeyValuePatProp {
+                    key: ident("bar"),
+                    value: Box::from(num_lit_pat("5")),
+                }),
+            ],
+            optional: false,
+            type_ann: None,
+            span: 0..0,
+        });
+        assert!(is_refutable(&obj));
+    }
+
+    #[test]
+    fn array_with_all_irrefutable_elements_is_irrefutable() {
+        let array = Pattern::Array(ArrayPat {
+            elems: vec![Some(ident_pattern("foo"))],
+            optional: false,
+            type_ann: None,
+            span: 0..0,
+        });
+        assert!(is_irrefutable(&array));
+    }
+
+    #[test]
+    fn array_with_one_refutable_prop_is_refutable() {
+        let array = Pattern::Array(ArrayPat {
+            elems: vec![Some(ident_pattern("foo")), Some(num_lit_pat("5"))],
+            optional: false,
+            type_ann: None,
+            span: 0..0,
+        });
+        assert!(is_refutable(&array));
+    }
+
+    #[test]
+    fn literal_pattern_is_refutable() {
+        assert!(is_refutable(&num_lit_pat("5")));
+    }
+
+    #[test]
+    fn is_is_refutable() {
+        let is_pat = Pattern::Is(IsPat {
+            span: 0..0,
+            id: ident("foo"),
+            is_id: ident("string"),
+        });
+        assert!(is_refutable(&is_pat));
     }
 }
