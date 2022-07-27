@@ -51,8 +51,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse(r#""hello""#));
         insta::assert_debug_snapshot!(parse("\"line 1\\nline 2\\nline 3\""));
         insta::assert_debug_snapshot!(parse("\"a \\u2212 b\""));
-        // TODO: fix this once I figure out how to handle escaped double quotes
-        // insta::assert_debug_snapshot!(parse("\"hello, \\\"world\\\"!\""));
+        insta::assert_debug_snapshot!(parse("\"hello, \\\"world\\\"!\""));
     }
 
     #[test]
