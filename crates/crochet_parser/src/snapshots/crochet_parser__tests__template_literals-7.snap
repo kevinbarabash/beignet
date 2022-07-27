@@ -1,0 +1,34 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"`line 1\\\\nline 2\\\\nline 3`\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..24,
+            expr: TemplateLiteral(
+                TemplateLiteral {
+                    span: 0..24,
+                    exprs: [],
+                    quasis: [
+                        TemplateElem {
+                            span: 1..24,
+                            raw: Str(
+                                Str {
+                                    span: 1..24,
+                                    value: "line 1\\nline 2\\nline 3",
+                                },
+                            ),
+                            cooked: Str(
+                                Str {
+                                    span: 1..24,
+                                    value: "line 1\nline 2\nline 3",
+                                },
+                            ),
+                        },
+                    ],
+                },
+            ),
+        },
+    ],
+}

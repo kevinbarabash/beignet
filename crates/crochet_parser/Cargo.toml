@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 chumsky = "0.8.0"
 crochet_ast = { version = "0.1.0", path = "../crochet_ast" }
+unescape = "0.1.0"
 
 [dev-dependencies]
 insta = "1.13.0"

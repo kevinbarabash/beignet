@@ -1,0 +1,34 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"`a \\\\u2212 b`\")"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..12,
+            expr: TemplateLiteral(
+                TemplateLiteral {
+                    span: 0..12,
+                    exprs: [],
+                    quasis: [
+                        TemplateElem {
+                            span: 1..12,
+                            raw: Str(
+                                Str {
+                                    span: 1..12,
+                                    value: "a \\u2212 b",
+                                },
+                            ),
+                            cooked: Str(
+                                Str {
+                                    span: 1..12,
+                                    value: "a − b",
+                                },
+                            ),
+                        },
+                    ],
+                },
+            ),
+        },
+    ],
+}

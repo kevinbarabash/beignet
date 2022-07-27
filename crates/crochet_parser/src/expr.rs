@@ -1,5 +1,6 @@
 use chumsky::prelude::*;
 use crochet_ast::*;
+use unescape::unescape;
 
 use crate::jsx::jsx_parser;
 use crate::pattern::pattern_parser;
@@ -28,11 +29,40 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
         .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
     let num = choice((real, int));
 
-    let r#str = just("\"")
-        .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
+    let escape = just('\\').ignore_then(
+        just('\\')
+            .or(just('/'))
+            .or(just('"'))
+            .or(just('b').to('\x08'))
+            .or(just('f').to('\x0C'))
+            .or(just('n').to('\n'))
+            .or(just('r').to('\r'))
+            .or(just('t').to('\t'))
+            .or(just('u').ignore_then(
+                filter(|c: &char| c.is_ascii_hexdigit())
+                    .repeated()
+                    .exactly(4)
+                    .collect::<String>()
+                    .validate(|digits, span, emit| {
+                        char::from_u32(u32::from_str_radix(&digits, 16).unwrap())
+                            .unwrap_or_else(|| {
+                                emit(Simple::custom(span, "invalid unicode character"));
+                                '\u{FFFD}' // unicode replacement character
+                            })
+                    }),
+            )),
+    );
+
+    let string = just("\"")
+        .ignore_then(filter(|c| *c != '\\' && *c != '"').or(escape).repeated())
         .then_ignore(just("\""))
         .collect::<String>()
-        .map_with_span(|value, span| Expr::Lit(Lit::str(value, span)));
+        .map_with_span(|raw, span| {
+            // unescape needs to know whether the string is contained in single quotes
+            // or double quotes so that it can unescape quote characters correctly.
+            let cooked = unescape(&raw).unwrap();
+            Expr::Lit(Lit::str(cooked, span))
+        });
 
     let parser = recursive(|expr: Recursive<'_, char, Expr, Simple<char>>| {
         // TODO: support recursive functions to be declared within another function
@@ -165,17 +195,19 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .delimited_by(just_with_padding("["), just_with_padding("]"))
             .map_with_span(|elems, span: Span| Expr::Tuple(Tuple { span, elems }));
 
+        // TODO: update to handle escaping of '`'
         let template_str = ident
             .or_not()
             .then_ignore(just("`"))
             .then(
                 take_until(just("${"))
                     .map_with_span(|(chars, _), span: Span| {
-                        let lit = Lit::str(chars.iter().collect(), span.clone());
+                        let raw = chars.iter().collect::<String>();
+                        let cooked = unescape(&raw).unwrap();
                         TemplateElem {
-                            span,
-                            raw: lit.clone(),
-                            cooked: lit,
+                            span: span.clone(),
+                            raw: Lit::str(raw, span.clone()),
+                            cooked: Lit::str(cooked, span),
                         }
                     })
                     .then(expr.clone())
@@ -184,11 +216,12 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                     .repeated()
                     .then(
                         take_until(just("`")).map_with_span(|(chars, _), span: Span| {
-                            let lit = Lit::str(chars.iter().collect(), span.clone());
+                            let raw = chars.iter().collect::<String>();
+                            let cooked = unescape(&raw).unwrap();
                             TemplateElem {
-                                span,
-                                raw: lit.clone(),
-                                cooked: lit,
+                                span: span.clone(),
+                                raw: Lit::str(raw, span.clone()),
+                                cooked: Lit::str(cooked, span),
                             }
                         }),
                     ),
@@ -217,7 +250,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             // quarks (can't be broken down any further)
             r#bool,
             num,
-            r#str,
+            string,
             // can contain sub-expressions, but have the highest precedence
             template_str,
             if_else,
