@@ -124,3 +124,45 @@ impl From<&Lit> for swc_ecma_ast::Expr {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn boolean() {
+        let t = Lit::bool(true, 0..4);
+        let f = Lit::bool(false, 0..5);
+        assert_eq!(format!("{}", t), "true");
+        assert_eq!(format!("{}", f), "false");
+        assert_eq!(t.span(), 0..4);
+    }
+
+    #[test]
+    fn number() {
+        let num = Lit::num(String::from("1.23"), 0..4);
+        assert_eq!(format!("{}", num), "1.23");
+        assert_eq!(num.span(), 0..4);
+    }
+
+    #[test]
+    fn string() {
+        let s = Lit::str(String::from("hello"), 0..5);
+        assert_eq!(format!("{}", s), "\"hello\"");
+        assert_eq!(s.span(), 0..5);
+    }
+
+    #[test]
+    fn null() {
+        let null = Lit::Null(Null { span: 0..4});
+        assert_eq!(format!("{}", null), "null");
+        assert_eq!(null.span(), 0..4);
+    }
+
+    #[test]
+    fn undefined() {
+        let undefined = Lit::Undefined(Undefined { span: 0..9});
+        assert_eq!(format!("{}", undefined), "undefined");
+        assert_eq!(undefined.span(), 0..9);
+    }
+}
