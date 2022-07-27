@@ -16,7 +16,6 @@ enum Mode {
     Write,
 }
 
-#[cfg(not(tarpaulin_include))]
 #[testing_macros::fixture("tests/pass/*.crochet")]
 fn pass(in_path: PathBuf) {
     let mode = match env::var("UPDATE") {
