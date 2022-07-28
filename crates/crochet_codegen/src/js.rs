@@ -559,6 +559,9 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
         ast::Expr::TaggedTemplateLiteral(_) => {
             todo!()
         }
+        ast::Expr::Match(_) => {
+            todo!()
+        }
     }
 }
 
