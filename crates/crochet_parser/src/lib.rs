@@ -289,5 +289,11 @@ mod tests {
                 _ => 0,
             }"#
         ));
+        insta::assert_debug_snapshot!(parse(
+            r#"match cond {
+                a is string => () => a.length,
+                {x: b} => () => b,
+            }"#
+        ));
     }
 }
