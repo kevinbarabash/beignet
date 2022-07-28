@@ -418,6 +418,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             // - rest params
             todo!()
         }
+        Expr::Match(_) => {
+            todo!()
+        }
     };
 
     let (s, t) = result?;

@@ -2,8 +2,8 @@ pub mod decl;
 pub mod expr;
 pub mod jsx;
 pub mod pattern;
-pub mod type_params;
 pub mod type_ann;
+pub mod type_params;
 pub mod util;
 
 pub use decl::decl_parser;
@@ -92,7 +92,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="rest params must come last"]
+    #[should_panic = "rest params must come last"]
     fn multiple_rest_params() {
         parse("(...a, ...b) => true");
     }
@@ -158,7 +158,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="JSX head and tail elements must match"]
+    #[should_panic = "JSX head and tail elements must match"]
     fn jsx_head_and_tail_must_match() {
         parse("<Foo>Hello</Bar>");
     }
@@ -241,13 +241,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Only one rest is allowed in an object pattern"]
+    #[should_panic = "Only one rest is allowed in an object pattern"]
     fn multiple_rests_is_invalid() {
         insta::assert_debug_snapshot!(parse("let {z, ...p, ...q} = point"));
     }
 
     #[test]
-    #[should_panic="Rest should come last in object pattern"]
+    #[should_panic = "Rest should come last in object pattern"]
     fn rest_that_isnt_last_is_invalid() {
         insta::assert_debug_snapshot!(parse("let {...p, z} = point"));
     }
@@ -267,10 +267,27 @@ mod tests {
         insta::assert_debug_snapshot!(parse("if let {x, y} = p { x + y; }"));
         insta::assert_debug_snapshot!(parse("if let {x: a, y: b} = p { a + b; }"));
         insta::assert_debug_snapshot!(parse("if let {x: 5, y} = p { y; }"));
-        // TODO: this should probably error since there's consequent
+        // TODO: this should probably error since there's no consequent
         insta::assert_debug_snapshot!(parse("if let a is string = value"));
         insta::assert_debug_snapshot!(parse("if let {x: 5, y} = p { y; }"));
         insta::assert_debug_snapshot!(parse("if let {x: 5, y} = p { y } else { 0 }"));
-        insta::assert_debug_snapshot!(parse("if let {x: 5, y} = p { y; } else if let {x} = p { x; }"));
+        insta::assert_debug_snapshot!(parse(
+            "if let {x: 5, y} = p { y; } else if let {x} = p { x; }"
+        ));
+    }
+
+    #[test]
+    fn pattern_matching() {
+        // TODO: update the pattern parser to special case `_`
+        // Right now it's treating it as an identifier and we
+        // want to treat it as the wildcard pattern
+        insta::assert_debug_snapshot!(parse(
+            r#"match cond {
+                a is string => a.length,
+                {x: b} => b,
+                c if c.id == 0 => c.value,
+                _ => 0,
+            }"#
+        ));
     }
 }

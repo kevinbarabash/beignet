@@ -197,6 +197,21 @@ pub struct TaggedTemplateLiteral {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Match {
+    pub span: Span,
+    pub expr: Box<Expr>,
+    pub arms: Vec<Arm>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Arm {
+    pub span: Span,
+    pub pattern: Pattern,
+    pub cond: Option<Expr>,
+    pub expr: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     App(App),
     Fix(Fix),
@@ -215,6 +230,7 @@ pub enum Expr {
     Empty(Empty),
     TemplateLiteral(TemplateLiteral),
     TaggedTemplateLiteral(TaggedTemplateLiteral),
+    Match(Match),
 }
 
 impl Expr {
@@ -237,6 +253,7 @@ impl Expr {
             Expr::LetExpr(let_expr) => let_expr.span.to_owned(),
             Expr::TemplateLiteral(tl) => tl.span.to_owned(),
             Expr::TaggedTemplateLiteral(ttl) => ttl.span.to_owned(),
+            Expr::Match(m) => m.span.to_owned(),
         }
     }
 }

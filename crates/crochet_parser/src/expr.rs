@@ -44,11 +44,12 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                     .exactly(4)
                     .collect::<String>()
                     .validate(|digits, span, emit| {
-                        char::from_u32(u32::from_str_radix(&digits, 16).unwrap())
-                            .unwrap_or_else(|| {
+                        char::from_u32(u32::from_str_radix(&digits, 16).unwrap()).unwrap_or_else(
+                            || {
                                 emit(Simple::custom(span, "invalid unicode character"));
                                 '\u{FFFD}' // unicode replacement character
-                            })
+                            },
+                        )
                     }),
             )),
     );
@@ -144,6 +145,32 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                     })
                 })
         });
+
+        let arm = pattern_parser()
+            .then(just_with_padding("if").ignore_then(expr.clone()).or_not())
+            .then_ignore(just_with_padding("=>"))
+            .then(expr.clone())
+            .map_with_span(|((pattern, cond), expr), span: Span| Arm {
+                span,
+                pattern,
+                cond,
+                expr,
+            });
+
+        let r#match = just_with_padding("match")
+            .ignore_then(expr.clone())
+            .then(
+                arm.separated_by(just_with_padding(","))
+                    .allow_trailing()
+                    .delimited_by(just_with_padding("{"), just_with_padding("}")),
+            )
+            .map_with_span(|(expr, arms), span: Span| {
+                Expr::Match(Match {
+                    span,
+                    expr: Box::from(expr),
+                    arms,
+                })
+            });
 
         let key_value_prop = text::ident()
             .then_ignore(just_with_padding(":"))
@@ -254,6 +281,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             // can contain sub-expressions, but have the highest precedence
             template_str,
             if_else,
+            r#match,
             ident.map(Expr::Ident),
             obj,
             tuple,
