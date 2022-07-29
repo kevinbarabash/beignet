@@ -59,14 +59,14 @@ mod tests {
         insta::assert_debug_snapshot!(parse("`Hello, world`"));
         insta::assert_debug_snapshot!(parse("`Hello, ${name}`"));
         insta::assert_debug_snapshot!(parse("`(${x}, ${y})`"));
-        // TODO: Fork snailquote so that we have an algorithm that handles this case
-        // correctly.  Right now the double quotes end up getting dropped which isn't
-        // right.
         insta::assert_debug_snapshot!(parse("`Hello, \"world\"`"));
         insta::assert_debug_snapshot!(parse("`foo ${`bar ${baz}`}`"));
         insta::assert_debug_snapshot!(parse("sql`SELECT * FROM ${table} WHERE id = ${id}`"));
         insta::assert_debug_snapshot!(parse("`line 1\\nline 2\\nline 3`"));
         insta::assert_debug_snapshot!(parse("`a \\u2212 b`"));
+        insta::assert_debug_snapshot!(parse(r#"if cond { `${foo}` } else { `${bar}` }"#));
+        // This parses, but it shouldn't.
+        insta::assert_debug_snapshot!(parse("`foo ${bar`}`"));
     }
 
     #[test]

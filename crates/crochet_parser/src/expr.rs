@@ -44,11 +44,12 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                     .exactly(4)
                     .collect::<String>()
                     .validate(|digits, span, emit| {
-                        char::from_u32(u32::from_str_radix(&digits, 16).unwrap())
-                            .unwrap_or_else(|| {
+                        char::from_u32(u32::from_str_radix(&digits, 16).unwrap()).unwrap_or_else(
+                            || {
                                 emit(Simple::custom(span, "invalid unicode character"));
                                 '\u{FFFD}' // unicode replacement character
-                            })
+                            },
+                        )
                     }),
             )),
     );
@@ -195,45 +196,35 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .delimited_by(just_with_padding("["), just_with_padding("]"))
             .map_with_span(|elems, span: Span| Expr::Tuple(Tuple { span, elems }));
 
-        // TODO: update to handle escaping of '`'
+        let interpolation = expr.clone().then_ignore(just("}"));
+        let str_seg =
+            take_until(just("${").or(just("`"))).map_with_span(|(chars, _), span: Span| {
+                let str = String::from_iter(chars);
+
+                let raw = str;
+                let cooked = unescape(&raw).unwrap();
+                TemplateElem {
+                    span: span.clone(),
+                    raw: Lit::str(raw, span.clone()),
+                    cooked: Lit::str(cooked, span),
+                }
+            });
+
         let template_str = ident
             .or_not()
             .then_ignore(just("`"))
-            .then(
-                take_until(just("${"))
-                    .map_with_span(|(chars, _), span: Span| {
-                        let raw = chars.iter().collect::<String>();
-                        let cooked = unescape(&raw).unwrap();
-                        TemplateElem {
-                            span: span.clone(),
-                            raw: Lit::str(raw, span.clone()),
-                            cooked: Lit::str(cooked, span),
-                        }
-                    })
-                    .then(expr.clone())
-                    .then(just("}"))
-                    .map(|((te, expr), _)| (te, expr))
-                    .repeated()
-                    .then(
-                        take_until(just("`")).map_with_span(|(chars, _), span: Span| {
-                            let raw = chars.iter().collect::<String>();
-                            let cooked = unescape(&raw).unwrap();
-                            TemplateElem {
-                                span: span.clone(),
-                                raw: Lit::str(raw, span.clone()),
-                                cooked: Lit::str(cooked, span),
-                            }
-                        }),
-                    ),
-            )
-            .map_with_span(|(tag, (body, tail)), span: Span| {
-                let (mut quasis, exprs): (Vec<_>, Vec<_>) = body.iter().cloned().unzip();
-                quasis.push(tail);
+            .then(str_seg)
+            .then(interpolation.then(str_seg).repeated().map(|values| values))
+            // .then_ignore(just("`"))
+            .map_with_span(|((tag, head), tail), span: Span| {
+                let (exprs, mut quasis): (Vec<_>, Vec<_>) = tail.iter().cloned().unzip();
+                quasis.insert(0, head);
                 let template = TemplateLiteral {
                     span: span.clone(),
                     exprs,
                     quasis,
                 };
+
                 match tag {
                     Some(tag) => {
                         Expr::TaggedTemplateLiteral(TaggedTemplateLiteral {
