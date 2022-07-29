@@ -28,31 +28,31 @@ Program {
                             ],
                             quasis: [
                                 TemplateElem {
-                                    span: 11..13,
+                                    span: 11..11,
                                     raw: Str(
                                         Str {
-                                            span: 11..13,
+                                            span: 11..11,
                                             value: "",
                                         },
                                     ),
                                     cooked: Str(
                                         Str {
-                                            span: 11..13,
+                                            span: 11..11,
                                             value: "",
                                         },
                                     ),
                                 },
                                 TemplateElem {
-                                    span: 17..18,
+                                    span: 17..17,
                                     raw: Str(
                                         Str {
-                                            span: 17..18,
+                                            span: 17..17,
                                             value: "",
                                         },
                                     ),
                                     cooked: Str(
                                         Str {
-                                            span: 17..18,
+                                            span: 17..17,
                                             value: "",
                                         },
                                     ),
@@ -74,31 +74,31 @@ Program {
                                 ],
                                 quasis: [
                                     TemplateElem {
-                                        span: 29..31,
+                                        span: 29..29,
                                         raw: Str(
                                             Str {
-                                                span: 29..31,
+                                                span: 29..29,
                                                 value: "",
                                             },
                                         ),
                                         cooked: Str(
                                             Str {
-                                                span: 29..31,
+                                                span: 29..29,
                                                 value: "",
                                             },
                                         ),
                                     },
                                     TemplateElem {
-                                        span: 35..36,
+                                        span: 35..35,
                                         raw: Str(
                                             Str {
-                                                span: 35..36,
+                                                span: 35..35,
                                                 value: "",
                                             },
                                         ),
                                         cooked: Str(
                                             Str {
-                                                span: 35..36,
+                                                span: 35..35,
                                                 value: "",
                                             },
                                         ),

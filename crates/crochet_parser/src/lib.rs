@@ -65,8 +65,18 @@ mod tests {
         insta::assert_debug_snapshot!(parse("`line 1\\nline 2\\nline 3`"));
         insta::assert_debug_snapshot!(parse("`a \\u2212 b`"));
         insta::assert_debug_snapshot!(parse(r#"if cond { `${foo}` } else { `${bar}` }"#));
-        // This parses, but it shouldn't.
+    }
+
+    #[test]
+    #[should_panic]
+    fn template_literal_with_mismatched_backtick() {
         insta::assert_debug_snapshot!(parse("`foo ${bar`}`"));
+    }
+
+    #[test]
+    #[should_panic]
+    fn interpolation_outside_of_template_literal() {
+        insta::assert_debug_snapshot!(parse("`foo ${bar}`${baz}`"));
     }
 
     #[test]

@@ -196,26 +196,28 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .delimited_by(just_with_padding("["), just_with_padding("]"))
             .map_with_span(|elems, span: Span| Expr::Tuple(Tuple { span, elems }));
 
-        let interpolation = expr.clone().then_ignore(just("}"));
-        let str_seg =
-            take_until(just("${").or(just("`"))).map_with_span(|(chars, _), span: Span| {
-                let str = String::from_iter(chars);
-
-                let raw = str;
+        // NOTE: rewind() is used here so that we can tell later on if we should be
+        // parsing an interpolation or the end of the template literal.
+        let str_seg = take_until(just("${").rewind().or(just("`").rewind())).map_with_span(
+            |(chars, _), span: Span| {
+                let raw = String::from_iter(chars);
                 let cooked = unescape(&raw).unwrap();
                 TemplateElem {
                     span: span.clone(),
                     raw: Lit::str(raw, span.clone()),
                     cooked: Lit::str(cooked, span),
                 }
-            });
+            },
+        );
+
+        let interpolation = just("${").ignore_then(expr.clone()).then_ignore(just("}"));
 
         let template_str = ident
             .or_not()
             .then_ignore(just("`"))
             .then(str_seg)
             .then(interpolation.then(str_seg).repeated().map(|values| values))
-            // .then_ignore(just("`"))
+            .then_ignore(just("`"))
             .map_with_span(|((tag, head), tail), span: Span| {
                 let (exprs, mut quasis): (Vec<_>, Vec<_>) = tail.iter().cloned().unzip();
                 quasis.insert(0, head);
