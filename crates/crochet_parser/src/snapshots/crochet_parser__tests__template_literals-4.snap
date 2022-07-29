@@ -12,16 +12,16 @@ Program {
                     exprs: [],
                     quasis: [
                         TemplateElem {
-                            span: 1..16,
+                            span: 1..15,
                             raw: Str(
                                 Str {
-                                    span: 1..16,
+                                    span: 1..15,
                                     value: "Hello, \"world\"",
                                 },
                             ),
                             cooked: Str(
                                 Str {
-                                    span: 1..16,
+                                    span: 1..15,
                                     value: "Hello, \"world\"",
                                 },
                             ),

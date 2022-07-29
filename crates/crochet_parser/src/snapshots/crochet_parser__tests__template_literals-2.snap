@@ -19,31 +19,31 @@ Program {
                     ],
                     quasis: [
                         TemplateElem {
-                            span: 1..10,
+                            span: 1..8,
                             raw: Str(
                                 Str {
-                                    span: 1..10,
+                                    span: 1..8,
                                     value: "Hello, ",
                                 },
                             ),
                             cooked: Str(
                                 Str {
-                                    span: 1..10,
+                                    span: 1..8,
                                     value: "Hello, ",
                                 },
                             ),
                         },
                         TemplateElem {
-                            span: 15..16,
+                            span: 15..15,
                             raw: Str(
                                 Str {
-                                    span: 15..16,
+                                    span: 15..15,
                                     value: "",
                                 },
                             ),
                             cooked: Str(
                                 Str {
-                                    span: 15..16,
+                                    span: 15..15,
                                     value: "",
                                 },
                             ),

@@ -23,31 +23,31 @@ Program {
                                 ],
                                 quasis: [
                                     TemplateElem {
-                                        span: 8..14,
+                                        span: 8..12,
                                         raw: Str(
                                             Str {
-                                                span: 8..14,
+                                                span: 8..12,
                                                 value: "bar ",
                                             },
                                         ),
                                         cooked: Str(
                                             Str {
-                                                span: 8..14,
+                                                span: 8..12,
                                                 value: "bar ",
                                             },
                                         ),
                                     },
                                     TemplateElem {
-                                        span: 18..19,
+                                        span: 18..18,
                                         raw: Str(
                                             Str {
-                                                span: 18..19,
+                                                span: 18..18,
                                                 value: "",
                                             },
                                         ),
                                         cooked: Str(
                                             Str {
-                                                span: 18..19,
+                                                span: 18..18,
                                                 value: "",
                                             },
                                         ),
@@ -58,31 +58,31 @@ Program {
                     ],
                     quasis: [
                         TemplateElem {
-                            span: 1..7,
+                            span: 1..5,
                             raw: Str(
                                 Str {
-                                    span: 1..7,
+                                    span: 1..5,
                                     value: "foo ",
                                 },
                             ),
                             cooked: Str(
                                 Str {
-                                    span: 1..7,
+                                    span: 1..5,
                                     value: "foo ",
                                 },
                             ),
                         },
                         TemplateElem {
-                            span: 20..21,
+                            span: 20..20,
                             raw: Str(
                                 Str {
-                                    span: 20..21,
+                                    span: 20..20,
                                     value: "",
                                 },
                             ),
                             cooked: Str(
                                 Str {
-                                    span: 20..21,
+                                    span: 20..20,
                                     value: "",
                                 },
                             ),
