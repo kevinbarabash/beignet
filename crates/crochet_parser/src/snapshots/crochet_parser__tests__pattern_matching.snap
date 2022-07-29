@@ -1,6 +1,6 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(r#\"match cond {\n                a is string => a.length,\n                {x: b} => b,\n                c if c.id == 0 => c.value,\n                _ => 0,\n            }\"#)"
+expression: "parse(r#\"match expr {\n                a is string => a.length,\n                {x: b} => b,\n                c if c.id == 0 => c.value,\n                _ => 0,\n            }\"#)"
 ---
 Program {
     body: [
@@ -12,7 +12,7 @@ Program {
                     expr: Ident(
                         Ident {
                             span: 6..10,
-                            name: "cond",
+                            name: "expr",
                         },
                     ),
                     arms: [

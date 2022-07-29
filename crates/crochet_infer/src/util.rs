@@ -206,9 +206,11 @@ fn flatten_types(ty: &Type) -> Vec<Type> {
 }
 
 pub fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
-    let mut types: Vec<Type> = vec![];
-    types.extend(flatten_types(t1));
-    types.extend(flatten_types(t2));
+    union_many_types(&[t1.to_owned(), t2.to_owned()], ctx)
+}
+
+pub fn union_many_types(ts: &[Type], ctx: &Context) -> Type {
+    let types: Vec<_> = ts.iter().flat_map(flatten_types).collect();
 
     let types_set: HashSet<_> = types.iter().cloned().collect();
 

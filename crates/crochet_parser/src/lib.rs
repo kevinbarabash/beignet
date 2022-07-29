@@ -43,6 +43,8 @@ mod tests {
     fn numbers() {
         insta::assert_debug_snapshot!(parse("10"));
         insta::assert_debug_snapshot!(parse("1.23"));
+        // TODO: support negative numbers
+        // insta::assert_debug_snapshot!(parse("-10"));
     }
 
     #[test]
@@ -59,14 +61,16 @@ mod tests {
         insta::assert_debug_snapshot!(parse("`Hello, world`"));
         insta::assert_debug_snapshot!(parse("`Hello, ${name}`"));
         insta::assert_debug_snapshot!(parse("`(${x}, ${y})`"));
-        // TODO: Fork snailquote so that we have an algorithm that handles this case
-        // correctly.  Right now the double quotes end up getting dropped which isn't
-        // right.
         insta::assert_debug_snapshot!(parse("`Hello, \"world\"`"));
         insta::assert_debug_snapshot!(parse("`foo ${`bar ${baz}`}`"));
         insta::assert_debug_snapshot!(parse("sql`SELECT * FROM ${table} WHERE id = ${id}`"));
         insta::assert_debug_snapshot!(parse("`line 1\\nline 2\\nline 3`"));
         insta::assert_debug_snapshot!(parse("`a \\u2212 b`"));
+        // TODO: fix how we parse template strings with interpolations.
+        // Right now we take until "${" which means if there are two 
+        // template strings both containing interpolations we end up parsing
+        // them as a single template string.
+        insta::assert_debug_snapshot!(parse(r#"if cond { `${foo}` } else { `${bar}` }"#));
     }
 
     #[test]
@@ -282,7 +286,7 @@ mod tests {
         // Right now it's treating it as an identifier and we
         // want to treat it as the wildcard pattern
         insta::assert_debug_snapshot!(parse(
-            r#"match cond {
+            r#"match expr {
                 a is string => a.length,
                 {x: b} => b,
                 c if c.id == 0 => c.value,
@@ -290,9 +294,14 @@ mod tests {
             }"#
         ));
         insta::assert_debug_snapshot!(parse(
-            r#"match cond {
+            r#"match expr {
                 a is string => () => a.length,
                 {x: b} => () => b,
+            }"#
+        ));
+        insta::assert_debug_snapshot!(parse(
+            r#"match expr {
+                5 => "five",
             }"#
         ));
     }
