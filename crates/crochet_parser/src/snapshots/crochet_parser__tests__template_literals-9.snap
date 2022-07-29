@@ -1,0 +1,89 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(r#\"if cond { `${foo}` } else { `${bar}` }\"#)"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..38,
+            expr: IfElse(
+                IfElse {
+                    span: 0..38,
+                    cond: Ident(
+                        Ident {
+                            span: 3..7,
+                            name: "cond",
+                        },
+                    ),
+                    consequent: TemplateLiteral(
+                        TemplateLiteral {
+                            span: 10..36,
+                            exprs: [
+                                Ident(
+                                    Ident {
+                                        span: 13..16,
+                                        name: "foo",
+                                    },
+                                ),
+                                Ident(
+                                    Ident {
+                                        span: 31..34,
+                                        name: "bar",
+                                    },
+                                ),
+                            ],
+                            quasis: [
+                                TemplateElem {
+                                    span: 11..13,
+                                    raw: Str(
+                                        Str {
+                                            span: 11..13,
+                                            value: "",
+                                        },
+                                    ),
+                                    cooked: Str(
+                                        Str {
+                                            span: 11..13,
+                                            value: "",
+                                        },
+                                    ),
+                                },
+                                TemplateElem {
+                                    span: 17..31,
+                                    raw: Str(
+                                        Str {
+                                            span: 17..31,
+                                            value: "` } else { `",
+                                        },
+                                    ),
+                                    cooked: Str(
+                                        Str {
+                                            span: 17..31,
+                                            value: "` } else { `",
+                                        },
+                                    ),
+                                },
+                                TemplateElem {
+                                    span: 35..36,
+                                    raw: Str(
+                                        Str {
+                                            span: 35..36,
+                                            value: "",
+                                        },
+                                    ),
+                                    cooked: Str(
+                                        Str {
+                                            span: 35..36,
+                                            value: "",
+                                        },
+                                    ),
+                                },
+                            ],
+                        },
+                    ),
+                    alternate: None,
+                },
+            ),
+        },
+    ],
+}
