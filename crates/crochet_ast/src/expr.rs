@@ -207,7 +207,7 @@ pub struct Match {
 pub struct Arm {
     pub span: Span,
     pub pattern: Pattern,
-    pub cond: Option<Expr>,
+    pub guard: Option<Expr>,
     pub expr: Expr,
 }
 

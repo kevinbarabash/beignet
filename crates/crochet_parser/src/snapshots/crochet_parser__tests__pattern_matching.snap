@@ -31,7 +31,7 @@ Program {
                                     },
                                 },
                             ),
-                            cond: None,
+                            guard: None,
                             expr: Member(
                                 Member {
                                     span: 44..52,
@@ -79,7 +79,7 @@ Program {
                                     type_ann: None,
                                 },
                             ),
-                            cond: None,
+                            guard: None,
                             expr: Ident(
                                 Ident {
                                     span: 80..81,
@@ -99,7 +99,7 @@ Program {
                                     type_ann: None,
                                 },
                             ),
-                            cond: Some(
+                            guard: Some(
                                 Op(
                                     Op {
                                         span: 104..113,
@@ -157,7 +157,7 @@ Program {
                                     span: 142..144,
                                 },
                             ),
-                            cond: None,
+                            guard: None,
                             expr: Lit(
                                 Num(
                                     Num {

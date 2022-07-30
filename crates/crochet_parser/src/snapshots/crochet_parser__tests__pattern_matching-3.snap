@@ -29,7 +29,7 @@ Program {
                                     ),
                                 },
                             ),
-                            cond: None,
+                            guard: None,
                             expr: Lit(
                                 Str(
                                     Str {

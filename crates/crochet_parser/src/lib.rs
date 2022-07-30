@@ -314,5 +314,13 @@ mod tests {
                 5 => "five",
             }"#
         ));
+        insta::assert_debug_snapshot!(parse(
+            r#"match tuple {
+                [a, b] => {
+                    let sum = a + b;
+                    sum
+                },
+            }"#
+        ));
     }
 }

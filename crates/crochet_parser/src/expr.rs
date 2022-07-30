@@ -118,7 +118,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .map_with_span(|((pattern, cond), expr), span: Span| Arm {
                 span,
                 pattern,
-                cond,
+                guard: cond,
                 expr,
             });
 
