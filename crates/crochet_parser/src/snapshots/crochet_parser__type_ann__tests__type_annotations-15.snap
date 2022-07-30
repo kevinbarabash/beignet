@@ -1,0 +1,12 @@
+---
+source: crates/crochet_parser/src/type_ann.rs
+expression: "parse_type(\"5\")"
+---
+Lit(
+    Num(
+        Num {
+            span: 0..1,
+            value: "5",
+        },
+    ),
+)

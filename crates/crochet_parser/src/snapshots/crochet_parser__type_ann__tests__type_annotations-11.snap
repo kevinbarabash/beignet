@@ -1,0 +1,12 @@
+---
+source: crates/crochet_parser/src/type_ann.rs
+expression: "parse_type(r#\"\"hello, world!\"\"#)"
+---
+Lit(
+    Str(
+        Str {
+            span: 0..15,
+            value: "hello, world!",
+        },
+    ),
+)

@@ -152,5 +152,10 @@ mod tests {
         insta::assert_debug_snapshot!(parse_type("(A) => B & C | D"));
         insta::assert_debug_snapshot!(parse_type("(A | B) & (C | D)"));
         insta::assert_debug_snapshot!(parse_type("(A, B) => C & D"));
+        insta::assert_debug_snapshot!(parse_type(r#""hello, world!""#));
+        insta::assert_debug_snapshot!(parse_type("true"));
+        insta::assert_debug_snapshot!(parse_type("false"));
+        insta::assert_debug_snapshot!(parse_type("1.23"));
+        insta::assert_debug_snapshot!(parse_type("5"));
     }
 }
