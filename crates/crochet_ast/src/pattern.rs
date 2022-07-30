@@ -12,6 +12,7 @@ pub enum Pattern {
     Array(ArrayPat),
     Lit(LitPat),
     Is(IsPat),
+    Wildcard(WildcardPat),
     // This can't be used at the top level similar to rest
     // Assign(AssignPat),
 }
@@ -25,6 +26,7 @@ impl Pattern {
             Pattern::Array(array) => array.span.to_owned(),
             Pattern::Lit(lit) => lit.span.to_owned(),
             Pattern::Is(is) => is.span.to_owned(),
+            Pattern::Wildcard(wc) => wc.span.to_owned(),
         }
     }
 }
@@ -47,6 +49,11 @@ pub struct IsPat {
     pub span: Span,
     pub id: Ident,
     pub is_id: Ident,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WildcardPat {
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -94,8 +101,16 @@ pub struct AssignPatProp {
 
 pub fn is_refutable(pat: &Pattern) -> bool {
     match pat {
+        // irrefutable
         Pattern::Ident(_) => false,
         Pattern::Rest(_) => false,
+        Pattern::Wildcard(_) => false,
+
+        // refutable
+        Pattern::Lit(_) => true,
+        Pattern::Is(_) => true,
+
+        // refutable if at least one sub-pattern is refutable
         Pattern::Object(ObjectPat { props, .. }) => props.iter().any(|prop| match prop {
             ObjectPatProp::KeyValue(KeyValuePatProp { value, .. }) => is_refutable(value),
             ObjectPatProp::Rest(RestPat { arg, .. }) => is_refutable(arg),
@@ -111,8 +126,6 @@ pub fn is_refutable(pat: &Pattern) -> bool {
                 }
             })
         }
-        Pattern::Lit(_) => true,
-        Pattern::Is(_) => true,
     }
 }
 

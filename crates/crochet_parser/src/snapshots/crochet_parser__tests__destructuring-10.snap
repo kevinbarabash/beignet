@@ -1,0 +1,48 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let [_, b] = letters\")"
+---
+Program {
+    body: [
+        VarDecl {
+            span: 0..20,
+            pattern: Array(
+                ArrayPat {
+                    span: 4..11,
+                    elems: [
+                        Some(
+                            Wildcard(
+                                WildcardPat {
+                                    span: 5..6,
+                                },
+                            ),
+                        ),
+                        Some(
+                            Ident(
+                                BindingIdent {
+                                    span: 8..9,
+                                    id: Ident {
+                                        span: 8..9,
+                                        name: "b",
+                                    },
+                                    type_ann: None,
+                                },
+                            ),
+                        ),
+                    ],
+                    optional: false,
+                    type_ann: None,
+                },
+            ),
+            init: Some(
+                Ident(
+                    Ident {
+                        span: 13..20,
+                        name: "letters",
+                    },
+                ),
+            ),
+            declare: false,
+        },
+    ],
+}

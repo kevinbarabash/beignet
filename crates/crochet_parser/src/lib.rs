@@ -1,6 +1,7 @@
 pub mod decl;
 pub mod expr;
 pub mod jsx;
+pub mod lit;
 pub mod pattern;
 pub mod type_params;
 pub mod type_ann;
@@ -237,6 +238,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let foo = ([a, b]: [string, number]) => a"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}) => b"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}: {a: string, b: number}) => b"));
+        insta::assert_debug_snapshot!(parse("let [_, b] = letters"));
         // TODO: assigning defaults
         // TODO: type annotations
         // TODO: function params

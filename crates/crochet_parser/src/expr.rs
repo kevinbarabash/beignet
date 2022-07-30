@@ -4,6 +4,7 @@ use unescape::unescape;
 
 use crate::jsx::jsx_parser;
 use crate::pattern::pattern_parser;
+use crate::lit::string_parser;
 use crate::type_ann::type_ann_parser;
 use crate::type_params::type_params;
 use crate::util::just_with_padding;
@@ -28,42 +29,6 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
         .collect::<String>()
         .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
     let num = choice((real, int));
-
-    let escape = just('\\').ignore_then(
-        just('\\')
-            .or(just('/'))
-            .or(just('"'))
-            .or(just('b').to('\x08'))
-            .or(just('f').to('\x0C'))
-            .or(just('n').to('\n'))
-            .or(just('r').to('\r'))
-            .or(just('t').to('\t'))
-            .or(just('u').ignore_then(
-                filter(|c: &char| c.is_ascii_hexdigit())
-                    .repeated()
-                    .exactly(4)
-                    .collect::<String>()
-                    .validate(|digits, span, emit| {
-                        char::from_u32(u32::from_str_radix(&digits, 16).unwrap()).unwrap_or_else(
-                            || {
-                                emit(Simple::custom(span, "invalid unicode character"));
-                                '\u{FFFD}' // unicode replacement character
-                            },
-                        )
-                    }),
-            )),
-    );
-
-    let string = just("\"")
-        .ignore_then(filter(|c| *c != '\\' && *c != '"').or(escape).repeated())
-        .then_ignore(just("\""))
-        .collect::<String>()
-        .map_with_span(|raw, span| {
-            // unescape needs to know whether the string is contained in single quotes
-            // or double quotes so that it can unescape quote characters correctly.
-            let cooked = unescape(&raw).unwrap();
-            Expr::Lit(Lit::str(cooked, span))
-        });
 
     let parser = recursive(|expr: Recursive<'_, char, Expr, Simple<char>>| {
         // TODO: support recursive functions to be declared within another function
@@ -243,7 +208,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             // quarks (can't be broken down any further)
             r#bool,
             num,
-            string,
+            string_parser().map(Expr::Lit),
             // can contain sub-expressions, but have the highest precedence
             template_str,
             if_else,
