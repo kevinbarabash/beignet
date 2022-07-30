@@ -2,6 +2,27 @@ use chumsky::prelude::*;
 use crochet_ast::*;
 use unescape::unescape;
 
+use crate::util::just_with_padding;
+
+pub fn boolean_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
+    let r#true = just_with_padding("true").map_with_span(|_, span| Lit::bool(true, span));
+    let r#false = just_with_padding("false").map_with_span(|_, span| Lit::bool(false, span));
+
+    choice((r#true, r#false)).boxed()
+}
+
+pub fn number_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
+    let int = text::int::<char, Simple<char>>(10).map_with_span(Lit::num);
+
+    let real = text::int(10)
+        .chain(just('.'))
+        .chain::<char, _, _>(text::digits(10))
+        .collect::<String>()
+        .map_with_span(Lit::num);
+
+    choice((real, int)).boxed()
+}
+
 pub fn string_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
     let escape = just('\\').ignore_then(
         just('\\')

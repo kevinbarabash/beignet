@@ -24,11 +24,11 @@ pub struct PrimType {
     pub prim: Primitive,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LitType {
-    pub span: Span,
-    pub lit: Lit,
-}
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// pub struct LitType {
+//     pub span: Span,
+//     pub lit: Lit,
+// }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeRef {
@@ -78,7 +78,7 @@ pub struct ArrayType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnn {
     Lam(LamType),
-    Lit(LitType),
+    Lit(Lit),
     Prim(PrimType),
     Object(ObjectType),
     TypeRef(TypeRef),

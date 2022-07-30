@@ -41,15 +41,12 @@ Program {
                         constraint: None,
                         default: Some(
                             Lit(
-                                LitType {
-                                    span: 13..18,
-                                    lit: Str(
-                                        Str {
-                                            span: 13..18,
-                                            value: "foo",
-                                        },
-                                    ),
-                                },
+                                Str(
+                                    Str {
+                                        span: 13..18,
+                                        value: "foo",
+                                    },
+                                ),
                             ),
                         ),
                     },
