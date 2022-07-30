@@ -100,6 +100,7 @@ pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, ctx: &Co
                 }),
             })
         }
+        ast::Pattern::Wildcard(_) => todo!(),
         ast::Pattern::Rest(_) => todo!(),
         ast::Pattern::Object(_) => todo!(),
         ast::Pattern::Array(_) => todo!(),
@@ -114,6 +115,7 @@ pub fn build_pattern_rec(pattern: &ast::Pattern) -> Pat {
             id: build_ident(id),
             type_ann: None,
         }),
+        ast::Pattern::Wildcard(_) => todo!(),
         ast::Pattern::Rest(ast::RestPat { arg, .. }) => Pat::Rest(RestPat {
             span: DUMMY_SP,
             dot3_token: DUMMY_SP,
@@ -259,6 +261,7 @@ pub fn build_type(
                                             type_ann,
                                         })
                                     }
+                                    ast::Pattern::Wildcard(_) => todo!(),
                                     ast::Pattern::Rest(ast::RestPat { arg, .. }) => {
                                         TsFnParam::Rest(RestPat {
                                             span: DUMMY_SP,

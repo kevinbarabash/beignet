@@ -1,6 +1,7 @@
 pub mod decl;
 pub mod expr;
 pub mod jsx;
+pub mod lit;
 pub mod pattern;
 pub mod type_ann;
 pub mod type_params;
@@ -66,11 +67,19 @@ mod tests {
         insta::assert_debug_snapshot!(parse("sql`SELECT * FROM ${table} WHERE id = ${id}`"));
         insta::assert_debug_snapshot!(parse("`line 1\\nline 2\\nline 3`"));
         insta::assert_debug_snapshot!(parse("`a \\u2212 b`"));
-        // TODO: fix how we parse template strings with interpolations.
-        // Right now we take until "${" which means if there are two 
-        // template strings both containing interpolations we end up parsing
-        // them as a single template string.
         insta::assert_debug_snapshot!(parse(r#"if cond { `${foo}` } else { `${bar}` }"#));
+    }
+
+    #[test]
+    #[should_panic]
+    fn template_literal_with_mismatched_backtick() {
+        insta::assert_debug_snapshot!(parse("`foo ${bar`}`"));
+    }
+
+    #[test]
+    #[should_panic]
+    fn interpolation_outside_of_template_literal() {
+        insta::assert_debug_snapshot!(parse("`foo ${bar}`${baz}`"));
     }
 
     #[test]
@@ -231,6 +240,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let foo = ([a, b]: [string, number]) => a"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}) => b"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}: {a: string, b: number}) => b"));
+        insta::assert_debug_snapshot!(parse("let [_, b] = letters"));
         // TODO: assigning defaults
         // TODO: type annotations
         // TODO: function params

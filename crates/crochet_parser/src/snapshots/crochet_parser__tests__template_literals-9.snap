@@ -17,7 +17,7 @@ Program {
                     ),
                     consequent: TemplateLiteral(
                         TemplateLiteral {
-                            span: 10..36,
+                            span: 10..18,
                             exprs: [
                                 Ident(
                                     Ident {
@@ -25,55 +25,34 @@ Program {
                                         name: "foo",
                                     },
                                 ),
-                                Ident(
-                                    Ident {
-                                        span: 31..34,
-                                        name: "bar",
-                                    },
-                                ),
                             ],
                             quasis: [
                                 TemplateElem {
-                                    span: 11..13,
+                                    span: 11..11,
                                     raw: Str(
                                         Str {
-                                            span: 11..13,
+                                            span: 11..11,
                                             value: "",
                                         },
                                     ),
                                     cooked: Str(
                                         Str {
-                                            span: 11..13,
+                                            span: 11..11,
                                             value: "",
                                         },
                                     ),
                                 },
                                 TemplateElem {
-                                    span: 17..31,
+                                    span: 17..17,
                                     raw: Str(
                                         Str {
-                                            span: 17..31,
-                                            value: "` } else { `",
-                                        },
-                                    ),
-                                    cooked: Str(
-                                        Str {
-                                            span: 17..31,
-                                            value: "` } else { `",
-                                        },
-                                    ),
-                                },
-                                TemplateElem {
-                                    span: 35..36,
-                                    raw: Str(
-                                        Str {
-                                            span: 35..36,
+                                            span: 17..17,
                                             value: "",
                                         },
                                     ),
                                     cooked: Str(
                                         Str {
-                                            span: 35..36,
+                                            span: 17..17,
                                             value: "",
                                         },
                                     ),
@@ -81,7 +60,53 @@ Program {
                             ],
                         },
                     ),
-                    alternate: None,
+                    alternate: Some(
+                        TemplateLiteral(
+                            TemplateLiteral {
+                                span: 28..36,
+                                exprs: [
+                                    Ident(
+                                        Ident {
+                                            span: 31..34,
+                                            name: "bar",
+                                        },
+                                    ),
+                                ],
+                                quasis: [
+                                    TemplateElem {
+                                        span: 29..29,
+                                        raw: Str(
+                                            Str {
+                                                span: 29..29,
+                                                value: "",
+                                            },
+                                        ),
+                                        cooked: Str(
+                                            Str {
+                                                span: 29..29,
+                                                value: "",
+                                            },
+                                        ),
+                                    },
+                                    TemplateElem {
+                                        span: 35..35,
+                                        raw: Str(
+                                            Str {
+                                                span: 35..35,
+                                                value: "",
+                                            },
+                                        ),
+                                        cooked: Str(
+                                            Str {
+                                                span: 35..35,
+                                                value: "",
+                                            },
+                                        ),
+                                    },
+                                ],
+                            },
+                        ),
+                    ),
                 },
             ),
         },

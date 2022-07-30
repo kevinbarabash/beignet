@@ -152,14 +152,9 @@ Program {
                         },
                         Arm {
                             span: 142..148,
-                            pattern: Ident(
-                                BindingIdent {
-                                    span: 142..143,
-                                    id: Ident {
-                                        span: 142..143,
-                                        name: "_",
-                                    },
-                                    type_ann: None,
+                            pattern: Wildcard(
+                                WildcardPat {
+                                    span: 142..144,
                                 },
                             ),
                             cond: None,

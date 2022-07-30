@@ -53,6 +53,7 @@ fn get_type_ann(pat: &Pattern) -> Option<TypeAnn> {
         Pattern::Array(ArrayPat { type_ann, .. }) => type_ann.to_owned(),
         Pattern::Lit(_) => None,
         Pattern::Is(_) => None,
+        Pattern::Wildcard(_) => None,
     }
 }
 
@@ -64,6 +65,12 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
             if assump.insert(id.name.to_owned(), scheme).is_some() {
                 return Err(String::from("Duplicate identifier in pattern"));
             }
+            Ok(tv)
+        }
+        Pattern::Wildcard(_) => {
+            // Same as Pattern::Ident but we don't insert an assumption since
+            // we don't want to bind it to a variable.
+            let tv = ctx.fresh_var();
             Ok(tv)
         }
         Pattern::Lit(LitPat { lit, .. }) => Ok(ctx.lit(lit.to_owned())),

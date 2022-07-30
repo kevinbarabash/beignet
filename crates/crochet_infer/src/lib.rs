@@ -185,6 +185,17 @@ mod tests {
     }
 
     #[test]
+    fn infer_destructuring_tuple_with_wildcard() {
+        let src = r#"
+        let [_, a] = [5, true]
+        "#;
+        
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("a", &ctx), "true");
+    }
+
+    #[test]
     #[should_panic = "Duplicate identifier in pattern"]
     fn infer_destructuring_tuple_reused_identifier() {
         let src = r#"
@@ -804,6 +815,17 @@ mod tests {
     #[test]
     fn infer_let_ignore_result() {
         assert_eq!(infer("() => {let _ = 5; 10}"), "() => 10");
+    }
+
+    #[test]
+    fn infer_let_wildcard() {
+        let src = r#"
+        let _ = 5
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(ctx.values.get("_"), None);
     }
 
     #[test]

@@ -108,6 +108,7 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
             },
             type_ann: None,
         }),
+        ast::Pattern::Wildcard(_) => todo!(),
         ast::Pattern::Rest(_) => todo!(),
         ast::Pattern::Object(ast::ObjectPat {
             props, optional, ..
@@ -230,6 +231,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 .map(|pat| {
                     let name = match pat {
                         ast::Pattern::Ident(ast::BindingIdent { id, .. }) => id.name.to_owned(),
+                        ast::Pattern::Wildcard(_) => todo!(),
                         ast::Pattern::Rest(_) => todo!(),
                         ast::Pattern::Object(_) => todo!(),
                         ast::Pattern::Array(_) => todo!(),
@@ -781,8 +783,12 @@ struct Condition {
 
 fn get_conds_for_pat(pat: &ast::Pattern, conds: &mut Vec<Condition>, path: &mut Path) {
     match pat {
+        // irrefutable
         ast::Pattern::Ident(_) => (),
         ast::Pattern::Rest(_) => (),
+        ast::Pattern::Wildcard(_) => (),
+
+        // refutable and possibly refutable
         ast::Pattern::Object(ast::ObjectPat { props, .. }) => {
             for prop in props {
                 match prop {
