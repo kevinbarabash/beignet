@@ -36,8 +36,11 @@ fn template_literals() {
 #[test]
 fn tagged_template_literals() {
     let src = r#"
-    let query = sql`SELECT * FROM users WHERE id = "12345"`
+    let id = "12345"
+    let query = sql`SELECT * FROM users WHERE id = "${id}"`
     "#;
-    insta::assert_snapshot!(compile(src), @r###"export const query = sql`SELECT * FROM users WHERE id = "12345"`;
-"###);
+    insta::assert_snapshot!(compile(src), @r###"
+    export const id = "12345";
+    export const query = sql`SELECT * FROM users WHERE id = "${id}"`;
+    "###);
 }
