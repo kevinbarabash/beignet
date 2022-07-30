@@ -48,15 +48,12 @@ Program {
                         ),
                         default: Some(
                             Lit(
-                                LitType {
-                                    span: 28..33,
-                                    lit: Str(
-                                        Str {
-                                            span: 28..33,
-                                            value: "foo",
-                                        },
-                                    ),
-                                },
+                                Str(
+                                    Str {
+                                        span: 28..33,
+                                        value: "foo",
+                                    },
+                                ),
                             ),
                         ),
                     },

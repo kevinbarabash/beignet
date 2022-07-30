@@ -1,0 +1,52 @@
+---
+source: crates/crochet_parser/src/type_ann.rs
+expression: "parse_type(\"(a: number, b: string) => boolean\")"
+---
+Lam(
+    LamType {
+        span: 0..33,
+        params: [
+            Ident(
+                BindingIdent {
+                    span: 1..10,
+                    id: Ident {
+                        span: 1..2,
+                        name: "a",
+                    },
+                    type_ann: Some(
+                        Prim(
+                            PrimType {
+                                span: 4..10,
+                                prim: Num,
+                            },
+                        ),
+                    ),
+                },
+            ),
+            Ident(
+                BindingIdent {
+                    span: 12..21,
+                    id: Ident {
+                        span: 12..13,
+                        name: "b",
+                    },
+                    type_ann: Some(
+                        Prim(
+                            PrimType {
+                                span: 15..21,
+                                prim: Str,
+                            },
+                        ),
+                    ),
+                },
+            ),
+        ],
+        ret: Prim(
+            PrimType {
+                span: 26..33,
+                prim: Bool,
+            },
+        ),
+        type_params: None,
+    },
+)

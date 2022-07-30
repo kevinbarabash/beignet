@@ -1,6 +1,7 @@
 use chumsky::prelude::*;
 use crochet_ast::*;
 
+use crate::lit::{boolean_parser, number_parser, string_parser};
 use crate::type_ann::Primitive;
 use crate::util::just_with_padding;
 
@@ -16,49 +17,6 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
     ))
     .map_with_span(|prim, span| TypeAnn::Prim(PrimType { span, prim }))
     .padded();
-
-    let r#true = just_with_padding("true").map_with_span(|_, span: Span| {
-        TypeAnn::Lit(LitType {
-            span: span.clone(),
-            lit: Lit::bool(true, span),
-        })
-    });
-    let r#false = just_with_padding("false").map_with_span(|_, span: Span| {
-        TypeAnn::Lit(LitType {
-            span: span.clone(),
-            lit: Lit::bool(false, span),
-        })
-    });
-    let r#bool = choice((r#true, r#false));
-
-    let int = text::int::<char, Simple<char>>(10).map_with_span(|value, span: Span| {
-        TypeAnn::Lit(LitType {
-            span: span.clone(),
-            lit: Lit::num(value, span),
-        })
-    });
-    let real = text::int(10)
-        .chain(just('.'))
-        .chain::<char, _, _>(text::digits(10))
-        .collect::<String>()
-        .map_with_span(|value, span: Span| {
-            TypeAnn::Lit(LitType {
-                span: span.clone(),
-                lit: Lit::num(value, span),
-            })
-        });
-    let num = choice((real, int));
-
-    let r#str = just("\"")
-        .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
-        .then_ignore(just("\""))
-        .collect::<String>()
-        .map_with_span(|value, span: Span| {
-            TypeAnn::Lit(LitType {
-                span: span.clone(),
-                lit: Lit::str(value, span),
-            })
-        });
 
     let parser = recursive(|type_ann| {
         let type_args = type_ann
@@ -103,9 +61,9 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
             .map_with_span(|types, span: Span| TypeAnn::Tuple(TupleType { span, types }));
 
         let atom = choice((
-            r#bool,
-            num,
-            r#str,
+            boolean_parser().map(TypeAnn::Lit),
+            number_parser().map(TypeAnn::Lit),
+            string_parser().map(TypeAnn::Lit),
             prim,
             obj,
             tuple,
@@ -115,15 +73,15 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
                 .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
 
-        let atom_with_suffix = atom
-            .clone()
-            .then(just_with_padding("[]").repeated())
-            .foldl(|accum, _| {
-                TypeAnn::Array(ArrayType {
-                    span: 0..0, // FIXME
-                    elem_type: Box::from(accum),
-                })
-            });
+        let atom_with_suffix =
+            atom.clone()
+                .then(just_with_padding("[]").repeated())
+                .foldl(|accum, _| {
+                    TypeAnn::Array(ArrayType {
+                        span: 0..0, // FIXME
+                        elem_type: Box::from(accum),
+                    })
+                });
 
         // We have to use `atom` here instead of `type_ann` to avoid a stack
         // overflow.
@@ -142,9 +100,41 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
                 _ => TypeAnn::Union(UnionType { span, types }),
             });
 
-        // TODO: support optional lambda param names
-        let lam_params = type_ann
-            .clone()
+        let ident = text::ident().map_with_span(|name, span: Span| Ident {
+            span,
+            name,
+        });
+
+        let ident_param = ident
+            .then_ignore(just_with_padding(":"))
+            .then(type_ann.clone())
+            .map_with_span(|(ident, type_ann), span: Span| {
+                FnParam::Ident(BindingIdent {
+                    id: ident,
+                    span,
+                    type_ann: Some(type_ann),
+                })
+            });
+
+        let rest_param = just_with_padding("...")
+            .ignore_then(ident.map_with_span(|id, span: Span| {
+                Pattern::Ident(BindingIdent {
+                    id,
+                    span,
+                    type_ann: None,
+                })
+            }))
+            .then_ignore(just_with_padding(":"))
+            .then(type_ann.clone())
+            .map_with_span(|(ident, type_ann), span: Span| {
+                FnParam::Rest(RestPat {
+                    span,
+                    arg: Box::from(ident),
+                    type_ann: Some(type_ann),
+                })
+            });
+
+        let lam_params = choice((ident_param, rest_param))
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("("), just_with_padding(")"));
@@ -165,7 +155,7 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
 
         choice((
             // lambda types have higher precedence than union types so that
-            // `(A, B) => C | D` parse as lambda type with a return type that
+            // `(a: A, b: B) => C | D` parse as lambda type with a return type that
             // happens to be a union.
             lam, union, atom,
         ))
@@ -183,16 +173,33 @@ mod tests {
     }
 
     #[test]
-    fn type_annotations() {
-        insta::assert_debug_snapshot!(parse_type("Promise<number>"));
-        insta::assert_debug_snapshot!(parse_type("(number, string) => boolean"));
-        insta::assert_debug_snapshot!(parse_type("{x: number, y: number}"));
-        insta::assert_debug_snapshot!(parse_type("(A, B) => C | D"));
-        insta::assert_debug_snapshot!(parse_type("((A, B) => C) | D"));
+    fn fn_type_annotations() {
+        insta::assert_debug_snapshot!(parse_type("(a: number, b: string) => boolean"));
+        insta::assert_debug_snapshot!(parse_type("(a: A) => B & C | D"));
+        insta::assert_debug_snapshot!(parse_type("(a: A, b: B) => C & D"));
+        insta::assert_debug_snapshot!(parse_type("(a: A, b: B) => C | D"));
+        insta::assert_debug_snapshot!(parse_type("((a: A, b: B) => C) | D"));
+    }
+
+    #[test]
+    fn union_and_intersection_type_annotations() {
         insta::assert_debug_snapshot!(parse_type("A & B & C"));
         insta::assert_debug_snapshot!(parse_type("A & B | C & D"));
-        insta::assert_debug_snapshot!(parse_type("(A) => B & C | D"));
         insta::assert_debug_snapshot!(parse_type("(A | B) & (C | D)"));
-        insta::assert_debug_snapshot!(parse_type("(A, B) => C & D"));
+    }
+
+    #[test]
+    fn literal_type_annotations() {
+        insta::assert_debug_snapshot!(parse_type(r#""hello""#));
+        insta::assert_debug_snapshot!(parse_type("true"));
+        insta::assert_debug_snapshot!(parse_type("false"));
+        insta::assert_debug_snapshot!(parse_type("1.23"));
+        insta::assert_debug_snapshot!(parse_type("5"));
+    }
+
+    #[test]
+    fn misc_type_annotations() {
+        insta::assert_debug_snapshot!(parse_type("Promise<number>"));
+        insta::assert_debug_snapshot!(parse_type("{x: number, y: number}"));
     }
 }

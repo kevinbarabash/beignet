@@ -1,37 +1,48 @@
 ---
-source: src/parser/types.rs
-expression: "parse_type(\"(A) => B & C | D\")"
+source: crates/crochet_parser/src/type_ann.rs
+expression: "parse_type(\"(a: A) => B & C | D\")"
 ---
 Lam(
     LamType {
-        span: 0..16,
+        span: 0..19,
         params: [
-            TypeRef(
-                TypeRef {
-                    span: 1..2,
-                    name: "A",
-                    type_params: None,
+            Ident(
+                BindingIdent {
+                    span: 1..5,
+                    id: Ident {
+                        span: 1..2,
+                        name: "a",
+                    },
+                    type_ann: Some(
+                        TypeRef(
+                            TypeRef {
+                                span: 4..5,
+                                name: "A",
+                                type_params: None,
+                            },
+                        ),
+                    ),
                 },
             ),
         ],
         ret: Union(
             UnionType {
-                span: 7..16,
+                span: 10..19,
                 types: [
                     Intersection(
                         IntersectionType {
-                            span: 7..12,
+                            span: 10..15,
                             types: [
                                 TypeRef(
                                     TypeRef {
-                                        span: 7..8,
+                                        span: 10..11,
                                         name: "B",
                                         type_params: None,
                                     },
                                 ),
                                 TypeRef(
                                     TypeRef {
-                                        span: 11..12,
+                                        span: 14..15,
                                         name: "C",
                                         type_params: None,
                                     },
@@ -41,7 +52,7 @@ Lam(
                     ),
                     TypeRef(
                         TypeRef {
-                            span: 15..16,
+                            span: 18..19,
                             name: "D",
                             type_params: None,
                         },

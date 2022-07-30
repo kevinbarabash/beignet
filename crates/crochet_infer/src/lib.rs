@@ -965,7 +965,7 @@ mod tests {
     #[test]
     fn call_lam_with_subtypes() {
         let src = r#"
-        declare let add: (number, number) => number
+        declare let add: (a: number, b: number) => number
         let sum = add(5, 10)
         "#;
 
@@ -978,7 +978,7 @@ mod tests {
     #[should_panic = "Unification failure"]
     fn call_lam_with_wrong_types() {
         let src = r#"
-        declare let add: (number, number) => number
+        declare let add: (a: number, b: number) => number
         let sum = add("hello", true)
         "#;
 
@@ -988,7 +988,7 @@ mod tests {
     #[test]
     fn call_lam_with_extra_params() {
         let src = r#"
-        declare let add: (number, number) => number
+        declare let add: (a: number, b: number) => number
         let sum = add(5, 10, "hello")
         "#;
 
@@ -1000,7 +1000,7 @@ mod tests {
     #[test]
     fn call_lam_with_too_few_params_result_in_partial_application() {
         let src = r#"
-        declare let add: (number, number) => number
+        declare let add: (a: number, b: number) => number
         let add5 = add(5)
         "#;
 
@@ -1012,7 +1012,7 @@ mod tests {
     #[test]
     fn call_lam_with_too_few_params_result_in_partial_application_no_params() {
         let src = r#"
-        declare let add: (number, number) => number
+        declare let add: (a: number, b: number) => number
         let plus = add()
         "#;
 
@@ -1024,7 +1024,7 @@ mod tests {
     #[test]
     fn call_lam_multiple_times_with_too_few_params() {
         let src = r#"
-        declare let add: (number, number) => number
+        declare let add: (a: number, b: number) => number
         let sum = add(5)(10)
         "#;
 
@@ -1036,7 +1036,7 @@ mod tests {
     #[test]
     fn pass_callback_with_too_few_params() {
         let src = r#"
-        declare let fold_num: ((number, number) => boolean, number) => number
+        declare let fold_num: (cb: (a: number, b: number) => boolean, seed: number) => number
         let result = fold_num((x) => true, 0)
         "#;
 
@@ -1048,7 +1048,7 @@ mod tests {
     #[test]
     fn pass_callback_whose_params_are_supertypes_of_expected_callback() {
         let src = r#"
-        declare let fold_num: ((5, 10) => boolean, number) => number
+        declare let fold_num: (cb: (a: 5, b: 10) => boolean, seed: number) => number
         let result = fold_num((x: number, y: number) => true, 0)
         "#;
 
@@ -1067,7 +1067,7 @@ mod tests {
         // calback results in correct function, allowing this in the type checker
         // is bound to result in confusing and hard to understand code.
         let src = r#"
-        declare let fold_num: ((number, number) => boolean, number) => number
+        declare let fold_num: (cb: (a: number, b: number) => boolean, seed: number) => number
         let result = fold_num((x, y, z) => true, 0)
         "#;
 
@@ -1079,7 +1079,7 @@ mod tests {
     #[ignore]
     fn call_generic_lam_with_subtypes() {
         let src = r#"
-        declare let add: <T>(T, T) => T
+        declare let add: <T>(a: T, b: T) => T
         let sum = add(5, 10)
         "#;
 
@@ -1107,7 +1107,7 @@ mod tests {
     #[test]
     fn spread_param_tuple() {
         let src = r#"
-        declare let add: (number, number) => number
+        declare let add: (a: number, b: number) => number
         let args = [5, 10]
         let result = add(...args)
         "#;
@@ -1120,7 +1120,7 @@ mod tests {
     #[test]
     fn spread_param_tuple_with_extra_elements() {
         let src = r#"
-        declare let add: (number, number) => number
+        declare let add: (a: number, b: number) => number
         let args = [5, 10, 15]
         let result = add(...args)
         "#;
@@ -1133,7 +1133,7 @@ mod tests {
     #[test]
     fn spread_param_tuple_with_not_enough_elements_is_partial_application() {
         let src = r#"
-        declare let add: (number, number) => number
+        declare let add: (a: number, b: number) => number
         let args = [5]
         let result = add(...args)
         "#;
@@ -1146,7 +1146,7 @@ mod tests {
     #[test]
     fn spread_multiple_param_tuples() {
         let src = r#"
-        declare let add: (number, number) => number
+        declare let add: (a: number, b: number) => number
         let args1 = [5]
         let args2 = [10]
         let result = add(...args1, ...args2)
@@ -1161,7 +1161,7 @@ mod tests {
     #[should_panic="Unification failure"]
     fn spread_param_tuples_with_incorrect_types() {
         let src = r#"
-        declare let add: (number, number) => number
+        declare let add: (a: number, b: number) => number
         let args = ["hello", true]
         let result = add(...args)
         "#;
@@ -1178,6 +1178,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
+        assert_eq!(get_type("fst", &ctx), "(number, ...number[]) => number");
         assert_eq!(get_type("result", &ctx), "number");
     }
 
@@ -1232,12 +1233,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn rest_param_decl() {
-        // TODO: update the parser to handle this test case
         let src = r#"
-        declare let add: (number, ...number[]) => number
-        let result = add(5, 10)
+        declare let add: (a: number, ...b: number[]) => number
+        let result = add(5, 10, 15)
         "#;
 
         let ctx = infer_prog(src);
@@ -1394,7 +1393,7 @@ mod tests {
     fn infer_obj_from_spread() {
         let src = r#"
         type Point = {x: number, y: number, z: number}
-        declare let mag: (Point) => number
+        declare let mag: (p: Point) => number
         let mag_2d = (p) => {
             mag({...p, z: 0})
         }
@@ -1412,7 +1411,7 @@ mod tests {
     fn infer_obj_from_spread_undecidable() {
         let src = r#"
         type Point = {x: number, y: number, z: number}
-        declare let mag: (Point) => number
+        declare let mag: (p: Point) => number
         let mag_2d = (p, q) => {
             mag({...p, ...q, z: 0})
         }
@@ -1590,7 +1589,7 @@ mod tests {
     #[test]
     fn call_overloaded_function() {
         let src = r#"
-        declare let add: ((number, number) => number) & ((string, string) => string)
+        declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string)
         let str = add("hello", "world")
         let num = add(5, 10)
         "#;
@@ -1604,7 +1603,7 @@ mod tests {
     #[should_panic = "Couldn't unify lambda with intersection"]
     fn call_overloaded_function_with_wrong_params() {
         let src = r#"
-        declare let add: ((number, number) => number) & ((string, string) => string)
+        declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string)
         add("hello", 10)
         "#;
 
@@ -1841,7 +1840,7 @@ mod tests {
     #[test]
     fn pass_tuple_as_array_param() {
         let src = r#"
-        declare let concat: (string[]) => string
+        declare let concat: (str_arr: string[]) => string
         let result = concat(["hello", "world"])
         "#;
         let ctx = infer_prog(src);

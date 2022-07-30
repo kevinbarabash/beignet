@@ -15,15 +15,12 @@ Program {
                     },
                     type_ann: Some(
                         Lit(
-                            LitType {
-                                span: 9..14,
-                                lit: Str(
-                                    Str {
-                                        span: 9..14,
-                                        value: "foo",
-                                    },
-                                ),
-                            },
+                            Str(
+                                Str {
+                                    span: 9..14,
+                                    value: "foo",
+                                },
+                            ),
                         ),
                     ),
                 },
