@@ -818,6 +818,17 @@ mod tests {
     }
 
     #[test]
+    fn infer_let_wildcard() {
+        let src = r#"
+        let _ = 5
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(ctx.values.get("_"), None);
+    }
+
+    #[test]
     fn infer_expression_statements() {
         assert_eq!(infer("() => {5; 10}"), "() => 10");
     }
