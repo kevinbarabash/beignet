@@ -101,11 +101,7 @@ fn build_js(program: &ast::Program) -> Program {
 pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
     match pattern {
         ast::Pattern::Ident(ast::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
-            id: Ident {
-                span: DUMMY_SP,
-                sym: JsWord::from(id.name.to_owned()),
-                optional: false,
-            },
+            id: build_ident(id),
             type_ann: None,
         }),
         ast::Pattern::Wildcard(_) => todo!(),
@@ -169,11 +165,7 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
         }
         ast::Pattern::Lit(_) => todo!(),
         ast::Pattern::Is(ast::IsPat { id, .. }) => Pat::Ident(BindingIdent {
-            id: Ident {
-                span: DUMMY_SP,
-                sym: JsWord::from(id.name.to_owned()),
-                optional: false,
-            },
+            id: build_ident(id),
             type_ann: None,
         }),
     }
@@ -215,11 +207,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 type_args: None,
             })
         }
-        ast::Expr::Ident(ident) => Expr::from(Ident {
-            span: DUMMY_SP,
-            sym: JsWord::from(ident.name.to_owned()),
-            optional: false,
-        }),
+        ast::Expr::Ident(ident) => Expr::from(build_ident(ident)),
         ast::Expr::Lambda(ast::Lambda {
             params: args,
             body,
@@ -504,11 +492,7 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
         }),
         ast::Expr::Member(ast::Member { obj, prop, .. }) => {
             let prop = match prop {
-                ast::MemberProp::Ident(ident) => MemberProp::Ident(Ident {
-                    span: DUMMY_SP,
-                    sym: JsWord::from(ident.name.to_owned()),
-                    optional: false,
-                }),
+                ast::MemberProp::Ident(ident) => MemberProp::Ident(build_ident(ident)),
                 ast::MemberProp::Computed(ast::ComputedPropName { expr, .. }) => {
                     MemberProp::Computed(ComputedPropName {
                         span: DUMMY_SP,
@@ -530,36 +514,19 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
         ast::Expr::LetExpr(_) => {
             panic!("LetExpr should always be handled by the IfElse branch")
         }
-        ast::Expr::TemplateLiteral(ast::TemplateLiteral { exprs, quasis, .. }) => {
-            Expr::Tpl(Tpl {
+        ast::Expr::TemplateLiteral(template) => Expr::Tpl(build_template_literal(template)),
+        ast::Expr::TaggedTemplateLiteral(ast::TaggedTemplateLiteral {
+            span: _,
+            tag,
+            template,
+        }) => {
+            Expr::TaggedTpl(TaggedTpl {
                 span: DUMMY_SP,
-                exprs: exprs
-                    .iter()
-                    .map(|expr| Box::from(build_expr(expr)))
-                    .collect(),
-                quasis: quasis
-                    .iter()
-                    .map(|quasi| {
-                        let cooked = match &quasi.cooked {
-                            ast::Lit::Str(ast::Str { value, .. }) => value,
-                            _ => panic!("quasi.cooked must be a string"),
-                        };
-                        let raw = match &quasi.raw {
-                            ast::Lit::Str(ast::Str { value, .. }) => value,
-                            _ => panic!("quasi.raw must be a string"),
-                        };
-                        TplElement {
-                            span: DUMMY_SP,
-                            cooked: Some(JsWord::from(cooked.to_owned())),
-                            raw: JsWord::from(raw.to_owned()),
-                            tail: false, // TODO: set this to `true` if it's the last quasi
-                        }
-                    })
-                    .collect(),
+                tag: Box::from(Expr::Ident(build_ident(tag))),
+                type_params: None, // TODO: support type params on tagged templates
+
+                tpl: build_template_literal(template),
             })
-        }
-        ast::Expr::TaggedTemplateLiteral(_) => {
-            todo!()
         }
     }
 }
@@ -753,6 +720,45 @@ fn build_cond_for_pat(pat: &ast::Pattern, id: &Ident) -> Option<Expr> {
         }))
     } else {
         None
+    }
+}
+
+fn build_template_literal(template: &ast::TemplateLiteral) -> Tpl {
+    Tpl {
+        span: DUMMY_SP,
+        exprs: template
+            .exprs
+            .iter()
+            .map(|expr| Box::from(build_expr(expr)))
+            .collect(),
+        quasis: template
+            .quasis
+            .iter()
+            .map(|quasi| {
+                let cooked = match &quasi.cooked {
+                    ast::Lit::Str(ast::Str { value, .. }) => value,
+                    _ => panic!("quasi.cooked must be a string"),
+                };
+                let raw = match &quasi.raw {
+                    ast::Lit::Str(ast::Str { value, .. }) => value,
+                    _ => panic!("quasi.raw must be a string"),
+                };
+                TplElement {
+                    span: DUMMY_SP,
+                    cooked: Some(JsWord::from(cooked.to_owned())),
+                    raw: JsWord::from(raw.to_owned()),
+                    tail: false, // TODO: set this to `true` if it's the last quasi
+                }
+            })
+            .collect(),
+    }
+}
+
+fn build_ident(ident: &ast::Ident) -> Ident {
+    Ident {
+        span: DUMMY_SP,
+        sym: JsWord::from(ident.name.to_owned()),
+        optional: false,
     }
 }
 
