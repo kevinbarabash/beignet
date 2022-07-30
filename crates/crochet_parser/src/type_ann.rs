@@ -115,15 +115,15 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
                 .delimited_by(just_with_padding("("), just_with_padding(")")),
         ));
 
-        let atom_with_suffix = atom
-            .clone()
-            .then(just_with_padding("[]").repeated())
-            .foldl(|accum, _| {
-                TypeAnn::Array(ArrayType {
-                    span: 0..0, // FIXME
-                    elem_type: Box::from(accum),
-                })
-            });
+        let atom_with_suffix =
+            atom.clone()
+                .then(just_with_padding("[]").repeated())
+                .foldl(|accum, _| {
+                    TypeAnn::Array(ArrayType {
+                        span: 0..0, // FIXME
+                        elem_type: Box::from(accum),
+                    })
+                });
 
         // We have to use `atom` here instead of `type_ann` to avoid a stack
         // overflow.
@@ -142,9 +142,41 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
                 _ => TypeAnn::Union(UnionType { span, types }),
             });
 
-        // TODO: support optional lambda param names
-        let lam_params = type_ann
-            .clone()
+        let ident = text::ident().map_with_span(|name, span: Span| Ident {
+            span,
+            name,
+        });
+
+        let ident_param = ident
+            .then_ignore(just_with_padding(":"))
+            .then(type_ann.clone())
+            .map_with_span(|(ident, type_ann), span: Span| {
+                FnParam::Ident(BindingIdent {
+                    id: ident,
+                    span,
+                    type_ann: Some(type_ann),
+                })
+            });
+
+        let rest_param = just_with_padding("...")
+            .ignore_then(ident.map_with_span(|id, span: Span| {
+                Pattern::Ident(BindingIdent {
+                    id,
+                    span,
+                    type_ann: None,
+                })
+            }))
+            .then_ignore(just_with_padding(":"))
+            .then(type_ann.clone())
+            .map_with_span(|(ident, type_ann), span: Span| {
+                FnParam::Rest(RestPat {
+                    span,
+                    arg: Box::from(ident),
+                    type_ann: Some(type_ann),
+                })
+            });
+
+        let lam_params = choice((ident_param, rest_param))
             .separated_by(just_with_padding(","))
             .allow_trailing()
             .delimited_by(just_with_padding("("), just_with_padding(")"));
@@ -165,7 +197,7 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
 
         choice((
             // lambda types have higher precedence than union types so that
-            // `(A, B) => C | D` parse as lambda type with a return type that
+            // `(a: A, b: B) => C | D` parse as lambda type with a return type that
             // happens to be a union.
             lam, union, atom,
         ))
@@ -185,14 +217,15 @@ mod tests {
     #[test]
     fn type_annotations() {
         insta::assert_debug_snapshot!(parse_type("Promise<number>"));
-        insta::assert_debug_snapshot!(parse_type("(number, string) => boolean"));
+        insta::assert_debug_snapshot!(parse_type("(a: number, b: string) => boolean"));
         insta::assert_debug_snapshot!(parse_type("{x: number, y: number}"));
-        insta::assert_debug_snapshot!(parse_type("(A, B) => C | D"));
-        insta::assert_debug_snapshot!(parse_type("((A, B) => C) | D"));
+        insta::assert_debug_snapshot!(parse_type("(a: A, b: B) => C | D"));
+        insta::assert_debug_snapshot!(parse_type("((a: A, b: B) => C) | D"));
         insta::assert_debug_snapshot!(parse_type("A & B & C"));
         insta::assert_debug_snapshot!(parse_type("A & B | C & D"));
-        insta::assert_debug_snapshot!(parse_type("(A) => B & C | D"));
+        insta::assert_debug_snapshot!(parse_type("(a: A) => B & C | D"));
         insta::assert_debug_snapshot!(parse_type("(A | B) & (C | D)"));
-        insta::assert_debug_snapshot!(parse_type("(A, B) => C & D"));
+        insta::assert_debug_snapshot!(parse_type("(a: A, b: B) => C & D"));
+        insta::assert_debug_snapshot!(parse_type("(a: number, ...b: string[]) => boolean"));
     }
 }

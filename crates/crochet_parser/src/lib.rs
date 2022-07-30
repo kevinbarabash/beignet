@@ -267,7 +267,7 @@ mod tests {
     #[test]
     fn types() {
         insta::assert_debug_snapshot!(parse("let get_bar = <T>(foo: Foo<T>) => foo.bar"));
-        insta::assert_debug_snapshot!(parse("declare let get_bar: (Foo) => T"));
+        insta::assert_debug_snapshot!(parse("declare let get_bar: (foo: Foo) => T"));
         insta::assert_debug_snapshot!(parse("let str_arr: string[] = []"));
         insta::assert_debug_snapshot!(parse("let thunk_arr: (() => undefined)[] = []"));
         insta::assert_debug_snapshot!(parse("let arr: string[] | number[] = []"));

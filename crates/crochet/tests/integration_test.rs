@@ -475,7 +475,7 @@ fn infer_expr_using_declared_var() {
 #[test]
 fn infer_app_of_declared_fn() {
     let src = r#"
-    declare let add: (number, number) => number
+    declare let add: (a: number, b: number) => number
     let sum = add(5, 10)
     "#;
     let (_, ctx) = infer_prog(src);
@@ -487,7 +487,7 @@ fn infer_app_of_declared_fn() {
 #[test]
 fn infer_app_of_declared_fn_with_obj_param() {
     let src = r#"
-    declare let mag: ({x: number, y: number}) => number
+    declare let mag: (p: {x: number, y: number}) => number
     let result = mag({x: 5, y: 10})
     "#;
     let (_, ctx) = infer_prog(src);
@@ -499,7 +499,7 @@ fn infer_app_of_declared_fn_with_obj_param() {
 #[test]
 fn calling_a_fn_with_an_obj_subtype() {
     let src = r#"
-    declare let mag: ({x: number, y: number}) => number
+    declare let mag: (p: {x: number, y: number}) => number
     let result = mag({x: 5, y: 10, z: 15})
     "#;
     let (_, ctx) = infer_prog(src);
@@ -512,7 +512,7 @@ fn calling_a_fn_with_an_obj_subtype() {
 #[should_panic = "Unification failure"]
 fn calling_a_fn_with_an_obj_missing_a_property() {
     let src = r#"
-    declare let mag: ({x: number, y: number}) => number
+    declare let mag: (p: {x: number, y: number}) => number
     let result = mag({x: 5})
     "#;
     infer_prog(src);
@@ -761,7 +761,7 @@ fn infer_assigning_an_obj_lit_with_extra_props() {
 #[test]
 fn infer_function_overloading() {
     let src = r#"
-    declare let add: ((number, number) => number) & ((string, string) => string)
+    declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string)
     let num = add(5, 10)
     let str = add("hello, ", "world")
     "#;
@@ -777,7 +777,7 @@ fn infer_function_overloading() {
 #[should_panic = "Couldn't unify lambda with intersection"]
 fn infer_function_overloading_with_incorrect_args() {
     let src = r#"
-    declare let add: ((number, number) => number) & ((string, string) => string)
+    declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string)
     let bool = add(true, false)
     "#;
     infer_prog(src);
@@ -883,7 +883,7 @@ fn infer_fn_param_with_type_alias_with_param() {
 fn infer_fn_param_with_type_alias_with_param_2() {
     let src = r#"
     type Foo<T> = {bar: T}
-    declare let get_bar: <T>(Foo<T>) => T
+    declare let get_bar: <T>(foo: Foo<T>) => T
     "#;
     let (_, ctx) = infer_prog(src);
 
@@ -896,7 +896,7 @@ fn infer_fn_param_with_type_alias_with_param_2() {
 fn infer_fn_param_with_type_alias_with_param_3() {
     let src = r#"
     type Foo<T> = {bar: T}
-    declare let get_bar: <T>(Foo<T>) => T
+    declare let get_bar: <T>(foo: Foo<T>) => T
     let bar = get_bar({bar: "hello"})
     "#;
     let (_, ctx) = infer_prog(src);

@@ -20,14 +20,7 @@ Program {
                                 elem_type: Lam(
                                     LamType {
                                         span: 16..31,
-                                        params: [
-                                            Intersection(
-                                                IntersectionType {
-                                                    span: 17..17,
-                                                    types: [],
-                                                },
-                                            ),
-                                        ],
+                                        params: [],
                                         ret: Prim(
                                             PrimType {
                                                 span: 22..31,
