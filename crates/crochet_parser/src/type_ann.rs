@@ -1,6 +1,7 @@
 use chumsky::prelude::*;
 use crochet_ast::*;
 
+use crate::lit::{boolean_parser, number_parser, string_parser};
 use crate::type_ann::Primitive;
 use crate::util::just_with_padding;
 
@@ -16,49 +17,6 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
     ))
     .map_with_span(|prim, span| TypeAnn::Prim(PrimType { span, prim }))
     .padded();
-
-    let r#true = just_with_padding("true").map_with_span(|_, span: Span| {
-        TypeAnn::Lit(LitType {
-            span: span.clone(),
-            lit: Lit::bool(true, span),
-        })
-    });
-    let r#false = just_with_padding("false").map_with_span(|_, span: Span| {
-        TypeAnn::Lit(LitType {
-            span: span.clone(),
-            lit: Lit::bool(false, span),
-        })
-    });
-    let r#bool = choice((r#true, r#false));
-
-    let int = text::int::<char, Simple<char>>(10).map_with_span(|value, span: Span| {
-        TypeAnn::Lit(LitType {
-            span: span.clone(),
-            lit: Lit::num(value, span),
-        })
-    });
-    let real = text::int(10)
-        .chain(just('.'))
-        .chain::<char, _, _>(text::digits(10))
-        .collect::<String>()
-        .map_with_span(|value, span: Span| {
-            TypeAnn::Lit(LitType {
-                span: span.clone(),
-                lit: Lit::num(value, span),
-            })
-        });
-    let num = choice((real, int));
-
-    let r#str = just("\"")
-        .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
-        .then_ignore(just("\""))
-        .collect::<String>()
-        .map_with_span(|value, span: Span| {
-            TypeAnn::Lit(LitType {
-                span: span.clone(),
-                lit: Lit::str(value, span),
-            })
-        });
 
     let parser = recursive(|type_ann| {
         let type_args = type_ann
@@ -103,9 +61,9 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
             .map_with_span(|types, span: Span| TypeAnn::Tuple(TupleType { span, types }));
 
         let atom = choice((
-            r#bool,
-            num,
-            r#str,
+            boolean_parser().map(TypeAnn::Lit),
+            number_parser().map(TypeAnn::Lit),
+            string_parser().map(TypeAnn::Lit),
             prim,
             obj,
             tuple,

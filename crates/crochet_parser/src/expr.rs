@@ -3,8 +3,8 @@ use crochet_ast::*;
 use unescape::unescape;
 
 use crate::jsx::jsx_parser;
+use crate::lit::{boolean_parser, number_parser, string_parser};
 use crate::pattern::pattern_parser;
-use crate::lit::string_parser;
 use crate::type_ann::type_ann_parser;
 use crate::type_params::type_params;
 use crate::util::just_with_padding;
@@ -14,21 +14,6 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
     let pattern = pattern_parser();
 
     let ident = text::ident().map_with_span(|name, span| Ident { span, name });
-
-    let r#true =
-        just_with_padding("true").map_with_span(|_, span| Expr::Lit(Lit::bool(true, span)));
-    let r#false =
-        just_with_padding("false").map_with_span(|_, span| Expr::Lit(Lit::bool(false, span)));
-    let r#bool = choice((r#true, r#false));
-
-    let int = text::int::<char, Simple<char>>(10)
-        .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
-    let real = text::int(10)
-        .chain(just('.'))
-        .chain::<char, _, _>(text::digits(10))
-        .collect::<String>()
-        .map_with_span(|value, span| Expr::Lit(Lit::num(value, span)));
-    let num = choice((real, int));
 
     let parser = recursive(|expr: Recursive<'_, char, Expr, Simple<char>>| {
         // TODO: support recursive functions to be declared within another function
@@ -206,8 +191,8 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
 
         let atom = choice((
             // quarks (can't be broken down any further)
-            r#bool,
-            num,
+            boolean_parser().map(Expr::Lit),
+            number_parser().map(Expr::Lit),
             string_parser().map(Expr::Lit),
             // can contain sub-expressions, but have the highest precedence
             template_str,
