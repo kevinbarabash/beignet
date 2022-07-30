@@ -1,6 +1,7 @@
 use chumsky::prelude::*;
 use crochet_ast::*;
 
+use crate::lit::string_parser;
 use crate::type_ann::*;
 use crate::util::just_with_padding;
 
@@ -22,21 +23,18 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
         .map_with_span(Lit::num);
     let num = choice((real, int));
 
-    let r#str = just("\"")
-        .ignore_then(filter(|c| *c != '"').repeated().at_least(1))
-        .then_ignore(just("\""))
-        .collect::<String>()
-        .map_with_span(Lit::str);
-
     let ident = text::ident().map_with_span(|name, span| Ident { name, span });
 
     let parser = recursive(|pat| {
+        let wildcard_pat =
+            just_with_padding("_").map_with_span(|_, span| Pattern::Wildcard(WildcardPat { span }));
+
         let is_pat = ident
             .then_ignore(just_with_padding("is"))
             .then(ident)
             .map_with_span(|(id, is_id), span| Pattern::Is(IsPat { span, id, is_id }));
 
-        let lit_pat = choice((r#bool, num, r#str))
+        let lit_pat = choice((r#bool, num, string_parser()))
             .map_with_span(|lit, span| Pattern::Lit(LitPat { span, lit }));
 
         let ident_pat = ident
@@ -149,6 +147,7 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
         top_level = false;
 
         choice((
+            wildcard_pat,
             is_pat,
             lit_pat, // TODO: restrict lit_pat from being parsed at the top-level
             ident_pat,
