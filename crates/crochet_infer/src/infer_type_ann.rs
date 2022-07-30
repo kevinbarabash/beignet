@@ -65,7 +65,21 @@ fn infer_type_ann_rec(
         TypeAnn::Lam(LamType { params, ret, .. }) => {
             let params: Vec<_> = params
                 .iter()
-                .map(|arg| infer_type_ann_rec(arg, ctx, type_param_map))
+                .map(|arg| {
+                    match &arg {
+                        FnParam::Ident(ident) => {
+                            // TODO: Update the AST to remove need for .unwrap() here
+                            let type_ann = ident.type_ann.clone().unwrap();
+                            infer_type_ann_rec(&type_ann, ctx, type_param_map)
+                        }
+                        FnParam::Rest(rest) => {
+                            // TODO: Update the AST to remove need for .unwrap() here
+                            let type_ann = rest.type_ann.clone().unwrap();
+                            let t = infer_type_ann_rec(&type_ann, ctx, type_param_map);
+                            ctx.rest(t)
+                        },
+                    }
+                })
                 .collect();
             let ret = Box::from(infer_type_ann_rec(ret.as_ref(), ctx, type_param_map));
             ctx.lam(params, ret)

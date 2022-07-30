@@ -1,3 +1,4 @@
+use crate::pattern::{BindingIdent, RestPat};
 use crate::span::Span;
 use crate::literal::Lit;
 use crate::ident::Ident;
@@ -6,9 +7,15 @@ use crate::prim::Primitive;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LamType {
     pub span: Span,
-    pub params: Vec<TypeAnn>,
+    pub params: Vec<FnParam>,
     pub ret: Box<TypeAnn>,
     pub type_params: Option<Vec<TypeParam>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FnParam {
+    Ident(BindingIdent),
+    Rest(RestPat),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
