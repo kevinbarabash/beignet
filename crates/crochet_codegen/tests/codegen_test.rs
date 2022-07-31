@@ -52,6 +52,7 @@ fn pattern_matching() {
         0 => "none",
         1 => "one",
         2 => "a couple",
+        _ => "many",
     }
     "#;
     // n if n < 5 => "a few",
@@ -67,6 +68,36 @@ fn pattern_matching() {
         }
         if (value === 2) {
             return "a couple";
+        }
+        {
+            return "many";
+        }
+    })();
+    "###);
+}
+
+#[test]
+fn pattern_matching_with_disjoint_union() {
+    let src = r#"
+    type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}
+    declare let event: Event
+    let result = match event {
+        {type: "mousedown", x, y} => `mousedown: (${x}, ${y})`,
+        {type: "keydown", key} => key,
+    }
+    "#;
+    insta::assert_snapshot!(compile(src), @r###"
+    ;
+    ;
+    export const result = (()=>{
+        const value = event;
+        if (value.type === "mousedown") {
+            const { x , y  } = value;
+            return `mousedown: (${x}, ${y})`;
+        }
+        if (value.type === "keydown") {
+            const { key  } = value;
+            return key;
         }
     })();
     "###);
