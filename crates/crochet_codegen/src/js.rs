@@ -479,25 +479,50 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             // TODO: we want to stop when we encounter the first
             // irrefutable pattern since all subsequent patterns
             // shouldn't be matched.
-            let mut stmts: Vec<Stmt> = arms
-                .iter()
-                .map(|arm| {
-                    let (cond, block) = build_arm(arm, &id);
+            let mut has_catchall: bool = false;
+            let mut built_arms: Vec<(_, _)> = vec![];
+            for arm in arms {
+                if has_catchall {
+                    panic!("Catchall must appear last in match");
+                }
 
-                    // TODO: codegen this as if/else if/else
+                let (cond, block) = build_arm(arm, &id);
+                
+                if cond.is_none() {
+                    has_catchall = true
+                }
+
+                built_arms.push((cond, block));
+            }
+
+            let mut stmts: Vec<Stmt> = vec![decl];
+
+            built_arms.reverse();
+            let mut iter = built_arms.iter();
+            let first = match iter.next() {
+                Some((cond, block)) => {
                     match cond {
                         Some(cond) => Stmt::If(IfStmt {
                             span: DUMMY_SP,
-                            test: Box::from(cond),
-                            cons: Box::from(Stmt::Block(block)),
+                            test: Box::from(cond.to_owned()),
+                            cons: Box::from(Stmt::Block(block.to_owned())),
                             alt: None,
                         }),
-                        None => Stmt::Block(block),
+                        None => Stmt::Block(block.to_owned()),
                     }
+                },
+                None => panic!("No arms in match"),
+            };
+            let if_else = iter.fold(first, |prev, (cond, block)| {
+                Stmt::If(IfStmt {
+                    span: DUMMY_SP,
+                    test: Box::from(cond.to_owned().unwrap()),
+                    cons: Box::from(Stmt::Block(block.to_owned())),
+                    alt: Some(Box::from(prev)),
                 })
-                .collect();
+            });
 
-            stmts.insert(0, decl);
+            stmts.push(if_else);
 
             let block = BlockStmt {
                 span: DUMMY_SP,
@@ -582,6 +607,7 @@ fn build_arm(arm: &ast::Arm, id: &Ident) -> (Option<Expr>, BlockStmt) {
     let ast::Arm {
         pattern: pat,
         expr: consequent,
+        guard,
         ..
     } = arm;
 
@@ -609,6 +635,22 @@ fn build_arm(arm: &ast::Arm, id: &Ident) -> (Option<Expr>, BlockStmt) {
 
         block.stmts.insert(0, destructure);
     }
+
+    let cond = match (cond, guard) {
+        (Some(cond), Some(guard)) => {
+            // If the pattern was refutable and there's a guard then
+            // we return them logically AND-ed together.
+            Some(Expr::Bin(BinExpr {
+                span: DUMMY_SP,
+                op: BinaryOp::LogicalAnd,
+                left: Box::from(cond),
+                right: Box::from(build_expr(guard)),
+            }))
+        },
+        (Some(cond), None) => Some(cond),
+        (None, Some(guard)) => Some(build_expr(guard)),
+        (None, None) => None,
+    };
 
     (cond, block)
 }

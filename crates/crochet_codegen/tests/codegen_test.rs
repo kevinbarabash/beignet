@@ -52,24 +52,31 @@ fn pattern_matching() {
         0 => "none",
         1 => "one",
         2 => "a couple",
-        _ => "many",
+        n if n < 5 => {
+            console.log(`n = ${n}`);
+            "a few"
+        },
+        _ => {
+            console.log("fallthrough");
+            "many"
+        },
     }
     "#;
-    // n if n < 5 => "a few",
-    // _ => "many",
     insta::assert_snapshot!(compile(src), @r###"
     export const result = (()=>{
         const value = count + 1;
         if (value === 0) {
             return "none";
-        }
-        if (value === 1) {
+        } else if (value === 1) {
             return "one";
-        }
-        if (value === 2) {
+        } else if (value === 2) {
             return "a couple";
-        }
-        {
+        } else if (n < 5) {
+            const n = value;
+            console.log(`n = ${n}`);
+            return "a few";
+        } else {
+            console.log("fallthrough");
             return "many";
         }
     })();
@@ -83,7 +90,7 @@ fn pattern_matching_with_disjoint_union() {
     declare let event: Event
     let result = match event {
         {type: "mousedown", x, y} => `mousedown: (${x}, ${y})`,
-        {type: "keydown", key} => key,
+        {type: "keydown", key} if key != "Escape" => key,
     }
     "#;
     insta::assert_snapshot!(compile(src), @r###"
@@ -94,11 +101,34 @@ fn pattern_matching_with_disjoint_union() {
         if (value.type === "mousedown") {
             const { x , y  } = value;
             return `mousedown: (${x}, ${y})`;
-        }
-        if (value.type === "keydown") {
+        } else if (value.type === "keydown" && key !== "Escape") {
             const { key  } = value;
             return key;
         }
     })();
     "###);
+}
+
+#[test]
+#[should_panic = "Catchall must appear last in match"]
+fn pattern_matching_multiple_catchall_panics() {
+    let src = r#"
+    let result = match value {
+        n => "foo",
+        _ => "bar",
+    }
+    "#;
+    
+    compile(src);
+}
+
+#[test]
+#[should_panic = "No arms in match"]
+fn pattern_matching_no_arms_panics() {
+    let src = r#"
+    let result = match value {
+    }
+    "#;
+    
+    compile(src);
 }
