@@ -44,3 +44,30 @@ fn tagged_template_literals() {
     export const query = sql`SELECT * FROM users WHERE id = "${id}"`;
     "###);
 }
+
+#[test]
+fn pattern_matching() {
+    let src = r#"
+    let result = match count + 1 {
+        0 => "none",
+        1 => "one",
+        2 => "a couple",
+    }
+    "#;
+    // n if n < 5 => "a few",
+    // _ => "many",
+    insta::assert_snapshot!(compile(src), @r###"
+    export const result = (()=>{
+        const value = count + 1;
+        if (value === 0) {
+            return "none";
+        }
+        if (value === 1) {
+            return "one";
+        }
+        if (value === 2) {
+            return "a couple";
+        }
+    })();
+    "###);
+}

@@ -65,20 +65,24 @@ fn build_js(program: &ast::Program) -> Program {
                     // It should be okay to unwrap this here since any decl that isn't
                     // using `declare` should have an initial value.
                     let init = init.as_ref().unwrap();
-                    ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                        span: DUMMY_SP,
-                        decl: Decl::Var(VarDecl {
+
+                    match build_pattern(pattern) {
+                        Some(name) => ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                             span: DUMMY_SP,
-                            kind: VarDeclKind::Const,
-                            declare: false,
-                            decls: vec![VarDeclarator {
+                            decl: Decl::Var(VarDecl {
                                 span: DUMMY_SP,
-                                name: build_pattern(pattern),
-                                init: Some(Box::from(build_expr(init))),
-                                definite: false,
-                            }],
-                        }),
-                    }))
+                                kind: VarDeclKind::Const,
+                                declare: false,
+                                decls: vec![VarDeclarator {
+                                    span: DUMMY_SP,
+                                    name,
+                                    init: Some(Box::from(build_expr(init))),
+                                    definite: false,
+                                }],
+                            }),
+                        })),
+                        None => todo!(),
+                    }
                 }
             },
             ast::Statement::TypeDecl { .. } => {
@@ -98,13 +102,17 @@ fn build_js(program: &ast::Program) -> Program {
     })
 }
 
-pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
+pub fn build_pattern(pattern: &ast::Pattern) -> Option<Pat> {
     match pattern {
-        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
+        // unassignable patterns
+        ast::Pattern::Lit(_) => None,
+        ast::Pattern::Wildcard(_) => None,
+
+        // assignable patterns
+        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => Some(Pat::Ident(BindingIdent {
             id: build_ident(id),
             type_ann: None,
-        }),
-        ast::Pattern::Wildcard(_) => todo!(),
+        })),
         ast::Pattern::Rest(_) => todo!(),
         ast::Pattern::Object(ast::ObjectPat {
             props, optional, ..
@@ -112,14 +120,14 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
             let props: Vec<ObjectPatProp> = props
                 .iter()
                 .filter_map(|p| match p {
-                    ast::ObjectPatProp::KeyValue(kvp) => match kvp.value.as_ref() {
-                        // Prevents literals from appearing in patterns during destructuring.
-                        ast::Pattern::Lit(_) => None,
-                        _ => Some(ObjectPatProp::KeyValue(KeyValuePatProp {
-                            key: PropName::Ident(Ident::from(&kvp.key)),
-                            value: Box::from(build_pattern(kvp.value.as_ref())),
-                        })),
-                    },
+                    ast::ObjectPatProp::KeyValue(kvp) => {
+                        build_pattern(kvp.value.as_ref()).map(|value| {
+                            ObjectPatProp::KeyValue(KeyValuePatProp {
+                                key: PropName::Ident(Ident::from(&kvp.key)),
+                                value: Box::from(value),
+                            })
+                        })
+                    }
                     ast::ObjectPatProp::Assign(ap) => Some(ObjectPatProp::Assign(AssignPatProp {
                         span: DUMMY_SP,
                         key: Ident::from(&ap.key),
@@ -132,12 +140,12 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
                 })
                 .collect();
 
-            Pat::Object(ObjectPat {
+            Some(Pat::Object(ObjectPat {
                 span: DUMMY_SP,
                 optional: optional.to_owned(),
                 type_ann: None, // because we're generating .js
                 props,
-            })
+            }))
         }
         ast::Pattern::Array(ast::ArrayPat {
             elems, optional, ..
@@ -145,29 +153,24 @@ pub fn build_pattern(pattern: &ast::Pattern) -> Pat {
             let elems: Vec<Option<Pat>> = elems
                 .iter()
                 .map(|elem| match elem {
-                    Some(elem) => match elem {
-                        // Prevents literals from appearing in patterns during destructuring.
-                        ast::Pattern::Lit(_) => None,
-                        _ => Some(build_pattern(elem)),
-                    },
+                    Some(elem) => build_pattern(elem),
                     None => None,
                 })
                 .collect();
 
             // TODO: If all elems are None, we can drop the array pattern.
 
-            Pat::Array(ArrayPat {
+            Some(Pat::Array(ArrayPat {
                 span: DUMMY_SP,
                 elems,
                 optional: optional.to_owned(),
                 type_ann: None, // because we're generating .js.
-            })
+            }))
         }
-        ast::Pattern::Lit(_) => todo!(),
-        ast::Pattern::Is(ast::IsPat { id, .. }) => Pat::Ident(BindingIdent {
+        ast::Pattern::Is(ast::IsPat { id, .. }) => Some(Pat::Ident(BindingIdent {
             id: build_ident(id),
             type_ann: None,
-        }),
+        })),
     }
 }
 
@@ -358,19 +361,6 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                             optional: false,
                         };
 
-                        // TODO: ignore the refutuable patterns when destructuring
-                        let destructure = Stmt::Decl(Decl::Var(VarDecl {
-                            span: DUMMY_SP,
-                            kind: VarDeclKind::Const,
-                            declare: false,
-                            decls: vec![VarDeclarator {
-                                span: DUMMY_SP,
-                                name: build_pattern(pat),
-                                init: Some(Box::from(Expr::from(id.clone()))),
-                                definite: false,
-                            }],
-                        }));
-
                         // TODO: only introduce a new decl, if expr isn't an Ident
                         let decl = Stmt::Decl(Decl::Var(VarDecl {
                             span: DUMMY_SP,
@@ -387,7 +377,22 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                         let cond = build_cond_for_pat(pat, &id).unwrap();
 
                         let mut cons = build_return_block(consequent.as_ref());
-                        cons.stmts.insert(0, destructure);
+
+                        if let Some(name) = build_pattern(pat) {
+                            // TODO: ignore the refutuable patterns when destructuring
+                            let destructure = Stmt::Decl(Decl::Var(VarDecl {
+                                span: DUMMY_SP,
+                                kind: VarDeclKind::Const,
+                                declare: false,
+                                decls: vec![VarDeclarator {
+                                    span: DUMMY_SP,
+                                    name,
+                                    init: Some(Box::from(Expr::from(id))),
+                                    definite: false,
+                                }],
+                            }));
+                            cons.stmts.insert(0, destructure);
+                        }
 
                         let stmts = vec![
                             decl,
@@ -404,20 +409,22 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                             stmts,
                         })
                     } else {
-                        let destructure = Stmt::Decl(Decl::Var(VarDecl {
-                            span: DUMMY_SP,
-                            kind: VarDeclKind::Const,
-                            declare: false,
-                            decls: vec![VarDeclarator {
-                                span: DUMMY_SP,
-                                name: build_pattern(pat),
-                                init: Some(Box::from(build_expr(expr))),
-                                definite: false,
-                            }],
-                        }));
-
                         let mut block = build_return_block(consequent.as_ref());
-                        block.stmts.insert(0, destructure);
+
+                        if let Some(name) = build_pattern(pat) {
+                            let destructure = Stmt::Decl(Decl::Var(VarDecl {
+                                span: DUMMY_SP,
+                                kind: VarDeclKind::Const,
+                                declare: false,
+                                decls: vec![VarDeclarator {
+                                    span: DUMMY_SP,
+                                    name,
+                                    init: Some(Box::from(build_expr(expr))),
+                                    definite: false,
+                                }],
+                            }));
+                            block.stmts.insert(0, destructure);
+                        }
 
                         BlockStmtOrExpr::BlockStmt(block)
                     };
@@ -528,9 +535,116 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
                 tpl: build_template_literal(template),
             })
         }
-        ast::Expr::Match(_) => {
-            todo!()
+        ast::Expr::Match(ast::Match { expr, arms, .. }) => {
+            let id = Ident {
+                span: DUMMY_SP,
+                sym: JsWord::from(String::from("value")),
+                optional: false,
+            };
+
+            let decl = Stmt::Decl(Decl::Var(VarDecl {
+                span: DUMMY_SP,
+                kind: VarDeclKind::Const,
+                declare: false,
+                decls: vec![VarDeclarator {
+                    span: DUMMY_SP,
+                    name: Pat::Ident(BindingIdent::from(id.clone())),
+                    init: Some(Box::from(build_expr(expr))),
+                    definite: false,
+                }],
+            }));
+
+            let mut stmts: Vec<Stmt> = arms
+                .iter()
+                .map(|arm| {
+                    let (cond, block) = build_arm(&id, arm);
+
+                    Stmt::If(IfStmt {
+                        span: DUMMY_SP,
+                        test: Box::from(cond.unwrap()),
+                        cons: Box::from(Stmt::Block(block)),
+                        alt: None, // TODO: handle chaining of if-let with else
+                    })
+                })
+                .collect();
+
+            stmts.insert(0, decl);
+
+            let block = BlockStmt {
+                span: DUMMY_SP,
+                stmts,
+            };
+
+            build_iife(BlockStmtOrExpr::BlockStmt(block))
         }
+    }
+}
+
+fn build_arm(expr_id: &Ident, arm: &ast::Arm) -> (Option<Expr>, BlockStmt) {
+    let ast::Arm {
+        pattern: pat,
+        expr: consequent,
+        ..
+    } = arm;
+    if ast::is_refutable(pat) {
+
+        let cond = build_cond_for_pat(pat, expr_id).unwrap();
+
+        let mut cons = build_return_block(consequent);
+
+        if let Some(name) = build_pattern(pat) {
+            // TODO: ignore the refutuable patterns when destructuring
+            let destructure = Stmt::Decl(Decl::Var(VarDecl {
+                span: DUMMY_SP,
+                kind: VarDeclKind::Const,
+                declare: false,
+                decls: vec![VarDeclarator {
+                    span: DUMMY_SP,
+                    name,
+                    init: Some(Box::from(Expr::from(expr_id.to_owned()))),
+                    definite: false,
+                }],
+            }));
+            cons.stmts.insert(0, destructure);
+        }
+
+        (Some(cond), cons)
+
+        // let stmts = vec![
+        //     Stmt::If(IfStmt {
+        //         span: DUMMY_SP,
+        //         test: Box::from(cond),
+        //         cons: Box::from(Stmt::Block(cons)),
+        //         alt: None, // TODO: handle chaining of if-let with else
+        //     }),
+        // ];
+
+        // BlockStmtOrExpr::BlockStmt(BlockStmt {
+        //     span: DUMMY_SP,
+        //     stmts,
+        // })
+    } else {
+        let mut block = build_return_block(consequent);
+
+        if let Some(name) = build_pattern(pat) {
+            let destructure = Stmt::Decl(Decl::Var(VarDecl {
+                span: DUMMY_SP,
+                kind: VarDeclKind::Const,
+                declare: false,
+                decls: vec![VarDeclarator {
+                    span: DUMMY_SP,
+                    name,
+                    init: Some(Box::from(Expr::from(expr_id.to_owned()))),
+                    definite: false,
+                }],
+            }));
+
+            block.stmts.insert(0, destructure);
+        }
+
+        // BlockStmtOrExpr::BlockStmt(block)
+
+        (None, block)
     }
 }
 
@@ -678,17 +792,20 @@ fn let_to_child(r#let: &ast::Let) -> Stmt {
     // TODO: handle shadowed variables in the same scope by introducing
     // unique identifiers.
     match pattern {
-        Some(pattern) => Stmt::Decl(Decl::Var(VarDecl {
-            span: DUMMY_SP,
-            kind: VarDeclKind::Const,
-            declare: false,
-            decls: vec![VarDeclarator {
+        Some(pattern) => match build_pattern(pattern) {
+            Some(name) => Stmt::Decl(Decl::Var(VarDecl {
                 span: DUMMY_SP,
-                name: build_pattern(pattern),
-                init: Some(Box::from(build_expr(init))),
-                definite: false,
-            }],
-        })),
+                kind: VarDeclKind::Const,
+                declare: false,
+                decls: vec![VarDeclarator {
+                    span: DUMMY_SP,
+                    name,
+                    init: Some(Box::from(build_expr(init))),
+                    definite: false,
+                }],
+            })),
+            None => todo!(),
+        },
         None => Stmt::Expr(ExprStmt {
             span: DUMMY_SP,
             expr: Box::from(build_expr(init)),
