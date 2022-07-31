@@ -479,32 +479,50 @@ pub fn build_expr(expr: &ast::Expr) -> Expr {
             // TODO: we want to stop when we encounter the first
             // irrefutable pattern since all subsequent patterns
             // shouldn't be matched.
-            let mut stmts: Vec<Stmt> = vec![decl];
             let mut has_catchall: bool = false;
-
+            let mut built_arms: Vec<(_, _)> = vec![];
             for arm in arms {
-                let (cond, block) = build_arm(arm, &id);
-
-                // TODO: codegen this as if/else if/else
-                match cond {
-                    Some(cond) => {
-                        stmts.push(Stmt::If(IfStmt {
-                            span: DUMMY_SP,
-                            test: Box::from(cond),
-                            cons: Box::from(Stmt::Block(block)),
-                            alt: None,
-                        }));
-                    },
-                    None => {
-                        // TODO: do this check earlier in the process
-                        if has_catchall {
-                            panic!("match can only have one catchall");
-                        }
-                        stmts.extend(block.stmts);
-                        has_catchall = true
-                    },
+                if has_catchall {
+                    panic!("Catchall must appear last in match");
                 }
+
+                let (cond, block) = build_arm(arm, &id);
+                
+                if cond.is_none() {
+                    has_catchall = true
+                }
+
+                built_arms.push((cond, block));
             }
+
+            let mut stmts: Vec<Stmt> = vec![decl];
+
+            built_arms.reverse();
+            let mut iter = built_arms.iter();
+            let first = match iter.next() {
+                Some((cond, block)) => {
+                    match cond {
+                        Some(cond) => Stmt::If(IfStmt {
+                            span: DUMMY_SP,
+                            test: Box::from(cond.to_owned()),
+                            cons: Box::from(Stmt::Block(block.to_owned())),
+                            alt: None,
+                        }),
+                        None => Stmt::Block(block.to_owned()),
+                    }
+                },
+                None => panic!("No arms in match"),
+            };
+            let if_else = iter.fold(first, |prev, (cond, block)| {
+                Stmt::If(IfStmt {
+                    span: DUMMY_SP,
+                    test: Box::from(cond.to_owned().unwrap()),
+                    cons: Box::from(Stmt::Block(block.to_owned())),
+                    alt: Some(Box::from(prev)),
+                })
+            });
+
+            stmts.push(if_else);
 
             let block = BlockStmt {
                 span: DUMMY_SP,

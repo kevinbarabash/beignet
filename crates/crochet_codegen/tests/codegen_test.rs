@@ -67,20 +67,18 @@ fn pattern_matching() {
         const value = count + 1;
         if (value === 0) {
             return "none";
-        }
-        if (value === 1) {
+        } else if (value === 1) {
             return "one";
-        }
-        if (value === 2) {
+        } else if (value === 2) {
             return "a couple";
-        }
-        if (n < 5) {
+        } else if (n < 5) {
             const n = value;
             console.log(`n = ${n}`);
             return "a few";
+        } else {
+            console.log("fallthrough");
+            return "many";
         }
-        console.log("fallthrough");
-        return "many";
     })();
     "###);
 }
@@ -103,8 +101,7 @@ fn pattern_matching_with_disjoint_union() {
         if (value.type === "mousedown") {
             const { x , y  } = value;
             return `mousedown: (${x}, ${y})`;
-        }
-        if (value.type === "keydown" && key !== "Escape") {
+        } else if (value.type === "keydown" && key !== "Escape") {
             const { key  } = value;
             return key;
         }
@@ -113,12 +110,23 @@ fn pattern_matching_with_disjoint_union() {
 }
 
 #[test]
-#[should_panic = "match can only have one catchall"]
+#[should_panic = "Catchall must appear last in match"]
 fn pattern_matching_multiple_catchall_panics() {
     let src = r#"
     let result = match value {
         n => "foo",
         _ => "bar",
+    }
+    "#;
+    
+    compile(src);
+}
+
+#[test]
+#[should_panic = "No arms in match"]
+fn pattern_matching_no_arms_panics() {
+    let src = r#"
+    let result = match value {
     }
     "#;
     
