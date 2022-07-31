@@ -418,6 +418,21 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             // - rest params
             todo!()
         }
+        Expr::Match(Match {expr, arms, ..}) => {
+            // TODO: warn if the pattern isn't refutable
+            let mut ss: Vec<Subst> = vec![];
+            let mut ts: Vec<Type> = vec![];
+            for arm in arms {
+                let (s, t) = infer_let(&arm.pattern, expr, &arm.expr, ctx, &PatternUsage::Match)?;
+                ss.push(s);
+                ts.push(t);
+            }
+            
+            let s = compose_many_subs(&ss);
+            let t = union_many_types(&ts, ctx);
+
+            Ok((s, t))
+        }
     };
 
     let (s, t) = result?;

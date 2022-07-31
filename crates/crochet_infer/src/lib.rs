@@ -1855,4 +1855,94 @@ mod tests {
         
         infer_prog(src);
     }
+
+    #[test]
+    fn basic_pattern_matching() {
+        let src = r#"
+        declare let count: number
+        let result = match count {
+            0 => "none",
+            1 => "one",
+            2 => "a couple",
+            n if n < 5 => "a few",
+            _ => "many",
+        }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), r#""none" | "one" | "a couple" | "a few" | "many""#);
+    }
+
+    #[test]
+    fn pattern_matching_with_disjoint_union() {
+        let src = r#"
+        type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}
+        declare let event: Event
+        let result = match event {
+            {type: "mousedown", x, y} => `mousedown: (${x}, ${y})`,
+            {type: "keydown", key} => key,
+        }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "string");
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn pattern_matching_with_disjoint_union_incorrect_result_type() {
+        // The return type of a `match` expression is the union of all of the return types of
+        // each of the arms.  If you want to ensure that all arms return a common type then you'll
+        // need to add an explicit type annotation to the variable that the match is being assigned
+        // to.
+        let src = r#"
+        type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}
+        declare let event: Event
+        let result: string = match event {
+            {type: "mousedown", x, y} => x + y,
+            {type: "keydown", key} => key,
+        }
+        "#;
+        
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic="Unification failure"]
+    fn pattern_matching_with_disjoint_union_does_not_match_fn_return_type() {
+        // The return type of a `match` expression is the union of all of the return types of
+        // each of the arms.  If you want to ensure that all arms return a common type then you'll
+        // need to add an explicit type annotation to the variable that the match is being assigned
+        // to.
+        let src = r#"
+        type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}
+        declare let event: Event
+        let print = (event: Event): string => {
+            match event {
+                {type: "mousedown", x, y} => x + y,
+                {type: "keydown", key} => key,
+            }
+        }
+        "#;
+        
+        infer_prog(src);
+    }
+
+    #[test]
+    fn if_let_disjoint_union() {
+        let src = r#"
+        type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}
+        declare let event: Event
+        let result = if let {type: "mousedown", x, y} = event {
+            `mousedown: (${x}, ${y})`
+        } else if let {type: "keydown", key} = event {
+            key
+        } else {
+            ""
+        }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "string");
+    }
 }

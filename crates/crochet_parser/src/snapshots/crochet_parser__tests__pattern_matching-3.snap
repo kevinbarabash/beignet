@@ -1,0 +1,47 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(r#\"match expr {\n                5 => \"five\",\n            }\"#)"
+---
+Program {
+    body: [
+        Expr {
+            span: 0..55,
+            expr: Match(
+                Match {
+                    span: 0..55,
+                    expr: Ident(
+                        Ident {
+                            span: 6..10,
+                            name: "expr",
+                        },
+                    ),
+                    arms: [
+                        Arm {
+                            span: 29..40,
+                            pattern: Lit(
+                                LitPat {
+                                    span: 29..30,
+                                    lit: Num(
+                                        Num {
+                                            span: 29..30,
+                                            value: "5",
+                                        },
+                                    ),
+                                },
+                            ),
+                            guard: None,
+                            expr: Lit(
+                                Str(
+                                    Str {
+                                        span: 34..40,
+                                        value: "five",
+                                    },
+                                ),
+                            ),
+                        },
+                    ],
+                },
+            ),
+        },
+    ],
+}
