@@ -157,3 +157,34 @@ fn simple_if_else() {
     export const result = temp;
     "###);
 }
+
+#[test]
+fn simple_if_else_inside_fn() {
+    let src = r#"
+    let foo = () => {
+        let result = if cond {
+            console.log("true");
+            5
+        } else {
+            console.log("false");
+            10
+        };
+        result
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const foo = ()=>{
+        let temp;
+        if (cond) {
+            console.log("true");
+            temp = 5;
+        } else {
+            console.log("false");
+            temp = 10;
+        }
+        const result = temp;
+        return result;
+    };
+    "###);
+}

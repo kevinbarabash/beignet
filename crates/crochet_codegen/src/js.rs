@@ -439,10 +439,6 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                     alt,
                 }));
 
-                // let body = BlockStmtOrExpr::BlockStmt(BlockStmt {
-                //     span: DUMMY_SP,
-                //     stmts,
-                // });
                 Expr::Ident(Ident {
                     span: DUMMY_SP,
                     sym: JsWord::from(String::from("temp")),
@@ -874,10 +870,12 @@ pub fn let_to_children(r#let: &ast::Let) -> Vec<Stmt> {
     }));
 
     // TODO:
-    // preprend children with the contents of `stmts`
+    // This works right now, but for more complicated blocks we'll
+    // want to intersperse stmts and children.
     println!("let_to_children - stmts = {stmts:#?}");
+    stmts.append(&mut children);
 
-    children
+    stmts
 }
 
 // TODO: have an intermediary from between the AST and what we used for
