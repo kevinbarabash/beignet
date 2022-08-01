@@ -375,13 +375,13 @@ fn codegen_if_else() {
     let js = codegen_js(&program);
     insta::assert_snapshot!(js, @r###"
     export const cond = true;
-    export const result = (()=>{
-        if (cond) {
-            return 5;
-        } else {
-            return 5;
-        }
-    })();
+    let temp;
+    if (cond) {
+        temp = 5;
+    } else {
+        temp = 5;
+    }
+    export const result = temp;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);

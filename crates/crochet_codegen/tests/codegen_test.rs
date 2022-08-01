@@ -118,7 +118,7 @@ fn pattern_matching_multiple_catchall_panics() {
         _ => "bar",
     }
     "#;
-    
+
     compile(src);
 }
 
@@ -129,6 +129,31 @@ fn pattern_matching_no_arms_panics() {
     let result = match value {
     }
     "#;
-    
+
     compile(src);
+}
+
+#[test]
+fn simple_if_else() {
+    let src = r#"
+    let result = if cond {
+        console.log("true");
+        5
+    } else {
+        console.log("false");
+        10
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    let temp;
+    if (cond) {
+        console.log("true");
+        temp = 5;
+    } else {
+        console.log("false");
+        temp = 10;
+    }
+    export const result = temp;
+    "###);
 }
