@@ -63,23 +63,22 @@ fn pattern_matching() {
     }
     "#;
     insta::assert_snapshot!(compile(src), @r###"
-    export const result = (()=>{
-        const value = count + 1;
-        if (value === 0) {
-            return "none";
-        } else if (value === 1) {
-            return "one";
-        } else if (value === 2) {
-            return "a couple";
-        } else if (n < 5) {
-            const n = value;
-            console.log(`n = ${n}`);
-            return "a few";
-        } else {
-            console.log("fallthrough");
-            return "many";
-        }
-    })();
+    const $temp_0 = count + 1;
+    if ($temp_0 === 0) {
+        $temp_0 = "none";
+    } else if ($temp_0 === 1) {
+        $temp_0 = "one";
+    } else if ($temp_0 === 2) {
+        $temp_0 = "a couple";
+    } else if (n < 5) {
+        const n = $temp_0;
+        console.log(`n = ${n}`);
+        $temp_0 = "a few";
+    } else {
+        console.log("fallthrough");
+        $temp_0 = "many";
+    }
+    export const result = $temp_0;
     "###);
 }
 
@@ -96,16 +95,15 @@ fn pattern_matching_with_disjoint_union() {
     insta::assert_snapshot!(compile(src), @r###"
     ;
     ;
-    export const result = (()=>{
-        const value = event;
-        if (value.type === "mousedown") {
-            const { x , y  } = value;
-            return `mousedown: (${x}, ${y})`;
-        } else if (value.type === "keydown" && key !== "Escape") {
-            const { key  } = value;
-            return key;
-        }
-    })();
+    const $temp_0 = event;
+    if ($temp_0.type === "mousedown") {
+        const { x , y  } = $temp_0;
+        $temp_0 = `mousedown: (${x}, ${y})`;
+    } else if ($temp_0.type === "keydown" && key !== "Escape") {
+        const { key  } = $temp_0;
+        $temp_0 = key;
+    }
+    export const result = $temp_0;
     "###);
 }
 

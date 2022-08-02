@@ -539,11 +539,12 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) ->
             })
         }
         ast::Expr::Match(ast::Match { expr, arms, .. }) => {
-            let id = Ident {
+            let temp_id = Ident {
                 span: DUMMY_SP,
-                sym: JsWord::from(String::from("value")),
+                sym: JsWord::from(format!("$temp_{}", ctx.temp_id)),
                 optional: false,
             };
+            ctx.temp_id += 1;
 
             let decl = Stmt::Decl(Decl::Var(VarDecl {
                 span: DUMMY_SP,
@@ -551,7 +552,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) ->
                 declare: false,
                 decls: vec![VarDeclarator {
                     span: DUMMY_SP,
-                    name: Pat::Ident(BindingIdent::from(id.clone())),
+                    name: Pat::Ident(BindingIdent::from(temp_id.clone())),
                     init: Some(Box::from(build_expr(expr, stmts, ctx))),
                     definite: false,
                 }],
@@ -567,7 +568,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) ->
                     panic!("Catchall must appear last in match");
                 }
 
-                let (cond, block) = build_arm(arm, &id, stmts, ctx);
+                let (cond, block) = build_arm(arm, &temp_id, stmts, ctx);
 
                 if cond.is_none() {
                     has_catchall = true
@@ -576,8 +577,11 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) ->
                 built_arms.push((cond, block));
             }
 
-            let mut stmts: Vec<Stmt> = vec![decl];
+            stmts.push(decl); 
 
+            // We reverse the order of the arms because when building
+            // an if/else-if/else chain we need to start with the `else`
+            // and work our way back to the initial `if`.
             built_arms.reverse();
             let mut iter = built_arms.iter();
             let first = match iter.next() {
@@ -592,6 +596,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) ->
                 },
                 None => panic!("No arms in match"),
             };
+
             let if_else = iter.fold(first, |prev, (cond, block)| {
                 Stmt::If(IfStmt {
                     span: DUMMY_SP,
@@ -603,12 +608,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) ->
 
             stmts.push(if_else);
 
-            let block = BlockStmt {
-                span: DUMMY_SP,
-                stmts,
-            };
-
-            build_iife(BlockStmtOrExpr::BlockStmt(block))
+            Expr::Ident(temp_id)
         }
     }
 }
@@ -702,7 +702,8 @@ fn build_arm(
 
     let cond = build_cond_for_pat(pat, id);
 
-    let mut block = build_return_block(consequent, stmts, ctx);
+    let mut block = build_expr_in_new_scope(consequent, id, ctx);
+    // let mut block = build_return_block(consequent, stmts, ctx);
 
     // If pattern has assignables, assign them
     if let Some(name) = build_pattern(pat, stmts, ctx) {
