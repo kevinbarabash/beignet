@@ -123,7 +123,7 @@ fn build_js(program: &ast::Program, ctx: &mut Context) -> Program {
     })
 }
 
-pub fn build_pattern(
+fn build_pattern(
     pattern: &ast::Pattern,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
@@ -199,24 +199,7 @@ pub fn build_pattern(
     }
 }
 
-pub fn build_return_block(body: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> BlockStmt {
-    match body {
-        // Avoids wrapping in an IIFE when it isn't necessary.
-        ast::Expr::Let(r#let) => BlockStmt {
-            span: DUMMY_SP,
-            stmts: let_to_children(r#let, ctx),
-        },
-        _ => BlockStmt {
-            span: DUMMY_SP,
-            stmts: vec![Stmt::Return(ReturnStmt {
-                span: DUMMY_SP,
-                arg: Some(Box::from(build_expr(body, stmts, ctx))),
-            })],
-        },
-    }
-}
-
-pub fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Context) -> BlockStmt {
+fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Context) -> BlockStmt {
     let mut stmts: Vec<Stmt> = vec![];
 
     let expr = if let ast::Expr::Let(r#let) = expr {
@@ -245,7 +228,7 @@ pub fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Cont
     }
 }
 
-pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
+fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
     match expr {
         ast::Expr::App(ast::App { lam, args, .. }) => {
             let callee = Callee::Expr(Box::from(build_expr(lam.as_ref(), stmts, ctx)));
@@ -779,31 +762,7 @@ fn build_arm(
     (cond, block)
 }
 
-// fn build_iife(body: BlockStmtOrExpr) -> Expr {
-//     let arrow = Expr::Arrow(ArrowExpr {
-//         span: DUMMY_SP,
-//         params: vec![],
-//         body,
-//         is_async: false,
-//         is_generator: false,
-//         type_params: None,
-//         return_type: None,
-//     });
-
-//     let callee = Callee::Expr(Box::from(Expr::Paren(ParenExpr {
-//         span: DUMMY_SP,
-//         expr: Box::from(arrow),
-//     })));
-
-//     Expr::Call(CallExpr {
-//         span: DUMMY_SP,
-//         callee,
-//         args: vec![],
-//         type_args: None,
-//     })
-// }
-
-pub fn build_jsx_element(
+fn build_jsx_element(
     elem: &ast::JSXElement,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
@@ -881,7 +840,7 @@ pub fn build_jsx_element(
     elem
 }
 
-pub fn build_lit(lit: &ast::Lit) -> Lit {
+fn build_lit(lit: &ast::Lit) -> Lit {
     match lit {
         ast::Lit::Num(n) => Lit::Num(Number {
             span: DUMMY_SP,
@@ -907,7 +866,7 @@ pub fn build_lit(lit: &ast::Lit) -> Lit {
 // TODO: have an intermediary from between the AST and what we used for
 // codegen that unwraps `Let` nodes into vectors before converting them
 // to statements.
-pub fn let_to_children(r#let: &ast::Let, ctx: &mut Context) -> Vec<Stmt> {
+fn let_to_children(r#let: &ast::Let, ctx: &mut Context) -> Vec<Stmt> {
     let mut stmts: Vec<Stmt> = vec![];
 
     let mut children: Vec<Stmt> = vec![let_to_child(r#let, &mut stmts, ctx)];
@@ -935,7 +894,7 @@ pub fn let_to_children(r#let: &ast::Let, ctx: &mut Context) -> Vec<Stmt> {
 // TODO: have an intermediary from between the AST and what we used for
 // codegen that unwraps `Let` nodes into vectors before converting them
 // to statements.
-pub fn let_to_children_no_return(
+fn let_to_children_no_return(
     r#let: &ast::Let,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
