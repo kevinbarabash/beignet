@@ -16,6 +16,18 @@ pub struct Context {
     pub temp_id: u32,
 }
 
+impl Context {
+    pub fn new_ident(&mut self) -> Ident {
+        let ident = Ident {
+            span: DUMMY_SP,
+            sym: JsWord::from(format!("$temp_{}", self.temp_id)),
+            optional: false,
+        };
+        self.temp_id += 1;
+        ident
+    }
+}
+
 pub fn codegen_js(program: &ast::Program) -> String {
     let mut ctx = Context { temp_id: 0 };
     let program = build_js(program, &mut ctx);
@@ -85,7 +97,9 @@ fn build_js(program: &ast::Program, ctx: &mut Context) -> Program {
                                         decls: vec![VarDeclarator {
                                             span: DUMMY_SP,
                                             name,
-                                            init: Some(Box::from(build_expr(init, &mut stmts, ctx))),
+                                            init: Some(Box::from(build_expr(
+                                                init, &mut stmts, ctx,
+                                            ))),
                                             definite: false,
                                         }],
                                     }),
@@ -123,11 +137,7 @@ fn build_js(program: &ast::Program, ctx: &mut Context) -> Program {
     })
 }
 
-fn build_pattern(
-    pattern: &ast::Pattern,
-    stmts: &mut Vec<Stmt>,
-    ctx: &mut Context,
-) -> Option<Pat> {
+fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Option<Pat> {
     match pattern {
         // unassignable patterns
         ast::Pattern::Lit(_) => None,
@@ -391,38 +401,23 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
         }) => match cond.as_ref() {
             ast::Expr::LetExpr(let_expr) => build_let_expr(let_expr, consequent, stmts, ctx),
             _ => {
-                let temp_id = Ident {
-                    span: DUMMY_SP,
-                    sym: JsWord::from(format!("$temp_{}", ctx.temp_id)),
-                    optional: false,
-                };
-                ctx.temp_id += 1;
-
-                // TODO:
-                // - `let temp` (empty variable declaration, must be unique)
-                // - change all returns to be `temp = <ret_val>`
-                // - return `temp` as the value of the expression
-                let decl = Stmt::Decl(Decl::Var(VarDecl {
-                    span: DUMMY_SP,
-                    kind: VarDeclKind::Let,
-                    decls: vec![VarDeclarator {
-                        span: DUMMY_SP,
-                        name: Pat::Ident(BindingIdent {
-                            id: temp_id.clone(),
-                            type_ann: None,
-                        }),
-                        init: None,
-                        definite: false,
-                    }],
-                    declare: false,
-                }));
+                let temp_id = ctx.new_ident();
+                let decl = build_let_with_id(&temp_id);
                 stmts.push(decl);
 
                 let test = Box::from(build_expr(cond.as_ref(), stmts, ctx));
-                let cons = Box::from(Stmt::Block(build_expr_in_new_scope(consequent.as_ref(), &temp_id, ctx)));
-                let alt = alternate
-                    .as_ref()
-                    .map(|alt| Box::from(Stmt::Block(build_expr_in_new_scope(alt.as_ref(), &temp_id, ctx))));
+                let cons = Box::from(Stmt::Block(build_expr_in_new_scope(
+                    consequent.as_ref(),
+                    &temp_id,
+                    ctx,
+                )));
+                let alt = alternate.as_ref().map(|alt| {
+                    Box::from(Stmt::Block(build_expr_in_new_scope(
+                        alt.as_ref(),
+                        &temp_id,
+                        ctx,
+                    )))
+                });
 
                 stmts.push(Stmt::If(IfStmt {
                     span: DUMMY_SP,
@@ -470,7 +465,9 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
             span: DUMMY_SP,
             arg: Box::from(build_expr(expr.as_ref(), stmts, ctx)),
         }),
-        ast::Expr::JSXElement(elem) => Expr::JSXElement(Box::from(build_jsx_element(elem, stmts, ctx))),
+        ast::Expr::JSXElement(elem) => {
+            Expr::JSXElement(Box::from(build_jsx_element(elem, stmts, ctx)))
+        }
         ast::Expr::Tuple(ast::Tuple { elems, .. }) => Expr::Array(ArrayLit {
             span: DUMMY_SP,
             elems: elems
@@ -507,7 +504,9 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
         ast::Expr::LetExpr(_) => {
             panic!("LetExpr should always be handled by the IfElse branch")
         }
-        ast::Expr::TemplateLiteral(template) => Expr::Tpl(build_template_literal(template, stmts, ctx)),
+        ast::Expr::TemplateLiteral(template) => {
+            Expr::Tpl(build_template_literal(template, stmts, ctx))
+        }
         ast::Expr::TaggedTemplateLiteral(ast::TaggedTemplateLiteral {
             span: _,
             tag,
@@ -522,46 +521,13 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
             })
         }
         ast::Expr::Match(ast::Match { expr, arms, .. }) => {
-            let ret_temp_id = Ident {
-                span: DUMMY_SP,
-                sym: JsWord::from(format!("$temp_{}", ctx.temp_id)),
-                optional: false,
-            };
-            ctx.temp_id += 1;
+            let ret_temp_id = ctx.new_ident();
+            let ret_decl = build_let_with_id(&ret_temp_id);
+            stmts.push(ret_decl);
 
-            let ret_decl = Stmt::Decl(Decl::Var(VarDecl {
-                span: DUMMY_SP,
-                kind: VarDeclKind::Let,
-                declare: false,
-                decls: vec![VarDeclarator {
-                    span: DUMMY_SP,
-                    name: Pat::Ident(BindingIdent::from(ret_temp_id.clone())),
-                    init: None,
-                    definite: false,
-                }],
-            }));
-
-            let temp_id = Ident {
-                span: DUMMY_SP,
-                sym: JsWord::from(format!("$temp_{}", ctx.temp_id)),
-                optional: false,
-            };
-            ctx.temp_id += 1;
-
-            let decl = Stmt::Decl(Decl::Var(VarDecl {
-                span: DUMMY_SP,
-                kind: VarDeclKind::Const,
-                declare: false,
-                decls: vec![VarDeclarator {
-                    span: DUMMY_SP,
-                    name: Pat::Ident(BindingIdent::from(temp_id.clone())),
-                    init: Some(Box::from(build_expr(expr, stmts, ctx))),
-                    definite: false,
-                }],
-            }));
-
-            stmts.push(ret_decl); 
-            stmts.push(decl); 
+            let temp_id = ctx.new_ident();
+            let decl = build_const_with_id(&temp_id, build_expr(expr, stmts, ctx));
+            stmts.push(decl);
 
             // TODO: we want to stop when we encounter the first
             // irrefutable pattern since all subsequent patterns
@@ -624,46 +590,11 @@ fn build_let_expr(
 ) -> Expr {
     let LetExpr { pat, expr, .. } = let_expr;
 
-    let ret_temp_id = Ident {
-        span: DUMMY_SP,
-        sym: JsWord::from(format!("$temp_{}", ctx.temp_id)),
-        optional: false,
-    };
-    ctx.temp_id += 1;
+    let ret_temp_id = ctx.new_ident();
+    stmts.push(build_let_with_id(&ret_temp_id));
 
-    let ret_decl = Stmt::Decl(Decl::Var(VarDecl {
-        span: DUMMY_SP,
-        kind: VarDeclKind::Let,
-        declare: false,
-        decls: vec![VarDeclarator {
-            span: DUMMY_SP,
-            name: Pat::Ident(BindingIdent::from(ret_temp_id.clone())),
-            init: None,
-            definite: false,
-        }],
-    }));
-
-    stmts.push(ret_decl);
-
-    let temp_id = Ident {
-        span: DUMMY_SP,
-        sym: JsWord::from(format!("$temp_{}", ctx.temp_id)),
-        optional: false,
-    };
-    ctx.temp_id += 1;
-
-    let decl = Stmt::Decl(Decl::Var(VarDecl {
-        span: DUMMY_SP,
-        kind: VarDeclKind::Const,
-        declare: false,
-        decls: vec![VarDeclarator {
-            span: DUMMY_SP,
-            name: Pat::Ident(BindingIdent::from(temp_id.clone())),
-            init: Some(Box::from(build_expr(expr, stmts, ctx))),
-            definite: false,
-        }],
-    }));
-
+    let temp_id = ctx.new_ident();
+    let decl = build_const_with_id(&temp_id, build_expr(expr, stmts, ctx));
     stmts.push(decl);
 
     let cond = build_cond_for_pat(pat, &temp_id);
@@ -672,17 +603,7 @@ fn build_let_expr(
 
     if let Some(name) = build_pattern(pat, stmts, ctx) {
         // TODO: ignore the refutuable patterns when destructuring
-        let destructure = Stmt::Decl(Decl::Var(VarDecl {
-            span: DUMMY_SP,
-            kind: VarDeclKind::Const,
-            declare: false,
-            decls: vec![VarDeclarator {
-                span: DUMMY_SP,
-                name,
-                init: Some(Box::from(Expr::from(temp_id))),
-                definite: false,
-            }],
-        }));
+        let destructure = build_const(name, Expr::from(temp_id));
         block.stmts.insert(0, destructure);
     }
 
@@ -698,7 +619,7 @@ fn build_let_expr(
         }
         None => {
             stmts.append(&mut block.stmts);
-        },
+        }
     };
 
     Expr::Ident(ret_temp_id)
@@ -724,22 +645,7 @@ fn build_arm(
 
     // If pattern has assignables, assign them
     if let Some(name) = build_pattern(pat, stmts, ctx) {
-        let destructure = Stmt::Decl(Decl::Var(VarDecl {
-            span: DUMMY_SP,
-            kind: VarDeclKind::Const,
-            declare: false,
-            decls: vec![VarDeclarator {
-                span: DUMMY_SP,
-                name,
-                // we created a temporary variable in the caller and assigned
-                // the match expression to it so that we:
-                // - don't have to evaluate the expression more than once
-                // - can build temp_var.foo.bar expressions for the condition
-                init: Some(Box::from(Expr::from(id.to_owned()))),
-                definite: false,
-            }],
-        }));
-
+        let destructure = build_const(name, Expr::from(id.to_owned()));
         block.stmts.insert(0, destructure);
     }
 
@@ -894,11 +800,7 @@ fn let_to_children(r#let: &ast::Let, ctx: &mut Context) -> Vec<Stmt> {
 // TODO: have an intermediary from between the AST and what we used for
 // codegen that unwraps `Let` nodes into vectors before converting them
 // to statements.
-fn let_to_children_no_return(
-    r#let: &ast::Let,
-    stmts: &mut Vec<Stmt>,
-    ctx: &mut Context,
-) -> Expr {
+fn let_to_children_no_return(r#let: &ast::Let, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
     let child = let_to_child(r#let, stmts, ctx);
     stmts.push(child);
 
@@ -919,17 +821,7 @@ fn let_to_child(r#let: &ast::Let, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> S
     // unique identifiers.
     match pattern {
         Some(pattern) => match build_pattern(pattern, stmts, ctx) {
-            Some(name) => Stmt::Decl(Decl::Var(VarDecl {
-                span: DUMMY_SP,
-                kind: VarDeclKind::Const,
-                declare: false,
-                decls: vec![VarDeclarator {
-                    span: DUMMY_SP,
-                    name,
-                    init: Some(Box::from(build_expr(init, stmts, ctx))),
-                    definite: false,
-                }],
-            })),
+            Some(name) => build_const(name, build_expr(init, stmts, ctx)),
             None => todo!(),
         },
         None => Stmt::Expr(ExprStmt {
@@ -1145,4 +1037,40 @@ fn cond_to_expr(cond: &Condition, id: &Ident) -> Expr {
             right: Box::from(Expr::Ident(Ident::from(id))),
         }),
     }
+}
+
+fn build_const_with_id(id: &Ident, expr: Expr) -> Stmt {
+    build_const(Pat::Ident(BindingIdent::from(id.to_owned())), expr)
+}
+
+fn build_const(name: Pat, expr: Expr) -> Stmt {
+    Stmt::Decl(Decl::Var(VarDecl {
+        span: DUMMY_SP,
+        kind: VarDeclKind::Const,
+        declare: false,
+        decls: vec![VarDeclarator {
+            span: DUMMY_SP,
+            name,
+            init: Some(Box::from(expr)),
+            definite: false,
+        }],
+    }))
+}
+
+fn build_let_with_id(id: &Ident) -> Stmt {
+    build_let(Pat::Ident(BindingIdent::from(id.to_owned())))
+}
+
+fn build_let(name: Pat) -> Stmt {
+    Stmt::Decl(Decl::Var(VarDecl {
+        span: DUMMY_SP,
+        kind: VarDeclKind::Let,
+        declare: false,
+        decls: vec![VarDeclarator {
+            span: DUMMY_SP,
+            name,
+            init: None,
+            definite: false,
+        }],
+    }))
 }
