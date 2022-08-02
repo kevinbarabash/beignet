@@ -1253,11 +1253,12 @@ fn codegen_if_let() {
         x: 5,
         y: 10
     };
-    (()=>{
-        const { x , y  } = p;
-        x + y;
-        return undefined;
-    })();
+    let $temp_0;
+    const $temp_1 = p;
+    const { x , y  } = $temp_1;
+    x + y;
+    $temp_0 = undefined;
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1288,11 +1289,12 @@ fn codegen_if_let_with_rename() {
         x: 5,
         y: 10
     };
-    (()=>{
-        const { x: a , y: b  } = p;
-        a + b;
-        return undefined;
-    })();
+    let $temp_0;
+    const $temp_1 = p;
+    const { x: a , y: b  } = $temp_1;
+    a + b;
+    $temp_0 = undefined;
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1337,14 +1339,14 @@ fn infer_if_let_refutable_pattern_obj() {
         x: 5,
         y: 10
     };
-    (()=>{
-        const value = p;
-        if (value.x === 5) {
-            const { y  } = value;
-            y;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = p;
+    if ($temp_1.x === 5) {
+        const { y  } = $temp_1;
+        y;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1378,14 +1380,14 @@ fn infer_if_let_refutable_pattern_nested_obj() {
             y: 10
         }
     };
-    (()=>{
-        const value = action;
-        if (value.type === "moveto") {
-            const { point: { x , y  }  } = value;
-            x + y;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = action;
+    if ($temp_1.type === "moveto") {
+        const { point: { x , y  }  } = $temp_1;
+        x + y;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1420,14 +1422,14 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
     ;
     ;
     ;
-    (()=>{
-        const value = action;
-        if (value.type === "moveto") {
-            const { point: { x , y  }  } = value;
-            x + y;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = action;
+    if ($temp_1.type === "moveto") {
+        const { point: { x , y  }  } = $temp_1;
+        x + y;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1468,14 +1470,14 @@ fn infer_if_let_refutable_pattern_array() {
         5,
         10
     ];
-    (()=>{
-        const value = p;
-        if (value[0] === 5) {
-            const [, y] = value;
-            y;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = p;
+    if ($temp_1[0] === 5) {
+        const [, y] = $temp_1;
+        y;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1506,14 +1508,14 @@ fn infer_if_let_refutable_pattern_nested_array() {
             10
         ]
     ];
-    (()=>{
-        const value = action;
-        if (value[0] === "moveto") {
-            const [, [x, y]] = value;
-            x + y;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = action;
+    if ($temp_1[0] === "moveto") {
+        const [, [x, y]] = $temp_1;
+        x + y;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1538,14 +1540,14 @@ fn codegen_if_let_with_is_prim() {
     let js = codegen_js(&program);
     insta::assert_snapshot!(js, @r###"
     ;
-    (()=>{
-        const value = b;
-        if (typeof value === "number") {
-            const a = value;
-            a + 5;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = b;
+    if (typeof $temp_1 === "number") {
+        const a = $temp_1;
+        a + 5;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1603,14 +1605,14 @@ fn codegen_if_let_with_is_class() {
         constructor: ()=>bar
     };
     ;
-    (()=>{
-        const value = b;
-        if (value instanceof Foo) {
-            const a = value;
-            a.getNum() + 5;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = b;
+    if ($temp_1 instanceof Foo) {
+        const a = $temp_1;
+        a.getNum() + 5;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 }
 

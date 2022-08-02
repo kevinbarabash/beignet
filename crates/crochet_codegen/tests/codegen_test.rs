@@ -63,15 +63,16 @@ fn pattern_matching() {
     }
     "#;
     insta::assert_snapshot!(compile(src), @r###"
-    const $temp_0 = count + 1;
-    if ($temp_0 === 0) {
+    let $temp_0;
+    const $temp_1 = count + 1;
+    if ($temp_1 === 0) {
         $temp_0 = "none";
-    } else if ($temp_0 === 1) {
+    } else if ($temp_1 === 1) {
         $temp_0 = "one";
-    } else if ($temp_0 === 2) {
+    } else if ($temp_1 === 2) {
         $temp_0 = "a couple";
     } else if (n < 5) {
-        const n = $temp_0;
+        const n = $temp_1;
         console.log(`n = ${n}`);
         $temp_0 = "a few";
     } else {
@@ -95,12 +96,13 @@ fn pattern_matching_with_disjoint_union() {
     insta::assert_snapshot!(compile(src), @r###"
     ;
     ;
-    const $temp_0 = event;
-    if ($temp_0.type === "mousedown") {
-        const { x , y  } = $temp_0;
+    let $temp_0;
+    const $temp_1 = event;
+    if ($temp_1.type === "mousedown") {
+        const { x , y  } = $temp_1;
         $temp_0 = `mousedown: (${x}, ${y})`;
-    } else if ($temp_0.type === "keydown" && key !== "Escape") {
-        const { key  } = $temp_0;
+    } else if ($temp_1.type === "keydown" && key !== "Escape") {
+        const { key  } = $temp_1;
         $temp_0 = key;
     }
     export const result = $temp_0;
@@ -246,5 +248,53 @@ fn multiple_lets_inside_a_function() {
         const result = x + y;
         return result;
     };
+    "###);
+}
+
+#[test]
+fn codegen_if_let_with_rename() {
+    // TODO: don't allow irrefutable patterns to be used with if-let
+    let src = r#"
+    let result = if let {x: a, y: b} = {x: 5, y: 10} {
+        a + b
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    let $temp_0;
+    const $temp_1 = {
+        x: 5,
+        y: 10
+    };
+    const { x: a , y: b  } = $temp_1;
+    $temp_0 = a + b;
+    export const result = $temp_0;
+    "###);
+}
+
+#[test]
+fn infer_if_let_refutable_pattern_nested_obj() {
+    let src = r#"
+    let action = {type: "moveto", point: {x: 5, y: 10}}
+    if let {type: "moveto", point: {x, y}} = action {
+        x + y
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const action = {
+        type: "moveto",
+        point: {
+            x: 5,
+            y: 10
+        }
+    };
+    let $temp_0;
+    const $temp_1 = action;
+    if ($temp_1.type === "moveto") {
+        const { point: { x , y  }  } = $temp_1;
+        $temp_0 = x + y;
+    }
+    $temp_0;
     "###);
 }
