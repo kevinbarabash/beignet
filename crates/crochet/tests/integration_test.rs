@@ -6,7 +6,7 @@ use crochet_infer::*;
 use crochet_parser::parser;
 
 fn infer(input: &str) -> String {
-    let mut ctx = Context::default();
+    let mut ctx = crochet_infer::Context::default();
     let prog = parser().parse(input).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = match stmt {
@@ -16,7 +16,7 @@ fn infer(input: &str) -> String {
     format!("{}", result.unwrap())
 }
 
-fn infer_prog(src: &str) -> (Program, Context) {
+fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
     let result = parser().parse(src);
     let prog = match result {
         Ok(prog) => prog,
@@ -375,13 +375,13 @@ fn codegen_if_else() {
     let js = codegen_js(&program);
     insta::assert_snapshot!(js, @r###"
     export const cond = true;
-    let temp;
+    let $temp_0;
     if (cond) {
-        temp = 5;
+        $temp_0 = 5;
     } else {
-        temp = 5;
+        $temp_0 = 5;
     }
-    export const result = temp;
+    export const result = $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);

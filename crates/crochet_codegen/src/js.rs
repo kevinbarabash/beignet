@@ -12,8 +12,13 @@ use swc_ecma_visit::*;
 
 use crochet_ast::{self as ast, is_refutable};
 
+pub struct Context {
+    pub temp_id: u32,
+}
+
 pub fn codegen_js(program: &ast::Program) -> String {
-    let program = build_js(program);
+    let mut ctx = Context { temp_id: 0 };
+    let program = build_js(program, &mut ctx);
 
     let cm = Rc::new(SourceMap::default());
     let comments: Option<SingleThreadedComments> = None;
@@ -50,7 +55,7 @@ fn print_js(program: &Program) -> String {
     String::from_utf8_lossy(&buf).to_string()
 }
 
-fn build_js(program: &ast::Program) -> Program {
+fn build_js(program: &ast::Program, ctx: &mut Context) -> Program {
     let body: Vec<ModuleItem> = program
         .body
         .iter()
@@ -69,7 +74,7 @@ fn build_js(program: &ast::Program) -> Program {
                         // using `declare` should have an initial value.
                         let init = init.as_ref().unwrap();
 
-                        match build_pattern(pattern, &mut stmts) {
+                        match build_pattern(pattern, &mut stmts, ctx) {
                             Some(name) => {
                                 ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                                     span: DUMMY_SP,
@@ -80,7 +85,7 @@ fn build_js(program: &ast::Program) -> Program {
                                         decls: vec![VarDeclarator {
                                             span: DUMMY_SP,
                                             name,
-                                            init: Some(Box::from(build_expr(init, &mut stmts))),
+                                            init: Some(Box::from(build_expr(init, &mut stmts, ctx))),
                                             definite: false,
                                         }],
                                     }),
@@ -95,7 +100,7 @@ fn build_js(program: &ast::Program) -> Program {
                 }
                 ast::Statement::Expr { expr, .. } => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
                     span: DUMMY_SP,
-                    expr: Box::from(build_expr(expr, &mut stmts)),
+                    expr: Box::from(build_expr(expr, &mut stmts, ctx)),
                 })),
             };
 
@@ -118,7 +123,11 @@ fn build_js(program: &ast::Program) -> Program {
     })
 }
 
-pub fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>) -> Option<Pat> {
+pub fn build_pattern(
+    pattern: &ast::Pattern,
+    stmts: &mut Vec<Stmt>,
+    ctx: &mut Context,
+) -> Option<Pat> {
     match pattern {
         // unassignable patterns
         ast::Pattern::Lit(_) => None,
@@ -136,20 +145,21 @@ pub fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>) -> Option<Pa
             let props: Vec<ObjectPatProp> = props
                 .iter()
                 .filter_map(|p| match p {
-                    ast::ObjectPatProp::KeyValue(kvp) => build_pattern(kvp.value.as_ref(), stmts)
-                        .map(|value| {
+                    ast::ObjectPatProp::KeyValue(kvp) => {
+                        build_pattern(kvp.value.as_ref(), stmts, ctx).map(|value| {
                             ObjectPatProp::KeyValue(KeyValuePatProp {
                                 key: PropName::Ident(Ident::from(&kvp.key)),
                                 value: Box::from(value),
                             })
-                        }),
+                        })
+                    }
                     ast::ObjectPatProp::Assign(ap) => Some(ObjectPatProp::Assign(AssignPatProp {
                         span: DUMMY_SP,
                         key: Ident::from(&ap.key),
                         value: ap
                             .value
                             .clone()
-                            .map(|value| Box::from(build_expr(value.as_ref(), stmts))),
+                            .map(|value| Box::from(build_expr(value.as_ref(), stmts, ctx))),
                     })),
                     ast::ObjectPatProp::Rest(_) => todo!(),
                 })
@@ -168,7 +178,7 @@ pub fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>) -> Option<Pa
             let elems: Vec<Option<Pat>> = elems
                 .iter()
                 .map(|elem| match elem {
-                    Some(elem) => build_pattern(elem, stmts),
+                    Some(elem) => build_pattern(elem, stmts, ctx),
                     None => None,
                 })
                 .collect();
@@ -189,30 +199,30 @@ pub fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>) -> Option<Pa
     }
 }
 
-pub fn build_return_block(body: &ast::Expr, stmts: &mut Vec<Stmt>) -> BlockStmt {
+pub fn build_return_block(body: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> BlockStmt {
     match body {
         // Avoids wrapping in an IIFE when it isn't necessary.
         ast::Expr::Let(r#let) => BlockStmt {
             span: DUMMY_SP,
-            stmts: let_to_children(r#let),
+            stmts: let_to_children(r#let, ctx),
         },
         _ => BlockStmt {
             span: DUMMY_SP,
             stmts: vec![Stmt::Return(ReturnStmt {
                 span: DUMMY_SP,
-                arg: Some(Box::from(build_expr(body, stmts))),
+                arg: Some(Box::from(build_expr(body, stmts, ctx))),
             })],
         },
     }
 }
 
-pub fn build_new_scope(expr: &ast::Expr) -> BlockStmt {
+pub fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Context) -> BlockStmt {
     let mut stmts: Vec<Stmt> = vec![];
 
     let expr = if let ast::Expr::Let(r#let) = expr {
-        let_to_children_no_return(r#let, &mut stmts)
+        let_to_children_no_return(r#let, &mut stmts, ctx)
     } else {
-        build_expr(expr, &mut stmts)
+        build_expr(expr, &mut stmts, ctx)
     };
 
     // Assigns the result of the block to the temp variable
@@ -222,11 +232,7 @@ pub fn build_new_scope(expr: &ast::Expr) -> BlockStmt {
             span: DUMMY_SP,
             op: AssignOp::Assign,
             left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
-                id: Ident {
-                    span: DUMMY_SP,
-                    sym: JsWord::from(String::from("temp")),
-                    optional: false,
-                },
+                id: temp_id.to_owned(),
                 type_ann: None,
             }))),
             right: Box::from(expr),
@@ -239,15 +245,15 @@ pub fn build_new_scope(expr: &ast::Expr) -> BlockStmt {
     }
 }
 
-pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
+pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
     match expr {
         ast::Expr::App(ast::App { lam, args, .. }) => {
-            let callee = Callee::Expr(Box::from(build_expr(lam.as_ref(), stmts)));
+            let callee = Callee::Expr(Box::from(build_expr(lam.as_ref(), stmts, ctx)));
             let args: Vec<ExprOrSpread> = args
                 .iter()
                 .map(|arg| ExprOrSpread {
                     spread: None,
-                    expr: Box::from(build_expr(arg.expr.as_ref(), stmts)),
+                    expr: Box::from(build_expr(arg.expr.as_ref(), stmts, ctx)),
                 })
                 .collect();
 
@@ -292,9 +298,9 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                 // TODO: Avoid wrapping in an IIFE when it isn't necessary.
                 ast::Expr::Let(r#let) => BlockStmtOrExpr::BlockStmt(BlockStmt {
                     span: DUMMY_SP,
-                    stmts: let_to_children(r#let),
+                    stmts: let_to_children(r#let, ctx),
                 }),
-                _ => BlockStmtOrExpr::Expr(Box::from(build_expr(body, stmts))),
+                _ => BlockStmtOrExpr::Expr(Box::from(build_expr(body, stmts, ctx))),
             };
 
             Expr::Arrow(ArrowExpr {
@@ -314,7 +320,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                 params: vec![],
                 body: BlockStmtOrExpr::BlockStmt(BlockStmt {
                     span: DUMMY_SP,
-                    stmts: let_to_children(r#let),
+                    stmts: let_to_children(r#let, ctx),
                 }),
                 is_async: false,
                 is_generator: false,
@@ -351,14 +357,14 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                 ast::BinOp::GtEq => BinaryOp::GtEq,
             };
 
-            let left = Box::from(build_expr(left, stmts));
+            let left = Box::from(build_expr(left, stmts, ctx));
 
             let wrap_left = match left.as_ref() {
                 Expr::Bin(left) => left.op.precedence() < op.precedence(),
                 _ => false,
             };
 
-            let right = Box::from(build_expr(right, stmts));
+            let right = Box::from(build_expr(right, stmts, ctx));
 
             let wrap_right = match right.as_ref() {
                 Expr::Bin(right) => match (op, right.op) {
@@ -391,7 +397,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
             })
         }
         ast::Expr::Fix(ast::Fix { expr, .. }) => match expr.as_ref() {
-            ast::Expr::Lambda(ast::Lambda { body, .. }) => build_expr(body, stmts),
+            ast::Expr::Lambda(ast::Lambda { body, .. }) => build_expr(body, stmts, ctx),
             _ => panic!("Fix should only wrap a lambda"),
         },
         ast::Expr::IfElse(ast::IfElse {
@@ -400,8 +406,15 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
             alternate,
             ..
         }) => match cond.as_ref() {
-            ast::Expr::LetExpr(let_expr) => build_let_expr(let_expr, consequent, stmts),
+            ast::Expr::LetExpr(let_expr) => build_let_expr(let_expr, consequent, stmts, ctx),
             _ => {
+                let temp_id = Ident {
+                    span: DUMMY_SP,
+                    sym: JsWord::from(format!("$temp_{}", ctx.temp_id)),
+                    optional: false,
+                };
+                ctx.temp_id += 1;
+
                 // TODO:
                 // - `let temp` (empty variable declaration, must be unique)
                 // - change all returns to be `temp = <ret_val>`
@@ -412,11 +425,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                     decls: vec![VarDeclarator {
                         span: DUMMY_SP,
                         name: Pat::Ident(BindingIdent {
-                            id: Ident {
-                                span: DUMMY_SP,
-                                sym: JsWord::from(String::from("temp")),
-                                optional: false,
-                            },
+                            id: temp_id.clone(),
                             type_ann: None,
                         }),
                         init: None,
@@ -426,11 +435,11 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                 }));
                 stmts.push(decl);
 
-                let test = Box::from(build_expr(cond.as_ref(), stmts));
-                let cons = Box::from(Stmt::Block(build_new_scope(consequent.as_ref())));
+                let test = Box::from(build_expr(cond.as_ref(), stmts, ctx));
+                let cons = Box::from(Stmt::Block(build_expr_in_new_scope(consequent.as_ref(), &temp_id, ctx)));
                 let alt = alternate
                     .as_ref()
-                    .map(|alt| Box::from(Stmt::Block(build_new_scope(alt.as_ref()))));
+                    .map(|alt| Box::from(Stmt::Block(build_expr_in_new_scope(alt.as_ref(), &temp_id, ctx))));
 
                 stmts.push(Stmt::If(IfStmt {
                     span: DUMMY_SP,
@@ -439,11 +448,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                     alt,
                 }));
 
-                Expr::Ident(Ident {
-                    span: DUMMY_SP,
-                    sym: JsWord::from(String::from("temp")),
-                    optional: false,
-                })
+                Expr::Ident(temp_id)
             }
         },
         ast::Expr::Obj(ast::Obj { props, .. }) => {
@@ -465,7 +470,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                                     sym: JsWord::from(name.clone()),
                                     optional: false,
                                 }),
-                                value: Box::from(build_expr(value, stmts)),
+                                value: Box::from(build_expr(value, stmts, ctx)),
                             })))
                         }
                     },
@@ -480,9 +485,9 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
         }
         ast::Expr::Await(ast::Await { expr, .. }) => Expr::Await(AwaitExpr {
             span: DUMMY_SP,
-            arg: Box::from(build_expr(expr.as_ref(), stmts)),
+            arg: Box::from(build_expr(expr.as_ref(), stmts, ctx)),
         }),
-        ast::Expr::JSXElement(elem) => Expr::JSXElement(Box::from(build_jsx_element(elem, stmts))),
+        ast::Expr::JSXElement(elem) => Expr::JSXElement(Box::from(build_jsx_element(elem, stmts, ctx))),
         ast::Expr::Tuple(ast::Tuple { elems, .. }) => Expr::Array(ArrayLit {
             span: DUMMY_SP,
             elems: elems
@@ -490,7 +495,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                 .map(|ast::ExprOrSpread { spread, expr }| {
                     Some(ExprOrSpread {
                         spread: spread.to_owned().map(|_| DUMMY_SP),
-                        expr: Box::from(build_expr(expr.as_ref(), stmts)),
+                        expr: Box::from(build_expr(expr.as_ref(), stmts, ctx)),
                     })
                 })
                 .collect(),
@@ -501,13 +506,13 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                 ast::MemberProp::Computed(ast::ComputedPropName { expr, .. }) => {
                     MemberProp::Computed(ComputedPropName {
                         span: DUMMY_SP,
-                        expr: Box::from(build_expr(expr, stmts)),
+                        expr: Box::from(build_expr(expr, stmts, ctx)),
                     })
                 }
             };
             Expr::Member(MemberExpr {
                 span: DUMMY_SP,
-                obj: Box::from(build_expr(obj, stmts)),
+                obj: Box::from(build_expr(obj, stmts, ctx)),
                 prop,
             })
         }
@@ -519,7 +524,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
         ast::Expr::LetExpr(_) => {
             panic!("LetExpr should always be handled by the IfElse branch")
         }
-        ast::Expr::TemplateLiteral(template) => Expr::Tpl(build_template_literal(template, stmts)),
+        ast::Expr::TemplateLiteral(template) => Expr::Tpl(build_template_literal(template, stmts, ctx)),
         ast::Expr::TaggedTemplateLiteral(ast::TaggedTemplateLiteral {
             span: _,
             tag,
@@ -530,7 +535,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                 tag: Box::from(Expr::Ident(build_ident(tag))),
                 type_params: None, // TODO: support type params on tagged templates
 
-                tpl: build_template_literal(template, stmts),
+                tpl: build_template_literal(template, stmts, ctx),
             })
         }
         ast::Expr::Match(ast::Match { expr, arms, .. }) => {
@@ -547,7 +552,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                 decls: vec![VarDeclarator {
                     span: DUMMY_SP,
                     name: Pat::Ident(BindingIdent::from(id.clone())),
-                    init: Some(Box::from(build_expr(expr, stmts))),
+                    init: Some(Box::from(build_expr(expr, stmts, ctx))),
                     definite: false,
                 }],
             }));
@@ -562,7 +567,7 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
                     panic!("Catchall must appear last in match");
                 }
 
-                let (cond, block) = build_arm(arm, &id, stmts);
+                let (cond, block) = build_arm(arm, &id, stmts, ctx);
 
                 if cond.is_none() {
                     has_catchall = true
@@ -608,7 +613,12 @@ pub fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
     }
 }
 
-fn build_let_expr(let_expr: &ast::LetExpr, consequent: &ast::Expr, stmts: &mut Vec<Stmt>) -> Expr {
+fn build_let_expr(
+    let_expr: &ast::LetExpr,
+    consequent: &ast::Expr,
+    stmts: &mut Vec<Stmt>,
+    ctx: &mut Context,
+) -> Expr {
     let LetExpr { pat, expr, .. } = let_expr;
 
     let id = Ident {
@@ -619,9 +629,9 @@ fn build_let_expr(let_expr: &ast::LetExpr, consequent: &ast::Expr, stmts: &mut V
 
     let cond = build_cond_for_pat(pat, &id);
 
-    let mut block = build_return_block(consequent, stmts);
+    let mut block = build_return_block(consequent, stmts, ctx);
 
-    if let Some(name) = build_pattern(pat, stmts) {
+    if let Some(name) = build_pattern(pat, stmts, ctx) {
         // TODO: ignore the refutuable patterns when destructuring
         let destructure = Stmt::Decl(Decl::Var(VarDecl {
             span: DUMMY_SP,
@@ -636,7 +646,7 @@ fn build_let_expr(let_expr: &ast::LetExpr, consequent: &ast::Expr, stmts: &mut V
                     // - don't have to evaluate the expression more than once
                     // - can build temp_var.foo.bar expressions for the condition
                     Some(_) => Some(Box::from(Expr::from(id.clone()))),
-                    None => Some(Box::from(build_expr(expr, stmts))),
+                    None => Some(Box::from(build_expr(expr, stmts, ctx))),
                 },
                 definite: false,
             }],
@@ -654,7 +664,7 @@ fn build_let_expr(let_expr: &ast::LetExpr, consequent: &ast::Expr, stmts: &mut V
                 decls: vec![VarDeclarator {
                     span: DUMMY_SP,
                     name: Pat::Ident(BindingIdent::from(id)),
-                    init: Some(Box::from(build_expr(expr, stmts))),
+                    init: Some(Box::from(build_expr(expr, stmts, ctx))),
                     definite: false,
                 }],
             }));
@@ -677,7 +687,12 @@ fn build_let_expr(let_expr: &ast::LetExpr, consequent: &ast::Expr, stmts: &mut V
     build_iife(body)
 }
 
-fn build_arm(arm: &ast::Arm, id: &Ident, stmts: &mut Vec<Stmt>) -> (Option<Expr>, BlockStmt) {
+fn build_arm(
+    arm: &ast::Arm,
+    id: &Ident,
+    stmts: &mut Vec<Stmt>,
+    ctx: &mut Context,
+) -> (Option<Expr>, BlockStmt) {
     let ast::Arm {
         pattern: pat,
         expr: consequent,
@@ -687,10 +702,10 @@ fn build_arm(arm: &ast::Arm, id: &Ident, stmts: &mut Vec<Stmt>) -> (Option<Expr>
 
     let cond = build_cond_for_pat(pat, id);
 
-    let mut block = build_return_block(consequent, stmts);
+    let mut block = build_return_block(consequent, stmts, ctx);
 
     // If pattern has assignables, assign them
-    if let Some(name) = build_pattern(pat, stmts) {
+    if let Some(name) = build_pattern(pat, stmts, ctx) {
         let destructure = Stmt::Decl(Decl::Var(VarDecl {
             span: DUMMY_SP,
             kind: VarDeclKind::Const,
@@ -718,11 +733,11 @@ fn build_arm(arm: &ast::Arm, id: &Ident, stmts: &mut Vec<Stmt>) -> (Option<Expr>
                 span: DUMMY_SP,
                 op: BinaryOp::LogicalAnd,
                 left: Box::from(cond),
-                right: Box::from(build_expr(guard, stmts)),
+                right: Box::from(build_expr(guard, stmts, ctx)),
             }))
         }
         (Some(cond), None) => Some(cond),
-        (None, Some(guard)) => Some(build_expr(guard, stmts)),
+        (None, Some(guard)) => Some(build_expr(guard, stmts, ctx)),
         (None, None) => None,
     };
 
@@ -753,7 +768,11 @@ fn build_iife(body: BlockStmtOrExpr) -> Expr {
     })
 }
 
-pub fn build_jsx_element(elem: &ast::JSXElement, stmts: &mut Vec<Stmt>) -> JSXElement {
+pub fn build_jsx_element(
+    elem: &ast::JSXElement,
+    stmts: &mut Vec<Stmt>,
+    ctx: &mut Context,
+) -> JSXElement {
     let name = JSXElementName::Ident(Ident {
         span: DUMMY_SP,
         sym: JsWord::from(elem.name.to_owned()),
@@ -775,7 +794,7 @@ pub fn build_jsx_element(elem: &ast::JSXElement, stmts: &mut Vec<Stmt>) -> JSXEl
                             expr, ..
                         }) => JSXAttrValue::JSXExprContainer(JSXExprContainer {
                             span: DUMMY_SP,
-                            expr: JSXExpr::Expr(Box::from(build_expr(expr, stmts))),
+                            expr: JSXExpr::Expr(Box::from(build_expr(expr, stmts, ctx))),
                         }),
                     });
 
@@ -809,10 +828,10 @@ pub fn build_jsx_element(elem: &ast::JSXElement, stmts: &mut Vec<Stmt>) -> JSXEl
                         expr, ..
                     }) => JSXElementChild::JSXExprContainer(JSXExprContainer {
                         span: DUMMY_SP,
-                        expr: JSXExpr::Expr(Box::from(build_expr(expr, stmts))),
+                        expr: JSXExpr::Expr(Box::from(build_expr(expr, stmts, ctx))),
                     }),
                     ast::JSXElementChild::JSXElement(elem) => {
-                        JSXElementChild::JSXElement(Box::from(build_jsx_element(elem, stmts)))
+                        JSXElementChild::JSXElement(Box::from(build_jsx_element(elem, stmts, ctx)))
                     }
                 };
                 result
@@ -853,20 +872,20 @@ pub fn build_lit(lit: &ast::Lit) -> Lit {
 // TODO: have an intermediary from between the AST and what we used for
 // codegen that unwraps `Let` nodes into vectors before converting them
 // to statements.
-pub fn let_to_children(r#let: &ast::Let) -> Vec<Stmt> {
+pub fn let_to_children(r#let: &ast::Let, ctx: &mut Context) -> Vec<Stmt> {
     let mut stmts: Vec<Stmt> = vec![];
 
-    let mut children: Vec<Stmt> = vec![let_to_child(r#let, &mut stmts)];
+    let mut children: Vec<Stmt> = vec![let_to_child(r#let, &mut stmts, ctx)];
     let mut body = r#let.body.to_owned();
 
     while let ast::Expr::Let(r#let) = body.as_ref() {
-        children.push(let_to_child(r#let, &mut stmts));
+        children.push(let_to_child(r#let, &mut stmts, ctx));
         body = r#let.body.to_owned();
     }
 
     children.push(Stmt::Return(ReturnStmt {
         span: DUMMY_SP,
-        arg: Some(Box::from(build_expr(&body, &mut stmts))),
+        arg: Some(Box::from(build_expr(&body, &mut stmts, ctx))),
     }));
 
     // TODO:
@@ -881,34 +900,31 @@ pub fn let_to_children(r#let: &ast::Let) -> Vec<Stmt> {
 // TODO: have an intermediary from between the AST and what we used for
 // codegen that unwraps `Let` nodes into vectors before converting them
 // to statements.
-pub fn let_to_children_no_return(r#let: &ast::Let, stmts: &mut Vec<Stmt>) -> Expr {
-    let mut new_stmts: Vec<Stmt> = vec![];
+pub fn let_to_children_no_return(
+    r#let: &ast::Let,
+    stmts: &mut Vec<Stmt>,
+    ctx: &mut Context,
+) -> Expr {
+    let child = let_to_child(r#let, stmts, ctx);
+    stmts.push(child);
 
-    // let mut children: Vec<Stmt> = vec![let_to_child(r#let, &mut new_stmts)];
-    stmts.push(let_to_child(r#let, &mut new_stmts));
     let mut body = r#let.body.to_owned();
-
     while let ast::Expr::Let(r#let) = body.as_ref() {
-        stmts.push(let_to_child(r#let, &mut new_stmts));
+        let child = let_to_child(r#let, stmts, ctx);
+        stmts.push(child);
         body = r#let.body.to_owned();
     }
 
-    let result = build_expr(&body, &mut new_stmts);
-
-    // TODO:
-    // preprend `stmts` with the contents of `new_stmts`
-    println!("let_to_children - new_stmts = {new_stmts:#?}");
-
-    result
+    build_expr(&body, stmts, ctx)
 }
 
-fn let_to_child(r#let: &ast::Let, stmts: &mut Vec<Stmt>) -> Stmt {
+fn let_to_child(r#let: &ast::Let, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Stmt {
     let ast::Let { pattern, init, .. } = r#let;
 
     // TODO: handle shadowed variables in the same scope by introducing
     // unique identifiers.
     match pattern {
-        Some(pattern) => match build_pattern(pattern, stmts) {
+        Some(pattern) => match build_pattern(pattern, stmts, ctx) {
             Some(name) => Stmt::Decl(Decl::Var(VarDecl {
                 span: DUMMY_SP,
                 kind: VarDeclKind::Const,
@@ -916,7 +932,7 @@ fn let_to_child(r#let: &ast::Let, stmts: &mut Vec<Stmt>) -> Stmt {
                 decls: vec![VarDeclarator {
                     span: DUMMY_SP,
                     name,
-                    init: Some(Box::from(build_expr(init, stmts))),
+                    init: Some(Box::from(build_expr(init, stmts, ctx))),
                     definite: false,
                 }],
             })),
@@ -924,7 +940,7 @@ fn let_to_child(r#let: &ast::Let, stmts: &mut Vec<Stmt>) -> Stmt {
         },
         None => Stmt::Expr(ExprStmt {
             span: DUMMY_SP,
-            expr: Box::from(build_expr(init, stmts)),
+            expr: Box::from(build_expr(init, stmts, ctx)),
         }),
     }
 }
@@ -959,13 +975,17 @@ fn build_cond_for_pat(pat: &ast::Pattern, id: &Ident) -> Option<Expr> {
     }
 }
 
-fn build_template_literal(template: &ast::TemplateLiteral, stmt: &mut Vec<Stmt>) -> Tpl {
+fn build_template_literal(
+    template: &ast::TemplateLiteral,
+    stmt: &mut Vec<Stmt>,
+    ctx: &mut Context,
+) -> Tpl {
     Tpl {
         span: DUMMY_SP,
         exprs: template
             .exprs
             .iter()
-            .map(|expr| Box::from(build_expr(expr, stmt)))
+            .map(|expr| Box::from(build_expr(expr, stmt, ctx)))
             .collect(),
         quasis: template
             .quasis

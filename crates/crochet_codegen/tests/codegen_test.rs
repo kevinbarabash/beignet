@@ -146,15 +146,15 @@ fn simple_if_else() {
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"
-    let temp;
+    let $temp_0;
     if (cond) {
         console.log("true");
-        temp = 5;
+        $temp_0 = 5;
     } else {
         console.log("false");
-        temp = 10;
+        $temp_0 = 10;
     }
-    export const result = temp;
+    export const result = $temp_0;
     "###);
 }
 
@@ -175,15 +175,77 @@ fn simple_if_else_inside_fn() {
 
     insta::assert_snapshot!(compile(src), @r###"
     export const foo = ()=>{
-        let temp;
+        let $temp_0;
         if (cond) {
             console.log("true");
-            temp = 5;
+            $temp_0 = 5;
         } else {
             console.log("false");
-            temp = 10;
+            $temp_0 = 10;
         }
-        const result = temp;
+        const result = $temp_0;
+        return result;
+    };
+    "###);
+}
+
+#[test]
+fn nested_if_else() {
+    let src = r#"
+    let result = if c1 {
+        if c2 {
+            5
+        } else {
+            10
+        }
+    } else {
+        if c3 {
+            "hello"
+        } else {
+            "world"
+        }
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    let $temp_0;
+    if (c1) {
+        let $temp_1;
+        if (c2) {
+            $temp_1 = 5;
+        } else {
+            $temp_1 = 10;
+        }
+        $temp_0 = $temp_1;
+    } else {
+        let $temp_2;
+        if (c3) {
+            $temp_2 = "hello";
+        } else {
+            $temp_2 = "world";
+        }
+        $temp_0 = $temp_2;
+    }
+    export const result = $temp_0;
+    "###);
+}
+
+#[test]
+fn multiple_lets_inside_a_function() {
+    let src = r#"
+    let do_math = () => {
+        let x = 5;
+        let y = 10;
+        let result = x + y;
+        result
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const do_math = ()=>{
+        const x = 5;
+        const y = 10;
+        const result = x + y;
         return result;
     };
     "###);
