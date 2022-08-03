@@ -207,25 +207,29 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
     }
 }
 
-// TODO: dedupe with build_fn_body()
-fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Context) -> BlockStmt {
-    let mut stmts: Vec<Stmt> = vec![];
-
-    let expr = if let ast::Expr::Let(r#let) = expr {
-        let child = let_to_child(r#let, &mut stmts, ctx);
+// This should only be called by `build_expr_in_new_scope` or `build_fn_body`.
+fn _build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
+    if let ast::Expr::Let(r#let) = expr {
+        let child = let_to_child(r#let, stmts, ctx);
         stmts.push(child);
 
         let mut body = r#let.body.to_owned();
         while let ast::Expr::Let(r#let) = body.as_ref() {
-            let child = let_to_child(r#let, &mut stmts, ctx);
+            let child = let_to_child(r#let, stmts, ctx);
             stmts.push(child);
             body = r#let.body.to_owned();
         }
 
-        build_expr(&body, &mut stmts, ctx)
+        build_expr(&body, stmts, ctx)
     } else {
-        build_expr(expr, &mut stmts, ctx)
-    };
+        build_expr(expr, stmts, ctx)
+    }
+}
+
+fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Context) -> BlockStmt {
+    let mut stmts: Vec<Stmt> = vec![];
+
+    let expr = _build_expr(expr, &mut stmts, ctx);
 
     // Assigns the result of the block to the temp variable
     stmts.push(Stmt::Expr(ExprStmt {
@@ -766,28 +770,10 @@ fn build_lit(lit: &ast::Lit) -> Lit {
 // TODO: have an intermediary from between the AST and what we used for
 // codegen that unwraps `Let` nodes into vectors before converting them
 // to statements.
-// TODO: dedupe with build_expr_in_new_scope()
 fn build_fn_body(body: &ast::Expr, ctx: &mut Context) -> BlockStmtOrExpr {
     let mut stmts: Vec<Stmt> = vec![];
 
-    let ret_expr: Expr = match body {
-        ast::Expr::Let(r#let) => {
-            let child = let_to_child(r#let, &mut stmts, ctx);
-            stmts.push(child);
-
-            let mut body = r#let.body.to_owned();
-            while let ast::Expr::Let(r#let) = body.as_ref() {
-                let child = let_to_child(r#let, &mut stmts, ctx);
-                stmts.push(child);
-                body = r#let.body.to_owned();
-            }
-
-            build_expr(&body, &mut stmts, ctx)
-        }
-        _ => {
-            build_expr(body, &mut stmts, ctx)
-        }
-    };
+    let ret_expr = _build_expr(body, &mut stmts, ctx);
 
     if stmts.is_empty() {
         // Use fat arrow shorthand, e.g. (x) => x
