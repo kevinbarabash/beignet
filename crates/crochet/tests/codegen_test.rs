@@ -118,21 +118,23 @@ fn variable_declaration_with_number_literal() {
 #[test]
 fn let_in_inside_declaration() {
     insta::assert_snapshot!(compile("let foo = {let x = 5; x}"), @r###"
-    export const foo = (()=>{
+    let $temp_0;
+    {
         const x = 5;
-        return x;
-    })();
+        $temp_0 = x;
+    }export const foo = $temp_0;
     "###);
 }
 
 #[test]
 fn nested_let_in_inside_declaration() {
     insta::assert_snapshot!(compile("let foo = {let x = 5; let y = 10; x + y}"), @r###"
-    export const foo = (()=>{
+    let $temp_0;
+    {
         const x = 5;
         const y = 10;
-        return x + y;
-    })();
+        $temp_0 = x + y;
+    }export const foo = $temp_0;
     "###);
 }
 
@@ -148,11 +150,12 @@ fn js_print_let_in() {
     let foo = {let x = 5; let y = 10; x + y}
     "#;
     insta::assert_snapshot!(compile(input), @r###"
-    export const foo = (()=>{
+    let $temp_0;
+    {
         const x = 5;
         const y = 10;
-        return x + y;
-    })();
+        $temp_0 = x + y;
+    }export const foo = $temp_0;
     "###);
 }
 
@@ -165,11 +168,12 @@ fn js_print_variable_shadowing() {
         x
     }"#;
     insta::assert_snapshot!(compile(input), @r###"
-    export const foo = (()=>{
+    let $temp_0;
+    {
         const x = 5;
         const x = 10;
-        return x;
-    })();
+        $temp_0 = x;
+    }export const foo = $temp_0;
     "###);
 }
 
@@ -216,14 +220,17 @@ fn js_print_nested_blocks() {
         };
         sum
     }"#), @r###"
-    export const result = (()=>{
-        const sum = (()=>{
+    let $temp_0;
+    {
+        let $temp_1;
+        {
             const x = 5;
             const y = 10;
-            return x + y;
-        })();
-        return sum;
-    })();
+            $temp_1 = x + y;
+        }
+        const sum = $temp_1;
+        $temp_0 = sum;
+    }export const result = $temp_0;
     "###);
 }
 

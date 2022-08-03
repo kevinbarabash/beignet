@@ -266,9 +266,10 @@ fn codegen_if_let_with_rename() {
         x: 5,
         y: 10
     };
-    const { x: a , y: b  } = $temp_1;
-    $temp_0 = a + b;
-    export const result = $temp_0;
+    {
+        const { x: a , y: b  } = $temp_1;
+        $temp_0 = a + b;
+    }export const result = $temp_0;
     "###);
 }
 
@@ -296,5 +297,19 @@ fn infer_if_let_refutable_pattern_nested_obj() {
         $temp_0 = x + y;
     }
     $temp_0;
+    "###);
+}
+
+#[test]
+fn codegen_block_with_multiple_non_let_lines() {
+    let src = "let result = {let x = 5; x + 0; x}";
+
+    insta::assert_snapshot!(compile(src), @r###"
+    let $temp_0;
+    {
+        const x = 5;
+        x + 0;
+        $temp_0 = x;
+    }export const result = $temp_0;
     "###);
 }

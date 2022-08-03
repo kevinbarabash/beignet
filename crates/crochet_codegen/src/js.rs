@@ -213,7 +213,17 @@ fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Context)
     let mut stmts: Vec<Stmt> = vec![];
 
     let expr = if let ast::Expr::Let(r#let) = expr {
-        let_to_children_no_return(r#let, &mut stmts, ctx)
+        let child = let_to_child(r#let, &mut stmts, ctx);
+        stmts.push(child);
+
+        let mut body = r#let.body.to_owned();
+        while let ast::Expr::Let(r#let) = body.as_ref() {
+            let child = let_to_child(r#let, &mut stmts, ctx);
+            stmts.push(child);
+            body = r#let.body.to_owned();
+        }
+
+        build_expr(&body, &mut stmts, ctx)
     } else {
         build_expr(expr, &mut stmts, ctx)
     };
@@ -287,14 +297,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 })
                 .collect();
 
-            let body: BlockStmtOrExpr = match &body.as_ref() {
-                // TODO: Avoid wrapping in an IIFE when it isn't necessary.
-                ast::Expr::Let(r#let) => BlockStmtOrExpr::BlockStmt(BlockStmt {
-                    span: DUMMY_SP,
-                    stmts: let_to_children(r#let, ctx),
-                }),
-                _ => BlockStmtOrExpr::Expr(Box::from(build_expr(body, stmts, ctx))),
-            };
+            let body = build_fn_body(body.as_ref(), stmts, ctx);
 
             Expr::Arrow(ArrowExpr {
                 span: DUMMY_SP,
@@ -306,32 +309,18 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 return_type: None,
             })
         }
-        ast::Expr::Let(r#let) => {
-            // Return an IIFE
-            let arrow = Expr::Arrow(ArrowExpr {
-                span: DUMMY_SP,
-                params: vec![],
-                body: BlockStmtOrExpr::BlockStmt(BlockStmt {
-                    span: DUMMY_SP,
-                    stmts: let_to_children(r#let, ctx),
-                }),
-                is_async: false,
-                is_generator: false,
-                type_params: None,
-                return_type: None,
-            });
+        ast::Expr::Let(_) => {
+            // let $temp_n;
+            let temp_id = ctx.new_ident();
+            let temp_decl = build_let_decl_stmt(&temp_id);
+            stmts.push(temp_decl);
 
-            let callee = Callee::Expr(Box::from(Expr::Paren(ParenExpr {
-                span: DUMMY_SP,
-                expr: Box::from(arrow),
-            })));
+            // { ...; $temp_n = <result> }
+            let block = build_expr_in_new_scope(expr, &temp_id, ctx);
+            stmts.push(Stmt::Block(block));
 
-            Expr::Call(CallExpr {
-                span: DUMMY_SP,
-                callee,
-                args: vec![],
-                type_args: None,
-            })
+            // $temp_n
+            Expr::Ident(temp_id)
         }
         ast::Expr::Lit(lit) => Expr::from(lit),
         ast::Expr::Op(ast::Op {
@@ -401,10 +390,12 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
         }) => match cond.as_ref() {
             ast::Expr::LetExpr(let_expr) => build_let_expr(let_expr, consequent, stmts, ctx),
             _ => {
+                // let $temp_n;
                 let temp_id = ctx.new_ident();
-                let decl = build_let_with_id(&temp_id);
-                stmts.push(decl);
+                let temp_decl = build_let_decl_stmt(&temp_id);
+                stmts.push(temp_decl);
 
+                // if (cond) { ...; $temp_n = <cons_res> } else { ...; $temp_n = <alt_res> }
                 let test = Box::from(build_expr(cond.as_ref(), stmts, ctx));
                 let cons = Box::from(Stmt::Block(build_expr_in_new_scope(
                     consequent.as_ref(),
@@ -418,7 +409,6 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                         ctx,
                     )))
                 });
-
                 stmts.push(Stmt::If(IfStmt {
                     span: DUMMY_SP,
                     test,
@@ -426,6 +416,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                     alt,
                 }));
 
+                // $temp_n
                 Expr::Ident(temp_id)
             }
         },
@@ -521,13 +512,15 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
             })
         }
         ast::Expr::Match(ast::Match { expr, arms, .. }) => {
+            // let $temp_n;
             let ret_temp_id = ctx.new_ident();
-            let ret_decl = build_let_with_id(&ret_temp_id);
+            let ret_decl = build_let_decl_stmt(&ret_temp_id);
             stmts.push(ret_decl);
 
+            // let $temp_m = <expr>
             let temp_id = ctx.new_ident();
-            let decl = build_const_with_id(&temp_id, build_expr(expr, stmts, ctx));
-            stmts.push(decl);
+            let temp_decl = build_const_decl_stmt(&temp_id, build_expr(expr, stmts, ctx));
+            stmts.push(temp_decl);
 
             // TODO: we want to stop when we encounter the first
             // irrefutable pattern since all subsequent patterns
@@ -577,6 +570,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
 
             stmts.push(if_else);
 
+            // $temp_n
             Expr::Ident(ret_temp_id)
         }
     }
@@ -590,20 +584,21 @@ fn build_let_expr(
 ) -> Expr {
     let LetExpr { pat, expr, .. } = let_expr;
 
-    let ret_temp_id = ctx.new_ident();
-    stmts.push(build_let_with_id(&ret_temp_id));
+    let ret_id = ctx.new_ident();
+    let ret_decl = build_let_decl_stmt(&ret_id);
+    stmts.push(ret_decl);
 
     let temp_id = ctx.new_ident();
-    let decl = build_const_with_id(&temp_id, build_expr(expr, stmts, ctx));
-    stmts.push(decl);
+    let temp_decl = build_const_decl_stmt(&temp_id, build_expr(expr, stmts, ctx));
+    stmts.push(temp_decl);
 
     let cond = build_cond_for_pat(pat, &temp_id);
 
-    let mut block = build_expr_in_new_scope(consequent, &ret_temp_id, ctx);
+    let mut block = build_expr_in_new_scope(consequent, &ret_id, ctx);
 
     if let Some(name) = build_pattern(pat, stmts, ctx) {
         // TODO: ignore the refutuable patterns when destructuring
-        let destructure = build_const(name, Expr::from(temp_id));
+        let destructure = build_const_decl_stmt_with_pat(name, Expr::from(temp_id));
         block.stmts.insert(0, destructure);
     }
 
@@ -618,11 +613,11 @@ fn build_let_expr(
             stmts.push(if_else);
         }
         None => {
-            stmts.append(&mut block.stmts);
+            stmts.push(Stmt::Block(block));
         }
     };
 
-    Expr::Ident(ret_temp_id)
+    Expr::Ident(ret_id)
 }
 
 fn build_arm(
@@ -645,7 +640,7 @@ fn build_arm(
 
     // If pattern has assignables, assign them
     if let Some(name) = build_pattern(pat, stmts, ctx) {
-        let destructure = build_const(name, Expr::from(id.to_owned()));
+        let destructure = build_const_decl_stmt_with_pat(name, Expr::from(id.to_owned()));
         block.stmts.insert(0, destructure);
     }
 
@@ -772,46 +767,38 @@ fn build_lit(lit: &ast::Lit) -> Lit {
 // TODO: have an intermediary from between the AST and what we used for
 // codegen that unwraps `Let` nodes into vectors before converting them
 // to statements.
-fn let_to_children(r#let: &ast::Let, ctx: &mut Context) -> Vec<Stmt> {
-    let mut stmts: Vec<Stmt> = vec![];
 
-    let mut children: Vec<Stmt> = vec![let_to_child(r#let, &mut stmts, ctx)];
-    let mut body = r#let.body.to_owned();
+fn build_fn_body(body: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> BlockStmtOrExpr {
+    let body: BlockStmtOrExpr = match body {
+        // TODO: Avoid wrapping in an IIFE when it isn't necessary.
+        ast::Expr::Let(r#let) => {
+            let mut stmts: Vec<Stmt> = vec![];
 
-    while let ast::Expr::Let(r#let) = body.as_ref() {
-        children.push(let_to_child(r#let, &mut stmts, ctx));
-        body = r#let.body.to_owned();
-    }
+            let child = let_to_child(r#let, &mut stmts, ctx);
+            stmts.push(child);
 
-    children.push(Stmt::Return(ReturnStmt {
-        span: DUMMY_SP,
-        arg: Some(Box::from(build_expr(&body, &mut stmts, ctx))),
-    }));
+            let mut body = r#let.body.to_owned();
+            while let ast::Expr::Let(r#let) = body.as_ref() {
+                let child = let_to_child(r#let, &mut stmts, ctx);
+                stmts.push(child);
+                body = r#let.body.to_owned();
+            }
 
-    // TODO:
-    // This works right now, but for more complicated blocks we'll
-    // want to intersperse stmts and children.
-    println!("let_to_children - stmts = {stmts:#?}");
-    stmts.append(&mut children);
+            let ret = Stmt::Return(ReturnStmt {
+                span: DUMMY_SP,
+                arg: Some(Box::from(build_expr(&body, &mut stmts, ctx))),
+            });
+            stmts.push(ret);
 
-    stmts
-}
+            BlockStmtOrExpr::BlockStmt(BlockStmt {
+                span: DUMMY_SP,
+                stmts,
+            })
+        }
+        _ => BlockStmtOrExpr::Expr(Box::from(build_expr(body, stmts, ctx))),
+    };
 
-// TODO: have an intermediary from between the AST and what we used for
-// codegen that unwraps `Let` nodes into vectors before converting them
-// to statements.
-fn let_to_children_no_return(r#let: &ast::Let, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
-    let child = let_to_child(r#let, stmts, ctx);
-    stmts.push(child);
-
-    let mut body = r#let.body.to_owned();
-    while let ast::Expr::Let(r#let) = body.as_ref() {
-        let child = let_to_child(r#let, stmts, ctx);
-        stmts.push(child);
-        body = r#let.body.to_owned();
-    }
-
-    build_expr(&body, stmts, ctx)
+    body
 }
 
 fn let_to_child(r#let: &ast::Let, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Stmt {
@@ -821,7 +808,7 @@ fn let_to_child(r#let: &ast::Let, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> S
     // unique identifiers.
     match pattern {
         Some(pattern) => match build_pattern(pattern, stmts, ctx) {
-            Some(name) => build_const(name, build_expr(init, stmts, ctx)),
+            Some(name) => build_const_decl_stmt_with_pat(name, build_expr(init, stmts, ctx)),
             None => todo!(),
         },
         None => Stmt::Expr(ExprStmt {
@@ -1039,11 +1026,11 @@ fn cond_to_expr(cond: &Condition, id: &Ident) -> Expr {
     }
 }
 
-fn build_const_with_id(id: &Ident, expr: Expr) -> Stmt {
-    build_const(Pat::Ident(BindingIdent::from(id.to_owned())), expr)
+fn build_const_decl_stmt(id: &Ident, expr: Expr) -> Stmt {
+    build_const_decl_stmt_with_pat(Pat::Ident(BindingIdent::from(id.to_owned())), expr)
 }
 
-fn build_const(name: Pat, expr: Expr) -> Stmt {
+fn build_const_decl_stmt_with_pat(name: Pat, expr: Expr) -> Stmt {
     Stmt::Decl(Decl::Var(VarDecl {
         span: DUMMY_SP,
         kind: VarDeclKind::Const,
@@ -1057,18 +1044,14 @@ fn build_const(name: Pat, expr: Expr) -> Stmt {
     }))
 }
 
-fn build_let_with_id(id: &Ident) -> Stmt {
-    build_let(Pat::Ident(BindingIdent::from(id.to_owned())))
-}
-
-fn build_let(name: Pat) -> Stmt {
+fn build_let_decl_stmt(id: &Ident) -> Stmt {
     Stmt::Decl(Decl::Var(VarDecl {
         span: DUMMY_SP,
         kind: VarDeclKind::Let,
         declare: false,
         decls: vec![VarDeclarator {
             span: DUMMY_SP,
-            name,
+            name: Pat::Ident(BindingIdent::from(id.to_owned())),
             init: None,
             definite: false,
         }],

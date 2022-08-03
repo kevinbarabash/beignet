@@ -840,11 +840,12 @@ fn codegen_block_with_multiple_non_let_lines() {
     let js = codegen_js(&program);
 
     insta::assert_snapshot!(js, @r###"
-    export const result = (()=>{
+    let $temp_0;
+    {
         const x = 5;
         x + 0;
-        return x;
-    })();
+        $temp_0 = x;
+    }export const result = $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1255,10 +1256,11 @@ fn codegen_if_let() {
     };
     let $temp_0;
     const $temp_1 = p;
-    const { x , y  } = $temp_1;
-    x + y;
-    $temp_0 = undefined;
-    $temp_0;
+    {
+        const { x , y  } = $temp_1;
+        x + y;
+        $temp_0 = undefined;
+    }$temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1291,10 +1293,11 @@ fn codegen_if_let_with_rename() {
     };
     let $temp_0;
     const $temp_1 = p;
-    const { x: a , y: b  } = $temp_1;
-    a + b;
-    $temp_0 = undefined;
-    $temp_0;
+    {
+        const { x: a , y: b  } = $temp_1;
+        a + b;
+        $temp_0 = undefined;
+    }$temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
