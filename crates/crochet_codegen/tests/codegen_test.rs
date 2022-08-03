@@ -190,6 +190,33 @@ fn simple_if_else_inside_fn() {
 }
 
 #[test]
+fn simple_if_else_inside_fn_as_expr() {
+    let src = r#"
+    let foo = () => if cond {
+        console.log("true");
+        5
+    } else {
+        console.log("false");
+        10
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const foo = ()=>{
+        let $temp_0;
+        if (cond) {
+            console.log("true");
+            $temp_0 = 5;
+        } else {
+            console.log("false");
+            $temp_0 = 10;
+        }
+        return $temp_0;
+    };
+    "###);
+}
+
+#[test]
 fn nested_if_else() {
     let src = r#"
     let result = if c1 {

@@ -118,8 +118,6 @@ fn build_js(program: &ast::Program, ctx: &mut Context) -> Program {
                 })),
             };
 
-            println!("stmts = {stmts:#?}");
-
             let mut items: Vec<ModuleItem> = stmts
                 .iter()
                 .map(|stmt| ModuleItem::Stmt(stmt.to_owned()))
@@ -209,6 +207,7 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
     }
 }
 
+// TODO: dedupe with build_fn_body()
 fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Context) -> BlockStmt {
     let mut stmts: Vec<Stmt> = vec![];
 
@@ -297,7 +296,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 })
                 .collect();
 
-            let body = build_fn_body(body.as_ref(), stmts, ctx);
+            let body = build_fn_body(body.as_ref(), ctx);
 
             Expr::Arrow(ArrowExpr {
                 span: DUMMY_SP,
@@ -767,13 +766,12 @@ fn build_lit(lit: &ast::Lit) -> Lit {
 // TODO: have an intermediary from between the AST and what we used for
 // codegen that unwraps `Let` nodes into vectors before converting them
 // to statements.
+// TODO: dedupe with build_expr_in_new_scope()
+fn build_fn_body(body: &ast::Expr, ctx: &mut Context) -> BlockStmtOrExpr {
+    let mut stmts: Vec<Stmt> = vec![];
 
-fn build_fn_body(body: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> BlockStmtOrExpr {
-    let body: BlockStmtOrExpr = match body {
-        // TODO: Avoid wrapping in an IIFE when it isn't necessary.
+    let ret_expr: Expr = match body {
         ast::Expr::Let(r#let) => {
-            let mut stmts: Vec<Stmt> = vec![];
-
             let child = let_to_child(r#let, &mut stmts, ctx);
             stmts.push(child);
 
@@ -784,21 +782,28 @@ fn build_fn_body(body: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 body = r#let.body.to_owned();
             }
 
-            let ret = Stmt::Return(ReturnStmt {
-                span: DUMMY_SP,
-                arg: Some(Box::from(build_expr(&body, &mut stmts, ctx))),
-            });
-            stmts.push(ret);
-
-            BlockStmtOrExpr::BlockStmt(BlockStmt {
-                span: DUMMY_SP,
-                stmts,
-            })
+            build_expr(&body, &mut stmts, ctx)
         }
-        _ => BlockStmtOrExpr::Expr(Box::from(build_expr(body, stmts, ctx))),
+        _ => {
+            build_expr(body, &mut stmts, ctx)
+        }
     };
 
-    body
+    if stmts.is_empty() {
+        // Use fat arrow shorthand, e.g. (x) => x
+        BlockStmtOrExpr::Expr(Box::from(ret_expr))
+    } else {
+        let ret = Stmt::Return(ReturnStmt {
+            span: DUMMY_SP,
+            arg: Some(Box::from(ret_expr)),
+        });
+        stmts.push(ret);
+
+        BlockStmtOrExpr::BlockStmt(BlockStmt {
+            span: DUMMY_SP,
+            stmts,
+        })
+    }
 }
 
 fn let_to_child(r#let: &ast::Let, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Stmt {
