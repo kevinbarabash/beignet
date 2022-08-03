@@ -6,7 +6,7 @@ use crochet_infer::*;
 use crochet_parser::parser;
 
 fn infer(input: &str) -> String {
-    let mut ctx = Context::default();
+    let mut ctx = crochet_infer::Context::default();
     let prog = parser().parse(input).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = match stmt {
@@ -16,7 +16,7 @@ fn infer(input: &str) -> String {
     format!("{}", result.unwrap())
 }
 
-fn infer_prog(src: &str) -> (Program, Context) {
+fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
     let result = parser().parse(src);
     let prog = match result {
         Ok(prog) => prog,
@@ -375,13 +375,13 @@ fn codegen_if_else() {
     let js = codegen_js(&program);
     insta::assert_snapshot!(js, @r###"
     export const cond = true;
-    export const result = (()=>{
-        if (cond) {
-            return 5;
-        } else {
-            return 5;
-        }
-    })();
+    let $temp_0;
+    if (cond) {
+        $temp_0 = 5;
+    } else {
+        $temp_0 = 5;
+    }
+    export const result = $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -840,11 +840,12 @@ fn codegen_block_with_multiple_non_let_lines() {
     let js = codegen_js(&program);
 
     insta::assert_snapshot!(js, @r###"
-    export const result = (()=>{
+    let $temp_0;
+    {
         const x = 5;
         x + 0;
-        return x;
-    })();
+        $temp_0 = x;
+    }export const result = $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1253,11 +1254,13 @@ fn codegen_if_let() {
         x: 5,
         y: 10
     };
-    (()=>{
-        const { x , y  } = p;
+    let $temp_0;
+    const $temp_1 = p;
+    {
+        const { x , y  } = $temp_1;
         x + y;
-        return undefined;
-    })();
+        $temp_0 = undefined;
+    }$temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1288,11 +1291,13 @@ fn codegen_if_let_with_rename() {
         x: 5,
         y: 10
     };
-    (()=>{
-        const { x: a , y: b  } = p;
+    let $temp_0;
+    const $temp_1 = p;
+    {
+        const { x: a , y: b  } = $temp_1;
         a + b;
-        return undefined;
-    })();
+        $temp_0 = undefined;
+    }$temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1337,14 +1342,14 @@ fn infer_if_let_refutable_pattern_obj() {
         x: 5,
         y: 10
     };
-    (()=>{
-        const value = p;
-        if (value.x === 5) {
-            const { y  } = value;
-            y;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = p;
+    if ($temp_1.x === 5) {
+        const { y  } = $temp_1;
+        y;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1378,14 +1383,14 @@ fn infer_if_let_refutable_pattern_nested_obj() {
             y: 10
         }
     };
-    (()=>{
-        const value = action;
-        if (value.type === "moveto") {
-            const { point: { x , y  }  } = value;
-            x + y;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = action;
+    if ($temp_1.type === "moveto") {
+        const { point: { x , y  }  } = $temp_1;
+        x + y;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1420,14 +1425,14 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
     ;
     ;
     ;
-    (()=>{
-        const value = action;
-        if (value.type === "moveto") {
-            const { point: { x , y  }  } = value;
-            x + y;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = action;
+    if ($temp_1.type === "moveto") {
+        const { point: { x , y  }  } = $temp_1;
+        x + y;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1468,14 +1473,14 @@ fn infer_if_let_refutable_pattern_array() {
         5,
         10
     ];
-    (()=>{
-        const value = p;
-        if (value[0] === 5) {
-            const [, y] = value;
-            y;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = p;
+    if ($temp_1[0] === 5) {
+        const [, y] = $temp_1;
+        y;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1506,14 +1511,14 @@ fn infer_if_let_refutable_pattern_nested_array() {
             10
         ]
     ];
-    (()=>{
-        const value = action;
-        if (value[0] === "moveto") {
-            const [, [x, y]] = value;
-            x + y;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = action;
+    if ($temp_1[0] === "moveto") {
+        const [, [x, y]] = $temp_1;
+        x + y;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1538,14 +1543,14 @@ fn codegen_if_let_with_is_prim() {
     let js = codegen_js(&program);
     insta::assert_snapshot!(js, @r###"
     ;
-    (()=>{
-        const value = b;
-        if (typeof value === "number") {
-            const a = value;
-            a + 5;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = b;
+    if (typeof $temp_1 === "number") {
+        const a = $temp_1;
+        a + 5;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
@@ -1603,14 +1608,14 @@ fn codegen_if_let_with_is_class() {
         constructor: ()=>bar
     };
     ;
-    (()=>{
-        const value = b;
-        if (value instanceof Foo) {
-            const a = value;
-            a.getNum() + 5;
-            return undefined;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = b;
+    if ($temp_1 instanceof Foo) {
+        const a = $temp_1;
+        a.getNum() + 5;
+        $temp_0 = undefined;
+    }
+    $temp_0;
     "###);
 }
 

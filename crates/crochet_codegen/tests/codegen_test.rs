@@ -63,23 +63,23 @@ fn pattern_matching() {
     }
     "#;
     insta::assert_snapshot!(compile(src), @r###"
-    export const result = (()=>{
-        const value = count + 1;
-        if (value === 0) {
-            return "none";
-        } else if (value === 1) {
-            return "one";
-        } else if (value === 2) {
-            return "a couple";
-        } else if (n < 5) {
-            const n = value;
-            console.log(`n = ${n}`);
-            return "a few";
-        } else {
-            console.log("fallthrough");
-            return "many";
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = count + 1;
+    if ($temp_1 === 0) {
+        $temp_0 = "none";
+    } else if ($temp_1 === 1) {
+        $temp_0 = "one";
+    } else if ($temp_1 === 2) {
+        $temp_0 = "a couple";
+    } else if (n < 5) {
+        const n = $temp_1;
+        console.log(`n = ${n}`);
+        $temp_0 = "a few";
+    } else {
+        console.log("fallthrough");
+        $temp_0 = "many";
+    }
+    export const result = $temp_0;
     "###);
 }
 
@@ -96,16 +96,16 @@ fn pattern_matching_with_disjoint_union() {
     insta::assert_snapshot!(compile(src), @r###"
     ;
     ;
-    export const result = (()=>{
-        const value = event;
-        if (value.type === "mousedown") {
-            const { x , y  } = value;
-            return `mousedown: (${x}, ${y})`;
-        } else if (value.type === "keydown" && key !== "Escape") {
-            const { key  } = value;
-            return key;
-        }
-    })();
+    let $temp_0;
+    const $temp_1 = event;
+    if ($temp_1.type === "mousedown") {
+        const { x , y  } = $temp_1;
+        $temp_0 = `mousedown: (${x}, ${y})`;
+    } else if ($temp_1.type === "keydown" && key !== "Escape") {
+        const { key  } = $temp_1;
+        $temp_0 = key;
+    }
+    export const result = $temp_0;
     "###);
 }
 
@@ -118,7 +118,7 @@ fn pattern_matching_multiple_catchall_panics() {
         _ => "bar",
     }
     "#;
-    
+
     compile(src);
 }
 
@@ -129,6 +129,214 @@ fn pattern_matching_no_arms_panics() {
     let result = match value {
     }
     "#;
-    
+
     compile(src);
+}
+
+#[test]
+fn simple_if_else() {
+    let src = r#"
+    let result = if cond {
+        console.log("true");
+        5
+    } else {
+        console.log("false");
+        10
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    let $temp_0;
+    if (cond) {
+        console.log("true");
+        $temp_0 = 5;
+    } else {
+        console.log("false");
+        $temp_0 = 10;
+    }
+    export const result = $temp_0;
+    "###);
+}
+
+#[test]
+fn simple_if_else_inside_fn() {
+    let src = r#"
+    let foo = () => {
+        let result = if cond {
+            console.log("true");
+            5
+        } else {
+            console.log("false");
+            10
+        };
+        result
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const foo = ()=>{
+        let $temp_0;
+        if (cond) {
+            console.log("true");
+            $temp_0 = 5;
+        } else {
+            console.log("false");
+            $temp_0 = 10;
+        }
+        const result = $temp_0;
+        return result;
+    };
+    "###);
+}
+
+#[test]
+fn simple_if_else_inside_fn_as_expr() {
+    let src = r#"
+    let foo = () => if cond {
+        console.log("true");
+        5
+    } else {
+        console.log("false");
+        10
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const foo = ()=>{
+        let $temp_0;
+        if (cond) {
+            console.log("true");
+            $temp_0 = 5;
+        } else {
+            console.log("false");
+            $temp_0 = 10;
+        }
+        return $temp_0;
+    };
+    "###);
+}
+
+#[test]
+fn nested_if_else() {
+    let src = r#"
+    let result = if c1 {
+        if c2 {
+            5
+        } else {
+            10
+        }
+    } else {
+        if c3 {
+            "hello"
+        } else {
+            "world"
+        }
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    let $temp_0;
+    if (c1) {
+        let $temp_1;
+        if (c2) {
+            $temp_1 = 5;
+        } else {
+            $temp_1 = 10;
+        }
+        $temp_0 = $temp_1;
+    } else {
+        let $temp_2;
+        if (c3) {
+            $temp_2 = "hello";
+        } else {
+            $temp_2 = "world";
+        }
+        $temp_0 = $temp_2;
+    }
+    export const result = $temp_0;
+    "###);
+}
+
+#[test]
+fn multiple_lets_inside_a_function() {
+    let src = r#"
+    let do_math = () => {
+        let x = 5;
+        let y = 10;
+        let result = x + y;
+        result
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const do_math = ()=>{
+        const x = 5;
+        const y = 10;
+        const result = x + y;
+        return result;
+    };
+    "###);
+}
+
+#[test]
+fn codegen_if_let_with_rename() {
+    // TODO: don't allow irrefutable patterns to be used with if-let
+    let src = r#"
+    let result = if let {x: a, y: b} = {x: 5, y: 10} {
+        a + b
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    let $temp_0;
+    const $temp_1 = {
+        x: 5,
+        y: 10
+    };
+    {
+        const { x: a , y: b  } = $temp_1;
+        $temp_0 = a + b;
+    }export const result = $temp_0;
+    "###);
+}
+
+#[test]
+fn infer_if_let_refutable_pattern_nested_obj() {
+    let src = r#"
+    let action = {type: "moveto", point: {x: 5, y: 10}}
+    if let {type: "moveto", point: {x, y}} = action {
+        x + y
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const action = {
+        type: "moveto",
+        point: {
+            x: 5,
+            y: 10
+        }
+    };
+    let $temp_0;
+    const $temp_1 = action;
+    if ($temp_1.type === "moveto") {
+        const { point: { x , y  }  } = $temp_1;
+        $temp_0 = x + y;
+    }
+    $temp_0;
+    "###);
+}
+
+#[test]
+fn codegen_block_with_multiple_non_let_lines() {
+    let src = "let result = {let x = 5; x + 0; x}";
+
+    insta::assert_snapshot!(compile(src), @r###"
+    let $temp_0;
+    {
+        const x = 5;
+        x + 0;
+        $temp_0 = x;
+    }export const result = $temp_0;
+    "###);
 }
