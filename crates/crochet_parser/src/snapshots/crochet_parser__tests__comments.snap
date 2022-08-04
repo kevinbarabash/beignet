@@ -1,0 +1,94 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: result
+---
+Program {
+    body: [
+        VarDecl {
+            span: 9..63,
+            pattern: Ident(
+                BindingIdent {
+                    span: 13..14,
+                    id: Ident {
+                        span: 13..14,
+                        name: "x",
+                    },
+                    type_ann: None,
+                },
+            ),
+            init: Some(
+                Lit(
+                    Num(
+                        Num {
+                            span: 17..18,
+                            value: "5",
+                        },
+                    ),
+                ),
+            ),
+            declare: false,
+        },
+        Expr {
+            span: 63..151,
+            expr: App(
+                App {
+                    span: 63..151,
+                    lam: Member(
+                        Member {
+                            span: 63..74,
+                            obj: Ident(
+                                Ident {
+                                    span: 63..70,
+                                    name: "console",
+                                },
+                            ),
+                            prop: Ident(
+                                Ident {
+                                    span: 70..74,
+                                    name: "log",
+                                },
+                            ),
+                        },
+                    ),
+                    args: [
+                        ExprOrSpread {
+                            spread: None,
+                            expr: Lit(
+                                Str(
+                                    Str {
+                                        span: 75..84,
+                                        value: "foo bar",
+                                    },
+                                ),
+                            ),
+                        },
+                    ],
+                },
+            ),
+        },
+        VarDecl {
+            span: 151..170,
+            pattern: Ident(
+                BindingIdent {
+                    span: 155..156,
+                    id: Ident {
+                        span: 155..156,
+                        name: "y",
+                    },
+                    type_ann: None,
+                },
+            ),
+            init: Some(
+                Lit(
+                    Num(
+                        Num {
+                            span: 159..161,
+                            value: "10",
+                        },
+                    ),
+                ),
+            ),
+            declare: false,
+        },
+    ],
+}

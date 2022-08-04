@@ -11,14 +11,8 @@ pub use decl::decl_parser;
 pub use expr::expr_parser;
 
 use chumsky::prelude::*;
-use chumsky::primitive::*;
-use chumsky::text::Padded;
 
 use crochet_ast::*;
-
-pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>> {
-    just(inputs).padded()
-}
 
 pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
     let program = choice((
@@ -323,5 +317,21 @@ mod tests {
                 },
             }"#
         ));
+    }
+
+    #[test]
+    fn comments() {
+        // TODO: figure out how to make this work with the "product" parser
+        let input = r#"
+        let x = 5 // hello
+                  // world
+        console.log("foo bar")
+        // leading comment 1
+        // leading omment 2
+        let y = 10
+        "#;
+        let result = parse(input);
+
+        insta::assert_debug_snapshot!(result);
     }
 }

@@ -45,7 +45,8 @@ pub fn jsx_parser(
     let jsx_tail = just("<")
         .ignore_then(just("/"))
         .ignore_then(text::ident().padded())
-        .then_ignore(just_with_padding(">"));
+        .then_ignore(just_with_padding(">"))
+        .labelled("jsx_tail");
 
     let jsx_element_self_closing = just_with_padding("<")
         .ignore_then(text::ident().padded())
@@ -63,7 +64,7 @@ pub fn jsx_parser(
         let jsx_element = jsx_head
             .clone()
             .then(jsx_element_child.repeated())
-            .then(jsx_tail)
+            .then(jsx_tail.clone())
             .map_with_span(|(((head, attrs), children), tail), span| {
                 if head != tail {
                     panic!("JSX head and tail elements must match")
@@ -104,7 +105,8 @@ pub fn jsx_parser(
             })
         });
 
-    let parser = choice((jsx_element, jsx_element_self_closing.map(Expr::JSXElement)));
+    let jsx_parser = choice((jsx_element, jsx_element_self_closing.map(Expr::JSXElement)))
+        .labelled("jsx_parser");
 
-    parser.boxed()
+    jsx_parser.boxed()
 }

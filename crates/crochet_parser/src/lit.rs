@@ -5,6 +5,8 @@ use unescape::unescape;
 use crate::util::just_with_padding;
 
 pub fn boolean_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
+    // NOTE: It's important to have padding around all tokens in order
+    // for comments to work because comments themselvse have no padding.
     let r#true = just_with_padding("true").map_with_span(|_, span| Lit::bool(true, span));
     let r#false = just_with_padding("false").map_with_span(|_, span| Lit::bool(false, span));
 
@@ -20,7 +22,14 @@ pub fn number_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
         .collect::<String>()
         .map_with_span(Lit::num);
 
-    choice((real, int)).boxed()
+    let comment = just("//")
+        .then(take_until(just('\n').rewind()))
+        .padded()
+        .labelled("comment");
+
+    // NOTE: It's important to have padding around all tokens in order
+    // for comments to work because comments themselvse have no padding.
+    choice((real, int)).padded().then_ignore(comment.repeated()).boxed()
 }
 
 // Based on https://github.com/zesterer/chumsky/blob/master/examples/json.rs.
@@ -61,5 +70,7 @@ pub fn string_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
             Lit::str(cooked, span)
         });
 
-    string.boxed()
+    // NOTE: It's important to have padding around all tokens in order
+    // for comments to work because comments themselvse have no padding.
+    string.padded().boxed()
 }
