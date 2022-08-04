@@ -381,6 +381,17 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 },
             })
         }
+        ast::Expr::UnaryExpr(ast::UnaryExpr { arg, op, .. }) => {
+            let op = match op {
+                ast::UnaryOp::Neg => UnaryOp::Minus
+            };
+
+            Expr::Unary(UnaryExpr {
+                span: DUMMY_SP,
+                op,
+                arg: Box::from(build_expr(arg, stmts, ctx)),
+            })
+        },
         ast::Expr::Fix(ast::Fix { expr, .. }) => match expr.as_ref() {
             ast::Expr::Lambda(ast::Lambda { body, .. }) => build_expr(body, stmts, ctx),
             _ => panic!("Fix should only wrap a lambda"),

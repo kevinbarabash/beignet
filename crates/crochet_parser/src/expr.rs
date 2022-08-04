@@ -307,14 +307,28 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 None => arg,
             });
 
-        let product = r#await
+        let negative = just_with_padding("-")
+            .or_not()
+            .then(r#await)
+            .map_with_span(|(neg, arg), span: Span| {
+                match neg {
+                    None => arg,
+                    Some(_) => Expr::UnaryExpr(UnaryExpr {
+                        span,
+                        op: UnaryOp::Neg,
+                        arg: Box::from(arg),
+                    }),
+                }
+            });
+
+        let product = negative
             .clone()
             .then(
                 choice((
                     just_with_padding("*").to(BinOp::Mul),
                     just_with_padding("/").to(BinOp::Div),
                 ))
-                .then(r#await.clone())
+                .then(negative.clone())
                 .repeated(),
             )
             .foldl(|left, (op, right)| {

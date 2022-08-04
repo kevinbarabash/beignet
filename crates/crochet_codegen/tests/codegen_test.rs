@@ -17,6 +17,16 @@ fn js_print_multiple_decls() {
 }
 
 #[test]
+fn unary_minus() {
+    let src = r#"
+    let negate = (x) => -x
+    "#;
+
+    insta::assert_snapshot!(compile(src), @"export const negate = (x)=>-x;
+");
+}
+
+#[test]
 fn template_literals() {
     let src = r#"
     let a = `hello, world`

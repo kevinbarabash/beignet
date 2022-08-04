@@ -87,6 +87,16 @@ mod tests {
     }
 
     #[test]
+    fn infer_unary_minus() {
+        let src = r#"
+        let negate = (x) => -x
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("negate", &ctx), "(number) => number");
+    }
+
+    #[test]
     fn infer_if_else() {
         let src = r#"
         let n = 0

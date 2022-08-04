@@ -94,6 +94,13 @@ pub struct Op {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnaryExpr {
+    pub span: Span,
+    pub op: UnaryOp,
+    pub arg: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Obj {
     pub span: Span,
     pub props: Vec<PropOrSpread>,
@@ -223,6 +230,7 @@ pub enum Expr {
     LetExpr(LetExpr), // should only be used in `if let` expressions
     Lit(Lit),
     Op(Op),
+    UnaryExpr(UnaryExpr),
     Obj(Obj),
     Await(Await),
     Tuple(Tuple),
@@ -245,6 +253,7 @@ impl Expr {
             Expr::Let(r#let) => r#let.span.to_owned(),
             Expr::Lit(lit) => lit.span(),
             Expr::Op(op) => op.span.to_owned(),
+            Expr::UnaryExpr(ue) => ue.span.to_owned(),
             Expr::Obj(obj) => obj.span.to_owned(),
             Expr::Await(r#await) => r#await.span.to_owned(),
             Expr::Tuple(tuple) => tuple.span.to_owned(),
@@ -270,4 +279,9 @@ pub enum BinOp {
     GtEq,
     Lt,
     LtEq,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UnaryOp {
+    Neg,
 }
