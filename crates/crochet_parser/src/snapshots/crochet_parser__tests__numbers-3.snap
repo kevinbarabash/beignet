@@ -9,7 +9,7 @@ Program {
             expr: UnaryExpr(
                 UnaryExpr {
                     span: 0..3,
-                    op: Neg,
+                    op: Minus,
                     arg: Lit(
                         Num(
                             Num {
