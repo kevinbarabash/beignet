@@ -383,7 +383,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
         }
         ast::Expr::UnaryExpr(ast::UnaryExpr { arg, op, .. }) => {
             let op = match op {
-                ast::UnaryOp::Neg => UnaryOp::Minus
+                ast::UnaryOp::Minus => UnaryOp::Minus
             };
 
             Expr::Unary(UnaryExpr {

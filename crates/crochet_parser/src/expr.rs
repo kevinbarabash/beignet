@@ -315,7 +315,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                     None => arg,
                     Some(_) => Expr::UnaryExpr(UnaryExpr {
                         span,
-                        op: UnaryOp::Neg,
+                        op: UnaryOp::Minus,
                         arg: Box::from(arg),
                     }),
                 }

@@ -306,7 +306,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let (s1, t1) = infer_expr(ctx, arg)?;
             let s2 = unify(&t1, &ctx.prim(Primitive::Num), ctx)?;
             let t = match op {
-                UnaryOp::Neg => ctx.prim(Primitive::Num),
+                UnaryOp::Minus => ctx.prim(Primitive::Num),
             };
             Ok((compose_many_subs(&[s1, s2]), t))
         }
