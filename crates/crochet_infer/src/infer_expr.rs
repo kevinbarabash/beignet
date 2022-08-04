@@ -282,6 +282,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         }) => {
             // TODO: check what `op` is and handle comparison operators
             // differently from arithmetic operators
+            // TODO: if both are literals, compute the result at compile
+            // time and set the result to be appropriate number literal.
             let (s1, t1) = infer_expr(ctx, left)?;
             let (s2, t2) = infer_expr(ctx, right)?;
             let s3 = unify(&t1, &ctx.prim(Primitive::Num), ctx)?;
@@ -299,6 +301,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 BinOp::LtEq => ctx.prim(Primitive::Bool),
             };
             Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
+        }
+        Expr::UnaryExpr(UnaryExpr { op, arg, .. }) => {
+            let (s1, t1) = infer_expr(ctx, arg)?;
+            let s2 = unify(&t1, &ctx.prim(Primitive::Num), ctx)?;
+            let t = match op {
+                UnaryOp::Minus => ctx.prim(Primitive::Num),
+            };
+            Ok((compose_many_subs(&[s1, s2]), t))
         }
         Expr::Obj(Obj { props, .. }) => {
             let mut ss: Vec<Subst> = vec![];

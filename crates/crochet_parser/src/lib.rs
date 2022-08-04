@@ -44,8 +44,7 @@ mod tests {
     fn numbers() {
         insta::assert_debug_snapshot!(parse("10"));
         insta::assert_debug_snapshot!(parse("1.23"));
-        // TODO: support negative numbers
-        // insta::assert_debug_snapshot!(parse("-10"));
+        insta::assert_debug_snapshot!(parse("-10"));
     }
 
     #[test]
@@ -94,6 +93,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse("a < b"));
         insta::assert_debug_snapshot!(parse("a <= b"));
         insta::assert_debug_snapshot!(parse("let cond = a != b"));
+        insta::assert_debug_snapshot!(parse("-a"));
+        insta::assert_debug_snapshot!(parse("-(a + b)"));
     }
 
     #[test]

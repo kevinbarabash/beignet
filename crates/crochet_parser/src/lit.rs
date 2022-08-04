@@ -23,6 +23,7 @@ pub fn number_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
     choice((real, int)).boxed()
 }
 
+// Based on https://github.com/zesterer/chumsky/blob/master/examples/json.rs.
 pub fn string_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
     let escape = just('\\').ignore_then(
         just('\\')
