@@ -11,7 +11,7 @@ Program {
                     span: 0..27,
                     cond: LetExpr(
                         LetExpr {
-                            span: 3..21,
+                            span: 7..20,
                             pat: Object(
                                 ObjectPat {
                                     span: 7..17,

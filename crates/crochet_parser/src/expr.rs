@@ -78,9 +78,11 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .ignore_then(pattern.clone())
             .then_ignore(just_with_padding("="))
             .then(expr.clone())
-            .map_with_span(|(pat, expr), span: Span| {
+            .map_with_span(|(pat, expr), _: Span| {
+                let start = pat.span().start;
+                let end = expr.span().end;
                 Expr::LetExpr(LetExpr {
-                    span,
+                    span: start..end,
                     pat,
                     expr: Box::from(expr),
                 })

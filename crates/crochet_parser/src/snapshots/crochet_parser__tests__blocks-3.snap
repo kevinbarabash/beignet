@@ -5,7 +5,7 @@ expression: "parse(\"{let x = 5; let y = 10; x + y}\")"
 Program {
     body: [
         Expr {
-            span: 0..30,
+            span: 5..29,
             expr: Let(
                 Let {
                     span: 5..29,

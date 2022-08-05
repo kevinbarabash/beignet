@@ -17,7 +17,10 @@ use crochet_ast::*;
 pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
     let program = choice((
         decl_parser(),
-        expr_parser().map_with_span(|expr, span: Span| Statement::Expr { expr, span }),
+        expr_parser().map_with_span(|expr, _: Span| {
+            let span = expr.span();
+            Statement::Expr { expr, span }
+        }),
     ))
     .padded()
     .repeated()
