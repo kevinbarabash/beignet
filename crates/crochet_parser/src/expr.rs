@@ -74,12 +74,12 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             })
             .labelled("block");
 
-        let let_expr = just_with_padding("let")
-            .ignore_then(pattern.clone())
+        let let_expr = just_with_padding("let").map_with_span(|_, span| span)
+            .then(pattern.clone())
             .then_ignore(just_with_padding("="))
             .then(expr.clone())
-            .map_with_span(|(pat, expr), _: Span| {
-                let start = pat.span().start;
+            .map_with_span(|((let_span, pat), expr), _: Span| {
+                let start = let_span.start;
                 let end = expr.span().end;
                 Expr::LetExpr(LetExpr {
                     span: start..end,
