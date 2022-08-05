@@ -1,16 +1,16 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: parse(trailing_comments_after_num_lit)
+expression: parse(leading_comments)
 ---
 Program {
     body: [
         VarDecl {
-            span: 9..63,
+            span: 9..86,
             pattern: Ident(
                 BindingIdent {
-                    span: 13..14,
+                    span: 71..72,
                     id: Ident {
-                        span: 13..14,
+                        span: 71..72,
                         name: "x",
                     },
                     type_ann: None,
@@ -20,8 +20,8 @@ Program {
                 Lit(
                     Num(
                         Num {
-                            span: 17..18,
-                            value: "5",
+                            span: 75..77,
+                            value: "10",
                         },
                     ),
                 ),

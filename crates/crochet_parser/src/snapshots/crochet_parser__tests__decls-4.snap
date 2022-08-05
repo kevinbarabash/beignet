@@ -8,7 +8,7 @@ Program {
             span: 0..28,
             pattern: Ident(
                 BindingIdent {
-                    span: 12..28,
+                    span: 12..15,
                     id: Ident {
                         span: 12..15,
                         name: "foo",

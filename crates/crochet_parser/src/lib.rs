@@ -320,18 +320,31 @@ mod tests {
     }
 
     #[test]
-    fn comments() {
-        // TODO: figure out how to make this work with the "product" parser
-        let input = r#"
+    fn trailing_comments() {
+        let trailing_comments_after_num_lit = r#"
         let x = 5 // hello
                   // world
-        console.log("foo bar")
-        // leading comment 1
-        // leading omment 2
-        let y = 10
         "#;
-        let result = parse(input);
+        insta::assert_debug_snapshot!(parse(trailing_comments_after_num_lit));
 
-        insta::assert_debug_snapshot!(result);
+        let trailing_comments_after_str_lit = r#"
+        let x = "hello" // world
+        "#;
+        insta::assert_debug_snapshot!(parse(trailing_comments_after_str_lit));
+
+        let trailing_comments_after_bool_lit = r#"
+        let x = true // dat
+        "#;
+        insta::assert_debug_snapshot!(parse(trailing_comments_after_bool_lit));
+    }
+
+    #[test]
+    fn leading_comments() {
+        let leading_comments = r#"
+        // leading comment 1
+        // leading comment 2
+        let x = 10
+        "#;
+        insta::assert_debug_snapshot!(parse(leading_comments));
     }
 }

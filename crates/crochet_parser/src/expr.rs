@@ -13,7 +13,15 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
     let type_ann = type_ann_parser();
     let pattern = pattern_parser();
 
-    let ident = text::ident().map_with_span(|name, span| Ident { span, name });
+    let comment = just("//")
+        .then(take_until(just('\n')))
+        .padded()
+        .labelled("comment");
+
+    let ident = text::ident()
+        .map_with_span(|name, span| Ident { span, name })
+        .padded()
+        .padded_by(comment.repeated());
 
     let parser = recursive(|expr: Recursive<'_, char, Expr, Simple<char>>| {
         // TODO: support recursive functions to be declared within another function
@@ -63,7 +71,8 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 });
 
                 result
-            });
+            })
+            .labelled("block");
 
         let let_expr = just_with_padding("let")
             .ignore_then(pattern.clone())
@@ -426,8 +435,14 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 },
             );
 
-        choice((lam, block, comp))
-    });
+        let comment = just("//")
+            .then(take_until(just('\n').rewind()))
+            .padded()
+            .labelled("comment");
+
+        choice((lam, block, comp)).padded_by(comment.repeated())
+    })
+    .labelled("expr");
 
     parser.boxed()
 }

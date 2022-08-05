@@ -27,7 +27,7 @@ Program {
                                 op: Add,
                                 left: Await(
                                     Await {
-                                        span: 22..29,
+                                        span: 22..30,
                                         expr: Ident(
                                             Ident {
                                                 span: 28..29,

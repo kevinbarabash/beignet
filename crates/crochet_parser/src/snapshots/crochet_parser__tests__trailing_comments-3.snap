@@ -1,11 +1,11 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: parse(trailing_comments_after_num_lit)
+expression: parse(trailing_comments_after_bool_lit)
 ---
 Program {
     body: [
         VarDecl {
-            span: 9..63,
+            span: 9..37,
             pattern: Ident(
                 BindingIdent {
                     span: 13..14,
@@ -18,10 +18,10 @@ Program {
             ),
             init: Some(
                 Lit(
-                    Num(
-                        Num {
-                            span: 17..18,
-                            value: "5",
+                    Bool(
+                        Bool {
+                            span: 17..37,
+                            value: true,
                         },
                     ),
                 ),

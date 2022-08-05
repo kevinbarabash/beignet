@@ -10,7 +10,15 @@ pub fn boolean_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
     let r#true = just_with_padding("true").map_with_span(|_, span| Lit::bool(true, span));
     let r#false = just_with_padding("false").map_with_span(|_, span| Lit::bool(false, span));
 
-    choice((r#true, r#false)).boxed()
+    let comment = just("//")
+        .then(take_until(just('\n')))
+        .padded()
+        .labelled("comment");
+
+    choice((r#true, r#false))
+        .padded()
+        .padded_by(comment.repeated())
+        .boxed()
 }
 
 pub fn number_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
@@ -23,13 +31,18 @@ pub fn number_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
         .map_with_span(Lit::num);
 
     let comment = just("//")
-        .then(take_until(just('\n').rewind()))
+        .then(take_until(just('\n')))
         .padded()
         .labelled("comment");
 
     // NOTE: It's important to have padding around all tokens in order
     // for comments to work because comments themselvse have no padding.
-    choice((real, int)).padded().then_ignore(comment.repeated()).boxed()
+    // TODO: move the `.then_ignore(comment.repeated())` to come after
+    // `atom` in expr.js otherwise we'll have to add it to the other literals.
+    choice((real, int))
+        .padded()
+        .padded_by(comment.repeated())
+        .boxed()
 }
 
 // Based on https://github.com/zesterer/chumsky/blob/master/examples/json.rs.
@@ -70,7 +83,12 @@ pub fn string_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
             Lit::str(cooked, span)
         });
 
+    let comment = just("//")
+        .then(take_until(just('\n')))
+        .padded()
+        .labelled("comment");
+
     // NOTE: It's important to have padding around all tokens in order
     // for comments to work because comments themselvse have no padding.
-    string.padded().boxed()
+    string.padded().padded_by(comment.repeated()).boxed()
 }

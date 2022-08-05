@@ -1,16 +1,15 @@
 use chumsky::prelude::*;
-use chumsky::primitive::*;
-use chumsky::text::Padded;
 use crochet_ast::*;
 
 use super::expr::expr_parser;
 use super::pattern::pattern_parser;
 use super::type_ann::type_ann_parser;
 use super::type_params::type_params;
+use super::util::just_with_padding;
 
-pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>> {
-    just(inputs).padded()
-}
+// pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>> {
+//     just(inputs).padded()
+// }
 
 pub fn decl_parser() -> impl Parser<char, Statement, Error = Simple<char>> {
     // We use `just` instead of `just_with_padding` here to ensure that
@@ -56,7 +55,7 @@ pub fn decl_parser() -> impl Parser<char, Statement, Error = Simple<char>> {
                     },
                 }
             },
-        );
+        ).labelled("var_decl_with_init");
 
     let var_decl = just("declare")
         .or_not()

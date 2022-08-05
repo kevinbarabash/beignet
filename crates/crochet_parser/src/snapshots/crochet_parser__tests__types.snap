@@ -23,7 +23,7 @@ Program {
                         params: [
                             Ident(
                                 BindingIdent {
-                                    span: 18..29,
+                                    span: 18..21,
                                     id: Ident {
                                         span: 18..21,
                                         name: "foo",

@@ -8,7 +8,7 @@ Program {
             span: 0..31,
             pattern: Ident(
                 BindingIdent {
-                    span: 4..27,
+                    span: 4..14,
                     id: Ident {
                         span: 4..14,
                         name: "nested_arr",

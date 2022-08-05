@@ -8,7 +8,7 @@ Program {
             span: 0..39,
             pattern: Ident(
                 BindingIdent {
-                    span: 4..35,
+                    span: 4..13,
                     id: Ident {
                         span: 4..13,
                         name: "thunk_arr",
