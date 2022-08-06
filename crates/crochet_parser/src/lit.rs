@@ -2,7 +2,7 @@ use chumsky::prelude::*;
 use crochet_ast::*;
 use unescape::unescape;
 
-use crate::util::just_with_padding;
+use crate::util::{comment_parser, just_with_padding};
 
 pub fn boolean_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
     // NOTE: It's important to have padding around all tokens in order
@@ -10,14 +10,9 @@ pub fn boolean_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
     let r#true = just_with_padding("true").map_with_span(|_, span| Lit::bool(true, span));
     let r#false = just_with_padding("false").map_with_span(|_, span| Lit::bool(false, span));
 
-    let comment = just("//")
-        .then(take_until(just('\n')))
-        .padded()
-        .labelled("comment");
-
     choice((r#true, r#false))
         .padded()
-        .padded_by(comment.repeated())
+        .padded_by(comment_parser().repeated())
         .boxed()
 }
 
@@ -30,18 +25,13 @@ pub fn number_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
         .collect::<String>()
         .map_with_span(Lit::num);
 
-    let comment = just("//")
-        .then(take_until(just('\n')))
-        .padded()
-        .labelled("comment");
-
     // NOTE: It's important to have padding around all tokens in order
     // for comments to work because comments themselvse have no padding.
     // TODO: move the `.then_ignore(comment.repeated())` to come after
     // `atom` in expr.js otherwise we'll have to add it to the other literals.
     choice((real, int))
         .padded()
-        .padded_by(comment.repeated())
+        .padded_by(comment_parser().repeated())
         .boxed()
 }
 
@@ -83,12 +73,7 @@ pub fn string_parser() -> BoxedParser<'static, char, Lit, Simple<char>> {
             Lit::str(cooked, span)
         });
 
-    let comment = just("//")
-        .then(take_until(just('\n')))
-        .padded()
-        .labelled("comment");
-
     // NOTE: It's important to have padding around all tokens in order
     // for comments to work because comments themselvse have no padding.
-    string.padded().padded_by(comment.repeated()).boxed()
+    string.padded().padded_by(comment_parser().repeated()).boxed()
 }

@@ -7,14 +7,16 @@ use crate::lit::{boolean_parser, number_parser, string_parser};
 use crate::pattern::pattern_parser;
 use crate::type_ann::type_ann_parser;
 use crate::type_params::type_params;
-use crate::util::just_with_padding;
+use crate::util::{comment_parser, just_with_padding};
 
 pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
     let type_ann = type_ann_parser();
     let pattern = pattern_parser();
 
+    // NOTE: It isn't possible to use comment_parser() here because rust will complain
+    // about `ident` being moved below.
     let comment = just("//")
-        .then(take_until(just('\n')))
+        .then_ignore(take_until(just('\n')))
         .padded()
         .labelled("comment");
 
@@ -74,7 +76,8 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             })
             .labelled("block");
 
-        let let_expr = just_with_padding("let").map_with_span(|_, span| span)
+        let let_expr = just_with_padding("let")
+            .map_with_span(|_, span| span)
             .then(pattern.clone())
             .then_ignore(just_with_padding("="))
             .then(expr.clone())
@@ -437,12 +440,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 },
             );
 
-        let comment = just("//")
-            .then(take_until(just('\n').rewind()))
-            .padded()
-            .labelled("comment");
-
-        choice((lam, block, comp)).padded_by(comment.repeated())
+        choice((lam, block, comp)).padded_by(comment_parser().repeated())
     })
     .labelled("expr");
 
