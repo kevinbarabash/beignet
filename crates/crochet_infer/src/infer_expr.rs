@@ -38,7 +38,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
             let call_type = Type {
                 id: ctx.fresh_id(),
-                frozen: false,
                 variant: Variant::Lam(types::LamType {
                     params: arg_types,
                     ret: Box::from(ret_type.clone()),
@@ -166,7 +165,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
                                 let call_type = Type {
                                     id: ctx.fresh_id(),
-                                    frozen: false,
                                     variant: Variant::Lam(types::LamType {
                                         params: vec![ctx.object(props)],
                                         ret: Box::from(ret_type.clone()),

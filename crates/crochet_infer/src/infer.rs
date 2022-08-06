@@ -5,7 +5,7 @@ use super::infer_expr::infer_expr as infer_expr_rec;
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
-use super::types::{freeze_scheme, Scheme, Type, TProp};
+use super::types::{Scheme, Type, TProp};
 use super::util::*;
 
 pub fn infer_prog(prog: &Program) -> Result<Context, String> {
@@ -47,7 +47,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                                     Some(type_ann) => {
                                         let scheme = infer_scheme(type_ann, &ctx);
                                         ctx.values
-                                            .insert(id.name.to_owned(), freeze_scheme(scheme));
+                                            .insert(id.name.to_owned(), scheme);
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
@@ -72,7 +72,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                         // current context.
                         for (name, scheme) in pa {
                             let scheme = normalize(&scheme.apply(&s), &ctx);
-                            ctx.values.insert(name, freeze_scheme(scheme));
+                            ctx.values.insert(name, scheme);
                         }
                     }
                 };
@@ -84,7 +84,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                 ..
             } => {
                 let scheme = infer_scheme_with_type_params(type_ann, type_params, &ctx);
-                ctx.types.insert(id.name.to_owned(), freeze_scheme(scheme));
+                ctx.types.insert(id.name.to_owned(), scheme);
             }
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that

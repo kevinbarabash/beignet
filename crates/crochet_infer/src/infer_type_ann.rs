@@ -4,7 +4,7 @@ use std::iter::Iterator;
 use crochet_ast::*;
 
 use super::context::Context;
-use super::types::{freeze, Scheme, TProp, Type};
+use super::types::{Scheme, TProp, Type};
 
 pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Scheme {
     match type_ann {
@@ -44,8 +44,7 @@ pub fn infer_scheme_with_type_params(
 }
 
 pub fn infer_type_ann(type_ann: &TypeAnn, ctx: &Context) -> Type {
-    let type_ann_ty = infer_type_ann_rec(type_ann, ctx, &HashMap::default());
-    freeze(type_ann_ty)
+    infer_type_ann_rec(type_ann, ctx, &HashMap::default())
 }
 
 pub fn infer_type_ann_with_params(
@@ -53,7 +52,7 @@ pub fn infer_type_ann_with_params(
     ctx: &Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Type {
-    freeze(infer_type_ann_rec(type_ann, ctx, type_param_map))
+    infer_type_ann_rec(type_ann, ctx, type_param_map)
 }
 
 fn infer_type_ann_rec(
