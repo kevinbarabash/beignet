@@ -34,7 +34,6 @@ impl fmt::Display for TProp {
 #[derive(Clone, Debug, Eq)]
 pub struct VarType {
     pub id: i32,
-    pub frozen: bool,
 }
 
 impl PartialEq for VarType {
@@ -127,7 +126,6 @@ pub enum Variant {
 pub struct Type {
     pub variant: Variant,
     pub id: i32,
-    pub frozen: bool,
 }
 
 impl PartialEq for Type {
@@ -178,56 +176,4 @@ impl fmt::Display for Type {
             Variant::Member(MemberType { obj, prop, .. }) => write!(f, "{obj}[\"{prop}\"]"),
         }
     }
-}
-
-fn set_frozen(ty: Type, frozen: bool) -> Type {
-    let variant = match ty.variant {
-        Variant::Var => Variant::Var,
-        Variant::Lam(lam) => Variant::Lam(LamType {
-            is_call: lam.is_call,
-            params: lam.params.into_iter().map(freeze).collect(),
-            ret: Box::from(freeze(lam.ret.as_ref().clone())),
-        }),
-        Variant::Prim(prim) => Variant::Prim(prim),
-        Variant::Lit(lit) => Variant::Lit(lit),
-        Variant::Union(types) => Variant::Union(types.into_iter().map(freeze).collect()),
-        Variant::Intersection(types) => {
-            Variant::Intersection(types.into_iter().map(freeze).collect())
-        }
-        Variant::Object(props) => Variant::Object(
-            props
-                .into_iter()
-                .map(|prop| TProp {
-                    ty: freeze(prop.ty),
-                    ..prop
-                })
-                .collect(),
-        ),
-        Variant::Alias(alias) => Variant::Alias(AliasType {
-            name: alias.name,
-            type_params: alias
-                .type_params
-                .map(|type_params| type_params.into_iter().map(freeze).collect()),
-        }),
-        Variant::Tuple(types) => Variant::Tuple(types.into_iter().map(freeze).collect()),
-        Variant::Array(t) => Variant::Array(Box::from(freeze(t.as_ref().clone()))),
-        Variant::Rest(arg) => Variant::Rest(Box::from(freeze(arg.as_ref().clone()))),
-        Variant::Member(member) => Variant::Member(MemberType {
-            obj: Box::from(freeze(member.obj.as_ref().clone())),
-            prop: member.prop,
-        }),
-    };
-    Type {
-        variant,
-        frozen,
-        ..ty
-    }
-}
-
-pub fn freeze(ty: Type) -> Type {
-    set_frozen(ty, true)
-}
-
-pub fn unfreeze(ty: Type) -> Type {
-    set_frozen(ty, false)
 }

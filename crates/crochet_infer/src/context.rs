@@ -70,7 +70,6 @@ impl Context {
     pub fn fresh_var(&self) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Var,
         }
     }
@@ -78,7 +77,6 @@ impl Context {
     pub fn lam(&self, params: Vec<Type>, ret: Box<Type>) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Lam(LamType {
                 params,
                 ret,
@@ -90,7 +88,6 @@ impl Context {
     pub fn prim(&self, prim: Primitive) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Prim(prim),
         }
     }
@@ -105,7 +102,6 @@ impl Context {
         };
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Lit(lit),
         }
     }
@@ -113,7 +109,6 @@ impl Context {
     pub fn lit_type(&self, lit: Lit) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Lit(lit),
         }
     }
@@ -121,7 +116,6 @@ impl Context {
     pub fn union(&self, types: Vec<Type>) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Union(types),
         }
     }
@@ -129,7 +123,6 @@ impl Context {
     pub fn intersection(&self, types: Vec<Type>) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Intersection(types),
         }
     }
@@ -137,7 +130,6 @@ impl Context {
     pub fn object(&self, props: Vec<TProp>) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Object(props),
         }
     }
@@ -153,7 +145,6 @@ impl Context {
     pub fn alias(&self, name: &str, type_params: Option<Vec<Type>>) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Alias(AliasType {
                 name: name.to_owned(),
                 type_params,
@@ -164,7 +155,6 @@ impl Context {
     pub fn tuple(&self, types: Vec<Type>) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Tuple(types),
         }
     }
@@ -172,7 +162,6 @@ impl Context {
     pub fn array(&self, t: Type) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Array(Box::from(t)),
         }
     }
@@ -180,7 +169,6 @@ impl Context {
     pub fn rest(&self, arg: Type) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Rest(Box::from(arg)),
         }
     }
@@ -188,7 +176,6 @@ impl Context {
     pub fn mem(&self, obj: Type, prop: &str) -> Type {
         Type {
             id: self.fresh_id(),
-            frozen: false,
             variant: Variant::Member(MemberType {
                 obj: Box::from(obj),
                 prop: prop.to_owned(),

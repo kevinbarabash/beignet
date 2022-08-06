@@ -224,9 +224,6 @@ fn infer_if_else_with_widening_of_top_level_vars() {
     let b = 10
     let x = if true { a } else { b }
     "#;
-    // Even though `a` and `b` have been frozen, we still allow
-    // clones of them to be widened when they're returned from an
-    // if-else.
     let (_, ctx) = infer_prog(src);
     let result = format!("{}", ctx.values.get("x").unwrap());
     assert_eq!(result, "5 | 10");
@@ -592,16 +589,6 @@ fn infer_widen_tuple_return() {
     assert_eq!(result, "(boolean) => [1, 2] | [true, false]");
 }
 
-// TODO: meditate on how to allow if-else to return a widened type
-// if both branches return a frozen type.
-// IDEA: we could make a copy of the type an unfreeze it.
-// When do we care about the frozeness of a type:
-// - assignment
-// - application
-// The problem is that the constraint solver doesn't know about these.
-// We should consider tagging constraints when we infer them.  We need
-// to do this anyways to handle subtyping of functions so that callbacks
-// are handled correctly.
 #[ignore]
 #[test]
 fn infer_widen_tuples_with_type_annotations() {
@@ -1160,17 +1147,6 @@ fn incorrect_args() {
     add("hello", "world")
     "#;
     infer_prog(src);
-}
-
-#[test]
-fn top_level_inferred_types_are_frozen() {
-    let src = r#"
-    let add = (a, b) => a + b
-    "#;
-    let (_, ctx) = infer_prog(src);
-
-    let add = ctx.values.get("add").unwrap();
-    assert!(add.ty.frozen);
 }
 
 #[test]

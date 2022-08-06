@@ -1,7 +1,7 @@
 use itertools::join;
 use std::fmt;
 
-use crate::types::{Type, freeze};
+use crate::types::Type;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Scheme {
@@ -48,12 +48,5 @@ impl fmt::Display for Scheme {
                 ty
             )
         }
-    }
-}
-
-pub fn freeze_scheme(scheme: Scheme) -> Scheme {
-    Scheme { 
-        ty: freeze(scheme.ty),
-        ..scheme
     }
 }

@@ -20,7 +20,6 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 key.to_owned(),
                 Type {
                     id: index as i32,
-                    frozen: false,
                     variant: Variant::Var,
                 },
             )
