@@ -23,7 +23,7 @@ Program {
                         params: [],
                         body: Await(
                             Await {
-                                span: 24..32,
+                                span: 24..33,
                                 expr: Lit(
                                     Num(
                                         Num {

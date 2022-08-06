@@ -23,16 +23,29 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
         .map_with_span(Lit::num);
     let num = choice((real, int));
 
-    let ident = text::ident().map_with_span(|name, span| Ident { name, span });
+    let comment = just("//")
+        .then(take_until(just('\n')))
+        .padded()
+        .labelled("comment");
+
+    let ident = text::ident()
+        .map_with_span(|name, span| Ident { name, span })
+        .padded()
+        .padded_by(comment.repeated());
 
     let parser = recursive(|pat| {
+        println!("pattern parser");
         let wildcard_pat =
             just_with_padding("_").map_with_span(|_, span| Pattern::Wildcard(WildcardPat { span }));
 
         let is_pat = ident
             .then_ignore(just_with_padding("is"))
             .then(ident)
-            .map_with_span(|(id, is_id), span| Pattern::Is(IsPat { span, id, is_id }));
+            .map_with_span(|(id, is_id), _: Span| {
+                let start = id.span.start;
+                let end = is_id.span.end;
+                Pattern::Is(IsPat { span: start..end, id, is_id })
+            });
 
         let lit_pat = choice((r#bool, num, string_parser()))
             .map_with_span(|lit, span| Pattern::Lit(LitPat { span, lit }));
@@ -43,10 +56,11 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
                     .ignore_then(type_ann.clone())
                     .or_not(),
             )
-            .map_with_span(|(id, type_ann), span: Span| {
-                Pattern::Ident(BindingIdent { span, id, type_ann })
+            .map_with_span(|(id, type_ann), _: Span| {
+                Pattern::Ident(BindingIdent { span: id.span.clone(), id, type_ann })
             })
-            .padded();
+            .padded()
+            .labelled("ident_pat");
 
         // NOTE: rest patterns are only valid in certain locations, for instance
         // let ...foo = bar is not valid, but bar(...foo) is valid.
@@ -154,8 +168,9 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
             array_pat,
             obj_pat_prop,
             rest_pat.map(Pattern::Rest),
-        ))
-    });
+        )).labelled("inner_pattern")
+    })
+    .labelled("pattern");
 
     parser.boxed()
 }

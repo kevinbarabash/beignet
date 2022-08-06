@@ -8,7 +8,7 @@ Program {
             span: 0..36,
             pattern: Ident(
                 BindingIdent {
-                    span: 12..36,
+                    span: 12..19,
                     id: Ident {
                         span: 12..19,
                         name: "get_bar",

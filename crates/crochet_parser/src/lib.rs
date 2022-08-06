@@ -11,19 +11,16 @@ pub use decl::decl_parser;
 pub use expr::expr_parser;
 
 use chumsky::prelude::*;
-use chumsky::primitive::*;
-use chumsky::text::Padded;
 
 use crochet_ast::*;
-
-pub fn just_with_padding(inputs: &str) -> Padded<Just<char, &str, Simple<char>>> {
-    just(inputs).padded()
-}
 
 pub fn parser() -> impl Parser<char, Program, Error = Simple<char>> {
     let program = choice((
         decl_parser(),
-        expr_parser().map_with_span(|expr, span: Span| Statement::Expr { expr, span }),
+        expr_parser().map_with_span(|expr, _: Span| {
+            let span = expr.span();
+            Statement::Expr { expr, span }
+        }),
     ))
     .padded()
     .repeated()
@@ -323,5 +320,34 @@ mod tests {
                 },
             }"#
         ));
+    }
+
+    #[test]
+    fn trailing_comments() {
+        let trailing_comments_after_num_lit = r#"
+        let x = 5 // hello
+                  // world
+        "#;
+        insta::assert_debug_snapshot!(parse(trailing_comments_after_num_lit));
+
+        let trailing_comments_after_str_lit = r#"
+        let x = "hello" // world
+        "#;
+        insta::assert_debug_snapshot!(parse(trailing_comments_after_str_lit));
+
+        let trailing_comments_after_bool_lit = r#"
+        let x = true // dat
+        "#;
+        insta::assert_debug_snapshot!(parse(trailing_comments_after_bool_lit));
+    }
+
+    #[test]
+    fn leading_comments() {
+        let leading_comments = r#"
+        // leading comment 1
+        // leading comment 2
+        let x = 10
+        "#;
+        insta::assert_debug_snapshot!(parse(leading_comments));
     }
 }

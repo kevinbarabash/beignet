@@ -7,13 +7,23 @@ use crate::lit::{boolean_parser, number_parser, string_parser};
 use crate::pattern::pattern_parser;
 use crate::type_ann::type_ann_parser;
 use crate::type_params::type_params;
-use crate::util::just_with_padding;
+use crate::util::{comment_parser, just_with_padding};
 
 pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
     let type_ann = type_ann_parser();
     let pattern = pattern_parser();
 
-    let ident = text::ident().map_with_span(|name, span| Ident { span, name });
+    // NOTE: It isn't possible to use comment_parser() here because rust will complain
+    // about `ident` being moved below.
+    let comment = just("//")
+        .then_ignore(take_until(just('\n')))
+        .padded()
+        .labelled("comment");
+
+    let ident = text::ident()
+        .map_with_span(|name, span| Ident { span, name })
+        .padded()
+        .padded_by(comment.repeated());
 
     let parser = recursive(|expr: Recursive<'_, char, Expr, Simple<char>>| {
         // TODO: support recursive functions to be declared within another function
@@ -63,15 +73,19 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 });
 
                 result
-            });
+            })
+            .labelled("block");
 
         let let_expr = just_with_padding("let")
-            .ignore_then(pattern.clone())
+            .map_with_span(|_, span| span)
+            .then(pattern.clone())
             .then_ignore(just_with_padding("="))
             .then(expr.clone())
-            .map_with_span(|(pat, expr), span: Span| {
+            .map_with_span(|((let_span, pat), expr), _: Span| {
+                let start = let_span.start;
+                let end = expr.span().end;
                 Expr::LetExpr(LetExpr {
-                    span,
+                    span: start..end,
                     pat,
                     expr: Box::from(expr),
                 })
@@ -217,20 +231,22 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
 
         let atom = choice((
             // quarks (can't be broken down any further)
-            boolean_parser().map(Expr::Lit),
-            number_parser().map(Expr::Lit),
-            string_parser().map(Expr::Lit),
+            boolean_parser().map(Expr::Lit).labelled("boolean"),
+            number_parser().map(Expr::Lit).labelled("number"),
+            string_parser().map(Expr::Lit).labelled("string"),
             // can contain sub-expressions, but have the highest precedence
-            template_str,
-            if_else,
-            r#match,
-            ident.map(Expr::Ident),
-            obj,
-            tuple,
+            template_str.labelled("template_str"),
+            if_else.labelled("if_else"),
+            r#match.labelled("match"),
+            ident.map(Expr::Ident).labelled("ident"),
+            obj.labelled("obj"),
+            tuple.labelled("tuple"),
             jsx_parser(expr.clone().boxed()),
             expr.clone()
-                .delimited_by(just_with_padding("("), just_with_padding(")")),
-        ));
+                .delimited_by(just_with_padding("("), just_with_padding(")"))
+                .labelled("parens"),
+        ))
+        .labelled("atom");
 
         enum Suffix {
             Member(MemberProp, Span),
@@ -293,7 +309,8 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                         })
                     }
                 }
-            });
+            })
+            .labelled("atom_with_suffix");
 
         // Application is higher precedence than `await`
         let r#await = just_with_padding("await")
@@ -310,16 +327,15 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
         let negative = just_with_padding("-")
             .or_not()
             .then(r#await)
-            .map_with_span(|(neg, arg), span: Span| {
-                match neg {
-                    None => arg,
-                    Some(_) => Expr::UnaryExpr(UnaryExpr {
-                        span,
-                        op: UnaryOp::Minus,
-                        arg: Box::from(arg),
-                    }),
-                }
-            });
+            .map_with_span(|(neg, arg), span: Span| match neg {
+                None => arg,
+                Some(_) => Expr::UnaryExpr(UnaryExpr {
+                    span,
+                    op: UnaryOp::Minus,
+                    arg: Box::from(arg),
+                }),
+            })
+            .labelled("negative");
 
         let product = negative
             .clone()
@@ -340,7 +356,8 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                     left: Box::from(left),
                     right: Box::from(right),
                 })
-            });
+            })
+            .labelled("product");
 
         let sum = product
             .clone()
@@ -423,8 +440,9 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 },
             );
 
-        choice((lam, block, comp))
-    });
+        choice((lam, block, comp)).padded_by(comment_parser().repeated())
+    })
+    .labelled("expr");
 
     parser.boxed()
 }

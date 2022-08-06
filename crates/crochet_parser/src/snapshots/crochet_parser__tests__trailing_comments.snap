@@ -1,33 +1,26 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"let x: number = 5\")"
+expression: parse(trailing_comments_after_num_lit)
 ---
 Program {
     body: [
         VarDecl {
-            span: 0..17,
+            span: 9..63,
             pattern: Ident(
                 BindingIdent {
-                    span: 4..5,
+                    span: 13..14,
                     id: Ident {
-                        span: 4..5,
+                        span: 13..14,
                         name: "x",
                     },
-                    type_ann: Some(
-                        Prim(
-                            PrimType {
-                                span: 7..13,
-                                prim: Num,
-                            },
-                        ),
-                    ),
+                    type_ann: None,
                 },
             ),
             init: Some(
                 Lit(
                     Num(
                         Num {
-                            span: 16..17,
+                            span: 17..18,
                             value: "5",
                         },
                     ),

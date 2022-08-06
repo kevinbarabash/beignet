@@ -1,33 +1,26 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"let msg: string = \\\"hello\\\"\")"
+expression: parse(trailing_comments_after_str_lit)
 ---
 Program {
     body: [
         VarDecl {
-            span: 0..25,
+            span: 9..42,
             pattern: Ident(
                 BindingIdent {
-                    span: 4..7,
+                    span: 13..14,
                     id: Ident {
-                        span: 4..7,
-                        name: "msg",
+                        span: 13..14,
+                        name: "x",
                     },
-                    type_ann: Some(
-                        Prim(
-                            PrimType {
-                                span: 9..15,
-                                prim: Str,
-                            },
-                        ),
-                    ),
+                    type_ann: None,
                 },
             ),
             init: Some(
                 Lit(
                     Str(
                         Str {
-                            span: 18..25,
+                            span: 17..24,
                             value: "hello",
                         },
                     ),

@@ -23,7 +23,7 @@ Program {
                         params: [
                             Ident(
                                 BindingIdent {
-                                    span: 11..20,
+                                    span: 11..12,
                                     id: Ident {
                                         span: 11..12,
                                         name: "a",
@@ -40,7 +40,7 @@ Program {
                             ),
                             Ident(
                                 BindingIdent {
-                                    span: 22..31,
+                                    span: 22..23,
                                     id: Ident {
                                         span: 22..23,
                                         name: "b",

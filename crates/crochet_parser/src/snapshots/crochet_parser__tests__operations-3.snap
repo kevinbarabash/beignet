@@ -5,7 +5,7 @@ expression: "parse(\"(a + b) * c\")"
 Program {
     body: [
         Expr {
-            span: 0..11,
+            span: 1..11,
             expr: Op(
                 Op {
                     span: 1..11,
