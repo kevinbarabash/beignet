@@ -311,7 +311,7 @@ fn codegen_if_let_with_rename() {
 }
 
 #[test]
-fn infer_if_let_refutable_pattern_nested_obj() {
+fn codegen_if_let_refutable_pattern_nested_obj() {
     let src = r#"
     let action = {type: "moveto", point: {x: 5, y: 10}}
     if let {type: "moveto", point: {x, y}} = action {
@@ -334,6 +334,41 @@ fn infer_if_let_refutable_pattern_nested_obj() {
         $temp_0 = x + y;
     }
     $temp_0;
+    "###);
+}
+
+#[test]
+fn codegen_if_let_with_else() {
+    let src = r#"
+    declare let a: string | number
+    let result = if let x is number = a {
+        x + 5
+    } else if let y is string = a {
+        y
+    } else {
+        true
+    }
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    ;
+    let $temp_0;
+    const $temp_1 = a;
+    if (typeof $temp_1 === "number") {
+        const x = $temp_1;
+        $temp_0 = x + 5;
+    } else {
+        let $temp_2;
+        const $temp_3 = a;
+        if (typeof $temp_3 === "string") {
+            const y = $temp_3;
+            $temp_2 = y;
+        } else {
+            $temp_2 = true;
+        }
+        $temp_0 = $temp_2;
+    }
+    export const result = $temp_0;
     "###);
 }
 

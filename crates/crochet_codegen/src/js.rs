@@ -383,7 +383,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
         }
         ast::Expr::UnaryExpr(ast::UnaryExpr { arg, op, .. }) => {
             let op = match op {
-                ast::UnaryOp::Minus => UnaryOp::Minus
+                ast::UnaryOp::Minus => UnaryOp::Minus,
             };
 
             Expr::Unary(UnaryExpr {
@@ -391,7 +391,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 op,
                 arg: Box::from(build_expr(arg, stmts, ctx)),
             })
-        },
+        }
         ast::Expr::Fix(ast::Fix { expr, .. }) => match expr.as_ref() {
             ast::Expr::Lambda(ast::Lambda { body, .. }) => build_expr(body, stmts, ctx),
             _ => panic!("Fix should only wrap a lambda"),
@@ -402,7 +402,9 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
             alternate,
             ..
         }) => match cond.as_ref() {
-            ast::Expr::LetExpr(let_expr) => build_let_expr(let_expr, consequent, stmts, ctx),
+            ast::Expr::LetExpr(let_expr) => {
+                build_let_expr(let_expr, consequent, alternate, stmts, ctx)
+            }
             _ => {
                 // let $temp_n;
                 let temp_id = ctx.new_ident();
@@ -593,6 +595,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
 fn build_let_expr(
     let_expr: &ast::LetExpr,
     consequent: &ast::Expr,
+    alternate: &Option<Box<ast::Expr>>,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> Expr {
@@ -618,11 +621,18 @@ fn build_let_expr(
 
     match cond {
         Some(cond) => {
+            let alt = alternate.as_ref().map(|alt| {
+                Box::from(Stmt::Block(build_expr_in_new_scope(
+                    alt.as_ref(),
+                    &ret_id,
+                    ctx,
+                )))
+            });
             let if_else = Stmt::If(IfStmt {
                 span: DUMMY_SP,
                 test: Box::from(cond),
                 cons: Box::from(Stmt::Block(block)),
-                alt: None, // TODO: handle chaining of if-let with else
+                alt,
             });
             stmts.push(if_else);
         }
