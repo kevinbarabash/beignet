@@ -628,7 +628,6 @@ fn build_let_expr(
                     ctx,
                 )))
             });
-            println!("alt = {alt:#?}");
             let if_else = Stmt::If(IfStmt {
                 span: DUMMY_SP,
                 test: Box::from(cond),
