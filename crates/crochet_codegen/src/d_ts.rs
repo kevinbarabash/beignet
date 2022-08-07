@@ -210,7 +210,7 @@ pub fn build_type(
                 crochet_infer::types::Lit::Num(n) => TsLit::Number(Number {
                     span: DUMMY_SP,
                     value: n.parse().unwrap(),
-                    raw: Some(JsWord::from(n.to_owned())),
+                    raw: Some(Atom::new(n.to_owned())),
                 }),
                 crochet_infer::types::Lit::Bool(b) => TsLit::Bool(Bool {
                     span: DUMMY_SP,
