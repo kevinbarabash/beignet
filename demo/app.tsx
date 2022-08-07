@@ -11,7 +11,7 @@ window.m = m;
 
 export const App = () => {
   let [example, setExample] = React.useState<keyof typeof examples>("basics");
-  let [source, setSource] = React.useState(() => examples[example]);
+  let [source, setSource] = React.useState(() => examples[example].trim());
 
   let [outputTab, setOutputTab] = React.useState<"js" | "dts">("js");
 
@@ -54,12 +54,15 @@ export const App = () => {
       gridColumnEnd: 3,
       alignSelf: "center",
       marginBottom: 12,
-    }
+    },
   };
 
   const changeExample = (event: React.ChangeEvent<HTMLSelectElement>) => {
     let value = event.target.value;
     switch (value) {
+      case "disjointUnionPatternMatching":
+      case "basicPatternMatching":
+      case "ifLetElse":
       case "ifLet":
       case "functionOverloading":
       case "asyncAwait":
@@ -67,7 +70,7 @@ export const App = () => {
       case "fibonacci":
       case "basics": {
         setExample(value);
-        setSource(examples[value]);
+        setSource(examples[value].trim());
       }
     }
   };
@@ -82,12 +85,21 @@ export const App = () => {
     }
   };
 
+  const activeTabStyle = {
+    borderBottom: "solid 2px blue",
+  };
+
   return (
     <div style={styles.grid}>
       <h1 style={styles.header}>crochet 🧣</h1>
       <div style={styles.links}>
         <a href="https://github.com/crochet-lang/crochet" target="_blank">
-          <img src={githubMark} width={16} height={16} style={{opacity: 0.7}} />
+          <img
+            src={githubMark}
+            width={16}
+            height={16}
+            style={{ opacity: 0.7 }}
+          />
         </a>
       </div>
       <div>
@@ -99,14 +111,26 @@ export const App = () => {
           <option value="fibonacci">Fibonacci</option>
           <option value="functionOverloading">Function Overloading</option>
           <option value="ifLet">if let</option>
+          <option value="ifLetElse">if let (with else)</option>
+          <option value="basicPatternMatching">Basic Pattern Matching</option>
+          <option value="disjointUnionPatternMatching">Disjoint Union Pattern Matching</option>
         </select>
       </div>
       <div>
-        <span style={styles.label}>Output:</span>
-        <select onChange={changeOutputTab} value={outputTab}>
-          <option value="js">.js</option>
-          <option value="dts">.d.ts</option>
-        </select>
+        <button
+          style={outputTab === "js" ? activeTabStyle : {}}
+          className="tab"
+          onClick={() => setOutputTab("js")}
+        >
+          .js
+        </button>
+        <button
+          style={outputTab === "dts" ? activeTabStyle : {}}
+          className="tab"
+          onClick={() => setOutputTab("dts")}
+        >
+          .d.ts
+        </button>
       </div>
       <textarea style={styles.editor} value={source} onChange={updateSource} />
       <textarea style={styles.editor} value={output[outputTab]} />
