@@ -42,18 +42,6 @@ let num = add(5, 10)
 let str = add("hello, ", "world")
 `;
 
-export const ifLet = `
-let p = {x: 5, y: 10}
-
-if let {x, y} = p {
-  let sum = x + y;
-}
-
-if let {x: a, y: b} = p {
-  let sum = a + b;
-}
-`;
-
 export const ifLetElse = `
 declare let a: string | number
 let result = if let x is number = a {
