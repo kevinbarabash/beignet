@@ -246,5 +246,7 @@ pub fn parse_dts(dts: &'static str) -> Result<InterfaceCollector, Error> {
     };
     module.visit_with(&mut collector);
 
+    // TODO: convert each interface into an object type
+
     Ok(collector)
 }
