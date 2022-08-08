@@ -38,9 +38,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16
+          cache: 'yarn'
 
       - name: Install node_modules
-        run: npm ci  
+        run: yarn install --frozen-lockfile
 
       - name: Cache
         uses: actions/cache@v3
