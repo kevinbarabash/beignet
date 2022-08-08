@@ -8,8 +8,13 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let dts = parse_dts(LIB_ES5_D_TS);
+        let dts = parse_dts(LIB_ES5_D_TS).unwrap();
 
-        println!("{dts:#?}");
+        for (name, interface) in dts.interfaces.iter() {
+            println!("{name}");
+            for (name, value) in interface {
+                println!("- {name}: {value}");
+            }
+        }
     }
 }

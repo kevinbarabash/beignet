@@ -224,6 +224,9 @@ dependencies = [
 name = "crochet_dts"
 version = "0.1.0"
 dependencies = [
+ "crochet_ast",
+ "crochet_infer",
+ "defaultmap",
  "memoize",
  "swc_atoms",
  "swc_common",
