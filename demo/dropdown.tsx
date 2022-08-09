@@ -24,7 +24,7 @@ const Dropdown = () => {
       >
         <a href={getPermalinkHref(examples.basics)}>Basics</a>
         <a href={getPermalinkHref(examples.asyncAwait)}>Async/Await</a>
-        <a href={getPermalinkHref(examples.jsx)}>JSX</a>
+        <a href={getPermalinkHref(examples.jsxReact)}>React + JSX</a>
         <a href={getPermalinkHref(examples.fibonacci)}>Fibonacci</a>
         <a href={getPermalinkHref(examples.functionOverloading)}>
           Function Overloading

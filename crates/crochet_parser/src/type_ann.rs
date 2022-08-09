@@ -93,17 +93,15 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
                 _ => TypeAnn::Intersection(IntersectionType { span, types }),
             });
 
-        let union = intersection
-            .separated_by(just_with_padding("|"))
+        let union = just_with_padding("|")
+            .or_not()
+            .ignore_then(intersection.separated_by(just_with_padding("|")))
             .map_with_span(|types, span| match types.len() {
                 1 => types[0].clone(),
                 _ => TypeAnn::Union(UnionType { span, types }),
             });
 
-        let ident = text::ident().map_with_span(|name, span: Span| Ident {
-            span,
-            name,
-        });
+        let ident = text::ident().map_with_span(|name, span: Span| Ident { span, name });
 
         let ident_param = ident
             .then_ignore(just_with_padding(":"))

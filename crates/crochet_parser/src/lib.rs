@@ -272,6 +272,12 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let thunk_arr: (() => undefined)[] = []"));
         insta::assert_debug_snapshot!(parse("let arr: string[] | number[] = []"));
         insta::assert_debug_snapshot!(parse("let nested_arr: string[][] = []"));
+        let src = r#"
+        type Event = 
+          | {type: "mousedown", x: number, y: number}
+          | {type: "keydown", key: string}
+        "#;
+        insta::assert_debug_snapshot!(parse(src));
     }
 
     #[test]
