@@ -356,7 +356,7 @@ pub fn build_type(
                 .map(|prop| {
                     TsTypeElement::TsPropertySignature(TsPropertySignature {
                         span: DUMMY_SP,
-                        readonly: false,
+                        readonly: !prop.mutable,
                         key: Box::from(Expr::from(Ident {
                             span: DUMMY_SP,
                             sym: JsWord::from(prop.name.to_owned()),

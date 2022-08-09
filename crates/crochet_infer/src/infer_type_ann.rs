@@ -91,6 +91,7 @@ fn infer_type_ann_rec(
                 .map(|prop| TProp {
                     name: prop.name.to_owned(),
                     optional: prop.optional,
+                    mutable: prop.mutable,
                     ty: infer_type_ann_rec(prop.type_ann.as_ref(), ctx, type_param_map),
                 })
                 .collect();

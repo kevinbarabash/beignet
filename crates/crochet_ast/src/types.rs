@@ -48,6 +48,7 @@ pub struct TProp {
     pub span: Span,
     pub name: String,
     pub optional: bool,
+    pub mutable: bool,
     pub type_ann: Box<TypeAnn>,
 }
 

@@ -406,8 +406,8 @@ fn codegen_object() {
 
     insta::assert_snapshot!(result, @r###"
     export declare const point: {
-        x: 5;
-        y: 10;
+        readonly x: 5;
+        readonly y: 10;
     };
     "###);
 }
@@ -693,8 +693,8 @@ fn codegen_code_with_type_delcarations() {
 
     insta::assert_snapshot!(result, @r###"
     type Point = {
-        x: number;
-        y: number;
+        readonly x: number;
+        readonly y: number;
     };
     export declare const point: Point;
     "###);
@@ -790,8 +790,8 @@ fn codegen_object_type_with_optional_property() {
 
     insta::assert_snapshot!(result, @r###"
     type Point = {
-        x?: number;
-        y: number;
+        readonly x?: number;
+        readonly y: number;
     };
     export declare const point: Point;
     "###);
@@ -1243,8 +1243,8 @@ fn codegen_if_let() {
 
     insta::assert_snapshot!(result, @r###"
     export declare const p: {
-        x: 5;
-        y: 10;
+        readonly x: 5;
+        readonly y: 10;
     };
     ;
     "###);
@@ -1280,8 +1280,8 @@ fn codegen_if_let_with_rename() {
 
     insta::assert_snapshot!(result, @r###"
     export declare const p: {
-        x: 5;
-        y: 10;
+        readonly x: 5;
+        readonly y: 10;
     };
     ;
     "###);
@@ -1332,8 +1332,8 @@ fn infer_if_let_refutable_pattern_obj() {
 
     insta::assert_snapshot!(result, @r###"
     export declare const p: {
-        x: 5;
-        y: 10;
+        readonly x: 5;
+        readonly y: 10;
     };
     ;
     "###);
@@ -1373,10 +1373,10 @@ fn infer_if_let_refutable_pattern_nested_obj() {
 
     insta::assert_snapshot!(result, @r###"
     export declare const action: {
-        type: "moveto";
-        point: {
-            x: 5;
-            y: 10;
+        readonly type: "moveto";
+        readonly point: {
+            readonly x: 5;
+            readonly y: 10;
         };
     };
     ;
@@ -1415,15 +1415,15 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
 
     insta::assert_snapshot!(result, @r###"
     type Point = {
-        x: number;
-        y: number;
+        readonly x: number;
+        readonly y: number;
     };
     type Action = {
-        type: "moveto";
-        point: Point;
+        readonly type: "moveto";
+        readonly point: Point;
     } | {
-        type: "lineto";
-        point: Point;
+        readonly type: "lineto";
+        readonly point: Point;
     };
     export declare const action: Action;
     ;

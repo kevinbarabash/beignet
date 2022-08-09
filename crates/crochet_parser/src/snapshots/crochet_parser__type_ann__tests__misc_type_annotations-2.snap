@@ -10,6 +10,7 @@ Object(
                 span: 1..10,
                 name: "x",
                 optional: false,
+                mutable: false,
                 type_ann: Prim(
                     PrimType {
                         span: 4..10,
@@ -21,6 +22,7 @@ Object(
                 span: 12..21,
                 name: "y",
                 optional: false,
+                mutable: false,
                 type_ann: Prim(
                     PrimType {
                         span: 15..21,

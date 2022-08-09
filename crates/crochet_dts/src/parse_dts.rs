@@ -40,37 +40,35 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
             TsKeywordTypeKind::TsIntrinsicKeyword => todo!(),
         },
         TsType::TsThisType(_) => todo!(),
-        TsType::TsFnOrConstructorType(fn_or_constructor) => {
-            match &fn_or_constructor {
-                TsFnOrConstructorType::TsFnType(fn_type) => {
-                    let params: Vec<_> = fn_type
-                        .params
-                        .iter()
-                        .filter_map(|param| match param {
-                            TsFnParam::Ident(ident) => {
-                                let type_ann = ident.type_ann.clone().unwrap();
-                                Some(infer_ts_type_ann(&type_ann.type_ann, ctx))
-                            }
-                            TsFnParam::Array(_) => {
-                                println!("skipping TsFnParam::Array(_)");
-                                None
-                            }
-                            TsFnParam::Rest(rest) => {
-                                let type_ann = rest.type_ann.clone().unwrap();
-                                let t = infer_ts_type_ann(&type_ann.type_ann, ctx);
-                                Some(ctx.rest(t))
-                            }
-                            TsFnParam::Object(_) => {
-                                println!("skipping TsFnParam::Object(_)");
-                                None
-                            }
-                        })
-                        .collect();
-                    let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx);
-                    ctx.lam(params, Box::from(ret))
-                },
-                TsFnOrConstructorType::TsConstructorType(_) => todo!(),
+        TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
+            TsFnOrConstructorType::TsFnType(fn_type) => {
+                let params: Vec<_> = fn_type
+                    .params
+                    .iter()
+                    .filter_map(|param| match param {
+                        TsFnParam::Ident(ident) => {
+                            let type_ann = ident.type_ann.clone().unwrap();
+                            Some(infer_ts_type_ann(&type_ann.type_ann, ctx))
+                        }
+                        TsFnParam::Array(_) => {
+                            println!("skipping TsFnParam::Array(_)");
+                            None
+                        }
+                        TsFnParam::Rest(rest) => {
+                            let type_ann = rest.type_ann.clone().unwrap();
+                            let t = infer_ts_type_ann(&type_ann.type_ann, ctx);
+                            Some(ctx.rest(t))
+                        }
+                        TsFnParam::Object(_) => {
+                            println!("skipping TsFnParam::Object(_)");
+                            None
+                        }
+                    })
+                    .collect();
+                let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx);
+                ctx.lam(params, Box::from(ret))
             }
+            TsFnOrConstructorType::TsConstructorType(_) => todo!(),
         },
         TsType::TsTypeRef(ref_type) => {
             let name = match &ref_type.type_name {
@@ -79,7 +77,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                     // TODO: handle qualified names properly
                     let id = &q_name.as_ref().right;
                     id.sym.to_string()
-                },
+                }
             };
             let type_params = ref_type.type_params.as_ref().map(|type_params| {
                 type_params
@@ -164,10 +162,22 @@ impl Visit for InterfaceCollector {
         match elem {
             TsTypeElement::TsCallSignatureDecl(_decl) => {}
             TsTypeElement::TsConstructSignatureDecl(_decl) => {}
-            TsTypeElement::TsPropertySignature(_sig) => {}
+            TsTypeElement::TsPropertySignature(sig) => {
+                // TODO: update TProp to include a readonly flag
+                match &sig.type_ann {
+                    Some(type_ann) => {
+                        let t = infer_ts_type_ann(&type_ann.type_ann, &self.ctx);
+                        if let Expr::Ident(Ident { sym, .. }) = sig.key.as_ref() {
+                            self.interfaces[name].insert(sym.to_string(), t);
+                        }
+                    },
+                    None => panic!("Property is missing type annotation"),
+                }
+            }
             TsTypeElement::TsGetterSignature(_sig) => {}
             TsTypeElement::TsSetterSignature(_sig) => {}
             TsTypeElement::TsMethodSignature(sig) => {
+                // TODO: all methods must be readonly properties on the interface
                 let t = self.infer_method_sig(sig);
                 if let Expr::Ident(Ident { sym, .. }) = sig.key.as_ref() {
                     self.interfaces[name].insert(sym.to_string(), t);
@@ -237,7 +247,15 @@ pub fn parse_dts(dts: &'static str) -> Result<InterfaceCollector, Error> {
     )?;
 
     // TODO: add more items from lib.es5.d.ts
-    let to_parse = HashSet::from([String::from("Math"), String::from("String")]);
+    let to_parse = HashSet::from([
+        String::from("Math"),
+        String::from("String"),
+        String::from("StringConstructor"),
+        String::from("Number"),
+        String::from("NumberConstructor"),
+        String::from("Boolean"),
+        String::from("BooleanConstructor"),
+    ]);
     let mut collector = InterfaceCollector {
         ctx: Context::default(),
         current_interface: None,

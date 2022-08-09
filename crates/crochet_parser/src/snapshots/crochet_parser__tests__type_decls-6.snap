@@ -19,6 +19,7 @@ Program {
                             span: 38..44,
                             name: "bar",
                             optional: false,
+                            mutable: false,
                             type_ann: TypeRef(
                                 TypeRef {
                                     span: 43..44,

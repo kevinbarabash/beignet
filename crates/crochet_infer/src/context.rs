@@ -138,6 +138,7 @@ impl Context {
         TProp {
             name: name.to_owned(),
             optional,
+            mutable: false,
             ty,
         }
     }
