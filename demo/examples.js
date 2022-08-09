@@ -39,7 +39,7 @@ let Button = (props: Props) => {
     };
     let msg = \`Click me \${times}\`;
 
-    <button>hello, world</button>
+    <button>{msg}</button>
 }
 
 // Props are type checked with extra props being allowed for now.
