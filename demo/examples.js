@@ -3,6 +3,8 @@ let add = (a, b) => a + b
 let sub = (a, b) => a - b
 let foo = (f, x) => f(x) + x
 
+// if-else are expressions and the last statement
+// in a block is its value
 let baz = if (true) {
   let x = 5;
   let y = 10;
@@ -19,13 +21,35 @@ export const asyncAwait = `
 let add = async (a, b) => await a() + await b()
 `;
 
-export const jsx = `
+export const jsxReact = `
+// This is a placeholder until we can infer types from react.d.ts
 type JSXElement = {}
-let msg = "world"
-let elem = <div point={point} id="point">Hello, {msg}</div>
+
+type Props = {
+    count: number,
+}
+
+// Adapted from https://rescript-lang.org/try
+let Button = (props: Props) => {
+    let {count} = props;
+    let times = match count {
+        1 => "once",
+        2 => "twice",
+        n => \`\${n} times\`,
+    };
+    let msg = \`Click me \${times}\`;
+
+    <button>hello, world</button>
+}
+
+// Props are type checked with extra props being allowed for now.
+// In the future they won't be.
+let button = <Button count={5} foo="bar" />
 `;
 
 export const fibonacci = `
+// only self-recursive functions are supported, but support for
+// mutual recursion will be added in the future
 let rec fib = (n) => if (n == 0) {
   0
 } else if (n == 1) {
@@ -44,6 +68,9 @@ let str = add("hello, ", "world")
 
 export const ifLetElse = `
 declare let a: string | number
+
+// if-let is similar to TypeScript's type narrowing, but it
+// introduces a new binding for the narrowed type.
 let result = if let x is number = a {
     x + 5
 } else if let y is string = a {
@@ -55,6 +82,7 @@ let result = if let x is number = a {
 
 export const basicPatternMatching = `
 declare let count: number
+
 let result = match count {
     0 => "none",
     1 => "one",
@@ -65,10 +93,14 @@ let result = match count {
 `;
 
 export const disjointUnionPatternMatching = `
-type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}
+type Event = 
+  | {type: "mousedown", x: number, y: number} 
+  | {type: "keydown", key: string}
+
 declare let event: Event
+
 let result = match event {
     {type: "mousedown", x, y} => \`mousedown: (\${x}, \${y})\`,
-    {type: "keydown", key} => key,
+    {type: "keydown", key} => \`keydown: \${key}\`,
 }
 `;
