@@ -156,6 +156,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                     let prop = types::TProp {
                                         name: attr.ident.name.to_owned(),
                                         optional: false,
+                                        mutable: false,
                                         ty: t,
                                     };
                                     props.push(prop);

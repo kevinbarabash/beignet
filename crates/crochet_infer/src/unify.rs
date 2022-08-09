@@ -429,17 +429,20 @@ mod tests {
             types::TProp {
                 name: String::from("foo"),
                 optional: false,
+                mutable: false,
                 ty: ctx.lit(num("5")),
             },
             types::TProp {
                 name: String::from("bar"),
                 optional: false,
+                mutable: false,
                 ty: ctx.lit(bool(&true)),
             },
             // Having extra properties is okay
             types::TProp {
                 name: String::from("baz"),
                 optional: false,
+                mutable: false,
                 ty: ctx.prim(Primitive::Str),
             },
         ]);
@@ -448,11 +451,13 @@ mod tests {
             types::TProp {
                 name: String::from("foo"),
                 optional: false,
+                mutable: false,
                 ty: ctx.prim(Primitive::Num),
             },
             types::TProp {
                 name: String::from("bar"),
                 optional: true,
+                mutable: false,
                 ty: ctx.prim(Primitive::Bool),
             },
             // It's okay for qux to not appear in the subtype since
@@ -460,6 +465,7 @@ mod tests {
             types::TProp {
                 name: String::from("qux"),
                 optional: true,
+                mutable: false,
                 ty: ctx.prim(Primitive::Str),
             },
         ]);

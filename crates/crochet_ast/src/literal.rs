@@ -1,4 +1,4 @@
-use swc_atoms::JsWord;
+use swc_atoms::{JsWord, Atom};
 use swc_common::source_map::DUMMY_SP;
 use swc_ecma_ast;
 
@@ -91,7 +91,7 @@ impl From<&Lit> for swc_ecma_ast::Expr {
                     value: n.value.parse().unwrap(),
                     // Use `None` value only for transformations to avoid recalculate
                     // characters in number literal
-                    raw: Some(JsWord::from(n.value.clone())),
+                    raw: Some(Atom::new(n.value.clone())),
                 });
                 swc_ecma_ast::Expr::Lit(lit)
             }

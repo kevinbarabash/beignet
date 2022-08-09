@@ -9,6 +9,7 @@ use crate::types::{Lit, Primitive};
 pub struct TProp {
     pub name: String,
     pub optional: bool,
+    pub mutable: bool,
     pub ty: Type,
 }
 
@@ -23,10 +24,12 @@ impl TProp {
 
 impl fmt::Display for TProp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { name, optional, ty } = self;
-        match optional {
-            false => write!(f, "{name}: {ty}"),
-            true => write!(f, "{name}?: {ty}"),
+        let Self { name, optional, mutable, ty } = self;
+        match (optional, mutable) {
+            (false, false) => write!(f, "{name}: {ty}"),
+            (true, false) => write!(f, "{name}?: {ty}"),
+            (false, true) => write!(f, "mut {name}: {ty}"),
+            (true, true) => write!(f, "mut {name}?: {ty}"),
         }
     }
 }

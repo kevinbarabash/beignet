@@ -136,6 +136,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                             Some(types::TProp {
                                 name: key.name.to_owned(),
                                 optional: false,
+                                mutable: false,
                                 ty: value_type,
                             })
                         }
@@ -153,6 +154,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                             Some(types::TProp {
                                 name: key.name.to_owned(),
                                 optional: false,
+                                mutable: false,
                                 ty: tv,
                             })
                         }

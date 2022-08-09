@@ -739,8 +739,8 @@ fn build_jsx_element(
                     ast::JSXElementChild::JSXText(ast::JSXText { value, .. }) => {
                         JSXElementChild::JSXText(JSXText {
                             span: DUMMY_SP,
-                            value: JsWord::from(value.to_owned()),
-                            raw: JsWord::from(value.to_owned()),
+                            value: Atom::new(value.to_owned()),
+                            raw: Atom::new(value.to_owned()),
                         })
                     }
                     ast::JSXElementChild::JSXExprContainer(ast::JSXExprContainer {
@@ -886,8 +886,8 @@ fn build_template_literal(
                 };
                 TplElement {
                     span: DUMMY_SP,
-                    cooked: Some(JsWord::from(cooked.to_owned())),
-                    raw: JsWord::from(raw.to_owned()),
+                    cooked: Some(Atom::new(cooked.to_owned())),
+                    raw: Atom::new(raw.to_owned()),
                     tail: false, // TODO: set this to `true` if it's the last quasi
                 }
             })

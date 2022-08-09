@@ -67,6 +67,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .map(|prop| TProp {
                         name: prop.name.clone(),
                         optional: prop.optional,
+                        mutable: prop.mutable,
                         // NOTE: we don't use prop.get_type(ctx) here because we're tracking
                         // the optionality of the property in the TProp that's returned.
                         ty: norm_type(&prop.ty, mapping, ctx),
@@ -170,6 +171,7 @@ pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
                 // the same name.  This should only be optional if all of
                 // the TProps with the current name are optional.
                 optional: false,
+                mutable: false,
                 ty,
             }
         })

@@ -16,6 +16,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
     let promise_scheme = Scheme::from(ctx.object(vec![TProp {
         name: String::from("_name"),
         optional: false,
+        mutable: false,
         ty: ctx.lit(Lit::str(String::from("Promise"), 0..0)),
     }]));
     ctx.types.insert(String::from("Promise"), promise_scheme);
@@ -25,6 +26,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
     let jsx_element_scheme = Scheme::from(ctx.object(vec![TProp {
         name: String::from("_name"),
         optional: false,
+        mutable: false,
         ty: ctx.lit(Lit::str(String::from("JSXElement"), 0..0)),
     }]));
     ctx.types

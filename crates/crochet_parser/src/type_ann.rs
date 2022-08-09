@@ -44,6 +44,9 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
                 span,
                 name,
                 optional: optional.is_some(),
+                // TODO: properties are immutable by default, add a `mut` keyword
+                // to make them mutable
+                mutable: false,
                 type_ann: Box::from(type_ann),
             });
 

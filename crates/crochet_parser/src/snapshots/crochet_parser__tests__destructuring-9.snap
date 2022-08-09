@@ -56,6 +56,7 @@ Program {
                                                         span: 20..29,
                                                         name: "a",
                                                         optional: false,
+                                                        mutable: false,
                                                         type_ann: Prim(
                                                             PrimType {
                                                                 span: 23..29,
@@ -67,6 +68,7 @@ Program {
                                                         span: 31..40,
                                                         name: "b",
                                                         optional: false,
+                                                        mutable: false,
                                                         type_ann: Prim(
                                                             PrimType {
                                                                 span: 34..40,
