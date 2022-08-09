@@ -7,7 +7,7 @@ mod tests {
     static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
     #[test]
-    fn it_works() {
+    fn parsing_lib_es5_d_ts() {
         let dts = parse_dts(LIB_ES5_D_TS).unwrap();
 
         for name in dts.interfaces.keys() {
