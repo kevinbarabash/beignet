@@ -10,11 +10,9 @@ mod tests {
     fn it_works() {
         let dts = parse_dts(LIB_ES5_D_TS).unwrap();
 
-        for (name, interface) in dts.interfaces.iter() {
-            println!("{name}");
-            for (name, value) in interface {
-                println!("- {name}: {value}");
-            }
+        for name in dts.interfaces.keys() {
+            let t = dts.get_interface(name);
+            println!("{name} = {t}")
         }
     }
 }

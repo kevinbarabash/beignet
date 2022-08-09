@@ -1,6 +1,6 @@
 use defaultmap::*;
 use memoize::memoize;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::{path::Path, sync::Arc};
 
 use swc_common::SourceMap;
@@ -10,9 +10,9 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::{Lit, Primitive};
-use crochet_infer::{Context, Type};
+use crochet_infer::{Context, Type, TProp};
 
-type Interface = HashMap<String, Type>;
+type Interface = Vec<TProp>;
 
 #[derive(Debug, Clone)]
 pub struct InterfaceCollector {
@@ -20,6 +20,13 @@ pub struct InterfaceCollector {
     pub current_interface: Option<String>,
     pub to_parse: HashSet<String>,
     pub interfaces: DefaultHashMap<String, Interface>,
+}
+
+impl InterfaceCollector {
+    pub fn get_interface(&self, name: &str) -> Type {
+        let props = &self.interfaces[name.to_owned()];
+        self.ctx.object(props.to_owned())
+    }
 }
 
 fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
@@ -168,7 +175,13 @@ impl Visit for InterfaceCollector {
                     Some(type_ann) => {
                         let t = infer_ts_type_ann(&type_ann.type_ann, &self.ctx);
                         if let Expr::Ident(Ident { sym, .. }) = sig.key.as_ref() {
-                            self.interfaces[name].insert(sym.to_string(), t);
+                            let prop = TProp {
+                                name: sym.to_string(),
+                                optional: sig.optional,
+                                mutable: !sig.readonly,
+                                ty: t,
+                            };
+                            self.interfaces[name].push(prop);
                         }
                     },
                     None => panic!("Property is missing type annotation"),
@@ -177,10 +190,15 @@ impl Visit for InterfaceCollector {
             TsTypeElement::TsGetterSignature(_sig) => {}
             TsTypeElement::TsSetterSignature(_sig) => {}
             TsTypeElement::TsMethodSignature(sig) => {
-                // TODO: all methods must be readonly properties on the interface
                 let t = self.infer_method_sig(sig);
                 if let Expr::Ident(Ident { sym, .. }) = sig.key.as_ref() {
-                    self.interfaces[name].insert(sym.to_string(), t);
+                    let prop = TProp {
+                        name: sym.to_string(),
+                        optional: sig.optional,
+                        mutable: false, // All methods on interfaces are readonly
+                        ty: t,
+                    };
+                    self.interfaces[name].push(prop);
                 }
             }
             TsTypeElement::TsIndexSignature(_sig) => {}

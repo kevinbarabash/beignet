@@ -11,7 +11,7 @@ pub mod types;
 
 pub use context::*;
 pub use infer::*;
-pub use types::{Lit, Type};
+pub use types::{Lit, Type, TProp};
 
 #[cfg(test)]
 mod tests {
