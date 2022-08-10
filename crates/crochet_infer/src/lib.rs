@@ -30,7 +30,8 @@ mod tests {
 
     fn infer_prog(input: &str) -> Context {
         let prog = parser().parse(input).unwrap();
-        infer::infer_prog(&prog).unwrap()
+        let mut ctx: Context = Context::default();
+        infer::infer_prog(&prog, &mut ctx).unwrap()
     }
 
     fn get_type(name: &str, ctx: &Context) -> String {

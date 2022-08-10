@@ -224,9 +224,12 @@ dependencies = [
 name = "crochet_dts"
 version = "0.1.0"
 dependencies = [
+ "chumsky",
  "crochet_ast",
  "crochet_infer",
+ "crochet_parser",
  "defaultmap",
+ "insta",
  "memoize",
  "swc_atoms",
  "swc_common",

@@ -501,7 +501,45 @@ fn infer_property_type(
             let t = lookup_alias(ctx, alias)?;
             infer_property_type(&t, prop, ctx)
         }
-        _ => todo!("Unhandled {obj_t} in infer_property_type"),
+        Variant::Lit(lit) => {
+            match lit {
+                crate::Lit::Num(_) => {
+                    let t = ctx.lookup_type("Number")?;
+                    infer_property_type(&t, prop, ctx)
+                },
+                crate::Lit::Bool(_) => {
+                    let t = ctx.lookup_type("Boolean")?;
+                    infer_property_type(&t, prop, ctx)
+                },
+                crate::Lit::Str(_) => {
+                    let t = ctx.lookup_type("String")?;
+                    infer_property_type(&t, prop, ctx)
+                },
+                crate::Lit::Null => todo!(),
+                crate::Lit::Undefined => todo!(),
+            }
+        }
+        Variant::Prim(prim) => {
+            match prim {
+                Primitive::Num => {
+                    let t = ctx.lookup_type("Number")?;
+                    infer_property_type(&t, prop, ctx)
+                },
+                Primitive::Bool => {
+                    let t = ctx.lookup_type("Boolean")?;
+                    infer_property_type(&t, prop, ctx)
+                },
+                Primitive::Str => {
+                    let t = ctx.lookup_type("String")?;
+                    infer_property_type(&t, prop, ctx)
+                },
+                Primitive::Undefined => todo!(),
+                Primitive::Null => todo!(),
+            }
+        }
+        _ => {
+            todo!("Unhandled {obj_t:#?} in infer_property_type")
+        },
     }
 }
 

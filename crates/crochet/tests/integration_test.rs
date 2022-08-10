@@ -26,8 +26,8 @@ fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
         }
     };
     // println!("prog = {:#?}", &prog);
-    // let prog = token_parser(&spans).parse(tokens).unwrap();
-    let ctx = crochet_infer::infer_prog(&prog).unwrap();
+    let mut ctx = crochet_infer::Context::default();
+    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
 
     (prog, ctx)
 }
