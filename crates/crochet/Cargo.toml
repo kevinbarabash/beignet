@@ -16,6 +16,7 @@ chumsky = "0.8.0"
 wasm-bindgen = "0.2.80"
 crochet_ast = { version = "0.1.0", path = "../crochet_ast" }
 crochet_codegen = { version = "0.1.0", path = "../crochet_codegen" }
+crochet_dts = { version = "0.1.0", path = "../crochet_dts" }
 crochet_infer = { version = "0.1.0", path = "../crochet_infer" }
 crochet_parser = { version = "0.1.0", path = "../crochet_parser" }
 

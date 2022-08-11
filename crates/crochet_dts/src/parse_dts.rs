@@ -1,9 +1,8 @@
 use defaultmap::*;
-use memoize::memoize;
 use std::collections::HashSet;
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
-use swc_common::SourceMap;
+use swc_common::{SourceMap, FileName};
 use swc_ecma_ast::*;
 use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
@@ -244,10 +243,9 @@ impl InterfaceCollector {
     }
 }
 
-#[memoize]
-pub fn parse_dts(dts: &'static str) -> Result<Context, Error> {
+pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
     let cm = Arc::<SourceMap>::default();
-    let fm = cm.load_file(Path::new(dts)).expect("failed to load file");
+    let fm = cm.new_source_file(FileName::Anon, d_ts_source.to_owned());
 
     let mut errors: Vec<Error> = vec![];
 
