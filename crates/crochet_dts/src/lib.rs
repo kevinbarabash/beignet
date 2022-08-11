@@ -8,11 +8,10 @@ mod tests {
 
     #[test]
     fn parsing_lib_es5_d_ts() {
-        let dts = parse_dts(LIB_ES5_D_TS).unwrap();
+        let ctx = parse_dts(LIB_ES5_D_TS).unwrap();
 
-        for name in dts.interfaces.keys() {
-            let t = dts.get_interface(name);
-            println!("{name} = {t}")
+        for (name, scheme) in ctx.types {
+            println!("{name} = {scheme}")
         }
     }
 }

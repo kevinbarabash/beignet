@@ -1,7 +1,6 @@
 use chumsky::prelude::*;
 
 use crochet_ast::Program;
-use crochet_infer::*;
 use crochet_parser::parser;
 
 use crochet_dts::parse_dts::*;
@@ -9,13 +8,7 @@ use crochet_dts::parse_dts::*;
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
 fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
-    let dts = parse_dts(LIB_ES5_D_TS).unwrap();
-    let mut ctx = Context::default();
-
-    for name in dts.interfaces.keys() {
-        let t = dts.get_interface(name);
-        ctx.types.insert(name.to_owned(), types::Scheme::from(t));
-    }
+    let mut ctx = parse_dts(LIB_ES5_D_TS).unwrap();
 
     let result = parser().parse(src);
     let prog = match result {
