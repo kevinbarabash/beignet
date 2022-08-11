@@ -15,3 +15,8 @@ swc_ecma_visit = "0.75.0"
 memoize = "0.3.0"
 crochet_ast = { version = "0.1.0", path = "../crochet_ast" }
 crochet_infer = { version = "0.1.0", path = "../crochet_infer" }
+
+[dev-dependencies]
+chumsky = "0.8.0"
+insta = "1.13.0"
+crochet_parser = { version = "0.1.0", path = "../crochet_parser" }

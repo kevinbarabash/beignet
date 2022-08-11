@@ -10,7 +10,7 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::{Lit, Primitive};
-use crochet_infer::{Context, Type, TProp};
+use crochet_infer::{Context, Type, TProp, types::Scheme};
 
 type Interface = Vec<TProp>;
 
@@ -245,7 +245,7 @@ impl InterfaceCollector {
 }
 
 #[memoize]
-pub fn parse_dts(dts: &'static str) -> Result<InterfaceCollector, Error> {
+pub fn parse_dts(dts: &'static str) -> Result<Context, Error> {
     let cm = Arc::<SourceMap>::default();
     let fm = cm.load_file(Path::new(dts)).expect("failed to load file");
 
@@ -282,7 +282,10 @@ pub fn parse_dts(dts: &'static str) -> Result<InterfaceCollector, Error> {
     };
     module.visit_with(&mut collector);
 
-    // TODO: convert each interface into an object type
+    for name in collector.interfaces.keys() {
+        let t = collector.get_interface(name);
+        collector.ctx.types.insert(name.to_owned(), Scheme::from(t));
+    }
 
-    Ok(collector)
+    Ok(collector.ctx)
 }

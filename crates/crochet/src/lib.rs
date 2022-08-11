@@ -29,7 +29,8 @@ pub fn compile(input: &str) -> Result<CompileResult, String> {
     let js = crochet_codegen::js::codegen_js(&program);
 
     // TODO: return errors as part of CompileResult
-    let ctx = infer_prog(&program)?;
+    let mut ctx: Context = Context::default();
+    let ctx = infer_prog(&program, &mut ctx)?;
     let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
 
     Ok(CompileResult { js, dts })

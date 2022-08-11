@@ -8,8 +8,8 @@ use super::substitutable::{Subst, Substitutable};
 use super::types::{Scheme, Type, TProp};
 use super::util::*;
 
-pub fn infer_prog(prog: &Program) -> Result<Context, String> {
-    let mut ctx: Context = Context::default();
+pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> {
+    // let mut ctx: Context = Context::default();
     // TODO: replace with Class type once it exists
     // We use {_name: "Promise"} to differentiate it from other
     // object types.
@@ -47,7 +47,7 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                             Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
                                 match type_ann {
                                     Some(type_ann) => {
-                                        let scheme = infer_scheme(type_ann, &ctx);
+                                        let scheme = infer_scheme(type_ann, ctx);
                                         ctx.values
                                             .insert(id.name.to_owned(), scheme);
                                     }
@@ -68,12 +68,12 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                         let init = init.as_ref().unwrap();
 
                         let (pa, s) =
-                            infer_pattern_and_init(pattern, init, &mut ctx, &PatternUsage::Assign)?;
+                            infer_pattern_and_init(pattern, init, ctx, &PatternUsage::Assign)?;
 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
                         for (name, scheme) in pa {
-                            let scheme = normalize(&scheme.apply(&s), &ctx);
+                            let scheme = normalize(&scheme.apply(&s), ctx);
                             ctx.values.insert(name, scheme);
                         }
                     }
@@ -85,18 +85,18 @@ pub fn infer_prog(prog: &Program) -> Result<Context, String> {
                 type_params,
                 ..
             } => {
-                let scheme = infer_scheme_with_type_params(type_ann, type_params, &ctx);
+                let scheme = infer_scheme_with_type_params(type_ann, type_params, ctx);
                 ctx.types.insert(id.name.to_owned(), scheme);
             }
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
-                infer_expr(&mut ctx, expr)?;
+                infer_expr(ctx, expr)?;
             }
         };
     }
 
-    Ok(ctx)
+    Ok(ctx.to_owned())
 }
 
 pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<Scheme, String> {
