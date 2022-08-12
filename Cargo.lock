@@ -184,6 +184,7 @@ dependencies = [
  "chumsky",
  "crochet_ast",
  "crochet_codegen",
+ "crochet_dts",
  "crochet_infer",
  "crochet_parser",
  "insta",

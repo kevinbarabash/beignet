@@ -1,3 +1,4 @@
+use std::fs;
 use chumsky::prelude::*;
 
 use crochet_ast::Program;
@@ -8,7 +9,8 @@ use crochet_dts::parse_dts::*;
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
 fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
-    let mut ctx = parse_dts(LIB_ES5_D_TS).unwrap();
+    let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
+    let mut ctx = parse_dts(&lib).unwrap();
 
     let result = parser().parse(src);
     let prog = match result {

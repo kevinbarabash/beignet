@@ -1,6 +1,7 @@
 use chumsky::prelude::*;
 use crochet_infer::*;
 use crochet_parser::parser;
+use crochet_dts::parse_dts::parse_dts;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -23,13 +24,13 @@ impl CompileResult {
 }
 
 #[wasm_bindgen]
-pub fn compile(input: &str) -> Result<CompileResult, String> {
+pub fn compile(input: &str, lib: &str) -> Result<CompileResult, String> {
     let program = parser().parse(input).unwrap();
 
     let js = crochet_codegen::js::codegen_js(&program);
 
     // TODO: return errors as part of CompileResult
-    let mut ctx: Context = Context::default();
+    let mut ctx = parse_dts(lib).unwrap();
     let ctx = infer_prog(&program, &mut ctx)?;
     let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
 

@@ -1,11 +1,11 @@
 import * as React from "react";
 
-import * as m from "../crates/crochet/pkg";
+import libPath from "../node_modules/typescript/lib/lib.es5.d.ts";
 
 import Dropdown from "./dropdown";
 import { getPermalinkHref } from "./util";
 
-import githubMark from "./GitHub-Mark-32px.png";
+type Crochet = typeof import("../crates/crochet/pkg");
 
 const DEFAULT_CODE = `
 // Welcome to the Crochet Playground!
@@ -18,21 +18,36 @@ export const App = () => {
   let [source, setSource] = React.useState(() => {
     const url = new URL(window.location.href);
     const code = url.searchParams.get("code");
-    debugger;
     return code
       ? window.atob(window.decodeURIComponent(code))
       : DEFAULT_CODE.trim();
   });
+  let [crochet, setCrochet] = React.useState<Crochet | null>(null);
   let [outputTab, setOutputTab] = React.useState<"js" | "dts">("js");
+  let [lib, setLib] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    import("../crates/crochet/pkg").then(setCrochet);
+  }, []);
+
+  React.useEffect(() => {
+    fetch(libPath).then(res => res.text()).then(text => {
+      setLib(text);
+    });
+  }, []);
 
   let output = React.useMemo(() => {
     try {
-      return m.compile(source);
+      if (crochet && lib) {
+        return crochet.compile(source, lib);
+      } else {
+        return { js: "", dts: "" };
+      }
     } catch (e) {
       console.log(e);
       return { js: "", dts: "" };
     }
-  }, [source]);
+  }, [source, crochet, lib]);
 
   const updateSource = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setSource(e.target.value);
