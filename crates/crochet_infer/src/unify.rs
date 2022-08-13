@@ -22,22 +22,19 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
         }
         (Variant::Lam(lam1), Variant::Lam(lam2)) => {
+            // NOTE: Any extra args (lam1.params) are ignored.
+
+            // TODO: work out how rest and spread should work together.
+            // args: (a1, a2, a_spread[0 to n]) -> 2 to 2 + n
+            // params: (p1, p2, p3, p_rest[0 to n]) -> 3 to 3 + n
+            // this means that a_spread must have a length of at least 1 in order 
+            // for the lower bounds to match.
+
             let mut s = Subst::new();
             // If `lam1` is a function call then we treat it differently.  Instead
-            // of checking if it's a subtype of `lam2`, we instead either:
+            // of checking if it's a subtype of `lam2`, we instead determine the types
+            // of all of its args and then try to unify those with the params.
             if lam1.is_call {
-                let mut params_1: Vec<Type> = vec![];
-                for param in &lam1.params {
-                    match &param.variant {
-                        Variant::Rest(rest) => {
-                            match &rest.as_ref().variant {
-                                Variant::Tuple(types) => params_1.extend(types.to_owned()),
-                                _ => return Err(format!("spread of type {rest} not allowed")),
-                            }
-                        },
-                        _ => params_1.push(param.to_owned())
-                    }
-                }
                 let last_param_2 = lam2.params.last();
                 let maybe_rest_param = if let Some(param) = last_param_2 {
                     match &param.variant {
@@ -48,7 +45,42 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     None
                 };
 
-                // TODO: add a `variadic` boolean to the Lambda type
+                let param_count_low_bound = match maybe_rest_param {
+                    Some(_) => lam2.params.len() - 1,
+                    None => lam2.params.len()
+                };
+
+                // NOTE: placeholder spreads must come last because we don't know they're
+                // length.  This will also be true for spreading arrays, but in the case
+                // of array spreads, they also need to come after the start of a rest param.
+
+                let mut args: Vec<Type> = vec![];
+                for (i, arg) in lam1.params.iter().enumerate() {
+                    let is_last = i == lam1.params.len() - 1;
+                    match &arg.variant {
+                        Variant::Rest(spread) => {
+                            match &spread.as_ref().variant {
+                                Variant::Placeholder(_) => {
+                                    if is_last {
+                                        let spread_count = param_count_low_bound - args.len();
+                                        for _ in 0..spread_count {
+                                            args.push(ctx.placeholder());
+                                        }
+                                    } else {
+                                        return Err(String::from("Placeholder spread must appear last"));
+                                    }
+                                }
+                                Variant::Tuple(types) => args.extend(types.to_owned()),
+                                _ => return Err(format!("spread of type {spread} not allowed")),
+                            }
+                        },
+                        _ => args.push(arg.to_owned())
+                    }
+                }
+
+                // TODO: add a `variadic` boolean to the Lambda type as a convenience
+                // so that we don't have to search through all the params for the rest
+                // param.
                 if let Some(rest_param) = maybe_rest_param {
                     let regular_param_count = lam2.params.len() - 1;
                     
@@ -75,39 +107,53 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let s2 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
 
                     Ok(compose_subs(&s2, &s1))
-                } else if params_1.len() < lam2.params.len() {
-                    // Partially application.
-                    // If there is fewer than expected by `lam2` we return an new
-                    // lambda that accepts the remaining params and returns the
-                    // original return type.
-                    let partial_ret =
-                        ctx.lam(lam2.params[params_1.len()..].to_vec(), lam2.ret.clone());
-                    for (p1, p2) in params_1.iter().zip(&lam2.params) {
-                        // Each argument must be a subtype of the corresponding param.
-                        let arg = p1.apply(&s);
-                        let param = p2.apply(&s);
-                        let s1 = unify(&arg, &param, ctx)?;
-                        s = compose_subs(&s, &s1);
-                    }
-                    let s1 = unify(&lam1.ret.apply(&s), &partial_ret, ctx)?;
-                    Ok(compose_subs(&s, &s1))
+                } else if args.len() < lam2.params.len() {
+                    Err(String::from("Not enough params provided"))
                 } else {
-                    // Regular application.
-                    // Any extra params (args) that `lam1` has are ignored.
-                    for (p1, p2) in params_1.iter().zip(&lam2.params) {
-                        // Each argument must be a subtype of the corresponding param.
-                        let arg = p1.apply(&s);
-                        let param = p2.apply(&s);
-                        let s1 = unify(&arg, &param, ctx)?;
-                        s = compose_subs(&s, &s1);
+                    let partial = args.iter().any(|param| {
+                        matches!(param.variant, Variant::Placeholder(_))
+                    });
+
+                    if partial {
+                        // Partial Application
+                        let mut partial_params: Vec<Type> = vec![];
+                        for (arg, param) in args.iter().zip(&lam2.params) {
+                            match arg.variant {
+                                Variant::Placeholder(_) => {
+                                    partial_params.push(param.to_owned());
+                                },
+                                _ => {
+                                    let arg = arg.apply(&s);
+                                    let param = param.apply(&s);
+                                    let s1 = unify(&arg, &param, ctx)?;
+                                    s = compose_subs(&s, &s1);
+                                }
+                            };
+                        }
+
+                        let partial_ret = ctx.lam(partial_params, lam2.ret.clone());
+                        let s1 = unify(&lam1.ret.apply(&s), &partial_ret, ctx)?;
+                        
+                        Ok(compose_subs(&s, &s1))
+                    } else {
+                        // Regular Application
+                        for (p1, p2) in args.iter().zip(&lam2.params) {
+                            // Each argument must be a subtype of the corresponding param.
+                            let arg = p1.apply(&s);
+                            let param = p2.apply(&s);
+                            let s1 = unify(&arg, &param, ctx)?;
+                            s = compose_subs(&s, &s1);
+                        }
+                        let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
+                        Ok(compose_subs(&s, &s1))
                     }
-                    let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
-                    Ok(compose_subs(&s, &s1))
                 }
             } else if lam1.params.len() <= lam2.params.len() {
                 // If `lam1` isn't being applied then it's okay if has fewer params
                 // than `lam2`.  This is because functions can be passed extra params
                 // meaning that any place `lam2` is used, `lam1` can be used as well.
+                //
+                // TODO: figure what this means for lambdas with rest params.
                 for (p1, p2) in lam1.params.iter().zip(&lam2.params) {
                     // NOTE: The order of params is reverse.  This allows a callback
                     // whose params can accept more values (are supertypes) than the

@@ -183,6 +183,13 @@ impl Context {
             }),
         }
     }
+
+    pub fn placeholder(&self) -> Type {
+        Type {
+            id: self.fresh_id(),
+            variant: Variant::Placeholder(false),
+        }
+    }
 }
 
 pub fn lookup_alias(ctx: &Context, alias: &AliasType) -> Result<Type, String> {
@@ -197,17 +204,18 @@ pub fn lookup_alias(ctx: &Context, alias: &AliasType) -> Result<Type, String> {
                         return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
                     }
                     ids.zip(type_params.iter().cloned()).collect()
-                },
+                }
                 None => {
                     if !scheme.qualifiers.is_empty() {
                         return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
                     }
-                    ids.zip(scheme.qualifiers.iter().map(|_| ctx.fresh_var())).collect()
-                },
+                    ids.zip(scheme.qualifiers.iter().map(|_| ctx.fresh_var()))
+                        .collect()
+                }
             };
 
             Ok(scheme.ty.apply(&subs))
-        },
+        }
         None => Err(String::from("Can't find alias '{name}' in context")),
     }
 }

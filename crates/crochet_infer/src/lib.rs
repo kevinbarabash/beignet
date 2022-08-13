@@ -1010,39 +1010,86 @@ mod tests {
     }
 
     #[test]
-    fn call_lam_with_too_few_params_result_in_partial_application() {
+    #[should_panic = "Not enough params provided"]
+    fn call_lam_with_too_few_params() {
         let src = r#"
         declare let add: (a: number, b: number) => number
-        let add5 = add(5)
+        let sum = add(5)
         "#;
 
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type("add5", &ctx), "(number) => number");
+        infer_prog(src);
     }
 
     #[test]
-    fn call_lam_with_too_few_params_result_in_partial_application_no_params() {
+    fn call_partially_applied_fn_immediately() {
         let src = r#"
         declare let add: (a: number, b: number) => number
-        let plus = add()
-        "#;
-
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type("plus", &ctx), "(number, number) => number");
-    }
-
-    #[test]
-    fn call_lam_multiple_times_with_too_few_params() {
-        let src = r#"
-        declare let add: (a: number, b: number) => number
-        let sum = add(5)(10)
+        let sum = add(5, _)(10)
         "#;
 
         let ctx = infer_prog(src);
 
         assert_eq!(get_type("sum", &ctx), "number");
+    }
+
+    #[test]
+    fn partially_apply_first_param() {
+        let src = r#"
+        declare let foo: (a: number, b: string) => bool
+        let foo_num = foo(5, _)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("foo_num", &ctx), "(string) => bool");
+    }
+
+    #[test]
+    fn partially_apply_second_param() {
+        let src = r#"
+        declare let foo: (a: number, b: string) => bool
+        let foo_str = foo(_, "hello")
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("foo_str", &ctx), "(number) => bool");
+    }
+
+    #[test]
+    fn partially_apply_multiple_params() {
+        let src = r#"
+        declare let foo: (a: number, b: string, c: bool) => undefined
+        let foo_bool = foo(5, "hello", _)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("foo_bool", &ctx), "(bool) => undefined");
+    }
+
+    #[test]
+    fn multiple_placeholders() {
+        let src = r#"
+        declare let foo: (a: number, b: string, c: bool) => undefined
+        let foo_num_bool = foo(_, "hello", _)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("foo_num_bool", &ctx), "(number, bool) => undefined");
+    }
+
+    #[test]
+    fn all_multiple_placeholders() {
+        let src = r#"
+        declare let foo: (a: number, b: string, c: bool) => undefined
+        let foo_num_str_bool = foo(_, _, _)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("foo_num_str_bool", &ctx), "(number, string, bool) => undefined");
     }
 
     #[test]
@@ -1143,16 +1190,30 @@ mod tests {
     }
 
     #[test]
-    fn spread_param_tuple_with_not_enough_elements_is_partial_application() {
+    fn spread_param_tuple_with_not_enough_elements_and_placeholder_is_partial_application() {
         let src = r#"
         declare let add: (a: number, b: number) => number
         let args = [5]
-        let result = add(...args)
+        let result1 = add(...args, _)
+        let result2 = add(_, ...args)
         "#;
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "(number) => number");
+        assert_eq!(get_type("result1", &ctx), "(number) => number");
+        assert_eq!(get_type("result2", &ctx), "(number) => number");
+    }
+
+    #[test]
+    fn partial_application_with_placeholder_rest() {
+        let src = r#"
+        declare let add: (a: number, b: number, c: number) => number
+        let add5 = add(5, ..._)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("add5", &ctx), "(number, number) => number");
     }
 
     #[test]

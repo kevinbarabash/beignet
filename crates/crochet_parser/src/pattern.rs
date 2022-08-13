@@ -34,7 +34,6 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
         .padded_by(comment.repeated());
 
     let parser = recursive(|pat| {
-        println!("pattern parser");
         let wildcard_pat =
             just_with_padding("_").map_with_span(|_, span| Pattern::Wildcard(WildcardPat { span }));
 
