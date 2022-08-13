@@ -1205,6 +1205,18 @@ mod tests {
     }
 
     #[test]
+    fn partial_application_with_placeholder_rest() {
+        let src = r#"
+        declare let add: (a: number, b: number, c: number) => number
+        let add5 = add(5, ..._)
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("add5", &ctx), "(number, number) => number");
+    }
+
+    #[test]
     fn spread_multiple_param_tuples() {
         let src = r#"
         declare let add: (a: number, b: number) => number
