@@ -6,8 +6,8 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
-use crochet_infer::Context;
 use crochet_infer::types::{self, Scheme, Type, Variant};
+use crochet_infer::Context;
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -52,11 +52,7 @@ fn build_d_ts(program: &ast::Program, ctx: &Context) -> Program {
                     }),
                 }))
             }
-            ast::Statement::TypeDecl {
-                declare,
-                id,
-                ..
-            } => match ctx.types.get(&id.name) {
+            ast::Statement::TypeDecl { declare, id, .. } => match ctx.types.get(&id.name) {
                 Some(scheme) => ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(TsTypeAliasDecl {
                     span: DUMMY_SP,
                     declare: declare.to_owned(),
@@ -84,6 +80,63 @@ pub fn build_ident(id: &ast::Ident) -> Ident {
         sym: JsWord::from(id.name.to_owned()),
         optional: false,
     }
+}
+
+pub fn build_param(inferred_type: &Type, pattern: &ast::Pattern) -> TsFnParam {
+    let type_ann = Some(TsTypeAnn {
+        span: DUMMY_SP,
+        type_ann: Box::from(build_type(inferred_type, None, None)),
+    });
+
+    match pattern {
+        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => TsFnParam::Ident(BindingIdent {
+            id: build_ident(id),
+            type_ann,
+        }),
+        ast::Pattern::Wildcard(_) => todo!(),
+        ast::Pattern::Rest(ast::RestPat { arg, .. }) => TsFnParam::Rest(RestPat {
+            span: DUMMY_SP,
+            dot3_token: DUMMY_SP,
+            arg: Box::from(build_pattern_rec(arg.as_ref())),
+            type_ann,
+        }),
+        ast::Pattern::Object(_) => todo!(),
+        ast::Pattern::Array(_) => todo!(),
+        ast::Pattern::Lit(_) => todo!(),
+        ast::Pattern::Is(_) => todo!(),
+    }
+}
+
+pub fn build_ts_fn_type(args_or_params: &[Type], ret: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
+    let params: Vec<TsFnParam> = args_or_params
+        .iter()
+        .enumerate()
+        .map(|(i, arg)| {
+            let type_ann = Some(TsTypeAnn {
+                span: DUMMY_SP,
+                type_ann: Box::from(build_type(arg, None, None)),
+            });
+
+            TsFnParam::Ident(BindingIdent {
+                id: Ident {
+                    span: DUMMY_SP,
+                    sym: JsWord::from(format!("arg{}", i)),
+                    optional: false,
+                },
+                type_ann,
+            })
+        })
+        .collect();
+
+    TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
+        span: DUMMY_SP,
+        params,
+        type_params,
+        type_ann: TsTypeAnn {
+            span: DUMMY_SP,
+            type_ann: Box::from(build_type(ret, None, None)),
+        },
+    }))
 }
 
 pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, ctx: &Context) -> Pat {
@@ -238,44 +291,14 @@ pub fn build_type(
             // This can happen when a function type is inferred by usage
             match expr {
                 // TODO: handle is_async
-                Some(ast::Expr::Lambda(ast::Lambda {
-                    params,
-                    ..
-                })) => {
+                Some(ast::Expr::Lambda(ast::Lambda { params, .. })) => {
                     if args.len() != params.len() {
                         panic!("number of args don't match")
                     } else {
                         let params: Vec<TsFnParam> = args
                             .iter()
                             .zip(params)
-                            .map(|(inferred_type, pattern)| {
-                                let type_ann = Some(TsTypeAnn {
-                                    span: DUMMY_SP,
-                                    type_ann: Box::from(build_type(inferred_type, None, None)),
-                                });
-
-                                match pattern {
-                                    ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
-                                        TsFnParam::Ident(BindingIdent {
-                                            id: build_ident(id),
-                                            type_ann,
-                                        })
-                                    }
-                                    ast::Pattern::Wildcard(_) => todo!(),
-                                    ast::Pattern::Rest(ast::RestPat { arg, .. }) => {
-                                        TsFnParam::Rest(RestPat {
-                                            span: DUMMY_SP,
-                                            dot3_token: DUMMY_SP,
-                                            arg: Box::from(build_pattern_rec(arg.as_ref())),
-                                            type_ann,
-                                        })
-                                    }
-                                    ast::Pattern::Object(_) => todo!(),
-                                    ast::Pattern::Array(_) => todo!(),
-                                    ast::Pattern::Lit(_) => todo!(),
-                                    ast::Pattern::Is(_) => todo!(),
-                                }
-                            })
+                            .map(|(inferred_type, pattern)| build_param(inferred_type, pattern))
                             .collect();
 
                         TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
@@ -297,39 +320,9 @@ pub fn build_type(
                     }
                     _ => panic!("mismatch"),
                 },
-                _ => {
-                    let params: Vec<TsFnParam> = args
-                        .iter()
-                        .enumerate()
-                        .map(|(i, arg)| {
-                            let type_ann = Some(TsTypeAnn {
-                                span: DUMMY_SP,
-                                type_ann: Box::from(build_type(arg, None, None)),
-                            });
-
-                            TsFnParam::Ident(BindingIdent {
-                                id: Ident {
-                                    span: DUMMY_SP,
-                                    sym: JsWord::from(format!("arg{}", i)),
-                                    optional: false,
-                                },
-                                type_ann,
-                            })
-                        })
-                        .collect();
-
-                    TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
-                        span: DUMMY_SP,
-                        params,
-                        type_params,
-                        type_ann: TsTypeAnn {
-                            span: DUMMY_SP,
-                            type_ann: Box::from(build_type(ret, None, None)),
-                        },
-                    }))
-                }
+                _ => build_ts_fn_type(args, ret, type_params),
             }
-        },
+        }
         // This is used to copy the names of args from the expression
         // over to the lambda's type.
         Variant::Lam(types::LamType { params, ret, .. }) => {
@@ -340,39 +333,12 @@ pub fn build_type(
                     ..
                 })) => {
                     if params.len() != expr_params.len() {
-                        panic!("number of args don't match")
+                        panic!("number of params don't match")
                     } else {
                         let params: Vec<TsFnParam> = params
                             .iter()
                             .zip(expr_params)
-                            .map(|(inferred_type, pattern)| {
-                                let type_ann = Some(TsTypeAnn {
-                                    span: DUMMY_SP,
-                                    type_ann: Box::from(build_type(inferred_type, None, None)),
-                                });
-
-                                match pattern {
-                                    ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
-                                        TsFnParam::Ident(BindingIdent {
-                                            id: build_ident(id),
-                                            type_ann,
-                                        })
-                                    }
-                                    ast::Pattern::Wildcard(_) => todo!(),
-                                    ast::Pattern::Rest(ast::RestPat { arg, .. }) => {
-                                        TsFnParam::Rest(RestPat {
-                                            span: DUMMY_SP,
-                                            dot3_token: DUMMY_SP,
-                                            arg: Box::from(build_pattern_rec(arg.as_ref())),
-                                            type_ann,
-                                        })
-                                    }
-                                    ast::Pattern::Object(_) => todo!(),
-                                    ast::Pattern::Array(_) => todo!(),
-                                    ast::Pattern::Lit(_) => todo!(),
-                                    ast::Pattern::Is(_) => todo!(),
-                                }
-                            })
+                            .map(|(inferred_type, pattern)| build_param(inferred_type, pattern))
                             .collect();
 
                         TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
@@ -394,39 +360,7 @@ pub fn build_type(
                     }
                     _ => panic!("mismatch"),
                 },
-                _ => {
-                    let params: Vec<TsFnParam> = params
-                        .iter()
-                        .enumerate()
-                        .map(|(i, arg)| {
-                            let type_ann = Some(TsTypeAnn {
-                                span: DUMMY_SP,
-                                type_ann: Box::from(build_type(arg, None, None)),
-                            });
-
-                            TsFnParam::Ident(BindingIdent {
-                                id: Ident {
-                                    span: DUMMY_SP,
-                                    // TODO: use param name once LamType is using TParam instead
-                                    // of Type for it's params vector.
-                                    sym: JsWord::from(format!("arg{}", i)),
-                                    optional: false,
-                                },
-                                type_ann,
-                            })
-                        })
-                        .collect();
-
-                    TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
-                        span: DUMMY_SP,
-                        params,
-                        type_params,
-                        type_ann: TsTypeAnn {
-                            span: DUMMY_SP,
-                            type_ann: Box::from(build_type(ret, None, None)),
-                        },
-                    }))
-                }
+                _ => build_ts_fn_type(params, ret, type_params),
             }
         }
         Variant::Union(types) => {
@@ -438,17 +372,15 @@ pub fn build_type(
                     .collect(),
             }))
         }
-        Variant::Intersection(types) => {
-            TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsIntersectionType(
-                TsIntersectionType {
-                    span: DUMMY_SP,
-                    types: types
-                        .iter()
-                        .map(|ty| Box::from(build_type(ty, None, None)))
-                        .collect(),
-                },
-            ))
-        }
+        Variant::Intersection(types) => TsType::TsUnionOrIntersectionType(
+            TsUnionOrIntersectionType::TsIntersectionType(TsIntersectionType {
+                span: DUMMY_SP,
+                types: types
+                    .iter()
+                    .map(|ty| Box::from(build_type(ty, None, None)))
+                    .collect(),
+            }),
+        ),
         Variant::Object(props) => {
             let members: Vec<TsTypeElement> = props
                 .iter()
