@@ -53,7 +53,7 @@ impl Hash for VarType {
 
 #[derive(Clone, Debug, Eq)]
 pub struct LamType {
-    pub params: Vec<Type>, // TOOD: rename this params
+    pub params: Vec<Type>,
     pub ret: Box<Type>,
     pub is_call: bool,
 }
@@ -113,6 +113,9 @@ impl Hash for MemberType {
 pub enum Variant {
     Var,
     Lam(LamType),
+    // TODO: we may want to have different types of placeholders in the future,
+    // e.g. typed holes vs. placeholder args
+    Placeholder(bool),
     Prim(Primitive),
     Lit(Lit),
     Union(Vec<Type>),
@@ -159,6 +162,12 @@ impl fmt::Display for Type {
             }
             Variant::Lam(LamType { params, ret, .. }) => {
                 write!(f, "({}) => {}", join(params, ", "), ret)
+            }
+            Variant::Placeholder(spread) => {
+                match spread {
+                    true => write!(f, "..._"),
+                    false => write!(f, "_"),
+                }
             }
             Variant::Prim(prim) => write!(f, "{}", prim),
             Variant::Lit(lit) => write!(f, "{}", lit),
