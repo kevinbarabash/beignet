@@ -18,9 +18,12 @@ impl Substitutable for Type {
             None => {
                 let variant = match &self.variant {
                     Variant::Var => self.variant.to_owned(),
+                    Variant::App(app) => Variant::App(AppType {
+                        args: app.args.iter().map(|param| param.apply(sub)).collect(),
+                        ret: Box::from(app.ret.apply(sub)),
+                    }),
                     // TODO: handle widening of lambdas
                     Variant::Lam(lam) => Variant::Lam(LamType {
-                        is_call: lam.is_call,
                         params: lam.params.iter().map(|param| param.apply(sub)).collect(),
                         ret: Box::from(lam.ret.apply(sub)),
                     }),
@@ -53,6 +56,11 @@ impl Substitutable for Type {
     fn ftv(&self) -> HashSet<i32> {
         match &self.variant {
             Variant::Var => HashSet::from([self.id.to_owned()]),
+            Variant::App(AppType { args, ret }) => {
+                let mut result: HashSet<_> = args.ftv();
+                result.extend(ret.ftv());
+                result
+            },
             Variant::Lam(LamType { params, ret, .. }) => {
                 let mut result: HashSet<_> = params.ftv();
                 result.extend(ret.ftv());

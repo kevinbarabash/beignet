@@ -38,10 +38,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
             let call_type = Type {
                 id: ctx.fresh_id(),
-                variant: Variant::Lam(types::LamType {
-                    params: arg_types,
+                variant: Variant::App(types::AppType {
+                    args: arg_types,
                     ret: Box::from(ret_type.clone()),
-                    is_call: true,
                 }),
             };
             let s3 = unify(&call_type, &lam_type, ctx)?;
@@ -170,10 +169,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
                                 let call_type = Type {
                                     id: ctx.fresh_id(),
-                                    variant: Variant::Lam(types::LamType {
-                                        params: vec![ctx.object(props)],
+                                    variant: Variant::App(types::AppType {
+                                        args: vec![ctx.object(props)],
                                         ret: Box::from(ret_type.clone()),
-                                        is_call: true,
                                     }),
                                 };
 
