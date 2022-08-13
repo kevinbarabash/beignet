@@ -51,11 +51,16 @@ impl Hash for VarType {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AppType {
+    pub args: Vec<Type>,
+    pub ret: Box<Type>,
+}
+
 #[derive(Clone, Debug, Eq)]
 pub struct LamType {
     pub params: Vec<Type>,
     pub ret: Box<Type>,
-    pub is_call: bool,
 }
 
 impl PartialEq for LamType {
@@ -112,6 +117,7 @@ impl Hash for MemberType {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Variant {
     Var,
+    App(AppType),
     Lam(LamType),
     // TODO: we may want to have different types of placeholders in the future,
     // e.g. typed holes vs. placeholder args
@@ -159,6 +165,9 @@ impl fmt::Display for Type {
             Variant::Var => {
                 let id = self.id;
                 write!(f, "t{id}")
+            }
+            Variant::App(AppType { args, ret }) => {
+                write!(f, "({}) => {}", join(args, ", "), ret)
             }
             Variant::Lam(LamType { params, ret, .. }) => {
                 write!(f, "({}) => {}", join(params, ", "), ret)

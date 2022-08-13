@@ -30,16 +30,27 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
     fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
         match &ty.variant {
             Variant::Var => mapping.get(&ty.id).unwrap().to_owned(),
+            Variant::App(app) => {
+                let args: Vec<_> = app.args
+                    .iter()
+                    .map(|arg| norm_type(arg, mapping, ctx))
+                    .collect();
+                let ret = Box::from(norm_type(&app.ret, mapping, ctx));
+                Type {
+                    variant: Variant::App(AppType { args, ret }),
+                    ..ty.to_owned()
+                }
+            }
             Variant::Lam(lam) => {
                 let params: Vec<_> = lam.params
                     .iter()
                     .map(|param| norm_type(param, mapping, ctx))
                     .collect();
+                let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
                 Type {
                     variant: Variant::Lam(LamType {
-                        is_call: lam.is_call,
                         params,
-                        ret: Box::from(norm_type(&lam.ret, mapping, ctx)),
+                        ret,
                     }),
                     ..ty.to_owned()
                 }

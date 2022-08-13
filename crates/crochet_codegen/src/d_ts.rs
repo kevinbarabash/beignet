@@ -233,6 +233,103 @@ pub fn build_type(
                 lit,
             })
         }
+        // This should never appear here since it's only used during unification
+        Variant::App(types::AppType { args, ret, .. }) => {
+            // This can happen when a function type is inferred by usage
+            match expr {
+                // TODO: handle is_async
+                Some(ast::Expr::Lambda(ast::Lambda {
+                    params,
+                    ..
+                })) => {
+                    if args.len() != params.len() {
+                        panic!("number of args don't match")
+                    } else {
+                        let params: Vec<TsFnParam> = args
+                            .iter()
+                            .zip(params)
+                            .map(|(inferred_type, pattern)| {
+                                let type_ann = Some(TsTypeAnn {
+                                    span: DUMMY_SP,
+                                    type_ann: Box::from(build_type(inferred_type, None, None)),
+                                });
+
+                                match pattern {
+                                    ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
+                                        TsFnParam::Ident(BindingIdent {
+                                            id: build_ident(id),
+                                            type_ann,
+                                        })
+                                    }
+                                    ast::Pattern::Wildcard(_) => todo!(),
+                                    ast::Pattern::Rest(ast::RestPat { arg, .. }) => {
+                                        TsFnParam::Rest(RestPat {
+                                            span: DUMMY_SP,
+                                            dot3_token: DUMMY_SP,
+                                            arg: Box::from(build_pattern_rec(arg.as_ref())),
+                                            type_ann,
+                                        })
+                                    }
+                                    ast::Pattern::Object(_) => todo!(),
+                                    ast::Pattern::Array(_) => todo!(),
+                                    ast::Pattern::Lit(_) => todo!(),
+                                    ast::Pattern::Is(_) => todo!(),
+                                }
+                            })
+                            .collect();
+
+                        TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
+                            span: DUMMY_SP,
+                            params,
+                            type_params,
+                            type_ann: TsTypeAnn {
+                                span: DUMMY_SP,
+                                type_ann: Box::from(build_type(ret, None, None)),
+                            },
+                        }))
+                    }
+                }
+                // Fix nodes are assumed to wrap a lambda where the body of
+                // the lambda is recursive function.
+                Some(ast::Expr::Fix(ast::Fix { expr, .. })) => match expr.as_ref() {
+                    ast::Expr::Lambda(ast::Lambda { body, .. }) => {
+                        build_type(ty, Some(body), type_params)
+                    }
+                    _ => panic!("mismatch"),
+                },
+                _ => {
+                    let params: Vec<TsFnParam> = args
+                        .iter()
+                        .enumerate()
+                        .map(|(i, arg)| {
+                            let type_ann = Some(TsTypeAnn {
+                                span: DUMMY_SP,
+                                type_ann: Box::from(build_type(arg, None, None)),
+                            });
+
+                            TsFnParam::Ident(BindingIdent {
+                                id: Ident {
+                                    span: DUMMY_SP,
+                                    sym: JsWord::from(format!("arg{}", i)),
+                                    optional: false,
+                                },
+                                type_ann,
+                            })
+                        })
+                        .collect();
+
+                    TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
+                        span: DUMMY_SP,
+                        params,
+                        type_params,
+                        type_ann: TsTypeAnn {
+                            span: DUMMY_SP,
+                            type_ann: Box::from(build_type(ret, None, None)),
+                        },
+                    }))
+                }
+            }
+        },
         // This is used to copy the names of args from the expression
         // over to the lambda's type.
         Variant::Lam(types::LamType { params, ret, .. }) => {
@@ -310,6 +407,8 @@ pub fn build_type(
                             TsFnParam::Ident(BindingIdent {
                                 id: Ident {
                                     span: DUMMY_SP,
+                                    // TODO: use param name once LamType is using TParam instead
+                                    // of Type for it's params vector.
                                     sym: JsWord::from(format!("arg{}", i)),
                                     optional: false,
                                 },

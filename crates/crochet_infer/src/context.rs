@@ -80,7 +80,6 @@ impl Context {
             variant: Variant::Lam(LamType {
                 params,
                 ret,
-                is_call: false,
             }),
         }
     }

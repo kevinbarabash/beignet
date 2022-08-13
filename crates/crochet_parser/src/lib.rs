@@ -123,6 +123,12 @@ mod tests {
         insta::assert_debug_snapshot!(parse("foo(10, \"hello\")"));
         insta::assert_debug_snapshot!(parse("f(x)(g(x))"));
         insta::assert_debug_snapshot!(parse("foo(a, ...b)"));
+        let src = r#"
+        let S = (f) => (g) => (x) => f(x)(g(x))
+        let K = (x) => (y) => x
+        let I = S(K)(K)
+        "#;
+        insta::assert_debug_snapshot!(parse(src));
     }
 
     #[test]
