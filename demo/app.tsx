@@ -10,7 +10,7 @@ type Crochet = typeof import("../crates/crochet/pkg");
 const DEFAULT_CODE = `
 // Welcome to the Crochet Playground!
 let add = (a, b) => a + b
-let add5 = add(5)
+let add5 = add(5, _)
 let sum = add5(10)
 `;
 
