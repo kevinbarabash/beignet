@@ -414,5 +414,6 @@ pub fn build_type(
         }),
         Variant::Rest(_) => todo!(),
         Variant::Member(_) => todo!(),
+        Variant::Placeholder(_) => todo!(),
     }
 }

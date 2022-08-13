@@ -22,6 +22,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
         }
         (Variant::Lam(lam1), Variant::Lam(lam2)) => {
+            // NOTE: Any extra args (lam1.params) are ignored.
+
             let mut s = Subst::new();
             // If `lam1` is a function call then we treat it differently.  Instead
             // of checking if it's a subtype of `lam2`, we instead either:
@@ -48,7 +50,14 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     None
                 };
 
-                // TODO: add a `variadic` boolean to the Lambda type
+                // TODO: add a `variadic` boolean to the Lambda type as a convenience
+                // so that we don't have to search through all the params for the rest
+                // param.
+
+                // TODO: handle placeholder rest params, e.g.
+                // let add = (a, b, c) => a + b + c;
+                // let add5 = add(5, ..._); // (number, number) => number
+                // NOTE: eventually we'd like to use '...' instead of '..._' for "placeholder rest"
                 if let Some(rest_param) = maybe_rest_param {
                     let regular_param_count = lam2.params.len() - 1;
                     
@@ -76,33 +85,49 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
                     Ok(compose_subs(&s2, &s1))
                 } else if params_1.len() < lam2.params.len() {
-                    // Partially application.
-                    // If there is fewer than expected by `lam2` we return an new
-                    // lambda that accepts the remaining params and returns the
-                    // original return type.
-                    let partial_ret =
-                        ctx.lam(lam2.params[params_1.len()..].to_vec(), lam2.ret.clone());
-                    for (p1, p2) in params_1.iter().zip(&lam2.params) {
-                        // Each argument must be a subtype of the corresponding param.
-                        let arg = p1.apply(&s);
-                        let param = p2.apply(&s);
-                        let s1 = unify(&arg, &param, ctx)?;
-                        s = compose_subs(&s, &s1);
-                    }
-                    let s1 = unify(&lam1.ret.apply(&s), &partial_ret, ctx)?;
-                    Ok(compose_subs(&s, &s1))
+                    Err(String::from("Not enough params provided"))
                 } else {
-                    // Regular application.
-                    // Any extra params (args) that `lam1` has are ignored.
-                    for (p1, p2) in params_1.iter().zip(&lam2.params) {
-                        // Each argument must be a subtype of the corresponding param.
-                        let arg = p1.apply(&s);
-                        let param = p2.apply(&s);
-                        let s1 = unify(&arg, &param, ctx)?;
-                        s = compose_subs(&s, &s1);
+                    // TODO:
+                    // - if any of the args are placeholders then we need to partial
+                    //   application here
+                    // TODO: rename `params_1` to `args`
+                    let partial = params_1.iter().any(|param| {
+                        matches!(param.variant, Variant::Placeholder(_))
+                    });
+
+                    if partial {
+                        // Partial Application
+                        let mut partial_params: Vec<Type> = vec![];
+                        for (arg, param) in params_1.iter().zip(&lam2.params) {
+                            match arg.variant {
+                                Variant::Placeholder(_) => {
+                                    partial_params.push(param.to_owned());
+                                },
+                                _ => {
+                                    let arg = arg.apply(&s);
+                                    let param = param.apply(&s);
+                                    let s1 = unify(&arg, &param, ctx)?;
+                                    s = compose_subs(&s, &s1);
+                                }
+                            };
+                        }
+
+                        let partial_ret = ctx.lam(partial_params, lam2.ret.clone());
+                        let s1 = unify(&lam1.ret.apply(&s), &partial_ret, ctx)?;
+                        
+                        Ok(compose_subs(&s, &s1))
+                    } else {
+                        // Regular Application
+                        for (p1, p2) in params_1.iter().zip(&lam2.params) {
+                            // Each argument must be a subtype of the corresponding param.
+                            let arg = p1.apply(&s);
+                            let param = p2.apply(&s);
+                            let s1 = unify(&arg, &param, ctx)?;
+                            s = compose_subs(&s, &s1);
+                        }
+                        let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
+                        Ok(compose_subs(&s, &s1))
                     }
-                    let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
-                    Ok(compose_subs(&s, &s1))
                 }
             } else if lam1.params.len() <= lam2.params.len() {
                 // If `lam1` isn't being applied then it's okay if has fewer params

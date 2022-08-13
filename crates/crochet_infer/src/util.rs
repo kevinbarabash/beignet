@@ -44,6 +44,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     ..ty.to_owned()
                 }
             }
+            Variant::Placeholder(_) => ty.to_owned(),
             Variant::Prim(_) => ty.to_owned(),
             Variant::Lit(_) => ty.to_owned(),
             Variant::Union(types) => {
