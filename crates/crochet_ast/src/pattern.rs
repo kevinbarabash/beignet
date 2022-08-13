@@ -29,6 +29,13 @@ impl Pattern {
             Pattern::Wildcard(wc) => wc.span.to_owned(),
         }
     }
+
+    pub fn get_name(&self, index: &usize) -> String {
+        match self {
+            Pattern::Ident(BindingIdent { id, .. }) => id.name.to_owned(),
+            _ => format!("arg{index}"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

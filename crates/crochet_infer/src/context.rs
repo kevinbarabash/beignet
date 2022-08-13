@@ -74,7 +74,7 @@ impl Context {
         }
     }
 
-    pub fn lam(&self, params: Vec<Type>, ret: Box<Type>) -> Type {
+    pub fn lam(&self, params: Vec<TParam>, ret: Box<Type>) -> Type {
         Type {
             id: self.fresh_id(),
             variant: Variant::Lam(LamType {

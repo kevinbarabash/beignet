@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use crochet_ast::*;
 
+use crate::types::TParam;
+
 use super::context::{lookup_alias, Context};
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
@@ -25,7 +27,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 if arg.spread.is_some() {
                     match arg_t.variant {
                         Variant::Tuple(types) => arg_types.extend(types.to_owned()),
-                        _ => arg_types.push(ctx.rest(arg_t))
+                        _ => arg_types.push(ctx.rest(arg_t)),
                     }
                 } else {
                     arg_types.push(arg_t);
@@ -56,14 +58,20 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         Expr::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer_expr(ctx, expr)?;
             let tv = ctx.fresh_var();
-            let s2 = unify(&ctx.lam(vec![tv.clone()], Box::from(tv.clone())), &t, ctx)?;
+            let param = TParam {
+                name: String::from("fix_param"),
+                optional: false,
+                mutable: false,
+                ty: tv.clone(),
+            };
+            let s2 = unify(&ctx.lam(vec![param], Box::from(tv.clone())), &t, ctx)?;
             Ok((compose_subs(&s2, &s1), tv.apply(&s2)))
         }
         Expr::Ident(Ident { name, .. }) => {
             let s = Subst::default();
-            let t = if name == "_" { 
+            let t = if name == "_" {
                 ctx.placeholder()
-            } else { 
+            } else {
                 ctx.lookup_value(name)?
             };
             Ok((s, t))
@@ -214,9 +222,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 None => HashMap::default(),
             };
 
-            let params: Result<Vec<(Subst, Type)>, String> = params
+            let params: Result<Vec<(Subst, TParam)>, String> = params
                 .iter()
-                .map(|param| {
+                .enumerate()
+                .map(|(index, param)| {
                     let (ps, pa, pt) = infer_pattern(param, &new_ctx, &type_params_map)?;
 
                     // Inserts any new variables introduced by infer_pattern() into
@@ -225,7 +234,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         new_ctx.values.insert(name, scheme);
                     }
 
-                    Ok((ps, pt))
+                    let param = TParam {
+                        name: param.get_name(&index),
+                        optional: false,
+                        mutable: false,
+                        ty: pt,
+                    };
+
+                    Ok((ps, param))
                 })
                 .collect();
 
@@ -379,17 +395,19 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         match &t.variant {
                             Variant::Tuple(types) => {
                                 ts.extend(types.to_owned());
-                            },
+                            }
                             _ => {
-                                return Err(String::from("Can only spread tuple types inside a tuple"))
+                                return Err(String::from(
+                                    "Can only spread tuple types inside a tuple",
+                                ))
                             }
                         }
-                    },
+                    }
                     None => {
                         let (s, t) = infer_expr(ctx, expr)?;
                         ss.push(s);
                         ts.push(t);
-                    },
+                    }
                 }
             }
 
@@ -411,11 +429,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let s = Subst::default();
             Ok((s, t))
         }
-        Expr::TemplateLiteral(TemplateLiteral { exprs, quasis: _, .. }) => {
+        Expr::TemplateLiteral(TemplateLiteral {
+            exprs, quasis: _, ..
+        }) => {
             let t = ctx.prim(Primitive::Str);
-            let result: Result<Vec<(Subst, Type)>, String> = exprs.iter().map(|expr| {
-                infer_expr(ctx, expr)
-            }).collect();
+            let result: Result<Vec<(Subst, Type)>, String> =
+                exprs.iter().map(|expr| infer_expr(ctx, expr)).collect();
             // We ignore the types of expressions if there are any because any expression
             // in JavaScript has a string representation.
             let (ss, _): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
@@ -429,7 +448,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             // - rest params
             todo!()
         }
-        Expr::Match(Match {expr, arms, ..}) => {
+        Expr::Match(Match { expr, arms, .. }) => {
             // TODO: warn if the pattern isn't refutable
             let mut ss: Vec<Subst> = vec![];
             let mut ts: Vec<Type> = vec![];
@@ -438,7 +457,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 ss.push(s);
                 ts.push(t);
             }
-            
+
             let s = compose_many_subs(&ss);
             let t = union_many_types(&ts, ctx);
 
@@ -503,45 +522,41 @@ fn infer_property_type(
             let t = lookup_alias(ctx, alias)?;
             infer_property_type(&t, prop, ctx)
         }
-        Variant::Lit(lit) => {
-            match lit {
-                crate::Lit::Num(_) => {
-                    let t = ctx.lookup_type("Number")?;
-                    infer_property_type(&t, prop, ctx)
-                },
-                crate::Lit::Bool(_) => {
-                    let t = ctx.lookup_type("Boolean")?;
-                    infer_property_type(&t, prop, ctx)
-                },
-                crate::Lit::Str(_) => {
-                    let t = ctx.lookup_type("String")?;
-                    infer_property_type(&t, prop, ctx)
-                },
-                crate::Lit::Null => todo!(),
-                crate::Lit::Undefined => todo!(),
+        Variant::Lit(lit) => match lit {
+            crate::Lit::Num(_) => {
+                let t = ctx.lookup_type("Number")?;
+                infer_property_type(&t, prop, ctx)
             }
-        }
-        Variant::Prim(prim) => {
-            match prim {
-                Primitive::Num => {
-                    let t = ctx.lookup_type("Number")?;
-                    infer_property_type(&t, prop, ctx)
-                },
-                Primitive::Bool => {
-                    let t = ctx.lookup_type("Boolean")?;
-                    infer_property_type(&t, prop, ctx)
-                },
-                Primitive::Str => {
-                    let t = ctx.lookup_type("String")?;
-                    infer_property_type(&t, prop, ctx)
-                },
-                Primitive::Undefined => todo!(),
-                Primitive::Null => todo!(),
+            crate::Lit::Bool(_) => {
+                let t = ctx.lookup_type("Boolean")?;
+                infer_property_type(&t, prop, ctx)
             }
-        }
+            crate::Lit::Str(_) => {
+                let t = ctx.lookup_type("String")?;
+                infer_property_type(&t, prop, ctx)
+            }
+            crate::Lit::Null => todo!(),
+            crate::Lit::Undefined => todo!(),
+        },
+        Variant::Prim(prim) => match prim {
+            Primitive::Num => {
+                let t = ctx.lookup_type("Number")?;
+                infer_property_type(&t, prop, ctx)
+            }
+            Primitive::Bool => {
+                let t = ctx.lookup_type("Boolean")?;
+                infer_property_type(&t, prop, ctx)
+            }
+            Primitive::Str => {
+                let t = ctx.lookup_type("String")?;
+                infer_property_type(&t, prop, ctx)
+            }
+            Primitive::Undefined => todo!(),
+            Primitive::Null => todo!(),
+        },
         _ => {
             todo!("Unhandled {obj_t:#?} in infer_property_type")
-        },
+        }
     }
 }
 

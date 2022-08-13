@@ -57,9 +57,38 @@ pub struct AppType {
     pub ret: Box<Type>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TParam {
+    pub name: String,
+    pub optional: bool,
+    pub mutable: bool,
+    pub ty: Type,
+}
+
+impl TParam {
+    pub fn get_type(&self, ctx: &Context) -> Type {
+        match self.optional {
+            true => ctx.union(vec![self.ty.to_owned(), ctx.prim(Primitive::Undefined)]),
+            false => self.ty.to_owned(),
+        }
+    }
+}
+
+impl fmt::Display for TParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self { name, optional, mutable, ty } = self;
+        match (optional, mutable) {
+            (false, false) => write!(f, "{name}: {ty}"),
+            (true, false) => write!(f, "{name}?: {ty}"),
+            (false, true) => write!(f, "mut {name}: {ty}"),
+            (true, true) => write!(f, "mut {name}?: {ty}"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq)]
 pub struct LamType {
-    pub params: Vec<Type>,
+    pub params: Vec<TParam>,
     pub ret: Box<Type>,
 }
 
