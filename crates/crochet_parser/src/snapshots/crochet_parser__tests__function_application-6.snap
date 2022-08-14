@@ -21,46 +21,52 @@ Program {
                     Lambda {
                         span: 17..57,
                         params: [
-                            Ident(
-                                BindingIdent {
-                                    span: 18..19,
-                                    id: Ident {
+                            EFnParam {
+                                pat: Ident(
+                                    EFnParamBindingIdent {
                                         span: 18..19,
-                                        name: "f",
+                                        id: Ident {
+                                            span: 18..19,
+                                            name: "f",
+                                        },
                                     },
-                                    type_ann: None,
-                                },
-                            ),
+                                ),
+                                type_ann: None,
+                            },
                         ],
                         body: Lambda(
                             Lambda {
                                 span: 24..57,
                                 params: [
-                                    Ident(
-                                        BindingIdent {
-                                            span: 25..26,
-                                            id: Ident {
+                                    EFnParam {
+                                        pat: Ident(
+                                            EFnParamBindingIdent {
                                                 span: 25..26,
-                                                name: "g",
+                                                id: Ident {
+                                                    span: 25..26,
+                                                    name: "g",
+                                                },
                                             },
-                                            type_ann: None,
-                                        },
-                                    ),
+                                        ),
+                                        type_ann: None,
+                                    },
                                 ],
                                 body: Lambda(
                                     Lambda {
                                         span: 31..57,
                                         params: [
-                                            Ident(
-                                                BindingIdent {
-                                                    span: 32..33,
-                                                    id: Ident {
+                                            EFnParam {
+                                                pat: Ident(
+                                                    EFnParamBindingIdent {
                                                         span: 32..33,
-                                                        name: "x",
+                                                        id: Ident {
+                                                            span: 32..33,
+                                                            name: "x",
+                                                        },
                                                     },
-                                                    type_ann: None,
-                                                },
-                                            ),
+                                                ),
+                                                type_ann: None,
+                                            },
                                         ],
                                         body: App(
                                             App {
@@ -151,31 +157,35 @@ Program {
                     Lambda {
                         span: 65..89,
                         params: [
-                            Ident(
-                                BindingIdent {
-                                    span: 66..67,
-                                    id: Ident {
+                            EFnParam {
+                                pat: Ident(
+                                    EFnParamBindingIdent {
                                         span: 66..67,
-                                        name: "x",
+                                        id: Ident {
+                                            span: 66..67,
+                                            name: "x",
+                                        },
                                     },
-                                    type_ann: None,
-                                },
-                            ),
+                                ),
+                                type_ann: None,
+                            },
                         ],
                         body: Lambda(
                             Lambda {
                                 span: 72..89,
                                 params: [
-                                    Ident(
-                                        BindingIdent {
-                                            span: 73..74,
-                                            id: Ident {
+                                    EFnParam {
+                                        pat: Ident(
+                                            EFnParamBindingIdent {
                                                 span: 73..74,
-                                                name: "y",
+                                                id: Ident {
+                                                    span: 73..74,
+                                                    name: "y",
+                                                },
                                             },
-                                            type_ann: None,
-                                        },
-                                    ),
+                                        ),
+                                        type_ann: None,
+                                    },
                                 ],
                                 body: Ident(
                                     Ident {

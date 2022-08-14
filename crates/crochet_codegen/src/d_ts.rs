@@ -82,28 +82,42 @@ pub fn build_ident(id: &ast::Ident) -> Ident {
     }
 }
 
-pub fn build_param(r#type: &Type, pattern: &ast::Pattern) -> TsFnParam {
+pub fn build_param(r#type: &Type, e_param: &ast::EFnParam) -> TsFnParam {
     let type_ann = Some(TsTypeAnn {
         span: DUMMY_SP,
         type_ann: Box::from(build_type(r#type, None, None)),
     });
 
-    match pattern {
-        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => TsFnParam::Ident(BindingIdent {
+    match &e_param.pat {
+        ast::EFnParamPat::Ident(ast::EFnParamBindingIdent { id, .. }) => TsFnParam::Ident(BindingIdent {
             id: build_ident(id),
             type_ann,
         }),
-        ast::Pattern::Wildcard(_) => todo!(),
-        ast::Pattern::Rest(ast::RestPat { arg, .. }) => TsFnParam::Rest(RestPat {
+        ast::EFnParamPat::Rest(ast::EFnParamRestPat { arg, .. }) => TsFnParam::Rest(RestPat {
             span: DUMMY_SP,
             dot3_token: DUMMY_SP,
-            arg: Box::from(build_pattern_rec(arg.as_ref())),
+            arg: Box::from(build_param_pat_rec(arg.as_ref())),
             type_ann,
         }),
-        ast::Pattern::Object(_) => todo!(),
-        ast::Pattern::Array(_) => todo!(),
-        ast::Pattern::Lit(_) => todo!(),
-        ast::Pattern::Is(_) => todo!(),
+        ast::EFnParamPat::Object(_) => todo!(),
+        ast::EFnParamPat::Array(_) => todo!(),
+    }
+}
+
+pub fn build_param_pat_rec(pattern: &ast::EFnParamPat) -> Pat {
+    match pattern {
+        ast::EFnParamPat::Ident(ast::EFnParamBindingIdent { id, .. }) => Pat::Ident(BindingIdent {
+            id: build_ident(id),
+            type_ann: None,
+        }),
+        ast::EFnParamPat::Rest(ast::EFnParamRestPat { arg, .. }) => Pat::Rest(RestPat {
+            span: DUMMY_SP,
+            dot3_token: DUMMY_SP,
+            arg: Box::from(build_param_pat_rec(arg.as_ref())),
+            type_ann: None,
+        }),
+        ast::EFnParamPat::Object(_) => todo!(),
+        ast::EFnParamPat::Array(_) => todo!(),
     }
 }
 
@@ -117,7 +131,7 @@ pub fn build_ts_pattern(pat: &TPat) -> Pat {
             },
             type_ann: None,
         }),
-        TPat::Rest(_) => todo!(),
+        _ => todo!(),
     }
 }
 
@@ -149,6 +163,7 @@ pub fn build_ts_fn_type_with_params(
                     arg: Box::from(build_ts_pattern(rest.arg.as_ref())),
                     type_ann,
                 }),
+                _ => todo!(),
             }
         })
         .collect();
@@ -356,7 +371,7 @@ pub fn build_type(
                         let args: Vec<TsFnParam> = args
                             .iter()
                             .zip(params)
-                            .map(|(arg, pattern)| build_param(arg, pattern))
+                            .map(|(arg, param)| build_param(arg, param))
                             .collect();
 
                         TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
@@ -393,7 +408,7 @@ pub fn build_type(
                         let params: Vec<TsFnParam> = params
                             .iter()
                             .zip(&other_lam.params)
-                            .map(|(param, pattern)| build_param(&param.get_type(), pattern))
+                            .map(|(t_param, e_param)| build_param(&t_param.get_type(), e_param))
                             .collect();
 
                         TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {

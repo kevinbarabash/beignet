@@ -1,5 +1,6 @@
 mod context;
 mod infer_expr;
+mod infer_fn_param;
 mod infer_pattern;
 mod infer_type_ann;
 mod substitutable;
@@ -232,14 +233,14 @@ mod tests {
     fn infer_destructuring_function_params() {
         let result = infer("([x, y]) => x + y");
 
-        assert_eq!(result, "(arg0: [number, number]) => number");
+        assert_eq!(result, "([x, y]: [number, number]) => number");
     }
 
     #[test]
     fn infer_destructuring_function_params_with_type_annotations() {
         let result = infer("([x, y]: [string, boolean]) => [x, y]");
 
-        assert_eq!(result, "(arg0: [string, boolean]) => [string, boolean]");
+        assert_eq!(result, "([x, y]: [string, boolean]) => [string, boolean]");
     }
 
     #[test]
@@ -1251,7 +1252,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fst", &ctx), "(a: number, arg1: ...number[]) => number");
+        assert_eq!(get_type("fst", &ctx), "(a: number, ...b: number[]) => number");
         assert_eq!(get_type("result", &ctx), "number");
     }
 

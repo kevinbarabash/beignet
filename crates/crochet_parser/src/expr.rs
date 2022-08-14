@@ -2,6 +2,7 @@ use chumsky::prelude::*;
 use crochet_ast::*;
 use unescape::unescape;
 
+use crate::fn_param::fn_param_parser;
 use crate::jsx::jsx_parser;
 use crate::lit::{boolean_parser, number_parser, string_parser};
 use crate::pattern::pattern_parser;
@@ -408,10 +409,11 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 })
             });
 
-        let param_list = pattern_parser()
+        let param_list = fn_param_parser()
             .separated_by(just_with_padding(","))
             .allow_trailing()
-            .delimited_by(just_with_padding("("), just_with_padding(")"));
+            .delimited_by(just_with_padding("("), just_with_padding(")"))
+            .labelled("param_list");
 
         let lam = just_with_padding("async")
             .or_not()
@@ -422,13 +424,13 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .then(choice((block.clone(), expr.clone())))
             .map_with_span(
                 |((((is_async, type_params), params), return_type), body), span: Span| {
-                    for (i, param) in params.iter().enumerate() {
-                        if let Pattern::Rest(_) = param {
-                            if i < params.len() - 1 {
-                                panic!("rest params must come last");
-                            };
-                        }
-                    }
+                    // for (i, param) in params.iter().enumerate() {
+                    //     if let Pattern::Rest(_) = param {
+                    //         if i < params.len() - 1 {
+                    //             panic!("rest params must come last");
+                    //         };
+                    //     }
+                    // }
                     Expr::Lambda(Lambda {
                         span,
                         params,

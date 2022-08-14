@@ -70,12 +70,79 @@ pub struct LetExpr {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lambda {
     pub span: Span,
-    // TODO: update this to use Vec<FnParam>
-    pub params: Vec<Pattern>,
+    pub params: Vec<EFnParam>,
     pub body: Box<Expr>,
     pub is_async: bool,
     pub return_type: Option<TypeAnn>,
     pub type_params: Option<Vec<TypeParam>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EFnParam {
+    pub pat: EFnParamPat,
+    pub type_ann: Option<TypeAnn>,
+}
+
+impl EFnParam {
+    pub fn get_name(&self, index: &usize) -> String {
+        match &self.pat {
+            EFnParamPat::Ident(bi) => bi.id.name.to_owned(),
+            _ => format!("arg{index}"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EFnParamPat {
+    Ident(EFnParamBindingIdent),
+    Rest(EFnParamRestPat),
+    Object(EFnParamObjectPat),
+    Array(EFnParamArrayPat),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EFnParamBindingIdent {
+    pub span: Span,
+    pub id: Ident,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EFnParamRestPat {
+    pub span: Span,
+    pub arg: Box<EFnParamPat>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EFnParamArrayPat {
+    pub span: Span,
+    pub elems: Vec<Option<EFnParamPat>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EFnParamObjectPat {
+    pub span: Span,
+    pub props: Vec<EFnParamObjectPatProp>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EFnParamObjectPatProp {
+    KeyValue(EFnParamKeyValuePatProp),
+    Assign(EFnParamAssignPatProp),
+    Rest(EFnParamRestPat),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EFnParamKeyValuePatProp {
+    // TODO: span
+    pub key: Ident,
+    pub value: Box<EFnParamPat>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EFnParamAssignPatProp {
+    // TODO: span
+    pub key: Ident,
+    pub value: Option<Box<Expr>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

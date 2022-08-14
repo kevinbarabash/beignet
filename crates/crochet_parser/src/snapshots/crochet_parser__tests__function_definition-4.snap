@@ -10,32 +10,35 @@ Program {
                 Lambda {
                     span: 0..17,
                     params: [
-                        Ident(
-                            BindingIdent {
-                                span: 1..2,
-                                id: Ident {
+                        EFnParam {
+                            pat: Ident(
+                                EFnParamBindingIdent {
                                     span: 1..2,
-                                    name: "a",
-                                },
-                                type_ann: None,
-                            },
-                        ),
-                        Rest(
-                            RestPat {
-                                span: 4..8,
-                                arg: Ident(
-                                    BindingIdent {
-                                        span: 7..8,
-                                        id: Ident {
-                                            span: 7..8,
-                                            name: "b",
-                                        },
-                                        type_ann: None,
+                                    id: Ident {
+                                        span: 1..2,
+                                        name: "a",
                                     },
-                                ),
-                                type_ann: None,
-                            },
-                        ),
+                                },
+                            ),
+                            type_ann: None,
+                        },
+                        EFnParam {
+                            pat: Rest(
+                                EFnParamRestPat {
+                                    span: 4..8,
+                                    arg: Ident(
+                                        EFnParamBindingIdent {
+                                            span: 7..8,
+                                            id: Ident {
+                                                span: 7..8,
+                                                name: "b",
+                                            },
+                                        },
+                                    ),
+                                },
+                            ),
+                            type_ann: None,
+                        },
                     ],
                     body: Lit(
                         Bool(

@@ -10,26 +10,30 @@ Program {
                 Lambda {
                     span: 0..11,
                     params: [
-                        Ident(
-                            BindingIdent {
-                                span: 1..2,
-                                id: Ident {
+                        EFnParam {
+                            pat: Ident(
+                                EFnParamBindingIdent {
                                     span: 1..2,
-                                    name: "a",
+                                    id: Ident {
+                                        span: 1..2,
+                                        name: "a",
+                                    },
                                 },
-                                type_ann: None,
-                            },
-                        ),
-                        Ident(
-                            BindingIdent {
-                                span: 4..5,
-                                id: Ident {
+                            ),
+                            type_ann: None,
+                        },
+                        EFnParam {
+                            pat: Ident(
+                                EFnParamBindingIdent {
                                     span: 4..5,
-                                    name: "b",
+                                    id: Ident {
+                                        span: 4..5,
+                                        name: "b",
+                                    },
                                 },
-                                type_ann: None,
-                            },
-                        ),
+                            ),
+                            type_ann: None,
+                        },
                     ],
                     body: Ident(
                         Ident {

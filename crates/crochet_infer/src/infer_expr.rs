@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crochet_ast::*;
 
 use super::context::{lookup_alias, Context};
+use super::infer_fn_param::infer_fn_param;
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
@@ -224,9 +225,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             let params: Result<Vec<(Subst, TFnParam)>, String> = params
                 .iter()
-                .enumerate()
-                .map(|(index, param)| {
-                    let (ps, pa, pt) = infer_pattern(param, &new_ctx, &type_params_map)?;
+                .map(|e_param| {
+                    let (ps, pa, t_param) = infer_fn_param(e_param, &new_ctx, &type_params_map)?;
+                    println!("pa = {pa:#?}");
 
                     // Inserts any new variables introduced by infer_pattern() into
                     // the current context.
@@ -234,20 +235,11 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         new_ctx.values.insert(name, scheme);
                     }
 
-                    let param = TFnParam {
-                        pat: TPat::Ident(types::BindingIdent {
-                            name: param.get_name(&index),
-                            optional: false,
-                            mutable: false,
-                        }),
-                        ty: pt,
-                    };
-
-                    Ok((ps, param))
+                    Ok((ps, t_param))
                 })
                 .collect();
 
-            let (ss, ts): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
+            let (ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
             let (rs, rt) = infer_expr(&mut new_ctx, body)?;
 
@@ -268,7 +260,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 )?,
                 None => Subst::default(),
             };
-            let t = ctx.lam(ts, Box::from(rt));
+            let t = ctx.lam(t_params, Box::from(rt));
             let s = compose_subs(&s, &compose_subs(&rs, &compose_many_subs(&ss)));
             let t = t.apply(&s);
 

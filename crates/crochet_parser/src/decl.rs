@@ -24,11 +24,24 @@ pub fn decl_parser() -> impl Parser<char, Statement, Error = Simple<char>> {
                     Some(_) => {
                         // `let fib = fix((fib) => (n) => ...)`
                         // TODO: Fix always wraps a lambda
+                        let id = match &pattern {
+                            Pattern::Ident(bi) => bi.id.to_owned(),
+                            _ => panic!("rec can only be used with identifier patterns")
+                        };
                         let fix = Expr::Fix(Fix {
                             span: init.span(),
                             expr: Box::from(Expr::Lambda(Lambda {
                                 span: init.span(),
-                                params: vec![pattern.clone()],
+                                params: vec![
+                                    EFnParam {
+                                        pat: EFnParamPat::Ident(EFnParamBindingIdent {
+                                            span: 0..0,
+                                            id,
+                                        }),
+                                        // TODO: grab this from the pattern
+                                        type_ann: None,
+                                    }
+                                ],
                                 body: Box::from(init),
                                 is_async: false,
                                 return_type: None,

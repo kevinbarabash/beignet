@@ -279,15 +279,12 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
         }) => {
             let params: Vec<Pat> = args
                 .iter()
-                .map(|pat| {
-                    let name = match pat {
-                        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => id.name.to_owned(),
-                        ast::Pattern::Wildcard(_) => todo!(),
-                        ast::Pattern::Rest(_) => todo!(),
-                        ast::Pattern::Object(_) => todo!(),
-                        ast::Pattern::Array(_) => todo!(),
-                        ast::Pattern::Lit(_) => todo!(),
-                        ast::Pattern::Is(_) => todo!(),
+                .map(|arg| {
+                    let name = match &arg.pat {
+                        ast::EFnParamPat::Ident(ast::EFnParamBindingIdent { id, .. }) => id.name.to_owned(),
+                        ast::EFnParamPat::Rest(_) => todo!(),
+                        ast::EFnParamPat::Object(_) => todo!(),
+                        ast::EFnParamPat::Array(_) => todo!(),
                     };
                     Pat::Ident(BindingIdent {
                         id: Ident {

@@ -432,6 +432,9 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let alias_t = lookup_alias(ctx, alias)?;
             unify(&alias_t, t2, ctx)
         }
+        (Variant::Rest(rest_arg), Variant::Array(array_arg)) => {
+            unify(rest_arg.as_ref(), array_arg.as_ref(), ctx)
+        }
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())

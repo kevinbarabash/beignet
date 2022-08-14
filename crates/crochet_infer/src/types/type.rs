@@ -67,6 +67,12 @@ impl TFnParam {
     pub fn get_type(&self) -> Type {
         self.ty.to_owned()
     }
+    pub fn get_name(&self, index: &usize) -> String {
+        match &self.pat {
+            TPat::Ident(bi) => bi.name.to_owned(),
+            _ => format!("arg{index}"),
+        }
+    }
 }
 
 impl fmt::Display for TFnParam {
@@ -80,9 +86,8 @@ impl fmt::Display for TFnParam {
 pub enum TPat {
     Ident(BindingIdent),
     Rest(RestPat),
-    // TODO: add these later
-    // Array(ArrayPat),
-    // Object(ObjectPat),
+    Array(ArrayPat),
+    Object(ObjectPat),
 }
 
 impl fmt::Display for TPat {
@@ -90,6 +95,8 @@ impl fmt::Display for TPat {
         match self {
             TPat::Ident(bi) => write!(f, "{bi}"),
             TPat::Rest(rest) => write!(f, "{rest}"),
+            TPat::Array(array) => write!(f, "{array}"),
+            TPat::Object(obj) => write!(f, "{obj}"),
         }
     }
 }
@@ -122,6 +129,37 @@ impl fmt::Display for RestPat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { arg } = self;
         write!(f, "...{arg}")
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ArrayPat {
+    pub elems: Vec<Option<TPat>>,
+}
+
+impl fmt::Display for ArrayPat {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self { elems } = self;
+        let elems = elems.iter().map(|elem| {
+            match elem {
+                Some(elem) => format!("{elem}"),
+                None => String::from(" "),
+            }
+        });
+        write!(f, "[{}]", join(elems, ", "))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ObjectPat {
+    // TODO: replace TProp with ObjectPatProp enum that maps to EFnParamPat
+    pub props: Vec<TProp>,
+}
+
+impl fmt::Display for ObjectPat {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self { props } = self;
+        write!(f, "{{{}}}", join(props, ", "))
     }
 }
 

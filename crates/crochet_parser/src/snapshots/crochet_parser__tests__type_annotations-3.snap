@@ -21,40 +21,44 @@ Program {
                     Lambda {
                         span: 10..41,
                         params: [
-                            Ident(
-                                BindingIdent {
-                                    span: 11..12,
-                                    id: Ident {
+                            EFnParam {
+                                pat: Ident(
+                                    EFnParamBindingIdent {
                                         span: 11..12,
-                                        name: "a",
+                                        id: Ident {
+                                            span: 11..12,
+                                            name: "a",
+                                        },
                                     },
-                                    type_ann: Some(
-                                        Prim(
-                                            PrimType {
-                                                span: 14..20,
-                                                prim: Num,
-                                            },
-                                        ),
+                                ),
+                                type_ann: Some(
+                                    Prim(
+                                        PrimType {
+                                            span: 14..20,
+                                            prim: Num,
+                                        },
                                     ),
-                                },
-                            ),
-                            Ident(
-                                BindingIdent {
-                                    span: 22..23,
-                                    id: Ident {
+                                ),
+                            },
+                            EFnParam {
+                                pat: Ident(
+                                    EFnParamBindingIdent {
                                         span: 22..23,
-                                        name: "b",
+                                        id: Ident {
+                                            span: 22..23,
+                                            name: "b",
+                                        },
                                     },
-                                    type_ann: Some(
-                                        Prim(
-                                            PrimType {
-                                                span: 25..31,
-                                                prim: Num,
-                                            },
-                                        ),
+                                ),
+                                type_ann: Some(
+                                    Prim(
+                                        PrimType {
+                                            span: 25..31,
+                                            prim: Num,
+                                        },
                                     ),
-                                },
-                            ),
+                                ),
+                            },
                         ],
                         body: Op(
                             Op {
