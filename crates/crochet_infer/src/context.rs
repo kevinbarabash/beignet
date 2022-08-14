@@ -186,7 +186,7 @@ impl Context {
     pub fn placeholder(&self) -> Type {
         Type {
             id: self.fresh_id(),
-            variant: Variant::Placeholder(false),
+            variant: Variant::Wildcard,
         }
     }
 }

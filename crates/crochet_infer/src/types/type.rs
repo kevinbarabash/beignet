@@ -148,9 +148,8 @@ pub enum Variant {
     Var,
     App(AppType),
     Lam(LamType),
-    // TODO: we may want to have different types of placeholders in the future,
-    // e.g. typed holes vs. placeholder args
-    Placeholder(bool),
+    Wildcard,
+    // Query, // use for typed holes
     Prim(Primitive),
     Lit(Lit),
     Union(Vec<Type>),
@@ -201,12 +200,7 @@ impl fmt::Display for Type {
             Variant::Lam(LamType { params, ret, .. }) => {
                 write!(f, "({}) => {}", join(params, ", "), ret)
             }
-            Variant::Placeholder(spread) => {
-                match spread {
-                    true => write!(f, "..._"),
-                    false => write!(f, "_"),
-                }
-            }
+            Variant::Wildcard => write!(f, "_"),
             Variant::Prim(prim) => write!(f, "{}", prim),
             Variant::Lit(lit) => write!(f, "{}", lit),
             Variant::Union(types) => write!(f, "{}", join(types, " | ")),

@@ -27,7 +27,7 @@ impl Substitutable for Type {
                         params: lam.params.iter().map(|param| param.apply(sub)).collect(),
                         ret: Box::from(lam.ret.apply(sub)),
                     }),
-                    Variant::Placeholder(_) => self.variant.to_owned(),
+                    Variant::Wildcard => self.variant.to_owned(),
                     Variant::Prim(_) => self.variant.to_owned(),
                     Variant::Lit(_) => self.variant.to_owned(),
                     Variant::Union(types) => Variant::Union(types.apply(sub)),
@@ -66,7 +66,7 @@ impl Substitutable for Type {
                 result.extend(ret.ftv());
                 result
             }
-            Variant::Placeholder(_) => HashSet::new(),
+            Variant::Wildcard => HashSet::new(),
             Variant::Prim(_) => HashSet::new(),
             Variant::Lit(_) => HashSet::new(),
             Variant::Union(types) => types.ftv(),
