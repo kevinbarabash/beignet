@@ -16,7 +16,7 @@ Program {
                                     span: 1..7,
                                     props: [
                                         Assign(
-                                            EFnAssignPatProp {
+                                            EFnParamAssignPatProp {
                                                 key: Ident {
                                                     span: 2..3,
                                                     name: "x",
@@ -25,7 +25,7 @@ Program {
                                             },
                                         ),
                                         Assign(
-                                            EFnAssignPatProp {
+                                            EFnParamAssignPatProp {
                                                 key: Ident {
                                                     span: 5..6,
                                                     name: "y",

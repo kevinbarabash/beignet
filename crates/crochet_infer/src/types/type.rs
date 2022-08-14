@@ -87,7 +87,7 @@ pub enum TPat {
     Ident(BindingIdent),
     Rest(RestPat),
     Array(ArrayPat),
-    Object(ObjectPat),
+    Object(TObjectPat),
 }
 
 impl fmt::Display for TPat {
@@ -151,15 +151,60 @@ impl fmt::Display for ArrayPat {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ObjectPat {
-    // TODO: replace TProp with ObjectPatProp enum that maps to EFnParamPat
-    pub props: Vec<TProp>,
+pub struct TObjectPat {
+    pub props: Vec<TObjectPatProp>,
 }
 
-impl fmt::Display for ObjectPat {
+impl fmt::Display for TObjectPat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { props } = self;
         write!(f, "{{{}}}", join(props, ", "))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum TObjectPatProp {
+    KeyValue(TObjectKeyValuePatProp),
+    Assign(TObjectAssignPatProp),
+    Rest(RestPat),
+}
+
+impl fmt::Display for TObjectPatProp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TObjectPatProp::KeyValue(kv) => write!(f, "{kv}"),
+            TObjectPatProp::Assign(assign) => write!(f, "{assign}"),
+            TObjectPatProp::Rest(rest) => write!(f, "{rest}"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TObjectKeyValuePatProp {
+    pub key: String,
+    pub value: TPat,
+}
+
+impl fmt::Display for TObjectKeyValuePatProp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self {key, value} = self;
+        write!(f, "{key}: {value}")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TObjectAssignPatProp {
+    pub key: String,
+    pub value: Option<Type>,
+}
+
+impl fmt::Display for TObjectAssignPatProp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self {key, value} = self;
+        match value {
+            Some(value) => write!(f, "{key} = {value}"),
+            None => write!(f, "{key}"),
+        }
     }
 }
 

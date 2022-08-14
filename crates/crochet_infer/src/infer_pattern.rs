@@ -14,7 +14,7 @@ pub type Assump = HashMap<String, Scheme>;
 
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
-pub fn infer_pattern(
+fn infer_pattern(
     pat: &Pattern,
     ctx: &Context,
     type_param_map: &HashMap<String, Type>,

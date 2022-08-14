@@ -229,7 +229,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                     let (ps, pa, t_param) = infer_fn_param(e_param, &new_ctx, &type_params_map)?;
                     println!("pa = {pa:#?}");
 
-                    // Inserts any new variables introduced by infer_pattern() into
+                    // Inserts any new variables introduced by infer_fn_param() into
                     // the current context.
                     for (name, scheme) in pa {
                         new_ctx.values.insert(name, scheme);
@@ -479,7 +479,7 @@ fn infer_let(
     let mut new_ctx = ctx.clone();
     let (pa, s1) = infer_pattern_and_init(pat, init, &mut new_ctx, pu)?;
 
-    // Inserts the new variables from infer_pattern() into the
+    // Inserts the new variables from infer_pattern_and_init() into the
     // current context.
     for (name, scheme) in pa {
         new_ctx.values.insert(name.to_owned(), scheme.to_owned());

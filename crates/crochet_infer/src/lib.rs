@@ -247,7 +247,7 @@ mod tests {
     fn infer_incomplete_destructuring_function_params_with_type_annotations() {
         let result = infer("([x]: [string, boolean]) => x");
 
-        assert_eq!(result, "(arg0: [string, boolean]) => string");
+        assert_eq!(result, "([x]: [string, boolean]) => string");
     }
 
     #[test]
@@ -495,7 +495,7 @@ mod tests {
     fn obj_param_destructuring() {
         assert_eq!(
             infer("({x, y}) => x + y"),
-            "(arg0: {x: number, y: number}) => number"
+            "({x, y}: {x: number, y: number}) => number"
         );
     }
 
@@ -503,7 +503,7 @@ mod tests {
     fn obj_param_destructuring_with_type_annotation() {
         assert_eq!(
             infer("({x, y}: {x: 5, y: 10}) => x + y"),
-            "(arg0: {x: 5, y: 10}) => number"
+            "({x, y}: {x: 5, y: 10}) => number"
         );
     }
 
@@ -511,7 +511,7 @@ mod tests {
     fn obj_param_partial_destructuring_with_type_annotation() {
         assert_eq!(
             infer("({a}: {a: string, b: boolean}) => a"),
-            "(arg0: {a: string, b: boolean}) => string"
+            "({a}: {a: string, b: boolean}) => string"
         );
     }
 

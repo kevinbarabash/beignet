@@ -67,7 +67,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         // NOTE: this arm is only hit by the `infer_skk` test case
         (Variant::Lam(_), Variant::App(_)) => unify(t2, t1, ctx),
         (Variant::App(app), Variant::Lam(lam)) => {
-            println!("app = {t1}, lam = {t2}");
             let mut s = Subst::new();
 
             let last_param_2 = lam.params.last();
@@ -79,9 +78,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             } else {
                 None
             };
-
-            println!("last_param_2 = {last_param_2:#?}");
-            println!("maybe_rest_param = {maybe_rest_param:#?}");
 
             // TODO: work out how rest and spread should work together.
             //
@@ -340,8 +336,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
             let obj_type = simplify_intersection(&obj_types, ctx);
 
-            println!("rest_types.len() = {}", rest_types.len());
-
             match rest_types.len() {
                 0 => unify(t1, &obj_type, ctx),
                 1 => {
@@ -432,8 +426,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let alias_t = lookup_alias(ctx, alias)?;
             unify(&alias_t, t2, ctx)
         }
-        (Variant::Rest(rest_arg), Variant::Array(array_arg)) => {
-            unify(rest_arg.as_ref(), array_arg.as_ref(), ctx)
+        (Variant::Array(array_arg), Variant::Rest(rest_arg)) => {
+            unify(array_arg.as_ref(), rest_arg.as_ref(), ctx)
         }
         (v1, v2) => {
             if v1 == v2 {

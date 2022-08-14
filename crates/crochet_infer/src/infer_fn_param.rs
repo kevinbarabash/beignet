@@ -10,37 +10,17 @@ use super::unify::unify;
 
 pub type Assump = HashMap<String, Scheme>;
 
+// NOTE: The caller is responsible for inserting any new variables introduced
+// into the appropriate context.
 pub fn infer_fn_param(
     param: &EFnParam,
     ctx: &Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Assump, TFnParam), String> {
-    println!("infer_fn_param");
     // Keeps track of all of the variables the need to be introduced by this pattern.
     let mut new_vars: HashMap<String, Scheme> = HashMap::new();
 
     let pat_type = infer_param_pattern_rec(&param.pat, ctx, &mut new_vars)?;
-
-    // let pat = match &param.pat {
-    //     EFnParamPat::Ident(e_bi) => TPat::Ident(types::BindingIdent {
-    //         name: e_bi.id.name.to_owned(),
-    //         optional: false,
-    //         mutable: false,
-    //     }),
-    //     EFnParamPat::Rest(e_rest) => {
-    //         // let rest_arg = infer_param_pattern_rec(rest.arg.as_ref(), ctx, &mut new_vars)?;
-    //         TPat::Rest(types::RestPat {
-    //             // TODO: replace this with the actual rest arg
-    //             arg: Box::from(TPat::Ident(types::BindingIdent {
-    //                 name: String::from("rest_placeholder"),
-    //                 optional: false,
-    //                 mutable: false,
-    //             })),
-    //         })
-    //     }
-    //     EFnParamPat::Object(_) => todo!(),
-    //     EFnParamPat::Array(_) => todo!(),
-    // };
     let pat = e_pat_to_t_pat(&param.pat);
 
     // If the pattern had a type annotation associated with it, we infer type of the
@@ -52,7 +32,7 @@ pub fn infer_fn_param(
 
             // Allowing type_ann_ty to be a subtype of pat_type because
             // only non-refutable patterns can have type annotations.
-            let s = unify(&pat_type, &type_ann_ty, ctx)?;
+            let s = unify(&type_ann_ty, &pat_type, ctx)?;
 
             // Substs are applied to any new variables introduced.  This handles
             // the situation where explicit types have be provided for function
@@ -81,21 +61,39 @@ fn e_pat_to_t_pat(e_pat: &EFnParamPat) -> TPat {
             optional: false,
             mutable: false,
         }),
-        EFnParamPat::Rest(e_rest) => {
-            TPat::Rest(types::RestPat {
-                arg: Box::from(e_pat_to_t_pat(e_rest.arg.as_ref())),
-            })
-        }
+        EFnParamPat::Rest(e_rest) => TPat::Rest(types::RestPat {
+            arg: Box::from(e_pat_to_t_pat(e_rest.arg.as_ref())),
+        }),
         EFnParamPat::Object(e_obj) => {
-            // let props: Vec<types::TProp> = e_obj.props.iter().map(|e_prop| {
-            //     match e_prop {
-            //         EFnParamObjectPatProp::KeyValue(_) => todo!(),
-            //         EFnParamObjectPatProp::Assign(_) => todo!(),
-            //         EFnParamObjectPatProp::Rest(_) => todo!(),
-            //     }
-            // });
-            todo!()
-        },
+            // TODO: replace TProp with the type equivalent of EFnParamObjectPatProp
+            let props: Vec<types::TObjectPatProp> = e_obj
+                .props
+                .iter()
+                .map(|e_prop| {
+                    match e_prop {
+                        EFnParamObjectPatProp::KeyValue(kv) => {
+                            types::TObjectPatProp::KeyValue(types::TObjectKeyValuePatProp {
+                                key: kv.key.name.to_owned(),
+                                value: e_pat_to_t_pat(&kv.value),
+                            })
+                        }
+                        EFnParamObjectPatProp::Assign(assign) => {
+                            types::TObjectPatProp::Assign(types::TObjectAssignPatProp {
+                                key: assign.key.name.to_owned(),
+                                // TODO: figure when/how to set this to a non-None value
+                                value: None,
+                            })
+                        }
+                        EFnParamObjectPatProp::Rest(rest) => {
+                            types::TObjectPatProp::Rest(types::RestPat {
+                                arg: Box::from(e_pat_to_t_pat(rest.arg.as_ref())),
+                            })
+                        }
+                    }
+                })
+                .collect();
+            TPat::Object(types::TObjectPat { props })
+        }
         EFnParamPat::Array(e_array) => {
             TPat::Array(types::ArrayPat {
                 // TODO: fill in gaps in array patterns with types from the corresponding
@@ -170,7 +168,11 @@ fn infer_param_pattern_rec(
                                 ty: value_type,
                             })
                         }
-                        EFnParamObjectPatProp::Assign(EFnParamAssignPatProp { key, value: _, .. }) => {
+                        EFnParamObjectPatProp::Assign(EFnParamAssignPatProp {
+                            key,
+                            value: _,
+                            ..
+                        }) => {
                             // We ignore the value for now, we can come back later to handle
                             // default values.
                             // TODO: handle default values
