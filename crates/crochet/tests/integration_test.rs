@@ -39,7 +39,7 @@ fn infer_number_literal() {
 
 #[test]
 fn infer_lam() {
-    insta::assert_snapshot!(infer("(x) => x"), @"<t0>(t0) => t0");
+    insta::assert_snapshot!(infer("(x) => x"), @"<t0>(x: t0) => t0");
 }
 
 #[test]
@@ -56,13 +56,13 @@ fn infer_op() {
 fn infer_fn_param() {
     assert_eq!(
         infer("(f, x) => f(x) + x"),
-        "((number) => number, number) => number"
+        "(f: (number) => number, x: number) => number"
     );
 }
 
 #[test]
 fn infer_fn_with_param_types() {
-    assert_eq!(infer("(a: 5, b: 10) => a + b"), "(5, 10) => number");
+    assert_eq!(infer("(a: 5, b: 10) => a + b"), "(a: 5, b: 10) => number");
 }
 
 #[test]
@@ -71,7 +71,7 @@ fn infer_let_fn_with_param_types() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.values.get("add").unwrap());
-    assert_eq!(result, "(5, 10) => number");
+    assert_eq!(result, "(a: 5, b: 10) => number");
 }
 
 #[test]
@@ -91,7 +91,7 @@ fn infer_let_fn_with_incorrect_param_types() {
 fn infer_fn_param_used_with_multiple_other_params() {
     insta::assert_snapshot!(
         infer("(f, x, y) => f(x) + f(y)"),
-        @"<t0>((t0) => number, t0, t0) => number"
+        @"<t0>(f: (t0) => number, x: t0, y: t0) => number"
     );
 }
 
@@ -99,14 +99,14 @@ fn infer_fn_param_used_with_multiple_other_params() {
 fn infer_i_combinator() {
     let (_, ctx) = infer_prog("let I = (x) => x");
     let result = format!("{}", ctx.values.get("I").unwrap());
-    insta::assert_snapshot!(result, @"<t0>(t0) => t0");
+    insta::assert_snapshot!(result, @"<t0>(x: t0) => t0");
 }
 
 #[test]
 fn infer_k_combinator_not_curried() {
     let (program, ctx) = infer_prog("let K = (x, y) => x");
     let result = format!("{}", ctx.values.get("K").unwrap());
-    insta::assert_snapshot!(result, @"<t0, t1>(t0, t1) => t0");
+    insta::assert_snapshot!(result, @"<t0, t1>(x: t0, y: t1) => t0");
 
     let result = codegen_d_ts(&program, &ctx);
     insta::assert_snapshot!(result, @"export declare const K: <A, B>(x: A, y: B) => A;\n");
@@ -116,14 +116,14 @@ fn infer_k_combinator_not_curried() {
 fn infer_s_combinator_not_curried() {
     let (_, ctx) = infer_prog("let S = (f, g, x) => f(x, g(x))");
     let result = format!("{}", ctx.values.get("S").unwrap());
-    insta::assert_snapshot!(result, @"<t0, t1, t2>((t0, t1) => t2, (t0) => t1, t0) => t2");
+    insta::assert_snapshot!(result, @"<t0, t1, t2>(f: (t0, t1) => t2, g: (t0) => t1, x: t0) => t2");
 }
 
 #[test]
 fn infer_k_combinator_curried() {
     let (_, ctx) = infer_prog("let K = (x) => (y) => x");
     let result = format!("{}", ctx.values.get("K").unwrap());
-    insta::assert_snapshot!(result, @"<t0, t1>(t0) => (t1) => t0");
+    insta::assert_snapshot!(result, @"<t0, t1>(x: t0) => (y: t1) => t0");
 }
 
 #[test]
@@ -132,7 +132,7 @@ fn infer_s_combinator_curried() {
     let result = format!("{}", ctx.values.get("S").unwrap());
     insta::assert_snapshot!(
         result,
-        @"<t0, t1, t2>((t0) => (t1) => t2) => ((t0) => t1) => (t0) => t2"
+        @"<t0, t1, t2>(f: (t0) => (t1) => t2) => (g: (t0) => t1) => (x: t0) => t2"
     );
 }
 
@@ -145,7 +145,7 @@ fn infer_skk() {
     "#;
     let (_, ctx) = infer_prog(src);
     let result = format!("{}", ctx.values.get("I").unwrap());
-    insta::assert_snapshot!(result, @"<t0>(t0) => t0");
+    insta::assert_snapshot!(result, @"<t0>(x: t0) => t0");
 }
 
 #[test]
@@ -271,19 +271,19 @@ fn infer_inequalities() {
     let (_, ctx) = infer_prog(src);
     assert_eq!(
         format!("{}", ctx.values.get("lt").unwrap()),
-        "(number, number) => boolean"
+        "(a: number, b: number) => boolean"
     );
     assert_eq!(
         format!("{}", ctx.values.get("lte").unwrap()),
-        "(number, number) => boolean"
+        "(a: number, b: number) => boolean"
     );
     assert_eq!(
         format!("{}", ctx.values.get("gt").unwrap()),
-        "(number, number) => boolean"
+        "(a: number, b: number) => boolean"
     );
     assert_eq!(
         format!("{}", ctx.values.get("gte").unwrap()),
-        "(number, number) => boolean"
+        "(a: number, b: number) => boolean"
     );
 }
 
@@ -340,7 +340,7 @@ fn infer_async_math() {
     let result = format!("{}", ctx.values.get("add").unwrap());
     assert_eq!(
         result,
-        "(() => Promise<number>, () => Promise<number>) => Promise<number>"
+        "(a: () => Promise<number>, b: () => Promise<number>) => Promise<number>"
     );
 
     let result = codegen_d_ts(&program, &ctx);
@@ -586,7 +586,7 @@ fn infer_widen_tuple_return() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.values.get("result").unwrap());
-    assert_eq!(result, "(boolean) => [1, 2] | [true, false]");
+    assert_eq!(result, "(cond: boolean) => [1, 2] | [true, false]");
 }
 
 #[ignore]
@@ -655,7 +655,7 @@ fn infer_fn_using_type_decl() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.values.get("mag").unwrap());
-    assert_eq!(result, "(Point) => number");
+    assert_eq!(result, "(p: Point) => number");
 }
 
 #[test]
@@ -669,7 +669,7 @@ fn infer_react_component() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.values.get("Foo").unwrap());
-    assert_eq!(result, "(Props) => JSXElement");
+    assert_eq!(result, "(props: Props) => JSXElement");
 }
 
 #[test]
@@ -877,7 +877,7 @@ fn infer_fn_param_with_type_alias_with_param_2() {
 
     let result = format!("{}", ctx.values.get("get_bar").unwrap());
     // TODO: normalize the scheme before inserting it into the context
-    insta::assert_snapshot!(result, @"<t7>(Foo<t7>) => t7");
+    insta::assert_snapshot!(result, @"<t7>(foo: Foo<t7>) => t7");
 }
 
 #[test]
@@ -903,7 +903,7 @@ fn infer_fn_param_with_type_alias_with_param_4() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.values.get("get_bar").unwrap());
-    insta::assert_snapshot!(result, @"<t0>(Foo<t0>) => t0");
+    insta::assert_snapshot!(result, @"<t0>(foo: Foo<t0>) => t0");
 
     let result = format!("{}", ctx.values.get("bar").unwrap());
     assert_eq!(result, "\"hello\"");

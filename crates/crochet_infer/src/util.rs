@@ -44,7 +44,12 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
             Variant::Lam(lam) => {
                 let params: Vec<_> = lam.params
                     .iter()
-                    .map(|param| norm_type(param, mapping, ctx))
+                    .map(|param| {
+                        TParam { 
+                            ty: norm_type(&param.ty, mapping, ctx),
+                            ..param.to_owned()
+                        }
+                    })
                     .collect();
                 let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
                 Type {

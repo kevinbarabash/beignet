@@ -93,6 +93,18 @@ impl Substitutable for TProp {
     }
 }
 
+impl Substitutable for TParam {
+    fn apply(&self, sub: &Subst) -> TParam {
+        TParam {
+            ty: self.ty.apply(sub),
+            ..self.to_owned()
+        }
+    }
+    fn ftv(&self) -> HashSet<i32> {
+        self.ty.ftv()
+    }
+}
+
 impl Substitutable for Scheme {
     fn apply(&self, sub: &Subst) -> Scheme {
         Scheme {

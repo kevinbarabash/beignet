@@ -2,7 +2,7 @@ use crochet_ast::Primitive;
 
 use super::context::{lookup_alias, Context};
 use super::substitutable::{Subst, Substitutable};
-use super::types::{self, Type, Variant};
+use super::types::{self, TParam, Type, Variant};
 use super::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
@@ -51,7 +51,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     // NOTE: The order of params is reversed.  This allows a callback
                     // whose params can accept more values (are supertypes) than the
                     // function will pass to the callback.
-                    let s1 = unify(&p2.apply(&s), &p1.apply(&s), ctx)?;
+                    let s1 = unify(&p2.ty.apply(&s), &p1.ty.apply(&s), ctx)?;
                     s = compose_subs(&s, &s1);
                 }
                 let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
@@ -67,7 +67,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
             let last_param_2 = lam.params.last();
             let maybe_rest_param = if let Some(param) = last_param_2 {
-                match &param.variant {
+                match &param.ty.variant {
                     Variant::Rest(rest) => Some(rest.as_ref()),
                     _ => None
                 }
@@ -133,7 +133,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     // Each argument must be a subtype of the corresponding param.
                     let arg = p1.apply(&s);
                     let param = p2.apply(&s);
-                    let s1 = unify(&arg, &param, ctx)?;
+                    let s1 = unify(&arg, &param.ty, ctx)?;
                     s = compose_subs(&s, &s1);
                 }
 
@@ -153,7 +153,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
                 if is_partial {
                     // Partial Application
-                    let mut partial_params: Vec<Type> = vec![];
+                    let mut partial_params: Vec<TParam> = vec![];
                     for (arg, param) in args.iter().zip(&lam.params) {
                         match arg.variant {
                             Variant::Placeholder(_) => {
@@ -162,7 +162,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             _ => {
                                 let arg = arg.apply(&s);
                                 let param = param.apply(&s);
-                                let s1 = unify(&arg, &param, ctx)?;
+                                let s1 = unify(&arg, &param.ty, ctx)?;
                                 s = compose_subs(&s, &s1);
                             }
                         };
@@ -177,7 +177,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     for (p1, p2) in args.iter().zip(&lam.params) {
                         // Each argument must be a subtype of the corresponding param.
                         let arg = p1.apply(&s);
-                        let param = p2.apply(&s);
+                        let param = p2.ty.apply(&s);
                         let s1 = unify(&arg, &param, ctx)?;
                         s = compose_subs(&s, &s1);
                     }

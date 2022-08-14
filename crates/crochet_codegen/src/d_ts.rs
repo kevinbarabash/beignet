@@ -6,7 +6,7 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
-use crochet_infer::types::{self, Scheme, Type, Variant};
+use crochet_infer::types::{self, Scheme, Type, TParam, Variant};
 use crochet_infer::Context;
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
@@ -82,10 +82,10 @@ pub fn build_ident(id: &ast::Ident) -> Ident {
     }
 }
 
-pub fn build_param(inferred_type: &Type, pattern: &ast::Pattern) -> TsFnParam {
+pub fn build_param(r#type: &Type, pattern: &ast::Pattern) -> TsFnParam {
     let type_ann = Some(TsTypeAnn {
         span: DUMMY_SP,
-        type_ann: Box::from(build_type(inferred_type, None, None)),
+        type_ann: Box::from(build_type(r#type, None, None)),
     });
 
     match pattern {
@@ -107,20 +107,19 @@ pub fn build_param(inferred_type: &Type, pattern: &ast::Pattern) -> TsFnParam {
     }
 }
 
-pub fn build_ts_fn_type(args_or_params: &[Type], ret: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
-    let params: Vec<TsFnParam> = args_or_params
+pub fn build_ts_fn_type_with_params(params: &[TParam], ret: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
+    let params: Vec<TsFnParam> = params
         .iter()
-        .enumerate()
-        .map(|(i, arg)| {
+        .map(|param| {
             let type_ann = Some(TsTypeAnn {
                 span: DUMMY_SP,
-                type_ann: Box::from(build_type(arg, None, None)),
+                type_ann: Box::from(build_type(&param.ty, None, None)),
             });
 
             TsFnParam::Ident(BindingIdent {
                 id: Ident {
                     span: DUMMY_SP,
-                    sym: JsWord::from(format!("arg{}", i)),
+                    sym: JsWord::from(param.name.to_owned()),
                     optional: false,
                 },
                 type_ann,
@@ -131,6 +130,38 @@ pub fn build_ts_fn_type(args_or_params: &[Type], ret: &Type, type_params: Option
     TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
         span: DUMMY_SP,
         params,
+        type_params,
+        type_ann: TsTypeAnn {
+            span: DUMMY_SP,
+            type_ann: Box::from(build_type(ret, None, None)),
+        },
+    }))
+}
+
+pub fn build_ts_fn_type_with_args(args: &[Type], ret: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
+    let args: Vec<TsFnParam> = args
+        .iter()
+        .enumerate()
+        .map(|(index, arg)| {
+            let type_ann = Some(TsTypeAnn {
+                span: DUMMY_SP,
+                type_ann: Box::from(build_type(arg, None, None)),
+            });
+
+            TsFnParam::Ident(BindingIdent {
+                id: Ident {
+                    span: DUMMY_SP,
+                    sym: JsWord::from(format!("arg{}", index)),
+                    optional: false,
+                },
+                type_ann,
+            })
+        })
+        .collect();
+
+    TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
+        span: DUMMY_SP,
+        params: args,
         type_params,
         type_ann: TsTypeAnn {
             span: DUMMY_SP,
@@ -220,8 +251,6 @@ pub fn build_type_params(scheme: &Scheme) -> Option<TsTypeParamDecl> {
 ///
 /// `expr` should be the original expression that `ty` was inferred
 /// from if it exists.
-///
-/// TODO: pass in `type_params` as an optional param
 pub fn build_type(
     ty: &Type,
     expr: Option<&ast::Expr>,
@@ -286,7 +315,6 @@ pub fn build_type(
                 lit,
             })
         }
-        // This should never appear here since it's only used during unification
         Variant::App(types::AppType { args, ret, .. }) => {
             // This can happen when a function type is inferred by usage
             match expr {
@@ -295,15 +323,15 @@ pub fn build_type(
                     if args.len() != params.len() {
                         panic!("number of args don't match")
                     } else {
-                        let params: Vec<TsFnParam> = args
+                        let args: Vec<TsFnParam> = args
                             .iter()
                             .zip(params)
-                            .map(|(inferred_type, pattern)| build_param(inferred_type, pattern))
+                            .map(|(arg, pattern)| build_param(arg, pattern))
                             .collect();
 
                         TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
                             span: DUMMY_SP,
-                            params,
+                            params: args,
                             type_params,
                             type_ann: TsTypeAnn {
                                 span: DUMMY_SP,
@@ -320,7 +348,7 @@ pub fn build_type(
                     }
                     _ => panic!("mismatch"),
                 },
-                _ => build_ts_fn_type(args, ret, type_params),
+                _ => build_ts_fn_type_with_args(args, ret, type_params),
             }
         }
         // This is used to copy the names of args from the expression
@@ -328,17 +356,14 @@ pub fn build_type(
         Variant::Lam(types::LamType { params, ret, .. }) => {
             match expr {
                 // TODO: handle is_async
-                Some(ast::Expr::Lambda(ast::Lambda {
-                    params: expr_params,
-                    ..
-                })) => {
-                    if params.len() != expr_params.len() {
+                Some(ast::Expr::Lambda(other_lam)) => {
+                    if params.len() != other_lam.params.len() {
                         panic!("number of params don't match")
                     } else {
                         let params: Vec<TsFnParam> = params
                             .iter()
-                            .zip(expr_params)
-                            .map(|(inferred_type, pattern)| build_param(inferred_type, pattern))
+                            .zip(&other_lam.params)
+                            .map(|(param, pattern)| build_param(&param.ty, pattern))
                             .collect();
 
                         TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
@@ -360,7 +385,7 @@ pub fn build_type(
                     }
                     _ => panic!("mismatch"),
                 },
-                _ => build_ts_fn_type(params, ret, type_params),
+                _ => build_ts_fn_type_with_params(params, ret, type_params),
             }
         }
         Variant::Union(types) => {

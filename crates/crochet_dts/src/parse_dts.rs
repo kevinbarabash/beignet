@@ -9,7 +9,7 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::{Lit, Primitive};
-use crochet_infer::{Context, Type, TProp, types::Scheme};
+use crochet_infer::{Context, Type, types::TParam, TProp, types::Scheme};
 
 type Interface = Vec<TProp>;
 
@@ -48,13 +48,20 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
         TsType::TsThisType(_) => todo!(),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
-                let params: Vec<_> = fn_type
+                let params: Vec<TParam> = fn_type
                     .params
                     .iter()
-                    .filter_map(|param| match param {
+                    .enumerate()
+                    .filter_map(|(index, param)| match param {
                         TsFnParam::Ident(ident) => {
                             let type_ann = ident.type_ann.clone().unwrap();
-                            Some(infer_ts_type_ann(&type_ann.type_ann, ctx))
+                            let param = TParam {
+                                name: ident.id.sym.to_string(),
+                                optional: ident.optional,
+                                mutable: false,
+                                ty: infer_ts_type_ann(&type_ann.type_ann, ctx),
+                            };
+                            Some(param)
                         }
                         TsFnParam::Array(_) => {
                             println!("skipping TsFnParam::Array(_)");
@@ -62,8 +69,17 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                         }
                         TsFnParam::Rest(rest) => {
                             let type_ann = rest.type_ann.clone().unwrap();
-                            let t = infer_ts_type_ann(&type_ann.type_ann, ctx);
-                            Some(ctx.rest(t))
+                            let name = match rest.arg.as_ref() {
+                                Pat::Ident(BindingIdent {id, ..}) => id.sym.to_string(),
+                                _ => format!("arg{index}"),
+                            };
+                            let param = TParam {
+                                name,
+                                optional: false,
+                                mutable: false,
+                                ty: infer_ts_type_ann(&type_ann.type_ann, ctx),
+                            };
+                            Some(param)
                         }
                         TsFnParam::Object(_) => {
                             println!("skipping TsFnParam::Object(_)");
@@ -211,13 +227,20 @@ impl InterfaceCollector {
             panic!("unexpected computed property in TypElement")
         }
 
-        let params: Vec<_> = sig
+        let params: Vec<TParam> = sig
             .params
             .iter()
-            .filter_map(|param| match param {
+            .enumerate()
+            .filter_map(|(index, param)| match param {
                 TsFnParam::Ident(ident) => {
                     let type_ann = ident.type_ann.clone().unwrap();
-                    Some(infer_ts_type_ann(&type_ann.type_ann, &self.ctx))
+                    let param = TParam {
+                        name: ident.id.sym.to_string(),
+                        optional: ident.optional,
+                        mutable: false,
+                        ty: infer_ts_type_ann(&type_ann.type_ann, &self.ctx),
+                    };
+                    Some(param)
                 }
                 TsFnParam::Array(_) => {
                     println!("skipping TsFnParam::Array(_)");
@@ -225,8 +248,17 @@ impl InterfaceCollector {
                 }
                 TsFnParam::Rest(rest) => {
                     let type_ann = rest.type_ann.clone().unwrap();
-                    let t = infer_ts_type_ann(&type_ann.type_ann, &self.ctx);
-                    Some(self.ctx.rest(t))
+                    let name = match rest.arg.as_ref() {
+                        Pat::Ident(BindingIdent {id, ..}) => id.sym.to_string(),
+                        _ => format!("arg{index}"),
+                    };
+                    let param = TParam {
+                        name,
+                        optional: false,
+                        mutable: false,
+                        ty: infer_ts_type_ann(&type_ann.type_ann, &self.ctx),
+                    };
+                    Some(param)
                 }
                 TsFnParam::Object(_) => {
                     println!("skipping TsFnParam::Object(_)");

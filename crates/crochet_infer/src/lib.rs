@@ -42,13 +42,13 @@ mod tests {
     #[test]
     fn infer_i_combinator() {
         let ctx = infer_prog("let I = (x) => x");
-        assert_eq!(get_type("I", &ctx), "<t0>(t0) => t0");
+        assert_eq!(get_type("I", &ctx), "<t0>(x: t0) => t0");
     }
 
     #[test]
     fn infer_k_combinator() {
         let ctx = infer_prog("let K = (x) => (y) => x");
-        assert_eq!(get_type("K", &ctx), "<t0, t1>(t0) => (t1) => t0");
+        assert_eq!(get_type("K", &ctx), "<t0, t1>(x: t0) => (y: t1) => t0");
     }
 
     #[test]
@@ -56,7 +56,7 @@ mod tests {
         let ctx = infer_prog("let S = (f) => (g) => (x) => f(x)(g(x))");
         assert_eq!(
             get_type("S", &ctx),
-            "<t0, t1, t2>((t0) => (t1) => t2) => ((t0) => t1) => (t0) => t2"
+            "<t0, t1, t2>(f: (t0) => (t1) => t2) => (g: (t0) => t1) => (x: t0) => t2"
         );
     }
 
@@ -68,12 +68,12 @@ mod tests {
         let I = S(K)(K)
         "#;
         let ctx = infer_prog(src);
-        assert_eq!(get_type("K", &ctx), "<t0, t1>(t0) => (t1) => t0");
+        assert_eq!(get_type("K", &ctx), "<t0, t1>(x: t0) => (y: t1) => t0");
         assert_eq!(
             get_type("S", &ctx),
-            "<t0, t1, t2>((t0) => (t1) => t2) => ((t0) => t1) => (t0) => t2"
+            "<t0, t1, t2>(f: (t0) => (t1) => t2) => (g: (t0) => t1) => (x: t0) => t2"
         );
-        // assert_eq!(get_type("I", &ctx), "<t0>(t0) => t0");
+        assert_eq!(get_type("I", &ctx), "<t0>(x: t0) => t0");
     }
 
     #[test]
@@ -95,7 +95,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("negate", &ctx), "(number) => number");
+        assert_eq!(get_type("negate", &ctx), "(x: number) => number");
     }
 
     #[test]
@@ -232,28 +232,28 @@ mod tests {
     fn infer_destructuring_function_params() {
         let result = infer("([x, y]) => x + y");
 
-        assert_eq!(result, "([number, number]) => number");
+        assert_eq!(result, "(arg0: [number, number]) => number");
     }
 
     #[test]
     fn infer_destructuring_function_params_with_type_annotations() {
         let result = infer("([x, y]: [string, boolean]) => [x, y]");
 
-        assert_eq!(result, "([string, boolean]) => [string, boolean]");
+        assert_eq!(result, "(arg0: [string, boolean]) => [string, boolean]");
     }
 
     #[test]
     fn infer_incomplete_destructuring_function_params_with_type_annotations() {
         let result = infer("([x]: [string, boolean]) => x");
 
-        assert_eq!(result, "([string, boolean]) => string");
+        assert_eq!(result, "(arg0: [string, boolean]) => string");
     }
 
     #[test]
     fn destructuring_tuple_inside_lambda() {
         let result = infer("(p) => {let [x, y] = p; x + y}");
 
-        assert_eq!(result, "([number, number]) => number");
+        assert_eq!(result, "(p: [number, number]) => number");
     }
 
     #[test]
@@ -494,7 +494,7 @@ mod tests {
     fn obj_param_destructuring() {
         assert_eq!(
             infer("({x, y}) => x + y"),
-            "({x: number, y: number}) => number"
+            "(arg0: {x: number, y: number}) => number"
         );
     }
 
@@ -502,7 +502,7 @@ mod tests {
     fn obj_param_destructuring_with_type_annotation() {
         assert_eq!(
             infer("({x, y}: {x: 5, y: 10}) => x + y"),
-            "({x: 5, y: 10}) => number"
+            "(arg0: {x: 5, y: 10}) => number"
         );
     }
 
@@ -510,7 +510,7 @@ mod tests {
     fn obj_param_partial_destructuring_with_type_annotation() {
         assert_eq!(
             infer("({a}: {a: string, b: boolean}) => a"),
-            "({a: string, b: boolean}) => string"
+            "(arg0: {a: string, b: boolean}) => string"
         );
     }
 
@@ -524,7 +524,7 @@ mod tests {
     fn destructuring_inside_lambda() {
         assert_eq!(
             infer("(p) => {let {x, y} = p; x + y}"),
-            "({x: number, y: number}) => number"
+            "(p: {x: number, y: number}) => number"
         );
     }
 
@@ -610,7 +610,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("add", &ctx), "({x: number, y: number}) => number");
+        assert_eq!(get_type("add", &ctx), "(p: {x: number, y: number}) => number");
     }
 
     #[test]
@@ -878,7 +878,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fst", &ctx), "<t0>(t0, t0) => t0");
+        assert_eq!(get_type("fst", &ctx), "<t0>(a: t0, b: t0) => t0");
     }
 
     #[test]
@@ -890,7 +890,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fst", &ctx), "<t0, t1>(t0, t1) => t0");
+        assert_eq!(get_type("fst", &ctx), "<t0, t1>(a: t0, b: t1) => t0");
     }
 
     #[test]
@@ -916,7 +916,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fst", &ctx), "<t0, t1>(t0, t1) => t0");
+        assert_eq!(get_type("fst", &ctx), "<t0, t1>(a: t0, b: t1) => t0");
         assert_eq!(get_type("x", &ctx), "5");
         assert_eq!(get_type("y", &ctx), "true");
     }
@@ -946,7 +946,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("add", &ctx), "(number, number) => number");
+        assert_eq!(get_type("add", &ctx), "(a: number, b: number) => number");
     }
 
     #[test]
@@ -1041,7 +1041,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("foo_num", &ctx), "(string) => bool");
+        assert_eq!(get_type("foo_num", &ctx), "(b: string) => bool");
     }
 
     #[test]
@@ -1053,7 +1053,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("foo_str", &ctx), "(number) => bool");
+        assert_eq!(get_type("foo_str", &ctx), "(a: number) => bool");
     }
 
     #[test]
@@ -1065,7 +1065,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("foo_bool", &ctx), "(bool) => undefined");
+        assert_eq!(get_type("foo_bool", &ctx), "(c: bool) => undefined");
     }
 
     #[test]
@@ -1077,7 +1077,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("foo_num_bool", &ctx), "(number, bool) => undefined");
+        assert_eq!(get_type("foo_num_bool", &ctx), "(a: number, c: bool) => undefined");
     }
 
     #[test]
@@ -1089,7 +1089,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("foo_num_str_bool", &ctx), "(number, string, bool) => undefined");
+        assert_eq!(get_type("foo_num_str_bool", &ctx), "(a: number, b: string, c: bool) => undefined");
     }
 
     #[test]
@@ -1159,7 +1159,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("add", &ctx), "(number, number) => number");
+        assert_eq!(get_type("add", &ctx), "(x: number, y: number) => number");
         assert_eq!(get_type("sum", &ctx), "number");
     }
 
@@ -1200,8 +1200,8 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result1", &ctx), "(number) => number");
-        assert_eq!(get_type("result2", &ctx), "(number) => number");
+        assert_eq!(get_type("result1", &ctx), "(b: number) => number");
+        assert_eq!(get_type("result2", &ctx), "(a: number) => number");
     }
 
     #[test]
@@ -1213,7 +1213,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("add5", &ctx), "(number, number) => number");
+        assert_eq!(get_type("add5", &ctx), "(b: number, c: number) => number");
     }
 
     #[test]
@@ -1251,7 +1251,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fst", &ctx), "(number, ...number[]) => number");
+        assert_eq!(get_type("fst", &ctx), "(a: number, arg1: ...number[]) => number");
         assert_eq!(get_type("result", &ctx), "number");
     }
 
@@ -1475,7 +1475,7 @@ mod tests {
 
         assert_eq!(
             get_type("mag_2d", &ctx),
-            "({x: number, y: number}) => number"
+            "(p: {x: number, y: number}) => number"
         );
     }
 
@@ -1694,7 +1694,7 @@ mod tests {
 
         assert_eq!(
             get_type("add_async", &ctx),
-            "(Promise<number>, Promise<number>) => Promise<number>"
+            "(a: Promise<number>, b: Promise<number>) => Promise<number>"
         );
     }
 
@@ -1707,7 +1707,7 @@ mod tests {
 
         assert_eq!(
             get_type("passthrough", &ctx),
-            "(Promise<string>) => Promise<string>"
+            "(x: Promise<string>) => Promise<string>"
         );
     }
 
@@ -1752,7 +1752,7 @@ mod tests {
 
         assert_eq!(
             get_type("add_async", &ctx),
-            "(Promise<number>, Promise<number>) => Promise<number>"
+            "(a: Promise<number>, b: Promise<number>) => Promise<number>"
         );
     }
 
@@ -1866,7 +1866,7 @@ mod tests {
 
         assert_eq!(
             get_type("h", &ctx),
-            "<t0>((t0) => number, t0, t0) => number"
+            "<t0>(f: (t0) => number, x: t0, y: t0) => number"
         );
     }
 
