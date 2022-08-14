@@ -424,13 +424,13 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .then(choice((block.clone(), expr.clone())))
             .map_with_span(
                 |((((is_async, type_params), params), return_type), body), span: Span| {
-                    // for (i, param) in params.iter().enumerate() {
-                    //     if let Pattern::Rest(_) = param {
-                    //         if i < params.len() - 1 {
-                    //             panic!("rest params must come last");
-                    //         };
-                    //     }
-                    // }
+                    for (i, param) in params.iter().enumerate() {
+                        if let EFnParamPat::Rest(_) = param.pat {
+                            if i < params.len() - 1 {
+                                panic!("rest params must come last");
+                            };
+                        }
+                    }
                     Expr::Lambda(Lambda {
                         span,
                         params,

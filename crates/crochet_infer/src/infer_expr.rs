@@ -227,7 +227,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 .iter()
                 .map(|e_param| {
                     let (ps, pa, t_param) = infer_fn_param(e_param, &new_ctx, &type_params_map)?;
-                    println!("pa = {pa:#?}");
 
                     // Inserts any new variables introduced by infer_fn_param() into
                     // the current context.

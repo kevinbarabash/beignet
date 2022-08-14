@@ -106,7 +106,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     #[should_panic = "rest params must come last"]
     fn multiple_rest_params() {
         parse("(...a, ...b) => true");

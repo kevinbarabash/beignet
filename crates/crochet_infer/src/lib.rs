@@ -25,7 +25,6 @@ mod tests {
         let mut ctx = Context::default();
         let expr = expr_parser().parse(input).unwrap();
         let scheme = infer::infer_expr(&mut ctx, &expr).unwrap();
-        println!("scheme = {:#?}", scheme);
         format!("{scheme}")
     }
 
@@ -496,6 +495,14 @@ mod tests {
         assert_eq!(
             infer("({x, y}) => x + y"),
             "({x, y}: {x: number, y: number}) => number"
+        );
+    }
+
+    #[test]
+    fn obj_param_destructuring_with_renaming() {
+        assert_eq!(
+            infer("({x: p, y: q}) => p + q"),
+            "({x: p, y: q}: {x: number, y: number}) => number"
         );
     }
 
