@@ -251,6 +251,63 @@ fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Context)
     }
 }
 
+fn e_fn_param_pat_to_js_pat(
+    pat: &ast::EFnParamPat,
+    stmts: &mut Vec<Stmt>,
+    ctx: &mut Context,
+) -> Pat {
+    match pat {
+        ast::EFnParamPat::Ident(ast::EFnParamBindingIdent { id, .. }) => Pat::Ident(BindingIdent {
+            id: Ident {
+                span: DUMMY_SP,
+                sym: JsWord::from(id.name.to_owned()),
+                optional: false,
+            },
+            type_ann: None,
+        }),
+        ast::EFnParamPat::Rest(_) => todo!(),
+        ast::EFnParamPat::Object(ast::EFnParamObjectPat { props, .. }) => {
+            let props: Vec<ObjectPatProp> = props
+                .iter()
+                .map(|prop| match prop {
+                    ast::EFnParamObjectPatProp::KeyValue(kv) => {
+                        ObjectPatProp::KeyValue(KeyValuePatProp {
+                            key: PropName::Ident(Ident {
+                                span: DUMMY_SP,
+                                sym: JsWord::from(kv.key.name.to_owned()),
+                                optional: false,
+                            }),
+                            value: Box::from(e_fn_param_pat_to_js_pat(&kv.value, stmts, ctx)),
+                        })
+                    }
+                    ast::EFnParamObjectPatProp::Assign(assign) => {
+                        ObjectPatProp::Assign(AssignPatProp {
+                            span: DUMMY_SP,
+                            key: Ident {
+                                span: DUMMY_SP,
+                                sym: JsWord::from(assign.key.name.to_owned()),
+                                optional: false,
+                            },
+                            value: assign
+                                .value
+                                .as_ref()
+                                .map(|value| Box::from(build_expr(value.as_ref(), stmts, ctx))),
+                        })
+                    }
+                    ast::EFnParamObjectPatProp::Rest(_) => todo!(),
+                })
+                .collect();
+            Pat::Object(ObjectPat {
+                span: DUMMY_SP,
+                props,
+                optional: false,
+                type_ann: None,
+            })
+        }
+        ast::EFnParamPat::Array(_) => todo!(),
+    }
+}
+
 fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
     match expr {
         ast::Expr::App(ast::App { lam, args, .. }) => {
@@ -279,22 +336,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
         }) => {
             let params: Vec<Pat> = args
                 .iter()
-                .map(|arg| {
-                    let name = match &arg.pat {
-                        ast::EFnParamPat::Ident(ast::EFnParamBindingIdent { id, .. }) => id.name.to_owned(),
-                        ast::EFnParamPat::Rest(_) => todo!(),
-                        ast::EFnParamPat::Object(_) => todo!(),
-                        ast::EFnParamPat::Array(_) => todo!(),
-                    };
-                    Pat::Ident(BindingIdent {
-                        id: Ident {
-                            span: DUMMY_SP,
-                            sym: JsWord::from(name),
-                            optional: false,
-                        },
-                        type_ann: None,
-                    })
-                })
+                .map(|arg| e_fn_param_pat_to_js_pat(&arg.pat, stmts, ctx))
                 .collect();
 
             let body = build_fn_body(body.as_ref(), ctx);

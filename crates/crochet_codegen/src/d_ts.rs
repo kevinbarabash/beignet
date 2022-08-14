@@ -88,36 +88,77 @@ pub fn build_param(r#type: &Type, e_param: &ast::EFnParam) -> TsFnParam {
         type_ann: Box::from(build_type(r#type, None, None)),
     });
 
-    match &e_param.pat {
-        ast::EFnParamPat::Ident(ast::EFnParamBindingIdent { id, .. }) => TsFnParam::Ident(BindingIdent {
-            id: build_ident(id),
-            type_ann,
-        }),
-        ast::EFnParamPat::Rest(ast::EFnParamRestPat { arg, .. }) => TsFnParam::Rest(RestPat {
-            span: DUMMY_SP,
-            dot3_token: DUMMY_SP,
-            arg: Box::from(build_param_pat_rec(arg.as_ref())),
-            type_ann,
-        }),
-        ast::EFnParamPat::Object(_) => todo!(),
-        ast::EFnParamPat::Array(_) => todo!(),
+    let pat = build_param_pat_rec(&e_param.pat, &type_ann);
+
+    match pat {
+        Pat::Ident(bi) => TsFnParam::Ident(bi),
+        Pat::Array(array) => TsFnParam::Array(array),
+        Pat::Rest(rest) => TsFnParam::Rest(rest),
+        Pat::Object(obj) => TsFnParam::Object(obj),
+        Pat::Assign(_) => todo!(),
+        Pat::Invalid(_) => todo!(),
+        Pat::Expr(_) => todo!(),
     }
 }
 
-pub fn build_param_pat_rec(pattern: &ast::EFnParamPat) -> Pat {
+pub fn build_param_pat_rec(pattern: &ast::EFnParamPat, type_ann: &Option<TsTypeAnn>) -> Pat {
     match pattern {
         ast::EFnParamPat::Ident(ast::EFnParamBindingIdent { id, .. }) => Pat::Ident(BindingIdent {
             id: build_ident(id),
-            type_ann: None,
+            type_ann: type_ann.to_owned(),
         }),
         ast::EFnParamPat::Rest(ast::EFnParamRestPat { arg, .. }) => Pat::Rest(RestPat {
             span: DUMMY_SP,
             dot3_token: DUMMY_SP,
-            arg: Box::from(build_param_pat_rec(arg.as_ref())),
-            type_ann: None,
+            arg: Box::from(build_param_pat_rec(arg.as_ref(), &None)),
+            type_ann: type_ann.to_owned(),
         }),
-        ast::EFnParamPat::Object(_) => todo!(),
-        ast::EFnParamPat::Array(_) => todo!(),
+        ast::EFnParamPat::Object(ast::EFnParamObjectPat { props, .. }) => {
+            let props: Vec<ObjectPatProp> = props
+                .iter()
+                .map(|prop| match prop {
+                    ast::EFnParamObjectPatProp::KeyValue(kv) => {
+                        ObjectPatProp::KeyValue(KeyValuePatProp {
+                            key: PropName::Ident(build_ident(&kv.key)),
+                            value: Box::from(build_param_pat_rec(kv.value.as_ref(), &None)),
+                        })
+                    }
+                    ast::EFnParamObjectPatProp::Assign(assign) => {
+                        ObjectPatProp::Assign(AssignPatProp {
+                            span: DUMMY_SP,
+                            key: build_ident(&assign.key),
+                            // TODO: handle default values
+                            value: None,
+                        })
+                    }
+                    ast::EFnParamObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
+                        span: DUMMY_SP,
+                        dot3_token: DUMMY_SP,
+                        arg: Box::from(build_param_pat_rec(rest.arg.as_ref(), &None)),
+                        type_ann: None,
+                    }),
+                })
+                .collect();
+            Pat::Object(ObjectPat {
+                span: DUMMY_SP,
+                props,
+                optional: false,
+                type_ann: type_ann.to_owned(),
+            })
+        }
+        ast::EFnParamPat::Array(array) => {
+            let elems = array
+                .elems
+                .iter()
+                .map(|elem| elem.as_ref().map(|elem| build_param_pat_rec(elem, &None)))
+                .collect();
+            Pat::Array(ArrayPat {
+                span: DUMMY_SP,
+                elems,
+                optional: false,
+                type_ann: type_ann.to_owned(),
+            })
+        }
     }
 }
 
@@ -135,6 +176,79 @@ pub fn build_ts_pattern(pat: &TPat) -> Pat {
     }
 }
 
+fn tpat_to_pat(pat: &TPat, type_ann: &Option<TsTypeAnn>) -> Pat {
+    match pat {
+        TPat::Ident(bi) => Pat::Ident(BindingIdent {
+            id: Ident {
+                span: DUMMY_SP,
+                sym: JsWord::from(bi.name.to_owned()),
+                optional: bi.optional,
+            },
+            type_ann: type_ann.to_owned(),
+        }),
+        TPat::Rest(rest) => Pat::Rest(RestPat {
+            span: DUMMY_SP,
+            dot3_token: DUMMY_SP,
+            arg: Box::from(tpat_to_pat(rest.arg.as_ref(), &None)),
+            type_ann: type_ann.to_owned(),
+        }),
+        TPat::Array(array) => Pat::Array(ArrayPat {
+            span: DUMMY_SP,
+            elems: array
+                .elems
+                .iter()
+                .map(|elem| elem.as_ref().map(|elem| tpat_to_pat(elem, &None)))
+                .collect(),
+            optional: false,
+            type_ann: type_ann.to_owned(),
+        }),
+        TPat::Object(obj) => {
+            let props: Vec<ObjectPatProp> = obj
+                .props
+                .iter()
+                .map(|prop| {
+                    match prop {
+                        types::TObjectPatProp::KeyValue(kv) => {
+                            ObjectPatProp::KeyValue(KeyValuePatProp {
+                                key: PropName::Ident(Ident {
+                                    span: DUMMY_SP,
+                                    sym: JsWord::from(kv.key.clone()),
+                                    optional: false,
+                                }),
+                                value: Box::from(tpat_to_pat(&kv.value, &None)),
+                            })
+                        }
+                        types::TObjectPatProp::Assign(assign) => {
+                            ObjectPatProp::Assign(AssignPatProp {
+                                span: DUMMY_SP,
+                                key: Ident {
+                                    span: DUMMY_SP,
+                                    sym: JsWord::from(assign.key.clone()),
+                                    optional: false,
+                                },
+                                // TODO: handle default values
+                                value: None,
+                            })
+                        }
+                        types::TObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
+                            span: DUMMY_SP,
+                            dot3_token: DUMMY_SP,
+                            arg: Box::from(tpat_to_pat(rest.arg.as_ref(), &None)),
+                            type_ann: None,
+                        }),
+                    }
+                })
+                .collect();
+            Pat::Object(ObjectPat {
+                span: DUMMY_SP,
+                props,
+                optional: false,
+                type_ann: type_ann.to_owned(),
+            })
+        }
+    }
+}
+
 pub fn build_ts_fn_type_with_params(
     params: &[TFnParam],
     ret: &Type,
@@ -148,23 +262,61 @@ pub fn build_ts_fn_type_with_params(
                 type_ann: Box::from(build_type(&param.get_type(), None, None)),
             });
 
-            match &param.pat {
-                TPat::Ident(bi) => TsFnParam::Ident(BindingIdent {
-                    id: Ident {
-                        span: DUMMY_SP,
-                        sym: JsWord::from(bi.name.to_owned()),
-                        optional: false,
-                    },
-                    type_ann,
-                }),
-                TPat::Rest(rest) => TsFnParam::Rest(RestPat {
-                    span: DUMMY_SP,
-                    dot3_token: DUMMY_SP,
-                    arg: Box::from(build_ts_pattern(rest.arg.as_ref())),
-                    type_ann,
-                }),
-                _ => todo!(),
-            }
+            let pat = tpat_to_pat(&param.pat, &type_ann);
+
+            let result: TsFnParam = match pat {
+                Pat::Ident(bi) => TsFnParam::Ident(bi),
+                Pat::Array(array) => TsFnParam::Array(array),
+                Pat::Rest(rest) => TsFnParam::Rest(rest),
+                Pat::Object(obj) => TsFnParam::Object(obj),
+                Pat::Assign(_) => todo!(),
+                Pat::Invalid(_) => todo!(),
+                Pat::Expr(_) => todo!(),
+            };
+
+            result
+
+            // match &param.pat {
+            //     TPat::Ident(bi) => TsFnParam::Ident(BindingIdent {
+            //         id: Ident {
+            //             span: DUMMY_SP,
+            //             sym: JsWord::from(bi.name.to_owned()),
+            //             optional: false,
+            //         },
+            //         type_ann,
+            //     }),
+            //     TPat::Rest(rest) => TsFnParam::Rest(RestPat {
+            //         span: DUMMY_SP,
+            //         dot3_token: DUMMY_SP,
+            //         arg: Box::from(build_ts_pattern(rest.arg.as_ref())),
+            //         type_ann,
+            //     }),
+            //     TPat::Array(_) => todo!(),
+            //     TPat::Object(obj) => {
+            //         let props: Vec<ObjectPatProp> = obj.props.iter().map(|prop| {
+            //             match prop {
+            //                 types::TObjectPatProp::KeyValue(kv) => {
+            //                     ObjectPatProp::KeyValue(KeyValuePatProp {
+            //                         key: PropName::Ident(Ident {
+            //                             span: DUMMY_SP,
+            //                             sym: JsWord::from(kv.key.clone()),
+            //                             optional: false,
+            //                         }),
+            //                         value: Box::from(tpat_to_pat(&kv.value, &None)),
+            //                     })
+            //                 },
+            //                 types::TObjectPatProp::Assign(_) => todo!(),
+            //                 types::TObjectPatProp::Rest(_) => todo!(),
+            //             }
+            //         }).collect();
+            //         TsFnParam::Object(ObjectPat {
+            //             span: DUMMY_SP,
+            //             props,
+            //             optional: false,
+            //             type_ann,
+            //         })
+            //     },
+            // }
         })
         .collect();
 
