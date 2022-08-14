@@ -275,48 +275,6 @@ pub fn build_ts_fn_type_with_params(
             };
 
             result
-
-            // match &param.pat {
-            //     TPat::Ident(bi) => TsFnParam::Ident(BindingIdent {
-            //         id: Ident {
-            //             span: DUMMY_SP,
-            //             sym: JsWord::from(bi.name.to_owned()),
-            //             optional: false,
-            //         },
-            //         type_ann,
-            //     }),
-            //     TPat::Rest(rest) => TsFnParam::Rest(RestPat {
-            //         span: DUMMY_SP,
-            //         dot3_token: DUMMY_SP,
-            //         arg: Box::from(build_ts_pattern(rest.arg.as_ref())),
-            //         type_ann,
-            //     }),
-            //     TPat::Array(_) => todo!(),
-            //     TPat::Object(obj) => {
-            //         let props: Vec<ObjectPatProp> = obj.props.iter().map(|prop| {
-            //             match prop {
-            //                 types::TObjectPatProp::KeyValue(kv) => {
-            //                     ObjectPatProp::KeyValue(KeyValuePatProp {
-            //                         key: PropName::Ident(Ident {
-            //                             span: DUMMY_SP,
-            //                             sym: JsWord::from(kv.key.clone()),
-            //                             optional: false,
-            //                         }),
-            //                         value: Box::from(tpat_to_pat(&kv.value, &None)),
-            //                     })
-            //                 },
-            //                 types::TObjectPatProp::Assign(_) => todo!(),
-            //                 types::TObjectPatProp::Rest(_) => todo!(),
-            //             }
-            //         }).collect();
-            //         TsFnParam::Object(ObjectPat {
-            //             span: DUMMY_SP,
-            //             props,
-            //             optional: false,
-            //             type_ann,
-            //         })
-            //     },
-            // }
         })
         .collect();
 
