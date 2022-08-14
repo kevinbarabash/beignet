@@ -58,26 +58,38 @@ pub struct AppType {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum FnParam {
-    Ident(BindingIdent),
-    // TODO: add these later
-    // Array(ArrayPat),
-    // Rest(RestPat),
-    // Object(ObjectPat),
+pub struct TFnParam {
+    pub pat: TPat,
+    pub ty: Type,
 }
 
-impl FnParam {
+impl TFnParam {
     pub fn get_type(&self) -> Type {
-        match self {
-            FnParam::Ident(bi) => bi.ty.to_owned(),
-        }
+        self.ty.to_owned()
     }
 }
 
-impl fmt::Display for FnParam {
+impl fmt::Display for TFnParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self {pat, ty} = self;
+        write!(f, "{pat}: {ty}")
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum TPat {
+    Ident(BindingIdent),
+    Rest(RestPat),
+    // TODO: add these later
+    // Array(ArrayPat),
+    // Object(ObjectPat),
+}
+
+impl fmt::Display for TPat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            FnParam::Ident(bi) => write!(f, "{bi}"),
+            TPat::Ident(bi) => write!(f, "{bi}"),
+            TPat::Rest(rest) => write!(f, "{rest}"),
         }
     }
 }
@@ -87,24 +99,35 @@ pub struct BindingIdent {
     pub name: String,
     pub optional: bool,
     pub mutable: bool,
-    pub ty: Type,
 }
 
 impl fmt::Display for BindingIdent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { name, optional, mutable, ty } = self;
+        let Self { name, optional, mutable } = self;
         match (optional, mutable) {
-            (false, false) => write!(f, "{name}: {ty}"),
-            (true, false) => write!(f, "{name}?: {ty}"),
-            (false, true) => write!(f, "mut {name}: {ty}"),
-            (true, true) => write!(f, "mut {name}?: {ty}"),
+            (false, false) => write!(f, "{name}"),
+            (true, false) => write!(f, "{name}?"),
+            (false, true) => write!(f, "mut {name}"),
+            (true, true) => write!(f, "mut {name}?"),
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct RestPat {
+    pub arg: Box<TPat>,
+}
+
+impl fmt::Display for RestPat {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self { arg } = self;
+        write!(f, "...{arg}")
     }
 }
 
 #[derive(Clone, Debug, Eq)]
 pub struct LamType {
-    pub params: Vec<FnParam>,
+    pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
 }
 

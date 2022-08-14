@@ -70,6 +70,7 @@ pub struct LetExpr {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lambda {
     pub span: Span,
+    // TODO: update this to use Vec<FnParam>
     pub params: Vec<Pattern>,
     pub body: Box<Expr>,
     pub is_async: bool,

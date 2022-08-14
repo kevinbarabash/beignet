@@ -93,19 +93,15 @@ impl Substitutable for TProp {
     }
 }
 
-impl Substitutable for FnParam {
-    fn apply(&self, sub: &Subst) -> FnParam {
-        match self {
-            FnParam::Ident(bi) => FnParam::Ident(BindingIdent {
-                ty: bi.ty.apply(sub),
-                ..bi.to_owned()
-            }),
+impl Substitutable for TFnParam {
+    fn apply(&self, sub: &Subst) -> TFnParam {
+        TFnParam {
+            pat: self.pat.to_owned(),
+            ty: self.ty.apply(sub),
         }
     }
     fn ftv(&self) -> HashSet<i32> {
-        match self {
-            FnParam::Ident(bi) => bi.ty.ftv(),
-        }
+        self.ty.ftv()
     }
 }
 

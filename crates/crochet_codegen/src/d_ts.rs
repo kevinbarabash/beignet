@@ -6,7 +6,7 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
-use crochet_infer::types::{self, Scheme, Type, FnParam, Variant};
+use crochet_infer::types::{self, Scheme, TFnParam, TPat, Type, Variant};
 use crochet_infer::Context;
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
@@ -107,7 +107,25 @@ pub fn build_param(r#type: &Type, pattern: &ast::Pattern) -> TsFnParam {
     }
 }
 
-pub fn build_ts_fn_type_with_params(params: &[FnParam], ret: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
+pub fn build_ts_pattern(pat: &TPat) -> Pat {
+    match pat {
+        TPat::Ident(bi) => Pat::Ident(BindingIdent {
+            id: Ident {
+                span: DUMMY_SP,
+                sym: JsWord::from(bi.name.to_owned()),
+                optional: false,
+            },
+            type_ann: None,
+        }),
+        TPat::Rest(_) => todo!(),
+    }
+}
+
+pub fn build_ts_fn_type_with_params(
+    params: &[TFnParam],
+    ret: &Type,
+    type_params: Option<TsTypeParamDecl>,
+) -> TsType {
     let params: Vec<TsFnParam> = params
         .iter()
         .map(|param| {
@@ -116,17 +134,21 @@ pub fn build_ts_fn_type_with_params(params: &[FnParam], ret: &Type, type_params:
                 type_ann: Box::from(build_type(&param.get_type(), None, None)),
             });
 
-            match param {
-                FnParam::Ident(bi) => {
-                    TsFnParam::Ident(BindingIdent {
-                        id: Ident {
-                            span: DUMMY_SP,
-                            sym: JsWord::from(bi.name.to_owned()),
-                            optional: false,
-                        },
-                        type_ann,
-                    })
-                },
+            match &param.pat {
+                TPat::Ident(bi) => TsFnParam::Ident(BindingIdent {
+                    id: Ident {
+                        span: DUMMY_SP,
+                        sym: JsWord::from(bi.name.to_owned()),
+                        optional: false,
+                    },
+                    type_ann,
+                }),
+                TPat::Rest(rest) => TsFnParam::Rest(RestPat {
+                    span: DUMMY_SP,
+                    dot3_token: DUMMY_SP,
+                    arg: Box::from(build_ts_pattern(rest.arg.as_ref())),
+                    type_ann,
+                }),
             }
         })
         .collect();
@@ -142,7 +164,11 @@ pub fn build_ts_fn_type_with_params(params: &[FnParam], ret: &Type, type_params:
     }))
 }
 
-pub fn build_ts_fn_type_with_args(args: &[Type], ret: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
+pub fn build_ts_fn_type_with_args(
+    args: &[Type],
+    ret: &Type,
+    type_params: Option<TsTypeParamDecl>,
+) -> TsType {
     let args: Vec<TsFnParam> = args
         .iter()
         .enumerate()

@@ -2,7 +2,7 @@ use crochet_ast::Primitive;
 
 use super::context::{lookup_alias, Context};
 use super::substitutable::{Subst, Substitutable};
-use super::types::{self, FnParam, Type, Variant};
+use super::types::{self, TFnParam, Type, Variant};
 use super::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
@@ -67,17 +67,21 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         // NOTE: this arm is only hit by the `infer_skk` test case
         (Variant::Lam(_), Variant::App(_)) => unify(t2, t1, ctx),
         (Variant::App(app), Variant::Lam(lam)) => {
+            println!("app = {t1}, lam = {t2}");
             let mut s = Subst::new();
 
             let last_param_2 = lam.params.last();
             let maybe_rest_param = if let Some(param) = last_param_2 {
-                match &param.get_type().variant {
-                    Variant::Rest(rest) => Some(rest.as_ref().to_owned()),
+                match &param.pat {
+                    types::TPat::Rest(_) => Some(param.ty.to_owned()),
                     _ => None,
                 }
             } else {
                 None
             };
+
+            println!("last_param_2 = {last_param_2:#?}");
+            println!("maybe_rest_param = {maybe_rest_param:#?}");
 
             // TODO: work out how rest and spread should work together.
             //
@@ -155,7 +159,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
                 if is_partial {
                     // Partial Application
-                    let mut partial_params: Vec<FnParam> = vec![];
+                    let mut partial_params: Vec<TFnParam> = vec![];
                     for (arg, param) in args.iter().zip(&lam.params) {
                         match arg.variant {
                             Variant::Wildcard => partial_params.push(param.to_owned()),

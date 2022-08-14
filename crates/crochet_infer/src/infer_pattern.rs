@@ -12,6 +12,61 @@ use super::util::*;
 
 pub type Assump = HashMap<String, Scheme>;
 
+// pub fn infer_fn_param(
+//     param: &expr::FnParam,
+//     ctx: &Context,
+//     type_param_map: &HashMap<String, Type>,
+// ) -> Result<(Subst, Assump, TFnParam), String> {
+//     // Keeps track of all of the variables the need to be introduced by this pattern.
+//     let mut new_vars: HashMap<String, Scheme> = HashMap::new();
+
+//     let pat_type = infer_pattern_rec(&param.pat, ctx, &mut new_vars)?;
+
+//     let pat = match &param.pat {
+//         Pattern::Ident(bi) => TPat::Ident(types::BindingIdent {
+//             name: bi.id.name.to_owned(),
+//             optional: false,
+//             mutable: false,
+//         }),
+//         Pattern::Rest(_) => todo!(),
+//         Pattern::Object(_) => todo!(),
+//         Pattern::Array(_) => todo!(),
+//         Pattern::Lit(_) => todo!(),
+//         Pattern::Is(_) => todo!(),
+//         Pattern::Wildcard(_) => todo!(),
+//     };
+
+//     // If the pattern had a type annotation associated with it, we infer type of the
+//     // type annotation and add a constraint between the types of the pattern and its
+//     // type annotation.
+//     match &param.type_ann {
+//         Some(type_ann) => {
+//             let type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
+
+//             // Allowing type_ann_ty to be a subtype of pat_type because
+//             // only non-refutable patterns can have type annotations.
+//             let s = unify(&type_ann_ty, &pat_type, ctx)?;
+
+//             // Substs are applied to any new variables introduced.  This handles
+//             // the situation where explicit types have be provided for function
+//             // parameters.
+//             let a = new_vars.apply(&s);
+
+//             let param = TFnParam {
+//                 pat,
+//                 ty: type_ann_ty,
+//             };
+
+//             Ok((s, a, param))
+//         }
+//         None => {
+//             let param = TFnParam { pat, ty: pat_type };
+
+//             Ok((Subst::new(), new_vars, param))
+//         }
+//     }
+// }
+
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
 pub fn infer_pattern(
@@ -96,7 +151,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                 None => {
                     // TODO: wrap this in an array type
                     infer_pattern_rec(arg.as_ref(), ctx, assump)?
-                },
+                }
             };
             Ok(ctx.rest(t))
         }

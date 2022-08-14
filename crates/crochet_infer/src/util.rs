@@ -45,13 +45,9 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 let params: Vec<_> = lam.params
                     .iter()
                     .map(|param| {
-                        match param {
-                            FnParam::Ident(bi) => {
-                                FnParam::Ident(BindingIdent {
-                                    ty: norm_type(&bi.ty, mapping, ctx),
-                                    ..bi.to_owned()
-                                })
-                            },
+                        TFnParam {
+                            ty: norm_type(&param.ty, mapping, ctx),
+                            ..param.to_owned()
                         }
                     })
                     .collect();
