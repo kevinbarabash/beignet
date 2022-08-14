@@ -2,8 +2,6 @@ use std::collections::HashMap;
 
 use crochet_ast::*;
 
-use crate::types::TParam;
-
 use super::context::{lookup_alias, Context};
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
@@ -58,12 +56,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         Expr::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer_expr(ctx, expr)?;
             let tv = ctx.fresh_var();
-            let param = TParam {
+            let param = types::FnParam::Ident(types::BindingIdent {
                 name: String::from("fix_param"),
                 optional: false,
                 mutable: false,
                 ty: tv.clone(),
-            };
+            });
             let s2 = unify(&ctx.lam(vec![param], Box::from(tv.clone())), &t, ctx)?;
             Ok((compose_subs(&s2, &s1), tv.apply(&s2)))
         }
@@ -222,7 +220,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 None => HashMap::default(),
             };
 
-            let params: Result<Vec<(Subst, TParam)>, String> = params
+            let params: Result<Vec<(Subst, types::FnParam)>, String> = params
                 .iter()
                 .enumerate()
                 .map(|(index, param)| {
@@ -234,12 +232,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         new_ctx.values.insert(name, scheme);
                     }
 
-                    let param = TParam {
+                    let param = types::FnParam::Ident(types::BindingIdent {
                         name: param.get_name(&index),
                         optional: false,
                         mutable: false,
                         ty: pt,
-                    };
+                    });
 
                     Ok((ps, param))
                 })

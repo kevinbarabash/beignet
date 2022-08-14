@@ -4,7 +4,7 @@ use std::iter::Iterator;
 use crochet_ast::*;
 
 use super::context::Context;
-use super::types::{Scheme, TParam, TProp, Type};
+use super::types::{self, Scheme, TProp, Type};
 
 pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Scheme {
     match type_ann {
@@ -62,7 +62,7 @@ fn infer_type_ann_rec(
 ) -> Type {
     match type_ann {
         TypeAnn::Lam(LamType { params, ret, .. }) => {
-            let params: Vec<_> = params
+            let params: Vec<types::FnParam> = params
                 .iter()
                 .enumerate()
                 .map(|(index, param)| {
@@ -70,24 +70,24 @@ fn infer_type_ann_rec(
                         FnParam::Ident(BindingIdent { id, type_ann, .. }) => {
                             // TODO: Update the AST to remove need for .unwrap() here
                             let type_ann = type_ann.clone().unwrap();
-                            TParam {
+                            types::FnParam::Ident(types::BindingIdent {
                                 name: id.name.to_owned(),
                                 optional: false,
                                 mutable: false,
                                 ty: infer_type_ann_rec(&type_ann, ctx, type_param_map),
-                            }
+                            })
                         }
                         FnParam::Rest(RestPat { arg, type_ann, .. }) => {
                             // TODO: Update the AST to remove need for .unwrap() here
                             let type_ann = type_ann.clone().unwrap();
                             let t = infer_type_ann_rec(&type_ann, ctx, type_param_map);
 
-                            TParam {
+                            types::FnParam::Ident(types::BindingIdent {
                                 name: arg.as_ref().get_name(&index),
                                 optional: false,
                                 mutable: false,
                                 ty: ctx.rest(t),
-                            }
+                            })
                         }
                     }
                 })

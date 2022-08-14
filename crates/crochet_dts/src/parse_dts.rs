@@ -2,14 +2,14 @@ use defaultmap::*;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use swc_common::{SourceMap, FileName};
+use swc_common::{FileName, SourceMap};
 use swc_ecma_ast::*;
 use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::{Lit, Primitive};
-use crochet_infer::{Context, Type, types::TParam, TProp, types::Scheme};
+use crochet_infer::{types, types::FnParam, types::Scheme, Context, TProp, Type};
 
 type Interface = Vec<TProp>;
 
@@ -48,19 +48,19 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
         TsType::TsThisType(_) => todo!(),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
-                let params: Vec<TParam> = fn_type
+                let params: Vec<FnParam> = fn_type
                     .params
                     .iter()
                     .enumerate()
                     .filter_map(|(index, param)| match param {
                         TsFnParam::Ident(ident) => {
                             let type_ann = ident.type_ann.clone().unwrap();
-                            let param = TParam {
+                            let param = FnParam::Ident(types::BindingIdent {
                                 name: ident.id.sym.to_string(),
                                 optional: ident.optional,
                                 mutable: false,
                                 ty: infer_ts_type_ann(&type_ann.type_ann, ctx),
-                            };
+                            });
                             Some(param)
                         }
                         TsFnParam::Array(_) => {
@@ -70,15 +70,16 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                         TsFnParam::Rest(rest) => {
                             let type_ann = rest.type_ann.clone().unwrap();
                             let name = match rest.arg.as_ref() {
-                                Pat::Ident(BindingIdent {id, ..}) => id.sym.to_string(),
+                                Pat::Ident(BindingIdent { id, .. }) => id.sym.to_string(),
                                 _ => format!("arg{index}"),
                             };
-                            let param = TParam {
+                            // TODO: replace this with FnParam::Rest
+                            let param = FnParam::Ident(types::BindingIdent {
                                 name,
                                 optional: false,
                                 mutable: false,
                                 ty: infer_ts_type_ann(&type_ann.type_ann, ctx),
-                            };
+                            });
                             Some(param)
                         }
                         TsFnParam::Object(_) => {
@@ -198,7 +199,7 @@ impl Visit for InterfaceCollector {
                             };
                             self.interfaces[name].push(prop);
                         }
-                    },
+                    }
                     None => panic!("Property is missing type annotation"),
                 }
             }
@@ -227,19 +228,19 @@ impl InterfaceCollector {
             panic!("unexpected computed property in TypElement")
         }
 
-        let params: Vec<TParam> = sig
+        let params: Vec<FnParam> = sig
             .params
             .iter()
             .enumerate()
             .filter_map(|(index, param)| match param {
                 TsFnParam::Ident(ident) => {
                     let type_ann = ident.type_ann.clone().unwrap();
-                    let param = TParam {
+                    let param = FnParam::Ident(types::BindingIdent {
                         name: ident.id.sym.to_string(),
                         optional: ident.optional,
                         mutable: false,
                         ty: infer_ts_type_ann(&type_ann.type_ann, &self.ctx),
-                    };
+                    });
                     Some(param)
                 }
                 TsFnParam::Array(_) => {
@@ -249,15 +250,16 @@ impl InterfaceCollector {
                 TsFnParam::Rest(rest) => {
                     let type_ann = rest.type_ann.clone().unwrap();
                     let name = match rest.arg.as_ref() {
-                        Pat::Ident(BindingIdent {id, ..}) => id.sym.to_string(),
+                        Pat::Ident(BindingIdent { id, .. }) => id.sym.to_string(),
                         _ => format!("arg{index}"),
                     };
-                    let param = TParam {
+                    // TODO: replace this with FnParam::Rest
+                    let param = FnParam::Ident(types::BindingIdent {
                         name,
                         optional: false,
                         mutable: false,
                         ty: infer_ts_type_ann(&type_ann.type_ann, &self.ctx),
-                    };
+                    });
                     Some(param)
                 }
                 TsFnParam::Object(_) => {

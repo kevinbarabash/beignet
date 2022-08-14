@@ -6,7 +6,7 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
-use crochet_infer::types::{self, Scheme, Type, TParam, Variant};
+use crochet_infer::types::{self, Scheme, Type, FnParam, Variant};
 use crochet_infer::Context;
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
@@ -107,23 +107,27 @@ pub fn build_param(r#type: &Type, pattern: &ast::Pattern) -> TsFnParam {
     }
 }
 
-pub fn build_ts_fn_type_with_params(params: &[TParam], ret: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
+pub fn build_ts_fn_type_with_params(params: &[FnParam], ret: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
     let params: Vec<TsFnParam> = params
         .iter()
         .map(|param| {
             let type_ann = Some(TsTypeAnn {
                 span: DUMMY_SP,
-                type_ann: Box::from(build_type(&param.ty, None, None)),
+                type_ann: Box::from(build_type(&param.get_type(), None, None)),
             });
 
-            TsFnParam::Ident(BindingIdent {
-                id: Ident {
-                    span: DUMMY_SP,
-                    sym: JsWord::from(param.name.to_owned()),
-                    optional: false,
+            match param {
+                FnParam::Ident(bi) => {
+                    TsFnParam::Ident(BindingIdent {
+                        id: Ident {
+                            span: DUMMY_SP,
+                            sym: JsWord::from(bi.name.to_owned()),
+                            optional: false,
+                        },
+                        type_ann,
+                    })
                 },
-                type_ann,
-            })
+            }
         })
         .collect();
 
@@ -363,7 +367,7 @@ pub fn build_type(
                         let params: Vec<TsFnParam> = params
                             .iter()
                             .zip(&other_lam.params)
-                            .map(|(param, pattern)| build_param(&param.ty, pattern))
+                            .map(|(param, pattern)| build_param(&param.get_type(), pattern))
                             .collect();
 
                         TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {

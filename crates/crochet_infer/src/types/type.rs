@@ -58,23 +58,39 @@ pub struct AppType {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TParam {
+pub enum FnParam {
+    Ident(BindingIdent),
+    // TODO: add these later
+    // Array(ArrayPat),
+    // Rest(RestPat),
+    // Object(ObjectPat),
+}
+
+impl FnParam {
+    pub fn get_type(&self) -> Type {
+        match self {
+            FnParam::Ident(bi) => bi.ty.to_owned(),
+        }
+    }
+}
+
+impl fmt::Display for FnParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            FnParam::Ident(bi) => write!(f, "{bi}"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct BindingIdent {
     pub name: String,
     pub optional: bool,
     pub mutable: bool,
     pub ty: Type,
 }
 
-impl TParam {
-    pub fn get_type(&self, ctx: &Context) -> Type {
-        match self.optional {
-            true => ctx.union(vec![self.ty.to_owned(), ctx.prim(Primitive::Undefined)]),
-            false => self.ty.to_owned(),
-        }
-    }
-}
-
-impl fmt::Display for TParam {
+impl fmt::Display for BindingIdent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { name, optional, mutable, ty } = self;
         match (optional, mutable) {
@@ -88,7 +104,7 @@ impl fmt::Display for TParam {
 
 #[derive(Clone, Debug, Eq)]
 pub struct LamType {
-    pub params: Vec<TParam>,
+    pub params: Vec<FnParam>,
     pub ret: Box<Type>,
 }
 
@@ -158,7 +174,7 @@ pub enum Variant {
     Alias(AliasType),
     Tuple(Vec<Type>),
     Array(Box<Type>),
-    Rest(Box<Type>),
+    Rest(Box<Type>), // TODO: rename this to Spread
     Member(MemberType),
 }
 
