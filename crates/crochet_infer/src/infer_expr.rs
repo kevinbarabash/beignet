@@ -7,7 +7,7 @@ use super::infer_fn_param::infer_fn_param;
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
-use super::types::{self, Type, TFnParam, TPat, Variant};
+use super::types::{self, TFnParam, TPat, Type, Variant};
 use super::unify::unify;
 use super::util::*;
 
@@ -87,7 +87,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 match cond.as_ref() {
                     Expr::LetExpr(LetExpr { pat, expr, .. }) => {
                         // TODO: warn if the pattern isn't refutable
-                        let (s1, t1) = infer_let(pat, expr, consequent, ctx, &PatternUsage::Match)?;
+                        let (s1, t1) =
+                            infer_let(pat, &None, expr, consequent, ctx, &PatternUsage::Match)?;
                         let (s2, t2) = infer_expr(ctx, alternate)?;
 
                         let s = compose_many_subs(&[s1, s2]);
@@ -108,7 +109,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             }
             None => match cond.as_ref() {
                 Expr::LetExpr(LetExpr { pat, expr, .. }) => {
-                    let (s1, t1) = infer_let(pat, expr, consequent, ctx, &PatternUsage::Match)?;
+                    let (s1, t1) =
+                        infer_let(pat, &None, expr, consequent, ctx, &PatternUsage::Match)?;
                     let s2 = match unify(&t1, &ctx.prim(Primitive::Undefined), ctx) {
                         Ok(s) => Ok(s),
                         Err(_) => Err(String::from(
@@ -267,12 +269,13 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         }
         Expr::Let(Let {
             pattern,
+            type_ann,
             init,
             body,
             ..
         }) => {
             match pattern {
-                Some(pat) => infer_let(pat, init, body, ctx, &PatternUsage::Assign),
+                Some(pat) => infer_let(pat, type_ann, init, body, ctx, &PatternUsage::Assign),
                 None => {
                     // TODO: warn about unused values
                     infer_expr(ctx, body)
@@ -446,7 +449,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let mut ss: Vec<Subst> = vec![];
             let mut ts: Vec<Type> = vec![];
             for arm in arms {
-                let (s, t) = infer_let(&arm.pattern, expr, &arm.expr, ctx, &PatternUsage::Match)?;
+                let (s, t) = infer_let(
+                    &arm.pattern,
+                    &None,
+                    expr,
+                    &arm.expr,
+                    ctx,
+                    &PatternUsage::Match,
+                )?;
                 ss.push(s);
                 ts.push(t);
             }
@@ -470,13 +480,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
 fn infer_let(
     pat: &Pattern,
+    type_ann: &Option<TypeAnn>,
     init: &Expr,
     body: &Expr,
     ctx: &Context,
     pu: &PatternUsage,
 ) -> Result<(Subst, Type), String> {
     let mut new_ctx = ctx.clone();
-    let (pa, s1) = infer_pattern_and_init(pat, init, &mut new_ctx, pu)?;
+    let (pa, s1) = infer_pattern_and_init(pat, type_ann, init, &mut new_ctx, pu)?;
 
     // Inserts the new variables from infer_pattern_and_init() into the
     // current context.

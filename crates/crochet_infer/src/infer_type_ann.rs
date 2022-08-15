@@ -4,7 +4,8 @@ use std::iter::Iterator;
 use crochet_ast::*;
 
 use super::context::Context;
-use super::types::{self, Scheme, TFnParam, TPat, TProp, Type};
+use super::infer_fn_param::e_pat_to_t_pat;
+use super::types::{self, Scheme, TFnParam, TProp, Type};
 
 pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Scheme {
     match type_ann {
@@ -64,37 +65,9 @@ fn infer_type_ann_rec(
         TypeAnn::Lam(LamType { params, ret, .. }) => {
             let params: Vec<types::TFnParam> = params
                 .iter()
-                .enumerate()
-                .map(|(index, param)| {
-                    match &param {
-                        FnParam::Ident(BindingIdent { id, type_ann, .. }) => {
-                            // TODO: Update the AST to remove need for .unwrap() here
-                            let type_ann = type_ann.clone().unwrap();
-                            TFnParam {
-                                pat: TPat::Ident(types::BindingIdent {
-                                    name: id.name.to_owned(),
-                                    optional: false,
-                                    mutable: false,
-                                }),
-                                ty: infer_type_ann_rec(&type_ann, ctx, type_param_map),
-                            }
-                        }
-                        FnParam::Rest(RestPat { arg, type_ann, .. }) => {
-                            // TODO: Update the AST to remove need for .unwrap() here
-                            let type_ann = type_ann.clone().unwrap();
-
-                            TFnParam {
-                                pat: TPat::Rest(types::RestPat {
-                                    arg: Box::from(TPat::Ident(types::BindingIdent {
-                                        name: arg.as_ref().get_name(&index),
-                                        optional: false,
-                                        mutable: false,
-                                    })),
-                                }),
-                                ty: infer_type_ann_rec(&type_ann, ctx, type_param_map),
-                            }
-                        }
-                    }
+                .map(|param| TFnParam {
+                    pat: e_pat_to_t_pat(&param.pat),
+                    ty: infer_type_ann_rec(&param.type_ann, ctx, type_param_map),
                 })
                 .collect();
             let ret = Box::from(infer_type_ann_rec(ret.as_ref(), ctx, type_param_map));

@@ -47,7 +47,6 @@ Program {
                                         ),
                                     ],
                                     optional: false,
-                                    type_ann: None,
                                 },
                             ),
                             expr: Ident(

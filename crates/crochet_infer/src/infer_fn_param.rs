@@ -54,7 +54,7 @@ pub fn infer_fn_param(
     }
 }
 
-fn e_pat_to_t_pat(e_pat: &EFnParamPat) -> TPat {
+pub fn e_pat_to_t_pat(e_pat: &EFnParamPat) -> TPat {
     match e_pat {
         EFnParamPat::Ident(e_bi) => TPat::Ident(types::BindingIdent {
             name: e_bi.id.name.to_owned(),

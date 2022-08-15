@@ -13,9 +13,9 @@ Program {
                         span: 7..8,
                         name: "x",
                     },
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Lit(
                     Num(

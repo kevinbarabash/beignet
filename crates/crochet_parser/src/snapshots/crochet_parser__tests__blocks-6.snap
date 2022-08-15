@@ -13,14 +13,15 @@ Program {
                         span: 4..7,
                         name: "foo",
                     },
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Let(
                     Let {
                         span: 11..28,
                         pattern: None,
+                        type_ann: None,
                         init: App(
                             App {
                                 span: 11..25,

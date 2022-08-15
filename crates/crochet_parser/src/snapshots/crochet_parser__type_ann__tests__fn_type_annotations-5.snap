@@ -10,42 +10,42 @@ Union(
                 LamType {
                     span: 1..18,
                     params: [
-                        Ident(
-                            BindingIdent {
-                                span: 2..6,
-                                id: Ident {
-                                    span: 2..3,
-                                    name: "a",
+                        TypeAnnFnParam {
+                            pat: Ident(
+                                EFnParamBindingIdent {
+                                    span: 2..6,
+                                    id: Ident {
+                                        span: 2..3,
+                                        name: "a",
+                                    },
                                 },
-                                type_ann: Some(
-                                    TypeRef(
-                                        TypeRef {
-                                            span: 5..6,
-                                            name: "A",
-                                            type_params: None,
-                                        },
-                                    ),
-                                ),
-                            },
-                        ),
-                        Ident(
-                            BindingIdent {
-                                span: 8..12,
-                                id: Ident {
-                                    span: 8..9,
-                                    name: "b",
+                            ),
+                            type_ann: TypeRef(
+                                TypeRef {
+                                    span: 5..6,
+                                    name: "A",
+                                    type_params: None,
                                 },
-                                type_ann: Some(
-                                    TypeRef(
-                                        TypeRef {
-                                            span: 11..12,
-                                            name: "B",
-                                            type_params: None,
-                                        },
-                                    ),
-                                ),
-                            },
-                        ),
+                            ),
+                        },
+                        TypeAnnFnParam {
+                            pat: Ident(
+                                EFnParamBindingIdent {
+                                    span: 8..12,
+                                    id: Ident {
+                                        span: 8..9,
+                                        name: "b",
+                                    },
+                                },
+                            ),
+                            type_ann: TypeRef(
+                                TypeRef {
+                                    span: 11..12,
+                                    name: "B",
+                                    type_params: None,
+                                },
+                            ),
+                        },
                     ],
                     ret: TypeRef(
                         TypeRef {

@@ -17,10 +17,10 @@ Program {
                                     span: 5..8,
                                     name: "sum",
                                 },
-                                type_ann: None,
                             },
                         ),
                     ),
+                    type_ann: None,
                     init: Let(
                         Let {
                             span: 16..40,
@@ -32,10 +32,10 @@ Program {
                                             span: 16..17,
                                             name: "x",
                                         },
-                                        type_ann: None,
                                     },
                                 ),
                             ),
+                            type_ann: None,
                             init: Lit(
                                 Num(
                                     Num {
@@ -55,10 +55,10 @@ Program {
                                                     span: 27..28,
                                                     name: "y",
                                                 },
-                                                type_ann: None,
                                             },
                                         ),
                                     ),
+                                    type_ann: None,
                                     init: Lit(
                                         Num(
                                             Num {

@@ -13,9 +13,9 @@ Program {
                         span: 13..14,
                         name: "S",
                     },
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Lambda(
                     Lambda {
@@ -149,9 +149,9 @@ Program {
                         span: 61..62,
                         name: "K",
                     },
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Lambda(
                     Lambda {
@@ -215,9 +215,9 @@ Program {
                         span: 93..94,
                         name: "I",
                     },
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 App(
                     App {

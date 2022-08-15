@@ -29,7 +29,6 @@ Program {
                                                             span: 11..12,
                                                             name: "a",
                                                         },
-                                                        type_ann: None,
                                                     },
                                                 ),
                                             },
@@ -47,14 +46,12 @@ Program {
                                                             span: 17..18,
                                                             name: "b",
                                                         },
-                                                        type_ann: None,
                                                     },
                                                 ),
                                             },
                                         ),
                                     ],
                                     optional: false,
-                                    type_ann: None,
                                 },
                             ),
                             expr: Ident(
@@ -69,6 +66,7 @@ Program {
                         Let {
                             span: 26..0,
                             pattern: None,
+                            type_ann: None,
                             init: Op(
                                 Op {
                                     span: 26..31,

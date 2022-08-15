@@ -13,9 +13,9 @@ Program {
                         span: 4..11,
                         name: "get_bar",
                     },
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Lambda(
                     Lambda {

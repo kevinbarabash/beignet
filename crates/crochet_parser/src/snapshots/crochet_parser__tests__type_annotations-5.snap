@@ -13,17 +13,17 @@ Program {
                         span: 4..7,
                         name: "FOO",
                     },
-                    type_ann: Some(
-                        Lit(
-                            Str(
-                                Str {
-                                    span: 9..14,
-                                    value: "foo",
-                                },
-                            ),
-                        ),
-                    ),
                 },
+            ),
+            type_ann: Some(
+                Lit(
+                    Str(
+                        Str {
+                            span: 9..14,
+                            value: "foo",
+                        },
+                    ),
+                ),
             ),
             init: Some(
                 Lit(

@@ -1,13 +1,20 @@
-use crate::pattern::{BindingIdent, RestPat};
-use crate::span::Span;
-use crate::literal::Lit;
+use crate::expr::EFnParamPat;
 use crate::ident::Ident;
+use crate::literal::Lit;
+use crate::pattern::{BindingIdent, RestPat};
 use crate::prim::Primitive;
+use crate::span::Span;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeAnnFnParam {
+    pub pat: EFnParamPat,
+    pub type_ann: TypeAnn,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LamType {
     pub span: Span,
-    pub params: Vec<FnParam>,
+    pub params: Vec<TypeAnnFnParam>,
     pub ret: Box<TypeAnn>,
     pub type_params: Option<Vec<TypeParam>>,
 }

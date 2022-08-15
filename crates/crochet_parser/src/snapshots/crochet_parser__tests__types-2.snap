@@ -13,42 +13,42 @@ Program {
                         span: 12..19,
                         name: "get_bar",
                     },
-                    type_ann: Some(
-                        Lam(
-                            LamType {
-                                span: 21..36,
-                                params: [
-                                    Ident(
-                                        BindingIdent {
-                                            span: 22..30,
-                                            id: Ident {
-                                                span: 22..25,
-                                                name: "foo",
-                                            },
-                                            type_ann: Some(
-                                                TypeRef(
-                                                    TypeRef {
-                                                        span: 27..30,
-                                                        name: "Foo",
-                                                        type_params: None,
-                                                    },
-                                                ),
-                                            ),
+                },
+            ),
+            type_ann: Some(
+                Lam(
+                    LamType {
+                        span: 21..36,
+                        params: [
+                            TypeAnnFnParam {
+                                pat: Ident(
+                                    EFnParamBindingIdent {
+                                        span: 22..30,
+                                        id: Ident {
+                                            span: 22..25,
+                                            name: "foo",
                                         },
-                                    ),
-                                ],
-                                ret: TypeRef(
+                                    },
+                                ),
+                                type_ann: TypeRef(
                                     TypeRef {
-                                        span: 35..36,
-                                        name: "T",
+                                        span: 27..30,
+                                        name: "Foo",
                                         type_params: None,
                                     },
                                 ),
+                            },
+                        ],
+                        ret: TypeRef(
+                            TypeRef {
+                                span: 35..36,
+                                name: "T",
                                 type_params: None,
                             },
                         ),
-                    ),
-                },
+                        type_params: None,
+                    },
+                ),
             ),
             init: None,
             declare: true,

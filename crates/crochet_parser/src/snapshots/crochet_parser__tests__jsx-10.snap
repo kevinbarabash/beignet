@@ -13,9 +13,9 @@ Program {
                         span: 4..8,
                         name: "elem",
                     },
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 JSXElement(
                     JSXElement {

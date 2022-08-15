@@ -13,9 +13,9 @@ Program {
                         span: 4..7,
                         name: "add",
                     },
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Lambda(
                     Lambda {

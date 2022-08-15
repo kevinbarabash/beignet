@@ -32,6 +32,11 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
 
         let block = just("let")
             .ignore_then(pattern.clone())
+            .then(
+                just_with_padding(":")
+                    .ignore_then(type_ann.clone())
+                    .or_not(),
+            )
             .then_ignore(just_with_padding("="))
             .or_not()
             .then(expr.clone())
@@ -58,16 +63,30 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                     }
                 };
 
-                let result: Expr = iter.fold(last, |body, (pattern, value)| {
-                    let start = match pattern {
-                        Some(pattern) => pattern.span().start,
+                let result: Expr = iter.fold(last, |body, (pattern_and_type, value)| {
+                    let start = match pattern_and_type {
+                        Some(pattern_and_type) => pattern_and_type.0.span().start,
                         None => value.span().start,
                     };
                     let end = body.span().end;
 
+                    let (pattern, type_ann) = match pattern_and_type {
+                        Some(pattern_and_type) => {
+                            let (pattern, type_ann) = pattern_and_type;
+                            match type_ann {
+                                Some(type_ann) => {
+                                    (Some(pattern.to_owned()), Some(type_ann.to_owned()))
+                                }
+                                None => (Some(pattern.to_owned()), None),
+                            }
+                        }
+                        None => (None, None),
+                    };
+
                     Expr::Let(Let {
                         span: start..end,
-                        pattern: pattern.to_owned(),
+                        pattern,
+                        type_ann,
                         init: Box::new(value.to_owned()),
                         body: Box::new(body),
                     })
@@ -144,7 +163,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
                     span,
                     name,
-                    value,
+                    value: Box::from(value),
                 })))
             });
 

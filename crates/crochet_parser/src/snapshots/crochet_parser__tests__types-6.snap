@@ -13,25 +13,25 @@ Program {
                         span: 4..14,
                         name: "nested_arr",
                     },
-                    type_ann: Some(
-                        Array(
+                },
+            ),
+            type_ann: Some(
+                Array(
+                    ArrayType {
+                        span: 0..0,
+                        elem_type: Array(
                             ArrayType {
                                 span: 0..0,
-                                elem_type: Array(
-                                    ArrayType {
-                                        span: 0..0,
-                                        elem_type: Prim(
-                                            PrimType {
-                                                span: 16..22,
-                                                prim: Str,
-                                            },
-                                        ),
+                                elem_type: Prim(
+                                    PrimType {
+                                        span: 16..22,
+                                        prim: Str,
                                     },
                                 ),
                             },
                         ),
-                    ),
-                },
+                    },
+                ),
             ),
             init: Some(
                 Tuple(

@@ -17,10 +17,10 @@ Program {
                                     span: 5..6,
                                     name: "x",
                                 },
-                                type_ann: None,
                             },
                         ),
                     ),
+                    type_ann: None,
                     init: Lit(
                         Num(
                             Num {
@@ -40,10 +40,10 @@ Program {
                                             span: 16..17,
                                             name: "y",
                                         },
-                                        type_ann: None,
                                     },
                                 ),
                             ),
+                            type_ann: None,
                             init: Lit(
                                 Num(
                                     Num {
