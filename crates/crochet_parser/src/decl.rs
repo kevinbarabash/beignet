@@ -35,6 +35,7 @@ pub fn decl_parser() -> impl Parser<char, Statement, Error = Simple<char>> {
                             Pattern::Ident(bi) => bi.id.to_owned(),
                             _ => panic!("rec can only be used with identifier patterns"),
                         };
+
                         let fix = Expr::Fix(Fix {
                             span: init.span(),
                             expr: Box::from(Expr::Lambda(Lambda {
@@ -44,8 +45,7 @@ pub fn decl_parser() -> impl Parser<char, Statement, Error = Simple<char>> {
                                         span: 0..0,
                                         id,
                                     }),
-                                    // TODO: grab this from the pattern
-                                    type_ann: None,
+                                    type_ann: type_ann.clone(),
                                 }],
                                 body: Box::from(init),
                                 is_async: false,
