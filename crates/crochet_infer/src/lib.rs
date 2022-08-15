@@ -1,5 +1,6 @@
 mod context;
 mod infer_expr;
+mod infer_fn_param;
 mod infer_pattern;
 mod infer_type_ann;
 mod substitutable;
@@ -24,7 +25,6 @@ mod tests {
         let mut ctx = Context::default();
         let expr = expr_parser().parse(input).unwrap();
         let scheme = infer::infer_expr(&mut ctx, &expr).unwrap();
-        println!("scheme = {:#?}", scheme);
         format!("{scheme}")
     }
 
@@ -232,21 +232,21 @@ mod tests {
     fn infer_destructuring_function_params() {
         let result = infer("([x, y]) => x + y");
 
-        assert_eq!(result, "(arg0: [number, number]) => number");
+        assert_eq!(result, "([x, y]: [number, number]) => number");
     }
 
     #[test]
     fn infer_destructuring_function_params_with_type_annotations() {
         let result = infer("([x, y]: [string, boolean]) => [x, y]");
 
-        assert_eq!(result, "(arg0: [string, boolean]) => [string, boolean]");
+        assert_eq!(result, "([x, y]: [string, boolean]) => [string, boolean]");
     }
 
     #[test]
     fn infer_incomplete_destructuring_function_params_with_type_annotations() {
         let result = infer("([x]: [string, boolean]) => x");
 
-        assert_eq!(result, "(arg0: [string, boolean]) => string");
+        assert_eq!(result, "([x]: [string, boolean]) => string");
     }
 
     #[test]
@@ -494,7 +494,15 @@ mod tests {
     fn obj_param_destructuring() {
         assert_eq!(
             infer("({x, y}) => x + y"),
-            "(arg0: {x: number, y: number}) => number"
+            "({x, y}: {x: number, y: number}) => number"
+        );
+    }
+
+    #[test]
+    fn obj_param_destructuring_with_renaming() {
+        assert_eq!(
+            infer("({x: p, y: q}) => p + q"),
+            "({x: p, y: q}: {x: number, y: number}) => number"
         );
     }
 
@@ -502,7 +510,7 @@ mod tests {
     fn obj_param_destructuring_with_type_annotation() {
         assert_eq!(
             infer("({x, y}: {x: 5, y: 10}) => x + y"),
-            "(arg0: {x: 5, y: 10}) => number"
+            "({x, y}: {x: 5, y: 10}) => number"
         );
     }
 
@@ -510,7 +518,7 @@ mod tests {
     fn obj_param_partial_destructuring_with_type_annotation() {
         assert_eq!(
             infer("({a}: {a: string, b: boolean}) => a"),
-            "(arg0: {a: string, b: boolean}) => string"
+            "({a}: {a: string, b: boolean}) => string"
         );
     }
 
@@ -1251,7 +1259,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fst", &ctx), "(a: number, arg1: ...number[]) => number");
+        assert_eq!(get_type("fst", &ctx), "(a: number, ...b: number[]) => number");
         assert_eq!(get_type("result", &ctx), "number");
     }
 

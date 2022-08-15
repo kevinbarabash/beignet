@@ -24,16 +24,18 @@ Program {
                             Lambda {
                                 span: 12..21,
                                 params: [
-                                    Ident(
-                                        BindingIdent {
-                                            span: 8..9,
-                                            id: Ident {
-                                                span: 8..9,
-                                                name: "f",
+                                    EFnParam {
+                                        pat: Ident(
+                                            EFnParamBindingIdent {
+                                                span: 0..0,
+                                                id: Ident {
+                                                    span: 8..9,
+                                                    name: "f",
+                                                },
                                             },
-                                            type_ann: None,
-                                        },
-                                    ),
+                                        ),
+                                        type_ann: None,
+                                    },
                                 ],
                                 body: Lambda(
                                     Lambda {

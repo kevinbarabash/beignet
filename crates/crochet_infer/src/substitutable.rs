@@ -93,11 +93,11 @@ impl Substitutable for TProp {
     }
 }
 
-impl Substitutable for TParam {
-    fn apply(&self, sub: &Subst) -> TParam {
-        TParam {
+impl Substitutable for TFnParam {
+    fn apply(&self, sub: &Subst) -> TFnParam {
+        TFnParam {
+            pat: self.pat.to_owned(),
             ty: self.ty.apply(sub),
-            ..self.to_owned()
         }
     }
     fn ftv(&self) -> HashSet<i32> {

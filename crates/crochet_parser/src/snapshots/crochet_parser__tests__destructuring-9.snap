@@ -21,67 +21,66 @@ Program {
                     Lambda {
                         span: 10..47,
                         params: [
-                            Object(
-                                ObjectPat {
-                                    span: 11..41,
-                                    props: [
-                                        Assign(
-                                            AssignPatProp {
-                                                span: 12..13,
-                                                key: Ident {
-                                                    span: 12..13,
-                                                    name: "a",
-                                                },
-                                                value: None,
-                                            },
-                                        ),
-                                        Assign(
-                                            AssignPatProp {
-                                                span: 15..16,
-                                                key: Ident {
-                                                    span: 15..16,
-                                                    name: "b",
-                                                },
-                                                value: None,
-                                            },
-                                        ),
-                                    ],
-                                    optional: false,
-                                    type_ann: Some(
-                                        Object(
-                                            ObjectType {
-                                                span: 19..41,
-                                                props: [
-                                                    TProp {
-                                                        span: 20..29,
+                            EFnParam {
+                                pat: Object(
+                                    EFnParamObjectPat {
+                                        span: 11..17,
+                                        props: [
+                                            Assign(
+                                                EFnParamAssignPatProp {
+                                                    key: Ident {
+                                                        span: 12..13,
                                                         name: "a",
-                                                        optional: false,
-                                                        mutable: false,
-                                                        type_ann: Prim(
-                                                            PrimType {
-                                                                span: 23..29,
-                                                                prim: Str,
-                                                            },
-                                                        ),
                                                     },
-                                                    TProp {
-                                                        span: 31..40,
+                                                    value: None,
+                                                },
+                                            ),
+                                            Assign(
+                                                EFnParamAssignPatProp {
+                                                    key: Ident {
+                                                        span: 15..16,
                                                         name: "b",
-                                                        optional: false,
-                                                        mutable: false,
-                                                        type_ann: Prim(
-                                                            PrimType {
-                                                                span: 34..40,
-                                                                prim: Num,
-                                                            },
-                                                        ),
                                                     },
-                                                ],
-                                            },
-                                        ),
+                                                    value: None,
+                                                },
+                                            ),
+                                        ],
+                                    },
+                                ),
+                                type_ann: Some(
+                                    Object(
+                                        ObjectType {
+                                            span: 19..41,
+                                            props: [
+                                                TProp {
+                                                    span: 20..29,
+                                                    name: "a",
+                                                    optional: false,
+                                                    mutable: false,
+                                                    type_ann: Prim(
+                                                        PrimType {
+                                                            span: 23..29,
+                                                            prim: Str,
+                                                        },
+                                                    ),
+                                                },
+                                                TProp {
+                                                    span: 31..40,
+                                                    name: "b",
+                                                    optional: false,
+                                                    mutable: false,
+                                                    type_ann: Prim(
+                                                        PrimType {
+                                                            span: 34..40,
+                                                            prim: Num,
+                                                        },
+                                                    ),
+                                                },
+                                            ],
+                                        },
                                     ),
-                                },
-                            ),
+                                ),
+                            },
                         ],
                         body: Ident(
                             Ident {

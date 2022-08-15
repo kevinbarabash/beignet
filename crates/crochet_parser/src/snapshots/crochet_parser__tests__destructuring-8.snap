@@ -21,35 +21,34 @@ Program {
                     Lambda {
                         span: 10..23,
                         params: [
-                            Object(
-                                ObjectPat {
-                                    span: 11..17,
-                                    props: [
-                                        Assign(
-                                            AssignPatProp {
-                                                span: 12..13,
-                                                key: Ident {
-                                                    span: 12..13,
-                                                    name: "a",
+                            EFnParam {
+                                pat: Object(
+                                    EFnParamObjectPat {
+                                        span: 11..17,
+                                        props: [
+                                            Assign(
+                                                EFnParamAssignPatProp {
+                                                    key: Ident {
+                                                        span: 12..13,
+                                                        name: "a",
+                                                    },
+                                                    value: None,
                                                 },
-                                                value: None,
-                                            },
-                                        ),
-                                        Assign(
-                                            AssignPatProp {
-                                                span: 15..16,
-                                                key: Ident {
-                                                    span: 15..16,
-                                                    name: "b",
+                                            ),
+                                            Assign(
+                                                EFnParamAssignPatProp {
+                                                    key: Ident {
+                                                        span: 15..16,
+                                                        name: "b",
+                                                    },
+                                                    value: None,
                                                 },
-                                                value: None,
-                                            },
-                                        ),
-                                    ],
-                                    optional: false,
-                                    type_ann: None,
-                                },
-                            ),
+                                            ),
+                                        ],
+                                    },
+                                ),
+                                type_ann: None,
+                            },
                         ],
                         body: Ident(
                             Ident {

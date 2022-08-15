@@ -2,13 +2,12 @@ use std::collections::HashMap;
 
 use crochet_ast::*;
 
-use crate::types::TParam;
-
 use super::context::{lookup_alias, Context};
+use super::infer_fn_param::infer_fn_param;
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
-use super::types::{self, Type, Variant};
+use super::types::{self, Type, TFnParam, TPat, Variant};
 use super::unify::unify;
 use super::util::*;
 
@@ -58,10 +57,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         Expr::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer_expr(ctx, expr)?;
             let tv = ctx.fresh_var();
-            let param = TParam {
-                name: String::from("fix_param"),
-                optional: false,
-                mutable: false,
+            let param = TFnParam {
+                pat: TPat::Ident(types::BindingIdent {
+                    name: String::from("fix_param"),
+                    optional: false,
+                    mutable: false,
+                }),
                 ty: tv.clone(),
             };
             let s2 = unify(&ctx.lam(vec![param], Box::from(tv.clone())), &t, ctx)?;
@@ -222,30 +223,22 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 None => HashMap::default(),
             };
 
-            let params: Result<Vec<(Subst, TParam)>, String> = params
+            let params: Result<Vec<(Subst, TFnParam)>, String> = params
                 .iter()
-                .enumerate()
-                .map(|(index, param)| {
-                    let (ps, pa, pt) = infer_pattern(param, &new_ctx, &type_params_map)?;
+                .map(|e_param| {
+                    let (ps, pa, t_param) = infer_fn_param(e_param, &new_ctx, &type_params_map)?;
 
-                    // Inserts any new variables introduced by infer_pattern() into
+                    // Inserts any new variables introduced by infer_fn_param() into
                     // the current context.
                     for (name, scheme) in pa {
                         new_ctx.values.insert(name, scheme);
                     }
 
-                    let param = TParam {
-                        name: param.get_name(&index),
-                        optional: false,
-                        mutable: false,
-                        ty: pt,
-                    };
-
-                    Ok((ps, param))
+                    Ok((ps, t_param))
                 })
                 .collect();
 
-            let (ss, ts): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
+            let (ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
             let (rs, rt) = infer_expr(&mut new_ctx, body)?;
 
@@ -266,7 +259,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 )?,
                 None => Subst::default(),
             };
-            let t = ctx.lam(ts, Box::from(rt));
+            let t = ctx.lam(t_params, Box::from(rt));
             let s = compose_subs(&s, &compose_subs(&rs, &compose_many_subs(&ss)));
             let t = t.apply(&s);
 
@@ -485,7 +478,7 @@ fn infer_let(
     let mut new_ctx = ctx.clone();
     let (pa, s1) = infer_pattern_and_init(pat, init, &mut new_ctx, pu)?;
 
-    // Inserts the new variables from infer_pattern() into the
+    // Inserts the new variables from infer_pattern_and_init() into the
     // current context.
     for (name, scheme) in pa {
         new_ctx.values.insert(name.to_owned(), scheme.to_owned());

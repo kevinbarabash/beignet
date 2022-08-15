@@ -21,34 +21,36 @@ Program {
                     Lambda {
                         span: 14..41,
                         params: [
-                            Ident(
-                                BindingIdent {
-                                    span: 18..21,
-                                    id: Ident {
+                            EFnParam {
+                                pat: Ident(
+                                    EFnParamBindingIdent {
                                         span: 18..21,
-                                        name: "foo",
+                                        id: Ident {
+                                            span: 18..21,
+                                            name: "foo",
+                                        },
                                     },
-                                    type_ann: Some(
-                                        TypeRef(
-                                            TypeRef {
-                                                span: 23..29,
-                                                name: "Foo",
-                                                type_params: Some(
-                                                    [
-                                                        TypeRef(
-                                                            TypeRef {
-                                                                span: 27..28,
-                                                                name: "T",
-                                                                type_params: None,
-                                                            },
-                                                        ),
-                                                    ],
-                                                ),
-                                            },
-                                        ),
+                                ),
+                                type_ann: Some(
+                                    TypeRef(
+                                        TypeRef {
+                                            span: 23..29,
+                                            name: "Foo",
+                                            type_params: Some(
+                                                [
+                                                    TypeRef(
+                                                        TypeRef {
+                                                            span: 27..28,
+                                                            name: "T",
+                                                            type_params: None,
+                                                        },
+                                                    ),
+                                                ],
+                                            ),
+                                        },
                                     ),
-                                },
-                            ),
+                                ),
+                            },
                         ],
                         body: Member(
                             Member {

@@ -12,6 +12,7 @@ pub struct LamType {
     pub type_params: Option<Vec<TypeParam>>,
 }
 
+// TODO: replace this with FnParam from expr
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FnParam {
     Ident(BindingIdent),

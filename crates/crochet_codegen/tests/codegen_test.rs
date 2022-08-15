@@ -1,7 +1,9 @@
 use chumsky::prelude::*;
 
 use crochet_codegen::js::codegen_js;
+use crochet_codegen::d_ts::codegen_d_ts;
 use crochet_parser::parser;
+use crochet_infer::{infer_prog, Context};
 
 fn compile(input: &str) -> String {
     let program = parser().parse(input).unwrap();
@@ -383,5 +385,27 @@ fn codegen_block_with_multiple_non_let_lines() {
         x + 0;
         $temp_0 = x;
     }export const result = $temp_0;
+    "###);
+}
+
+#[test]
+fn destructuring_function_params() {
+    let src = r#"
+    let foo = ({x, y}) => x + y
+    "#;
+
+    insta::assert_snapshot!(compile(src), @"export const foo = ({ x , y  })=>x + y;
+");
+
+    let program = parser().parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const foo: ({ x , y  }: {
+        readonly x: number;
+        readonly y: number;
+    }) => number;
     "###);
 }

@@ -6,7 +6,7 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
-use crochet_infer::types::{self, Scheme, Type, TParam, Variant};
+use crochet_infer::types::{self, Scheme, TFnParam, TPat, Type, Variant};
 use crochet_infer::Context;
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
@@ -82,48 +82,199 @@ pub fn build_ident(id: &ast::Ident) -> Ident {
     }
 }
 
-pub fn build_param(r#type: &Type, pattern: &ast::Pattern) -> TsFnParam {
+pub fn build_param(r#type: &Type, e_param: &ast::EFnParam) -> TsFnParam {
     let type_ann = Some(TsTypeAnn {
         span: DUMMY_SP,
         type_ann: Box::from(build_type(r#type, None, None)),
     });
 
-    match pattern {
-        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => TsFnParam::Ident(BindingIdent {
-            id: build_ident(id),
-            type_ann,
-        }),
-        ast::Pattern::Wildcard(_) => todo!(),
-        ast::Pattern::Rest(ast::RestPat { arg, .. }) => TsFnParam::Rest(RestPat {
-            span: DUMMY_SP,
-            dot3_token: DUMMY_SP,
-            arg: Box::from(build_pattern_rec(arg.as_ref())),
-            type_ann,
-        }),
-        ast::Pattern::Object(_) => todo!(),
-        ast::Pattern::Array(_) => todo!(),
-        ast::Pattern::Lit(_) => todo!(),
-        ast::Pattern::Is(_) => todo!(),
+    let pat = build_param_pat_rec(&e_param.pat, type_ann);
+
+    match pat {
+        Pat::Ident(bi) => TsFnParam::Ident(bi),
+        Pat::Array(array) => TsFnParam::Array(array),
+        Pat::Rest(rest) => TsFnParam::Rest(rest),
+        Pat::Object(obj) => TsFnParam::Object(obj),
+        Pat::Assign(_) => todo!(),
+        Pat::Invalid(_) => todo!(),
+        Pat::Expr(_) => todo!(),
     }
 }
 
-pub fn build_ts_fn_type_with_params(params: &[TParam], ret: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
+pub fn build_param_pat_rec(pattern: &ast::EFnParamPat, type_ann: Option<TsTypeAnn>) -> Pat {
+    match pattern {
+        ast::EFnParamPat::Ident(ast::EFnParamBindingIdent { id, .. }) => Pat::Ident(BindingIdent {
+            id: build_ident(id),
+            type_ann,
+        }),
+        ast::EFnParamPat::Rest(ast::EFnParamRestPat { arg, .. }) => Pat::Rest(RestPat {
+            span: DUMMY_SP,
+            dot3_token: DUMMY_SP,
+            arg: Box::from(build_param_pat_rec(arg.as_ref(), None)),
+            type_ann,
+        }),
+        ast::EFnParamPat::Object(ast::EFnParamObjectPat { props, .. }) => {
+            let props: Vec<ObjectPatProp> = props
+                .iter()
+                .map(|prop| match prop {
+                    ast::EFnParamObjectPatProp::KeyValue(kv) => {
+                        ObjectPatProp::KeyValue(KeyValuePatProp {
+                            key: PropName::Ident(build_ident(&kv.key)),
+                            value: Box::from(build_param_pat_rec(kv.value.as_ref(), None)),
+                        })
+                    }
+                    ast::EFnParamObjectPatProp::Assign(assign) => {
+                        ObjectPatProp::Assign(AssignPatProp {
+                            span: DUMMY_SP,
+                            key: build_ident(&assign.key),
+                            // TODO: handle default values
+                            value: None,
+                        })
+                    }
+                    ast::EFnParamObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
+                        span: DUMMY_SP,
+                        dot3_token: DUMMY_SP,
+                        arg: Box::from(build_param_pat_rec(rest.arg.as_ref(), None)),
+                        type_ann: None,
+                    }),
+                })
+                .collect();
+            Pat::Object(ObjectPat {
+                span: DUMMY_SP,
+                props,
+                optional: false,
+                type_ann,
+            })
+        }
+        ast::EFnParamPat::Array(array) => {
+            let elems = array
+                .elems
+                .iter()
+                .map(|elem| elem.as_ref().map(|elem| build_param_pat_rec(elem, None)))
+                .collect();
+            Pat::Array(ArrayPat {
+                span: DUMMY_SP,
+                elems,
+                optional: false,
+                type_ann,
+            })
+        }
+    }
+}
+
+pub fn build_ts_pattern(pat: &TPat) -> Pat {
+    match pat {
+        TPat::Ident(bi) => Pat::Ident(BindingIdent {
+            id: Ident {
+                span: DUMMY_SP,
+                sym: JsWord::from(bi.name.to_owned()),
+                optional: false,
+            },
+            type_ann: None,
+        }),
+        _ => todo!(),
+    }
+}
+
+fn tpat_to_pat(pat: &TPat, type_ann: Option<TsTypeAnn>) -> Pat {
+    match pat {
+        TPat::Ident(bi) => Pat::Ident(BindingIdent {
+            id: Ident {
+                span: DUMMY_SP,
+                sym: JsWord::from(bi.name.to_owned()),
+                optional: bi.optional,
+            },
+            type_ann,
+        }),
+        TPat::Rest(rest) => Pat::Rest(RestPat {
+            span: DUMMY_SP,
+            dot3_token: DUMMY_SP,
+            arg: Box::from(tpat_to_pat(rest.arg.as_ref(), None)),
+            type_ann,
+        }),
+        TPat::Array(array) => Pat::Array(ArrayPat {
+            span: DUMMY_SP,
+            elems: array
+                .elems
+                .iter()
+                .map(|elem| elem.as_ref().map(|elem| tpat_to_pat(elem, None)))
+                .collect(),
+            optional: false,
+            type_ann,
+        }),
+        TPat::Object(obj) => {
+            let props: Vec<ObjectPatProp> = obj
+                .props
+                .iter()
+                .map(|prop| {
+                    match prop {
+                        types::TObjectPatProp::KeyValue(kv) => {
+                            ObjectPatProp::KeyValue(KeyValuePatProp {
+                                key: PropName::Ident(Ident {
+                                    span: DUMMY_SP,
+                                    sym: JsWord::from(kv.key.clone()),
+                                    optional: false,
+                                }),
+                                value: Box::from(tpat_to_pat(&kv.value, None)),
+                            })
+                        }
+                        types::TObjectPatProp::Assign(assign) => {
+                            ObjectPatProp::Assign(AssignPatProp {
+                                span: DUMMY_SP,
+                                key: Ident {
+                                    span: DUMMY_SP,
+                                    sym: JsWord::from(assign.key.clone()),
+                                    optional: false,
+                                },
+                                // TODO: handle default values
+                                value: None,
+                            })
+                        }
+                        types::TObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
+                            span: DUMMY_SP,
+                            dot3_token: DUMMY_SP,
+                            arg: Box::from(tpat_to_pat(rest.arg.as_ref(), None)),
+                            type_ann: None,
+                        }),
+                    }
+                })
+                .collect();
+            Pat::Object(ObjectPat {
+                span: DUMMY_SP,
+                props,
+                optional: false,
+                type_ann,
+            })
+        }
+    }
+}
+
+pub fn build_ts_fn_type_with_params(
+    params: &[TFnParam],
+    ret: &Type,
+    type_params: Option<TsTypeParamDecl>,
+) -> TsType {
     let params: Vec<TsFnParam> = params
         .iter()
         .map(|param| {
             let type_ann = Some(TsTypeAnn {
                 span: DUMMY_SP,
-                type_ann: Box::from(build_type(&param.ty, None, None)),
+                type_ann: Box::from(build_type(&param.get_type(), None, None)),
             });
 
-            TsFnParam::Ident(BindingIdent {
-                id: Ident {
-                    span: DUMMY_SP,
-                    sym: JsWord::from(param.name.to_owned()),
-                    optional: false,
-                },
-                type_ann,
-            })
+            let pat = tpat_to_pat(&param.pat, type_ann);
+
+            let result: TsFnParam = match pat {
+                Pat::Ident(bi) => TsFnParam::Ident(bi),
+                Pat::Array(array) => TsFnParam::Array(array),
+                Pat::Rest(rest) => TsFnParam::Rest(rest),
+                Pat::Object(obj) => TsFnParam::Object(obj),
+                Pat::Assign(_) => todo!(),
+                Pat::Invalid(_) => todo!(),
+                Pat::Expr(_) => todo!(),
+            };
+
+            result
         })
         .collect();
 
@@ -138,7 +289,11 @@ pub fn build_ts_fn_type_with_params(params: &[TParam], ret: &Type, type_params: 
     }))
 }
 
-pub fn build_ts_fn_type_with_args(args: &[Type], ret: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
+pub fn build_ts_fn_type_with_args(
+    args: &[Type],
+    ret: &Type,
+    type_params: Option<TsTypeParamDecl>,
+) -> TsType {
     let args: Vec<TsFnParam> = args
         .iter()
         .enumerate()
@@ -326,7 +481,7 @@ pub fn build_type(
                         let args: Vec<TsFnParam> = args
                             .iter()
                             .zip(params)
-                            .map(|(arg, pattern)| build_param(arg, pattern))
+                            .map(|(arg, param)| build_param(arg, param))
                             .collect();
 
                         TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
@@ -363,7 +518,7 @@ pub fn build_type(
                         let params: Vec<TsFnParam> = params
                             .iter()
                             .zip(&other_lam.params)
-                            .map(|(param, pattern)| build_param(&param.ty, pattern))
+                            .map(|(t_param, e_param)| build_param(&t_param.get_type(), e_param))
                             .collect();
 
                         TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {

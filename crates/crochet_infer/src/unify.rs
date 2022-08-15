@@ -2,7 +2,7 @@ use crochet_ast::Primitive;
 
 use super::context::{lookup_alias, Context};
 use super::substitutable::{Subst, Substitutable};
-use super::types::{self, TParam, Type, Variant};
+use super::types::{self, TFnParam, Type, Variant};
 use super::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
@@ -51,7 +51,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     // NOTE: The order of params is reversed.  This allows a callback
                     // whose params can accept more values (are supertypes) than the
                     // function will pass to the callback.
-                    let s1 = unify(&p2.ty.apply(&s), &p1.ty.apply(&s), ctx)?;
+                    let s1 = unify(
+                        &p2.get_type().apply(&s),
+                        &p1.get_type().apply(&s),
+                        ctx,
+                    )?;
                     s = compose_subs(&s, &s1);
                 }
                 let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
@@ -67,8 +71,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
             let last_param_2 = lam.params.last();
             let maybe_rest_param = if let Some(param) = last_param_2 {
-                match &param.ty.variant {
-                    Variant::Rest(rest) => Some(rest.as_ref()),
+                match &param.pat {
+                    types::TPat::Rest(_) => Some(param.ty.to_owned()),
                     _ => None,
                 }
             } else {
@@ -131,12 +135,12 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     // Each argument must be a subtype of the corresponding param.
                     let arg = p1.apply(&s);
                     let param = p2.apply(&s);
-                    let s1 = unify(&arg, &param.ty, ctx)?;
+                    let s1 = unify(&arg, &param.get_type(), ctx)?;
                     s = compose_subs(&s, &s1);
                 }
 
                 // Unify remaining args with the rest param
-                let s1 = unify(&rest_arg, rest_param, ctx)?;
+                let s1 = unify(&rest_arg, &rest_param, ctx)?;
 
                 // Unify return types
                 let s2 = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
@@ -151,14 +155,14 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
                 if is_partial {
                     // Partial Application
-                    let mut partial_params: Vec<TParam> = vec![];
+                    let mut partial_params: Vec<TFnParam> = vec![];
                     for (arg, param) in args.iter().zip(&lam.params) {
                         match arg.variant {
                             Variant::Wildcard => partial_params.push(param.to_owned()),
                             _ => {
                                 let arg = arg.apply(&s);
                                 let param = param.apply(&s);
-                                let s1 = unify(&arg, &param.ty, ctx)?;
+                                let s1 = unify(&arg, &param.get_type(), ctx)?;
                                 s = compose_subs(&s, &s1);
                             }
                         };
@@ -173,7 +177,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     for (p1, p2) in args.iter().zip(&lam.params) {
                         // Each argument must be a subtype of the corresponding param.
                         let arg = p1.apply(&s);
-                        let param = p2.ty.apply(&s);
+                        let param = p2.get_type().apply(&s);
                         let s1 = unify(&arg, &param, ctx)?;
                         s = compose_subs(&s, &s1);
                     }
@@ -332,8 +336,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
             let obj_type = simplify_intersection(&obj_types, ctx);
 
-            println!("rest_types.len() = {}", rest_types.len());
-
             match rest_types.len() {
                 0 => unify(t1, &obj_type, ctx),
                 1 => {
@@ -423,6 +425,9 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         (Variant::Alias(alias), _) => {
             let alias_t = lookup_alias(ctx, alias)?;
             unify(&alias_t, t2, ctx)
+        }
+        (Variant::Array(array_arg), Variant::Rest(rest_arg)) => {
+            unify(array_arg.as_ref(), rest_arg.as_ref(), ctx)
         }
         (v1, v2) => {
             if v1 == v2 {

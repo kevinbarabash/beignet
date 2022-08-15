@@ -45,7 +45,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 let params: Vec<_> = lam.params
                     .iter()
                     .map(|param| {
-                        TParam { 
+                        TFnParam {
                             ty: norm_type(&param.ty, mapping, ctx),
                             ..param.to_owned()
                         }
