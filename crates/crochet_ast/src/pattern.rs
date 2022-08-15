@@ -1,7 +1,6 @@
 use crate::expr::Expr;
 use crate::ident::Ident;
 use crate::span::Span;
-use crate::types::TypeAnn;
 use crate::Lit;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,7 +41,6 @@ impl Pattern {
 pub struct BindingIdent {
     pub span: Span,
     pub id: Ident,
-    pub type_ann: Option<TypeAnn>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,7 +65,6 @@ pub struct WildcardPat {
 pub struct RestPat {
     pub span: Span,
     pub arg: Box<Pattern>,
-    pub type_ann: Option<TypeAnn>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -75,7 +72,6 @@ pub struct ArrayPat {
     pub span: Span,
     pub elems: Vec<Option<Pattern>>,
     pub optional: bool,
-    pub type_ann: Option<TypeAnn>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,7 +79,6 @@ pub struct ObjectPat {
     pub span: Span,
     pub props: Vec<ObjectPatProp>,
     pub optional: bool,
-    pub type_ann: Option<TypeAnn>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -155,7 +150,6 @@ mod tests {
         Pattern::Ident(BindingIdent {
             span: 0..0,
             id: ident(name),
-            type_ann: None,
         })
     }
 
@@ -178,7 +172,6 @@ mod tests {
         let rest = Pattern::Rest(RestPat {
             span: 0..0,
             arg: Box::from(ident),
-            type_ann: None,
         });
         assert!(is_irrefutable(&rest));
     }
@@ -191,7 +184,6 @@ mod tests {
                 value: Box::from(ident_pattern("foo")),
             })],
             optional: false,
-            type_ann: None,
             span: 0..0,
         });
         assert!(is_irrefutable(&obj));
@@ -211,7 +203,6 @@ mod tests {
                 }),
             ],
             optional: false,
-            type_ann: None,
             span: 0..0,
         });
         assert!(is_refutable(&obj));
@@ -222,7 +213,6 @@ mod tests {
         let array = Pattern::Array(ArrayPat {
             elems: vec![Some(ident_pattern("foo"))],
             optional: false,
-            type_ann: None,
             span: 0..0,
         });
         assert!(is_irrefutable(&array));
@@ -233,7 +223,6 @@ mod tests {
         let array = Pattern::Array(ArrayPat {
             elems: vec![Some(ident_pattern("foo")), Some(num_lit_pat("5"))],
             optional: false,
-            type_ann: None,
             span: 0..0,
         });
         assert!(is_refutable(&array));

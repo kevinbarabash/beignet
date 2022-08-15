@@ -40,17 +40,15 @@ Program {
                                             span: 14..18,
                                             name: "rest",
                                         },
-                                        type_ann: None,
                                     },
                                 ),
-                                type_ann: None,
                             },
                         ),
                     ],
                     optional: false,
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Ident(
                     Ident {

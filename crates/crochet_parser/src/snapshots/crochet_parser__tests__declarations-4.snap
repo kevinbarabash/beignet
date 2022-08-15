@@ -13,9 +13,9 @@ Program {
                         span: 8..9,
                         name: "f",
                     },
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Fix(
                     Fix {

@@ -16,6 +16,7 @@ pub type Assump = HashMap<String, Scheme>;
 // into the appropriate context.
 fn infer_pattern(
     pat: &Pattern,
+    type_ann: &Option<TypeAnn>,
     ctx: &Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Assump, Type), String> {
@@ -27,9 +28,9 @@ fn infer_pattern(
     // If the pattern had a type annotation associated with it, we infer type of the
     // type annotation and add a constraint between the types of the pattern and its
     // type annotation.
-    match get_type_ann(pat) {
+    match type_ann {
         Some(type_ann) => {
-            let type_ann_ty = infer_type_ann_with_params(&type_ann, ctx, type_param_map);
+            let type_ann_ty = infer_type_ann_with_params(type_ann, ctx, type_param_map);
 
             // Allowing type_ann_ty to be a subtype of pat_type because
             // only non-refutable patterns can have type annotations.
@@ -42,18 +43,6 @@ fn infer_pattern(
             Ok((s, a, type_ann_ty))
         }
         None => Ok((Subst::new(), new_vars, pat_type)),
-    }
-}
-
-fn get_type_ann(pat: &Pattern) -> Option<TypeAnn> {
-    match pat {
-        Pattern::Ident(BindingIdent { type_ann, .. }) => type_ann.to_owned(),
-        Pattern::Rest(RestPat { type_ann, .. }) => type_ann.to_owned(),
-        Pattern::Object(ObjectPat { type_ann, .. }) => type_ann.to_owned(),
-        Pattern::Array(ArrayPat { type_ann, .. }) => type_ann.to_owned(),
-        Pattern::Lit(_) => None,
-        Pattern::Is(_) => None,
-        Pattern::Wildcard(_) => None,
     }
 }
 
@@ -91,13 +80,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
             Ok(ty)
         }
         Pattern::Rest(RestPat { arg, .. }) => {
-            let t = match get_type_ann(arg) {
-                Some(type_ann) => infer_type_ann(&type_ann, ctx),
-                None => {
-                    // TODO: wrap this in an array type
-                    infer_pattern_rec(arg.as_ref(), ctx, assump)?
-                }
-            };
+            let t = infer_pattern_rec(arg.as_ref(), ctx, assump)?;
             Ok(ctx.rest(t))
         }
         Pattern::Array(ArrayPat { elems, .. }) => {
@@ -191,12 +174,13 @@ pub enum PatternUsage {
 
 pub fn infer_pattern_and_init(
     pat: &Pattern,
+    type_ann: &Option<TypeAnn>,
     init: &Expr,
     ctx: &mut Context,
     pu: &PatternUsage,
 ) -> Result<(Assump, Subst), String> {
     let type_param_map = HashMap::new();
-    let (ps, pa, pt) = infer_pattern(pat, ctx, &type_param_map)?;
+    let (ps, pa, pt) = infer_pattern(pat, type_ann, ctx, &type_param_map)?;
 
     let (is, it) = infer_expr(ctx, init)?;
 

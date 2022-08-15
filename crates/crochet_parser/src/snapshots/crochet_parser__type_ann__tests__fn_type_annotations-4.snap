@@ -6,42 +6,42 @@ Lam(
     LamType {
         span: 0..21,
         params: [
-            Ident(
-                BindingIdent {
-                    span: 1..5,
-                    id: Ident {
-                        span: 1..2,
-                        name: "a",
+            TypeAnnFnParam {
+                pat: Ident(
+                    EFnParamBindingIdent {
+                        span: 1..5,
+                        id: Ident {
+                            span: 1..2,
+                            name: "a",
+                        },
                     },
-                    type_ann: Some(
-                        TypeRef(
-                            TypeRef {
-                                span: 4..5,
-                                name: "A",
-                                type_params: None,
-                            },
-                        ),
-                    ),
-                },
-            ),
-            Ident(
-                BindingIdent {
-                    span: 7..11,
-                    id: Ident {
-                        span: 7..8,
-                        name: "b",
+                ),
+                type_ann: TypeRef(
+                    TypeRef {
+                        span: 4..5,
+                        name: "A",
+                        type_params: None,
                     },
-                    type_ann: Some(
-                        TypeRef(
-                            TypeRef {
-                                span: 10..11,
-                                name: "B",
-                                type_params: None,
-                            },
-                        ),
-                    ),
-                },
-            ),
+                ),
+            },
+            TypeAnnFnParam {
+                pat: Ident(
+                    EFnParamBindingIdent {
+                        span: 7..11,
+                        id: Ident {
+                            span: 7..8,
+                            name: "b",
+                        },
+                    },
+                ),
+                type_ann: TypeRef(
+                    TypeRef {
+                        span: 10..11,
+                        name: "B",
+                        type_params: None,
+                    },
+                ),
+            },
         ],
         ret: Union(
             UnionType {

@@ -13,25 +13,25 @@ Program {
                         span: 12..15,
                         name: "foo",
                     },
-                    type_ann: Some(
-                        TypeRef(
-                            TypeRef {
-                                span: 17..28,
-                                name: "Foo",
-                                type_params: Some(
-                                    [
-                                        Prim(
-                                            PrimType {
-                                                span: 21..27,
-                                                prim: Str,
-                                            },
-                                        ),
-                                    ],
-                                ),
-                            },
-                        ),
-                    ),
                 },
+            ),
+            type_ann: Some(
+                TypeRef(
+                    TypeRef {
+                        span: 17..28,
+                        name: "Foo",
+                        type_params: Some(
+                            [
+                                Prim(
+                                    PrimType {
+                                        span: 21..27,
+                                        prim: Str,
+                                    },
+                                ),
+                            ],
+                        ),
+                    },
+                ),
             ),
             init: None,
             declare: true,

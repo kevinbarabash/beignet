@@ -2,13 +2,11 @@ use chumsky::prelude::*;
 use crochet_ast::*;
 
 use crate::lit::string_parser;
-use crate::type_ann::*;
 use crate::util::just_with_padding;
 
 // NOTE: Destructuring assignments admits different patterns from destructuring
 // function params.  We'll need to have different parsers for those.
 pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
-    let type_ann = type_ann_parser();
     let mut top_level = true;
 
     let r#true = just_with_padding("true").map_with_span(|_, span| Lit::bool(true, span));
@@ -43,20 +41,22 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
             .map_with_span(|(id, is_id), _: Span| {
                 let start = id.span.start;
                 let end = is_id.span.end;
-                Pattern::Is(IsPat { span: start..end, id, is_id })
+                Pattern::Is(IsPat {
+                    span: start..end,
+                    id,
+                    is_id,
+                })
             });
 
         let lit_pat = choice((r#bool, num, string_parser()))
             .map_with_span(|lit, span| Pattern::Lit(LitPat { span, lit }));
 
         let ident_pat = ident
-            .then(
-                just_with_padding(":")
-                    .ignore_then(type_ann.clone())
-                    .or_not(),
-            )
-            .map_with_span(|(id, type_ann), _: Span| {
-                Pattern::Ident(BindingIdent { span: id.span.clone(), id, type_ann })
+            .map_with_span(|id, _: Span| {
+                Pattern::Ident(BindingIdent {
+                    span: id.span.clone(),
+                    id,
+                })
             })
             .padded()
             .labelled("ident_pat");
@@ -68,19 +68,13 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
             .map_with_span(|arg, span| RestPat {
                 span,
                 arg: Box::from(arg),
-                type_ann: None,
             });
 
         let array_pat = pat
             .clone()
             .separated_by(just_with_padding(","))
             .delimited_by(just_with_padding("["), just_with_padding("]"))
-            .then(
-                just_with_padding(":")
-                    .ignore_then(type_ann.clone())
-                    .or_not(),
-            )
-            .map_with_span(|(elems, type_ann), span| {
+            .map_with_span(|elems, span| {
                 Pattern::Array(ArrayPat {
                     span,
                     // The reason why each elem is wrapped in Some() is that
@@ -88,7 +82,6 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
                     // althought the parser doesn't support this yet.
                     elems: elems.iter().cloned().map(Some).collect(),
                     optional: false,
-                    type_ann,
                 })
             });
 
@@ -121,12 +114,7 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
         ))
         .separated_by(just_with_padding(","))
         .delimited_by(just_with_padding("{"), just_with_padding("}"))
-        .then(
-            just_with_padding(":")
-                .ignore_then(type_ann.clone())
-                .or_not(),
-        )
-        .map_with_span(|(props, type_ann), span| -> Pattern {
+        .map_with_span(|props, span| -> Pattern {
             let rest_count = props
                 .iter()
                 .filter(|p| matches!(p, ObjectPatProp::Rest(_)))
@@ -137,7 +125,6 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
                     span,
                     props,
                     optional: false,
-                    type_ann,
                 }),
                 1 => match props.last() {
                     Some(last) => match last {
@@ -145,7 +132,6 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
                             span,
                             props,
                             optional: false,
-                            type_ann,
                         }),
                         _ => {
                             panic!("Rest should come last in object pattern")
@@ -167,7 +153,8 @@ pub fn pattern_parser() -> BoxedParser<'static, char, Pattern, Simple<char>> {
             array_pat,
             obj_pat_prop,
             rest_pat.map(Pattern::Rest),
-        )).labelled("inner_pattern")
+        ))
+        .labelled("inner_pattern")
     })
     .labelled("pattern");
 

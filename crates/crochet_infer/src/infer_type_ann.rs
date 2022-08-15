@@ -65,35 +65,28 @@ fn infer_type_ann_rec(
             let params: Vec<types::TFnParam> = params
                 .iter()
                 .enumerate()
-                .map(|(index, param)| {
-                    match &param {
-                        FnParam::Ident(BindingIdent { id, type_ann, .. }) => {
-                            // TODO: Update the AST to remove need for .unwrap() here
-                            let type_ann = type_ann.clone().unwrap();
-                            TFnParam {
-                                pat: TPat::Ident(types::BindingIdent {
-                                    name: id.name.to_owned(),
+                .map(|(index, param)| -> TFnParam {
+                    match &param.pat {
+                        EFnParamPat::Ident(EFnParamBindingIdent { id, .. }) => TFnParam {
+                            pat: TPat::Ident(types::BindingIdent {
+                                name: id.name.to_owned(),
+                                optional: false,
+                                mutable: false,
+                            }),
+                            ty: infer_type_ann_rec(&param.type_ann, ctx, type_param_map),
+                        },
+                        EFnParamPat::Rest(EFnParamRestPat { arg, .. }) => TFnParam {
+                            pat: TPat::Rest(types::RestPat {
+                                arg: Box::from(TPat::Ident(types::BindingIdent {
+                                    name: arg.as_ref().get_name(&index),
                                     optional: false,
                                     mutable: false,
-                                }),
-                                ty: infer_type_ann_rec(&type_ann, ctx, type_param_map),
-                            }
-                        }
-                        FnParam::Rest(RestPat { arg, type_ann, .. }) => {
-                            // TODO: Update the AST to remove need for .unwrap() here
-                            let type_ann = type_ann.clone().unwrap();
-
-                            TFnParam {
-                                pat: TPat::Rest(types::RestPat {
-                                    arg: Box::from(TPat::Ident(types::BindingIdent {
-                                        name: arg.as_ref().get_name(&index),
-                                        optional: false,
-                                        mutable: false,
-                                    })),
-                                }),
-                                ty: infer_type_ann_rec(&type_ann, ctx, type_param_map),
-                            }
-                        }
+                                })),
+                            }),
+                            ty: infer_type_ann_rec(&param.type_ann, ctx, type_param_map),
+                        },
+                        EFnParamPat::Object(_) => todo!(),
+                        EFnParamPat::Array(_) => todo!(),
                     }
                 })
                 .collect();

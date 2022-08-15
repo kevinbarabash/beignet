@@ -13,16 +13,16 @@ Program {
                         span: 4..5,
                         name: "p",
                     },
-                    type_ann: Some(
-                        TypeRef(
-                            TypeRef {
-                                span: 7..12,
-                                name: "Point",
-                                type_params: None,
-                            },
-                        ),
-                    ),
                 },
+            ),
+            type_ann: Some(
+                TypeRef(
+                    TypeRef {
+                        span: 7..12,
+                        name: "Point",
+                        type_params: None,
+                    },
+                ),
             ),
             init: Some(
                 Obj(

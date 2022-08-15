@@ -6,40 +6,40 @@ Lam(
     LamType {
         span: 0..33,
         params: [
-            Ident(
-                BindingIdent {
-                    span: 1..10,
-                    id: Ident {
-                        span: 1..2,
-                        name: "a",
+            TypeAnnFnParam {
+                pat: Ident(
+                    EFnParamBindingIdent {
+                        span: 1..10,
+                        id: Ident {
+                            span: 1..2,
+                            name: "a",
+                        },
                     },
-                    type_ann: Some(
-                        Prim(
-                            PrimType {
-                                span: 4..10,
-                                prim: Num,
-                            },
-                        ),
-                    ),
-                },
-            ),
-            Ident(
-                BindingIdent {
-                    span: 12..21,
-                    id: Ident {
-                        span: 12..13,
-                        name: "b",
+                ),
+                type_ann: Prim(
+                    PrimType {
+                        span: 4..10,
+                        prim: Num,
                     },
-                    type_ann: Some(
-                        Prim(
-                            PrimType {
-                                span: 15..21,
-                                prim: Str,
-                            },
-                        ),
-                    ),
-                },
-            ),
+                ),
+            },
+            TypeAnnFnParam {
+                pat: Ident(
+                    EFnParamBindingIdent {
+                        span: 12..21,
+                        id: Ident {
+                            span: 12..13,
+                            name: "b",
+                        },
+                    },
+                ),
+                type_ann: Prim(
+                    PrimType {
+                        span: 15..21,
+                        prim: Str,
+                    },
+                ),
+            },
         ],
         ret: Prim(
             PrimType {

@@ -25,15 +25,14 @@ Program {
                                         span: 8..9,
                                         name: "b",
                                     },
-                                    type_ann: None,
                                 },
                             ),
                         ),
                     ],
                     optional: false,
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Ident(
                     Ident {

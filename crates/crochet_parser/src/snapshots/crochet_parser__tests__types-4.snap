@@ -13,27 +13,27 @@ Program {
                         span: 4..13,
                         name: "thunk_arr",
                     },
-                    type_ann: Some(
-                        Array(
-                            ArrayType {
-                                span: 0..0,
-                                elem_type: Lam(
-                                    LamType {
-                                        span: 16..31,
-                                        params: [],
-                                        ret: Prim(
-                                            PrimType {
-                                                span: 22..31,
-                                                prim: Undefined,
-                                            },
-                                        ),
-                                        type_params: None,
+                },
+            ),
+            type_ann: Some(
+                Array(
+                    ArrayType {
+                        span: 0..0,
+                        elem_type: Lam(
+                            LamType {
+                                span: 16..31,
+                                params: [],
+                                ret: Prim(
+                                    PrimType {
+                                        span: 22..31,
+                                        prim: Undefined,
                                     },
                                 ),
+                                type_params: None,
                             },
                         ),
-                    ),
-                },
+                    },
+                ),
             ),
             init: Some(
                 Tuple(

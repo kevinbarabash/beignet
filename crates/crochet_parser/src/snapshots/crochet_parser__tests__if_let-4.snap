@@ -28,6 +28,7 @@ Program {
                     },
                 },
             ),
+            type_ann: None,
             init: Some(
                 Ident(
                     Ident {

@@ -13,9 +13,9 @@ Program {
                         span: 4..7,
                         name: "foo",
                     },
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Let(
                     Let {
@@ -28,10 +28,10 @@ Program {
                                         span: 15..16,
                                         name: "x",
                                     },
-                                    type_ann: None,
                                 },
                             ),
                         ),
+                        type_ann: None,
                         init: Lit(
                             Num(
                                 Num {

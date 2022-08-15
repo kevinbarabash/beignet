@@ -13,9 +13,9 @@ Program {
                         span: 13..14,
                         name: "x",
                     },
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Lit(
                     Bool(

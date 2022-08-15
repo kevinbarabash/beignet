@@ -5,7 +5,7 @@ use super::infer_expr::infer_expr as infer_expr_rec;
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
-use super::types::{Scheme, Type, TProp};
+use super::types::{Scheme, TProp, Type};
 use super::util::*;
 
 pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> {
@@ -39,17 +39,17 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
                 declare,
                 init,
                 pattern,
+                type_ann,
                 ..
             } => {
                 match declare {
                     true => {
                         match pattern {
-                            Pattern::Ident(BindingIdent { id, type_ann, .. }) => {
+                            Pattern::Ident(BindingIdent { id, .. }) => {
                                 match type_ann {
                                     Some(type_ann) => {
                                         let scheme = infer_scheme(type_ann, ctx);
-                                        ctx.values
-                                            .insert(id.name.to_owned(), scheme);
+                                        ctx.values.insert(id.name.to_owned(), scheme);
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
@@ -67,8 +67,13 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
                         // `let` statement
                         let init = init.as_ref().unwrap();
 
-                        let (pa, s) =
-                            infer_pattern_and_init(pattern, init, ctx, &PatternUsage::Assign)?;
+                        let (pa, s) = infer_pattern_and_init(
+                            pattern,
+                            type_ann,
+                            init,
+                            ctx,
+                            &PatternUsage::Assign,
+                        )?;
 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.

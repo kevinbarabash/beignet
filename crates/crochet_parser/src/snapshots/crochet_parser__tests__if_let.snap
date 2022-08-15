@@ -38,7 +38,6 @@ Program {
                                         ),
                                     ],
                                     optional: false,
-                                    type_ann: None,
                                 },
                             ),
                             expr: Ident(
@@ -53,6 +52,7 @@ Program {
                         Let {
                             span: 20..0,
                             pattern: None,
+                            type_ann: None,
                             init: Op(
                                 Op {
                                     span: 20..25,

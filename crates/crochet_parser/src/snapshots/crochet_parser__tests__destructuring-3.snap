@@ -42,7 +42,6 @@ Program {
                                             ),
                                         ],
                                         optional: false,
-                                        type_ann: None,
                                     },
                                 ),
                             },
@@ -79,16 +78,15 @@ Program {
                                             ),
                                         ],
                                         optional: false,
-                                        type_ann: None,
                                     },
                                 ),
                             },
                         ),
                     ],
                     optional: false,
-                    type_ann: None,
                 },
             ),
+            type_ann: None,
             init: Some(
                 Ident(
                     Ident {

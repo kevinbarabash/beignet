@@ -1,5 +1,3 @@
-
-
 use crate::ident::Ident;
 use crate::jsx::JSXElement;
 use crate::literal::Lit;
@@ -17,6 +15,7 @@ pub enum Statement {
     VarDecl {
         span: Span,
         pattern: Pattern,
+        type_ann: Option<TypeAnn>,
         init: Option<Expr>,
         declare: bool,
     },
@@ -24,8 +23,8 @@ pub enum Statement {
         span: Span,
         declare: bool,
         id: Ident,
-        type_ann: TypeAnn,    
-        type_params: Option<Vec<TypeParam>>,    
+        type_ann: TypeAnn,
+        type_params: Option<Vec<TypeParam>>,
     },
     Expr {
         span: Span,
@@ -100,6 +99,15 @@ pub enum EFnParamPat {
     Array(EFnParamArrayPat),
 }
 
+impl EFnParamPat {
+    pub fn get_name(&self, index: &usize) -> String {
+        match self {
+            EFnParamPat::Ident(bi) => bi.id.name.to_owned(),
+            _ => format!("arg{index}"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EFnParamBindingIdent {
     pub span: Span,
@@ -149,6 +157,7 @@ pub struct EFnParamAssignPatProp {
 pub struct Let {
     pub span: Span,
     pub pattern: Option<Pattern>,
+    pub type_ann: Option<TypeAnn>,
     pub init: Box<Expr>,
     pub body: Box<Expr>,
 }
@@ -196,7 +205,7 @@ pub enum Prop {
 pub struct KeyValueProp {
     pub span: Span,
     pub name: String,
-    pub value: Expr,
+    pub value: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
