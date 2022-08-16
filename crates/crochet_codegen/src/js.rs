@@ -302,7 +302,22 @@ fn e_fn_param_pat_to_js_pat(
                 type_ann: None,
             })
         }
-        ast::EFnParamPat::Array(_) => todo!(),
+        ast::EFnParamPat::Array(array) => {
+            let elems: Vec<Option<Pat>> = array
+                .elems
+                .iter()
+                .map(|elem| {
+                    elem.as_ref()
+                        .map(|elem| e_fn_param_pat_to_js_pat(elem, stmts, ctx))
+                })
+                .collect();
+            Pat::Array(ArrayPat {
+                span: DUMMY_SP,
+                elems,
+                optional: false,
+                type_ann: None,
+            })
+        }
     }
 }
 
