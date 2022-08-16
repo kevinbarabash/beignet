@@ -258,43 +258,41 @@ fn e_fn_param_pat_to_js_pat(
 ) -> Pat {
     match pat {
         ast::EFnParamPat::Ident(ast::EFnParamBindingIdent { id, .. }) => Pat::Ident(BindingIdent {
-            id: Ident {
-                span: DUMMY_SP,
-                sym: JsWord::from(id.name.to_owned()),
-                optional: false,
-            },
+            id: build_ident(id),
             type_ann: None,
         }),
-        ast::EFnParamPat::Rest(_) => todo!(),
+        ast::EFnParamPat::Rest(rest) => Pat::Rest(RestPat {
+            span: DUMMY_SP,
+            dot3_token: DUMMY_SP,
+            arg: Box::from(e_fn_param_pat_to_js_pat(&rest.arg, stmts, ctx)),
+            type_ann: None,
+        }),
         ast::EFnParamPat::Object(ast::EFnParamObjectPat { props, .. }) => {
             let props: Vec<ObjectPatProp> = props
                 .iter()
                 .map(|prop| match prop {
                     ast::EFnParamObjectPatProp::KeyValue(kv) => {
                         ObjectPatProp::KeyValue(KeyValuePatProp {
-                            key: PropName::Ident(Ident {
-                                span: DUMMY_SP,
-                                sym: JsWord::from(kv.key.name.to_owned()),
-                                optional: false,
-                            }),
+                            key: PropName::Ident(build_ident(&kv.key)),
                             value: Box::from(e_fn_param_pat_to_js_pat(&kv.value, stmts, ctx)),
                         })
                     }
                     ast::EFnParamObjectPatProp::Assign(assign) => {
                         ObjectPatProp::Assign(AssignPatProp {
                             span: DUMMY_SP,
-                            key: Ident {
-                                span: DUMMY_SP,
-                                sym: JsWord::from(assign.key.name.to_owned()),
-                                optional: false,
-                            },
+                            key: build_ident(&assign.key),
                             value: assign
                                 .value
                                 .as_ref()
                                 .map(|value| Box::from(build_expr(value.as_ref(), stmts, ctx))),
                         })
                     }
-                    ast::EFnParamObjectPatProp::Rest(_) => todo!(),
+                    ast::EFnParamObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
+                        span: DUMMY_SP,
+                        dot3_token: DUMMY_SP,
+                        arg: Box::from(e_fn_param_pat_to_js_pat(&rest.arg, stmts, ctx)),
+                        type_ann: None,
+                    }),
                 })
                 .collect();
             Pat::Object(ObjectPat {
@@ -304,7 +302,22 @@ fn e_fn_param_pat_to_js_pat(
                 type_ann: None,
             })
         }
-        ast::EFnParamPat::Array(_) => todo!(),
+        ast::EFnParamPat::Array(array) => {
+            let elems: Vec<Option<Pat>> = array
+                .elems
+                .iter()
+                .map(|elem| {
+                    elem.as_ref()
+                        .map(|elem| e_fn_param_pat_to_js_pat(elem, stmts, ctx))
+                })
+                .collect();
+            Pat::Array(ArrayPat {
+                span: DUMMY_SP,
+                elems,
+                optional: false,
+                type_ann: None,
+            })
+        }
     }
 }
 

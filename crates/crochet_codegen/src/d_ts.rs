@@ -325,6 +325,7 @@ pub fn build_ts_fn_type_with_args(
     }))
 }
 
+// TODO: Support destructuring in top-level decls
 pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, ctx: &Context) -> Pat {
     match pattern {
         ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
@@ -341,26 +342,6 @@ pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, ctx: &Co
         }
         ast::Pattern::Wildcard(_) => todo!(),
         ast::Pattern::Rest(_) => todo!(),
-        ast::Pattern::Object(_) => todo!(),
-        ast::Pattern::Array(_) => todo!(),
-        ast::Pattern::Lit(_) => todo!(),
-        ast::Pattern::Is(_) => todo!(),
-    }
-}
-
-pub fn build_pattern_rec(pattern: &ast::Pattern) -> Pat {
-    match pattern {
-        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
-            id: build_ident(id),
-            type_ann: None,
-        }),
-        ast::Pattern::Wildcard(_) => todo!(),
-        ast::Pattern::Rest(ast::RestPat { arg, .. }) => Pat::Rest(RestPat {
-            span: DUMMY_SP,
-            dot3_token: DUMMY_SP,
-            arg: Box::from(build_pattern_rec(arg.as_ref())),
-            type_ann: None,
-        }),
         ast::Pattern::Object(_) => todo!(),
         ast::Pattern::Array(_) => todo!(),
         ast::Pattern::Lit(_) => todo!(),

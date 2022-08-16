@@ -1,9 +1,9 @@
 use chumsky::prelude::*;
 
-use crochet_codegen::js::codegen_js;
 use crochet_codegen::d_ts::codegen_d_ts;
-use crochet_parser::parser;
+use crochet_codegen::js::codegen_js;
 use crochet_infer::{infer_prog, Context};
+use crochet_parser::parser;
 
 fn compile(input: &str) -> String {
     let program = parser().parse(input).unwrap();
@@ -389,12 +389,12 @@ fn codegen_block_with_multiple_non_let_lines() {
 }
 
 #[test]
-fn destructuring_function_params() {
+fn destructuring_function_object_params() {
     let src = r#"
-    let foo = ({x, y}) => x + y
+    let foo = ({x, y: b}) => x + b
     "#;
 
-    insta::assert_snapshot!(compile(src), @"export const foo = ({ x , y  })=>x + y;
+    insta::assert_snapshot!(compile(src), @"export const foo = ({ x , y: b  })=>x + b;
 ");
 
     let program = parser().parse(src).unwrap();
@@ -403,9 +403,69 @@ fn destructuring_function_params() {
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
-    export declare const foo: ({ x , y  }: {
+    export declare const foo: ({ x , y: b  }: {
         readonly x: number;
         readonly y: number;
     }) => number;
     "###);
+}
+
+#[test]
+fn destructuring_function_array_params() {
+    let src = r#"
+    let foo = ([a, b]) => a + b
+    "#;
+
+    insta::assert_snapshot!(compile(src), @"export const foo = ([a, b])=>a + b;
+");
+
+    let program = parser().parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const foo: ([a, b]: [number, number]) => number;
+    "###);
+}
+
+#[test]
+fn function_with_rest_param() {
+    let src = r#"
+    let foo = (x: number, ...y: number[]) => x
+    "#;
+
+    insta::assert_snapshot!(compile(src), @"export const foo = (x, ...y)=>x;
+");
+
+    let program = parser().parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const foo: (x: number, ...y: number[]) => number;
+");
+}
+
+#[test]
+fn variable_declaration_with_destructuring() {
+    let src = r#"
+    let [x, y] = [5, 10]
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const [x, y] = [
+        5,
+        10
+    ];
+    "###);
+
+    // TODO: Support destructuring in top-level decls
+    // let program = parser().parse(src).unwrap();
+    // let mut ctx = Context::default();
+    // infer_prog(&program, &mut ctx).unwrap();
+    // let result = codegen_d_ts(&program, &ctx);
+
+    // insta::assert_snapshot!(result, @"export declare const foo: (x: number, ...y: number[]) => number;
+    // ");
 }
