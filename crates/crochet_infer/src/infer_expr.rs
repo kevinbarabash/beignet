@@ -512,10 +512,11 @@ fn is_promise(ty: &Type) -> bool {
 fn infer_property_type(
     obj_t: &Type,
     prop: &MemberProp,
-    ctx: &Context,
+    ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t.variant {
         Variant::Object(props) => {
+            // TODO: handle both ComputedProp and Ident
             let mem_t = ctx.mem(obj_t.clone(), &prop.name());
             match props.iter().find(|p| p.name == prop.name()) {
                 Some(_) => Ok((Subst::default(), mem_t)),
@@ -558,6 +559,39 @@ fn infer_property_type(
             Primitive::Undefined => todo!(),
             Primitive::Null => todo!(),
         },
+        Variant::Tuple(elem_types) => {
+            match prop {
+                // TODO: lookup methods on Array.prototype
+                MemberProp::Ident(_) => todo!(),
+                MemberProp::Computed(ComputedPropName { expr, .. }) => {
+                    let (prop_s, prop_t) = infer_expr(ctx, expr)?;
+
+                    match prop_t.variant {
+                        Variant::Prim(prim) => match prim {
+                            Primitive::Num => {
+                                // TODO: remove duplicate types
+                                let mut elem_types = elem_types.to_owned();
+                                elem_types.push(ctx.prim(Primitive::Undefined));
+                                let t = ctx.union(elem_types);
+                                Ok((prop_s, t))
+                            }
+                            _ => Err(format!("{prim} is an invalid index for a tuple type")),
+                        },
+                        Variant::Lit(lit) => match lit {
+                            crate::Lit::Num(num) => {
+                                let index: usize = num.parse().unwrap();
+                                match elem_types.get(index) {
+                                    Some(t) => Ok((prop_s, t.to_owned())),
+                                    None => Err(format!("{index} is out of bounds for {obj_t}")),
+                                }
+                            }
+                            _ => Err(format!("{lit} is an invalid indexer for tuple types")),
+                        },
+                        _ => Err(format!("{prop_t} is an invalid indexer for tuple types")),
+                    }
+                }
+            }
+        }
         _ => {
             todo!("Unhandled {obj_t:#?} in infer_property_type")
         }

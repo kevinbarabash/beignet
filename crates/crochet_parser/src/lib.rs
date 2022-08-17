@@ -214,6 +214,10 @@ mod tests {
         insta::assert_debug_snapshot!(parse("foo.bar()"));
         insta::assert_debug_snapshot!(parse("p.x * p.x + p.y * p.y"));
         insta::assert_debug_snapshot!(parse("foo().bar()"));
+        insta::assert_debug_snapshot!(parse("arr[0][1]"));
+        insta::assert_debug_snapshot!(parse("arr[x](y)"));
+        insta::assert_debug_snapshot!(parse("arr[arr.length - 1]"));
+        insta::assert_debug_snapshot!(parse("foo[bar[-1]]"));
     }
 
     #[test]

@@ -12,7 +12,7 @@ pub mod types;
 
 pub use context::*;
 pub use infer::*;
-pub use types::{Lit, Type, TProp};
+pub use types::{Lit, TProp, Type};
 
 #[cfg(test)]
 mod tests {
@@ -201,7 +201,7 @@ mod tests {
         let src = r#"
         let [_, a] = [5, true]
         "#;
-        
+
         let ctx = infer_prog(src);
 
         assert_eq!(get_type("a", &ctx), "true");
@@ -618,7 +618,10 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("add", &ctx), "(p: {x: number, y: number}) => number");
+        assert_eq!(
+            get_type("add", &ctx),
+            "(p: {x: number, y: number}) => number"
+        );
     }
 
     #[test]
@@ -1085,7 +1088,10 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("foo_num_bool", &ctx), "(a: number, c: bool) => undefined");
+        assert_eq!(
+            get_type("foo_num_bool", &ctx),
+            "(a: number, c: bool) => undefined"
+        );
     }
 
     #[test]
@@ -1097,7 +1103,10 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("foo_num_str_bool", &ctx), "(a: number, b: string, c: bool) => undefined");
+        assert_eq!(
+            get_type("foo_num_str_bool", &ctx),
+            "(a: number, b: string, c: bool) => undefined"
+        );
     }
 
     #[test]
@@ -1239,7 +1248,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn spread_param_tuples_with_incorrect_types() {
         let src = r#"
         declare let add: (a: number, b: number) => number
@@ -1259,7 +1268,10 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fst", &ctx), "(a: number, ...b: number[]) => number");
+        assert_eq!(
+            get_type("fst", &ctx),
+            "(a: number, ...b: number[]) => number"
+        );
         assert_eq!(get_type("result", &ctx), "number");
     }
 
@@ -1278,7 +1290,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn rest_param_with_arg_spread_and_incorrect_type() {
         // TODO: handle the spread directly in infer_expr()
         let src = r#"
@@ -1303,7 +1315,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn rest_param_with_incorrect_arg_type() {
         let src = r#"
         let fst = (a: number, ...b: number[]) => a
@@ -1401,6 +1413,44 @@ mod tests {
         let src = r#"
         let p = {x: 5, y: 10}
         let z = p.z
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn infer_number_literal_index_on_tuple() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        let fst = tuple[0]
+        let snd = tuple[1]
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("fst", &ctx), "5");
+        assert_eq!(get_type("snd", &ctx), "\"hello\"");
+    }
+
+    #[test]
+    fn infer_number_primitive_index_on_tuple() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        let index: number = 0
+        let elem = tuple[index]
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("elem", &ctx), "5 | \"hello\" | true | undefined");
+    }
+
+    #[test]
+    #[should_panic = "4 is out of bounds for [5, \\\"hello\\\", true]"]
+    fn infer_number_index_on_tuple_out_of_bounds() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        tuple[4]
         "#;
 
         infer_prog(src);
@@ -1895,10 +1945,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn detect_type_errors_inside_template_literal_expressions() {
         let src = r#"let str = `hello, ${5 + true}!`"#;
-        
+
         infer_prog(src);
     }
 
@@ -1930,10 +1980,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn assign_tuple_with_to_array_with_incompatible_types() {
         let src = r#"let arr: string[] = ["hello", 5]"#;
-        
+
         infer_prog(src);
     }
 
@@ -1951,7 +2001,10 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), r#""none" | "one" | "a couple" | "a few" | "many""#);
+        assert_eq!(
+            get_type("result", &ctx),
+            r#""none" | "one" | "a couple" | "a few" | "many""#
+        );
     }
 
     #[test]
@@ -1970,7 +2023,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn pattern_matching_with_disjoint_union_incorrect_result_type() {
         // The return type of a `match` expression is the union of all of the return types of
         // each of the arms.  If you want to ensure that all arms return a common type then you'll
@@ -1984,12 +2037,12 @@ mod tests {
             {type: "keydown", key} => key,
         }
         "#;
-        
+
         infer_prog(src);
     }
 
     #[test]
-    #[should_panic="Unification failure"]
+    #[should_panic = "Unification failure"]
     fn pattern_matching_with_disjoint_union_does_not_match_fn_return_type() {
         // The return type of a `match` expression is the union of all of the return types of
         // each of the arms.  If you want to ensure that all arms return a common type then you'll
@@ -2005,7 +2058,7 @@ mod tests {
             }
         }
         "#;
-        
+
         infer_prog(src);
     }
 
