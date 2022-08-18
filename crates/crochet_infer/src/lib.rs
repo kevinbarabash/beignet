@@ -1444,6 +1444,17 @@ mod tests {
     }
 
     #[test]
+    #[should_panic = "Object type doesn't contain key z."]
+    fn infer_missing_member_str_lit() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        let z = p["z"]
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
     #[should_panic = "true is an invalid key for object types"]
     fn infer_member_with_invalid_literal_key() {
         let src = r#"
