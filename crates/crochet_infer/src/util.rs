@@ -31,7 +31,8 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
         match &ty.variant {
             Variant::Var => mapping.get(&ty.id).unwrap().to_owned(),
             Variant::App(app) => {
-                let args: Vec<_> = app.args
+                let args: Vec<_> = app
+                    .args
                     .iter()
                     .map(|arg| norm_type(arg, mapping, ctx))
                     .collect();
@@ -42,21 +43,17 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 }
             }
             Variant::Lam(lam) => {
-                let params: Vec<_> = lam.params
+                let params: Vec<_> = lam
+                    .params
                     .iter()
-                    .map(|param| {
-                        TFnParam {
-                            ty: norm_type(&param.ty, mapping, ctx),
-                            ..param.to_owned()
-                        }
+                    .map(|param| TFnParam {
+                        ty: norm_type(&param.ty, mapping, ctx),
+                        ..param.to_owned()
                     })
                     .collect();
                 let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
                 Type {
-                    variant: Variant::Lam(LamType {
-                        params,
-                        ret,
-                    }),
+                    variant: Variant::Lam(LamType { params, ret }),
                     ..ty.to_owned()
                 }
             }
@@ -125,13 +122,6 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 variant: Variant::Rest(Box::from(norm_type(arg, mapping, ctx))),
                 ..ty.to_owned()
             },
-            Variant::Member(MemberType { obj, prop }) => Type {
-                variant: Variant::Member(MemberType {
-                    obj: Box::from(norm_type(obj, mapping, ctx)),
-                    prop: prop.to_owned(),
-                }),
-                ..ty.to_owned()
-            },
         }
     }
 
@@ -154,7 +144,7 @@ pub fn generalize(env: &Env, ty: &Type) -> Scheme {
 
 // TODO: make this recursive
 // TODO: handle optional properties correctly
-// Maybe we can have a function that will canonicalize objects by converting 
+// Maybe we can have a function that will canonicalize objects by converting
 // `x: T | undefined` to `x?: T`
 pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
     let obj_types: Vec<_> = in_types
@@ -214,7 +204,6 @@ pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
         ctx.intersection(out_types)
     }
 }
-
 
 fn flatten_types(ty: &Type) -> Vec<Type> {
     match &ty.variant {

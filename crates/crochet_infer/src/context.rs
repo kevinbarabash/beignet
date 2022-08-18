@@ -77,10 +77,7 @@ impl Context {
     pub fn lam(&self, params: Vec<TFnParam>, ret: Box<Type>) -> Type {
         Type {
             id: self.fresh_id(),
-            variant: Variant::Lam(LamType {
-                params,
-                ret,
-            }),
+            variant: Variant::Lam(LamType { params, ret }),
         }
     }
 
@@ -173,17 +170,7 @@ impl Context {
         }
     }
 
-    pub fn mem(&self, obj: Type, prop: &str) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Member(MemberType {
-                obj: Box::from(obj),
-                prop: prop.to_owned(),
-            }),
-        }
-    }
-
-    pub fn placeholder(&self) -> Type {
+    pub fn wildcard(&self) -> Type {
         Type {
             id: self.fresh_id(),
             variant: Variant::Wildcard,

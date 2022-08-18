@@ -51,11 +51,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     // NOTE: The order of params is reversed.  This allows a callback
                     // whose params can accept more values (are supertypes) than the
                     // function will pass to the callback.
-                    let s1 = unify(
-                        &p2.get_type().apply(&s),
-                        &p1.get_type().apply(&s),
-                        ctx,
-                    )?;
+                    let s1 = unify(&p2.get_type().apply(&s), &p1.get_type().apply(&s), ctx)?;
                     s = compose_subs(&s, &s1);
                 }
                 let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
@@ -104,7 +100,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             if is_last {
                                 let spread_count = param_count_low_bound - args.len();
                                 for _ in 0..spread_count {
-                                    args.push(ctx.placeholder());
+                                    args.push(ctx.wildcard());
                                 }
                             } else {
                                 return Err(String::from("Placeholder spread must appear last"));

@@ -1366,6 +1366,31 @@ mod tests {
     }
 
     #[test]
+    fn infer_member_access_with_string_literal_key() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        let z = p["x"]
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("z", &ctx), "5");
+    }
+
+    #[test]
+    fn infer_member_access_with_string_key() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        declare let key: string
+        let z = p[key]
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("z", &ctx), "5 | 10 | undefined");
+    }
+
+    #[test]
     fn infer_nested_member_access() {
         let src = r#"
         let obj = {a: {b: {c: "hello"}}}
@@ -1408,11 +1433,45 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Record literal doesn't contain property"]
+    #[should_panic = "Object type doesn't contain key z."]
     fn infer_missing_member() {
         let src = r#"
         let p = {x: 5, y: 10}
         let z = p.z
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "true is an invalid key for object types"]
+    fn infer_member_with_invalid_literal_key() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        let z = p[true]
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "boolean is an invalid key for object types"]
+    fn infer_member_with_invalid_primitive_key() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        declare let key: boolean
+        let z = p[key]
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "{x: 5, y: 10} is an invalid key for object types"]
+    fn infer_member_with_invalid_key_of_other_type() {
+        let src = r#"
+        let p = {x: 5, y: 10}
+        let z = p[p]
         "#;
 
         infer_prog(src);
@@ -1451,6 +1510,40 @@ mod tests {
         let src = r#"
         let tuple = [5, "hello", true]
         tuple[4]
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "true is an invalid indexer for tuple types"]
+    fn infer_invalid_literal_index_on_tuple() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        tuple[true]
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "boolean is an invalid indexer for tuple types"]
+    fn infer_invalid_primitive_index_on_tuple() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        declare let index: boolean
+        tuple[index]
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "[5, \\\"hello\\\", true] is an invalid indexer for tuple types"]
+    fn infer_invalid_other_index_type_on_tuple() {
+        let src = r#"
+        let tuple = [5, "hello", true]
+        tuple[tuple]
         "#;
 
         infer_prog(src);

@@ -605,7 +605,6 @@ pub fn build_type(
             elem_type: Box::from(build_type(t, None, None)),
         }),
         Variant::Rest(_) => todo!(),
-        Variant::Member(_) => todo!(),
         Variant::Wildcard => todo!(),
     }
 }
