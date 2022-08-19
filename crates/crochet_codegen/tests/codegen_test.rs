@@ -469,3 +469,25 @@ fn variable_declaration_with_destructuring() {
     // insta::assert_snapshot!(result, @"export declare const foo: (x: number, ...y: number[]) => number;
     // ");
 }
+
+#[test]
+fn computed_property() {
+    let src = r#"
+    let p = {x: 5, y: 10}
+    let x = p["x"]
+    let q = [5, 10]
+    let y = q[1]
+    "#;
+    insta::assert_snapshot!(compile(src), @r###"
+    export const p = {
+        x: 5,
+        y: 10
+    };
+    export const x = p["x"];
+    export const q = [
+        5,
+        10
+    ];
+    export const y = q[1];
+    "###);
+}
