@@ -4,17 +4,17 @@ use std::collections::HashSet;
 
 use super::context::{lookup_alias, Context};
 use super::substitutable::{Subst, Substitutable};
-use super::types::{self, TFnParam, Type, Variant};
+use super::types::{self, TFnParam, Type};
 use super::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
-    let result = match (&t1.variant, &t2.variant) {
+    let result = match (&t1, &t2) {
         // All binding must be done first
-        (Variant::Var, _) => bind(&t1.id, t2),
-        (_, Variant::Var) => bind(&t2.id, t1),
+        (Type::Var(id), _) => bind(id, t2),
+        (_, Type::Var(id)) => bind(id, t1),
 
-        (Variant::Lit(lit), Variant::Prim(prim)) => {
+        (Type::Lit(lit), Type::Prim(prim)) => {
             let b = matches!(
                 (lit, prim),
                 (types::Lit::Num(_), Primitive::Num)
@@ -27,7 +27,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Err(String::from("Unification failure"))
             }
         }
-        (Variant::App(app1), Variant::App(app2)) => {
+        (Type::App(app1), Type::App(app2)) => {
             let mut s = Subst::new();
 
             // NOTE: `app1` and `app2` currently must have the same number of args.
@@ -44,7 +44,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Err(String::from("Couldn't unify function calls"))
             }
         }
-        (Variant::Lam(lam1), Variant::Lam(lam2)) => {
+        (Type::Lam(lam1), Type::Lam(lam2)) => {
             let mut s = Subst::new();
 
             // It's okay if has fewer params than `lam2`.  This is because
@@ -71,8 +71,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
         }
         // NOTE: this arm is only hit by the `infer_skk` test case
-        (Variant::Lam(_), Variant::App(_)) => unify(t2, t1, ctx),
-        (Variant::App(app), Variant::Lam(lam)) => {
+        (Type::Lam(_), Type::App(_)) => unify(t2, t1, ctx),
+        (Type::App(app), Type::Lam(lam)) => {
             let mut s = Subst::new();
 
             let last_param_2 = lam.params.last();
@@ -112,9 +112,9 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let mut args: Vec<Type> = vec![];
             for (i, arg) in app.args.iter().enumerate() {
                 let is_last = i == app.args.len() - 1;
-                match &arg.variant {
-                    Variant::Rest(spread) => match &spread.as_ref().variant {
-                        Variant::Wildcard => {
+                match &arg {
+                    Type::Rest(spread) => match &spread.as_ref() {
+                        Type::Wildcard => {
                             if is_last {
                                 let spread_count = param_count_low_bound - args.len();
                                 for _ in 0..spread_count {
@@ -124,7 +124,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                                 return Err(String::from("Placeholder spread must appear last"));
                             }
                         }
-                        Variant::Tuple(types) => args.extend(types.to_owned()),
+                        Type::Tuple(types) => args.extend(types.to_owned()),
                         _ => return Err(format!("spread of type {spread} not allowed")),
                     },
                     _ => args.push(arg.to_owned()),
@@ -164,16 +164,14 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             } else if args.len() >= param_count_low_bound {
                 // NOTE: Any extra args are ignored.
 
-                let is_partial = args
-                    .iter()
-                    .any(|param| matches!(param.variant, Variant::Wildcard));
+                let is_partial = args.iter().any(|param| matches!(param, Type::Wildcard));
 
                 if is_partial {
                     // Partial Application
                     let mut partial_params: Vec<TFnParam> = vec![];
                     for (arg, param) in args.iter().zip(&lam.params) {
-                        match arg.variant {
-                            Variant::Wildcard => partial_params.push(param.to_owned()),
+                        match arg {
+                            Type::Wildcard => partial_params.push(param.to_owned()),
                             _ => {
                                 let arg = arg.apply(&s);
                                 let param = param.apply(&s);
@@ -203,7 +201,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Err(String::from("Not enough params provided"))
             }
         }
-        (Variant::App(_), Variant::Intersection(types)) => {
+        (Type::App(_), Type::Intersection(types)) => {
             for t in types {
                 let result = unify(t1, t, ctx);
                 if result.is_ok() {
@@ -212,7 +210,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
             Err(String::from("Couldn't unify lambda with intersection"))
         }
-        (Variant::Object(props1), Variant::Object(props2)) => {
+        (Type::Object(props1), Type::Object(props2)) => {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
             let result: Result<Vec<_>, String> = props2
                 .iter()
@@ -244,14 +242,14 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let ss = result?;
             Ok(compose_many_subs(&ss))
         }
-        (Variant::Tuple(types1), Variant::Tuple(types2)) => {
+        (Type::Tuple(types1), Type::Tuple(types2)) => {
             let mut before2: Vec<Type> = vec![];
             let mut after2: Vec<Type> = vec![];
             let mut maybe_rest2: Option<Type> = None;
 
             for t in types2 {
-                match &t.variant {
-                    Variant::Rest(rest_type) => {
+                match &t {
+                    Type::Rest(rest_type) => {
                         if maybe_rest2.is_some() {
                             return Err(String::from(
                                 "Only one rest pattern is allowed in a tuple",
@@ -302,7 +300,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
             Ok(compose_many_subs(&ss))
         }
-        (Variant::Tuple(tuple_types), Variant::Array(array_type)) => {
+        (Type::Tuple(tuple_types), Type::Array(array_type)) => {
             if tuple_types.is_empty() {
                 Ok(Subst::default())
             } else {
@@ -314,15 +312,15 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Ok(compose_many_subs(&ss))
             }
         }
-        (Variant::Array(array_type_1), Variant::Array(array_type_2)) => {
+        (Type::Array(array_type_1), Type::Array(array_type_2)) => {
             unify(array_type_1, array_type_2, ctx)
         }
-        (Variant::Union(types), _) => {
+        (Type::Union(types), _) => {
             let result: Result<Vec<_>, _> = types.iter().map(|t1| unify(t1, t2, ctx)).collect();
             let ss = result?; // This is only okay if all calls to is_subtype are okay
             Ok(compose_many_subs_with_context(&ss, ctx))
         }
-        (_, Variant::Union(types)) => {
+        (_, Type::Union(types)) => {
             let mut b = false;
             let mut ss = vec![];
             for t2 in types.iter() {
@@ -337,15 +335,15 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 false => Err(String::from("Unification failure")),
             }
         }
-        (Variant::Object(props), Variant::Intersection(types)) => {
+        (Type::Object(props), Type::Intersection(types)) => {
             let obj_types: Vec<_> = types
                 .iter()
-                .filter(|t| matches!(t.variant, Variant::Object(_)))
+                .filter(|t| matches!(t, Type::Object(_)))
                 .cloned()
                 .collect();
             let rest_types: Vec<_> = types
                 .iter()
-                .filter(|t| matches!(t.variant, Variant::Var))
+                .filter(|t| matches!(t, Type::Var(_)))
                 .cloned()
                 .collect();
             // TODO: check for other variants, if there are we should error
@@ -355,8 +353,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             match rest_types.len() {
                 0 => unify(t1, &obj_type, ctx),
                 1 => {
-                    let all_obj_props = match &obj_type.variant {
-                        Variant::Object(props) => props.to_owned(),
+                    let all_obj_props = match &obj_type {
+                        Type::Object(props) => props.to_owned(),
                         _ => vec![],
                     };
 
@@ -376,15 +374,15 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 _ => Err(String::from("Unification is undecidable")),
             }
         }
-        (Variant::Intersection(types), Variant::Object(props)) => {
+        (Type::Intersection(types), Type::Object(props)) => {
             let obj_types: Vec<_> = types
                 .iter()
-                .filter(|t| matches!(t.variant, Variant::Object(_)))
+                .filter(|t| matches!(t, Type::Object(_)))
                 .cloned()
                 .collect();
             let rest_types: Vec<_> = types
                 .iter()
-                .filter(|t| matches!(t.variant, Variant::Var))
+                .filter(|t| matches!(t, Type::Var(_)))
                 .cloned()
                 .collect();
             // TODO: check for other variants, if there are we should error
@@ -394,8 +392,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             match rest_types.len() {
                 0 => unify(&obj_type, t2, ctx),
                 1 => {
-                    let all_obj_props = match &obj_type.variant {
-                        Variant::Object(props) => props.to_owned(),
+                    let all_obj_props = match &obj_type {
+                        Type::Object(props) => props.to_owned(),
                         _ => vec![],
                     };
 
@@ -415,7 +413,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 _ => Err(String::from("Unification is undecidable")),
             }
         }
-        (Variant::Alias(alias1), Variant::Alias(alias2)) => {
+        (Type::Alias(alias1), Type::Alias(alias2)) => {
             if alias1.name == alias2.name {
                 match (&alias1.type_params, &alias2.type_params) {
                     (Some(tp1), Some(tp2)) => {
@@ -434,15 +432,15 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 todo!("unify(): handle aliases that point to another alias")
             }
         }
-        (_, Variant::Alias(alias)) => {
+        (_, Type::Alias(alias)) => {
             let alias_t = lookup_alias(ctx, alias)?;
             unify(t1, &alias_t, ctx)
         }
-        (Variant::Alias(alias), _) => {
+        (Type::Alias(alias), _) => {
             let alias_t = lookup_alias(ctx, alias)?;
             unify(&alias_t, t2, ctx)
         }
-        (Variant::Array(array_arg), Variant::Rest(rest_arg)) => {
+        (Type::Array(array_arg), Type::Rest(rest_arg)) => {
             unify(array_arg.as_ref(), rest_arg.as_ref(), ctx)
         }
         (v1, v2) => {
@@ -463,42 +461,44 @@ fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
     // | t == TVar a     = return nullSubst
     // | occursCheck a t = throwError $ InfiniteType a t
     // | otherwise       = return $ Map.singleton a t
-    if &t.id == id {
-        Ok(Subst::default())
-    } else if occurs_check(id, t) {
-        // Union types are a special case since `t1` unifies trivially with `t1 | t2 | ... tn`
-        if let Variant::Union(elem_types) = &t.variant {
-            let elem_types_without_id: Vec<Type> = elem_types
-                .iter()
-                .filter(|elem_type| elem_type.id != *id)
-                .cloned()
-                .collect();
+    match t {
+        Type::Var(other_id) if other_id == id => Ok(Subst::default()),
+        _ => {
+            if occurs_check(id, t) {
+                // Union types are a special case since `t1` unifies trivially with `t1 | t2 | ... tn`
+                if let Type::Union(elem_types) = &t {
+                    let elem_types_without_id: Vec<Type> = elem_types
+                        .iter()
+                        .filter(|elem_type| match elem_type {
+                            Type::Var(elem_id) => elem_id != id,
+                            _ => true,
+                        })
+                        .cloned()
+                        .collect();
 
-            if elem_types_without_id.len() < elem_types.len() {
-                // TODO: dedupe with `norm_type()` in substitutable.rs
-                // TODO: restrict this special case handling to recursive functions?
-                // Removes duplicates
-                let types: HashSet<Type> = elem_types_without_id.into_iter().collect();
-                // Converts set back to an array
-                let mut types: Vec<Type> = types.into_iter().collect();
-                types.sort_by_key(|k| k.id);
+                    if elem_types_without_id.len() < elem_types.len() {
+                        // TODO: dedupe with `norm_type()` in substitutable.rs
+                        // TODO: restrict this special case handling to recursive functions?
+                        // Removes duplicates
+                        let types: HashSet<Type> = elem_types_without_id.into_iter().collect();
+                        // Converts set back to an array
+                        let types: Vec<Type> = types.into_iter().collect();
 
-                let t = if types.len() == 1 {
-                    types.get(0).unwrap().to_owned()
-                } else {
-                    Type {
-                        variant: Variant::Union(types),
-                        ..t.to_owned()
+                        let t = if types.len() == 1 {
+                            types.get(0).unwrap().to_owned()
+                        } else {
+                            Type::Union(types)
+                        };
+
+                        return Ok(Subst::from([(id.to_owned(), t)]));
                     }
-                };
+                }
 
-                return Ok(Subst::from([(id.to_owned(), t)]));
+                Err(String::from("InfiniteType"))
+            } else {
+                Ok(Subst::from([(id.to_owned(), t.to_owned())]))
             }
         }
-
-        Err(String::from("InfiniteType"))
-    } else {
-        Ok(Subst::from([(id.to_owned(), t.to_owned())]))
     }
 }
 

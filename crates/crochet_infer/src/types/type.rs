@@ -1,4 +1,4 @@
-use itertools::join;
+use itertools::{join, Itertools};
 use std::fmt;
 use std::hash::Hash;
 
@@ -36,23 +36,6 @@ impl fmt::Display for TProp {
             (false, true) => write!(f, "mut {name}: {ty}"),
             (true, true) => write!(f, "mut {name}?: {ty}"),
         }
-    }
-}
-
-#[derive(Clone, Debug, Eq)]
-pub struct VarType {
-    pub id: i32,
-}
-
-impl PartialEq for VarType {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-impl Hash for VarType {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.id.hash(state);
     }
 }
 
@@ -254,8 +237,8 @@ impl Hash for AliasType {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Variant {
-    Var,
+pub enum Type {
+    Var(i32), // i32 is the if of the type variable
     App(AppType),
     Lam(LamType),
     Wildcard,
@@ -271,61 +254,38 @@ pub enum Variant {
     Rest(Box<Type>), // TODO: rename this to Spread
 }
 
-#[derive(Clone, Debug, Eq)]
-pub struct Type {
-    pub variant: Variant,
-    pub id: i32,
-}
-
-impl PartialEq for Type {
-    fn eq(&self, other: &Self) -> bool {
-        match &self.variant {
-            Variant::Var => self.id == other.id,
-            _ => self.variant == other.variant,
-        }
-    }
-}
-
-impl Hash for Type {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match &self.variant {
-            Variant::Var => self.id.hash(state),
-            _ => self.variant.hash(state),
-        }
-    }
-}
-
 impl fmt::Display for Type {
     // TODO: add in parentheses where necessary to get the precedence right
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self.variant {
-            Variant::Var => {
-                let id = self.id;
-                write!(f, "t{id}")
-            }
-            Variant::App(AppType { args, ret }) => {
+        match &self {
+            Type::Var(id) => write!(f, "t{id}"),
+            Type::App(AppType { args, ret }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }
-            Variant::Lam(LamType { params, ret, .. }) => {
+            Type::Lam(LamType { params, ret, .. }) => {
                 write!(f, "({}) => {}", join(params, ", "), ret)
             }
-            Variant::Wildcard => write!(f, "_"),
-            Variant::Prim(prim) => write!(f, "{}", prim),
-            Variant::Lit(lit) => write!(f, "{}", lit),
-            Variant::Union(types) => write!(f, "{}", join(types, " | ")),
-            Variant::Intersection(types) => {
-                write!(f, "{}", join(types, " & "))
+            Type::Wildcard => write!(f, "_"),
+            Type::Prim(prim) => write!(f, "{}", prim),
+            Type::Lit(lit) => write!(f, "{}", lit),
+            Type::Union(types) => {
+                let strings: Vec<_> = types.iter().map(|t| format!("{t}")).sorted().collect();
+                write!(f, "{}", join(strings, " | "))
             }
-            Variant::Object(props) => write!(f, "{{{}}}", join(props, ", ")),
-            Variant::Alias(AliasType {
+            Type::Intersection(types) => {
+                let strings: Vec<_> = types.iter().map(|t| format!("{t}")).sorted().collect();
+                write!(f, "{}", join(strings, " & "))
+            }
+            Type::Object(props) => write!(f, "{{{}}}", join(props, ", ")),
+            Type::Alias(AliasType {
                 name, type_params, ..
             }) => match type_params {
                 Some(params) => write!(f, "{name}<{}>", join(params, ", ")),
                 None => write!(f, "{name}"),
             },
-            Variant::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
-            Variant::Array(t) => write!(f, "{t}[]"),
-            Variant::Rest(arg) => write!(f, "...{arg}"),
+            Type::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
+            Type::Array(t) => write!(f, "{t}[]"),
+            Type::Rest(arg) => write!(f, "...{arg}"),
         }
     }
 }
