@@ -107,12 +107,16 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
         let ident = text::ident().map_with_span(|name, span: Span| Ident { span, name });
 
         let ident_param = ident
+            .then(just_with_padding("?").or_not())
             .then_ignore(just_with_padding(":"))
             .then(type_ann.clone())
-            .map_with_span(|(ident, type_ann), span: Span| TypeAnnFnParam {
-                pat: EFnParamPat::Ident(EFnParamBindingIdent { span, id: ident }),
-                type_ann,
-            });
+            .map_with_span(
+                |((ident, question_mark), type_ann), span: Span| TypeAnnFnParam {
+                    pat: EFnParamPat::Ident(EFnParamBindingIdent { span, id: ident }),
+                    type_ann,
+                    optional: question_mark.is_some(),
+                },
+            );
 
         let rest_param = just_with_padding("...")
             .ignore_then(ident.map_with_span(|id, span: Span| {
@@ -126,6 +130,7 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
                     arg: Box::from(ident),
                 }),
                 type_ann,
+                optional: false,
             });
 
         let lam_params = choice((ident_param, rest_param))

@@ -66,11 +66,15 @@ pub struct AppType {
 pub struct TFnParam {
     pub pat: TPat,
     pub ty: Type,
+    pub optional: bool,
 }
 
 impl TFnParam {
-    pub fn get_type(&self) -> Type {
-        self.ty.to_owned()
+    pub fn get_type(&self, ctx: &Context) -> Type {
+        match self.optional {
+            true => ctx.union(vec![self.ty.to_owned(), ctx.prim(Primitive::Undefined)]),
+            false => self.ty.to_owned(),
+        }
     }
     pub fn get_name(&self, index: &usize) -> String {
         match &self.pat {
@@ -82,8 +86,11 @@ impl TFnParam {
 
 impl fmt::Display for TFnParam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { pat, ty } = self;
-        write!(f, "{pat}: {ty}")
+        let Self { pat, ty, optional } = self;
+        match optional {
+            true => write!(f, "{pat}?: {ty}"),
+            false => write!(f, "{pat}: {ty}"),
+        }
     }
 }
 
@@ -109,22 +116,15 @@ impl fmt::Display for TPat {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BindingIdent {
     pub name: String,
-    pub optional: bool,
     pub mutable: bool,
 }
 
 impl fmt::Display for BindingIdent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self {
-            name,
-            optional,
-            mutable,
-        } = self;
-        match (optional, mutable) {
-            (false, false) => write!(f, "{name}"),
-            (true, false) => write!(f, "{name}?"),
-            (false, true) => write!(f, "mut {name}"),
-            (true, true) => write!(f, "mut {name}?"),
+        let Self { name, mutable } = self;
+        match mutable {
+            false => write!(f, "{name}"),
+            true => write!(f, "mut {name}"),
         }
     }
 }

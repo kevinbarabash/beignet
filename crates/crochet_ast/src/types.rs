@@ -9,6 +9,7 @@ use crate::span::Span;
 pub struct TypeAnnFnParam {
     pub pat: EFnParamPat,
     pub type_ann: TypeAnn,
+    pub optional: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

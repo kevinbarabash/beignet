@@ -23,6 +23,7 @@ Lam(
                         type_params: None,
                     },
                 ),
+                optional: false,
             },
         ],
         ret: Union(

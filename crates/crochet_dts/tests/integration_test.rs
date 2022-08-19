@@ -1,5 +1,5 @@
-use std::fs;
 use chumsky::prelude::*;
+use std::fs;
 
 use crochet_ast::Program;
 use crochet_parser::parser;
@@ -29,7 +29,7 @@ fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
 fn infer_adding_variables() {
     let src = r#"
     let msg = "Hello, world!"
-    let len = msg.length.toString(10) // radix is required b/c we don't support optional params yet
+    let len = msg.length.toString() // radix is optional
     "#;
     let (_, ctx) = infer_prog(src);
     let result = format!("{}", ctx.values.get("len").unwrap());

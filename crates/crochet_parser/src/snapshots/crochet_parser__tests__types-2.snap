@@ -37,6 +37,7 @@ Program {
                                         type_params: None,
                                     },
                                 ),
+                                optional: false,
                             },
                         ],
                         ret: TypeRef(

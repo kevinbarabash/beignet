@@ -64,10 +64,10 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                             let param = TFnParam {
                                 pat: TPat::Ident(types::BindingIdent {
                                     name: ident.id.sym.to_string(),
-                                    optional: ident.optional,
                                     mutable: false,
                                 }),
                                 ty: infer_ts_type_ann(&type_ann.type_ann, ctx),
+                                optional: ident.optional,
                             };
                             Some(param)
                         }
@@ -85,11 +85,11 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                                 pat: TPat::Rest(RestPat {
                                     arg: Box::from(TPat::Ident(types::BindingIdent {
                                         name,
-                                        optional: false,
                                         mutable: false,
                                     })),
                                 }),
                                 ty: infer_ts_type_ann(&type_ann.type_ann, ctx),
+                                optional: false,
                             };
                             Some(param)
                         }
@@ -249,10 +249,10 @@ impl InterfaceCollector {
                     let param = TFnParam {
                         pat: TPat::Ident(types::BindingIdent {
                             name: ident.id.sym.to_string(),
-                            optional: ident.optional,
                             mutable: false,
                         }),
                         ty: infer_ts_type_ann(&type_ann.type_ann, &self.ctx),
+                        optional: ident.optional,
                     };
                     Some(param)
                 }
@@ -270,11 +270,11 @@ impl InterfaceCollector {
                         pat: TPat::Rest(RestPat {
                             arg: Box::from(TPat::Ident(types::BindingIdent {
                                 name,
-                                optional: false,
                                 mutable: false,
                             })),
                         }),
                         ty: infer_ts_type_ann(&type_ann.type_ann, &self.ctx),
+                        optional: false,
                     };
                     Some(param)
                 }

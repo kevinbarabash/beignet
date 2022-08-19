@@ -103,12 +103,19 @@ mod tests {
         insta::assert_debug_snapshot!(parse("(a, ...b) => true"));
         insta::assert_debug_snapshot!(parse("({x, y}) => x + y"));
         insta::assert_debug_snapshot!(parse("({x: p, y: q}) => p + q"));
+        insta::assert_debug_snapshot!(parse("(a?: bool, b?) => c"));
     }
 
     #[test]
     #[should_panic = "rest params must come last"]
     fn multiple_rest_params() {
         parse("(...a, ...b) => true");
+    }
+
+    #[test]
+    #[should_panic = "optional params must come last"]
+    fn optional_params_must_appear_last() {
+        parse("(a?, b) => true");
     }
 
     #[test]

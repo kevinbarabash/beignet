@@ -97,10 +97,7 @@ pub fn fn_param_parser() -> BoxedParser<'static, char, EFnParam, Simple<char>> {
         let assign_pat_prop = text::ident()
             .map_with_span(|name, span| Ident { span, name })
             .map_with_span(|key, _| {
-                EFnParamObjectPatProp::Assign(EFnParamAssignPatProp {
-                    key,
-                    value: None,
-                })
+                EFnParamObjectPatProp::Assign(EFnParamAssignPatProp { key, value: None })
             });
 
         let obj_pat = choice((
@@ -144,12 +141,18 @@ pub fn fn_param_parser() -> BoxedParser<'static, char, EFnParam, Simple<char>> {
     let type_ann = type_ann_parser();
 
     let parser = pat_parser
+        .then(just_with_padding("?").or_not())
         .then(
             just_with_padding(":")
                 .ignore_then(type_ann.clone())
                 .or_not(),
         )
-        .map_with_span(|(pat, type_ann), _: Span| EFnParam { pat, type_ann });
+        .map_with_span(|((pat, question_mark), type_ann), _: Span| EFnParam {
+            pat,
+            type_ann,
+            optional: question_mark.is_some(),
+            mutable: false,
+        });
 
     parser.boxed()
 }

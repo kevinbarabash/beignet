@@ -37,6 +37,8 @@ Program {
                                 },
                             ),
                             type_ann: None,
+                            optional: false,
+                            mutable: false,
                         },
                     ],
                     body: Op(

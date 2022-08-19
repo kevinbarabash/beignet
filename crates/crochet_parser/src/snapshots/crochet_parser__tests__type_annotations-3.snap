@@ -39,6 +39,8 @@ Program {
                                         },
                                     ),
                                 ),
+                                optional: false,
+                                mutable: false,
                             },
                             EFnParam {
                                 pat: Ident(
@@ -58,6 +60,8 @@ Program {
                                         },
                                     ),
                                 ),
+                                optional: false,
+                                mutable: false,
                             },
                         ],
                         body: Op(
