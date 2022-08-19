@@ -531,37 +531,23 @@ pub fn build_type(
             }
         }
         Type::Union(types) => {
-            let mut sorted_types = types.to_owned();
-            sorted_types.sort_by(|a, b| {
-                let a = format!("{a}");
-                let b = format!("{b}");
-                a.cmp(&b)
-            });
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
                 span: DUMMY_SP,
-                types: sorted_types
+                types: sort_types(types)
                     .iter()
                     .map(|ty| Box::from(build_type(ty, None, None)))
                     .collect(),
             }))
         }
-        Type::Intersection(types) => {
-            let mut sorted_types = types.to_owned();
-            sorted_types.sort_by(|a, b| {
-                let a = format!("{a}");
-                let b = format!("{b}");
-                a.cmp(&b)
-            });
-            TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsIntersectionType(
-                TsIntersectionType {
-                    span: DUMMY_SP,
-                    types: sorted_types
-                        .iter()
-                        .map(|ty| Box::from(build_type(ty, None, None)))
-                        .collect(),
-                },
-            ))
-        }
+        Type::Intersection(types) => TsType::TsUnionOrIntersectionType(
+            TsUnionOrIntersectionType::TsIntersectionType(TsIntersectionType {
+                span: DUMMY_SP,
+                types: sort_types(types)
+                    .iter()
+                    .map(|ty| Box::from(build_type(ty, None, None)))
+                    .collect(),
+            }),
+        ),
         Type::Object(props) => {
             let members: Vec<TsTypeElement> = props
                 .iter()
@@ -627,4 +613,14 @@ pub fn build_type(
         Type::Rest(_) => todo!(),
         Type::Wildcard => todo!(),
     }
+}
+
+fn sort_types(types: &[Type]) -> Vec<Type> {
+    let mut sorted_types = types.to_owned();
+    sorted_types.sort_by(|a, b| {
+        let a = format!("{a}");
+        let b = format!("{b}");
+        a.cmp(&b)
+    });
+    sorted_types
 }
