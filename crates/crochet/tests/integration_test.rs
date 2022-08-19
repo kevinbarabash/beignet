@@ -239,7 +239,7 @@ fn infer_if_else_with_multiple_widenings() {
     assert_eq!(result, "10 | 15 | 5");
 
     let result = codegen_d_ts(&program, &ctx);
-    insta::assert_snapshot!(result, @"export declare const x: 15 | 10 | 5;
+    insta::assert_snapshot!(result, @"export declare const x: 10 | 15 | 5;
 ");
 }
 
@@ -1409,10 +1409,10 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
         readonly y: number;
     };
     type Action = {
-        readonly type: "moveto";
+        readonly type: "lineto";
         readonly point: Point;
     } | {
-        readonly type: "lineto";
+        readonly type: "moveto";
         readonly point: Point;
     };
     export declare const action: Action;

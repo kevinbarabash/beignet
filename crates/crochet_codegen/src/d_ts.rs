@@ -1,3 +1,4 @@
+use std::cmp;
 use std::rc::Rc;
 
 use swc_atoms::*;
@@ -531,23 +532,45 @@ pub fn build_type(
             }
         }
         Type::Union(types) => {
+            let mut sorted_types = types.to_owned();
+            sorted_types.sort_by(|a, b| {
+                let a = format!("{a}");
+                let b = format!("{b}");
+                if a < b {
+                    cmp::Ordering::Less
+                } else {
+                    cmp::Ordering::Greater
+                }
+            });
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
                 span: DUMMY_SP,
-                types: types
+                types: sorted_types
                     .iter()
                     .map(|ty| Box::from(build_type(ty, None, None)))
                     .collect(),
             }))
         }
-        Type::Intersection(types) => TsType::TsUnionOrIntersectionType(
-            TsUnionOrIntersectionType::TsIntersectionType(TsIntersectionType {
-                span: DUMMY_SP,
-                types: types
-                    .iter()
-                    .map(|ty| Box::from(build_type(ty, None, None)))
-                    .collect(),
-            }),
-        ),
+        Type::Intersection(types) => {
+            let mut sorted_types = types.to_owned();
+            sorted_types.sort_by(|a, b| {
+                let a = format!("{a}");
+                let b = format!("{b}");
+                if a < b {
+                    cmp::Ordering::Less
+                } else {
+                    cmp::Ordering::Greater
+                }
+            });
+            TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsIntersectionType(
+                TsIntersectionType {
+                    span: DUMMY_SP,
+                    types: sorted_types
+                        .iter()
+                        .map(|ty| Box::from(build_type(ty, None, None)))
+                        .collect(),
+                },
+            ))
+        }
         Type::Object(props) => {
             let members: Vec<TsTypeElement> = props
                 .iter()
