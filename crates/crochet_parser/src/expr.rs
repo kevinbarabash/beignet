@@ -460,6 +460,7 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                             if i < params.len() - 1 {
                                 panic!("rest params must come last");
                             };
+                            continue;
                         }
                         // TODO: rest params can't be optional, but they
                         // can appear after optional param, e.g.

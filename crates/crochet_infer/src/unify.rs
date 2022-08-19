@@ -1,4 +1,6 @@
 use crochet_ast::Primitive;
+use std::cmp;
+use std::collections::HashSet;
 
 use super::context::{lookup_alias, Context};
 use super::substitutable::{Subst, Substitutable};
@@ -8,6 +10,10 @@ use super::util::*;
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     let result = match (&t1.variant, &t2.variant) {
+        // All binding must be done first
+        (Variant::Var, _) => bind(&t1.id, t2),
+        (_, Variant::Var) => bind(&t2.id, t1),
+
         (Variant::Lit(lit), Variant::Prim(prim)) => {
             let b = matches!(
                 (lit, prim),
@@ -51,7 +57,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     // NOTE: The order of params is reversed.  This allows a callback
                     // whose params can accept more values (are supertypes) than the
                     // function will pass to the callback.
-                    let s1 = unify(&p2.get_type().apply(&s), &p1.get_type().apply(&s), ctx)?;
+                    let s1 = unify(
+                        &p2.get_type(ctx).apply(&s),
+                        &p1.get_type(ctx).apply(&s),
+                        ctx,
+                    )?;
                     s = compose_subs(&s, &s1);
                 }
                 let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
@@ -95,8 +105,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 None => lam.params.len() - optional_count,
             };
 
-            println!("param_count_low_bound = {param_count_low_bound}");
-
             // NOTE: placeholder spreads must come last because we don't know they're
             // length.  This will also be true for spreading arrays, but in the case
             // of array spreads, they also need to come after the start of a rest param.
@@ -123,27 +131,26 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 }
             }
 
-            // TODO: handle functions with optional params and a rest param
-
             // TODO: add a `variadic` boolean to the Lambda type as a convenience
             // so that we don't have to search through all the params for the rest
             // param.
             if let Some(rest_param) = maybe_rest_param {
-                let regular_param_count = lam.params.len() - 1;
+                let max_regular_arg_count = lam.params.len() - 1;
+                let regular_arg_count = cmp::min(max_regular_arg_count, app.args.len());
 
                 let mut args = app.args.clone();
-                let regular_args: Vec<_> = args.drain(0..regular_param_count).collect();
+                let regular_args: Vec<_> = args.drain(0..regular_arg_count).collect();
                 let rest_arg = ctx.tuple(args);
 
                 let mut params = lam.params.clone();
-                let regular_params: Vec<_> = params.drain(0..regular_param_count).collect();
+                let regular_params: Vec<_> = params.drain(0..regular_arg_count).collect();
 
                 // Unify regular args and params
                 for (p1, p2) in regular_args.iter().zip(&regular_params) {
                     // Each argument must be a subtype of the corresponding param.
                     let arg = p1.apply(&s);
                     let param = p2.apply(&s);
-                    let s1 = unify(&arg, &param.get_type(), ctx)?;
+                    let s1 = unify(&arg, &param.get_type(ctx), ctx)?;
                     s = compose_subs(&s, &s1);
                 }
 
@@ -170,7 +177,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             _ => {
                                 let arg = arg.apply(&s);
                                 let param = param.apply(&s);
-                                let s1 = unify(&arg, &param.get_type(), ctx)?;
+                                let s1 = unify(&arg, &param.get_type(ctx), ctx)?;
                                 s = compose_subs(&s, &s1);
                             }
                         };
@@ -185,7 +192,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     for (p1, p2) in args.iter().zip(&lam.params) {
                         // Each argument must be a subtype of the corresponding param.
                         let arg = p1.apply(&s);
-                        let param = p2.get_type().apply(&s);
+                        let param = p2.get_type(ctx).apply(&s);
                         let s1 = unify(&arg, &param, ctx)?;
                         s = compose_subs(&s, &s1);
                     }
@@ -307,6 +314,9 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Ok(compose_many_subs(&ss))
             }
         }
+        (Variant::Array(array_type_1), Variant::Array(array_type_2)) => {
+            unify(array_type_1, array_type_2, ctx)
+        }
         (Variant::Union(types), _) => {
             let result: Result<Vec<_>, _> = types.iter().map(|t1| unify(t1, t2, ctx)).collect();
             let ss = result?; // This is only okay if all calls to is_subtype are okay
@@ -327,8 +337,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 false => Err(String::from("Unification failure")),
             }
         }
-        (Variant::Var, _) => bind(&t1.id, t2),
-        (_, Variant::Var) => bind(&t2.id, t1),
         (Variant::Object(props), Variant::Intersection(types)) => {
             let obj_types: Vec<_> = types
                 .iter()
@@ -458,6 +466,36 @@ fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
     if &t.id == id {
         Ok(Subst::default())
     } else if occurs_check(id, t) {
+        // Union types are a special case since `t1` unifies trivially with `t1 | t2 | ... tn`
+        if let Variant::Union(elem_types) = &t.variant {
+            let elem_types_without_id: Vec<Type> = elem_types
+                .iter()
+                .filter(|elem_type| elem_type.id != *id)
+                .cloned()
+                .collect();
+
+            if elem_types_without_id.len() < elem_types.len() {
+                // TODO: dedupe with `norm_type()` in substitutable.rs
+                // TODO: restrict this special case handling to recursive functions?
+                // Removes duplicates
+                let types: HashSet<Type> = elem_types_without_id.into_iter().collect();
+                // Converts set back to an array
+                let mut types: Vec<Type> = types.into_iter().collect();
+                types.sort_by_key(|k| k.id);
+
+                let t = if types.len() == 1 {
+                    types.get(0).unwrap().to_owned()
+                } else {
+                    Type {
+                        variant: Variant::Union(types),
+                        ..t.to_owned()
+                    }
+                };
+
+                return Ok(Subst::from([(id.to_owned(), t)]));
+            }
+        }
+
         Err(String::from("InfiniteType"))
     } else {
         Ok(Subst::from([(id.to_owned(), t.to_owned())]))

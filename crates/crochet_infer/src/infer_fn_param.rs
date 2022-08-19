@@ -37,10 +37,24 @@ pub fn infer_fn_param(
             // Substs are applied to any new variables introduced.  This handles
             // the situation where explicit types have be provided for function
             // parameters.
-            let a = new_vars.apply(&s);
+            let mut a = new_vars.apply(&s);
+
+            // TODO: handle schemes with type params
+            if param.optional {
+                match a.iter().find(|(_, value)| type_ann_ty == value.ty) {
+                    Some((name, scheme)) => {
+                        let mut scheme = scheme.to_owned();
+                        scheme.ty = ctx.union(vec![scheme.ty, ctx.prim(Primitive::Undefined)]);
+                        a.insert(name.to_owned(), scheme);
+                    }
+                    None => (),
+                };
+            }
 
             let param = TFnParam {
                 pat,
+                // We don't modify the type annotation for the param since the optionality
+                // is already tracked by the `optional` field.
                 ty: type_ann_ty,
                 optional: param.optional,
             };
@@ -48,6 +62,18 @@ pub fn infer_fn_param(
             Ok((s, a, param))
         }
         None => {
+            // TODO: handle schemes with type params
+            if param.optional {
+                match new_vars.iter().find(|(_, value)| pat_type == value.ty) {
+                    Some((name, scheme)) => {
+                        let mut scheme = scheme.to_owned();
+                        scheme.ty = ctx.union(vec![scheme.ty, ctx.prim(Primitive::Undefined)]);
+                        new_vars.insert(name.to_owned(), scheme);
+                    }
+                    None => (),
+                };
+            }
+
             let param = TFnParam {
                 pat,
                 ty: pat_type,
@@ -127,9 +153,8 @@ fn infer_param_pattern_rec(
             Ok(tv)
         }
         EFnParamPat::Rest(EFnParamRestPat { arg, .. }) => {
-            // TODO: wrap this in an array type
             let t = infer_param_pattern_rec(arg.as_ref(), ctx, assump)?;
-            Ok(ctx.rest(t))
+            Ok(ctx.array(t))
         }
         EFnParamPat::Array(EFnParamArrayPat { elems, .. }) => {
             let elems: Result<Vec<Type>, String> = elems

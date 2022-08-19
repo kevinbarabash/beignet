@@ -70,8 +70,11 @@ pub struct TFnParam {
 }
 
 impl TFnParam {
-    pub fn get_type(&self) -> Type {
-        self.ty.to_owned()
+    pub fn get_type(&self, ctx: &Context) -> Type {
+        match self.optional {
+            true => ctx.union(vec![self.ty.to_owned(), ctx.prim(Primitive::Undefined)]),
+            false => self.ty.to_owned(),
+        }
     }
     pub fn get_name(&self, index: &usize) -> String {
         match &self.pat {

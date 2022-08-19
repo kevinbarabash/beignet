@@ -965,6 +965,72 @@ mod tests {
     }
 
     #[test]
+    fn optional_param_with_type_annotation_inferred_as_union_with_undefined() {
+        let src = r#"
+        let foo = (a?: string) => a
+        let result1 = foo()
+        let result2 = foo("hello")
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("foo", &ctx), "(a?: string) => string | undefined");
+        assert_eq!(get_type("result1", &ctx), "string | undefined");
+        assert_eq!(get_type("result2", &ctx), "string | undefined");
+    }
+
+    #[test]
+    fn optional_param_type_inferred_as_union_with_undefined() {
+        let src = r#"
+        let foo = (a?: number) => a
+        let bar = (a?) => foo(a)
+        let result1 = bar()
+        let result2 = bar(5)
+        "#;
+        let ctx = infer_prog(src);
+
+        // TODO: bar should be inferred as `(a?: number) => number | undefined`
+        // This is likely because foo's `a` param's type is `number | undefined`.
+        // This suggests that we should introduce a `Optional` type into the type
+        // system that can be differentiated from `T | undefined`.
+        assert_eq!(
+            get_type("bar", &ctx),
+            "(a?: number | undefined) => number | undefined"
+        );
+        assert_eq!(get_type("result1", &ctx), "number | undefined");
+        assert_eq!(get_type("result2", &ctx), "number | undefined");
+    }
+
+    #[test]
+    fn call_fn_with_optional_and_rest_params() {
+        let src = r#"
+        let plus_one = (a, b?, ...c) => a + 1
+        let result = plus_one(5)
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(
+            get_type("plus_one", &ctx),
+            "<t0, t1>(a: number, b?: t0, ...c: t1[]) => number"
+        );
+    }
+
+    #[test]
+    fn call_fn_with_optional_and_rest_params_all_args() {
+        let src = r#"
+        let plus_one = (a, b?: string, ...c: boolean[]) => a + 1
+        let result = plus_one(5, "hello", true, false)
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(
+            get_type("plus_one", &ctx),
+            "(a: number, b?: string, ...c: boolean[]) => number"
+        );
+    }
+
+    #[test]
     fn infer_optional_param_type() {
         let src = r#"
         let plus_one = (a, b?) => {
