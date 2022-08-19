@@ -3,7 +3,6 @@ use std::fmt;
 use std::hash::Hash;
 
 use crate::types::{Lit, Primitive};
-use crate::Context;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TProp {
@@ -14,9 +13,9 @@ pub struct TProp {
 }
 
 impl TProp {
-    pub fn get_type(&self, ctx: &Context) -> Type {
+    pub fn get_type(&self) -> Type {
         match self.optional {
-            true => ctx.union(vec![self.ty.to_owned(), ctx.prim(Primitive::Undefined)]),
+            true => Type::Union(vec![self.ty.to_owned(), Type::Prim(Primitive::Undefined)]),
             false => self.ty.to_owned(),
         }
     }
@@ -53,9 +52,9 @@ pub struct TFnParam {
 }
 
 impl TFnParam {
-    pub fn get_type(&self, ctx: &Context) -> Type {
+    pub fn get_type(&self) -> Type {
         match self.optional {
-            true => ctx.union(vec![self.ty.to_owned(), ctx.prim(Primitive::Undefined)]),
+            true => Type::Union(vec![self.ty.to_owned(), Type::Prim(Primitive::Undefined)]),
             false => self.ty.to_owned(),
         }
     }

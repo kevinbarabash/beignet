@@ -71,14 +71,6 @@ impl Context {
         Type::Var(self.fresh_id())
     }
 
-    pub fn lam(&self, params: Vec<TFnParam>, ret: Box<Type>) -> Type {
-        Type::Lam(LamType { params, ret })
-    }
-
-    pub fn prim(&self, prim: Primitive) -> Type {
-        Type::Prim(prim)
-    }
-
     pub fn lit(&self, lit: AstLit) -> Type {
         let lit = match lit {
             AstLit::Num(n) => Lit::Num(n.value),
@@ -94,18 +86,6 @@ impl Context {
         Type::Lit(lit)
     }
 
-    pub fn union(&self, types: Vec<Type>) -> Type {
-        Type::Union(types)
-    }
-
-    pub fn intersection(&self, types: Vec<Type>) -> Type {
-        Type::Intersection(types)
-    }
-
-    pub fn object(&self, props: Vec<TProp>) -> Type {
-        Type::Object(props)
-    }
-
     pub fn prop(&self, name: &str, ty: Type, optional: bool) -> TProp {
         TProp {
             name: name.to_owned(),
@@ -113,29 +93,6 @@ impl Context {
             mutable: false,
             ty,
         }
-    }
-
-    pub fn alias(&self, name: &str, type_params: Option<Vec<Type>>) -> Type {
-        Type::Alias(AliasType {
-            name: name.to_owned(),
-            type_params,
-        })
-    }
-
-    pub fn tuple(&self, types: Vec<Type>) -> Type {
-        Type::Tuple(types)
-    }
-
-    pub fn array(&self, t: Type) -> Type {
-        Type::Array(Box::from(t))
-    }
-
-    pub fn rest(&self, arg: Type) -> Type {
-        Type::Rest(Box::from(arg))
-    }
-
-    pub fn wildcard(&self) -> Type {
-        Type::Wildcard
     }
 }
 

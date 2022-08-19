@@ -56,7 +56,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 // TODO: update intersection_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
                 let types: Vec<_> = types.iter().map(|ty| norm_type(ty, mapping, ctx)).collect();
-                simplify_intersection(&types, ctx)
+                simplify_intersection(&types)
             }
             Type::Object(props) => {
                 let props = props
@@ -114,7 +114,7 @@ pub fn generalize(env: &Env, ty: &Type) -> Scheme {
 // TODO: handle optional properties correctly
 // Maybe we can have a function that will canonicalize objects by converting
 // `x: T | undefined` to `x?: T`
-pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
+pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let obj_types: Vec<_> = in_types
         .iter()
         .filter_map(|ty| match &ty {
@@ -138,7 +138,7 @@ pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
             let ty: Type = if types.len() == 1 {
                 types[0].clone()
             } else {
-                ctx.intersection(types)
+                Type::Intersection(types)
             };
             TProp {
                 name: name.to_owned(),
@@ -162,7 +162,7 @@ pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
     let mut out_types = vec![];
     out_types.append(&mut not_obj_types);
     if !props.is_empty() {
-        out_types.push(ctx.object(props));
+        out_types.push(Type::Object(props));
     }
     // TODO: figure out a consistent way to sort types
     // out_types.sort_by_key(|ty| ty.id); // ensure a stable order
@@ -170,7 +170,7 @@ pub fn simplify_intersection(in_types: &[Type], ctx: &Context) -> Type {
     if out_types.len() == 1 {
         out_types[0].clone()
     } else {
-        ctx.intersection(out_types)
+        Type::Intersection(out_types)
     }
 }
 
@@ -181,11 +181,11 @@ fn flatten_types(ty: &Type) -> Vec<Type> {
     }
 }
 
-pub fn union_types(t1: &Type, t2: &Type, ctx: &Context) -> Type {
-    union_many_types(&[t1.to_owned(), t2.to_owned()], ctx)
+pub fn union_types(t1: &Type, t2: &Type) -> Type {
+    union_many_types(&[t1.to_owned(), t2.to_owned()])
 }
 
-pub fn union_many_types(ts: &[Type], ctx: &Context) -> Type {
+pub fn union_many_types(ts: &[Type]) -> Type {
     let types: Vec<_> = ts.iter().flat_map(flatten_types).collect();
 
     let types_set: HashSet<_> = types.iter().cloned().collect();
@@ -201,11 +201,11 @@ pub fn union_many_types(ts: &[Type], ctx: &Context) -> Type {
         .filter(|ty| match &ty {
             // Primitive types subsume corresponding literal types
             Type::Lit(lit) => match lit {
-                Lit::Num(_) => !prim_types.contains(&ctx.prim(Primitive::Num)),
-                Lit::Bool(_) => !prim_types.contains(&ctx.prim(Primitive::Bool)),
-                Lit::Str(_) => !prim_types.contains(&ctx.prim(Primitive::Str)),
-                Lit::Null => !prim_types.contains(&ctx.prim(Primitive::Null)),
-                Lit::Undefined => !prim_types.contains(&ctx.prim(Primitive::Undefined)),
+                Lit::Num(_) => !prim_types.contains(&Type::Prim(Primitive::Num)),
+                Lit::Bool(_) => !prim_types.contains(&Type::Prim(Primitive::Bool)),
+                Lit::Str(_) => !prim_types.contains(&Type::Prim(Primitive::Str)),
+                Lit::Null => !prim_types.contains(&Type::Prim(Primitive::Null)),
+                Lit::Undefined => !prim_types.contains(&Type::Prim(Primitive::Undefined)),
             },
             _ => false,
         })
@@ -224,7 +224,7 @@ pub fn union_many_types(ts: &[Type], ctx: &Context) -> Type {
         .collect();
 
     if types.len() > 1 {
-        ctx.union(types)
+        Type::Union(types)
     } else {
         types[0].clone()
     }
@@ -245,12 +245,12 @@ pub fn compose_many_subs(subs: &[Subst]) -> Subst {
 
 // If are multiple entries for the same type variable, this function merges
 // them into a union type (simplifying the type if possible).
-fn compose_subs_with_context(s1: &Subst, s2: &Subst, ctx: &Context) -> Subst {
+fn compose_subs_with_context(s1: &Subst, s2: &Subst) -> Subst {
     let mut result: Subst = s2.iter().map(|(i, t)| (*i, t.apply(s1))).collect();
     for (i, t) in s1 {
         match result.get(i) {
             Some(t1) => {
-                let t = union_types(t, t1, ctx);
+                let t = union_types(t, t1);
                 result.insert(*i, t)
             }
             None => result.insert(*i, t.to_owned()),
@@ -259,8 +259,8 @@ fn compose_subs_with_context(s1: &Subst, s2: &Subst, ctx: &Context) -> Subst {
     result
 }
 
-pub fn compose_many_subs_with_context(subs: &[Subst], ctx: &Context) -> Subst {
+pub fn compose_many_subs_with_context(subs: &[Subst]) -> Subst {
     subs.iter().fold(Subst::new(), |accum, next| {
-        compose_subs_with_context(&accum, next, ctx)
+        compose_subs_with_context(&accum, next)
     })
 }

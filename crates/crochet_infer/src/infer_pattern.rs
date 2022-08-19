@@ -65,13 +65,16 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
         Pattern::Lit(LitPat { lit, .. }) => Ok(ctx.lit(lit.to_owned())),
         Pattern::Is(IsPat { id, is_id, .. }) => {
             let ty = match is_id.name.as_str() {
-                "string" => ctx.prim(types::Primitive::Str),
-                "number" => ctx.prim(types::Primitive::Num),
-                "boolean" => ctx.prim(types::Primitive::Bool),
+                "string" => Type::Prim(types::Primitive::Str),
+                "number" => Type::Prim(types::Primitive::Num),
+                "boolean" => Type::Prim(types::Primitive::Bool),
                 // The alias type will be used for `instanceof` of checks, but
                 // only if the definition of the alias is an object type with a
                 // `constructor` method.
-                name => ctx.alias(name, None),
+                name => Type::Alias(types::AliasType {
+                    name: name.to_owned(),
+                    type_params: None,
+                }),
             };
             let scheme = generalize(&ctx.types, &ty);
             if assump.insert(id.name.to_owned(), scheme).is_some() {
@@ -81,7 +84,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
         }
         Pattern::Rest(RestPat { arg, .. }) => {
             let t = infer_pattern_rec(arg.as_ref(), ctx, assump)?;
-            Ok(ctx.rest(t))
+            Ok(Type::Rest(Box::from(t)))
         }
         Pattern::Array(ArrayPat { elems, .. }) => {
             let elems: Result<Vec<Type>, String> = elems
@@ -91,7 +94,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                         Some(elem) => match elem {
                             Pattern::Rest(rest) => {
                                 let rest_ty = infer_pattern_rec(rest.arg.as_ref(), ctx, assump)?;
-                                Ok(ctx.rest(rest_ty))
+                                Ok(Type::Rest(Box::from(rest_ty)))
                             }
                             _ => infer_pattern_rec(elem, ctx, assump),
                         },
@@ -103,7 +106,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                 })
                 .collect();
 
-            Ok(ctx.tuple(elems?))
+            Ok(Type::Tuple(elems?))
         }
         Pattern::Object(ObjectPat { props, .. }) => {
             let mut rest_opt_ty: Option<Type> = None;
@@ -157,10 +160,12 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                 })
                 .collect();
 
-            let obj_type = ctx.object(props);
+            let obj_type = Type::Object(props);
 
             match rest_opt_ty {
-                Some(rest_ty) => Ok(ctx.intersection(vec![obj_type, rest_ty])),
+                // TODO: Replace this with a proper Rest/Spread type
+                // See https://github.com/microsoft/TypeScript/issues/10727
+                Some(rest_ty) => Ok(Type::Intersection(vec![obj_type, rest_ty])),
                 None => Ok(obj_type),
             }
         }

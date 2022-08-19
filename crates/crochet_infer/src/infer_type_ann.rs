@@ -78,10 +78,10 @@ fn infer_type_ann_rec(
                 })
                 .collect();
             let ret = Box::from(infer_type_ann_rec(ret.as_ref(), ctx, type_param_map));
-            ctx.lam(params, ret)
+            Type::Lam(types::LamType { params, ret })
         }
         TypeAnn::Lit(lit) => ctx.lit(lit.to_owned()),
-        TypeAnn::Prim(PrimType { prim, .. }) => ctx.prim(prim.to_owned()),
+        TypeAnn::Prim(PrimType { prim, .. }) => Type::Prim(prim.to_owned()),
         TypeAnn::Object(ObjectType { props, .. }) => {
             let props: Vec<_> = props
                 .iter()
@@ -92,7 +92,7 @@ fn infer_type_ann_rec(
                     ty: infer_type_ann_rec(prop.type_ann.as_ref(), ctx, type_param_map),
                 })
                 .collect();
-            ctx.object(props)
+            Type::Object(props)
         }
         TypeAnn::TypeRef(TypeRef {
             name, type_params, ..
@@ -105,29 +105,34 @@ fn infer_type_ann_rec(
                         .map(|param| infer_type_ann_rec(param, ctx, type_param_map))
                         .collect()
                 });
-                ctx.alias(name, type_params)
+                Type::Alias(types::AliasType {
+                    name: name.to_owned(),
+                    type_params,
+                })
             }
         },
-        TypeAnn::Union(UnionType { types, .. }) => ctx.union(
+        TypeAnn::Union(UnionType { types, .. }) => Type::Union(
             types
                 .iter()
                 .map(|t| infer_type_ann_rec(t, ctx, type_param_map))
                 .collect(),
         ),
-        TypeAnn::Intersection(IntersectionType { types, .. }) => ctx.intersection(
+        TypeAnn::Intersection(IntersectionType { types, .. }) => Type::Intersection(
             types
                 .iter()
                 .map(|t| infer_type_ann_rec(t, ctx, type_param_map))
                 .collect(),
         ),
-        TypeAnn::Tuple(TupleType { types, .. }) => ctx.tuple(
+        TypeAnn::Tuple(TupleType { types, .. }) => Type::Tuple(
             types
                 .iter()
                 .map(|t| infer_type_ann_rec(t, ctx, type_param_map))
                 .collect(),
         ),
-        TypeAnn::Array(ArrayType { elem_type, .. }) => {
-            ctx.array(infer_type_ann_rec(elem_type, ctx, type_param_map))
-        }
+        TypeAnn::Array(ArrayType { elem_type, .. }) => Type::Array(Box::from(infer_type_ann_rec(
+            elem_type,
+            ctx,
+            type_param_map,
+        ))),
     }
 }
