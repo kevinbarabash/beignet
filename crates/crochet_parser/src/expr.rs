@@ -273,36 +273,47 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             Call(Vec<ExprOrSpread>, Span),
         }
 
+        let arg = just_with_padding("...")
+            .map_with_span(|_, span: Span| span)
+            .or_not()
+            .then(expr.clone())
+            .map_with_span(|(spread, arg), _: Span| ExprOrSpread {
+                spread,
+                expr: Box::from(arg),
+            });
+
+        let fn_call = arg
+            .separated_by(just_with_padding(","))
+            .allow_trailing()
+            .delimited_by(just_with_padding("("), just_with_padding(")"))
+            .map_with_span(Suffix::Call);
+
+        let dot_member = just_with_padding(".")
+            .ignore_then(text::ident())
+            .map_with_span(|name, span: Span| {
+                let prop = MemberProp::Ident(Ident {
+                    span: span.clone(),
+                    name,
+                });
+                Suffix::Member(prop, span)
+            });
+
+        let brackets_member = just_with_padding("[")
+            .ignore_then(expr.clone())
+            .then_ignore(just_with_padding("]"))
+            .map_with_span(|expr, span: Span| {
+                let prop = MemberProp::Computed(ComputedPropName {
+                    span: span.clone(),
+                    expr: Box::from(expr),
+                });
+                Suffix::Member(prop, span)
+            });
+
         // NOTE: We use this approach of parsing suffixes instead of using a recursive
         // parser which would be left recursive (this causes a stack overflow).
         let atom_with_suffix = atom
             .clone()
-            .then(
-                choice((
-                    just_with_padding("...")
-                        .map_with_span(|_, span: Span| span)
-                        .or_not()
-                        .then(expr.clone())
-                        .map_with_span(|(spread, arg), _: Span| ExprOrSpread {
-                            spread,
-                            expr: Box::from(arg),
-                        })
-                        .separated_by(just_with_padding(","))
-                        .allow_trailing()
-                        .delimited_by(just_with_padding("("), just_with_padding(")"))
-                        .map_with_span(Suffix::Call),
-                    just_with_padding(".")
-                        .ignore_then(text::ident())
-                        .map_with_span(|name, span: Span| {
-                            let prop = MemberProp::Ident(Ident {
-                                span: span.clone(),
-                                name,
-                            });
-                            Suffix::Member(prop, span)
-                        }),
-                ))
-                .repeated(),
-            )
+            .then(choice((fn_call, dot_member, brackets_member)).repeated())
             .foldl(|f, suffix| {
                 // TODO: check the type of `f` to verify if the current `suffix`
                 // makes sense for that type of node.  For instance, calling a

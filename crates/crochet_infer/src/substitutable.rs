@@ -40,10 +40,6 @@ impl Substitutable for Type {
                     Variant::Tuple(types) => Variant::Tuple(types.apply(sub)),
                     Variant::Array(t) => Variant::Array(Box::from(t.apply(sub))),
                     Variant::Rest(arg) => Variant::Rest(Box::from(arg.apply(sub))),
-                    Variant::Member(member) => Variant::Member(MemberType {
-                        obj: Box::from(member.obj.apply(sub)),
-                        ..member.to_owned()
-                    }),
                 };
                 Type {
                     variant,
@@ -60,7 +56,7 @@ impl Substitutable for Type {
                 let mut result: HashSet<_> = args.ftv();
                 result.extend(ret.ftv());
                 result
-            },
+            }
             Variant::Lam(LamType { params, ret, .. }) => {
                 let mut result: HashSet<_> = params.ftv();
                 result.extend(ret.ftv());
@@ -76,7 +72,6 @@ impl Substitutable for Type {
             Variant::Tuple(types) => types.ftv(),
             Variant::Array(t) => t.ftv(),
             Variant::Rest(arg) => arg.ftv(),
-            Variant::Member(MemberType { obj, .. }) => obj.ftv(),
         }
     }
 }

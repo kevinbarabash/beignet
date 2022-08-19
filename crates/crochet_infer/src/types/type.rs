@@ -2,8 +2,8 @@ use itertools::join;
 use std::fmt;
 use std::hash::Hash;
 
-use crate::Context;
 use crate::types::{Lit, Primitive};
+use crate::Context;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TProp {
@@ -24,7 +24,12 @@ impl TProp {
 
 impl fmt::Display for TProp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { name, optional, mutable, ty } = self;
+        let Self {
+            name,
+            optional,
+            mutable,
+            ty,
+        } = self;
         match (optional, mutable) {
             (false, false) => write!(f, "{name}: {ty}"),
             (true, false) => write!(f, "{name}?: {ty}"),
@@ -77,7 +82,7 @@ impl TFnParam {
 
 impl fmt::Display for TFnParam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self {pat, ty} = self;
+        let Self { pat, ty } = self;
         write!(f, "{pat}: {ty}")
     }
 }
@@ -110,7 +115,11 @@ pub struct BindingIdent {
 
 impl fmt::Display for BindingIdent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { name, optional, mutable } = self;
+        let Self {
+            name,
+            optional,
+            mutable,
+        } = self;
         match (optional, mutable) {
             (false, false) => write!(f, "{name}"),
             (true, false) => write!(f, "{name}?"),
@@ -140,11 +149,9 @@ pub struct ArrayPat {
 impl fmt::Display for ArrayPat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { elems } = self;
-        let elems = elems.iter().map(|elem| {
-            match elem {
-                Some(elem) => format!("{elem}"),
-                None => String::from(" "),
-            }
+        let elems = elems.iter().map(|elem| match elem {
+            Some(elem) => format!("{elem}"),
+            None => String::from(" "),
         });
         write!(f, "[{}]", join(elems, ", "))
     }
@@ -187,7 +194,7 @@ pub struct TObjectKeyValuePatProp {
 
 impl fmt::Display for TObjectKeyValuePatProp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self {key, value} = self;
+        let Self { key, value } = self;
         write!(f, "{key}: {value}")
     }
 }
@@ -200,7 +207,7 @@ pub struct TObjectAssignPatProp {
 
 impl fmt::Display for TObjectAssignPatProp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self {key, value} = self;
+        let Self { key, value } = self;
         match value {
             Some(value) => write!(f, "{key} = {value}"),
             None => write!(f, "{key}"),
@@ -246,25 +253,6 @@ impl Hash for AliasType {
     }
 }
 
-#[derive(Clone, Debug, Eq)]
-pub struct MemberType {
-    pub obj: Box<Type>,
-    pub prop: String, // TODO: allow numbers as well for accessing elements on tuples and arrays
-}
-
-impl PartialEq for MemberType {
-    fn eq(&self, other: &Self) -> bool {
-        self.obj == other.obj && self.prop == other.prop
-    }
-}
-
-impl Hash for MemberType {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.obj.hash(state);
-        self.prop.hash(state);
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Variant {
     Var,
@@ -281,7 +269,6 @@ pub enum Variant {
     Tuple(Vec<Type>),
     Array(Box<Type>),
     Rest(Box<Type>), // TODO: rename this to Spread
-    Member(MemberType),
 }
 
 #[derive(Clone, Debug, Eq)]
@@ -339,7 +326,6 @@ impl fmt::Display for Type {
             Variant::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
             Variant::Array(t) => write!(f, "{t}[]"),
             Variant::Rest(arg) => write!(f, "...{arg}"),
-            Variant::Member(MemberType { obj, prop, .. }) => write!(f, "{obj}[\"{prop}\"]"),
         }
     }
 }

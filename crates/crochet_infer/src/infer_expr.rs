@@ -71,7 +71,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         Expr::Ident(Ident { name, .. }) => {
             let s = Subst::default();
             let t = if name == "_" {
-                ctx.placeholder()
+                ctx.wildcard()
             } else {
                 ctx.lookup_value(name)?
             };
@@ -416,7 +416,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let (prop_s, prop_t) = infer_property_type(&obj_t, prop, ctx)?;
 
             let s = compose_subs(&prop_s, &obj_s);
-            let t = unwrap_member_type(&prop_t, ctx);
+            let t = prop_t;
 
             Ok((s, t))
         }
@@ -512,16 +512,45 @@ fn is_promise(ty: &Type) -> bool {
 fn infer_property_type(
     obj_t: &Type,
     prop: &MemberProp,
-    ctx: &Context,
+    ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t.variant {
-        Variant::Object(props) => {
-            let mem_t = ctx.mem(obj_t.clone(), &prop.name());
-            match props.iter().find(|p| p.name == prop.name()) {
-                Some(_) => Ok((Subst::default(), mem_t)),
-                None => Err(String::from("Record literal doesn't contain property")),
+        Variant::Object(props) => match prop {
+            MemberProp::Ident(Ident { name, .. }) => {
+                let prop = props.iter().find(|prop| prop.name == *name);
+                match prop {
+                    Some(prop) => Ok((Subst::default(), prop.get_type(ctx))),
+                    None => Err(format!("Object type doesn't contain key {name}.")),
+                }
             }
-        }
+            MemberProp::Computed(ComputedPropName { expr, .. }) => {
+                let (prop_s, prop_t) = infer_expr(ctx, expr)?;
+
+                match prop_t.variant {
+                    Variant::Prim(prim) => match prim {
+                        Primitive::Str => {
+                            let mut value_types: Vec<Type> =
+                                props.iter().map(|prop| prop.ty.to_owned()).collect();
+                            value_types.push(ctx.prim(Primitive::Undefined));
+                            let t = ctx.union(value_types);
+                            Ok((prop_s, t))
+                        }
+                        _ => Err(format!("{prim} is an invalid key for object types")),
+                    },
+                    Variant::Lit(lit) => match lit {
+                        crate::Lit::Str(key) => {
+                            let prop = props.iter().find(|prop| prop.name == key);
+                            match prop {
+                                Some(prop) => Ok((Subst::default(), prop.get_type(ctx))),
+                                None => Err(format!("Object type doesn't contain key {key}.")),
+                            }
+                        }
+                        _ => Err(format!("{lit} is an invalid key for object types")),
+                    },
+                    _ => Err(format!("{prop_t} is an invalid key for object types")),
+                }
+            }
+        },
         Variant::Alias(alias) => {
             let t = lookup_alias(ctx, alias)?;
             infer_property_type(&t, prop, ctx)
@@ -558,20 +587,41 @@ fn infer_property_type(
             Primitive::Undefined => todo!(),
             Primitive::Null => todo!(),
         },
+        Variant::Tuple(elem_types) => {
+            match prop {
+                // TODO: lookup methods on Array.prototype
+                MemberProp::Ident(_) => todo!(),
+                MemberProp::Computed(ComputedPropName { expr, .. }) => {
+                    let (prop_s, prop_t) = infer_expr(ctx, expr)?;
+
+                    match prop_t.variant {
+                        Variant::Prim(prim) => match prim {
+                            Primitive::Num => {
+                                // TODO: remove duplicate types
+                                let mut elem_types = elem_types.to_owned();
+                                elem_types.push(ctx.prim(Primitive::Undefined));
+                                let t = ctx.union(elem_types);
+                                Ok((prop_s, t))
+                            }
+                            _ => Err(format!("{prim} is an invalid indexer for tuple types")),
+                        },
+                        Variant::Lit(lit) => match lit {
+                            crate::Lit::Num(index) => {
+                                let index: usize = index.parse().unwrap();
+                                match elem_types.get(index) {
+                                    Some(t) => Ok((prop_s, t.to_owned())),
+                                    None => Err(format!("{index} is out of bounds for {obj_t}")),
+                                }
+                            }
+                            _ => Err(format!("{lit} is an invalid indexer for tuple types")),
+                        },
+                        _ => Err(format!("{prop_t} is an invalid indexer for tuple types")),
+                    }
+                }
+            }
+        }
         _ => {
             todo!("Unhandled {obj_t:#?} in infer_property_type")
         }
     }
-}
-
-fn unwrap_member_type(t: &Type, ctx: &Context) -> Type {
-    if let Variant::Member(member) = &t.variant {
-        if let Variant::Object(props) = &member.obj.as_ref().variant {
-            let prop = props.iter().find(|prop| prop.name == member.prop);
-            if let Some(prop) = prop {
-                return prop.get_type(ctx);
-            }
-        }
-    }
-    t.to_owned()
 }

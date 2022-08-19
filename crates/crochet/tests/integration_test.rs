@@ -628,16 +628,6 @@ fn infer_member_access() {
 }
 
 #[test]
-#[should_panic = "Record literal doesn't contain property"]
-fn infer_incorrect_member_access() {
-    let src = r#"
-    let point = {x: 5, y: 10}
-    let z = point.z
-    "#;
-    infer_prog(src);
-}
-
-#[test]
 fn infer_member_access_on_obj_lit() {
     let src = r#"let x = {x: 5, y: 10}.x"#;
     let (_, ctx) = infer_prog(src);
@@ -1594,7 +1584,6 @@ fn codegen_if_let_with_is_class() {
     $temp_0;
     "###);
 }
-
 
 #[test]
 fn codegen_array() {
