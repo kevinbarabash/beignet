@@ -456,15 +456,13 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                 |((((is_async, type_params), params), return_type), body), span: Span| {
                     let mut seen_optional_param = false;
                     for (i, param) in params.iter().enumerate() {
+                        // NOTE: rest params can come after optional params
                         if let EFnParamPat::Rest(_) = param.pat {
                             if i < params.len() - 1 {
                                 panic!("rest params must come last");
                             };
                             continue;
                         }
-                        // TODO: rest params can't be optional, but they
-                        // can appear after optional param, e.g.
-                        // const foo = (a?: number, ...b: number[]) => true;
                         if seen_optional_param && !param.optional {
                             panic!("optional params must come last");
                         }
