@@ -42,12 +42,17 @@ pub fn infer_fn_param(
             let param = TFnParam {
                 pat,
                 ty: type_ann_ty,
+                optional: param.optional,
             };
 
             Ok((s, a, param))
         }
         None => {
-            let param = TFnParam { pat, ty: pat_type };
+            let param = TFnParam {
+                pat,
+                ty: pat_type,
+                optional: param.optional,
+            };
 
             Ok((Subst::new(), new_vars, param))
         }

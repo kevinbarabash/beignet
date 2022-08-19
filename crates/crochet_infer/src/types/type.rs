@@ -66,6 +66,7 @@ pub struct AppType {
 pub struct TFnParam {
     pub pat: TPat,
     pub ty: Type,
+    pub optional: bool,
 }
 
 impl TFnParam {
@@ -82,8 +83,11 @@ impl TFnParam {
 
 impl fmt::Display for TFnParam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { pat, ty } = self;
-        write!(f, "{pat}: {ty}")
+        let Self { pat, ty, optional } = self;
+        match optional {
+            true => write!(f, "{pat}?: {ty}"),
+            false => write!(f, "{pat}: {ty}"),
+        }
     }
 }
 

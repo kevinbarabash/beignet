@@ -68,6 +68,7 @@ fn infer_type_ann_rec(
                 .map(|param| TFnParam {
                     pat: e_pat_to_t_pat(&param.pat),
                     ty: infer_type_ann_rec(&param.type_ann, ctx, type_param_map),
+                    optional: param.optional,
                 })
                 .collect();
             let ret = Box::from(infer_type_ann_rec(ret.as_ref(), ctx, type_param_map));

@@ -35,8 +35,10 @@ mod tests {
     }
 
     fn get_type(name: &str, ctx: &Context) -> String {
-        let t = ctx.values.get(name).unwrap();
-        format!("{t}")
+        match ctx.values.get(name) {
+            Some(t) => format!("{t}"),
+            None => panic!("Couldn't find type with name '{name}'"),
+        }
     }
 
     #[test]
@@ -945,6 +947,39 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(get_type("result", &ctx), "[5, true]");
+    }
+
+    #[test]
+    fn call_fn_with_optional_param() {
+        let src = r#"
+        let plus_one = (a, b?) => a + 1
+        let result = plus_one(5)
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(
+            get_type("plus_one", &ctx),
+            "<t0>(a: number, b?: t0) => number"
+        );
+    }
+
+    #[test]
+    fn infer_optional_param_type() {
+        let src = r#"
+        let plus_one = (a, b?) => {
+            match b {
+                c is string => c,
+                undefined => a + 1
+            }
+        }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(
+            get_type("plus_one", &ctx),
+            "(a: number, b?: string) => string | number"
+        );
     }
 
     #[test]

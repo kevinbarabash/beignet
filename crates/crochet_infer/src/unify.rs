@@ -82,10 +82,20 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             // this means that a_spread must have a length of at least 1 in order
             // for the lower bounds to match.
 
+            let optional_count = lam
+                .params
+                .iter()
+                .fold(0, |accum, param| match param.optional {
+                    true => accum + 1,
+                    false => accum,
+                });
+
             let param_count_low_bound = match maybe_rest_param {
-                Some(_) => lam.params.len() - 1,
-                None => lam.params.len(),
+                Some(_) => lam.params.len() - optional_count - 1,
+                None => lam.params.len() - optional_count,
             };
+
+            println!("param_count_low_bound = {param_count_low_bound}");
 
             // NOTE: placeholder spreads must come last because we don't know they're
             // length.  This will also be true for spreading arrays, but in the case
@@ -112,6 +122,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     _ => args.push(arg.to_owned()),
                 }
             }
+
+            // TODO: handle functions with optional params and a rest param
 
             // TODO: add a `variadic` boolean to the Lambda type as a convenience
             // so that we don't have to search through all the params for the rest
@@ -142,7 +154,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 let s2 = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
 
                 Ok(compose_subs(&s2, &s1))
-            } else if args.len() >= lam.params.len() {
+            } else if args.len() >= param_count_low_bound {
                 // NOTE: Any extra args are ignored.
 
                 let is_partial = args

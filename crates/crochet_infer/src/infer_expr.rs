@@ -64,6 +64,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                     mutable: false,
                 }),
                 ty: tv.clone(),
+                optional: false,
             };
             let s2 = unify(&ctx.lam(vec![param], Box::from(tv.clone())), &t, ctx)?;
             Ok((compose_subs(&s2, &s1), tv.apply(&s2)))

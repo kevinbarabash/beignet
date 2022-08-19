@@ -461,6 +461,9 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
                                 panic!("rest params must come last");
                             };
                         }
+                        // TODO: rest params can't be optional, but they
+                        // can appear after optional param, e.g.
+                        // const foo = (a?: number, ...b: number[]) => true;
                         if seen_optional_param && !param.optional {
                             panic!("optional params must come last");
                         }
