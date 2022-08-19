@@ -113,22 +113,15 @@ impl fmt::Display for TPat {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BindingIdent {
     pub name: String,
-    pub optional: bool,
     pub mutable: bool,
 }
 
 impl fmt::Display for BindingIdent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self {
-            name,
-            optional,
-            mutable,
-        } = self;
-        match (optional, mutable) {
-            (false, false) => write!(f, "{name}"),
-            (true, false) => write!(f, "{name}?"),
-            (false, true) => write!(f, "mut {name}"),
-            (true, true) => write!(f, "mut {name}?"),
+        let Self { name, mutable } = self;
+        match mutable {
+            false => write!(f, "{name}"),
+            true => write!(f, "mut {name}"),
         }
     }
 }

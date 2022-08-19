@@ -63,7 +63,6 @@ pub fn e_pat_to_t_pat(e_pat: &EFnParamPat) -> TPat {
     match e_pat {
         EFnParamPat::Ident(e_bi) => TPat::Ident(types::BindingIdent {
             name: e_bi.id.name.to_owned(),
-            optional: false,
             mutable: false,
         }),
         EFnParamPat::Rest(e_rest) => TPat::Rest(types::RestPat {

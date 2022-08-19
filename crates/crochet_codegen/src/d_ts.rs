@@ -182,7 +182,7 @@ fn tpat_to_pat(pat: &TPat, type_ann: Option<TsTypeAnn>) -> Pat {
             id: Ident {
                 span: DUMMY_SP,
                 sym: JsWord::from(bi.name.to_owned()),
-                optional: bi.optional,
+                optional: false,
             },
             type_ann,
         }),
