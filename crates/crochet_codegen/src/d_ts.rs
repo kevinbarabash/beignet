@@ -91,7 +91,13 @@ pub fn build_param(r#type: &Type, e_param: &ast::EFnParam) -> TsFnParam {
     let pat = build_param_pat_rec(&e_param.pat, type_ann);
 
     match pat {
-        Pat::Ident(bi) => TsFnParam::Ident(bi),
+        Pat::Ident(bi) => {
+            let id = Ident {
+                optional: e_param.optional,
+                ..bi.id
+            };
+            TsFnParam::Ident(BindingIdent { id, ..bi })
+        }
         Pat::Array(array) => TsFnParam::Array(array),
         Pat::Rest(rest) => TsFnParam::Rest(rest),
         Pat::Object(obj) => TsFnParam::Object(obj),

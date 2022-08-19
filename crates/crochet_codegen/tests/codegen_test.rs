@@ -448,6 +448,42 @@ fn function_with_rest_param() {
 }
 
 #[test]
+fn function_with_optional_param() {
+    let src = r#"
+    let foo = (x: number, y?: number) => x
+    "#;
+
+    insta::assert_snapshot!(compile(src), @"export const foo = (x, y)=>x;
+");
+
+    let program = parser().parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const foo: (x: number, y?: number) => number;
+");
+}
+
+#[test]
+fn function_with_optional_param_and_rest_param() {
+    let src = r#"
+    let foo = (x?: number, ...y: number[]) => x
+    "#;
+
+    insta::assert_snapshot!(compile(src), @"export const foo = (x, ...y)=>x;
+");
+
+    let program = parser().parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const foo: (x?: number, ...y: number[]) => number | undefined;
+");
+}
+
+#[test]
 fn variable_declaration_with_destructuring() {
     let src = r#"
     let [x, y] = [5, 10]
