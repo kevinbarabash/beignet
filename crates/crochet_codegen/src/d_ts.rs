@@ -1,4 +1,3 @@
-use std::cmp;
 use std::rc::Rc;
 
 use swc_atoms::*;
@@ -536,11 +535,7 @@ pub fn build_type(
             sorted_types.sort_by(|a, b| {
                 let a = format!("{a}");
                 let b = format!("{b}");
-                if a < b {
-                    cmp::Ordering::Less
-                } else {
-                    cmp::Ordering::Greater
-                }
+                a.cmp(&b)
             });
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
                 span: DUMMY_SP,
@@ -555,11 +550,7 @@ pub fn build_type(
             sorted_types.sort_by(|a, b| {
                 let a = format!("{a}");
                 let b = format!("{b}");
-                if a < b {
-                    cmp::Ordering::Less
-                } else {
-                    cmp::Ordering::Greater
-                }
+                a.cmp(&b)
             });
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsIntersectionType(
                 TsIntersectionType {
