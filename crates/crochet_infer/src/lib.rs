@@ -108,7 +108,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "5 | 10");
+        assert_eq!(get_type("result", &ctx), "10 | 5");
     }
 
     #[test]
@@ -407,7 +407,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("value", &ctx), "string | number | undefined");
+        assert_eq!(get_type("value", &ctx), "number | string | undefined");
     }
 
     // TODO: In order for this to work, we need custom handling for unifying
@@ -599,7 +599,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "5 | 1 | 0");
+        assert_eq!(get_type("sum", &ctx), "0 | 1 | 5");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.values.get("x").is_none());
@@ -769,7 +769,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "string | number | true");
+        assert_eq!(get_type("result", &ctx), "number | string | true");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.values.get("x").is_none());
@@ -1044,7 +1044,7 @@ mod tests {
 
         assert_eq!(
             get_type("plus_one", &ctx),
-            "(a: number, b?: string) => string | number"
+            "(a: number, b?: string) => number | string"
         );
     }
 
@@ -1506,7 +1506,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("z", &ctx), "5 | 10 | undefined");
+        assert_eq!(get_type("z", &ctx), "10 | 5 | undefined");
     }
 
     #[test]
@@ -1631,7 +1631,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("elem", &ctx), "5 | \"hello\" | true | undefined");
+        assert_eq!(get_type("elem", &ctx), "\"hello\" | 5 | true | undefined");
     }
 
     #[test]
@@ -2226,7 +2226,7 @@ mod tests {
 
         assert_eq!(
             get_type("result", &ctx),
-            r#""none" | "one" | "a couple" | "a few" | "many""#
+            r#""a couple" | "a few" | "many" | "none" | "one""#
         );
     }
 

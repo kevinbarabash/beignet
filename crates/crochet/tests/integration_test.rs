@@ -201,7 +201,7 @@ fn infer_if_else_without_widening() {
 fn infer_if_else_with_widening() {
     let (_, ctx) = infer_prog("let x = if (true) { 5 } else { 10 }");
     let result = format!("{}", ctx.values.get("x").unwrap());
-    assert_eq!(result, "5 | 10");
+    assert_eq!(result, "10 | 5");
 }
 
 #[test]
@@ -226,7 +226,7 @@ fn infer_if_else_with_widening_of_top_level_vars() {
     "#;
     let (_, ctx) = infer_prog(src);
     let result = format!("{}", ctx.values.get("x").unwrap());
-    assert_eq!(result, "5 | 10");
+    assert_eq!(result, "10 | 5");
 }
 
 #[test]
@@ -236,12 +236,11 @@ fn infer_if_else_with_multiple_widenings() {
     "#;
     let (program, ctx) = infer_prog(src);
     let result = format!("{}", ctx.values.get("x").unwrap());
-    assert_eq!(result, "5 | 10 | 15");
+    assert_eq!(result, "10 | 15 | 5");
 
     let result = codegen_d_ts(&program, &ctx);
-    insta::assert_snapshot!(result, @r###"
-    export declare const x: 5 | 10 | 15;
-    "###);
+    insta::assert_snapshot!(result, @"export declare const x: 15 | 10 | 5;
+");
 }
 
 #[test]
@@ -868,7 +867,7 @@ fn infer_fn_param_with_type_alias_with_param_2() {
 
     let result = format!("{}", ctx.values.get("get_bar").unwrap());
     // TODO: normalize the scheme before inserting it into the context
-    insta::assert_snapshot!(result, @"<t7>(foo: Foo<t7>) => t7");
+    insta::assert_snapshot!(result, @"<t2>(foo: Foo<t2>) => t2");
 }
 
 #[test]
@@ -1198,7 +1197,7 @@ fn infer_if_let_with_is() {
 
     assert_eq!(
         format!("{}", ctx.values.get("b").unwrap()),
-        "string | number"
+        "number | string"
     );
     // Ensures we aren't polluting the outside context
     assert!(ctx.values.get("a").is_none());
@@ -1523,7 +1522,7 @@ fn codegen_if_let_with_is_prim() {
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
-    export declare const b: string | number;
+    export declare const b: number | string;
     ;
     "###);
 }

@@ -68,24 +68,15 @@ impl Context {
     }
 
     pub fn fresh_var(&self) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Var,
-        }
+        Type::Var(self.fresh_id())
     }
 
     pub fn lam(&self, params: Vec<TFnParam>, ret: Box<Type>) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Lam(LamType { params, ret }),
-        }
+        Type::Lam(LamType { params, ret })
     }
 
     pub fn prim(&self, prim: Primitive) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Prim(prim),
-        }
+        Type::Prim(prim)
     }
 
     pub fn lit(&self, lit: AstLit) -> Type {
@@ -96,38 +87,23 @@ impl Context {
             AstLit::Null(_) => Lit::Null,
             AstLit::Undefined(_) => Lit::Undefined,
         };
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Lit(lit),
-        }
+        Type::Lit(lit)
     }
 
     pub fn lit_type(&self, lit: Lit) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Lit(lit),
-        }
+        Type::Lit(lit)
     }
 
     pub fn union(&self, types: Vec<Type>) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Union(types),
-        }
+        Type::Union(types)
     }
 
     pub fn intersection(&self, types: Vec<Type>) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Intersection(types),
-        }
+        Type::Intersection(types)
     }
 
     pub fn object(&self, props: Vec<TProp>) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Object(props),
-        }
+        Type::Object(props)
     }
 
     pub fn prop(&self, name: &str, ty: Type, optional: bool) -> TProp {
@@ -140,41 +116,26 @@ impl Context {
     }
 
     pub fn alias(&self, name: &str, type_params: Option<Vec<Type>>) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Alias(AliasType {
-                name: name.to_owned(),
-                type_params,
-            }),
-        }
+        Type::Alias(AliasType {
+            name: name.to_owned(),
+            type_params,
+        })
     }
 
     pub fn tuple(&self, types: Vec<Type>) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Tuple(types),
-        }
+        Type::Tuple(types)
     }
 
     pub fn array(&self, t: Type) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Array(Box::from(t)),
-        }
+        Type::Array(Box::from(t))
     }
 
     pub fn rest(&self, arg: Type) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Rest(Box::from(arg)),
-        }
+        Type::Rest(Box::from(arg))
     }
 
     pub fn wildcard(&self) -> Type {
-        Type {
-            id: self.fresh_id(),
-            variant: Variant::Wildcard,
-        }
+        Type::Wildcard
     }
 }
 

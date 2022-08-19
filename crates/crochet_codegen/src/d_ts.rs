@@ -6,7 +6,7 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
-use crochet_infer::types::{self, Scheme, TFnParam, TPat, Type, Variant};
+use crochet_infer::types::{self, Scheme, TFnParam, TPat, Type};
 use crochet_infer::Context;
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
@@ -398,12 +398,12 @@ pub fn build_type(
     expr: Option<&ast::Expr>,
     type_params: Option<TsTypeParamDecl>,
 ) -> TsType {
-    match &ty.variant {
-        Variant::Var => {
+    match &ty {
+        Type::Var(id) => {
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                 .chars()
                 .collect();
-            let id = chars.get(ty.id.to_owned() as usize).unwrap();
+            let id = chars.get(id.to_owned() as usize).unwrap();
 
             TsType::TsTypeRef(TsTypeRef {
                 span: DUMMY_SP,
@@ -415,7 +415,7 @@ pub fn build_type(
                 type_params: None,
             })
         }
-        Variant::Prim(prim) => {
+        Type::Prim(prim) => {
             let kind = match prim {
                 crochet_infer::types::Primitive::Num => TsKeywordTypeKind::TsNumberKeyword,
                 crochet_infer::types::Primitive::Bool => TsKeywordTypeKind::TsBooleanKeyword,
@@ -429,7 +429,7 @@ pub fn build_type(
                 kind,
             })
         }
-        Variant::Lit(lit) => {
+        Type::Lit(lit) => {
             let lit = match lit {
                 crochet_infer::types::Lit::Num(n) => TsLit::Number(Number {
                     span: DUMMY_SP,
@@ -457,7 +457,7 @@ pub fn build_type(
                 lit,
             })
         }
-        Variant::App(types::AppType { args, ret, .. }) => {
+        Type::App(types::AppType { args, ret, .. }) => {
             // This can happen when a function type is inferred by usage
             match expr {
                 // TODO: handle is_async
@@ -495,7 +495,7 @@ pub fn build_type(
         }
         // This is used to copy the names of args from the expression
         // over to the lambda's type.
-        Variant::Lam(types::LamType { params, ret, .. }) => {
+        Type::Lam(types::LamType { params, ret, .. }) => {
             match expr {
                 // TODO: handle is_async
                 Some(ast::Expr::Lambda(other_lam)) => {
@@ -530,7 +530,7 @@ pub fn build_type(
                 _ => build_ts_fn_type_with_params(params, ret, type_params),
             }
         }
-        Variant::Union(types) => {
+        Type::Union(types) => {
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
                 span: DUMMY_SP,
                 types: types
@@ -539,7 +539,7 @@ pub fn build_type(
                     .collect(),
             }))
         }
-        Variant::Intersection(types) => TsType::TsUnionOrIntersectionType(
+        Type::Intersection(types) => TsType::TsUnionOrIntersectionType(
             TsUnionOrIntersectionType::TsIntersectionType(TsIntersectionType {
                 span: DUMMY_SP,
                 types: types
@@ -548,7 +548,7 @@ pub fn build_type(
                     .collect(),
             }),
         ),
-        Variant::Object(props) => {
+        Type::Object(props) => {
             let members: Vec<TsTypeElement> = props
                 .iter()
                 .map(|prop| {
@@ -578,7 +578,7 @@ pub fn build_type(
                 members,
             })
         }
-        Variant::Alias(types::AliasType {
+        Type::Alias(types::AliasType {
             name, type_params, ..
         }) => TsType::TsTypeRef(TsTypeRef {
             span: DUMMY_SP,
@@ -595,7 +595,7 @@ pub fn build_type(
                     .collect(),
             }),
         }),
-        Variant::Tuple(types) => TsType::TsTupleType(TsTupleType {
+        Type::Tuple(types) => TsType::TsTupleType(TsTupleType {
             span: DUMMY_SP,
             elem_types: types
                 .iter()
@@ -606,11 +606,11 @@ pub fn build_type(
                 })
                 .collect(),
         }),
-        Variant::Array(t) => TsType::TsArrayType(TsArrayType {
+        Type::Array(t) => TsType::TsArrayType(TsArrayType {
             span: DUMMY_SP,
             elem_type: Box::from(build_type(t, None, None)),
         }),
-        Variant::Rest(_) => todo!(),
-        Variant::Wildcard => todo!(),
+        Type::Rest(_) => todo!(),
+        Type::Wildcard => todo!(),
     }
 }

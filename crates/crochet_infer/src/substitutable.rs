@@ -13,65 +13,59 @@ pub trait Substitutable {
 
 impl Substitutable for Type {
     fn apply(&self, sub: &Subst) -> Type {
-        let result = match sub.get(&self.id) {
-            Some(replacement) => replacement.to_owned(),
-            None => {
-                let variant = match &self.variant {
-                    Variant::Var => self.variant.to_owned(),
-                    Variant::App(app) => Variant::App(AppType {
-                        args: app.args.iter().map(|param| param.apply(sub)).collect(),
-                        ret: Box::from(app.ret.apply(sub)),
-                    }),
-                    // TODO: handle widening of lambdas
-                    Variant::Lam(lam) => Variant::Lam(LamType {
-                        params: lam.params.iter().map(|param| param.apply(sub)).collect(),
-                        ret: Box::from(lam.ret.apply(sub)),
-                    }),
-                    Variant::Wildcard => self.variant.to_owned(),
-                    Variant::Prim(_) => self.variant.to_owned(),
-                    Variant::Lit(_) => self.variant.to_owned(),
-                    Variant::Union(types) => Variant::Union(types.apply(sub)),
-                    Variant::Intersection(types) => Variant::Intersection(types.apply(sub)),
-                    Variant::Object(props) => Variant::Object(props.apply(sub)),
-                    Variant::Alias(alias) => Variant::Alias(AliasType {
-                        type_params: alias.type_params.apply(sub),
-                        ..alias.to_owned()
-                    }),
-                    Variant::Tuple(types) => Variant::Tuple(types.apply(sub)),
-                    Variant::Array(t) => Variant::Array(Box::from(t.apply(sub))),
-                    Variant::Rest(arg) => Variant::Rest(Box::from(arg.apply(sub))),
-                };
-                Type {
-                    variant,
-                    ..self.to_owned()
-                }
-            }
+        let result = match self {
+            Type::Var(id) => match sub.get(id) {
+                Some(replacement) => replacement.to_owned(),
+                None => self.to_owned(),
+            },
+            Type::App(app) => Type::App(AppType {
+                args: app.args.iter().map(|param| param.apply(sub)).collect(),
+                ret: Box::from(app.ret.apply(sub)),
+            }),
+            // TODO: handle widening of lambdas
+            Type::Lam(lam) => Type::Lam(LamType {
+                params: lam.params.iter().map(|param| param.apply(sub)).collect(),
+                ret: Box::from(lam.ret.apply(sub)),
+            }),
+            Type::Wildcard => self.to_owned(),
+            Type::Prim(_) => self.to_owned(),
+            Type::Lit(_) => self.to_owned(),
+            Type::Union(types) => Type::Union(types.apply(sub)),
+            Type::Intersection(types) => Type::Intersection(types.apply(sub)),
+            Type::Object(props) => Type::Object(props.apply(sub)),
+            Type::Alias(alias) => Type::Alias(AliasType {
+                type_params: alias.type_params.apply(sub),
+                ..alias.to_owned()
+            }),
+            Type::Tuple(types) => Type::Tuple(types.apply(sub)),
+            Type::Array(t) => Type::Array(Box::from(t.apply(sub))),
+            Type::Rest(arg) => Type::Rest(Box::from(arg.apply(sub))),
         };
         norm_type(result)
     }
     fn ftv(&self) -> HashSet<i32> {
-        match &self.variant {
-            Variant::Var => HashSet::from([self.id.to_owned()]),
-            Variant::App(AppType { args, ret }) => {
+        match &self {
+            Type::Var(id) => HashSet::from([id.to_owned()]),
+            Type::App(AppType { args, ret }) => {
                 let mut result: HashSet<_> = args.ftv();
                 result.extend(ret.ftv());
                 result
             }
-            Variant::Lam(LamType { params, ret, .. }) => {
+            Type::Lam(LamType { params, ret, .. }) => {
                 let mut result: HashSet<_> = params.ftv();
                 result.extend(ret.ftv());
                 result
             }
-            Variant::Wildcard => HashSet::new(),
-            Variant::Prim(_) => HashSet::new(),
-            Variant::Lit(_) => HashSet::new(),
-            Variant::Union(types) => types.ftv(),
-            Variant::Intersection(types) => types.ftv(),
-            Variant::Object(props) => props.ftv(),
-            Variant::Alias(AliasType { type_params, .. }) => type_params.ftv(),
-            Variant::Tuple(types) => types.ftv(),
-            Variant::Array(t) => t.ftv(),
-            Variant::Rest(arg) => arg.ftv(),
+            Type::Wildcard => HashSet::new(),
+            Type::Prim(_) => HashSet::new(),
+            Type::Lit(_) => HashSet::new(),
+            Type::Union(types) => types.ftv(),
+            Type::Intersection(types) => types.ftv(),
+            Type::Object(props) => props.ftv(),
+            Type::Alias(AliasType { type_params, .. }) => type_params.ftv(),
+            Type::Tuple(types) => types.ftv(),
+            Type::Array(t) => t.ftv(),
+            Type::Rest(arg) => arg.ftv(),
         }
     }
 }
@@ -152,37 +146,29 @@ where
 }
 
 fn norm_type(ty: Type) -> Type {
-    match &ty.variant {
-        Variant::Union(types) => {
+    match &ty {
+        Type::Union(types) => {
             // Removes duplicates
             let types: HashSet<Type> = types.clone().into_iter().collect();
             // Converts set back to an array
-            let mut types: Vec<Type> = types.into_iter().collect();
-            types.sort_by_key(|k| k.id);
+            let types: Vec<Type> = types.into_iter().collect();
 
             if types.len() == 1 {
                 types.get(0).unwrap().to_owned()
             } else {
-                Type {
-                    variant: Variant::Union(types),
-                    ..ty.to_owned()
-                }
+                Type::Union(types)
             }
         }
-        Variant::Intersection(types) => {
+        Type::Intersection(types) => {
             // Removes duplicates
             let types: HashSet<Type> = types.clone().into_iter().collect();
             // Converts set back to an array
-            let mut types: Vec<Type> = types.into_iter().collect();
-            types.sort_by_key(|k| k.id);
+            let types: Vec<Type> = types.into_iter().collect();
 
             if types.len() == 1 {
                 types.get(0).unwrap().to_owned()
             } else {
-                Type {
-                    variant: Variant::Intersection(types),
-                    ..ty.to_owned()
-                }
+                Type::Intersection(types)
             }
         }
         _ => ty,

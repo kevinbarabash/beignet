@@ -39,7 +39,13 @@ pub fn infer_scheme_with_type_params(
     // Creates a Scheme with the correct qualifiers for the type references that were
     // replaced with type variables.
     Scheme {
-        qualifiers: type_param_map.values().map(|tv| tv.id).collect(),
+        qualifiers: type_param_map
+            .values()
+            .map(|t| match t {
+                Type::Var(id) => id.to_owned(),
+                _ => panic!("{t} is not a type variable"),
+            })
+            .collect(),
         ty: type_ann_ty,
     }
 }

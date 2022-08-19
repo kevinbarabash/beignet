@@ -7,7 +7,7 @@ use super::infer_fn_param::infer_fn_param;
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
-use super::types::{self, TFnParam, TPat, Type, Variant};
+use super::types::{self, TFnParam, TPat, Type};
 use super::unify::unify;
 use super::util::*;
 
@@ -24,8 +24,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 let (arg_s, arg_t) = infer_expr(ctx, arg.expr.as_ref())?;
                 ss.push(arg_s);
                 if arg.spread.is_some() {
-                    match arg_t.variant {
-                        Variant::Tuple(types) => arg_types.extend(types.to_owned()),
+                    match arg_t {
+                        Type::Tuple(types) => arg_types.extend(types.to_owned()),
                         _ => arg_types.push(ctx.rest(arg_t)),
                     }
                 } else {
@@ -37,13 +37,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             // Are we missing an `apply()` call here?
             // Maybe, I could see us needing an apply to handle generic functions properly
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
-            let call_type = Type {
-                id: ctx.fresh_id(),
-                variant: Variant::App(types::AppType {
-                    args: arg_types,
-                    ret: Box::from(ret_type.clone()),
-                }),
-            };
+            let call_type = Type::App(types::AppType {
+                args: arg_types,
+                ret: Box::from(ret_type.clone()),
+            });
             let s3 = unify(&call_type, &lam_type, ctx)?;
 
             ss.push(s3);
@@ -151,8 +148,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 match ctx.values.get(name) {
                     Some(scheme) => {
                         let ct = ctx.instantiate(scheme);
-                        match &ct.variant {
-                            Variant::Lam(_) => {
+                        match &ct {
+                            Type::Lam(_) => {
                                 let mut ss: Vec<_> = vec![];
                                 let mut props: Vec<_> = vec![];
                                 for attr in attrs {
@@ -178,13 +175,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
                                 let ret_type = ctx.alias("JSXElement", None);
 
-                                let call_type = Type {
-                                    id: ctx.fresh_id(),
-                                    variant: Variant::App(types::AppType {
-                                        args: vec![ctx.object(props)],
-                                        ret: Box::from(ret_type.clone()),
-                                    }),
-                                };
+                                let call_type = Type::App(types::AppType {
+                                    args: vec![ctx.object(props)],
+                                    ret: Box::from(ret_type.clone()),
+                                });
 
                                 let s1 = compose_many_subs(&ss);
                                 let s2 = unify(&call_type, &ct, ctx)?;
@@ -388,8 +382,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                     Some(_) => {
                         let (s, t) = infer_expr(ctx, expr)?;
                         ss.push(s);
-                        match &t.variant {
-                            Variant::Tuple(types) => {
+                        match &t {
+                            Type::Tuple(types) => {
                                 ts.extend(types.to_owned());
                             }
                             _ => {
@@ -506,7 +500,7 @@ fn infer_let(
 }
 
 fn is_promise(ty: &Type) -> bool {
-    matches!(&ty.variant, Variant::Alias(types::AliasType { name, .. }) if name == "Promise")
+    matches!(&ty, Type::Alias(types::AliasType { name, .. }) if name == "Promise")
 }
 
 fn infer_property_type(
@@ -514,8 +508,8 @@ fn infer_property_type(
     prop: &MemberProp,
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
-    match &obj_t.variant {
-        Variant::Object(props) => match prop {
+    match &obj_t {
+        Type::Object(props) => match prop {
             MemberProp::Ident(Ident { name, .. }) => {
                 let prop = props.iter().find(|prop| prop.name == *name);
                 match prop {
@@ -526,8 +520,8 @@ fn infer_property_type(
             MemberProp::Computed(ComputedPropName { expr, .. }) => {
                 let (prop_s, prop_t) = infer_expr(ctx, expr)?;
 
-                match prop_t.variant {
-                    Variant::Prim(prim) => match prim {
+                match prop_t {
+                    Type::Prim(prim) => match prim {
                         Primitive::Str => {
                             let mut value_types: Vec<Type> =
                                 props.iter().map(|prop| prop.ty.to_owned()).collect();
@@ -537,7 +531,7 @@ fn infer_property_type(
                         }
                         _ => Err(format!("{prim} is an invalid key for object types")),
                     },
-                    Variant::Lit(lit) => match lit {
+                    Type::Lit(lit) => match lit {
                         crate::Lit::Str(key) => {
                             let prop = props.iter().find(|prop| prop.name == key);
                             match prop {
@@ -551,11 +545,11 @@ fn infer_property_type(
                 }
             }
         },
-        Variant::Alias(alias) => {
+        Type::Alias(alias) => {
             let t = lookup_alias(ctx, alias)?;
             infer_property_type(&t, prop, ctx)
         }
-        Variant::Lit(lit) => match lit {
+        Type::Lit(lit) => match lit {
             crate::Lit::Num(_) => {
                 let t = ctx.lookup_type("Number")?;
                 infer_property_type(&t, prop, ctx)
@@ -571,7 +565,7 @@ fn infer_property_type(
             crate::Lit::Null => todo!(),
             crate::Lit::Undefined => todo!(),
         },
-        Variant::Prim(prim) => match prim {
+        Type::Prim(prim) => match prim {
             Primitive::Num => {
                 let t = ctx.lookup_type("Number")?;
                 infer_property_type(&t, prop, ctx)
@@ -587,15 +581,15 @@ fn infer_property_type(
             Primitive::Undefined => todo!(),
             Primitive::Null => todo!(),
         },
-        Variant::Tuple(elem_types) => {
+        Type::Tuple(elem_types) => {
             match prop {
                 // TODO: lookup methods on Array.prototype
                 MemberProp::Ident(_) => todo!(),
                 MemberProp::Computed(ComputedPropName { expr, .. }) => {
                     let (prop_s, prop_t) = infer_expr(ctx, expr)?;
 
-                    match prop_t.variant {
-                        Variant::Prim(prim) => match prim {
+                    match prop_t {
+                        Type::Prim(prim) => match prim {
                             Primitive::Num => {
                                 // TODO: remove duplicate types
                                 let mut elem_types = elem_types.to_owned();
@@ -605,7 +599,7 @@ fn infer_property_type(
                             }
                             _ => Err(format!("{prim} is an invalid indexer for tuple types")),
                         },
-                        Variant::Lit(lit) => match lit {
+                        Type::Lit(lit) => match lit {
                             crate::Lit::Num(index) => {
                                 let index: usize = index.parse().unwrap();
                                 match elem_types.get(index) {
