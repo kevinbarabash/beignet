@@ -80,6 +80,8 @@ pub struct Lambda {
 pub struct EFnParam {
     pub pat: EFnParamPat,
     pub type_ann: Option<TypeAnn>,
+    pub optional: bool,
+    pub mutable: bool,
 }
 
 impl EFnParam {

@@ -32,6 +32,8 @@ Program {
                                     },
                                 ),
                                 type_ann: None,
+                                optional: false,
+                                mutable: false,
                             },
                         ],
                         body: Lambda(
@@ -49,6 +51,8 @@ Program {
                                             },
                                         ),
                                         type_ann: None,
+                                        optional: false,
+                                        mutable: false,
                                     },
                                 ],
                                 body: Lambda(
@@ -66,6 +70,8 @@ Program {
                                                     },
                                                 ),
                                                 type_ann: None,
+                                                optional: false,
+                                                mutable: false,
                                             },
                                         ],
                                         body: App(
@@ -168,6 +174,8 @@ Program {
                                     },
                                 ),
                                 type_ann: None,
+                                optional: false,
+                                mutable: false,
                             },
                         ],
                         body: Lambda(
@@ -185,6 +193,8 @@ Program {
                                             },
                                         ),
                                         type_ann: None,
+                                        optional: false,
+                                        mutable: false,
                                     },
                                 ],
                                 body: Ident(

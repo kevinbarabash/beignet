@@ -72,6 +72,8 @@ Program {
                                         },
                                     ),
                                 ),
+                                optional: false,
+                                mutable: false,
                             },
                         ],
                         body: Ident(

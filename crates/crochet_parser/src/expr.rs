@@ -454,11 +454,18 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .then(choice((block.clone(), expr.clone())))
             .map_with_span(
                 |((((is_async, type_params), params), return_type), body), span: Span| {
+                    let mut seen_optional_param = false;
                     for (i, param) in params.iter().enumerate() {
                         if let EFnParamPat::Rest(_) = param.pat {
                             if i < params.len() - 1 {
                                 panic!("rest params must come last");
                             };
+                        }
+                        if seen_optional_param && !param.optional {
+                            panic!("optional params must come last");
+                        }
+                        if param.optional && !seen_optional_param {
+                            seen_optional_param = true
                         }
                     }
                     Expr::Lambda(Lambda {

@@ -46,6 +46,8 @@ pub fn decl_parser() -> impl Parser<char, Statement, Error = Simple<char>> {
                                         id,
                                     }),
                                     type_ann: type_ann.clone(),
+                                    optional: false,
+                                    mutable: false,
                                 }],
                                 body: Box::from(init),
                                 is_async: false,
