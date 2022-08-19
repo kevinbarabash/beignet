@@ -23,6 +23,7 @@ Lam(
                         type_params: None,
                     },
                 ),
+                optional: false,
             },
             TypeAnnFnParam {
                 pat: Ident(
@@ -41,6 +42,7 @@ Lam(
                         type_params: None,
                     },
                 ),
+                optional: false,
             },
         ],
         ret: Union(

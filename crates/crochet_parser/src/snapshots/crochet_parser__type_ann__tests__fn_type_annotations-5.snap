@@ -27,6 +27,7 @@ Union(
                                     type_params: None,
                                 },
                             ),
+                            optional: false,
                         },
                         TypeAnnFnParam {
                             pat: Ident(
@@ -45,6 +46,7 @@ Union(
                                     type_params: None,
                                 },
                             ),
+                            optional: false,
                         },
                     ],
                     ret: TypeRef(

@@ -983,6 +983,24 @@ mod tests {
     }
 
     #[test]
+    fn infer_from_pattern_matching() {
+        let src = r#"
+        let foo = (arg) => {
+            match arg {
+                {x: x is number, y: y is number} => x + y,
+                {msg: msg is string} => msg
+            }
+        }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(
+            get_type("foo", &ctx),
+            "(arg: {x: number, y: number}) => number | string"
+        );
+    }
+
+    #[test]
     fn lambda_with_explicit_types() {
         let src = r#"
         let add = (a: number, b: number): number => {
