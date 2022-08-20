@@ -32,6 +32,6 @@ fn infer_adding_variables() {
     let len = msg.length.toString() // radix is optional
     "#;
     let (_, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.values.get("len").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("len").unwrap());
     assert_eq!(result, "string");
 }

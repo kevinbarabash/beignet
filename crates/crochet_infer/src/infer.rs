@@ -19,7 +19,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
         mutable: false,
         ty: Type::from(Lit::str(String::from("Promise"), 0..0)),
     }]));
-    ctx.types.insert(String::from("Promise"), promise_scheme);
+    ctx.insert_type(String::from("Promise"), promise_scheme);
     // TODO: replace with Class type once it exists
     // We use {_name: "JSXElement"} to differentiate it from other
     // object types.
@@ -29,8 +29,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
         mutable: false,
         ty: Type::from(Lit::str(String::from("JSXElement"), 0..0)),
     }]));
-    ctx.types
-        .insert(String::from("JSXElement"), jsx_element_scheme);
+    ctx.insert_type(String::from("JSXElement"), jsx_element_scheme);
 
     // TODO: figure out how report multiple errors
     for stmt in &prog.body {
@@ -49,7 +48,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
                                 match type_ann {
                                     Some(type_ann) => {
                                         let scheme = infer_scheme(type_ann, ctx);
-                                        ctx.values.insert(id.name.to_owned(), scheme);
+                                        ctx.insert_value(id.name.to_owned(), scheme);
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
@@ -79,7 +78,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
                         // current context.
                         for (name, scheme) in pa {
                             let scheme = normalize(&scheme.apply(&s), ctx);
-                            ctx.values.insert(name, scheme);
+                            ctx.insert_value(name, scheme);
                         }
                     }
                 };
@@ -91,7 +90,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
                 ..
             } => {
                 let scheme = infer_scheme_with_type_params(type_ann, type_params, ctx);
-                ctx.types.insert(id.name.to_owned(), scheme);
+                ctx.insert_type(id.name.to_owned(), scheme);
             }
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that

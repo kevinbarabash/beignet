@@ -13,10 +13,15 @@ pub struct State {
     pub count: Cell<i32>,
 }
 
-#[derive(Clone, Debug)]
-pub struct Context {
+#[derive(Clone, Debug, Default)]
+pub struct Scope {
     pub values: Env,
     pub types: Env,
+}
+
+#[derive(Clone, Debug)]
+pub struct Context {
+    pub scopes: Vec<Scope>,
     pub state: State,
     pub is_async: bool,
 }
@@ -24,8 +29,7 @@ pub struct Context {
 impl Default for Context {
     fn default() -> Self {
         Self {
-            values: HashMap::new(),
-            types: HashMap::new(),
+            scopes: vec![Scope::default()],
             state: State {
                 count: Cell::from(0),
             },
@@ -35,17 +39,52 @@ impl Default for Context {
 }
 
 impl Context {
+    pub fn apply(&mut self, s: &Subst) {
+        let current_scope = self.scopes.last_mut().unwrap();
+        for (k, v) in current_scope.values.clone() {
+            // Should we be apply substitions to types as well?
+            current_scope.values.insert(k.to_owned(), v.apply(s));
+        }
+    }
+
+    pub fn get_all_types(&self) -> Env {
+        // TODO: gather types from all scopes being careful with shadowing
+        let current_scope = self.scopes.last().unwrap();
+        current_scope.types.to_owned()
+    }
+
+    pub fn insert_value(&mut self, name: String, scheme: Scheme) {
+        let current_scope = self.scopes.last_mut().unwrap();
+        current_scope.values.insert(name, scheme);
+    }
+
+    pub fn insert_type(&mut self, name: String, scheme: Scheme) {
+        let current_scope = self.scopes.last_mut().unwrap();
+        current_scope.types.insert(name, scheme);
+    }
+
     pub fn lookup_value(&self, name: &str) -> Result<Type, String> {
-        let scheme = self
+        let current_scope = self.scopes.last().unwrap();
+        let scheme = current_scope
             .values
             .get(name)
             .ok_or(format!("Can't find type: {name}"))?;
         Ok(self.instantiate(scheme))
     }
 
+    pub fn lookup_value_scheme(&self, name: &str) -> Result<Scheme, String> {
+        let current_scope = self.scopes.last().unwrap();
+        let scheme = current_scope
+            .values
+            .get(name)
+            .ok_or(format!("Can't find type: {name}"))?;
+        Ok(scheme.to_owned())
+    }
+
     // TODO: Make this return a Result<Type, String>
     pub fn lookup_type(&self, name: &str) -> Result<Type, String> {
-        let scheme = self
+        let current_scope = self.scopes.last().unwrap();
+        let scheme = current_scope
             .types
             .get(name)
             .ok_or(format!("Can't find type: {name}"))?;
@@ -53,7 +92,8 @@ impl Context {
     }
 
     pub fn lookup_alias(&self, alias: &TAlias) -> Result<Type, String> {
-        match self.types.get(&alias.name) {
+        let current_scope = self.scopes.last().unwrap();
+        match current_scope.types.get(&alias.name) {
             Some(scheme) => {
                 // Replaces qualifiers in the scheme with the corresponding type params
                 // from the alias type.

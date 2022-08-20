@@ -70,7 +70,7 @@ fn infer_let_fn_with_param_types() {
     let src = "let add = (a: 5, b: 10) => a + b";
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("add").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("add").unwrap());
     assert_eq!(result, "(a: 5, b: 10) => number");
 }
 
@@ -98,14 +98,14 @@ fn infer_fn_param_used_with_multiple_other_params() {
 #[test]
 fn infer_i_combinator() {
     let (_, ctx) = infer_prog("let I = (x) => x");
-    let result = format!("{}", ctx.values.get("I").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("I").unwrap());
     insta::assert_snapshot!(result, @"<t0>(x: t0) => t0");
 }
 
 #[test]
 fn infer_k_combinator_not_curried() {
     let (program, ctx) = infer_prog("let K = (x, y) => x");
-    let result = format!("{}", ctx.values.get("K").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("K").unwrap());
     insta::assert_snapshot!(result, @"<t0, t1>(x: t0, y: t1) => t0");
 
     let result = codegen_d_ts(&program, &ctx);
@@ -115,21 +115,21 @@ fn infer_k_combinator_not_curried() {
 #[test]
 fn infer_s_combinator_not_curried() {
     let (_, ctx) = infer_prog("let S = (f, g, x) => f(x, g(x))");
-    let result = format!("{}", ctx.values.get("S").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("S").unwrap());
     insta::assert_snapshot!(result, @"<t0, t1, t2>(f: (t0, t1) => t2, g: (t0) => t1, x: t0) => t2");
 }
 
 #[test]
 fn infer_k_combinator_curried() {
     let (_, ctx) = infer_prog("let K = (x) => (y) => x");
-    let result = format!("{}", ctx.values.get("K").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("K").unwrap());
     insta::assert_snapshot!(result, @"<t0, t1>(x: t0) => (y: t1) => t0");
 }
 
 #[test]
 fn infer_s_combinator_curried() {
     let (_, ctx) = infer_prog("let S = (f) => (g) => (x) => f(x)(g(x))");
-    let result = format!("{}", ctx.values.get("S").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("S").unwrap());
     insta::assert_snapshot!(
         result,
         @"<t0, t1, t2>(f: (t0) => (t1) => t2) => (g: (t0) => t1) => (x: t0) => t2"
@@ -144,7 +144,7 @@ fn infer_skk() {
     let I = S(K)(K)
     "#;
     let (_, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.values.get("I").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("I").unwrap());
     insta::assert_snapshot!(result, @"<t0>(x: t0) => t0");
 }
 
@@ -156,7 +156,7 @@ fn infer_adding_variables() {
     let z = x + y
     "#;
     let (_, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.values.get("z").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("z").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -193,21 +193,21 @@ fn infer_with_subtyping() {
 #[test]
 fn infer_if_else_without_widening() {
     let (_, ctx) = infer_prog("let x = if true { 5 } else { 5 }");
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "5");
 }
 
 #[test]
 fn infer_if_else_with_widening() {
     let (_, ctx) = infer_prog("let x = if (true) { 5 } else { 10 }");
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "10 | 5");
 }
 
 #[test]
 fn infer_only_if_must_be_undefined() {
     let (_, ctx) = infer_prog("let x = if true { let a = 5; }");
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "undefined");
 }
 
@@ -225,7 +225,7 @@ fn infer_if_else_with_widening_of_top_level_vars() {
     let x = if true { a } else { b }
     "#;
     let (_, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "10 | 5");
 }
 
@@ -235,7 +235,7 @@ fn infer_if_else_with_multiple_widenings() {
     let x = if true { 5 } else if false { 10 } else { 15 }
     "#;
     let (program, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "10 | 15 | 5");
 
     let result = codegen_d_ts(&program, &ctx);
@@ -246,7 +246,7 @@ fn infer_if_else_with_multiple_widenings() {
 #[test]
 fn infer_equal_with_numbers() {
     let (_, ctx) = infer_prog("let cond = 5 == 10");
-    let result = format!("{}", ctx.values.get("cond").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("cond").unwrap());
     assert_eq!(result, "boolean");
 }
 
@@ -255,7 +255,7 @@ fn infer_equal_with_numbers() {
 #[ignore]
 fn infer_not_equal_with_variables() {
     let (_, ctx) = infer_prog("let neq = (a, b) => a != b");
-    let result = format!("{}", ctx.values.get("neq").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("neq").unwrap());
     insta::assert_snapshot!(result, @"<t0>(t0, t0) => boolean");
 }
 
@@ -269,19 +269,19 @@ fn infer_inequalities() {
     "###;
     let (_, ctx) = infer_prog(src);
     assert_eq!(
-        format!("{}", ctx.values.get("lt").unwrap()),
+        format!("{}", ctx.lookup_value_scheme("lt").unwrap()),
         "(a: number, b: number) => boolean"
     );
     assert_eq!(
-        format!("{}", ctx.values.get("lte").unwrap()),
+        format!("{}", ctx.lookup_value_scheme("lte").unwrap()),
         "(a: number, b: number) => boolean"
     );
     assert_eq!(
-        format!("{}", ctx.values.get("gt").unwrap()),
+        format!("{}", ctx.lookup_value_scheme("gt").unwrap()),
         "(a: number, b: number) => boolean"
     );
     assert_eq!(
-        format!("{}", ctx.values.get("gte").unwrap()),
+        format!("{}", ctx.lookup_value_scheme("gte").unwrap()),
         "(a: number, b: number) => boolean"
     );
 }
@@ -290,7 +290,7 @@ fn infer_inequalities() {
 fn infer_let_rec_until() {
     let src = "let rec until = (p, f, x) => if p(x) { x } else { until(p, f, f(x)) }";
     let (program, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.values.get("until").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("until").unwrap());
     insta::assert_snapshot!(result, @"<t0>((t0) => boolean, (t0) => t0, t0) => t0");
 
     let result = codegen_d_ts(&program, &ctx);
@@ -311,7 +311,7 @@ fn infer_fib() {
     "###;
 
     let (_, ctx) = infer_prog(src);
-    let fib_type = ctx.values.get("fib").unwrap();
+    let fib_type = ctx.lookup_value_scheme("fib").unwrap();
     assert_eq!(format!("{}", fib_type), "(number) => number");
 }
 
@@ -321,7 +321,7 @@ fn infer_obj() {
     let point = {x: 5, y: 10, msg: "Hello, world!"}
     "#;
     let (_, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.values.get("point").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("point").unwrap());
     assert_eq!(result, "{x: 5, y: 10, msg: \"Hello, world!\"}");
 }
 
@@ -329,7 +329,7 @@ fn infer_obj() {
 fn infer_async() {
     let src = "let foo = async () => 10";
     let (_, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.values.get("foo").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("foo").unwrap());
     assert_eq!(result, "() => Promise<10>");
 }
 
@@ -337,7 +337,7 @@ fn infer_async() {
 fn infer_async_math() {
     let src = "let add = async (a, b) => await a() + await b()";
     let (program, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.values.get("add").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("add").unwrap());
     assert_eq!(
         result,
         "(a: () => Promise<number>, b: () => Promise<number>) => Promise<number>"
@@ -432,7 +432,7 @@ fn infer_let_decl_with_type_ann() {
     let src = "let x: number = 10";
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -444,7 +444,7 @@ fn infer_let_decl_with_incorrect_type_ann() {
     let src = "let x: string = 10";
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -453,7 +453,7 @@ fn infer_declare() {
     let src = "declare let x: number";
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -465,7 +465,7 @@ fn infer_expr_using_declared_var() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("y").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("y").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -477,7 +477,7 @@ fn infer_app_of_declared_fn() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("sum").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("sum").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -489,7 +489,7 @@ fn infer_app_of_declared_fn_with_obj_param() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("result").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("result").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -501,7 +501,7 @@ fn calling_a_fn_with_an_obj_subtype() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("result").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("result").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -520,7 +520,7 @@ fn infer_literal_tuple() {
     let src = r#"let tuple = [1, "two", true]"#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("tuple").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("tuple").unwrap());
     assert_eq!(result, "[1, \"two\", true]");
 }
 
@@ -529,7 +529,7 @@ fn infer_tuple_with_type_annotation() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two", true]"#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("tuple").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("tuple").unwrap());
     assert_eq!(result, "[number, string, boolean]");
 }
 
@@ -538,7 +538,7 @@ fn infer_tuple_with_type_annotation_and_extra_element() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two", true, "ignored"]"#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("tuple").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("tuple").unwrap());
     assert_eq!(result, "[number, string, boolean]");
 }
 
@@ -566,9 +566,9 @@ fn infer_var_with_union_type_annotation() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let a = format!("{}", ctx.values.get("a").unwrap());
+    let a = format!("{}", ctx.lookup_value_scheme("a").unwrap());
     assert_eq!(a, "number | string");
-    let b = format!("{}", ctx.values.get("b").unwrap());
+    let b = format!("{}", ctx.lookup_value_scheme("b").unwrap());
     assert_eq!(b, "number | string");
 }
 
@@ -585,7 +585,7 @@ fn infer_widen_tuple_return() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("result").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("result").unwrap());
     assert_eq!(result, "(cond: boolean) => [1, 2] | [true, false]");
 }
 
@@ -605,7 +605,7 @@ fn infer_widen_tuples_with_type_annotations() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("result").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("result").unwrap());
     assert_eq!(
         result,
         "(boolean) => [number | number] | [boolean | boolean]"
@@ -621,9 +621,9 @@ fn infer_member_access() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let x = format!("{}", ctx.values.get("x").unwrap());
+    let x = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(x, "5");
-    let y = format!("{}", ctx.values.get("y").unwrap());
+    let y = format!("{}", ctx.lookup_value_scheme("y").unwrap());
     assert_eq!(y, "10");
 }
 
@@ -632,7 +632,7 @@ fn infer_member_access_on_obj_lit() {
     let src = r#"let x = {x: 5, y: 10}.x"#;
     let (_, ctx) = infer_prog(src);
 
-    let x = format!("{}", ctx.values.get("x").unwrap());
+    let x = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(x, "5");
 }
 
@@ -644,7 +644,7 @@ fn infer_fn_using_type_decl() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("mag").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("mag").unwrap());
     assert_eq!(result, "(p: Point) => number");
 }
 
@@ -658,7 +658,7 @@ fn infer_react_component() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("Foo").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("Foo").unwrap());
     assert_eq!(result, "(props: Props) => JSXElement");
 }
 
@@ -698,7 +698,7 @@ fn infer_mem_access_with_optional_prop() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "number | undefined");
 }
 
@@ -720,7 +720,7 @@ fn infer_assigning_to_obj_with_optional_props() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let x = format!("{}", ctx.values.get("x").unwrap());
+    let x = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(x, "number | undefined");
 }
 
@@ -731,7 +731,7 @@ fn infer_assigning_an_obj_lit_with_extra_props() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let point = format!("{}", ctx.values.get("point").unwrap());
+    let point = format!("{}", ctx.lookup_value_scheme("point").unwrap());
     assert_eq!(point, "{x: number, y: number}");
 }
 
@@ -744,9 +744,9 @@ fn infer_function_overloading() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let num_result = format!("{}", ctx.values.get("num").unwrap());
+    let num_result = format!("{}", ctx.lookup_value_scheme("num").unwrap());
     assert_eq!(num_result, "number");
-    let str_result = format!("{}", ctx.values.get("str").unwrap());
+    let str_result = format!("{}", ctx.lookup_value_scheme("str").unwrap());
     assert_eq!(str_result, "string");
 }
 
@@ -792,7 +792,7 @@ fn infer_nested_block() {
     let src = "let result = {let sum = {let x = 5; let y = 10; x + y}; sum}";
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("result").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("result").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -806,7 +806,7 @@ fn infer_block_with_multiple_non_let_lines() {
     let src = "let result = {let x = 5; x + 0; x}";
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("result").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("result").unwrap());
     assert_eq!(result, "5");
 }
 
@@ -840,7 +840,7 @@ fn infer_type_alias_with_param() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("bar").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("bar").unwrap());
     assert_eq!(result, "string");
 }
 
@@ -853,7 +853,7 @@ fn infer_fn_param_with_type_alias_with_param() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("bar").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("bar").unwrap());
     assert_eq!(result, "string");
 }
 
@@ -865,7 +865,7 @@ fn infer_fn_param_with_type_alias_with_param_2() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("get_bar").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("get_bar").unwrap());
     // TODO: normalize the scheme before inserting it into the context
     insta::assert_snapshot!(result, @"<t2>(foo: Foo<t2>) => t2");
 }
@@ -879,7 +879,7 @@ fn infer_fn_param_with_type_alias_with_param_3() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("bar").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("bar").unwrap());
     assert_eq!(result, "\"hello\"");
 }
 
@@ -892,10 +892,10 @@ fn infer_fn_param_with_type_alias_with_param_4() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("get_bar").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("get_bar").unwrap());
     insta::assert_snapshot!(result, @"<t0>(foo: Foo<t0>) => t0");
 
-    let result = format!("{}", ctx.values.get("bar").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("bar").unwrap());
     assert_eq!(result, "\"hello\"");
 }
 
@@ -907,9 +907,9 @@ fn infer_destructure_all_object_properties() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "5");
-    let result = format!("{}", ctx.values.get("y").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("y").unwrap());
     assert_eq!(result, "10");
 }
 
@@ -921,7 +921,7 @@ fn infer_destructure_some_object_properties() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "5");
 }
 
@@ -933,7 +933,7 @@ fn infer_destructure_some_object_properties_with_renaming() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("a").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("a").unwrap());
     assert_eq!(result, "5");
 }
 
@@ -946,7 +946,7 @@ fn infer_destructure_object_with_type_alias() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("x").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -962,7 +962,7 @@ fn infer_destructure_object_inside_fn() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("foo").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("foo").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -978,7 +978,7 @@ fn infer_destructure_object_inside_fn_2() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.values.get("foo").unwrap());
+    let result = format!("{}", ctx.lookup_value_scheme("foo").unwrap());
     assert_eq!(result, "number");
 }
 
@@ -990,7 +990,7 @@ fn infer_destructure_object_param() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let a = format!("{}", ctx.values.get("a").unwrap());
+    let a = format!("{}", ctx.lookup_value_scheme("a").unwrap());
     assert_eq!(a, "string");
 }
 
@@ -1004,10 +1004,10 @@ fn infer_destructure_object_param_2() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let a = format!("{}", ctx.values.get("a").unwrap());
+    let a = format!("{}", ctx.lookup_value_scheme("a").unwrap());
     assert_eq!(a, "string");
 
-    let b = format!("{}", ctx.values.get("b").unwrap());
+    let b = format!("{}", ctx.lookup_value_scheme("b").unwrap());
     assert_eq!(b, "number");
 }
 
@@ -1021,10 +1021,10 @@ fn return_an_object() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let a = format!("{}", ctx.values.get("a").unwrap());
+    let a = format!("{}", ctx.lookup_value_scheme("a").unwrap());
     assert_eq!(a, "\"hello\"");
 
-    let b = format!("{}", ctx.values.get("b").unwrap());
+    let b = format!("{}", ctx.lookup_value_scheme("b").unwrap());
     assert_eq!(b, "5");
 }
 
@@ -1037,7 +1037,7 @@ fn object_property_shorthand() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let c = format!("{}", ctx.values.get("c").unwrap());
+    let c = format!("{}", ctx.lookup_value_scheme("c").unwrap());
     assert_eq!(c, "{a: \"hello\", b: 5}");
 }
 
@@ -1049,9 +1049,9 @@ fn infer_destructuring_with_optional_properties() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let x = format!("{}", ctx.values.get("x").unwrap());
+    let x = format!("{}", ctx.lookup_value_scheme("x").unwrap());
     assert_eq!(x, "number | undefined");
-    assert_eq!(ctx.values.get("y"), None);
+    assert!(ctx.lookup_value_scheme("y").is_err());
 }
 
 #[test]
@@ -1061,10 +1061,10 @@ fn infer_destructure_tuple() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let a = format!("{}", ctx.values.get("a").unwrap());
+    let a = format!("{}", ctx.lookup_value_scheme("a").unwrap());
     assert_eq!(a, "\"hello\"");
 
-    let b = format!("{}", ctx.values.get("b").unwrap());
+    let b = format!("{}", ctx.lookup_value_scheme("b").unwrap());
     assert_eq!(b, "5");
 }
 
@@ -1093,10 +1093,10 @@ fn lam_param_tuple() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let a = format!("{}", ctx.values.get("a").unwrap());
+    let a = format!("{}", ctx.lookup_value_scheme("a").unwrap());
     assert_eq!(a, "string");
 
-    let b = format!("{}", ctx.values.get("b").unwrap());
+    let b = format!("{}", ctx.lookup_value_scheme("b").unwrap());
     assert_eq!(b, "number");
 }
 
@@ -1108,10 +1108,10 @@ fn destructure_lam_param_tuple() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let a = format!("{}", ctx.values.get("a").unwrap());
+    let a = format!("{}", ctx.lookup_value_scheme("a").unwrap());
     assert_eq!(a, "string");
 
-    let b = format!("{}", ctx.values.get("b").unwrap());
+    let b = format!("{}", ctx.lookup_value_scheme("b").unwrap());
     assert_eq!(b, "number");
 }
 
@@ -1125,7 +1125,7 @@ fn infer_jsx() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let elem = format!("{}", ctx.values.get("elem").unwrap());
+    let elem = format!("{}", ctx.lookup_value_scheme("elem").unwrap());
     assert_eq!(elem, "JSXElement");
 }
 
@@ -1147,7 +1147,7 @@ fn return_empty() {
     let (_, ctx) = infer_prog(src);
 
     assert_eq!(
-        format!("{}", ctx.values.get("foo").unwrap()),
+        format!("{}", ctx.lookup_value_scheme("foo").unwrap()),
         "() => undefined"
     );
 }
@@ -1162,7 +1162,7 @@ fn return_empty_with_body() {
     let (_, ctx) = infer_prog(src);
 
     assert_eq!(
-        format!("{}", ctx.values.get("foo").unwrap()),
+        format!("{}", ctx.lookup_value_scheme("foo").unwrap()),
         "() => undefined"
     );
 }
@@ -1178,10 +1178,13 @@ fn infer_if_let() {
 
     let (_, ctx) = infer_prog(src);
 
-    assert_eq!(format!("{}", ctx.values.get("p").unwrap()), "{x: 5, y: 10}");
+    assert_eq!(
+        format!("{}", ctx.lookup_value_scheme("p").unwrap()),
+        "{x: 5, y: 10}"
+    );
     // Ensures we aren't polluting the outside context
-    assert!(ctx.values.get("x").is_none());
-    assert!(ctx.values.get("y").is_none());
+    assert!(ctx.lookup_value_scheme("x").is_err());
+    assert!(ctx.lookup_value_scheme("y").is_err());
 }
 
 #[test]
@@ -1196,11 +1199,11 @@ fn infer_if_let_with_is() {
     let (_, ctx) = infer_prog(src);
 
     assert_eq!(
-        format!("{}", ctx.values.get("b").unwrap()),
+        format!("{}", ctx.lookup_value_scheme("b").unwrap()),
         "number | string"
     );
     // Ensures we aren't polluting the outside context
-    assert!(ctx.values.get("a").is_none());
+    assert!(ctx.lookup_value_scheme("a").is_err());
 }
 
 #[test]
@@ -1300,7 +1303,10 @@ fn infer_if_let_refutable_pattern_obj() {
 
     let (program, ctx) = infer_prog(src);
 
-    assert_eq!(format!("{}", ctx.values.get("p").unwrap()), "{x: 5, y: 10}");
+    assert_eq!(
+        format!("{}", ctx.lookup_value_scheme("p").unwrap()),
+        "{x: 5, y: 10}"
+    );
 
     let js = codegen_js(&program);
     insta::assert_snapshot!(js, @r###"
@@ -1431,7 +1437,10 @@ fn infer_if_let_refutable_pattern_array() {
 
     let (program, ctx) = infer_prog(src);
 
-    assert_eq!(format!("{}", ctx.values.get("p").unwrap()), "[5, 10]");
+    assert_eq!(
+        format!("{}", ctx.lookup_value_scheme("p").unwrap()),
+        "[5, 10]"
+    );
 
     let js = codegen_js(&program);
     insta::assert_snapshot!(js, @r###"

@@ -52,15 +52,15 @@ fn build_d_ts(program: &ast::Program, ctx: &Context) -> Program {
                     }),
                 }))
             }
-            ast::Statement::TypeDecl { declare, id, .. } => match ctx.types.get(&id.name) {
-                Some(scheme) => ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(TsTypeAliasDecl {
+            ast::Statement::TypeDecl { declare, id, .. } => match ctx.lookup_type(&id.name) {
+                Ok(t) => ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(TsTypeAliasDecl {
                     span: DUMMY_SP,
                     declare: declare.to_owned(),
                     id: build_ident(id),
                     type_params: None,
-                    type_ann: Box::from(build_type(&scheme.ty, None, None)),
+                    type_ann: Box::from(build_type(&t, None, None)),
                 }))),
-                None => panic!("Couldn't find type in ctx.types"),
+                Err(_) => panic!("Couldn't find type in ctx.types"),
             },
             _ => ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP })),
         })
@@ -335,8 +335,8 @@ pub fn build_ts_fn_type_with_args(
 pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, ctx: &Context) -> Pat {
     match pattern {
         ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
-            let scheme = ctx.values.get(&id.name).unwrap();
-            let type_params = build_type_params(scheme);
+            let scheme = ctx.lookup_value_scheme(&id.name).unwrap();
+            let type_params = build_type_params(&scheme);
 
             Pat::Ident(BindingIdent {
                 id: build_ident(id),
