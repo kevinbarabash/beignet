@@ -19,12 +19,12 @@ impl Substitutable for Type {
                 Some(replacement) => replacement.to_owned(),
                 None => self.to_owned(),
             },
-            Type::App(app) => Type::App(AppType {
+            Type::App(app) => Type::App(TApp {
                 args: app.args.iter().map(|param| param.apply(sub)).collect(),
                 ret: Box::from(app.ret.apply(sub)),
             }),
             // TODO: handle widening of lambdas
-            Type::Lam(lam) => Type::Lam(LamType {
+            Type::Lam(lam) => Type::Lam(TLam {
                 params: lam.params.iter().map(|param| param.apply(sub)).collect(),
                 ret: Box::from(lam.ret.apply(sub)),
             }),
@@ -34,7 +34,7 @@ impl Substitutable for Type {
             Type::Union(types) => Type::Union(types.apply(sub)),
             Type::Intersection(types) => Type::Intersection(types.apply(sub)),
             Type::Object(props) => Type::Object(props.apply(sub)),
-            Type::Alias(alias) => Type::Alias(AliasType {
+            Type::Alias(alias) => Type::Alias(TAlias {
                 type_params: alias.type_params.apply(sub),
                 ..alias.to_owned()
             }),
@@ -47,12 +47,12 @@ impl Substitutable for Type {
     fn ftv(&self) -> HashSet<i32> {
         match &self {
             Type::Var(id) => HashSet::from([id.to_owned()]),
-            Type::App(AppType { args, ret }) => {
+            Type::App(TApp { args, ret }) => {
                 let mut result: HashSet<_> = args.ftv();
                 result.extend(ret.ftv());
                 result
             }
-            Type::Lam(LamType { params, ret, .. }) => {
+            Type::Lam(TLam { params, ret, .. }) => {
                 let mut result: HashSet<_> = params.ftv();
                 result.extend(ret.ftv());
                 result
@@ -63,7 +63,7 @@ impl Substitutable for Type {
             Type::Union(types) => types.ftv(),
             Type::Intersection(types) => types.ftv(),
             Type::Object(props) => props.ftv(),
-            Type::Alias(AliasType { type_params, .. }) => type_params.ftv(),
+            Type::Alias(TAlias { type_params, .. }) => type_params.ftv(),
             Type::Tuple(types) => types.ftv(),
             Type::Array(t) => t.ftv(),
             Type::Rest(arg) => arg.ftv(),

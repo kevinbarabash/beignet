@@ -1,6 +1,6 @@
 use crate::expr::EFnParamPat;
 use crate::ident::Ident;
-use crate::literal::Lit;
+use crate::lit::Lit;
 use crate::pattern::{BindingIdent, RestPat};
 use crate::prim::Primitive;
 use crate::span::Span;
@@ -32,12 +32,6 @@ pub struct PrimType {
     pub span: Span,
     pub prim: Primitive,
 }
-
-// #[derive(Clone, Debug, PartialEq, Eq)]
-// pub struct LitType {
-//     pub span: Span,
-//     pub lit: Lit,
-// }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeRef {

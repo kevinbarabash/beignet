@@ -2,9 +2,7 @@ use itertools::{join, Itertools};
 use std::fmt;
 use std::hash::Hash;
 
-use crochet_ast::literal::Lit as AstLit;
-
-use crate::{Lit, Primitive};
+use crate::{TLit, TPrim};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TProp {
@@ -17,7 +15,7 @@ pub struct TProp {
 impl TProp {
     pub fn get_type(&self) -> Type {
         match self.optional {
-            true => Type::Union(vec![self.ty.to_owned(), Type::Prim(Primitive::Undefined)]),
+            true => Type::Union(vec![self.ty.to_owned(), Type::Prim(TPrim::Undefined)]),
             false => self.ty.to_owned(),
         }
     }
@@ -41,7 +39,7 @@ impl fmt::Display for TProp {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AppType {
+pub struct TApp {
     pub args: Vec<Type>,
     pub ret: Box<Type>,
 }
@@ -56,7 +54,7 @@ pub struct TFnParam {
 impl TFnParam {
     pub fn get_type(&self) -> Type {
         match self.optional {
-            true => Type::Union(vec![self.ty.to_owned(), Type::Prim(Primitive::Undefined)]),
+            true => Type::Union(vec![self.ty.to_owned(), Type::Prim(TPrim::Undefined)]),
             false => self.ty.to_owned(),
         }
     }
@@ -200,18 +198,18 @@ impl fmt::Display for TObjectAssignPatProp {
 }
 
 #[derive(Clone, Debug, Eq)]
-pub struct LamType {
+pub struct TLam {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
 }
 
-impl PartialEq for LamType {
+impl PartialEq for TLam {
     fn eq(&self, other: &Self) -> bool {
         self.params == other.params && self.ret == other.ret
     }
 }
 
-impl Hash for LamType {
+impl Hash for TLam {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.params.hash(state);
         self.ret.hash(state);
@@ -219,18 +217,18 @@ impl Hash for LamType {
 }
 
 #[derive(Clone, Debug, Eq)]
-pub struct AliasType {
+pub struct TAlias {
     pub name: String,
     pub type_params: Option<Vec<Type>>,
 }
 
-impl PartialEq for AliasType {
+impl PartialEq for TAlias {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name && self.type_params == other.type_params
     }
 }
 
-impl Hash for AliasType {
+impl Hash for TAlias {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.name.hash(state);
         self.type_params.hash(state);
@@ -240,35 +238,23 @@ impl Hash for AliasType {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Var(i32), // i32 is the if of the type variable
-    App(AppType),
-    Lam(LamType),
+    App(TApp),
+    Lam(TLam),
     Wildcard,
     // Query, // use for typed holes
-    Prim(Primitive),
-    Lit(Lit),
+    Prim(TPrim),
+    Lit(TLit),
     Union(Vec<Type>),
     Intersection(Vec<Type>),
     Object(Vec<TProp>),
-    Alias(AliasType),
+    Alias(TAlias),
     Tuple(Vec<Type>),
     Array(Box<Type>),
     Rest(Box<Type>), // TODO: rename this to Spread
 }
 
-impl From<AstLit> for Type {
-    fn from(ast_lit: AstLit) -> Self {
-        Type::Lit(match ast_lit {
-            AstLit::Num(n) => Lit::Num(n.value),
-            AstLit::Bool(b) => Lit::Bool(b.value),
-            AstLit::Str(s) => Lit::Str(s.value),
-            AstLit::Null(_) => Lit::Null,
-            AstLit::Undefined(_) => Lit::Undefined,
-        })
-    }
-}
-
-impl From<Lit> for Type {
-    fn from(lit: Lit) -> Self {
+impl From<TLit> for Type {
+    fn from(lit: TLit) -> Self {
         Type::Lit(lit)
     }
 }
@@ -278,10 +264,10 @@ impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             Type::Var(id) => write!(f, "t{id}"),
-            Type::App(AppType { args, ret }) => {
+            Type::App(TApp { args, ret }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }
-            Type::Lam(LamType { params, ret, .. }) => {
+            Type::Lam(TLam { params, ret, .. }) => {
                 write!(f, "({}) => {}", join(params, ", "), ret)
             }
             Type::Wildcard => write!(f, "_"),
@@ -296,7 +282,7 @@ impl fmt::Display for Type {
                 write!(f, "{}", join(strings, " & "))
             }
             Type::Object(props) => write!(f, "{{{}}}", join(props, ", ")),
-            Type::Alias(AliasType {
+            Type::Alias(TAlias {
                 name, type_params, ..
             }) => match type_params {
                 Some(params) => write!(f, "{name}<{}>", join(params, ", ")),

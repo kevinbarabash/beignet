@@ -65,13 +65,13 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
         Pattern::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
         Pattern::Is(IsPat { id, is_id, .. }) => {
             let ty = match is_id.name.as_str() {
-                "string" => Type::Prim(types::Primitive::Str),
-                "number" => Type::Prim(types::Primitive::Num),
-                "boolean" => Type::Prim(types::Primitive::Bool),
+                "string" => Type::Prim(types::TPrim::Str),
+                "number" => Type::Prim(types::TPrim::Num),
+                "boolean" => Type::Prim(types::TPrim::Bool),
                 // The alias type will be used for `instanceof` of checks, but
                 // only if the definition of the alias is an object type with a
                 // `constructor` method.
-                name => Type::Alias(types::AliasType {
+                name => Type::Alias(types::TAlias {
                     name: name.to_owned(),
                     type_params: None,
                 }),

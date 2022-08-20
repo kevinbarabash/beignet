@@ -78,10 +78,10 @@ fn infer_type_ann_rec(
                 })
                 .collect();
             let ret = Box::from(infer_type_ann_rec(ret.as_ref(), ctx, type_param_map));
-            Type::Lam(types::LamType { params, ret })
+            Type::Lam(types::TLam { params, ret })
         }
         TypeAnn::Lit(lit) => Type::from(lit.to_owned()),
-        TypeAnn::Prim(PrimType { prim, .. }) => Type::Prim(prim.to_owned()),
+        TypeAnn::Prim(PrimType { prim, .. }) => Type::from(prim.to_owned()),
         TypeAnn::Object(ObjectType { props, .. }) => {
             let props: Vec<_> = props
                 .iter()
@@ -105,7 +105,7 @@ fn infer_type_ann_rec(
                         .map(|param| infer_type_ann_rec(param, ctx, type_param_map))
                         .collect()
                 });
-                Type::Alias(types::AliasType {
+                Type::Alias(types::TAlias {
                     name: name.to_owned(),
                     type_params,
                 })

@@ -1,6 +1,6 @@
 use crate::expr::Expr;
 use crate::ident::Ident;
-use crate::literal::Lit;
+use crate::lit::Lit;
 use crate::span::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
