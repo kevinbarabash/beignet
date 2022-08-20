@@ -1,7 +1,7 @@
 use itertools::join;
 use std::fmt;
 
-use crate::types::Type;
+use crate::Type;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Scheme {
@@ -39,12 +39,7 @@ impl fmt::Display for Scheme {
             write!(
                 f,
                 "<{}>{}",
-                join(
-                    quals.iter().map(|id| {
-                        format!("t{id}")
-                    }),
-                    ", "
-                ),
+                join(quals.iter().map(|id| { format!("t{id}") }), ", "),
                 ty
             )
         }

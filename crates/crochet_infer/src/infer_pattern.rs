@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
+use crochet_types::{self as types, Scheme, Type};
 
 use super::context::Context;
 use super::infer_expr::infer_expr;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
-use super::types::{self, Scheme, Type};
 use super::unify::unify;
 use super::util::*;
 

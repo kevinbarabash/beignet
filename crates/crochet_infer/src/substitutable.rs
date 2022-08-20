@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
+use crochet_types::*;
+
 use super::context::Env;
-use super::types::*;
 
 pub type Subst = HashMap<i32, Type>;
 

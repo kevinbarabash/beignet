@@ -8,11 +8,9 @@ mod unify;
 mod util;
 
 pub mod infer;
-pub mod types;
 
 pub use context::*;
 pub use infer::*;
-pub use types::{Lit, TProp, Type};
 
 #[cfg(test)]
 mod tests {

@@ -210,6 +210,7 @@ dependencies = [
  "crochet_ast",
  "crochet_infer",
  "crochet_parser",
+ "crochet_types",
  "insta",
  "pretty_assertions",
  "swc_atoms",
@@ -229,6 +230,7 @@ dependencies = [
  "crochet_ast",
  "crochet_infer",
  "crochet_parser",
+ "crochet_types",
  "defaultmap",
  "insta",
  "memoize",
@@ -246,6 +248,7 @@ dependencies = [
  "chumsky",
  "crochet_ast",
  "crochet_parser",
+ "crochet_types",
  "defaultmap",
  "itertools",
 ]
@@ -259,6 +262,17 @@ dependencies = [
  "insta",
  "pretty_assertions",
  "unescape",
+]
+
+[[package]]
+name = "crochet_types"
+version = "0.1.0"
+dependencies = [
+ "chumsky",
+ "crochet_ast",
+ "insta",
+ "itertools",
+ "pretty_assertions",
 ]
 
 [[package]]

@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::*;
+use crochet_types::{self as types, Scheme, TFnParam, TProp, Type};
 
 use super::context::Context;
 use super::infer_fn_param::e_pat_to_t_pat;
-use super::types::{self, Scheme, TFnParam, TProp, Type};
 
 pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Scheme {
     match type_ann {

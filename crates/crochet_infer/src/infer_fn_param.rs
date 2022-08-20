@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
+use crochet_types::{self as types, Scheme, TFnParam, TPat, Type};
 
 use super::context::Context;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
-use super::types::{self, Scheme, TFnParam, TPat, Type};
 use super::unify::unify;
 
 pub type Assump = HashMap<String, Scheme>;

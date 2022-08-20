@@ -1,10 +1,11 @@
-use crochet_ast::Primitive;
 use std::cmp;
 use std::collections::HashSet;
 
+use crochet_ast::Primitive;
+use crochet_types::{self as types, TFnParam, Type};
+
 use super::context::Context;
 use super::substitutable::{Subst, Substitutable};
-use super::types::{self, TFnParam, Type};
 use super::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.

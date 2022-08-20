@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
+use crochet_types::{self as types, TFnParam, TPat, Type};
 
 use super::context::Context;
 use super::infer_fn_param::infer_fn_param;
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
-use super::types::{self, TFnParam, TPat, Type};
 use super::unify::unify;
 use super::util::*;
 
@@ -564,7 +564,7 @@ fn infer_property_type(
                         _ => Err(format!("{prim} is an invalid key for object types")),
                     },
                     Type::Lit(lit) => match lit {
-                        crate::Lit::Str(key) => {
+                        types::Lit::Str(key) => {
                             let prop = props.iter().find(|prop| prop.name == key);
                             match prop {
                                 Some(prop) => Ok((Subst::default(), prop.get_type())),
@@ -582,20 +582,20 @@ fn infer_property_type(
             infer_property_type(&t, prop, ctx)
         }
         Type::Lit(lit) => match lit {
-            crate::Lit::Num(_) => {
+            types::Lit::Num(_) => {
                 let t = ctx.lookup_type("Number")?;
                 infer_property_type(&t, prop, ctx)
             }
-            crate::Lit::Bool(_) => {
+            types::Lit::Bool(_) => {
                 let t = ctx.lookup_type("Boolean")?;
                 infer_property_type(&t, prop, ctx)
             }
-            crate::Lit::Str(_) => {
+            types::Lit::Str(_) => {
                 let t = ctx.lookup_type("String")?;
                 infer_property_type(&t, prop, ctx)
             }
-            crate::Lit::Null => todo!(),
-            crate::Lit::Undefined => todo!(),
+            types::Lit::Null => todo!(),
+            types::Lit::Undefined => todo!(),
         },
         Type::Prim(prim) => match prim {
             Primitive::Num => {
@@ -632,7 +632,7 @@ fn infer_property_type(
                             _ => Err(format!("{prim} is an invalid indexer for tuple types")),
                         },
                         Type::Lit(lit) => match lit {
-                            crate::Lit::Num(index) => {
+                            types::Lit::Num(index) => {
                                 let index: usize = index.parse().unwrap();
                                 match elem_types.get(index) {
                                     Some(t) => Ok((prop_s, t.to_owned())),

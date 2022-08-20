@@ -9,13 +9,8 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::{Lit, Primitive};
-use crochet_infer::{
-    types::Scheme,
-    types::TFnParam,
-    types::TPat,
-    types::{self, RestPat},
-    Context, TProp, Type,
-};
+use crochet_infer::Context;
+use crochet_types::{self as types, RestPat, Scheme, TFnParam, TPat, TProp, Type};
 
 type Interface = Vec<TProp>;
 
