@@ -68,8 +68,6 @@ fn build_d_ts(_program: &ast::Program, ctx: &Context) -> Program {
             }),
         });
 
-        println!("scheme = {scheme:#?}");
-
         let decl = ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
             span: DUMMY_SP,
             decl: Decl::Var(VarDecl {

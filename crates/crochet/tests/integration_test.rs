@@ -291,10 +291,10 @@ fn infer_let_rec_until() {
     let src = "let rec until = (p, f, x) => if p(x) { x } else { until(p, f, f(x)) }";
     let (program, ctx) = infer_prog(src);
     let result = format!("{}", ctx.lookup_value_scheme("until").unwrap());
-    insta::assert_snapshot!(result, @"<t0>((t0) => boolean, (t0) => t0, t0) => t0");
+    insta::assert_snapshot!(result, @"<t0>(p: (t0) => boolean, f: (t0) => t0, x: t0) => t0");
 
     let result = codegen_d_ts(&program, &ctx);
-    insta::assert_snapshot!(result, @"export declare const until: <A>(arg0: (arg0: A) => boolean, arg1: (arg0: A) => A, arg2: A) => A;
+    insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A;
 ");
 }
 
@@ -312,7 +312,7 @@ fn infer_fib() {
 
     let (_, ctx) = infer_prog(src);
     let fib_type = ctx.lookup_value_scheme("fib").unwrap();
-    assert_eq!(format!("{}", fib_type), "(number) => number");
+    assert_eq!(format!("{}", fib_type), "(n: number) => number");
 }
 
 #[test]
@@ -1406,16 +1406,16 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
+    declare type Point = {
+        readonly x: number;
+        readonly y: number;
+    };
     declare type Action = {
         readonly type: "lineto";
         readonly point: Point;
     } | {
         readonly type: "moveto";
         readonly point: Point;
-    };
-    declare type Point = {
-        readonly x: number;
-        readonly y: number;
     };
     export declare const action: Action;
     "###);

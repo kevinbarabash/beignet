@@ -503,8 +503,8 @@ fn variable_declaration_with_destructuring() {
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
-    export declare const y: 10;
     export declare const x: 5;
+    export declare const y: 10;
     "###);
 }
 
