@@ -1,11 +1,11 @@
 use defaultmap::*;
-
 use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
 
+use crochet_types::*;
+
 use super::context::{Context, Env};
 use super::substitutable::{Subst, Substitutable};
-use super::types::*;
 
 pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
     let body = &sc.ty;

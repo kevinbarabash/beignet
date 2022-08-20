@@ -4,7 +4,7 @@ use std::hash::Hash;
 
 use crochet_ast::literal::Lit as AstLit;
 
-use crate::types::{Lit, Primitive};
+use crate::{Lit, Primitive};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TProp {

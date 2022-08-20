@@ -1,11 +1,11 @@
 use crochet_ast::*;
+use crochet_types::{Scheme, TProp, Type};
 
 use super::context::{Context, Env};
 use super::infer_expr::infer_expr as infer_expr_rec;
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
-use super::types::{Scheme, TProp, Type};
 use super::util::*;
 
 pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> {

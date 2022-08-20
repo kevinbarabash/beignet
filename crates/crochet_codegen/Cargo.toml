@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 crochet_ast = { version = "0.1.0", path = "../crochet_ast" }
 crochet_infer = { version = "0.1.0", path = "../crochet_infer" }
+crochet_types = { version = "0.1.0", path = "../crochet_types" }
 swc_atoms = "0.3.0"
 swc_ecma_ast = "0.89.1"
 swc_common = "0.26.0"

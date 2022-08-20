@@ -6,8 +6,8 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
-use crochet_infer::types::{self, Scheme, TFnParam, TPat, Type};
 use crochet_infer::Context;
+use crochet_types::{self as types, Scheme, TFnParam, TPat, Type};
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -417,11 +417,11 @@ pub fn build_type(
         }
         Type::Prim(prim) => {
             let kind = match prim {
-                crochet_infer::types::Primitive::Num => TsKeywordTypeKind::TsNumberKeyword,
-                crochet_infer::types::Primitive::Bool => TsKeywordTypeKind::TsBooleanKeyword,
-                crochet_infer::types::Primitive::Str => TsKeywordTypeKind::TsStringKeyword,
-                crochet_infer::types::Primitive::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
-                crochet_infer::types::Primitive::Null => TsKeywordTypeKind::TsNullKeyword,
+                types::Primitive::Num => TsKeywordTypeKind::TsNumberKeyword,
+                types::Primitive::Bool => TsKeywordTypeKind::TsBooleanKeyword,
+                types::Primitive::Str => TsKeywordTypeKind::TsStringKeyword,
+                types::Primitive::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
+                types::Primitive::Null => TsKeywordTypeKind::TsNullKeyword,
             };
 
             TsType::TsKeywordType(TsKeywordType {
@@ -431,16 +431,16 @@ pub fn build_type(
         }
         Type::Lit(lit) => {
             let lit = match lit {
-                crochet_infer::types::Lit::Num(n) => TsLit::Number(Number {
+                types::Lit::Num(n) => TsLit::Number(Number {
                     span: DUMMY_SP,
                     value: n.parse().unwrap(),
                     raw: Some(Atom::new(n.to_owned())),
                 }),
-                crochet_infer::types::Lit::Bool(b) => TsLit::Bool(Bool {
+                types::Lit::Bool(b) => TsLit::Bool(Bool {
                     span: DUMMY_SP,
                     value: b.to_owned(),
                 }),
-                crochet_infer::types::Lit::Str(s) => TsLit::Str(Str {
+                types::Lit::Str(s) => TsLit::Str(Str {
                     span: DUMMY_SP,
                     value: JsWord::from(s.clone()),
                     raw: None,

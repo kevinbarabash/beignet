@@ -1,8 +1,8 @@
+use crochet_types::*;
 use std::cell::Cell;
 use std::collections::HashMap;
 
 use super::substitutable::*;
-use super::types::*;
 
 // This maps to the Assump data type in THIH which was a tuple
 // of (Id, Scheme) where Id was a String.
