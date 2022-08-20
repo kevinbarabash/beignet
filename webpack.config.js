@@ -14,6 +14,13 @@ module.exports = {
     }),
     new WasmPackPlugin({
       crateDirectory: path.resolve(__dirname, "./crates/crochet"),
+      watchDirectories: [
+        path.resolve(__dirname, "./crates/crochet_ast/src"),
+        path.resolve(__dirname, "./crates/crochet_codegen/src"),
+        path.resolve(__dirname, "./crates/crochet_dst/src"),
+        path.resolve(__dirname, "./crates/crochet_infer/src"),
+        path.resolve(__dirname, "./crates/crochet_parser/src"),
+      ],
     }),
   ],
   module: {
