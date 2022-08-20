@@ -65,12 +65,20 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let s2 = unify(
                 &Type::Lam(types::TLam {
                     params: vec![param],
-                    ret: Box::from(tv.clone()),
+                    ret: Box::from(tv),
                 }),
                 &t,
                 ctx,
             )?;
-            Ok((compose_subs(&s2, &s1), tv.apply(&s2)))
+
+            // This leaves the function param names intact and returns a TLam
+            // instead of a TApp.
+            let t = match t {
+                Type::Lam(types::TLam { ret, .. }) => Ok(ret.as_ref().to_owned()),
+                _ => Err(String::from("Expr::Fix should always infer a lambda")),
+            }?;
+
+            Ok((compose_subs(&s2, &s1), t))
         }
         Expr::Ident(Ident { name, .. }) => {
             let s = Subst::default();

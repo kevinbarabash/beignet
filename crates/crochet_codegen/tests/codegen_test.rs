@@ -497,13 +497,15 @@ fn variable_declaration_with_destructuring() {
     "###);
 
     // TODO: Support destructuring in top-level decls
-    // let program = parser().parse(src).unwrap();
-    // let mut ctx = Context::default();
-    // infer_prog(&program, &mut ctx).unwrap();
-    // let result = codegen_d_ts(&program, &ctx);
+    let program = parser().parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
 
-    // insta::assert_snapshot!(result, @"export declare const foo: (x: number, ...y: number[]) => number;
-    // ");
+    insta::assert_snapshot!(result, @r###"
+    export declare const x: 5;
+    export declare const y: 10;
+    "###);
 }
 
 #[test]
