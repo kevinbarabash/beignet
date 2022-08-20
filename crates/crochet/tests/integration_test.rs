@@ -294,7 +294,7 @@ fn infer_let_rec_until() {
     insta::assert_snapshot!(result, @"<t0>((t0) => boolean, (t0) => t0, t0) => t0");
 
     let result = codegen_d_ts(&program, &ctx);
-    insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A;
+    insta::assert_snapshot!(result, @"export declare const until: <A>(arg0: (arg0: A) => boolean, arg1: (arg0: A) => A, arg2: A) => A;
 ");
 }
 
@@ -682,7 +682,7 @@ fn codegen_code_with_type_delcarations() {
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
-    type Point = {
+    declare type Point = {
         readonly x: number;
         readonly y: number;
     };
@@ -779,7 +779,7 @@ fn codegen_object_type_with_optional_property() {
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
-    type Point = {
+    declare type Point = {
         readonly x?: number;
         readonly y: number;
     };
@@ -1239,7 +1239,6 @@ fn codegen_if_let() {
         readonly x: 5;
         readonly y: 10;
     };
-    ;
     "###);
 }
 
@@ -1276,7 +1275,6 @@ fn codegen_if_let_with_rename() {
         readonly x: 5;
         readonly y: 10;
     };
-    ;
     "###);
 }
 
@@ -1331,7 +1329,6 @@ fn infer_if_let_refutable_pattern_obj() {
         readonly x: 5;
         readonly y: 10;
     };
-    ;
     "###);
 }
 
@@ -1375,7 +1372,6 @@ fn infer_if_let_refutable_pattern_nested_obj() {
             readonly y: 10;
         };
     };
-    ;
     "###);
 }
 
@@ -1410,19 +1406,18 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
-    type Point = {
-        readonly x: number;
-        readonly y: number;
-    };
-    type Action = {
+    declare type Action = {
         readonly type: "lineto";
         readonly point: Point;
     } | {
         readonly type: "moveto";
         readonly point: Point;
     };
+    declare type Point = {
+        readonly x: number;
+        readonly y: number;
+    };
     export declare const action: Action;
-    ;
     "###);
 }
 
@@ -1460,10 +1455,8 @@ fn infer_if_let_refutable_pattern_array() {
 
     let result = codegen_d_ts(&program, &ctx);
 
-    insta::assert_snapshot!(result, @r###"
-    export declare const p: [5, 10];
-    ;
-    "###);
+    insta::assert_snapshot!(result, @"export declare const p: [5, 10];
+");
 }
 
 #[test]
@@ -1498,10 +1491,8 @@ fn infer_if_let_refutable_pattern_nested_array() {
 
     let result = codegen_d_ts(&program, &ctx);
 
-    insta::assert_snapshot!(result, @r###"
-    export declare const action: ["moveto", [5, 10]];
-    ;
-    "###);
+    insta::assert_snapshot!(result, @r###"export declare const action: ["moveto", [5, 10]];
+"###);
 }
 
 #[test]
@@ -1530,10 +1521,8 @@ fn codegen_if_let_with_is_prim() {
 
     let result = codegen_d_ts(&program, &ctx);
 
-    insta::assert_snapshot!(result, @r###"
-    export declare const b: number | string;
-    ;
-    "###);
+    insta::assert_snapshot!(result, @"export declare const b: number | string;
+");
 }
 
 #[test]

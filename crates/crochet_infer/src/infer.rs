@@ -31,6 +31,10 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
     }]));
     ctx.insert_type(String::from("JSXElement"), jsx_element_scheme);
 
+    // We push a scope here so that it's easy to differentiate globals from
+    // module definitions.
+    ctx.push_scope(false);
+
     // TODO: figure out how report multiple errors
     for stmt in &prog.body {
         match stmt {

@@ -31,40 +31,62 @@ fn print_d_ts(program: &Program) -> String {
     String::from_utf8_lossy(&buf).to_string()
 }
 
-fn build_d_ts(program: &ast::Program, ctx: &Context) -> Program {
-    let body: Vec<ModuleItem> = program
-        .body
-        .iter()
-        .map(|child| match child {
-            ast::Statement::VarDecl { pattern, init, .. } => {
-                ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+fn build_d_ts(_program: &ast::Program, ctx: &Context) -> Program {
+    let current_scope = ctx.scopes.last().unwrap();
+
+    let mut body: Vec<ModuleItem> = vec![];
+
+    for (name, scheme) in &current_scope.types {
+        let id = Ident {
+            span: DUMMY_SP,
+            sym: JsWord::from(name.to_owned()),
+            optional: false,
+        };
+        let decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(TsTypeAliasDecl {
+            span: DUMMY_SP,
+            declare: true,
+            id,
+            type_params: build_type_params(scheme),
+            type_ann: Box::from(build_type(&scheme.ty, None)),
+        })));
+
+        body.push(decl);
+    }
+
+    for (name, scheme) in &current_scope.values {
+        let type_params = build_type_params(scheme);
+        let id = Ident {
+            span: DUMMY_SP,
+            sym: JsWord::from(name.to_owned()),
+            optional: false,
+        };
+        let pat = Pat::Ident(BindingIdent {
+            id,
+            type_ann: Some(TsTypeAnn {
+                span: DUMMY_SP,
+                type_ann: Box::from(build_type(&scheme.ty, type_params)),
+            }),
+        });
+
+        println!("scheme = {scheme:#?}");
+
+        let decl = ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+            span: DUMMY_SP,
+            decl: Decl::Var(VarDecl {
+                span: DUMMY_SP,
+                kind: VarDeclKind::Const,
+                declare: true,
+                decls: vec![VarDeclarator {
                     span: DUMMY_SP,
-                    decl: Decl::Var(VarDecl {
-                        span: DUMMY_SP,
-                        kind: VarDeclKind::Const,
-                        declare: true,
-                        decls: vec![VarDeclarator {
-                            span: DUMMY_SP,
-                            name: build_pattern(pattern, init.as_ref(), ctx),
-                            init: None,
-                            definite: false,
-                        }],
-                    }),
-                }))
-            }
-            ast::Statement::TypeDecl { declare, id, .. } => match ctx.lookup_type(&id.name) {
-                Ok(t) => ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(TsTypeAliasDecl {
-                    span: DUMMY_SP,
-                    declare: declare.to_owned(),
-                    id: build_ident(id),
-                    type_params: None,
-                    type_ann: Box::from(build_type(&t, None, None)),
-                }))),
-                Err(_) => panic!("Couldn't find type in ctx.types"),
-            },
-            _ => ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP })),
-        })
-        .collect();
+                    name: pat,
+                    init: None,
+                    definite: false,
+                }],
+            }),
+        }));
+
+        body.push(decl);
+    }
 
     Program::Module(Module {
         span: DUMMY_SP,
@@ -85,7 +107,7 @@ pub fn build_ident(id: &ast::Ident) -> Ident {
 pub fn build_param(r#type: &Type, e_param: &ast::EFnParam) -> TsFnParam {
     let type_ann = Some(TsTypeAnn {
         span: DUMMY_SP,
-        type_ann: Box::from(build_type(r#type, None, None)),
+        type_ann: Box::from(build_type(r#type, None)),
     });
 
     let pat = build_param_pat_rec(&e_param.pat, type_ann);
@@ -265,13 +287,19 @@ pub fn build_ts_fn_type_with_params(
         .map(|param| {
             let type_ann = Some(TsTypeAnn {
                 span: DUMMY_SP,
-                type_ann: Box::from(build_type(&param.ty, None, None)),
+                type_ann: Box::from(build_type(&param.ty, None)),
             });
 
             let pat = tpat_to_pat(&param.pat, type_ann);
 
             let result: TsFnParam = match pat {
-                Pat::Ident(bi) => TsFnParam::Ident(bi),
+                Pat::Ident(bi) => {
+                    let id = Ident {
+                        optional: param.optional,
+                        ..bi.id
+                    };
+                    TsFnParam::Ident(BindingIdent { id, ..bi })
+                }
                 Pat::Array(array) => TsFnParam::Array(array),
                 Pat::Rest(rest) => TsFnParam::Rest(rest),
                 Pat::Object(obj) => TsFnParam::Object(obj),
@@ -290,7 +318,7 @@ pub fn build_ts_fn_type_with_params(
         type_params,
         type_ann: TsTypeAnn {
             span: DUMMY_SP,
-            type_ann: Box::from(build_type(ret, None, None)),
+            type_ann: Box::from(build_type(ret, None)),
         },
     }))
 }
@@ -306,7 +334,7 @@ pub fn build_ts_fn_type_with_args(
         .map(|(index, arg)| {
             let type_ann = Some(TsTypeAnn {
                 span: DUMMY_SP,
-                type_ann: Box::from(build_type(arg, None, None)),
+                type_ann: Box::from(build_type(arg, None)),
             });
 
             TsFnParam::Ident(BindingIdent {
@@ -326,33 +354,9 @@ pub fn build_ts_fn_type_with_args(
         type_params,
         type_ann: TsTypeAnn {
             span: DUMMY_SP,
-            type_ann: Box::from(build_type(ret, None, None)),
+            type_ann: Box::from(build_type(ret, None)),
         },
     }))
-}
-
-// TODO: Support destructuring in top-level decls
-pub fn build_pattern(pattern: &ast::Pattern, value: Option<&ast::Expr>, ctx: &Context) -> Pat {
-    match pattern {
-        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => {
-            let scheme = ctx.lookup_value_scheme(&id.name).unwrap();
-            let type_params = build_type_params(&scheme);
-
-            Pat::Ident(BindingIdent {
-                id: build_ident(id),
-                type_ann: Some(TsTypeAnn {
-                    span: DUMMY_SP,
-                    type_ann: Box::from(build_type(&scheme.ty, value, type_params)),
-                }),
-            })
-        }
-        ast::Pattern::Wildcard(_) => todo!(),
-        ast::Pattern::Rest(_) => todo!(),
-        ast::Pattern::Object(_) => todo!(),
-        ast::Pattern::Array(_) => todo!(),
-        ast::Pattern::Lit(_) => todo!(),
-        ast::Pattern::Is(_) => todo!(),
-    }
 }
 
 pub fn build_type_params(scheme: &Scheme) -> Option<TsTypeParamDecl> {
@@ -393,11 +397,7 @@ pub fn build_type_params(scheme: &Scheme) -> Option<TsTypeParamDecl> {
 ///
 /// `expr` should be the original expression that `ty` was inferred
 /// from if it exists.
-pub fn build_type(
-    ty: &Type,
-    expr: Option<&ast::Expr>,
-    type_params: Option<TsTypeParamDecl>,
-) -> TsType {
+pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
     match &ty {
         Type::Var(id) => {
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -459,83 +459,17 @@ pub fn build_type(
         }
         Type::App(types::TApp { args, ret, .. }) => {
             // This can happen when a function type is inferred by usage
-            match expr {
-                // TODO: handle is_async
-                Some(ast::Expr::Lambda(ast::Lambda { params, .. })) => {
-                    if args.len() != params.len() {
-                        panic!("number of args don't match")
-                    } else {
-                        let args: Vec<TsFnParam> = args
-                            .iter()
-                            .zip(params)
-                            .map(|(arg, param)| build_param(arg, param))
-                            .collect();
-
-                        TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
-                            span: DUMMY_SP,
-                            params: args,
-                            type_params,
-                            type_ann: TsTypeAnn {
-                                span: DUMMY_SP,
-                                type_ann: Box::from(build_type(ret, None, None)),
-                            },
-                        }))
-                    }
-                }
-                // Fix nodes are assumed to wrap a lambda where the body of
-                // the lambda is recursive function.
-                Some(ast::Expr::Fix(ast::Fix { expr, .. })) => match expr.as_ref() {
-                    ast::Expr::Lambda(ast::Lambda { body, .. }) => {
-                        build_type(ty, Some(body), type_params)
-                    }
-                    _ => panic!("mismatch"),
-                },
-                _ => build_ts_fn_type_with_args(args, ret, type_params),
-            }
+            build_ts_fn_type_with_args(args, ret, type_params)
         }
-        // This is used to copy the names of args from the expression
-        // over to the lambda's type.
         Type::Lam(types::TLam { params, ret, .. }) => {
-            match expr {
-                // TODO: handle is_async
-                Some(ast::Expr::Lambda(other_lam)) => {
-                    if params.len() != other_lam.params.len() {
-                        panic!("number of params don't match")
-                    } else {
-                        let params: Vec<TsFnParam> = params
-                            .iter()
-                            .zip(&other_lam.params)
-                            .map(|(t_param, e_param)| build_param(&t_param.ty, e_param))
-                            .collect();
-
-                        TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
-                            span: DUMMY_SP,
-                            params,
-                            type_params,
-                            type_ann: TsTypeAnn {
-                                span: DUMMY_SP,
-                                type_ann: Box::from(build_type(ret, None, None)),
-                            },
-                        }))
-                    }
-                }
-                // Fix nodes are assumed to wrap a lambda where the body of
-                // the lambda is recursive function.
-                Some(ast::Expr::Fix(ast::Fix { expr, .. })) => match expr.as_ref() {
-                    ast::Expr::Lambda(ast::Lambda { body, .. }) => {
-                        build_type(ty, Some(body), type_params)
-                    }
-                    _ => panic!("mismatch"),
-                },
-                _ => build_ts_fn_type_with_params(params, ret, type_params),
-            }
+            build_ts_fn_type_with_params(params, ret, type_params)
         }
         Type::Union(types) => {
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
                 span: DUMMY_SP,
                 types: sort_types(types)
                     .iter()
-                    .map(|ty| Box::from(build_type(ty, None, None)))
+                    .map(|ty| Box::from(build_type(ty, None)))
                     .collect(),
             }))
         }
@@ -544,7 +478,7 @@ pub fn build_type(
                 span: DUMMY_SP,
                 types: sort_types(types)
                     .iter()
-                    .map(|ty| Box::from(build_type(ty, None, None)))
+                    .map(|ty| Box::from(build_type(ty, None)))
                     .collect(),
             }),
         ),
@@ -566,7 +500,7 @@ pub fn build_type(
                         params: vec![],
                         type_ann: Some(TsTypeAnn {
                             span: DUMMY_SP,
-                            type_ann: Box::from(build_type(&prop.ty, None, None)),
+                            type_ann: Box::from(build_type(&prop.ty, None)),
                         }),
                         type_params: None,
                     })
@@ -591,7 +525,7 @@ pub fn build_type(
                 span: DUMMY_SP,
                 params: params
                     .iter()
-                    .map(|ty| Box::from(build_type(ty, None, None)))
+                    .map(|ty| Box::from(build_type(ty, None)))
                     .collect(),
             }),
         }),
@@ -602,13 +536,13 @@ pub fn build_type(
                 .map(|ty| TsTupleElement {
                     span: DUMMY_SP,
                     label: None,
-                    ty: build_type(ty, None, None),
+                    ty: build_type(ty, None),
                 })
                 .collect(),
         }),
         Type::Array(t) => TsType::TsArrayType(TsArrayType {
             span: DUMMY_SP,
-            elem_type: Box::from(build_type(t, None, None)),
+            elem_type: Box::from(build_type(t, None)),
         }),
         Type::Rest(_) => todo!(),
         Type::Wildcard => todo!(),
