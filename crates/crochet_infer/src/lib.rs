@@ -1031,6 +1031,17 @@ mod tests {
     }
 
     #[test]
+    #[should_panic = "Not enough args provided"]
+    fn call_fn_with_rest_param_with_too_few_args() {
+        let src = r#"
+        let add = (a, b, ...c: number[]) => a + b
+        let add5 = add(5)
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
     fn infer_optional_param_type() {
         let src = r#"
         let plus_one = (a, b?) => {
@@ -1140,7 +1151,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Not enough params provided"]
+    #[should_panic = "Not enough args provided"]
     fn call_lam_with_too_few_params() {
         let src = r#"
         declare let add: (a: number, b: number) => number
