@@ -2,6 +2,8 @@ use itertools::{join, Itertools};
 use std::fmt;
 use std::hash::Hash;
 
+use crochet_ast::literal::Lit as AstLit;
+
 use crate::types::{Lit, Primitive};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -251,6 +253,24 @@ pub enum Type {
     Tuple(Vec<Type>),
     Array(Box<Type>),
     Rest(Box<Type>), // TODO: rename this to Spread
+}
+
+impl From<AstLit> for Type {
+    fn from(ast_lit: AstLit) -> Self {
+        Type::Lit(match ast_lit {
+            AstLit::Num(n) => Lit::Num(n.value),
+            AstLit::Bool(b) => Lit::Bool(b.value),
+            AstLit::Str(s) => Lit::Str(s.value),
+            AstLit::Null(_) => Lit::Null,
+            AstLit::Undefined(_) => Lit::Undefined,
+        })
+    }
+}
+
+impl From<Lit> for Type {
+    fn from(lit: Lit) -> Self {
+        Type::Lit(lit)
+    }
 }
 
 impl fmt::Display for Type {

@@ -2,7 +2,7 @@ use crochet_ast::Primitive;
 use std::cmp;
 use std::collections::HashSet;
 
-use super::context::{lookup_alias, Context};
+use super::context::Context;
 use super::substitutable::{Subst, Substitutable};
 use super::types::{self, TFnParam, Type};
 use super::util::*;
@@ -432,11 +432,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
         }
         (_, Type::Alias(alias)) => {
-            let alias_t = lookup_alias(ctx, alias)?;
+            let alias_t = ctx.lookup_alias(alias)?;
             unify(t1, &alias_t, ctx)
         }
         (Type::Alias(alias), _) => {
-            let alias_t = lookup_alias(ctx, alias)?;
+            let alias_t = ctx.lookup_alias(alias)?;
             unify(&alias_t, t2, ctx)
         }
         (Type::Array(array_arg), Type::Rest(rest_arg)) => {
@@ -526,13 +526,13 @@ mod tests {
     fn literals_are_subtypes_of_corresponding_primitives() {
         let ctx = Context::default();
 
-        let result = unify(&ctx.lit(num("5")), &Type::Prim(Primitive::Num), &ctx);
+        let result = unify(&Type::from(num("5")), &Type::Prim(Primitive::Num), &ctx);
         assert_eq!(result, Ok(Subst::default()));
 
-        let result = unify(&ctx.lit(str("hello")), &Type::Prim(Primitive::Str), &ctx);
+        let result = unify(&Type::from(str("hello")), &Type::Prim(Primitive::Str), &ctx);
         assert_eq!(result, Ok(Subst::default()));
 
-        let result = unify(&ctx.lit(bool(&true)), &Type::Prim(Primitive::Bool), &ctx);
+        let result = unify(&Type::from(bool(&true)), &Type::Prim(Primitive::Bool), &ctx);
         assert_eq!(result, Ok(Subst::default()));
     }
 
@@ -545,13 +545,13 @@ mod tests {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
-                ty: ctx.lit(num("5")),
+                ty: Type::from(num("5")),
             },
             types::TProp {
                 name: String::from("bar"),
                 optional: false,
                 mutable: false,
-                ty: ctx.lit(bool(&true)),
+                ty: Type::from(bool(&true)),
             },
             // Having extra properties is okay
             types::TProp {
@@ -595,7 +595,7 @@ mod tests {
     fn failure_case() {
         let ctx = Context::default();
 
-        let result = unify(&Type::Prim(Primitive::Num), &ctx.lit(num("5")), &ctx);
+        let result = unify(&Type::Prim(Primitive::Num), &Type::from(num("5")), &ctx);
 
         assert_eq!(result, Err(String::from("Unification failure")))
     }

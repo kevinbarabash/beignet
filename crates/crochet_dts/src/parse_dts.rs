@@ -159,9 +159,9 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
         TsType::TsIndexedAccessType(_) => todo!(),
         TsType::TsMappedType(_) => todo!(),
         TsType::TsLitType(lit) => match &lit.lit {
-            TsLit::Number(num) => ctx.lit(Lit::num(format!("{}", num.value), 0..0)),
-            TsLit::Str(str) => ctx.lit(Lit::str(str.value.to_string(), 0..0)),
-            TsLit::Bool(b) => ctx.lit(Lit::bool(b.value, 0..0)),
+            TsLit::Number(num) => Type::from(Lit::num(format!("{}", num.value), 0..0)),
+            TsLit::Str(str) => Type::from(Lit::str(str.value.to_string(), 0..0)),
+            TsLit::Bool(b) => Type::from(Lit::bool(b.value, 0..0)),
             TsLit::BigInt(_) => todo!(),
             TsLit::Tpl(_) => todo!(),
         },

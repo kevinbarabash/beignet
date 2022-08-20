@@ -17,7 +17,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
         name: String::from("_name"),
         optional: false,
         mutable: false,
-        ty: ctx.lit(Lit::str(String::from("Promise"), 0..0)),
+        ty: Type::from(Lit::str(String::from("Promise"), 0..0)),
     }]));
     ctx.types.insert(String::from("Promise"), promise_scheme);
     // TODO: replace with Class type once it exists
@@ -27,7 +27,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
         name: String::from("_name"),
         optional: false,
         mutable: false,
-        ty: ctx.lit(Lit::str(String::from("JSXElement"), 0..0)),
+        ty: Type::from(Lit::str(String::from("JSXElement"), 0..0)),
     }]));
     ctx.types
         .insert(String::from("JSXElement"), jsx_element_scheme);

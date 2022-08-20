@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crochet_ast::*;
 
-use super::context::{lookup_alias, Context};
+use super::context::Context;
 use super::infer_fn_param::infer_fn_param;
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
@@ -300,7 +300,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         }
         Expr::Lit(lit) => {
             let s = Subst::new();
-            let t = ctx.lit(lit.to_owned());
+            let t = Type::from(lit.to_owned());
             Ok((s, t))
         }
         Expr::Op(Op {
@@ -346,14 +346,24 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         match p.as_ref() {
                             Prop::Shorthand(Ident { name, .. }) => {
                                 let t = ctx.lookup_value(name)?;
-                                ps.push(ctx.prop(name, t, false));
+                                ps.push(types::TProp {
+                                    name: name.to_owned(),
+                                    optional: false,
+                                    mutable: false,
+                                    ty: t,
+                                });
                             }
                             Prop::KeyValue(KeyValueProp { name, value, .. }) => {
                                 let (s, t) = infer_expr(ctx, value)?;
                                 ss.push(s);
                                 // TODO: check if the inferred type is T | undefined and use that
                                 // determine the value of optional
-                                ps.push(ctx.prop(name, t, false));
+                                ps.push(types::TProp {
+                                    name: name.to_owned(),
+                                    optional: false,
+                                    mutable: false,
+                                    ty: t,
+                                });
                             }
                         }
                     }
@@ -568,7 +578,7 @@ fn infer_property_type(
             }
         },
         Type::Alias(alias) => {
-            let t = lookup_alias(ctx, alias)?;
+            let t = ctx.lookup_alias(alias)?;
             infer_property_type(&t, prop, ctx)
         }
         Type::Lit(lit) => match lit {

@@ -62,7 +62,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
             let tv = ctx.fresh_var();
             Ok(tv)
         }
-        Pattern::Lit(LitPat { lit, .. }) => Ok(ctx.lit(lit.to_owned())),
+        Pattern::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
         Pattern::Is(IsPat { id, is_id, .. }) => {
             let ty = match is_id.name.as_str() {
                 "string" => Type::Prim(types::Primitive::Str),
