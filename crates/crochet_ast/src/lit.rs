@@ -1,8 +1,9 @@
-use swc_atoms::{JsWord, Atom};
+use std::fmt;
+use swc_atoms::{Atom, JsWord};
 use swc_common::source_map::DUMMY_SP;
 use swc_ecma_ast;
 
-use std::fmt;
+use crochet_types::{TLit, Type};
 
 use crate::span::Span;
 
@@ -125,6 +126,18 @@ impl From<&Lit> for swc_ecma_ast::Expr {
     }
 }
 
+impl From<Lit> for Type {
+    fn from(lit: Lit) -> Self {
+        Type::Lit(match lit {
+            Lit::Num(n) => TLit::Num(n.value),
+            Lit::Bool(b) => TLit::Bool(b.value),
+            Lit::Str(s) => TLit::Str(s.value),
+            Lit::Null(_) => TLit::Null,
+            Lit::Undefined(_) => TLit::Undefined,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,14 +167,14 @@ mod tests {
 
     #[test]
     fn null() {
-        let null = Lit::Null(Null { span: 0..4});
+        let null = Lit::Null(Null { span: 0..4 });
         assert_eq!(format!("{}", null), "null");
         assert_eq!(null.span(), 0..4);
     }
 
     #[test]
     fn undefined() {
-        let undefined = Lit::Undefined(Undefined { span: 0..9});
+        let undefined = Lit::Undefined(Undefined { span: 0..9 });
         assert_eq!(format!("{}", undefined), "undefined");
         assert_eq!(undefined.span(), 0..9);
     }

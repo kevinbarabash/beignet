@@ -8,9 +8,9 @@ use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
-use crochet_ast::{Lit, Primitive};
+use crochet_ast::Lit;
 use crochet_infer::Context;
-use crochet_types::{self as types, RestPat, Scheme, TFnParam, TPat, TProp, Type};
+use crochet_types::{self as types, RestPat, Scheme, TFnParam, TPat, TPrim, TProp, Type};
 
 type Interface = Vec<TProp>;
 
@@ -34,15 +34,15 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
         TsType::TsKeywordType(keyword) => match &keyword.kind {
             TsKeywordTypeKind::TsAnyKeyword => ctx.fresh_var(),
             TsKeywordTypeKind::TsUnknownKeyword => todo!(),
-            TsKeywordTypeKind::TsNumberKeyword => Type::Prim(Primitive::Num),
+            TsKeywordTypeKind::TsNumberKeyword => Type::Prim(TPrim::Num),
             TsKeywordTypeKind::TsObjectKeyword => todo!(),
-            TsKeywordTypeKind::TsBooleanKeyword => Type::Prim(Primitive::Bool),
+            TsKeywordTypeKind::TsBooleanKeyword => Type::Prim(TPrim::Bool),
             TsKeywordTypeKind::TsBigIntKeyword => todo!(),
-            TsKeywordTypeKind::TsStringKeyword => Type::Prim(Primitive::Str),
+            TsKeywordTypeKind::TsStringKeyword => Type::Prim(TPrim::Str),
             TsKeywordTypeKind::TsSymbolKeyword => todo!(),
             TsKeywordTypeKind::TsVoidKeyword => todo!(),
-            TsKeywordTypeKind::TsUndefinedKeyword => Type::Prim(Primitive::Undefined),
-            TsKeywordTypeKind::TsNullKeyword => Type::Prim(Primitive::Null),
+            TsKeywordTypeKind::TsUndefinedKeyword => Type::Prim(TPrim::Undefined),
+            TsKeywordTypeKind::TsNullKeyword => Type::Prim(TPrim::Null),
             TsKeywordTypeKind::TsNeverKeyword => todo!(),
             TsKeywordTypeKind::TsIntrinsicKeyword => todo!(),
         },
@@ -95,7 +95,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                     })
                     .collect();
                 let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx);
-                Type::Lam(types::LamType {
+                Type::Lam(types::TLam {
                     params,
                     ret: Box::from(ret),
                 })
@@ -118,7 +118,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                     .map(|t| infer_ts_type_ann(t, ctx))
                     .collect()
             });
-            Type::Alias(types::AliasType { name, type_params })
+            Type::Alias(types::TAlias { name, type_params })
         }
         TsType::TsTypeQuery(_) => todo!(),
         TsType::TsTypeLit(_) => todo!(),
@@ -287,7 +287,7 @@ impl InterfaceCollector {
             None => panic!("method has no return type"),
         };
         // TODO: maintain param names
-        Type::Lam(types::LamType {
+        Type::Lam(types::TLam {
             params,
             ret: Box::from(ret),
         })

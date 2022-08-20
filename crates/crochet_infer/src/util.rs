@@ -29,7 +29,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .map(|arg| norm_type(arg, mapping, ctx))
                     .collect();
                 let ret = Box::from(norm_type(&app.ret, mapping, ctx));
-                Type::App(AppType { args, ret })
+                Type::App(TApp { args, ret })
             }
             Type::Lam(lam) => {
                 let params: Vec<_> = lam
@@ -41,7 +41,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     })
                     .collect();
                 let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
-                Type::Lam(LamType { params, ret })
+                Type::Lam(TLam { params, ret })
             }
             Type::Wildcard => ty.to_owned(),
             Type::Prim(_) => ty.to_owned(),
@@ -72,14 +72,14 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .collect();
                 Type::Object(props)
             }
-            Type::Alias(AliasType { name, type_params }) => {
+            Type::Alias(TAlias { name, type_params }) => {
                 let type_params = type_params.clone().map(|params| {
                     params
                         .iter()
                         .map(|ty| norm_type(ty, mapping, ctx))
                         .collect()
                 });
-                Type::Alias(AliasType {
+                Type::Alias(TAlias {
                     name: name.to_owned(),
                     type_params,
                 })
@@ -201,11 +201,11 @@ pub fn union_many_types(ts: &[Type]) -> Type {
         .filter(|ty| match &ty {
             // Primitive types subsume corresponding literal types
             Type::Lit(lit) => match lit {
-                Lit::Num(_) => !prim_types.contains(&Type::Prim(Primitive::Num)),
-                Lit::Bool(_) => !prim_types.contains(&Type::Prim(Primitive::Bool)),
-                Lit::Str(_) => !prim_types.contains(&Type::Prim(Primitive::Str)),
-                Lit::Null => !prim_types.contains(&Type::Prim(Primitive::Null)),
-                Lit::Undefined => !prim_types.contains(&Type::Prim(Primitive::Undefined)),
+                TLit::Num(_) => !prim_types.contains(&Type::Prim(TPrim::Num)),
+                TLit::Bool(_) => !prim_types.contains(&Type::Prim(TPrim::Bool)),
+                TLit::Str(_) => !prim_types.contains(&Type::Prim(TPrim::Str)),
+                TLit::Null => !prim_types.contains(&Type::Prim(TPrim::Null)),
+                TLit::Undefined => !prim_types.contains(&Type::Prim(TPrim::Undefined)),
             },
             _ => false,
         })

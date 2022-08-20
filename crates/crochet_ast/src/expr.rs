@@ -1,9 +1,9 @@
 use crate::ident::Ident;
 use crate::jsx::JSXElement;
-use crate::literal::Lit;
+use crate::lit::Lit;
 use crate::pattern::Pattern;
 use crate::span::Span;
-use crate::types::{TypeAnn, TypeParam};
+use crate::type_ann::{TypeAnn, TypeParam};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {

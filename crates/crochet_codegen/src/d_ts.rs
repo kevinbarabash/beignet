@@ -417,11 +417,11 @@ pub fn build_type(
         }
         Type::Prim(prim) => {
             let kind = match prim {
-                types::Primitive::Num => TsKeywordTypeKind::TsNumberKeyword,
-                types::Primitive::Bool => TsKeywordTypeKind::TsBooleanKeyword,
-                types::Primitive::Str => TsKeywordTypeKind::TsStringKeyword,
-                types::Primitive::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
-                types::Primitive::Null => TsKeywordTypeKind::TsNullKeyword,
+                types::TPrim::Num => TsKeywordTypeKind::TsNumberKeyword,
+                types::TPrim::Bool => TsKeywordTypeKind::TsBooleanKeyword,
+                types::TPrim::Str => TsKeywordTypeKind::TsStringKeyword,
+                types::TPrim::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
+                types::TPrim::Null => TsKeywordTypeKind::TsNullKeyword,
             };
 
             TsType::TsKeywordType(TsKeywordType {
@@ -431,16 +431,16 @@ pub fn build_type(
         }
         Type::Lit(lit) => {
             let lit = match lit {
-                types::Lit::Num(n) => TsLit::Number(Number {
+                types::TLit::Num(n) => TsLit::Number(Number {
                     span: DUMMY_SP,
                     value: n.parse().unwrap(),
                     raw: Some(Atom::new(n.to_owned())),
                 }),
-                types::Lit::Bool(b) => TsLit::Bool(Bool {
+                types::TLit::Bool(b) => TsLit::Bool(Bool {
                     span: DUMMY_SP,
                     value: b.to_owned(),
                 }),
-                types::Lit::Str(s) => TsLit::Str(Str {
+                types::TLit::Str(s) => TsLit::Str(Str {
                     span: DUMMY_SP,
                     value: JsWord::from(s.clone()),
                     raw: None,
@@ -457,7 +457,7 @@ pub fn build_type(
                 lit,
             })
         }
-        Type::App(types::AppType { args, ret, .. }) => {
+        Type::App(types::TApp { args, ret, .. }) => {
             // This can happen when a function type is inferred by usage
             match expr {
                 // TODO: handle is_async
@@ -495,7 +495,7 @@ pub fn build_type(
         }
         // This is used to copy the names of args from the expression
         // over to the lambda's type.
-        Type::Lam(types::LamType { params, ret, .. }) => {
+        Type::Lam(types::TLam { params, ret, .. }) => {
             match expr {
                 // TODO: handle is_async
                 Some(ast::Expr::Lambda(other_lam)) => {
@@ -578,7 +578,7 @@ pub fn build_type(
                 members,
             })
         }
-        Type::Alias(types::AliasType {
+        Type::Alias(types::TAlias {
             name, type_params, ..
         }) => TsType::TsTypeRef(TsTypeRef {
             span: DUMMY_SP,

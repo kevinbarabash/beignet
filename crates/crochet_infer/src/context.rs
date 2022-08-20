@@ -52,7 +52,7 @@ impl Context {
         Ok(self.instantiate(scheme))
     }
 
-    pub fn lookup_alias(&self, alias: &AliasType) -> Result<Type, String> {
+    pub fn lookup_alias(&self, alias: &TAlias) -> Result<Type, String> {
         match self.types.get(&alias.name) {
             Some(scheme) => {
                 // Replaces qualifiers in the scheme with the corresponding type params
