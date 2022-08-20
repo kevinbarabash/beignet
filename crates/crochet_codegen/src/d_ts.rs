@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::rc::Rc;
 
 use swc_atoms::*;
@@ -36,7 +37,7 @@ fn build_d_ts(_program: &ast::Program, ctx: &Context) -> Program {
 
     let mut body: Vec<ModuleItem> = vec![];
 
-    for (name, scheme) in &current_scope.types {
+    for (name, scheme) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
         let id = Ident {
             span: DUMMY_SP,
             sym: JsWord::from(name.to_owned()),
@@ -53,7 +54,7 @@ fn build_d_ts(_program: &ast::Program, ctx: &Context) -> Program {
         body.push(decl);
     }
 
-    for (name, scheme) in &current_scope.values {
+    for (name, scheme) in current_scope.values.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
         let type_params = build_type_params(scheme);
         let id = Ident {
             span: DUMMY_SP,

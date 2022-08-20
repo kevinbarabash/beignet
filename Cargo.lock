@@ -213,6 +213,7 @@ dependencies = [
  "crochet_parser",
  "crochet_types",
  "insta",
+ "itertools",
  "pretty_assertions",
  "swc_atoms",
  "swc_common",

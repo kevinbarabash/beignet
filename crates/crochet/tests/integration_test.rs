@@ -170,8 +170,8 @@ fn infer_decl() {
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
-    export declare const foo: (a: number, b: number) => number;
     export declare const bar: "hello";
+    export declare const foo: (a: number, b: number) => number;
     "###);
 }
 
@@ -185,8 +185,8 @@ fn infer_with_subtyping() {
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
-    export declare const foo: (a: number, b: number) => number;
     export declare const bar: number;
+    export declare const foo: (a: number, b: number) => number;
     "###);
 }
 
@@ -1406,16 +1406,16 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
-    declare type Point = {
-        readonly x: number;
-        readonly y: number;
-    };
     declare type Action = {
         readonly type: "lineto";
         readonly point: Point;
     } | {
         readonly type: "moveto";
         readonly point: Point;
+    };
+    declare type Point = {
+        readonly x: number;
+        readonly y: number;
     };
     export declare const action: Action;
     "###);
