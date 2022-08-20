@@ -13,71 +13,132 @@ pub struct State {
     pub count: Cell<i32>,
 }
 
-#[derive(Clone, Debug)]
-pub struct Context {
+#[derive(Clone, Debug, Default)]
+pub struct Scope {
     pub values: Env,
     pub types: Env,
-    pub state: State,
     pub is_async: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct Context {
+    pub scopes: Vec<Scope>,
+    pub state: State,
 }
 
 impl Default for Context {
     fn default() -> Self {
         Self {
-            values: HashMap::new(),
-            types: HashMap::new(),
+            scopes: vec![Scope::default()],
             state: State {
                 count: Cell::from(0),
             },
-            is_async: false,
         }
     }
 }
 
 impl Context {
+    pub fn push_scope(&mut self, is_async: bool) {
+        self.scopes.push(Scope {
+            is_async,
+            ..Scope::default()
+        });
+    }
+
+    pub fn pop_scope(&mut self) {
+        self.scopes.pop();
+    }
+
+    pub fn is_async(&self) -> bool {
+        let current_scope = self.scopes.last().unwrap();
+        current_scope.is_async
+    }
+
+    pub fn apply(&mut self, s: &Subst) {
+        let current_scope = self.scopes.last_mut().unwrap();
+        for (k, v) in current_scope.values.clone() {
+            // Should we be apply substitions to types as well?
+            current_scope.values.insert(k.to_owned(), v.apply(s));
+        }
+    }
+
+    pub fn get_all_types(&self) -> Env {
+        // TODO: gather types from all scopes being careful with shadowing
+        let current_scope = self.scopes.last().unwrap();
+        current_scope.types.to_owned()
+    }
+
+    pub fn insert_value(&mut self, name: String, scheme: Scheme) {
+        let current_scope = self.scopes.last_mut().unwrap();
+        current_scope.values.insert(name, scheme);
+    }
+
+    pub fn insert_type(&mut self, name: String, scheme: Scheme) {
+        let current_scope = self.scopes.last_mut().unwrap();
+        current_scope.types.insert(name, scheme);
+    }
+
     pub fn lookup_value(&self, name: &str) -> Result<Type, String> {
-        let scheme = self
-            .values
-            .get(name)
-            .ok_or(format!("Can't find type: {name}"))?;
-        Ok(self.instantiate(scheme))
+        for scope in self.scopes.iter().rev() {
+            match scope.values.get(name) {
+                Some(scheme) => return Ok(self.instantiate(scheme)),
+                None => (),
+            }
+        }
+        Err(format!("Can't find type: {name}"))
+    }
+
+    pub fn lookup_value_scheme(&self, name: &str) -> Result<Scheme, String> {
+        for scope in self.scopes.iter().rev() {
+            match scope.values.get(name) {
+                Some(scheme) => return Ok(scheme.to_owned()),
+                None => (),
+            }
+        }
+        Err(format!("Can't find type: {name}"))
     }
 
     // TODO: Make this return a Result<Type, String>
     pub fn lookup_type(&self, name: &str) -> Result<Type, String> {
-        let scheme = self
-            .types
-            .get(name)
-            .ok_or(format!("Can't find type: {name}"))?;
-        Ok(self.instantiate(scheme))
+        for scope in self.scopes.iter().rev() {
+            match scope.types.get(name) {
+                Some(scheme) => return Ok(self.instantiate(scheme)),
+                None => (),
+            }
+        }
+        Err(format!("Can't find type: {name}"))
     }
 
     pub fn lookup_alias(&self, alias: &TAlias) -> Result<Type, String> {
-        match self.types.get(&alias.name) {
-            Some(scheme) => {
-                // Replaces qualifiers in the scheme with the corresponding type params
-                // from the alias type.
-                let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
-                let subs: Subst = match &alias.type_params {
-                    Some(type_params) => {
-                        if scheme.qualifiers.len() != type_params.len() {
-                            return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+        let name = &alias.name;
+        for scope in self.scopes.iter().rev() {
+            match scope.types.get(name) {
+                Some(scheme) => {
+                    // Replaces qualifiers in the scheme with the corresponding type params
+                    // from the alias type.
+                    let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
+                    let subs: Subst = match &alias.type_params {
+                        Some(type_params) => {
+                            if scheme.qualifiers.len() != type_params.len() {
+                                return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                            }
+                            ids.zip(type_params.iter().cloned()).collect()
                         }
-                        ids.zip(type_params.iter().cloned()).collect()
-                    }
-                    None => {
-                        if !scheme.qualifiers.is_empty() {
-                            return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                        None => {
+                            if !scheme.qualifiers.is_empty() {
+                                return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                            }
+                            ids.zip(scheme.qualifiers.iter().map(|_| self.fresh_var()))
+                                .collect()
                         }
-                        ids.zip(scheme.qualifiers.iter().map(|_| self.fresh_var()))
-                            .collect()
-                    }
-                };
+                    };
 
-                Ok(scheme.ty.apply(&subs))
+                    return Ok(scheme.ty.apply(&subs));
+                }
+                None => (),
             }
-            None => Err(String::from("Can't find alias '{name}' in context")),
         }
+        Err(format!("Can't find type: {name}"))
     }
 
     pub fn instantiate(&self, scheme: &Scheme) -> Type {

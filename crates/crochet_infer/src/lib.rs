@@ -33,9 +33,9 @@ mod tests {
     }
 
     fn get_type(name: &str, ctx: &Context) -> String {
-        match ctx.values.get(name) {
-            Some(t) => format!("{t}"),
-            None => panic!("Couldn't find type with name '{name}'"),
+        match ctx.lookup_value_scheme(name) {
+            Ok(t) => format!("{t}"),
+            Err(_) => panic!("Couldn't find type with name '{name}'"),
         }
     }
 
@@ -350,8 +350,8 @@ mod tests {
 
         assert_eq!(get_type("a", &ctx), "5");
         assert_eq!(get_type("b", &ctx), "10");
-        assert_eq!(ctx.values.get("x"), None);
-        assert_eq!(ctx.values.get("y"), None);
+        assert!(ctx.lookup_value_scheme("x").is_err());
+        assert!(ctx.lookup_value_scheme("y").is_err());
     }
 
     #[test]
@@ -365,8 +365,8 @@ mod tests {
     fn nested_destructure_obj() {
         let ctx = infer_prog("let {a: {b: {c}}} = {a: {b: {c: \"hello\"}}}");
 
-        assert_eq!(ctx.values.get("a"), None);
-        assert_eq!(ctx.values.get("b"), None);
+        assert!(ctx.lookup_value_scheme("a").is_err());
+        assert!(ctx.lookup_value_scheme("b").is_err());
         assert_eq!(get_type("c", &ctx), "\"hello\"");
     }
 
@@ -486,7 +486,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        let x = format!("{}", ctx.values.get("x").unwrap());
+        let x = format!("{}", ctx.lookup_value_scheme("x").unwrap());
         assert_eq!(x, "number | undefined");
     }
 
@@ -552,8 +552,8 @@ mod tests {
         assert_eq!(get_type("sum", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.values.get("x").is_none());
-        assert!(ctx.values.get("y").is_none());
+        assert!(ctx.lookup_value_scheme("x").is_err());
+        assert!(ctx.lookup_value_scheme("y").is_err());
     }
 
     #[test]
@@ -600,8 +600,8 @@ mod tests {
         assert_eq!(get_type("sum", &ctx), "0 | 1 | 5");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.values.get("x").is_none());
-        assert!(ctx.values.get("y").is_none());
+        assert!(ctx.lookup_value_scheme("x").is_err());
+        assert!(ctx.lookup_value_scheme("y").is_err());
     }
 
     #[test]
@@ -640,7 +640,7 @@ mod tests {
         assert_eq!(get_type("sum", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.values.get("x").is_none());
+        assert!(ctx.lookup_value_scheme("x").is_err());
     }
 
     #[test]
@@ -661,8 +661,8 @@ mod tests {
         assert_eq!(get_type("result", &ctx), "number | string | true");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.values.get("x").is_none());
-        assert!(ctx.values.get("y").is_none());
+        assert!(ctx.lookup_value_scheme("x").is_err());
+        assert!(ctx.lookup_value_scheme("y").is_err());
     }
 
     #[test]
@@ -694,7 +694,7 @@ mod tests {
         assert_eq!(get_type("sum", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.values.get("x").is_none());
+        assert!(ctx.lookup_value_scheme("x").is_err());
     }
 
     #[test]
@@ -749,7 +749,7 @@ mod tests {
         assert_eq!(get_type("result", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.values.get("x").is_none());
+        assert!(ctx.lookup_value_scheme("x").is_err());
     }
 
     #[test]
@@ -770,7 +770,7 @@ mod tests {
         assert_eq!(get_type("result", &ctx), "number | string | true");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.values.get("x").is_none());
+        assert!(ctx.lookup_value_scheme("x").is_err());
     }
 
     #[test]
@@ -819,8 +819,8 @@ mod tests {
         assert_eq!(get_type("result", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.values.get("x").is_none());
-        assert!(ctx.values.get("y").is_none());
+        assert!(ctx.lookup_value_scheme("x").is_err());
+        assert!(ctx.lookup_value_scheme("y").is_err());
     }
 
     // TODO: handle refutable patterns in if-else
@@ -848,7 +848,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(ctx.values.get("_"), None);
+        assert!(ctx.lookup_value_scheme("_").is_err());
     }
 
     #[test]
@@ -2117,7 +2117,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Component 'Bar' is not in scope"]
+    #[should_panic = "Can't find type: Bar"]
     fn jsx_custom_element_not_found() {
         let src = r#"
         let Foo = () => <div>Hello, world!</div>

@@ -76,7 +76,10 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                     type_params: None,
                 }),
             };
-            let scheme = generalize(&ctx.types, &ty);
+            // TODO: we need a method on Context to get all types that currently in
+            // scope so that we can pass them to generalize()
+            let all_types = ctx.get_all_types();
+            let scheme = generalize(&all_types, &ty);
             if assump.insert(id.name.to_owned(), scheme).is_some() {
                 return Err(String::from("Duplicate identifier in pattern"));
             }

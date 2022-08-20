@@ -152,55 +152,49 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let first_char = name.chars().next().unwrap();
             // JSXElement's starting with an uppercase char are user defined.
             if first_char.is_uppercase() {
-                match ctx.values.get(name) {
-                    Some(scheme) => {
-                        let ct = ctx.instantiate(scheme);
-                        match &ct {
-                            Type::Lam(_) => {
-                                let mut ss: Vec<_> = vec![];
-                                let mut props: Vec<_> = vec![];
-                                for attr in attrs {
-                                    let (s, t) = match &attr.value {
-                                        JSXAttrValue::Lit(lit) => {
-                                            infer_expr(ctx, &Expr::Lit(lit.to_owned()))?
-                                        }
-                                        JSXAttrValue::JSXExprContainer(JSXExprContainer {
-                                            expr,
-                                            ..
-                                        }) => infer_expr(ctx, expr)?,
-                                    };
-                                    ss.push(s);
-
-                                    let prop = types::TProp {
-                                        name: attr.ident.name.to_owned(),
-                                        optional: false,
-                                        mutable: false,
-                                        ty: t,
-                                    };
-                                    props.push(prop);
+                let t = ctx.lookup_value(name)?;
+                match t {
+                    Type::Lam(_) => {
+                        let mut ss: Vec<_> = vec![];
+                        let mut props: Vec<_> = vec![];
+                        for attr in attrs {
+                            let (s, t) = match &attr.value {
+                                JSXAttrValue::Lit(lit) => {
+                                    infer_expr(ctx, &Expr::Lit(lit.to_owned()))?
                                 }
+                                JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                                    expr, ..
+                                }) => infer_expr(ctx, expr)?,
+                            };
+                            ss.push(s);
 
-                                let ret_type = Type::Alias(types::TAlias {
-                                    name: String::from("JSXElement"),
-                                    type_params: None,
-                                });
-
-                                let call_type = Type::App(types::TApp {
-                                    args: vec![Type::Object(props)],
-                                    ret: Box::from(ret_type.clone()),
-                                });
-
-                                let s1 = compose_many_subs(&ss);
-                                let s2 = unify(&call_type, &ct, ctx)?;
-
-                                let s = compose_subs(&s2, &s1);
-
-                                return Ok((s, ret_type));
-                            }
-                            _ => return Err(String::from("Component must be a function")),
+                            let prop = types::TProp {
+                                name: attr.ident.name.to_owned(),
+                                optional: false,
+                                mutable: false,
+                                ty: t,
+                            };
+                            props.push(prop);
                         }
+
+                        let ret_type = Type::Alias(types::TAlias {
+                            name: String::from("JSXElement"),
+                            type_params: None,
+                        });
+
+                        let call_type = Type::App(types::TApp {
+                            args: vec![Type::Object(props)],
+                            ret: Box::from(ret_type.clone()),
+                        });
+
+                        let s1 = compose_many_subs(&ss);
+                        let s2 = unify(&call_type, &t, ctx)?;
+
+                        let s = compose_subs(&s2, &s1);
+
+                        return Ok((s, ret_type));
                     }
-                    None => return Err(format!("Component '{name}' is not in scope")),
+                    _ => return Err(String::from("Component must be a function")),
                 }
             }
 
@@ -221,13 +215,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             type_params,
             ..
         }) => {
-            let mut new_ctx = ctx.clone();
-            new_ctx.is_async = is_async.to_owned();
+            ctx.push_scope(is_async.to_owned());
 
             let type_params_map: HashMap<String, Type> = match type_params {
                 Some(params) => params
                     .iter()
-                    .map(|param| (param.name.name.to_owned(), new_ctx.fresh_var()))
+                    .map(|param| (param.name.name.to_owned(), ctx.fresh_var()))
                     .collect(),
                 None => HashMap::default(),
             };
@@ -235,12 +228,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let params: Result<Vec<(Subst, TFnParam)>, String> = params
                 .iter()
                 .map(|e_param| {
-                    let (ps, pa, t_param) = infer_fn_param(e_param, &new_ctx, &type_params_map)?;
+                    let (ps, pa, t_param) = infer_fn_param(e_param, ctx, &type_params_map)?;
 
                     // Inserts any new variables introduced by infer_fn_param() into
                     // the current context.
                     for (name, scheme) in pa {
-                        new_ctx.values.insert(name, scheme);
+                        ctx.insert_value(name, scheme);
                     }
 
                     Ok((ps, t_param))
@@ -249,10 +242,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             let (ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-            let (rs, rt) = infer_expr(&mut new_ctx, body)?;
+            let (rs, rt) = infer_expr(ctx, body)?;
 
-            // Copies over the count from new_ctx so that it's unique across Contexts.
-            ctx.state.count.set(new_ctx.state.count.get());
+            ctx.pop_scope();
 
             let rt = if *is_async && !is_promise(&rt) {
                 Type::Alias(types::TAlias {
@@ -387,7 +379,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             }
         }
         Expr::Await(Await { expr, .. }) => {
-            if !ctx.is_async {
+            if !ctx.is_async() {
                 return Err(String::from("Can't use `await` inside non-async lambda"));
             }
 
@@ -496,10 +488,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
     let (s, t) = result?;
 
-    // TODO: apply `s` to `ctx.values`
-    for (k, v) in ctx.values.clone() {
-        ctx.values.insert(k.to_owned(), v.apply(&s));
-    }
+    ctx.apply(&s);
 
     Ok((s, t))
 }
@@ -509,22 +498,22 @@ fn infer_let(
     type_ann: &Option<TypeAnn>,
     init: &Expr,
     body: &Expr,
-    ctx: &Context,
+    ctx: &mut Context,
     pu: &PatternUsage,
 ) -> Result<(Subst, Type), String> {
-    let mut new_ctx = ctx.clone();
-    let (pa, s1) = infer_pattern_and_init(pat, type_ann, init, &mut new_ctx, pu)?;
+    ctx.push_scope(ctx.is_async());
+    let (pa, s1) = infer_pattern_and_init(pat, type_ann, init, ctx, pu)?;
 
     // Inserts the new variables from infer_pattern_and_init() into the
     // current context.
+    // TODO: have infer_pattern_and_init do this
     for (name, scheme) in pa {
-        new_ctx.values.insert(name.to_owned(), scheme.to_owned());
+        ctx.insert_value(name.to_owned(), scheme.to_owned());
     }
 
-    let (s2, t2) = infer_expr(&mut new_ctx, body)?;
+    let (s2, t2) = infer_expr(ctx, body)?;
 
-    // Copies over the count from new_ctx so that it's unique across Contexts.
-    ctx.state.count.set(new_ctx.state.count.get());
+    ctx.pop_scope();
 
     let s = compose_subs(&s2, &s1);
     let t = t2;

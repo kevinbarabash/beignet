@@ -333,7 +333,7 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
 
     for name in collector.interfaces.keys() {
         let t = collector.get_interface(name);
-        collector.ctx.types.insert(name.to_owned(), Scheme::from(t));
+        collector.ctx.insert_type(name.to_owned(), Scheme::from(t));
     }
 
     Ok(collector.ctx)
