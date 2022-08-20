@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crochet_ast::*;
 
-use super::context::{lookup_alias, Context};
+use super::context::Context;
 use super::infer_fn_param::infer_fn_param;
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
@@ -26,7 +26,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 if arg.spread.is_some() {
                     match arg_t {
                         Type::Tuple(types) => arg_types.extend(types.to_owned()),
-                        _ => arg_types.push(ctx.rest(arg_t)),
+                        _ => arg_types.push(Type::Rest(Box::from(arg_t))),
                     }
                 } else {
                     arg_types.push(arg_t);
@@ -62,13 +62,20 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 ty: tv.clone(),
                 optional: false,
             };
-            let s2 = unify(&ctx.lam(vec![param], Box::from(tv.clone())), &t, ctx)?;
+            let s2 = unify(
+                &Type::Lam(types::LamType {
+                    params: vec![param],
+                    ret: Box::from(tv.clone()),
+                }),
+                &t,
+                ctx,
+            )?;
             Ok((compose_subs(&s2, &s1), tv.apply(&s2)))
         }
         Expr::Ident(Ident { name, .. }) => {
             let s = Subst::default();
             let t = if name == "_" {
-                ctx.wildcard()
+                Type::Wildcard
             } else {
                 ctx.lookup_value(name)?
             };
@@ -89,17 +96,17 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         let (s2, t2) = infer_expr(ctx, alternate)?;
 
                         let s = compose_many_subs(&[s1, s2]);
-                        let t = union_types(&t1, &t2, ctx);
+                        let t = union_types(&t1, &t2);
                         Ok((s, t))
                     }
                     _ => {
                         let (s1, t1) = infer_expr(ctx, cond)?;
                         let (s2, t2) = infer_expr(ctx, consequent)?;
                         let (s3, t3) = infer_expr(ctx, alternate)?;
-                        let s4 = unify(&t1, &ctx.prim(Primitive::Bool), ctx)?;
+                        let s4 = unify(&t1, &Type::Prim(Primitive::Bool), ctx)?;
 
                         let s = compose_many_subs(&[s1, s2, s3, s4]);
-                        let t = union_types(&t2, &t3, ctx);
+                        let t = union_types(&t2, &t3);
                         Ok((s, t))
                     }
                 }
@@ -108,7 +115,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 Expr::LetExpr(LetExpr { pat, expr, .. }) => {
                     let (s1, t1) =
                         infer_let(pat, &None, expr, consequent, ctx, &PatternUsage::Match)?;
-                    let s2 = match unify(&t1, &ctx.prim(Primitive::Undefined), ctx) {
+                    let s2 = match unify(&t1, &Type::Prim(Primitive::Undefined), ctx) {
                         Ok(s) => Ok(s),
                         Err(_) => Err(String::from(
                             "Consequent for 'if' without 'else' must not return a value",
@@ -122,8 +129,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 _ => {
                     let (s1, t1) = infer_expr(ctx, cond)?;
                     let (s2, t2) = infer_expr(ctx, consequent)?;
-                    let s3 = unify(&t1, &ctx.prim(Primitive::Bool), ctx)?;
-                    let s4 = match unify(&t2, &ctx.prim(Primitive::Undefined), ctx) {
+                    let s3 = unify(&t1, &Type::Prim(Primitive::Bool), ctx)?;
+                    let s4 = match unify(&t2, &Type::Prim(Primitive::Undefined), ctx) {
                         Ok(s) => Ok(s),
                         Err(_) => Err(String::from(
                             "Consequent for 'if' without 'else' must not return a value",
@@ -173,10 +180,13 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                     props.push(prop);
                                 }
 
-                                let ret_type = ctx.alias("JSXElement", None);
+                                let ret_type = Type::Alias(types::AliasType {
+                                    name: String::from("JSXElement"),
+                                    type_params: None,
+                                });
 
                                 let call_type = Type::App(types::AppType {
-                                    args: vec![ctx.object(props)],
+                                    args: vec![Type::Object(props)],
                                     ret: Box::from(ret_type.clone()),
                                 });
 
@@ -196,7 +206,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             let s = Subst::default();
             // TODO: check props on JSXInstrinsics
-            let t = ctx.alias("JSXElement", None);
+            let t = Type::Alias(types::AliasType {
+                name: String::from("JSXElement"),
+                type_params: None,
+            });
 
             Ok((s, t))
         }
@@ -242,7 +255,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             ctx.state.count.set(new_ctx.state.count.get());
 
             let rt = if *is_async && !is_promise(&rt) {
-                ctx.alias("Promise", Some(vec![rt]))
+                Type::Alias(types::AliasType {
+                    name: String::from("Promise"),
+                    type_params: Some(vec![rt]),
+                })
             } else {
                 rt
             };
@@ -255,7 +271,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 )?,
                 None => Subst::default(),
             };
-            let t = ctx.lam(t_params, Box::from(rt));
+            let t = Type::Lam(types::LamType {
+                params: t_params,
+                ret: Box::from(rt),
+            });
             let s = compose_subs(&s, &compose_subs(&rs, &compose_many_subs(&ss)));
             let t = t.apply(&s);
 
@@ -281,7 +300,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         }
         Expr::Lit(lit) => {
             let s = Subst::new();
-            let t = ctx.lit(lit.to_owned());
+            let t = Type::from(lit.to_owned());
             Ok((s, t))
         }
         Expr::Op(Op {
@@ -293,27 +312,27 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             // time and set the result to be appropriate number literal.
             let (s1, t1) = infer_expr(ctx, left)?;
             let (s2, t2) = infer_expr(ctx, right)?;
-            let s3 = unify(&t1, &ctx.prim(Primitive::Num), ctx)?;
-            let s4 = unify(&t2, &ctx.prim(Primitive::Num), ctx)?;
+            let s3 = unify(&t1, &Type::Prim(Primitive::Num), ctx)?;
+            let s4 = unify(&t2, &Type::Prim(Primitive::Num), ctx)?;
             let t = match op {
-                BinOp::Add => ctx.prim(Primitive::Num),
-                BinOp::Sub => ctx.prim(Primitive::Num),
-                BinOp::Mul => ctx.prim(Primitive::Num),
-                BinOp::Div => ctx.prim(Primitive::Num),
-                BinOp::EqEq => ctx.prim(Primitive::Bool),
-                BinOp::NotEq => ctx.prim(Primitive::Bool),
-                BinOp::Gt => ctx.prim(Primitive::Bool),
-                BinOp::GtEq => ctx.prim(Primitive::Bool),
-                BinOp::Lt => ctx.prim(Primitive::Bool),
-                BinOp::LtEq => ctx.prim(Primitive::Bool),
+                BinOp::Add => Type::Prim(Primitive::Num),
+                BinOp::Sub => Type::Prim(Primitive::Num),
+                BinOp::Mul => Type::Prim(Primitive::Num),
+                BinOp::Div => Type::Prim(Primitive::Num),
+                BinOp::EqEq => Type::Prim(Primitive::Bool),
+                BinOp::NotEq => Type::Prim(Primitive::Bool),
+                BinOp::Gt => Type::Prim(Primitive::Bool),
+                BinOp::GtEq => Type::Prim(Primitive::Bool),
+                BinOp::Lt => Type::Prim(Primitive::Bool),
+                BinOp::LtEq => Type::Prim(Primitive::Bool),
             };
             Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
         }
         Expr::UnaryExpr(UnaryExpr { op, arg, .. }) => {
             let (s1, t1) = infer_expr(ctx, arg)?;
-            let s2 = unify(&t1, &ctx.prim(Primitive::Num), ctx)?;
+            let s2 = unify(&t1, &Type::Prim(Primitive::Num), ctx)?;
             let t = match op {
-                UnaryOp::Minus => ctx.prim(Primitive::Num),
+                UnaryOp::Minus => Type::Prim(Primitive::Num),
             };
             Ok((compose_many_subs(&[s1, s2]), t))
         }
@@ -327,14 +346,24 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         match p.as_ref() {
                             Prop::Shorthand(Ident { name, .. }) => {
                                 let t = ctx.lookup_value(name)?;
-                                ps.push(ctx.prop(name, t, false));
+                                ps.push(types::TProp {
+                                    name: name.to_owned(),
+                                    optional: false,
+                                    mutable: false,
+                                    ty: t,
+                                });
                             }
                             Prop::KeyValue(KeyValueProp { name, value, .. }) => {
                                 let (s, t) = infer_expr(ctx, value)?;
                                 ss.push(s);
                                 // TODO: check if the inferred type is T | undefined and use that
                                 // determine the value of optional
-                                ps.push(ctx.prop(name, t, false));
+                                ps.push(types::TProp {
+                                    name: name.to_owned(),
+                                    optional: false,
+                                    mutable: false,
+                                    ty: t,
+                                });
                             }
                         }
                     }
@@ -348,12 +377,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             let s = compose_many_subs(&ss);
             if spread_types.is_empty() {
-                let t = ctx.object(ps);
+                let t = Type::Object(ps);
                 Ok((s, t))
             } else {
                 let mut all_types = spread_types;
-                all_types.push(ctx.object(ps));
-                let t = simplify_intersection(&all_types, ctx);
+                all_types.push(Type::Object(ps));
+                let t = simplify_intersection(&all_types);
                 Ok((s, t))
             }
         }
@@ -364,7 +393,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             let (s1, t1) = infer_expr(ctx, expr)?;
             let wrapped_type = ctx.fresh_var();
-            let promise_type = ctx.alias("Promise", Some(vec![wrapped_type.clone()]));
+            let promise_type = Type::Alias(types::AliasType {
+                name: String::from("Promise"),
+                type_params: Some(vec![wrapped_type.clone()]),
+            });
 
             let s2 = unify(&t1, &promise_type, ctx)?;
 
@@ -402,7 +434,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             }
 
             let s = compose_many_subs(&ss);
-            let t = ctx.tuple(ts);
+            let t = Type::Tuple(ts);
             Ok((s, t))
         }
         Expr::Member(Member { obj, prop, .. }) => {
@@ -415,14 +447,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             Ok((s, t))
         }
         Expr::Empty(_) => {
-            let t = ctx.prim(Primitive::Undefined);
+            let t = Type::Prim(Primitive::Undefined);
             let s = Subst::default();
             Ok((s, t))
         }
         Expr::TemplateLiteral(TemplateLiteral {
             exprs, quasis: _, ..
         }) => {
-            let t = ctx.prim(Primitive::Str);
+            let t = Type::Prim(Primitive::Str);
             let result: Result<Vec<(Subst, Type)>, String> =
                 exprs.iter().map(|expr| infer_expr(ctx, expr)).collect();
             // We ignore the types of expressions if there are any because any expression
@@ -456,7 +488,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             }
 
             let s = compose_many_subs(&ss);
-            let t = union_many_types(&ts, ctx);
+            let t = union_many_types(&ts);
 
             Ok((s, t))
         }
@@ -513,7 +545,7 @@ fn infer_property_type(
             MemberProp::Ident(Ident { name, .. }) => {
                 let prop = props.iter().find(|prop| prop.name == *name);
                 match prop {
-                    Some(prop) => Ok((Subst::default(), prop.get_type(ctx))),
+                    Some(prop) => Ok((Subst::default(), prop.get_type())),
                     None => Err(format!("Object type doesn't contain key {name}.")),
                 }
             }
@@ -525,8 +557,8 @@ fn infer_property_type(
                         Primitive::Str => {
                             let mut value_types: Vec<Type> =
                                 props.iter().map(|prop| prop.ty.to_owned()).collect();
-                            value_types.push(ctx.prim(Primitive::Undefined));
-                            let t = ctx.union(value_types);
+                            value_types.push(Type::Prim(Primitive::Undefined));
+                            let t = Type::Union(value_types);
                             Ok((prop_s, t))
                         }
                         _ => Err(format!("{prim} is an invalid key for object types")),
@@ -535,7 +567,7 @@ fn infer_property_type(
                         crate::Lit::Str(key) => {
                             let prop = props.iter().find(|prop| prop.name == key);
                             match prop {
-                                Some(prop) => Ok((Subst::default(), prop.get_type(ctx))),
+                                Some(prop) => Ok((Subst::default(), prop.get_type())),
                                 None => Err(format!("Object type doesn't contain key {key}.")),
                             }
                         }
@@ -546,7 +578,7 @@ fn infer_property_type(
             }
         },
         Type::Alias(alias) => {
-            let t = lookup_alias(ctx, alias)?;
+            let t = ctx.lookup_alias(alias)?;
             infer_property_type(&t, prop, ctx)
         }
         Type::Lit(lit) => match lit {
@@ -593,8 +625,8 @@ fn infer_property_type(
                             Primitive::Num => {
                                 // TODO: remove duplicate types
                                 let mut elem_types = elem_types.to_owned();
-                                elem_types.push(ctx.prim(Primitive::Undefined));
-                                let t = ctx.union(elem_types);
+                                elem_types.push(Type::Prim(Primitive::Undefined));
+                                let t = Type::Union(elem_types);
                                 Ok((prop_s, t))
                             }
                             _ => Err(format!("{prim} is an invalid indexer for tuple types")),

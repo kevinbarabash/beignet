@@ -13,21 +13,21 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
     // TODO: replace with Class type once it exists
     // We use {_name: "Promise"} to differentiate it from other
     // object types.
-    let promise_scheme = Scheme::from(ctx.object(vec![TProp {
+    let promise_scheme = Scheme::from(Type::Object(vec![TProp {
         name: String::from("_name"),
         optional: false,
         mutable: false,
-        ty: ctx.lit(Lit::str(String::from("Promise"), 0..0)),
+        ty: Type::from(Lit::str(String::from("Promise"), 0..0)),
     }]));
     ctx.types.insert(String::from("Promise"), promise_scheme);
     // TODO: replace with Class type once it exists
     // We use {_name: "JSXElement"} to differentiate it from other
     // object types.
-    let jsx_element_scheme = Scheme::from(ctx.object(vec![TProp {
+    let jsx_element_scheme = Scheme::from(Type::Object(vec![TProp {
         name: String::from("_name"),
         optional: false,
         mutable: false,
-        ty: ctx.lit(Lit::str(String::from("JSXElement"), 0..0)),
+        ty: Type::from(Lit::str(String::from("JSXElement"), 0..0)),
     }]));
     ctx.types
         .insert(String::from("JSXElement"), jsx_element_scheme);

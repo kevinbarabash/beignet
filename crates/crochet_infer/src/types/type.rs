@@ -2,8 +2,9 @@ use itertools::{join, Itertools};
 use std::fmt;
 use std::hash::Hash;
 
+use crochet_ast::literal::Lit as AstLit;
+
 use crate::types::{Lit, Primitive};
-use crate::Context;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TProp {
@@ -14,9 +15,9 @@ pub struct TProp {
 }
 
 impl TProp {
-    pub fn get_type(&self, ctx: &Context) -> Type {
+    pub fn get_type(&self) -> Type {
         match self.optional {
-            true => ctx.union(vec![self.ty.to_owned(), ctx.prim(Primitive::Undefined)]),
+            true => Type::Union(vec![self.ty.to_owned(), Type::Prim(Primitive::Undefined)]),
             false => self.ty.to_owned(),
         }
     }
@@ -53,9 +54,9 @@ pub struct TFnParam {
 }
 
 impl TFnParam {
-    pub fn get_type(&self, ctx: &Context) -> Type {
+    pub fn get_type(&self) -> Type {
         match self.optional {
-            true => ctx.union(vec![self.ty.to_owned(), ctx.prim(Primitive::Undefined)]),
+            true => Type::Union(vec![self.ty.to_owned(), Type::Prim(Primitive::Undefined)]),
             false => self.ty.to_owned(),
         }
     }
@@ -252,6 +253,24 @@ pub enum Type {
     Tuple(Vec<Type>),
     Array(Box<Type>),
     Rest(Box<Type>), // TODO: rename this to Spread
+}
+
+impl From<AstLit> for Type {
+    fn from(ast_lit: AstLit) -> Self {
+        Type::Lit(match ast_lit {
+            AstLit::Num(n) => Lit::Num(n.value),
+            AstLit::Bool(b) => Lit::Bool(b.value),
+            AstLit::Str(s) => Lit::Str(s.value),
+            AstLit::Null(_) => Lit::Null,
+            AstLit::Undefined(_) => Lit::Undefined,
+        })
+    }
+}
+
+impl From<Lit> for Type {
+    fn from(lit: Lit) -> Self {
+        Type::Lit(lit)
+    }
 }
 
 impl fmt::Display for Type {

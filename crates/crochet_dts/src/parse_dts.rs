@@ -30,7 +30,7 @@ pub struct InterfaceCollector {
 impl InterfaceCollector {
     pub fn get_interface(&self, name: &str) -> Type {
         let props = &self.interfaces[name.to_owned()];
-        self.ctx.object(props.to_owned())
+        Type::Object(props.to_owned())
     }
 }
 
@@ -39,15 +39,15 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
         TsType::TsKeywordType(keyword) => match &keyword.kind {
             TsKeywordTypeKind::TsAnyKeyword => ctx.fresh_var(),
             TsKeywordTypeKind::TsUnknownKeyword => todo!(),
-            TsKeywordTypeKind::TsNumberKeyword => ctx.prim(Primitive::Num),
+            TsKeywordTypeKind::TsNumberKeyword => Type::Prim(Primitive::Num),
             TsKeywordTypeKind::TsObjectKeyword => todo!(),
-            TsKeywordTypeKind::TsBooleanKeyword => ctx.prim(Primitive::Bool),
+            TsKeywordTypeKind::TsBooleanKeyword => Type::Prim(Primitive::Bool),
             TsKeywordTypeKind::TsBigIntKeyword => todo!(),
-            TsKeywordTypeKind::TsStringKeyword => ctx.prim(Primitive::Str),
+            TsKeywordTypeKind::TsStringKeyword => Type::Prim(Primitive::Str),
             TsKeywordTypeKind::TsSymbolKeyword => todo!(),
             TsKeywordTypeKind::TsVoidKeyword => todo!(),
-            TsKeywordTypeKind::TsUndefinedKeyword => ctx.prim(Primitive::Undefined),
-            TsKeywordTypeKind::TsNullKeyword => ctx.prim(Primitive::Null),
+            TsKeywordTypeKind::TsUndefinedKeyword => Type::Prim(Primitive::Undefined),
+            TsKeywordTypeKind::TsNullKeyword => Type::Prim(Primitive::Null),
             TsKeywordTypeKind::TsNeverKeyword => todo!(),
             TsKeywordTypeKind::TsIntrinsicKeyword => todo!(),
         },
@@ -100,7 +100,10 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                     })
                     .collect();
                 let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx);
-                ctx.lam(params, Box::from(ret))
+                Type::Lam(types::LamType {
+                    params,
+                    ret: Box::from(ret),
+                })
             }
             TsFnOrConstructorType::TsConstructorType(_) => todo!(),
         },
@@ -120,13 +123,13 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                     .map(|t| infer_ts_type_ann(t, ctx))
                     .collect()
             });
-            ctx.alias(&name, type_params)
+            Type::Alias(types::AliasType { name, type_params })
         }
         TsType::TsTypeQuery(_) => todo!(),
         TsType::TsTypeLit(_) => todo!(),
         TsType::TsArrayType(array) => {
             let elem_type = infer_ts_type_ann(&array.elem_type, ctx);
-            ctx.array(elem_type)
+            Type::Array(Box::from(elem_type))
         }
         TsType::TsTupleType(_) => todo!(),
         TsType::TsOptionalType(_) => todo!(),
@@ -138,7 +141,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                     .iter()
                     .map(|ts_type| infer_ts_type_ann(ts_type, ctx))
                     .collect();
-                ctx.union(types)
+                Type::Union(types)
             }
             TsUnionOrIntersectionType::TsIntersectionType(intersection) => {
                 let types: Vec<_> = intersection
@@ -146,7 +149,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                     .iter()
                     .map(|ts_type| infer_ts_type_ann(ts_type, ctx))
                     .collect();
-                ctx.intersection(types)
+                Type::Intersection(types)
             }
         },
         TsType::TsConditionalType(_) => todo!(),
@@ -156,9 +159,9 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
         TsType::TsIndexedAccessType(_) => todo!(),
         TsType::TsMappedType(_) => todo!(),
         TsType::TsLitType(lit) => match &lit.lit {
-            TsLit::Number(num) => ctx.lit(Lit::num(format!("{}", num.value), 0..0)),
-            TsLit::Str(str) => ctx.lit(Lit::str(str.value.to_string(), 0..0)),
-            TsLit::Bool(b) => ctx.lit(Lit::bool(b.value, 0..0)),
+            TsLit::Number(num) => Type::from(Lit::num(format!("{}", num.value), 0..0)),
+            TsLit::Str(str) => Type::from(Lit::str(str.value.to_string(), 0..0)),
+            TsLit::Bool(b) => Type::from(Lit::bool(b.value, 0..0)),
             TsLit::BigInt(_) => todo!(),
             TsLit::Tpl(_) => todo!(),
         },
@@ -289,7 +292,10 @@ impl InterfaceCollector {
             None => panic!("method has no return type"),
         };
         // TODO: maintain param names
-        self.ctx.lam(params, Box::from(ret))
+        Type::Lam(types::LamType {
+            params,
+            ret: Box::from(ret),
+        })
     }
 }
 

@@ -44,7 +44,7 @@ pub fn infer_fn_param(
                 match a.iter().find(|(_, value)| type_ann_ty == value.ty) {
                     Some((name, scheme)) => {
                         let mut scheme = scheme.to_owned();
-                        scheme.ty = ctx.union(vec![scheme.ty, ctx.prim(Primitive::Undefined)]);
+                        scheme.ty = Type::Union(vec![scheme.ty, Type::Prim(Primitive::Undefined)]);
                         a.insert(name.to_owned(), scheme);
                     }
                     None => (),
@@ -67,7 +67,7 @@ pub fn infer_fn_param(
                 match new_vars.iter().find(|(_, value)| pat_type == value.ty) {
                     Some((name, scheme)) => {
                         let mut scheme = scheme.to_owned();
-                        scheme.ty = ctx.union(vec![scheme.ty, ctx.prim(Primitive::Undefined)]);
+                        scheme.ty = Type::Union(vec![scheme.ty, Type::Prim(Primitive::Undefined)]);
                         new_vars.insert(name.to_owned(), scheme);
                     }
                     None => (),
@@ -154,7 +154,7 @@ fn infer_param_pattern_rec(
         }
         EFnParamPat::Rest(EFnParamRestPat { arg, .. }) => {
             let t = infer_param_pattern_rec(arg.as_ref(), ctx, assump)?;
-            Ok(ctx.array(t))
+            Ok(Type::Array(Box::from(t)))
         }
         EFnParamPat::Array(EFnParamArrayPat { elems, .. }) => {
             let elems: Result<Vec<Type>, String> = elems
@@ -165,7 +165,7 @@ fn infer_param_pattern_rec(
                             EFnParamPat::Rest(rest) => {
                                 let rest_ty =
                                     infer_param_pattern_rec(rest.arg.as_ref(), ctx, assump)?;
-                                Ok(ctx.rest(rest_ty))
+                                Ok(Type::Rest(Box::from(rest_ty)))
                             }
                             _ => infer_param_pattern_rec(elem, ctx, assump),
                         },
@@ -177,7 +177,7 @@ fn infer_param_pattern_rec(
                 })
                 .collect();
 
-            Ok(ctx.tuple(elems?))
+            Ok(Type::Tuple(elems?))
         }
         EFnParamPat::Object(EFnParamObjectPat { props, .. }) => {
             let mut rest_opt_ty: Option<Type> = None;
@@ -236,10 +236,10 @@ fn infer_param_pattern_rec(
                 })
                 .collect();
 
-            let obj_type = ctx.object(props);
+            let obj_type = Type::Object(props);
 
             match rest_opt_ty {
-                Some(rest_ty) => Ok(ctx.intersection(vec![obj_type, rest_ty])),
+                Some(rest_ty) => Ok(Type::Intersection(vec![obj_type, rest_ty])),
                 None => Ok(obj_type),
             }
         }

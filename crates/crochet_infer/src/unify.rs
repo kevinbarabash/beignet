@@ -2,7 +2,7 @@ use crochet_ast::Primitive;
 use std::cmp;
 use std::collections::HashSet;
 
-use super::context::{lookup_alias, Context};
+use super::context::Context;
 use super::substitutable::{Subst, Substitutable};
 use super::types::{self, TFnParam, Type};
 use super::util::*;
@@ -57,11 +57,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     // NOTE: The order of params is reversed.  This allows a callback
                     // whose params can accept more values (are supertypes) than the
                     // function will pass to the callback.
-                    let s1 = unify(
-                        &p2.get_type(ctx).apply(&s),
-                        &p1.get_type(ctx).apply(&s),
-                        ctx,
-                    )?;
+                    let s1 = unify(&p2.get_type().apply(&s), &p1.get_type().apply(&s), ctx)?;
                     s = compose_subs(&s, &s1);
                 }
                 let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
@@ -118,7 +114,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             if is_last {
                                 let spread_count = param_count_low_bound - args.len();
                                 for _ in 0..spread_count {
-                                    args.push(ctx.wildcard());
+                                    args.push(Type::Wildcard);
                                 }
                             } else {
                                 return Err(String::from("Placeholder spread must appear last"));
@@ -140,7 +136,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
                 let mut args = app.args.clone();
                 let regular_args: Vec<_> = args.drain(0..regular_arg_count).collect();
-                let rest_arg = ctx.tuple(args);
+                let rest_arg = Type::Tuple(args);
 
                 let mut params = lam.params.clone();
                 let regular_params: Vec<_> = params.drain(0..regular_arg_count).collect();
@@ -150,7 +146,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     // Each argument must be a subtype of the corresponding param.
                     let arg = p1.apply(&s);
                     let param = p2.apply(&s);
-                    let s1 = unify(&arg, &param.get_type(ctx), ctx)?;
+                    let s1 = unify(&arg, &param.get_type(), ctx)?;
                     s = compose_subs(&s, &s1);
                 }
 
@@ -175,13 +171,16 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             _ => {
                                 let arg = arg.apply(&s);
                                 let param = param.apply(&s);
-                                let s1 = unify(&arg, &param.get_type(ctx), ctx)?;
+                                let s1 = unify(&arg, &param.get_type(), ctx)?;
                                 s = compose_subs(&s, &s1);
                             }
                         };
                     }
 
-                    let partial_ret = ctx.lam(partial_params, lam.ret.clone());
+                    let partial_ret = Type::Lam(types::LamType {
+                        params: partial_params,
+                        ret: lam.ret.clone(),
+                    });
                     let s1 = unify(&app.ret.apply(&s), &partial_ret, ctx)?;
 
                     Ok(compose_subs(&s, &s1))
@@ -190,7 +189,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     for (p1, p2) in args.iter().zip(&lam.params) {
                         // Each argument must be a subtype of the corresponding param.
                         let arg = p1.apply(&s);
-                        let param = p2.get_type(ctx).apply(&s);
+                        let param = p2.get_type().apply(&s);
                         let s1 = unify(&arg, &param, ctx)?;
                         s = compose_subs(&s, &s1);
                     }
@@ -219,7 +218,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let mut ss = vec![];
                     for prop1 in props1.iter() {
                         if prop1.name == prop2.name {
-                            if let Ok(s) = unify(&prop1.get_type(ctx), &prop2.get_type(ctx), ctx) {
+                            if let Ok(s) = unify(&prop1.get_type(), &prop2.get_type(), ctx) {
                                 b = true;
                                 ss.push(s);
                             }
@@ -289,7 +288,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 let rest1: Vec<_> = types1.drain(0..rest_len).collect();
                 let after1: Vec<_> = types1;
 
-                let s = unify(&ctx.tuple(rest1), &rest2, ctx)?;
+                let s = unify(&Type::Tuple(rest1), &rest2, ctx)?;
                 ss.push(s);
 
                 for (t1, t2) in after1.iter().zip(after2.iter()) {
@@ -318,7 +317,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         (Type::Union(types), _) => {
             let result: Result<Vec<_>, _> = types.iter().map(|t1| unify(t1, t2, ctx)).collect();
             let ss = result?; // This is only okay if all calls to is_subtype are okay
-            Ok(compose_many_subs_with_context(&ss, ctx))
+            Ok(compose_many_subs_with_context(&ss))
         }
         (_, Type::Union(types)) => {
             let mut b = false;
@@ -348,7 +347,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 .collect();
             // TODO: check for other variants, if there are we should error
 
-            let obj_type = simplify_intersection(&obj_types, ctx);
+            let obj_type = simplify_intersection(&obj_types);
 
             match rest_types.len() {
                 0 => unify(t1, &obj_type, ctx),
@@ -363,10 +362,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         .cloned()
                         .partition(|p| all_obj_props.iter().any(|op| op.name == p.name));
 
-                    let s1 = unify(&ctx.object(obj_props), &obj_type, ctx)?;
+                    let s1 = unify(&Type::Object(obj_props), &obj_type, ctx)?;
 
                     let rest_type = rest_types.get(0).unwrap();
-                    let s2 = unify(&ctx.object(rest_props), rest_type, ctx)?;
+                    let s2 = unify(&Type::Object(rest_props), rest_type, ctx)?;
 
                     let s = compose_subs(&s2, &s1);
                     Ok(s)
@@ -387,7 +386,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 .collect();
             // TODO: check for other variants, if there are we should error
 
-            let obj_type = simplify_intersection(&obj_types, ctx);
+            let obj_type = simplify_intersection(&obj_types);
 
             match rest_types.len() {
                 0 => unify(&obj_type, t2, ctx),
@@ -402,10 +401,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         .cloned()
                         .partition(|p| all_obj_props.iter().any(|op| op.name == p.name));
 
-                    let s_obj = unify(&obj_type, &ctx.object(obj_props), ctx)?;
+                    let s_obj = unify(&obj_type, &Type::Object(obj_props), ctx)?;
 
                     let rest_type = rest_types.get(0).unwrap();
-                    let s_rest = unify(rest_type, &ctx.object(rest_props), ctx)?;
+                    let s_rest = unify(rest_type, &Type::Object(rest_props), ctx)?;
 
                     let s = compose_subs(&s_rest, &s_obj);
                     Ok(s)
@@ -423,7 +422,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             .map(|(t1, t2)| unify(t1, t2, ctx))
                             .collect();
                         let ss = result?; // This is only okay if all calls to is_subtype are okay
-                        Ok(compose_many_subs_with_context(&ss, ctx))
+                        Ok(compose_many_subs_with_context(&ss))
                     }
                     (None, None) => Ok(Subst::default()),
                     _ => Err(String::from("Alias type mismatch")),
@@ -433,11 +432,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
         }
         (_, Type::Alias(alias)) => {
-            let alias_t = lookup_alias(ctx, alias)?;
+            let alias_t = ctx.lookup_alias(alias)?;
             unify(t1, &alias_t, ctx)
         }
         (Type::Alias(alias), _) => {
-            let alias_t = lookup_alias(ctx, alias)?;
+            let alias_t = ctx.lookup_alias(alias)?;
             unify(&alias_t, t2, ctx)
         }
         (Type::Array(array_arg), Type::Rest(rest_arg)) => {
@@ -527,13 +526,13 @@ mod tests {
     fn literals_are_subtypes_of_corresponding_primitives() {
         let ctx = Context::default();
 
-        let result = unify(&ctx.lit(num("5")), &ctx.prim(Primitive::Num), &ctx);
+        let result = unify(&Type::from(num("5")), &Type::Prim(Primitive::Num), &ctx);
         assert_eq!(result, Ok(Subst::default()));
 
-        let result = unify(&ctx.lit(str("hello")), &ctx.prim(Primitive::Str), &ctx);
+        let result = unify(&Type::from(str("hello")), &Type::Prim(Primitive::Str), &ctx);
         assert_eq!(result, Ok(Subst::default()));
 
-        let result = unify(&ctx.lit(bool(&true)), &ctx.prim(Primitive::Bool), &ctx);
+        let result = unify(&Type::from(bool(&true)), &Type::Prim(Primitive::Bool), &ctx);
         assert_eq!(result, Ok(Subst::default()));
     }
 
@@ -541,40 +540,40 @@ mod tests {
     fn object_subtypes() {
         let ctx = Context::default();
 
-        let t1 = ctx.object(vec![
+        let t1 = Type::Object(vec![
             types::TProp {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
-                ty: ctx.lit(num("5")),
+                ty: Type::from(num("5")),
             },
             types::TProp {
                 name: String::from("bar"),
                 optional: false,
                 mutable: false,
-                ty: ctx.lit(bool(&true)),
+                ty: Type::from(bool(&true)),
             },
             // Having extra properties is okay
             types::TProp {
                 name: String::from("baz"),
                 optional: false,
                 mutable: false,
-                ty: ctx.prim(Primitive::Str),
+                ty: Type::Prim(Primitive::Str),
             },
         ]);
 
-        let t2 = ctx.object(vec![
+        let t2 = Type::Object(vec![
             types::TProp {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
-                ty: ctx.prim(Primitive::Num),
+                ty: Type::Prim(Primitive::Num),
             },
             types::TProp {
                 name: String::from("bar"),
                 optional: true,
                 mutable: false,
-                ty: ctx.prim(Primitive::Bool),
+                ty: Type::Prim(Primitive::Bool),
             },
             // It's okay for qux to not appear in the subtype since
             // it's an optional property.
@@ -582,7 +581,7 @@ mod tests {
                 name: String::from("qux"),
                 optional: true,
                 mutable: false,
-                ty: ctx.prim(Primitive::Str),
+                ty: Type::Prim(Primitive::Str),
             },
         ]);
 
@@ -596,7 +595,7 @@ mod tests {
     fn failure_case() {
         let ctx = Context::default();
 
-        let result = unify(&ctx.prim(Primitive::Num), &ctx.lit(num("5")), &ctx);
+        let result = unify(&Type::Prim(Primitive::Num), &Type::from(num("5")), &ctx);
 
         assert_eq!(result, Err(String::from("Unification failure")))
     }

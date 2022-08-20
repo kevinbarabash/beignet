@@ -1,8 +1,6 @@
 use std::cell::Cell;
 use std::collections::HashMap;
 
-use crochet_ast::literal::Lit as AstLit;
-
 use super::substitutable::*;
 use super::types::*;
 
@@ -44,6 +42,7 @@ impl Context {
             .ok_or(format!("Can't find type: {name}"))?;
         Ok(self.instantiate(scheme))
     }
+
     // TODO: Make this return a Result<Type, String>
     pub fn lookup_type(&self, name: &str) -> Result<Type, String> {
         let scheme = self
@@ -51,6 +50,34 @@ impl Context {
             .get(name)
             .ok_or(format!("Can't find type: {name}"))?;
         Ok(self.instantiate(scheme))
+    }
+
+    pub fn lookup_alias(&self, alias: &AliasType) -> Result<Type, String> {
+        match self.types.get(&alias.name) {
+            Some(scheme) => {
+                // Replaces qualifiers in the scheme with the corresponding type params
+                // from the alias type.
+                let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
+                let subs: Subst = match &alias.type_params {
+                    Some(type_params) => {
+                        if scheme.qualifiers.len() != type_params.len() {
+                            return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                        }
+                        ids.zip(type_params.iter().cloned()).collect()
+                    }
+                    None => {
+                        if !scheme.qualifiers.is_empty() {
+                            return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                        }
+                        ids.zip(scheme.qualifiers.iter().map(|_| self.fresh_var()))
+                            .collect()
+                    }
+                };
+
+                Ok(scheme.ty.apply(&subs))
+            }
+            None => Err(String::from("Can't find alias '{name}' in context")),
+        }
     }
 
     pub fn instantiate(&self, scheme: &Scheme) -> Type {
@@ -69,100 +96,5 @@ impl Context {
 
     pub fn fresh_var(&self) -> Type {
         Type::Var(self.fresh_id())
-    }
-
-    pub fn lam(&self, params: Vec<TFnParam>, ret: Box<Type>) -> Type {
-        Type::Lam(LamType { params, ret })
-    }
-
-    pub fn prim(&self, prim: Primitive) -> Type {
-        Type::Prim(prim)
-    }
-
-    pub fn lit(&self, lit: AstLit) -> Type {
-        let lit = match lit {
-            AstLit::Num(n) => Lit::Num(n.value),
-            AstLit::Bool(b) => Lit::Bool(b.value),
-            AstLit::Str(s) => Lit::Str(s.value),
-            AstLit::Null(_) => Lit::Null,
-            AstLit::Undefined(_) => Lit::Undefined,
-        };
-        Type::Lit(lit)
-    }
-
-    pub fn lit_type(&self, lit: Lit) -> Type {
-        Type::Lit(lit)
-    }
-
-    pub fn union(&self, types: Vec<Type>) -> Type {
-        Type::Union(types)
-    }
-
-    pub fn intersection(&self, types: Vec<Type>) -> Type {
-        Type::Intersection(types)
-    }
-
-    pub fn object(&self, props: Vec<TProp>) -> Type {
-        Type::Object(props)
-    }
-
-    pub fn prop(&self, name: &str, ty: Type, optional: bool) -> TProp {
-        TProp {
-            name: name.to_owned(),
-            optional,
-            mutable: false,
-            ty,
-        }
-    }
-
-    pub fn alias(&self, name: &str, type_params: Option<Vec<Type>>) -> Type {
-        Type::Alias(AliasType {
-            name: name.to_owned(),
-            type_params,
-        })
-    }
-
-    pub fn tuple(&self, types: Vec<Type>) -> Type {
-        Type::Tuple(types)
-    }
-
-    pub fn array(&self, t: Type) -> Type {
-        Type::Array(Box::from(t))
-    }
-
-    pub fn rest(&self, arg: Type) -> Type {
-        Type::Rest(Box::from(arg))
-    }
-
-    pub fn wildcard(&self) -> Type {
-        Type::Wildcard
-    }
-}
-
-pub fn lookup_alias(ctx: &Context, alias: &AliasType) -> Result<Type, String> {
-    match ctx.types.get(&alias.name) {
-        Some(scheme) => {
-            // Replaces qualifiers in the scheme with the corresponding type params
-            // from the alias type.
-            let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
-            let subs: Subst = match &alias.type_params {
-                Some(type_params) => {
-                    if scheme.qualifiers.len() != type_params.len() {
-                        return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
-                    }
-                    ids.zip(type_params.iter().cloned()).collect()
-                }
-                None => {
-                    if !scheme.qualifiers.is_empty() {
-                        return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
-                    }
-                    ids.zip(scheme.qualifiers.iter().map(|_| ctx.fresh_var()))
-                        .collect()
-                }
-            };
-
-            Ok(scheme.ty.apply(&subs))
-        }
-        None => Err(String::from("Can't find alias '{name}' in context")),
     }
 }
