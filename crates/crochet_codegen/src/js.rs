@@ -325,10 +325,90 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
     match expr {
         ast::Expr::App(ast::App { lam, args, .. }) => {
             let callee = Callee::Expr(Box::from(build_expr(lam.as_ref(), stmts, ctx)));
+
+            let is_partial = args.iter().any(|arg| match arg.expr.as_ref() {
+                ast::Expr::Ident(bi) => bi.name == "_",
+                _ => false,
+            });
+
+            if is_partial {
+                let params: Vec<Pat> = args
+                    .iter()
+                    .filter(|arg| match arg.expr.as_ref() {
+                        ast::Expr::Ident(bi) => bi.name == "_",
+                        _ => false,
+                    })
+                    .enumerate()
+                    .map(|(i, _)| {
+                        Pat::Ident(BindingIdent {
+                            id: Ident {
+                                span: DUMMY_SP,
+                                sym: JsWord::from(format!("$arg{i}")),
+                                optional: false,
+                            },
+                            type_ann: None,
+                        })
+                    })
+                    .collect();
+
+                let mut i = 0;
+
+                let args: Vec<ExprOrSpread> = args
+                    .iter()
+                    .map(|arg| match arg.expr.as_ref() {
+                        ast::Expr::Ident(bi) if bi.name == "_" => {
+                            let expr = Expr::Ident(Ident {
+                                span: DUMMY_SP,
+                                sym: JsWord::from(format!("$arg{i}")),
+                                optional: false,
+                            });
+                            i += 1;
+                            ExprOrSpread {
+                                spread: None, // Spread can't be used with wildcard args
+                                expr: Box::from(expr),
+                            }
+                        }
+                        _ => {
+                            let expr = build_expr(arg.expr.as_ref(), stmts, ctx);
+                            let spread = if arg.spread.is_some() {
+                                Some(DUMMY_SP)
+                            } else {
+                                None
+                            };
+                            ExprOrSpread {
+                                spread,
+                                expr: Box::from(expr),
+                            }
+                        }
+                    })
+                    .collect();
+
+                let call: Expr = Expr::Call(CallExpr {
+                    span: DUMMY_SP,
+                    callee,
+                    args,
+                    type_args: None,
+                });
+
+                return Expr::Arrow(ArrowExpr {
+                    span: DUMMY_SP,
+                    params,
+                    body: BlockStmtOrExpr::from(call),
+                    is_async: false,
+                    is_generator: false,
+                    return_type: None,
+                    type_params: None,
+                });
+            }
+
             let args: Vec<ExprOrSpread> = args
                 .iter()
                 .map(|arg| ExprOrSpread {
-                    spread: None,
+                    spread: if arg.spread.is_some() {
+                        Some(DUMMY_SP)
+                    } else {
+                        None
+                    },
                     expr: Box::from(build_expr(arg.expr.as_ref(), stmts, ctx)),
                 })
                 .collect();

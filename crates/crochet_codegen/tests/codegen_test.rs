@@ -527,3 +527,88 @@ fn computed_property() {
     export const y = q[1];
     "###);
 }
+
+#[test]
+fn partial_application() {
+    let src = r#"
+    let add = (a, b) => a + b
+    let add5 = add(5, _)
+    let sum = add5(10)
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const add = (a, b)=>a + b;
+    export const add5 = ($arg0)=>add(5, $arg0);
+    export const sum = add5(10);
+    "###);
+}
+
+#[test]
+fn partial_application_with_spread() {
+    let src = r#"
+    let add = (a, b, c) => a + b + c
+    let add5 = add(5, ..._)
+    let sum = add5(10, 15)
+    "#;
+
+    // Instead of treating ..._ like a spread operation, it should just expand
+    // to add(5, _, _)
+
+    // TODO: handle spreading a wildcard
+    // The output should be:
+    // export const add5 = ($arg0, $arg1)=>add(5, $arg0, $arg1);
+    // This requires having type information in the expression tree
+    insta::assert_snapshot!(compile(src), @r###"
+    export const add = (a, b, c)=>a + b + c;
+    export const add5 = ($arg0)=>add(5, $arg0);
+    export const sum = add5(10, 15);
+    "###);
+}
+
+#[test]
+#[ignore]
+fn partial_application_of_fn_with_rest_params() {
+    let _src = r#"
+    let add = (a, b, ...c) => a + b + c
+    let add5 = add(5, _, _)
+    let sum = add5(10, 15)
+    "#;
+
+    // What should the type of `add5` be?
+    // It should not have a rest param
+}
+
+#[test]
+#[ignore]
+fn partial_application_of_fn_with_rest_params_using_spread() {
+    let _src = r#"
+    let add = (a, b, ...c) => a + b + c
+    let add5 = add(5, ..._)
+    let sum = add5(10, 15)
+    "#;
+
+    // Instead of treating ..._ like a spread operation, it should just expand
+    // to add(5, _, ..._)
+
+    // We need to know the type of the callee  In order to build the partially
+    // applied function correctly.
+
+    // What should the type of `add5` be?
+    // add5: (arg0: number, ...rest: number[])
+}
+
+#[test]
+fn spread_args() {
+    let src = r#"
+    let add = (a, b) => a + b
+    let sum = add(...[5, 10])
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const add = (a, b)=>a + b;
+    export const sum = add(...[
+        5,
+        10
+    ]);
+    "###);
+}

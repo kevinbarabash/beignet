@@ -127,12 +127,19 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 }
             }
 
-            // TODO: add a `variadic` boolean to the Lambda type as a convenience
+            if args.len() < param_count_low_bound {
+                return Err(String::from("Not enough args provided"));
+            }
+
+            // TODO: Add a `variadic` boolean to the Lambda type as a convenience
             // so that we don't have to search through all the params for the rest
             // param.
+
+            // TODO: Refactor this logic to be simpler, try to unify the rest and non-rest
+            // cases if possible.
             if let Some(rest_param) = maybe_rest_param {
                 let max_regular_arg_count = lam.params.len() - 1;
-                let regular_arg_count = cmp::min(max_regular_arg_count, app.args.len());
+                let regular_arg_count = cmp::min(max_regular_arg_count, args.len());
 
                 let mut args = app.args.clone();
                 let regular_args: Vec<_> = args.drain(0..regular_arg_count).collect();
@@ -160,7 +167,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             } else if args.len() >= param_count_low_bound {
                 // NOTE: Any extra args are ignored.
 
-                let is_partial = args.iter().any(|param| matches!(param, Type::Wildcard));
+                let is_partial = args.iter().any(|arg| matches!(arg, Type::Wildcard));
 
                 if is_partial {
                     // Partial Application
