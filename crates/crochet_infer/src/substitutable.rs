@@ -74,12 +74,12 @@ impl Substitutable for Type {
 impl Substitutable for TProp {
     fn apply(&self, sub: &Subst) -> TProp {
         TProp {
-            ty: self.ty.apply(sub),
+            scheme: self.scheme.apply(sub),
             ..self.to_owned()
         }
     }
     fn ftv(&self) -> HashSet<i32> {
-        self.ty.ftv()
+        self.scheme.ftv()
     }
 }
 

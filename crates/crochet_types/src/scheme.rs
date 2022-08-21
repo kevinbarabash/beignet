@@ -3,7 +3,7 @@ use std::fmt;
 
 use crate::Type;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Scheme {
     pub qualifiers: Vec<i32>,
     pub ty: Type,

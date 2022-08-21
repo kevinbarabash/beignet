@@ -259,7 +259,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TProp, S
                         name,
                         optional: sig.optional,
                         mutable: !sig.readonly,
-                        ty: t,
+                        scheme: Scheme::from(t),
                     })
                 }
                 None => Err(String::from("Property is missing type annotation")),
@@ -280,7 +280,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TProp, S
                 name,
                 optional: sig.optional,
                 mutable: false, // All methods on interfaces are readonly
-                ty: t,
+                scheme: Scheme::from(t),
             })
         }
         TsTypeElement::TsIndexSignature(_sig) => Err(String::from("TsIndexSignature")),

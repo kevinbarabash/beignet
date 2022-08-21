@@ -194,7 +194,7 @@ fn infer_param_pattern_rec(
                                 name: key.name.to_owned(),
                                 optional: false,
                                 mutable: false,
-                                ty: value_type,
+                                scheme: Scheme::from(value_type),
                             })
                         }
                         EFnParamObjectPatProp::Assign(EFnParamAssignPatProp {
@@ -216,7 +216,7 @@ fn infer_param_pattern_rec(
                                 name: key.name.to_owned(),
                                 optional: false,
                                 mutable: false,
-                                ty: tv,
+                                scheme: Scheme::from(tv),
                             })
                         }
                         EFnParamObjectPatProp::Rest(rest) => {

@@ -61,13 +61,15 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
             Type::Object(props) => {
                 let props = props
                     .iter()
-                    .map(|prop| TProp {
-                        name: prop.name.clone(),
-                        optional: prop.optional,
-                        mutable: prop.mutable,
-                        // NOTE: we don't use prop.get_type(ctx) here because we're tracking
-                        // the optionality of the property in the TProp that's returned.
-                        ty: norm_type(&prop.ty, mapping, ctx),
+                    .map(|prop| {
+                        TProp {
+                            name: prop.name.clone(),
+                            optional: prop.optional,
+                            mutable: prop.mutable,
+                            // NOTE: we don't use prop.get_type(ctx) here because we're tracking
+                            // the optionality of the property in the TProp that's returned.
+                            scheme: Scheme::from(norm_type(&prop.scheme.ty, mapping, ctx)),
+                        }
                     })
                     .collect();
                 Type::Object(props)
@@ -124,21 +126,29 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
         .collect();
 
     // The use of HashSet<Type> here is to avoid duplicate types
-    let mut props_map: DefaultHashMap<String, HashSet<Type>> = defaulthashmap!();
+    let mut props_map: DefaultHashMap<String, HashSet<Scheme>> = defaulthashmap!();
     for props in obj_types {
         for prop in props {
-            props_map[prop.name.clone()].insert(prop.ty.clone());
+            props_map[prop.name.clone()].insert(prop.scheme.clone());
         }
     }
 
     let mut props: Vec<TProp> = props_map
         .iter()
         .map(|(name, types)| {
-            let types: Vec<_> = types.iter().cloned().collect();
-            let ty: Type = if types.len() == 1 {
-                types[0].clone()
+            let schemes: Vec<_> = types.iter().cloned().collect();
+            let scheme: Scheme = if types.len() == 1 {
+                schemes[0].clone()
             } else {
-                Type::Intersection(types)
+                let qualifiers: Vec<_> = schemes
+                    .iter()
+                    .flat_map(|scheme| scheme.qualifiers.clone())
+                    .collect();
+                let types: Vec<Type> = schemes.iter().map(|scheme| scheme.ty.clone()).collect();
+                Scheme {
+                    qualifiers,
+                    ty: Type::Intersection(types),
+                }
             };
             TProp {
                 name: name.to_owned(),
@@ -147,7 +157,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
                 // the TProps with the current name are optional.
                 optional: false,
                 mutable: false,
-                ty,
+                scheme,
             }
         })
         .collect();
