@@ -13,8 +13,11 @@ pub struct State {
     pub count: Cell<i32>,
 }
 
+// TODO: each scope has separate namespaces for values and types.  Namespace module
+// imports/decls can include types and values.
 #[derive(Clone, Debug, Default)]
 pub struct Scope {
+    pub namespaces: HashMap<String, Box<Scope>>,
     pub values: Env,
     pub types: Env,
     pub is_async: bool,
@@ -78,6 +81,11 @@ impl Context {
         current_scope.types.insert(name, scheme);
     }
 
+    pub fn insert_namespace(&mut self, name: String, namespace: Scope) {
+        let current_scope = self.scopes.last_mut().unwrap();
+        current_scope.namespaces.insert(name, Box::from(namespace));
+    }
+
     pub fn lookup_value(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
             match scope.values.get(name) {
@@ -85,7 +93,7 @@ impl Context {
                 None => (),
             }
         }
-        Err(format!("Can't find type: {name}"))
+        Err(format!("Can't find value type: {name}"))
     }
 
     pub fn lookup_value_scheme(&self, name: &str) -> Result<Scheme, String> {
@@ -95,7 +103,7 @@ impl Context {
                 None => (),
             }
         }
-        Err(format!("Can't find type: {name}"))
+        Err(format!("Can't find scheme: {name}"))
     }
 
     // TODO: Make this return a Result<Type, String>
@@ -107,6 +115,26 @@ impl Context {
             }
         }
         Err(format!("Can't find type: {name}"))
+    }
+
+    pub fn lookup_type_scheme(&self, name: &str) -> Result<Scheme, String> {
+        for scope in self.scopes.iter().rev() {
+            match scope.types.get(name) {
+                Some(scheme) => return Ok(scheme.to_owned()),
+                None => (),
+            }
+        }
+        Err(format!("Can't find type: {name}"))
+    }
+
+    pub fn lookup_namespace(&self, name: &str) -> Result<Box<Scope>, String> {
+        for scope in self.scopes.iter().rev() {
+            match scope.namespaces.get(name) {
+                Some(namespace) => return Ok(namespace.to_owned()),
+                None => (),
+            }
+        }
+        Err(format!("Can't find namespace: {name}"))
     }
 
     pub fn lookup_alias(&self, alias: &TAlias) -> Result<Type, String> {

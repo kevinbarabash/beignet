@@ -115,7 +115,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<Scheme, String> {
 // closeOver :: (Map.Map TVar Type, Type) -> Scheme
 // closeOver (sub, ty) = normalize sc
 //   where sc = generalize emptyTyenv (apply sub ty)
-fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Scheme {
+pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Scheme {
     let empty_env = Env::default();
     normalize(&generalize(&empty_env, &t.to_owned().apply(s)), ctx)
 }
