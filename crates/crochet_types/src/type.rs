@@ -2,6 +2,7 @@ use itertools::{join, Itertools};
 use std::fmt;
 use std::hash::Hash;
 
+use crate::Scheme;
 use crate::{TLit, TPrim};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -9,14 +10,17 @@ pub struct TProp {
     pub name: String,
     pub optional: bool,
     pub mutable: bool,
-    pub ty: Type,
+    pub scheme: Scheme,
 }
 
 impl TProp {
-    pub fn get_type(&self) -> Type {
+    pub fn get_scheme(&self) -> Scheme {
         match self.optional {
-            true => Type::Union(vec![self.ty.to_owned(), Type::Prim(TPrim::Undefined)]),
-            false => self.ty.to_owned(),
+            true => Scheme::from(Type::Union(vec![
+                self.scheme.ty.to_owned(),
+                Type::Prim(TPrim::Undefined),
+            ])),
+            false => self.scheme.to_owned(),
         }
     }
 }
@@ -27,7 +31,7 @@ impl fmt::Display for TProp {
             name,
             optional,
             mutable,
-            ty,
+            scheme: ty,
         } = self;
         match (optional, mutable) {
             (false, false) => write!(f, "{name}: {ty}"),

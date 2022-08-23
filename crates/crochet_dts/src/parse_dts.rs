@@ -1,52 +1,46 @@
-use defaultmap::*;
-use std::collections::HashSet;
 use std::sync::Arc;
+use types::Scheme;
 
-use swc_common::{FileName, SourceMap};
+use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
 use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
-use crochet_infer::Context;
-use crochet_types::{self as types, RestPat, Scheme, TFnParam, TPat, TPrim, TProp, Type};
-
-type Interface = Vec<TProp>;
+use crochet_infer::{close_over, generalize, Context, Env, Subst};
+use crochet_types::{self as types, RestPat, TFnParam, TPat, TPrim, TProp, Type};
 
 #[derive(Debug, Clone)]
 pub struct InterfaceCollector {
     pub ctx: Context,
-    pub current_interface: Option<String>,
-    pub to_parse: HashSet<String>,
-    pub interfaces: DefaultHashMap<String, Interface>,
+    pub comments: SingleThreadedComments,
+    pub namespace: Vec<String>,
 }
 
-impl InterfaceCollector {
-    pub fn get_interface(&self, name: &str) -> Type {
-        let props = &self.interfaces[name.to_owned()];
-        Type::Object(props.to_owned())
-    }
-}
-
-fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
+fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
     match type_ann {
         TsType::TsKeywordType(keyword) => match &keyword.kind {
-            TsKeywordTypeKind::TsAnyKeyword => ctx.fresh_var(),
-            TsKeywordTypeKind::TsUnknownKeyword => todo!(),
-            TsKeywordTypeKind::TsNumberKeyword => Type::Prim(TPrim::Num),
-            TsKeywordTypeKind::TsObjectKeyword => todo!(),
-            TsKeywordTypeKind::TsBooleanKeyword => Type::Prim(TPrim::Bool),
-            TsKeywordTypeKind::TsBigIntKeyword => todo!(),
-            TsKeywordTypeKind::TsStringKeyword => Type::Prim(TPrim::Str),
-            TsKeywordTypeKind::TsSymbolKeyword => todo!(),
-            TsKeywordTypeKind::TsVoidKeyword => todo!(),
-            TsKeywordTypeKind::TsUndefinedKeyword => Type::Prim(TPrim::Undefined),
-            TsKeywordTypeKind::TsNullKeyword => Type::Prim(TPrim::Null),
-            TsKeywordTypeKind::TsNeverKeyword => todo!(),
-            TsKeywordTypeKind::TsIntrinsicKeyword => todo!(),
+            TsKeywordTypeKind::TsAnyKeyword => Ok(ctx.fresh_var()),
+            TsKeywordTypeKind::TsUnknownKeyword => {
+                Err(String::from("can't parse unknown keyword yet"))
+            }
+            TsKeywordTypeKind::TsNumberKeyword => Ok(Type::Prim(TPrim::Num)),
+            TsKeywordTypeKind::TsObjectKeyword => Err(String::from("can't parse Objects yet")),
+            TsKeywordTypeKind::TsBooleanKeyword => Ok(Type::Prim(TPrim::Bool)),
+            TsKeywordTypeKind::TsBigIntKeyword => Err(String::from("can't parse BigInt yet")),
+            TsKeywordTypeKind::TsStringKeyword => Ok(Type::Prim(TPrim::Str)),
+            TsKeywordTypeKind::TsSymbolKeyword => Err(String::from("can't parse Symbols yet")),
+            // NOTE: `void` is treated the same as `undefined` ...for now.
+            TsKeywordTypeKind::TsVoidKeyword => Ok(Type::Prim(TPrim::Undefined)),
+            TsKeywordTypeKind::TsUndefinedKeyword => Ok(Type::Prim(TPrim::Undefined)),
+            TsKeywordTypeKind::TsNullKeyword => Ok(Type::Prim(TPrim::Null)),
+            TsKeywordTypeKind::TsNeverKeyword => Err(String::from("can't parse never keyword yet")),
+            TsKeywordTypeKind::TsIntrinsicKeyword => {
+                Err(String::from("can't parse Intrinsics yet"))
+            }
         },
-        TsType::TsThisType(_) => todo!(),
+        TsType::TsThisType(_) => Err(String::from("can't parse this type yet")),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
                 let params: Vec<TFnParam> = fn_type
@@ -61,12 +55,13 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                                     name: ident.id.sym.to_string(),
                                     mutable: false,
                                 }),
-                                ty: infer_ts_type_ann(&type_ann.type_ann, ctx),
+                                ty: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
                                 optional: ident.optional,
                             };
                             Some(param)
                         }
                         TsFnParam::Array(_) => {
+                            // TODO: create a tuple pattern
                             println!("skipping TsFnParam::Array(_)");
                             None
                         }
@@ -83,24 +78,27 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                                         mutable: false,
                                     })),
                                 }),
-                                ty: infer_ts_type_ann(&type_ann.type_ann, ctx),
+                                ty: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
                                 optional: false,
                             };
                             Some(param)
                         }
                         TsFnParam::Object(_) => {
+                            // TODO: create an object pattern
                             println!("skipping TsFnParam::Object(_)");
                             None
                         }
                     })
                     .collect();
-                let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx);
-                Type::Lam(types::TLam {
+                let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?;
+                Ok(Type::Lam(types::TLam {
                     params,
                     ret: Box::from(ret),
-                })
+                }))
             }
-            TsFnOrConstructorType::TsConstructorType(_) => todo!(),
+            TsFnOrConstructorType::TsConstructorType(_) => {
+                Err(String::from("can't parse constructor yet"))
+            }
         },
         TsType::TsTypeRef(ref_type) => {
             let name = match &ref_type.type_name {
@@ -111,194 +109,268 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Type {
                     id.sym.to_string()
                 }
             };
-            let type_params = ref_type.type_params.as_ref().map(|type_params| {
-                type_params
-                    .params
-                    .iter()
-                    .map(|t| infer_ts_type_ann(t, ctx))
-                    .collect()
-            });
-            Type::Alias(types::TAlias { name, type_params })
+            match &ref_type.type_params {
+                Some(type_params) => {
+                    let result: Result<Vec<_>, String> = type_params
+                        .params
+                        .iter()
+                        .map(|t| infer_ts_type_ann(t, ctx))
+                        .collect();
+                    Ok(Type::Alias(types::TAlias {
+                        name,
+                        type_params: result.ok(),
+                    }))
+                }
+                None => Ok(Type::Alias(types::TAlias {
+                    name,
+                    type_params: None,
+                })),
+            }
         }
-        TsType::TsTypeQuery(_) => todo!(),
-        TsType::TsTypeLit(_) => todo!(),
+        TsType::TsTypeQuery(_) => Err(String::from("can't parse type query yet")),
+        TsType::TsTypeLit(_) => Err(String::from("can't parse type literal yet")),
         TsType::TsArrayType(array) => {
-            let elem_type = infer_ts_type_ann(&array.elem_type, ctx);
-            Type::Array(Box::from(elem_type))
+            let elem_type = infer_ts_type_ann(&array.elem_type, ctx)?;
+            Ok(Type::Array(Box::from(elem_type)))
         }
-        TsType::TsTupleType(_) => todo!(),
-        TsType::TsOptionalType(_) => todo!(),
-        TsType::TsRestType(_) => todo!(),
+        TsType::TsTupleType(_) => Err(String::from("can't parse tuple type yet")),
+        TsType::TsOptionalType(_) => Err(String::from("can't parse optional type yet")),
+        TsType::TsRestType(_) => Err(String::from("can't parse rest type yet")),
         TsType::TsUnionOrIntersectionType(union_or_intersection) => match union_or_intersection {
             TsUnionOrIntersectionType::TsUnionType(union) => {
-                let types: Vec<_> = union
+                let types: Result<Vec<_>, String> = union
                     .types
                     .iter()
                     .map(|ts_type| infer_ts_type_ann(ts_type, ctx))
                     .collect();
-                Type::Union(types)
+                Ok(Type::Union(types?))
             }
             TsUnionOrIntersectionType::TsIntersectionType(intersection) => {
-                let types: Vec<_> = intersection
+                let types: Result<Vec<_>, String> = intersection
                     .types
                     .iter()
                     .map(|ts_type| infer_ts_type_ann(ts_type, ctx))
                     .collect();
-                Type::Intersection(types)
+                Ok(Type::Intersection(types?))
             }
         },
-        TsType::TsConditionalType(_) => todo!(),
-        TsType::TsInferType(_) => todo!(),
-        TsType::TsParenthesizedType(_) => todo!(),
-        TsType::TsTypeOperator(_) => todo!(),
-        TsType::TsIndexedAccessType(_) => todo!(),
-        TsType::TsMappedType(_) => todo!(),
+        TsType::TsConditionalType(_) => Err(String::from("can't parse conditional type yet")),
+        TsType::TsInferType(_) => Err(String::from("can't parse infer type yet")),
+        TsType::TsParenthesizedType(_) => Err(String::from("can't parse parenthesized yet")),
+        TsType::TsTypeOperator(_) => Err(String::from("can't parse type operator yet")),
+        TsType::TsIndexedAccessType(_) => Err(String::from("can't parse indexed type yet")),
+        TsType::TsMappedType(_) => Err(String::from("can't parse mapped type yet")),
         TsType::TsLitType(lit) => match &lit.lit {
-            TsLit::Number(num) => Type::from(Lit::num(format!("{}", num.value), 0..0)),
-            TsLit::Str(str) => Type::from(Lit::str(str.value.to_string(), 0..0)),
-            TsLit::Bool(b) => Type::from(Lit::bool(b.value, 0..0)),
-            TsLit::BigInt(_) => todo!(),
-            TsLit::Tpl(_) => todo!(),
+            TsLit::Number(num) => Ok(Type::from(Lit::num(format!("{}", num.value), 0..0))),
+            TsLit::Str(str) => Ok(Type::from(Lit::str(str.value.to_string(), 0..0))),
+            TsLit::Bool(b) => Ok(Type::from(Lit::bool(b.value, 0..0))),
+            TsLit::BigInt(_) => Err(String::from("can't parse BigInt literal yet")),
+            TsLit::Tpl(_) => Err(String::from("can't parse Tpl literal yet")),
         },
-        TsType::TsTypePredicate(_) => todo!(),
-        TsType::TsImportType(_) => todo!(),
+        TsType::TsTypePredicate(_) => Err(String::from("can't parse type predicate yet")),
+        TsType::TsImportType(_) => Err(String::from("can't parse import type yet")),
+    }
+}
+
+fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, String> {
+    if sig.computed {
+        panic!("unexpected computed property in TypElement")
+    }
+
+    let params: Vec<TFnParam> = sig
+        .params
+        .iter()
+        .enumerate()
+        .filter_map(|(index, param)| match param {
+            TsFnParam::Ident(ident) => {
+                let type_ann = ident.type_ann.clone().unwrap();
+                let param = TFnParam {
+                    pat: TPat::Ident(types::BindingIdent {
+                        name: ident.id.sym.to_string(),
+                        mutable: false,
+                    }),
+                    ty: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
+                    optional: ident.optional,
+                };
+                Some(param)
+            }
+            TsFnParam::Array(_) => {
+                println!("skipping TsFnParam::Array(_)");
+                None
+            }
+            TsFnParam::Rest(rest) => {
+                let type_ann = rest.type_ann.clone().unwrap();
+                let name = match rest.arg.as_ref() {
+                    Pat::Ident(BindingIdent { id, .. }) => id.sym.to_string(),
+                    _ => format!("arg{index}"),
+                };
+                let param = TFnParam {
+                    pat: TPat::Rest(RestPat {
+                        arg: Box::from(TPat::Ident(types::BindingIdent {
+                            name,
+                            mutable: false,
+                        })),
+                    }),
+                    ty: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
+                    optional: false,
+                };
+                Some(param)
+            }
+            TsFnParam::Object(_) => {
+                println!("skipping TsFnParam::Object(_)");
+                None
+            }
+        })
+        .collect();
+
+    let ret = match &sig.type_ann {
+        Some(type_ann) => infer_ts_type_ann(&type_ann.type_ann, ctx),
+        None => Err(String::from("method has no return type")),
+    };
+
+    // TODO: maintain param names
+    Ok(Type::Lam(types::TLam {
+        params,
+        ret: Box::from(ret?),
+    }))
+}
+
+fn get_key_name(key: &Expr) -> Result<String, String> {
+    match key {
+        Expr::Ident(Ident { sym, .. }) => Ok(sym.to_string()),
+        Expr::Lit(swc_ecma_ast::Lit::Str(Str { value, .. })) => Ok(value.to_string()),
+        _ => Err(format!("get_key_name: {key:#?}")),
+    }
+}
+
+fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TProp, String> {
+    match elem {
+        TsTypeElement::TsCallSignatureDecl(_decl) => Err(String::from("TsCallSignatureDecl")),
+        TsTypeElement::TsConstructSignatureDecl(_decl) => {
+            Err(String::from("TsConstructSignatureDecl"))
+        }
+        TsTypeElement::TsPropertySignature(sig) => {
+            // TODO: update TProp to include a readonly flag
+            match &sig.type_ann {
+                Some(type_ann) => {
+                    // TODO: do a better job of handling this
+                    let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
+                    let name = get_key_name(sig.key.as_ref())?;
+                    Ok(TProp {
+                        name,
+                        optional: sig.optional,
+                        mutable: !sig.readonly,
+                        scheme: Scheme::from(t),
+                    })
+                }
+                None => Err(String::from("Property is missing type annotation")),
+            }
+        }
+        TsTypeElement::TsGetterSignature(sig) => {
+            let key = get_key_name(sig.key.as_ref())?;
+            Err(format!("TsGetterSignature: {key}"))
+        }
+        TsTypeElement::TsSetterSignature(sig) => {
+            let key = get_key_name(sig.key.as_ref())?;
+            Err(format!("TsSetterSignature: {key}"))
+        }
+        TsTypeElement::TsMethodSignature(sig) => {
+            let t = infer_method_sig(sig, ctx)?;
+            let name = get_key_name(sig.key.as_ref())?;
+            let scheme = generalize(&Env::new(), &t);
+            Ok(TProp {
+                name,
+                optional: sig.optional,
+                mutable: false, // All methods on interfaces are readonly
+                scheme,
+            })
+        }
+        TsTypeElement::TsIndexSignature(_sig) => Err(String::from("TsIndexSignature")),
+    }
+}
+
+fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, String> {
+    // TODO: skip properties we don't know how to deal with instead of return an error for the whole map
+    let props: Vec<_> = decl
+        .body
+        .body
+        .iter()
+        .filter_map(|elem| {
+            let prop = infer_ts_type_element(elem, ctx);
+
+            match prop {
+                Ok(prop) => Some(prop),
+                Err(msg) => {
+                    println!("Err: {msg}");
+                    None
+                }
+            }
+        })
+        .collect();
+
+    Ok(Type::Object(props))
+}
+
+fn merge_schemes(s1: &Scheme, s2: &Scheme) -> Scheme {
+    match (&s1.ty, &s2.ty) {
+        (Type::Object(props1), Type::Object(props2)) => {
+            let props: Vec<_> = props1
+                .iter()
+                .cloned()
+                .chain(props2.iter().cloned())
+                .collect();
+            let merged_t = Type::Object(props);
+            // TODO: merge qualifiers
+            Scheme::from(merged_t)
+        }
+        (_, _) => todo!(),
     }
 }
 
 impl Visit for InterfaceCollector {
-    // call this if we don't want to visit TypeScript type nodes
-    // noop_visit_type!();
-
-    // fn visit_ident(&mut self, ident: &Ident) {
-    //     self.names.insert(ident.span.lo, ident.sym.clone());
-    // }
-
     fn visit_ts_interface_decl(&mut self, decl: &TsInterfaceDecl) {
-        self.current_interface = Some(decl.id.sym.to_string());
-        decl.visit_children_with(self);
-        self.current_interface = None;
+        let name = decl.id.sym.to_string();
+        println!("inferring: {name}");
+        let t = infer_interface_decl(decl, &self.ctx);
+        match t {
+            Ok(t) => {
+                let empty_s = Subst::default();
+                let scheme = close_over(&empty_s, &t, &self.ctx);
+                match self.ctx.lookup_type_scheme(&name).ok() {
+                    Some(existing_scheme) => self
+                        .ctx
+                        .insert_type(name, merge_schemes(&existing_scheme, &scheme)),
+                    None => self.ctx.insert_type(name, scheme),
+                };
+            }
+            Err(_) => {
+                println!("couldn't infer {name}");
+            }
+        }
     }
 
-    fn visit_ts_type_element(&mut self, elem: &TsTypeElement) {
-        let name = if let Some(name) = &self.current_interface {
-            if !self.to_parse.contains(name) {
-                return;
-            } else {
-                name.clone()
+    fn visit_ts_module_decl(&mut self, decl: &TsModuleDecl) {
+        match &decl.id {
+            TsModuleName::Ident(id) => {
+                let name = id.sym.to_string();
+                println!("module: {name}");
+                self.namespace.push(name);
+                decl.visit_children_with(self);
+                self.namespace.pop();
             }
-        } else {
-            // This can happen when visiting types like Awaited<T>
-            // that aren't interfaces
-            return;
-        };
-        match elem {
-            TsTypeElement::TsCallSignatureDecl(_decl) => {}
-            TsTypeElement::TsConstructSignatureDecl(_decl) => {}
-            TsTypeElement::TsPropertySignature(sig) => {
-                // TODO: update TProp to include a readonly flag
-                match &sig.type_ann {
-                    Some(type_ann) => {
-                        let t = infer_ts_type_ann(&type_ann.type_ann, &self.ctx);
-                        if let Expr::Ident(Ident { sym, .. }) = sig.key.as_ref() {
-                            let prop = TProp {
-                                name: sym.to_string(),
-                                optional: sig.optional,
-                                mutable: !sig.readonly,
-                                ty: t,
-                            };
-                            self.interfaces[name].push(prop);
-                        }
-                    }
-                    None => panic!("Property is missing type annotation"),
-                }
-            }
-            TsTypeElement::TsGetterSignature(_sig) => {}
-            TsTypeElement::TsSetterSignature(_sig) => {}
-            TsTypeElement::TsMethodSignature(sig) => {
-                let t = self.infer_method_sig(sig);
-                if let Expr::Ident(Ident { sym, .. }) = sig.key.as_ref() {
-                    let prop = TProp {
-                        name: sym.to_string(),
-                        optional: sig.optional,
-                        mutable: false, // All methods on interfaces are readonly
-                        ty: t,
-                    };
-                    self.interfaces[name].push(prop);
-                }
-            }
-            TsTypeElement::TsIndexSignature(_sig) => {}
+            TsModuleName::Str(_) => todo!(),
         }
     }
 }
 
-impl InterfaceCollector {
-    fn infer_method_sig(&mut self, sig: &TsMethodSignature) -> Type {
-        if sig.computed {
-            panic!("unexpected computed property in TypElement")
-        }
-
-        let params: Vec<TFnParam> = sig
-            .params
-            .iter()
-            .enumerate()
-            .filter_map(|(index, param)| match param {
-                TsFnParam::Ident(ident) => {
-                    let type_ann = ident.type_ann.clone().unwrap();
-                    let param = TFnParam {
-                        pat: TPat::Ident(types::BindingIdent {
-                            name: ident.id.sym.to_string(),
-                            mutable: false,
-                        }),
-                        ty: infer_ts_type_ann(&type_ann.type_ann, &self.ctx),
-                        optional: ident.optional,
-                    };
-                    Some(param)
-                }
-                TsFnParam::Array(_) => {
-                    println!("skipping TsFnParam::Array(_)");
-                    None
-                }
-                TsFnParam::Rest(rest) => {
-                    let type_ann = rest.type_ann.clone().unwrap();
-                    let name = match rest.arg.as_ref() {
-                        Pat::Ident(BindingIdent { id, .. }) => id.sym.to_string(),
-                        _ => format!("arg{index}"),
-                    };
-                    let param = TFnParam {
-                        pat: TPat::Rest(RestPat {
-                            arg: Box::from(TPat::Ident(types::BindingIdent {
-                                name,
-                                mutable: false,
-                            })),
-                        }),
-                        ty: infer_ts_type_ann(&type_ann.type_ann, &self.ctx),
-                        optional: false,
-                    };
-                    Some(param)
-                }
-                TsFnParam::Object(_) => {
-                    println!("skipping TsFnParam::Object(_)");
-                    None
-                }
-            })
-            .collect();
-        let ret = match &sig.type_ann {
-            Some(type_ann) => infer_ts_type_ann(&type_ann.type_ann, &self.ctx),
-            None => panic!("method has no return type"),
-        };
-        // TODO: maintain param names
-        Type::Lam(types::TLam {
-            params,
-            ret: Box::from(ret),
-        })
-    }
-}
+impl InterfaceCollector {}
 
 pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
     let cm = Arc::<SourceMap>::default();
     let fm = cm.new_source_file(FileName::Anon, d_ts_source.to_owned());
 
     let mut errors: Vec<Error> = vec![];
+    let comments = SingleThreadedComments::default();
 
     let module = parse_file_as_module(
         &fm,
@@ -309,32 +381,17 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
             no_early_errors: false,
         }),
         EsVersion::Es2020,
-        None, // comments
+        Some(&comments),
         &mut errors,
     )?;
 
-    // TODO: add more items from lib.es5.d.ts
-    let to_parse = HashSet::from([
-        String::from("Math"),
-        String::from("String"),
-        String::from("StringConstructor"),
-        String::from("Number"),
-        String::from("NumberConstructor"),
-        String::from("Boolean"),
-        String::from("BooleanConstructor"),
-    ]);
     let mut collector = InterfaceCollector {
         ctx: Context::default(),
-        current_interface: None,
-        to_parse,
-        interfaces: defaulthashmap!(),
+        comments,
+        namespace: vec![],
     };
-    module.visit_with(&mut collector);
 
-    for name in collector.interfaces.keys() {
-        let t = collector.get_interface(name);
-        collector.ctx.insert_type(name.to_owned(), Scheme::from(t));
-    }
+    module.visit_with(&mut collector);
 
     Ok(collector.ctx)
 }

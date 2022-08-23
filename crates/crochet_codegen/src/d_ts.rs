@@ -499,7 +499,8 @@ pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                         params: vec![],
                         type_ann: Some(TsTypeAnn {
                             span: DUMMY_SP,
-                            type_ann: Box::from(build_type(&prop.ty, None)),
+                            // TODO: add build_type_from_scheme() helper that handles type params
+                            type_ann: Box::from(build_type(&prop.scheme.ty, None)),
                         }),
                         type_params: None,
                     })

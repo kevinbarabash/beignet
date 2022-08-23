@@ -225,7 +225,9 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let mut ss = vec![];
                     for prop1 in props1.iter() {
                         if prop1.name == prop2.name {
-                            if let Ok(s) = unify(&prop1.get_type(), &prop2.get_type(), ctx) {
+                            let prop1 = ctx.instantiate(&prop1.get_scheme());
+                            let prop2 = ctx.instantiate(&prop2.get_scheme());
+                            if let Ok(s) = unify(&prop1, &prop2, ctx) {
                                 b = true;
                                 ss.push(s);
                             }
@@ -552,20 +554,20 @@ mod tests {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
-                ty: Type::from(num("5")),
+                scheme: types::Scheme::from(Type::from(num("5"))),
             },
             types::TProp {
                 name: String::from("bar"),
                 optional: false,
                 mutable: false,
-                ty: Type::from(bool(&true)),
+                scheme: types::Scheme::from(Type::from(bool(&true))),
             },
             // Having extra properties is okay
             types::TProp {
                 name: String::from("baz"),
                 optional: false,
                 mutable: false,
-                ty: Type::Prim(TPrim::Str),
+                scheme: types::Scheme::from(Type::Prim(TPrim::Str)),
             },
         ]);
 
@@ -574,13 +576,13 @@ mod tests {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
-                ty: Type::Prim(TPrim::Num),
+                scheme: types::Scheme::from(Type::Prim(TPrim::Num)),
             },
             types::TProp {
                 name: String::from("bar"),
                 optional: true,
                 mutable: false,
-                ty: Type::Prim(TPrim::Bool),
+                scheme: types::Scheme::from(Type::Prim(TPrim::Bool)),
             },
             // It's okay for qux to not appear in the subtype since
             // it's an optional property.
@@ -588,7 +590,7 @@ mod tests {
                 name: String::from("qux"),
                 optional: true,
                 mutable: false,
-                ty: Type::Prim(TPrim::Str),
+                scheme: types::Scheme::from(Type::Prim(TPrim::Str)),
             },
         ]);
 

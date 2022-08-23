@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TPat, TPrim, Type};
+use crochet_types::{self as types, Scheme, TFnParam, TPat, TPrim, Type};
 
 use super::context::Context;
 use super::infer_fn_param::infer_fn_param;
@@ -180,7 +180,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                 name: attr.ident.name.to_owned(),
                                 optional: false,
                                 mutable: false,
-                                ty: t,
+                                scheme: Scheme::from(t),
                             };
                             props.push(prop);
                         }
@@ -350,7 +350,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                     name: name.to_owned(),
                                     optional: false,
                                     mutable: false,
-                                    ty: t,
+                                    scheme: Scheme::from(t),
                                 });
                             }
                             Prop::KeyValue(KeyValueProp { name, value, .. }) => {
@@ -362,7 +362,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                     name: name.to_owned(),
                                     optional: false,
                                     mutable: false,
-                                    ty: t,
+                                    scheme: Scheme::from(t),
                                 });
                             }
                         }
@@ -542,7 +542,10 @@ fn infer_property_type(
             MemberProp::Ident(Ident { name, .. }) => {
                 let prop = props.iter().find(|prop| prop.name == *name);
                 match prop {
-                    Some(prop) => Ok((Subst::default(), prop.get_type())),
+                    Some(prop) => {
+                        let prop = ctx.instantiate(&prop.get_scheme());
+                        Ok((Subst::default(), prop))
+                    }
                     None => Err(format!("Object type doesn't contain key {name}.")),
                 }
             }
@@ -552,8 +555,10 @@ fn infer_property_type(
                 match prop_t {
                     Type::Prim(prim) => match prim {
                         TPrim::Str => {
-                            let mut value_types: Vec<Type> =
-                                props.iter().map(|prop| prop.ty.to_owned()).collect();
+                            let mut value_types: Vec<Type> = props
+                                .iter()
+                                .map(|prop| ctx.instantiate(&prop.scheme))
+                                .collect();
                             value_types.push(Type::Prim(TPrim::Undefined));
                             let t = Type::Union(value_types);
                             Ok((prop_s, t))
@@ -564,7 +569,10 @@ fn infer_property_type(
                         types::TLit::Str(key) => {
                             let prop = props.iter().find(|prop| prop.name == key);
                             match prop {
-                                Some(prop) => Ok((Subst::default(), prop.get_type())),
+                                Some(prop) => {
+                                    let prop = ctx.instantiate(&prop.get_scheme());
+                                    Ok((Subst::default(), prop))
+                                }
                                 None => Err(format!("Object type doesn't contain key {key}.")),
                             }
                         }

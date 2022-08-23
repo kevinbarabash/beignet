@@ -17,7 +17,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
         name: String::from("_name"),
         optional: false,
         mutable: false,
-        ty: Type::from(Lit::str(String::from("Promise"), 0..0)),
+        scheme: Scheme::from(Type::from(Lit::str(String::from("Promise"), 0..0))),
     }]));
     ctx.insert_type(String::from("Promise"), promise_scheme);
     // TODO: replace with Class type once it exists
@@ -27,7 +27,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
         name: String::from("_name"),
         optional: false,
         mutable: false,
-        ty: Type::from(Lit::str(String::from("JSXElement"), 0..0)),
+        scheme: Scheme::from(Type::from(Lit::str(String::from("JSXElement"), 0..0))),
     }]));
     ctx.insert_type(String::from("JSXElement"), jsx_element_scheme);
 
@@ -115,7 +115,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<Scheme, String> {
 // closeOver :: (Map.Map TVar Type, Type) -> Scheme
 // closeOver (sub, ty) = normalize sc
 //   where sc = generalize emptyTyenv (apply sub ty)
-fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Scheme {
+pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Scheme {
     let empty_env = Env::default();
     normalize(&generalize(&empty_env, &t.to_owned().apply(s)), ctx)
 }
