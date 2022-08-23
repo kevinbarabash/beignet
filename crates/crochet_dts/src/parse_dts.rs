@@ -31,7 +31,8 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
             TsKeywordTypeKind::TsBigIntKeyword => Err(String::from("can't parse BigInt yet")),
             TsKeywordTypeKind::TsStringKeyword => Ok(Type::Prim(TPrim::Str)),
             TsKeywordTypeKind::TsSymbolKeyword => Err(String::from("can't parse Symbols yet")),
-            TsKeywordTypeKind::TsVoidKeyword => Err(String::from("can't parse void keyword yet")),
+            // NOTE: `void` is treated the same as `undefined` ...for now.
+            TsKeywordTypeKind::TsVoidKeyword => Ok(Type::Prim(TPrim::Undefined)),
             TsKeywordTypeKind::TsUndefinedKeyword => Ok(Type::Prim(TPrim::Undefined)),
             TsKeywordTypeKind::TsNullKeyword => Ok(Type::Prim(TPrim::Null)),
             TsKeywordTypeKind::TsNeverKeyword => Err(String::from("can't parse never keyword yet")),
@@ -235,10 +236,10 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
 }
 
 fn get_key_name(key: &Expr) -> Result<String, String> {
-    if let Expr::Ident(Ident { sym, .. }) = key {
-        Ok(sym.to_string())
-    } else {
-        Err(format!("get_key_name: {key:#?}"))
+    match key {
+        Expr::Ident(Ident { sym, .. }) => Ok(sym.to_string()),
+        Expr::Lit(swc_ecma_ast::Lit::Str(Str { value, .. })) => Ok(value.to_string()),
+        _ => Err(format!("get_key_name: {key:#?}")),
     }
 }
 
