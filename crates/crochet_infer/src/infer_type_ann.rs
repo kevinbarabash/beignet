@@ -82,6 +82,7 @@ fn infer_type_ann_rec(
         }
         TypeAnn::Lit(lit) => Type::from(lit.to_owned()),
         TypeAnn::Prim(PrimType { prim, .. }) => Type::from(prim.to_owned()),
+        TypeAnn::Keyword(KeywordType { keyword, .. }) => Type::from(keyword.to_owned()),
         TypeAnn::Object(ObjectType { props, .. }) => {
             let props: Vec<_> = props
                 .iter()

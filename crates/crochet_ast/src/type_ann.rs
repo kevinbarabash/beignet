@@ -1,5 +1,6 @@
 use crate::expr::EFnParamPat;
 use crate::ident::Ident;
+use crate::keyword::Keyword;
 use crate::lit::Lit;
 use crate::pattern::{BindingIdent, RestPat};
 use crate::prim::Primitive;
@@ -31,6 +32,12 @@ pub enum FnParam {
 pub struct PrimType {
     pub span: Span,
     pub prim: Primitive,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KeywordType {
+    pub span: Span,
+    pub keyword: Keyword,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -83,6 +90,7 @@ pub struct ArrayType {
 pub enum TypeAnn {
     Lam(LamType),
     Lit(Lit),
+    Keyword(KeywordType),
     Prim(PrimType),
     Object(ObjectType),
     TypeRef(TypeRef),

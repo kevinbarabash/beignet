@@ -419,8 +419,17 @@ pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                 types::TPrim::Num => TsKeywordTypeKind::TsNumberKeyword,
                 types::TPrim::Bool => TsKeywordTypeKind::TsBooleanKeyword,
                 types::TPrim::Str => TsKeywordTypeKind::TsStringKeyword,
-                types::TPrim::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
-                types::TPrim::Null => TsKeywordTypeKind::TsNullKeyword,
+            };
+
+            TsType::TsKeywordType(TsKeywordType {
+                span: DUMMY_SP,
+                kind,
+            })
+        }
+        Type::Keyword(keyword) => {
+            let kind = match keyword {
+                types::TKeyword::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
+                types::TKeyword::Null => TsKeywordTypeKind::TsNullKeyword,
             };
 
             TsType::TsKeywordType(TsKeywordType {
@@ -444,11 +453,6 @@ pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                     value: JsWord::from(s.clone()),
                     raw: None,
                 }),
-                // TODO: remove these frmo types::Lit since they're covered
-                // by primitives.
-                // crochet_infer::types::Lit::Null => todo!(),
-                // crochet_infer::types::Lit::Undefined => todo!(),
-                _ => panic!("TODO: model null and undefined as keywords"),
             };
 
             TsType::TsLitType(TsLitType {

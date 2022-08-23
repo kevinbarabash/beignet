@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, Scheme, TFnParam, TPat, TPrim, Type};
+use crochet_types::{self as types, Scheme, TFnParam, TKeyword, TPat, Type};
 
 use super::context::Context;
 use super::infer_type_ann::*;
@@ -44,7 +44,8 @@ pub fn infer_fn_param(
                 match a.iter().find(|(_, value)| type_ann_ty == value.ty) {
                     Some((name, scheme)) => {
                         let mut scheme = scheme.to_owned();
-                        scheme.ty = Type::Union(vec![scheme.ty, Type::Prim(TPrim::Undefined)]);
+                        scheme.ty =
+                            Type::Union(vec![scheme.ty, Type::Keyword(TKeyword::Undefined)]);
                         a.insert(name.to_owned(), scheme);
                     }
                     None => (),
@@ -67,7 +68,8 @@ pub fn infer_fn_param(
                 match new_vars.iter().find(|(_, value)| pat_type == value.ty) {
                     Some((name, scheme)) => {
                         let mut scheme = scheme.to_owned();
-                        scheme.ty = Type::Union(vec![scheme.ty, Type::Prim(TPrim::Undefined)]);
+                        scheme.ty =
+                            Type::Union(vec![scheme.ty, Type::Keyword(TKeyword::Undefined)]);
                         new_vars.insert(name.to_owned(), scheme);
                     }
                     None => (),

@@ -46,6 +46,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
             Type::Wildcard => ty.to_owned(),
             Type::Prim(_) => ty.to_owned(),
             Type::Lit(_) => ty.to_owned(),
+            Type::Keyword(_) => ty.to_owned(),
             Type::Union(types) => {
                 // TODO: update union_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
@@ -211,6 +212,7 @@ pub fn union_many_types(ts: &[Type]) -> Type {
         .cloned()
         .filter(|ty| matches!(ty, Type::Prim(_)))
         .collect();
+
     let lit_types: HashSet<_> = types_set
         .iter()
         .cloned()
@@ -220,21 +222,27 @@ pub fn union_many_types(ts: &[Type]) -> Type {
                 TLit::Num(_) => !prim_types.contains(&Type::Prim(TPrim::Num)),
                 TLit::Bool(_) => !prim_types.contains(&Type::Prim(TPrim::Bool)),
                 TLit::Str(_) => !prim_types.contains(&Type::Prim(TPrim::Str)),
-                TLit::Null => !prim_types.contains(&Type::Prim(TPrim::Null)),
-                TLit::Undefined => !prim_types.contains(&Type::Prim(TPrim::Undefined)),
             },
             _ => false,
         })
         .collect();
+
+    let keyword_types: HashSet<_> = types_set
+        .iter()
+        .cloned()
+        .filter(|ty| matches!(ty, Type::Keyword(_)))
+        .collect();
+
     let rest_types: HashSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|ty| !matches!(ty, Type::Prim(_) | Type::Lit(_)))
+        .filter(|ty| !matches!(ty, Type::Prim(_) | Type::Lit(_) | Type::Keyword(_)))
         .collect();
 
     let types: Vec<_> = prim_types
         .iter()
         .chain(lit_types.iter())
+        .chain(keyword_types.iter())
         .chain(rest_types.iter())
         .cloned()
         .collect();

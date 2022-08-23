@@ -2,7 +2,6 @@ use chumsky::prelude::*;
 use crochet_ast::*;
 
 use crate::lit::{boolean_parser, number_parser, string_parser};
-use crate::type_ann::Primitive;
 use crate::util::just_with_padding;
 
 use super::type_params::type_params;
@@ -12,10 +11,24 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
         just("number").to(Primitive::Num),
         just("string").to(Primitive::Str),
         just("boolean").to(Primitive::Bool),
-        just("null").to(Primitive::Null),
-        just("undefined").to(Primitive::Undefined),
     ))
     .map_with_span(|prim, span| TypeAnn::Prim(PrimType { span, prim }))
+    .padded();
+
+    let keyword = choice((
+        just("null").map_with_span(|_, span: Span| {
+            TypeAnn::Keyword(KeywordType {
+                span: span.clone(),
+                keyword: Keyword::Null(Null { span }),
+            })
+        }),
+        just("undefined").map_with_span(|_, span: Span| {
+            TypeAnn::Keyword(KeywordType {
+                span: span.clone(),
+                keyword: Keyword::Undefined(Undefined { span }),
+            })
+        }),
+    ))
     .padded();
 
     let parser = recursive(|type_ann| {
@@ -68,6 +81,7 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
             number_parser().map(TypeAnn::Lit),
             string_parser().map(TypeAnn::Lit),
             prim,
+            keyword,
             obj,
             tuple,
             type_ref,

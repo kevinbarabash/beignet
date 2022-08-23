@@ -8,8 +8,6 @@ pub enum TLit {
     Num(String),
     Bool(bool),
     Str(String),
-    Null,
-    Undefined,
 }
 
 impl fmt::Display for TLit {
@@ -18,8 +16,6 @@ impl fmt::Display for TLit {
             TLit::Num(n) => write!(f, "{}", n),
             TLit::Bool(b) => write!(f, "{}", b),
             TLit::Str(s) => write!(f, "\"{}\"", s),
-            TLit::Null => write!(f, "null"),
-            TLit::Undefined => write!(f, "undefined"),
         }
     }
 }

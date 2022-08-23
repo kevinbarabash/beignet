@@ -6,8 +6,6 @@ pub enum TPrim {
     Num,
     Bool,
     Str,
-    Undefined,
-    Null,
 }
 
 impl fmt::Display for TPrim {
@@ -16,8 +14,6 @@ impl fmt::Display for TPrim {
             TPrim::Num => write!(f, "number",),
             TPrim::Bool => write!(f, "boolean"),
             TPrim::Str => write!(f, "string"),
-            TPrim::Null => write!(f, "null"),
-            TPrim::Undefined => write!(f, "undefined"),
         }
     }
 }

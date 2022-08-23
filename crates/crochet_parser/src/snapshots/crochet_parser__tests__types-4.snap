@@ -23,10 +23,14 @@ Program {
                             LamType {
                                 span: 16..31,
                                 params: [],
-                                ret: Prim(
-                                    PrimType {
+                                ret: Keyword(
+                                    KeywordType {
                                         span: 22..31,
-                                        prim: Undefined,
+                                        keyword: Undefined(
+                                            Undefined {
+                                                span: 22..31,
+                                            },
+                                        ),
                                     },
                                 ),
                                 type_params: None,

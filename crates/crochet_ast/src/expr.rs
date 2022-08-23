@@ -1,5 +1,6 @@
 use crate::ident::Ident;
 use crate::jsx::JSXElement;
+use crate::keyword::Keyword;
 use crate::lit::Lit;
 use crate::pattern::Pattern;
 use crate::span::Span;
@@ -308,6 +309,7 @@ pub enum Expr {
     Let(Let),
     LetExpr(LetExpr), // should only be used in `if let` expressions
     Lit(Lit),
+    Keyword(Keyword),
     Op(Op),
     UnaryExpr(UnaryExpr),
     Obj(Obj),
@@ -331,6 +333,7 @@ impl Expr {
             Expr::Lambda(lam) => lam.span.to_owned(),
             Expr::Let(r#let) => r#let.span.to_owned(),
             Expr::Lit(lit) => lit.span(),
+            Expr::Keyword(keyword) => keyword.span(),
             Expr::Op(op) => op.span.to_owned(),
             Expr::UnaryExpr(ue) => ue.span.to_owned(),
             Expr::Obj(obj) => obj.span.to_owned(),

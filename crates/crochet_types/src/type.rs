@@ -18,7 +18,7 @@ impl TProp {
         match self.optional {
             true => Scheme::from(Type::Union(vec![
                 self.scheme.ty.to_owned(),
-                Type::Prim(TPrim::Undefined),
+                Type::Keyword(TKeyword::Undefined),
             ])),
             false => self.scheme.to_owned(),
         }
@@ -58,7 +58,7 @@ pub struct TFnParam {
 impl TFnParam {
     pub fn get_type(&self) -> Type {
         match self.optional {
-            true => Type::Union(vec![self.ty.to_owned(), Type::Prim(TPrim::Undefined)]),
+            true => Type::Union(vec![self.ty.to_owned(), Type::Keyword(TKeyword::Undefined)]),
             false => self.ty.to_owned(),
         }
     }
@@ -240,6 +240,21 @@ impl Hash for TAlias {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum TKeyword {
+    Null,
+    Undefined,
+}
+
+impl fmt::Display for TKeyword {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TKeyword::Null => write!(f, "null"),
+            TKeyword::Undefined => write!(f, "undefined"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Var(i32), // i32 is the if of the type variable
     App(TApp),
@@ -248,6 +263,7 @@ pub enum Type {
     // Query, // use for typed holes
     Prim(TPrim),
     Lit(TLit),
+    Keyword(TKeyword),
     Union(Vec<Type>),
     Intersection(Vec<Type>),
     Object(Vec<TProp>),
@@ -277,6 +293,7 @@ impl fmt::Display for Type {
             Type::Wildcard => write!(f, "_"),
             Type::Prim(prim) => write!(f, "{}", prim),
             Type::Lit(lit) => write!(f, "{}", lit),
+            Type::Keyword(keyword) => write!(f, "{}", keyword),
             Type::Union(types) => {
                 let strings: Vec<_> = types.iter().map(|t| format!("{t}")).sorted().collect();
                 write!(f, "{}", join(strings, " | "))
