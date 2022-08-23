@@ -8,7 +8,7 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
-use crochet_infer::{close_over, Context, Subst};
+use crochet_infer::{close_over, generalize, Context, Env, Subst};
 use crochet_types::{self as types, RestPat, TFnParam, TPat, TPrim, TProp, Type};
 
 #[derive(Debug, Clone)]
@@ -276,11 +276,12 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TProp, S
         TsTypeElement::TsMethodSignature(sig) => {
             let t = infer_method_sig(sig, ctx)?;
             let name = get_key_name(sig.key.as_ref())?;
+            let scheme = generalize(&Env::new(), &t);
             Ok(TProp {
                 name,
                 optional: sig.optional,
                 mutable: false, // All methods on interfaces are readonly
-                scheme: Scheme::from(t),
+                scheme,
             })
         }
         TsTypeElement::TsIndexSignature(_sig) => Err(String::from("TsIndexSignature")),
@@ -334,8 +335,6 @@ impl Visit for InterfaceCollector {
             Ok(t) => {
                 let empty_s = Subst::default();
                 let scheme = close_over(&empty_s, &t, &self.ctx);
-
-                // TODO: merge declarations
                 match self.ctx.lookup_type_scheme(&name).ok() {
                     Some(existing_scheme) => self
                         .ctx

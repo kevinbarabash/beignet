@@ -62,13 +62,19 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 let props = props
                     .iter()
                     .map(|prop| {
+                        // TODO: figure out an algorithm for normalizing nested Scheme
+                        let scheme = if prop.scheme.qualifiers.is_empty() {
+                            Scheme::from(norm_type(&prop.scheme.ty, mapping, ctx))
+                        } else {
+                            prop.scheme.to_owned()
+                        };
                         TProp {
                             name: prop.name.clone(),
                             optional: prop.optional,
                             mutable: prop.mutable,
-                            // NOTE: we don't use prop.get_type(ctx) here because we're tracking
+                            // NOTE: we don't use prop.get_scheme(ctx) here because we're tracking
                             // the optionality of the property in the TProp that's returned.
-                            scheme: Scheme::from(norm_type(&prop.scheme.ty, mapping, ctx)),
+                            scheme,
                         }
                     })
                     .collect();

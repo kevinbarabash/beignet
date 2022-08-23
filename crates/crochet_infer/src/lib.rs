@@ -12,6 +12,7 @@ pub mod infer;
 pub use context::*;
 pub use infer::*;
 pub use substitutable::Subst;
+pub use util::generalize;
 
 #[cfg(test)]
 mod tests {
