@@ -26,24 +26,12 @@ pub struct Str {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Null {
-    pub span: Span,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Undefined {
-    pub span: Span,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Lit {
     // We store all of the values as strings since f64 doesn't
     // support the Eq trait because NaN and 0.1 + 0.2 != 0.3.
     Num(Num),
     Bool(Bool),
     Str(Str),
-    Null(Null),
-    Undefined(Undefined),
 }
 
 impl Lit {
@@ -64,8 +52,6 @@ impl Lit {
             Lit::Num(n) => n.span.to_owned(),
             Lit::Bool(b) => b.span.to_owned(),
             Lit::Str(s) => s.span.to_owned(),
-            Lit::Null(n) => n.span.to_owned(),
-            Lit::Undefined(u) => u.span.to_owned(),
         }
     }
 }
@@ -76,8 +62,6 @@ impl fmt::Display for Lit {
             Lit::Num(n) => write!(f, "{}", n.value),
             Lit::Bool(b) => write!(f, "{}", b.value),
             Lit::Str(s) => write!(f, "\"{}\"", s.value),
-            Lit::Null(_) => write!(f, "null"),
-            Lit::Undefined(_) => write!(f, "undefined"),
         }
     }
 }
@@ -113,15 +97,6 @@ impl From<&Lit> for swc_ecma_ast::Expr {
                 });
                 swc_ecma_ast::Expr::Lit(lit)
             }
-            Lit::Null(_) => {
-                let lit = swc_ecma_ast::Lit::Null(swc_ecma_ast::Null { span: DUMMY_SP });
-                swc_ecma_ast::Expr::Lit(lit)
-            }
-            Lit::Undefined(_) => swc_ecma_ast::Expr::from(swc_ecma_ast::Ident {
-                span: DUMMY_SP,
-                sym: JsWord::from("undefined"),
-                optional: false,
-            }),
         }
     }
 }
@@ -132,8 +107,6 @@ impl From<Lit> for Type {
             Lit::Num(n) => TLit::Num(n.value),
             Lit::Bool(b) => TLit::Bool(b.value),
             Lit::Str(s) => TLit::Str(s.value),
-            Lit::Null(_) => TLit::Null,
-            Lit::Undefined(_) => TLit::Undefined,
         })
     }
 }
@@ -163,19 +136,5 @@ mod tests {
         let s = Lit::str(String::from("hello"), 0..5);
         assert_eq!(format!("{}", s), "\"hello\"");
         assert_eq!(s.span(), 0..5);
-    }
-
-    #[test]
-    fn null() {
-        let null = Lit::Null(Null { span: 0..4 });
-        assert_eq!(format!("{}", null), "null");
-        assert_eq!(null.span(), 0..4);
-    }
-
-    #[test]
-    fn undefined() {
-        let undefined = Lit::Undefined(Undefined { span: 0..9 });
-        assert_eq!(format!("{}", undefined), "undefined");
-        assert_eq!(undefined.span(), 0..9);
     }
 }

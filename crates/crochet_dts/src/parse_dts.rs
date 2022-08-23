@@ -9,7 +9,7 @@ use swc_ecma_visit::*;
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
 use crochet_infer::{close_over, generalize, Context, Env, Subst};
-use crochet_types::{self as types, RestPat, TFnParam, TPat, TPrim, TProp, Type};
+use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TPrim, TProp, Type};
 
 #[derive(Debug, Clone)]
 pub struct InterfaceCollector {
@@ -32,9 +32,9 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
             TsKeywordTypeKind::TsStringKeyword => Ok(Type::Prim(TPrim::Str)),
             TsKeywordTypeKind::TsSymbolKeyword => Err(String::from("can't parse Symbols yet")),
             // NOTE: `void` is treated the same as `undefined` ...for now.
-            TsKeywordTypeKind::TsVoidKeyword => Ok(Type::Prim(TPrim::Undefined)),
-            TsKeywordTypeKind::TsUndefinedKeyword => Ok(Type::Prim(TPrim::Undefined)),
-            TsKeywordTypeKind::TsNullKeyword => Ok(Type::Prim(TPrim::Null)),
+            TsKeywordTypeKind::TsVoidKeyword => Ok(Type::Keyword(TKeyword::Undefined)),
+            TsKeywordTypeKind::TsUndefinedKeyword => Ok(Type::Keyword(TKeyword::Undefined)),
+            TsKeywordTypeKind::TsNullKeyword => Ok(Type::Keyword(TKeyword::Null)),
             TsKeywordTypeKind::TsNeverKeyword => Err(String::from("can't parse never keyword yet")),
             TsKeywordTypeKind::TsIntrinsicKeyword => {
                 Err(String::from("can't parse Intrinsics yet"))

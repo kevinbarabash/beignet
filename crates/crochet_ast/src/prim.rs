@@ -8,8 +8,6 @@ pub enum Primitive {
     Num,
     Bool,
     Str,
-    Undefined,
-    Null,
 }
 
 impl fmt::Display for Primitive {
@@ -18,8 +16,6 @@ impl fmt::Display for Primitive {
             Primitive::Num => write!(f, "number",),
             Primitive::Bool => write!(f, "boolean"),
             Primitive::Str => write!(f, "string"),
-            Primitive::Null => write!(f, "null"),
-            Primitive::Undefined => write!(f, "undefined"),
         }
     }
 }
@@ -30,8 +26,6 @@ impl From<Primitive> for Type {
             Primitive::Num => TPrim::Num,
             Primitive::Bool => TPrim::Bool,
             Primitive::Str => TPrim::Str,
-            Primitive::Null => TPrim::Null,
-            Primitive::Undefined => TPrim::Undefined,
         })
     }
 }

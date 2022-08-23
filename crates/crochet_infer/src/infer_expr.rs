@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, Scheme, TFnParam, TPat, TPrim, Type};
+use crochet_types::{self as types, Scheme, TFnParam, TKeyword, TPat, TPrim, Type};
 
 use super::context::Context;
 use super::infer_fn_param::infer_fn_param;
@@ -123,7 +123,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 Expr::LetExpr(LetExpr { pat, expr, .. }) => {
                     let (s1, t1) =
                         infer_let(pat, &None, expr, consequent, ctx, &PatternUsage::Match)?;
-                    let s2 = match unify(&t1, &Type::Prim(TPrim::Undefined), ctx) {
+                    let s2 = match unify(&t1, &Type::Keyword(TKeyword::Undefined), ctx) {
                         Ok(s) => Ok(s),
                         Err(_) => Err(String::from(
                             "Consequent for 'if' without 'else' must not return a value",
@@ -138,7 +138,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                     let (s1, t1) = infer_expr(ctx, cond)?;
                     let (s2, t2) = infer_expr(ctx, consequent)?;
                     let s3 = unify(&t1, &Type::Prim(TPrim::Bool), ctx)?;
-                    let s4 = match unify(&t2, &Type::Prim(TPrim::Undefined), ctx) {
+                    let s4 = match unify(&t2, &Type::Keyword(TKeyword::Undefined), ctx) {
                         Ok(s) => Ok(s),
                         Err(_) => Err(String::from(
                             "Consequent for 'if' without 'else' must not return a value",
@@ -303,6 +303,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let t = Type::from(lit.to_owned());
             Ok((s, t))
         }
+        Expr::Keyword(keyword) => {
+            let s = Subst::new();
+            let t = match keyword {
+                Keyword::Null(_) => Type::Keyword(TKeyword::Null),
+                Keyword::Undefined(_) => Type::Keyword(TKeyword::Undefined),
+            };
+            Ok((s, t))
+        }
         Expr::Op(Op {
             op, left, right, ..
         }) => {
@@ -447,7 +455,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             Ok((s, t))
         }
         Expr::Empty(_) => {
-            let t = Type::Prim(TPrim::Undefined);
+            let t = Type::Keyword(TKeyword::Undefined);
             let s = Subst::default();
             Ok((s, t))
         }
@@ -559,7 +567,7 @@ fn infer_property_type(
                                 .iter()
                                 .map(|prop| ctx.instantiate(&prop.scheme))
                                 .collect();
-                            value_types.push(Type::Prim(TPrim::Undefined));
+                            value_types.push(Type::Keyword(TKeyword::Undefined));
                             let t = Type::Union(value_types);
                             Ok((prop_s, t))
                         }
@@ -599,8 +607,6 @@ fn infer_property_type(
                 let t = ctx.lookup_type("String")?;
                 infer_property_type(&t, prop, ctx)
             }
-            types::TLit::Null => todo!(),
-            types::TLit::Undefined => todo!(),
         },
         Type::Prim(prim) => match prim {
             TPrim::Num => {
@@ -615,8 +621,10 @@ fn infer_property_type(
                 let t = ctx.lookup_type("String")?;
                 infer_property_type(&t, prop, ctx)
             }
-            TPrim::Undefined => todo!(),
-            TPrim::Null => todo!(),
+        },
+        Type::Keyword(keyword) => match keyword {
+            TKeyword::Undefined => todo!(),
+            TKeyword::Null => todo!(),
         },
         Type::Tuple(elem_types) => {
             match prop {
@@ -630,7 +638,7 @@ fn infer_property_type(
                             TPrim::Num => {
                                 // TODO: remove duplicate types
                                 let mut elem_types = elem_types.to_owned();
-                                elem_types.push(Type::Prim(TPrim::Undefined));
+                                elem_types.push(Type::Keyword(TKeyword::Undefined));
                                 let t = Type::Union(elem_types);
                                 Ok((prop_s, t))
                             }

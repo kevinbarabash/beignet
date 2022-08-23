@@ -458,6 +458,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
             Expr::Ident(temp_id)
         }
         ast::Expr::Lit(lit) => Expr::from(lit),
+        ast::Expr::Keyword(keyword) => Expr::from(keyword),
         ast::Expr::Op(ast::Op {
             op, left, right, ..
         }) => {
@@ -915,8 +916,6 @@ fn build_lit(lit: &ast::Lit) -> Lit {
             // Some would include the quotes around the string
             // Some(JsWord::from(s.value.to_owned())),
         }),
-        ast::Lit::Null(_) => Lit::Null(Null { span: DUMMY_SP }),
-        ast::Lit::Undefined(_) => todo!(),
     }
 }
 
