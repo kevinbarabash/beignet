@@ -35,3 +35,17 @@ fn infer_adding_variables() {
     let result = format!("{}", ctx.lookup_value_scheme("len").unwrap());
     assert_eq!(result, "string");
 }
+
+#[test]
+fn infer_method_on_array() {
+    let src = r#"
+    declare let arr: string[]
+    let map = arr.map
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let result = format!("{}", ctx.lookup_value_scheme("map").unwrap());
+    assert_eq!(
+        result,
+        "<t0>(callbackfn: (value: string, index: number, array: string[]) => U, thisArg?: t0) => U[]"
+    );
+}

@@ -16,20 +16,12 @@ pub fn type_ann_parser() -> BoxedParser<'static, char, TypeAnn, Simple<char>> {
     .padded();
 
     let keyword = choice((
-        just("null").map_with_span(|_, span: Span| {
-            TypeAnn::Keyword(KeywordType {
-                span: span.clone(),
-                keyword: Keyword::Null(Null { span }),
-            })
-        }),
-        just("undefined").map_with_span(|_, span: Span| {
-            TypeAnn::Keyword(KeywordType {
-                span: span.clone(),
-                keyword: Keyword::Undefined(Undefined { span }),
-            })
-        }),
+        just("null").to(Keyword::Null),
+        just("symbol").to(Keyword::Symbol),
+        just("undefined").to(Keyword::Undefined),
     ))
-    .padded();
+    .padded()
+    .map_with_span(|keyword, span| TypeAnn::Keyword(KeywordType { keyword, span }));
 
     let parser = recursive(|type_ann| {
         let type_args = type_ann

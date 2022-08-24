@@ -2,8 +2,6 @@ use std::collections::{HashMap, HashSet};
 
 use crochet_types::*;
 
-use super::context::Env;
-
 pub type Subst = HashMap<i32, Type>;
 
 pub trait Substitutable {
@@ -110,8 +108,11 @@ impl Substitutable for Scheme {
     }
 }
 
-impl Substitutable for Env {
-    fn apply(&self, sub: &Subst) -> Env {
+impl<I> Substitutable for HashMap<String, I>
+where
+    I: Substitutable,
+{
+    fn apply(&self, sub: &Subst) -> HashMap<String, I> {
         self.iter()
             .map(|(a, b)| (a.clone(), b.apply(sub)))
             .collect()

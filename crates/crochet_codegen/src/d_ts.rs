@@ -428,8 +428,9 @@ pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
         }
         Type::Keyword(keyword) => {
             let kind = match keyword {
-                types::TKeyword::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
                 types::TKeyword::Null => TsKeywordTypeKind::TsNullKeyword,
+                types::TKeyword::Symbol => TsKeywordTypeKind::TsSymbolKeyword,
+                types::TKeyword::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
             };
 
             TsType::TsKeywordType(TsKeywordType {
