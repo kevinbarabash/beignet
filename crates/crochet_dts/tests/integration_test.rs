@@ -63,3 +63,17 @@ fn infer_array_method_on_tuple() {
         "<t0>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: \"hello\" | 5 | true[]) => U, thisArg?: t0) => U[]"
     );
 }
+
+#[test]
+fn infer_static_properties() {
+    let src = r#"
+    let max = Number.MAX_VALUE
+    let parse = Date.parse
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.lookup_value_scheme("max").unwrap());
+    assert_eq!(result, "number");
+    let result = format!("{}", ctx.lookup_value_scheme("parse").unwrap());
+    assert_eq!(result, "(s: string) => number");
+}

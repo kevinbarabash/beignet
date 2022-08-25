@@ -434,6 +434,34 @@ impl Visit for InterfaceCollector {
             TsModuleName::Str(_) => todo!(),
         }
     }
+
+    fn visit_var_decl(&mut self, decl: &VarDecl) {
+        if !decl.declare {
+            return;
+        }
+        for d in &decl.decls {
+            match &d.name {
+                Pat::Ident(bi) => {
+                    match &bi.type_ann {
+                        Some(type_ann) => {
+                            // TODO: capture errors and store them in self.errors
+                            let t = infer_ts_type_ann(&type_ann.type_ann, &self.ctx).unwrap();
+                            let scheme = generalize(&Env::new(), &t);
+                            let name = bi.id.sym.to_string();
+                            self.ctx.insert_value(name, scheme)
+                        }
+                        None => todo!(),
+                    }
+                }
+                Pat::Array(_) => todo!(),
+                Pat::Rest(_) => todo!(),
+                Pat::Object(_) => todo!(),
+                Pat::Assign(_) => todo!(),
+                Pat::Invalid(_) => todo!(),
+                Pat::Expr(_) => todo!(),
+            }
+        }
+    }
 }
 
 impl InterfaceCollector {}
