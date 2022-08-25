@@ -26,11 +26,7 @@ Program {
                                 ret: Keyword(
                                     KeywordType {
                                         span: 22..31,
-                                        keyword: Undefined(
-                                            Undefined {
-                                                span: 22..31,
-                                            },
-                                        ),
+                                        keyword: Undefined,
                                     },
                                 ),
                                 type_params: None,

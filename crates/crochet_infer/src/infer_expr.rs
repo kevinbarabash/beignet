@@ -303,14 +303,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let t = Type::from(lit.to_owned());
             Ok((s, t))
         }
-        Expr::Keyword(keyword) => {
-            let s = Subst::new();
-            let t = match keyword {
-                Keyword::Null(_) => Type::Keyword(TKeyword::Null),
-                Keyword::Undefined(_) => Type::Keyword(TKeyword::Undefined),
-            };
-            Ok((s, t))
-        }
         Expr::Op(Op {
             op, left, right, ..
         }) => {
@@ -623,13 +615,36 @@ fn infer_property_type(
             }
         },
         Type::Keyword(keyword) => match keyword {
-            TKeyword::Undefined => todo!(),
-            TKeyword::Null => todo!(),
+            TKeyword::Symbol => {
+                let t = ctx.lookup_type("Symbol")?;
+                infer_property_type(&t, prop, ctx)
+            }
+            TKeyword::Null => Err("Cannot read property on 'null'".to_owned()),
+            TKeyword::Undefined => Err("Cannot read property on 'null'".to_owned()),
         },
+        Type::Array(type_param) => {
+            // TODO: Do this for all interfaces that we lookup
+            let scheme = ctx.lookup_type_scheme("Array")?;
+            // TODO: Instead of instantiating the whole interface for one method, do
+            // the lookup call first and then instantiate the method.
+            let s: Subst = Subst::from([(scheme.qualifiers[0], type_param.as_ref().to_owned())]);
+            let t = scheme.ty.apply(&s);
+            infer_property_type(&t, prop, ctx)
+        }
         Type::Tuple(elem_types) => {
             match prop {
                 // TODO: lookup methods on Array.prototype
-                MemberProp::Ident(_) => todo!(),
+                MemberProp::Ident(_) => {
+                    // TODO: Do this for all interfaces that we lookup
+                    let scheme = ctx.lookup_type_scheme("Array")?;
+                    // TODO: Instead of instantiating the whole interface for one method, do
+                    // the lookup call first and then instantiate the method.
+                    // TODO: remove duplicate types
+                    let type_param = Type::Union(elem_types.to_owned());
+                    let s: Subst = Subst::from([(scheme.qualifiers[0], type_param)]);
+                    let t = scheme.ty.apply(&s);
+                    infer_property_type(&t, prop, ctx)
+                }
                 MemberProp::Computed(ComputedPropName { expr, .. }) => {
                     let (prop_s, prop_t) = infer_expr(ctx, expr)?;
 

@@ -458,7 +458,6 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
             Expr::Ident(temp_id)
         }
         ast::Expr::Lit(lit) => Expr::from(lit),
-        ast::Expr::Keyword(keyword) => Expr::from(keyword),
         ast::Expr::Op(ast::Op {
             op, left, right, ..
         }) => {

@@ -64,18 +64,18 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .iter()
                     .map(|prop| {
                         // TODO: figure out an algorithm for normalizing nested Scheme
-                        let scheme = if prop.scheme.qualifiers.is_empty() {
-                            Scheme::from(norm_type(&prop.scheme.ty, mapping, ctx))
-                        } else {
-                            prop.scheme.to_owned()
-                        };
+                        // let scheme = if prop.scheme.qualifiers.is_empty() {
+                        //     Scheme::from(norm_type(&prop.scheme.ty, mapping, ctx))
+                        // } else {
+                        //     prop.scheme.to_owned()
+                        // };
                         TProp {
                             name: prop.name.clone(),
                             optional: prop.optional,
                             mutable: prop.mutable,
                             // NOTE: we don't use prop.get_scheme(ctx) here because we're tracking
                             // the optionality of the property in the TProp that's returned.
-                            scheme,
+                            scheme: prop.scheme.to_owned(),
                         }
                     })
                     .collect();
@@ -109,6 +109,17 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
 }
 
 pub fn generalize(env: &Env, ty: &Type) -> Scheme {
+    // ftv() returns a Set which is not ordered
+    // TODO: switch to an ordered set
+    let mut qualifiers: Vec<_> = ty.ftv().difference(&env.ftv()).cloned().collect();
+    qualifiers.sort_unstable();
+    Scheme {
+        qualifiers,
+        ty: ty.clone(),
+    }
+}
+
+pub fn generalize_type_map(env: &HashMap<String, Type>, ty: &Type) -> Scheme {
     // ftv() returns a Set which is not ordered
     // TODO: switch to an ordered set
     let mut qualifiers: Vec<_> = ty.ftv().difference(&env.ftv()).cloned().collect();

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use types::Scheme;
 
@@ -8,7 +9,7 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
-use crochet_infer::{close_over, generalize, Context, Env, Subst};
+use crochet_infer::{close_over, generalize, generalize_type_map, Context, Env, Subst};
 use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TPrim, TProp, Type};
 
 #[derive(Debug, Clone)]
@@ -22,15 +23,13 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
     match type_ann {
         TsType::TsKeywordType(keyword) => match &keyword.kind {
             TsKeywordTypeKind::TsAnyKeyword => Ok(ctx.fresh_var()),
-            TsKeywordTypeKind::TsUnknownKeyword => {
-                Err(String::from("can't parse unknown keyword yet"))
-            }
+            TsKeywordTypeKind::TsUnknownKeyword => Ok(ctx.fresh_var()),
             TsKeywordTypeKind::TsNumberKeyword => Ok(Type::Prim(TPrim::Num)),
             TsKeywordTypeKind::TsObjectKeyword => Err(String::from("can't parse Objects yet")),
             TsKeywordTypeKind::TsBooleanKeyword => Ok(Type::Prim(TPrim::Bool)),
             TsKeywordTypeKind::TsBigIntKeyword => Err(String::from("can't parse BigInt yet")),
             TsKeywordTypeKind::TsStringKeyword => Ok(Type::Prim(TPrim::Str)),
-            TsKeywordTypeKind::TsSymbolKeyword => Err(String::from("can't parse Symbols yet")),
+            TsKeywordTypeKind::TsSymbolKeyword => Ok(Type::Keyword(TKeyword::Symbol)),
             // NOTE: `void` is treated the same as `undefined` ...for now.
             TsKeywordTypeKind::TsVoidKeyword => Ok(Type::Keyword(TKeyword::Undefined)),
             TsKeywordTypeKind::TsUndefinedKeyword => Ok(Type::Keyword(TKeyword::Undefined)),
@@ -289,7 +288,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TProp, S
     }
 }
 
-fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, String> {
+fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Scheme, String> {
     // TODO: skip properties we don't know how to deal with instead of return an error for the whole map
     let props: Vec<_> = decl
         .body
@@ -308,7 +307,84 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, S
         })
         .collect();
 
-    Ok(Type::Object(props))
+    let t = Type::Object(props);
+
+    let scheme = if decl.id.to_string() == "Array#0" {
+        println!("Array: ");
+        println!("    t = {t}");
+        let type_param_map: HashMap<String, Type> = match &decl.type_params {
+            Some(type_params) => type_params
+                .params
+                .iter()
+                .map(|tp| (tp.name.sym.to_string(), ctx.fresh_var()))
+                .collect(),
+            None => HashMap::default(),
+        };
+        let t = replace_aliases(&t, &type_param_map);
+        println!("    t = {t}");
+
+        // let empty_s = Subst::default();
+        // let scheme = close_over(&type_param_map, &t, ctx);
+
+        generalize_type_map(&HashMap::default(), &t)
+    } else {
+        let empty_s = Subst::default();
+        close_over(&empty_s, &t, ctx)
+    };
+
+    Ok(scheme)
+}
+
+fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
+    match t {
+        Type::Var(_) => t.to_owned(),
+        Type::App(types::TApp { args, ret }) => Type::App(types::TApp {
+            args: args.iter().map(|t| replace_aliases(t, map)).collect(),
+            ret: Box::from(replace_aliases(ret, map)),
+        }),
+        Type::Lam(types::TLam { params, ret }) => Type::Lam(types::TLam {
+            params: params
+                .iter()
+                .map(|param| TFnParam {
+                    ty: replace_aliases(&param.ty, map),
+                    ..param.to_owned()
+                })
+                .collect(),
+            ret: Box::from(replace_aliases(ret, map)),
+        }),
+        Type::Wildcard => t.to_owned(),
+        Type::Prim(_) => t.to_owned(),
+        Type::Lit(_) => t.to_owned(),
+        Type::Keyword(_) => t.to_owned(),
+        Type::Union(types) => Type::Union(types.iter().map(|t| replace_aliases(t, map)).collect()),
+        Type::Intersection(types) => {
+            Type::Intersection(types.iter().map(|t| replace_aliases(t, map)).collect())
+        }
+        Type::Object(props) => {
+            let props = props
+                .iter()
+                .map(|prop| {
+                    // TODO: handle qualifiers in each prop's .scheme field
+                    let ty = replace_aliases(&prop.scheme.ty, map);
+                    types::TProp {
+                        scheme: Scheme {
+                            ty,
+                            ..prop.scheme.to_owned()
+                        },
+                        ..prop.to_owned()
+                    }
+                })
+                .collect();
+            Type::Object(props)
+        }
+        Type::Alias(alias) => match map.get(&alias.name) {
+            Some(replacement) => replacement.to_owned(),
+            None => t.to_owned(),
+        },
+        Type::Tuple(types) => Type::Tuple(types.iter().map(|t| replace_aliases(t, map)).collect()),
+        Type::Array(t) => Type::Array(Box::from(replace_aliases(t, map))),
+        Type::Rest(t) => Type::Rest(Box::from(replace_aliases(t, map))),
+    }
 }
 
 fn merge_schemes(s1: &Scheme, s2: &Scheme) -> Scheme {
@@ -331,11 +407,8 @@ impl Visit for InterfaceCollector {
     fn visit_ts_interface_decl(&mut self, decl: &TsInterfaceDecl) {
         let name = decl.id.sym.to_string();
         println!("inferring: {name}");
-        let t = infer_interface_decl(decl, &self.ctx);
-        match t {
-            Ok(t) => {
-                let empty_s = Subst::default();
-                let scheme = close_over(&empty_s, &t, &self.ctx);
+        match infer_interface_decl(decl, &self.ctx) {
+            Ok(scheme) => {
                 match self.ctx.lookup_type_scheme(&name).ok() {
                     Some(existing_scheme) => self
                         .ctx
@@ -359,6 +432,34 @@ impl Visit for InterfaceCollector {
                 self.namespace.pop();
             }
             TsModuleName::Str(_) => todo!(),
+        }
+    }
+
+    fn visit_var_decl(&mut self, decl: &VarDecl) {
+        if !decl.declare {
+            return;
+        }
+        for d in &decl.decls {
+            match &d.name {
+                Pat::Ident(bi) => {
+                    match &bi.type_ann {
+                        Some(type_ann) => {
+                            // TODO: capture errors and store them in self.errors
+                            let t = infer_ts_type_ann(&type_ann.type_ann, &self.ctx).unwrap();
+                            let scheme = generalize(&Env::new(), &t);
+                            let name = bi.id.sym.to_string();
+                            self.ctx.insert_value(name, scheme)
+                        }
+                        None => todo!(),
+                    }
+                }
+                Pat::Array(_) => todo!(),
+                Pat::Rest(_) => todo!(),
+                Pat::Object(_) => todo!(),
+                Pat::Assign(_) => todo!(),
+                Pat::Invalid(_) => todo!(),
+                Pat::Expr(_) => todo!(),
+            }
         }
     }
 }
