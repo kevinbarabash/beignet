@@ -51,6 +51,28 @@ fn infer_method_on_array() {
 }
 
 #[test]
+fn infer_method_on_arrays_of_different_things() {
+    let src = r#"
+    declare let str_arr: string[]
+    declare let num_arr: number[]
+    let map1 = str_arr.map
+    let map2 = num_arr.map
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.lookup_value_scheme("map1").unwrap());
+    assert_eq!(
+        result,
+        "<t0>(callbackfn: (value: string, index: number, array: string[]) => U, thisArg?: t0) => U[]"
+    );
+    let result = format!("{}", ctx.lookup_value_scheme("map2").unwrap());
+    assert_eq!(
+        result,
+        "<t0>(callbackfn: (value: number, index: number, array: number[]) => U, thisArg?: t0) => U[]"
+    );
+}
+
+#[test]
 fn infer_array_method_on_tuple() {
     let src = r#"
     let tuple = [5, "hello", true]
