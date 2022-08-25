@@ -49,3 +49,17 @@ fn infer_method_on_array() {
         "<t0>(callbackfn: (value: string, index: number, array: string[]) => U, thisArg?: t0) => U[]"
     );
 }
+
+#[test]
+fn infer_array_method_on_tuple() {
+    let src = r#"
+    let tuple = [5, "hello", true]
+    let map = tuple.map
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let result = format!("{}", ctx.lookup_value_scheme("map").unwrap());
+    assert_eq!(
+        result,
+        "<t0>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: \"hello\" | 5 | true[]) => U, thisArg?: t0) => U[]"
+    );
+}

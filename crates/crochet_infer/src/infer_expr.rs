@@ -625,6 +625,8 @@ fn infer_property_type(
         Type::Array(type_param) => {
             // TODO: Do this for all interfaces that we lookup
             let scheme = ctx.lookup_type_scheme("Array")?;
+            // TODO: Instead of instantiating the whole interface for one method, do
+            // the lookup call first and then instantiate the method.
             let s: Subst = Subst::from([(scheme.qualifiers[0], type_param.as_ref().to_owned())]);
             let t = scheme.ty.apply(&s);
             infer_property_type(&t, prop, ctx)
@@ -632,7 +634,17 @@ fn infer_property_type(
         Type::Tuple(elem_types) => {
             match prop {
                 // TODO: lookup methods on Array.prototype
-                MemberProp::Ident(_) => todo!(),
+                MemberProp::Ident(_) => {
+                    // TODO: Do this for all interfaces that we lookup
+                    let scheme = ctx.lookup_type_scheme("Array")?;
+                    // TODO: Instead of instantiating the whole interface for one method, do
+                    // the lookup call first and then instantiate the method.
+                    // TODO: remove duplicate types
+                    let type_param = Type::Union(elem_types.to_owned());
+                    let s: Subst = Subst::from([(scheme.qualifiers[0], type_param)]);
+                    let t = scheme.ty.apply(&s);
+                    infer_property_type(&t, prop, ctx)
+                }
                 MemberProp::Computed(ComputedPropName { expr, .. }) => {
                     let (prop_s, prop_t) = infer_expr(ctx, expr)?;
 
