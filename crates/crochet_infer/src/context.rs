@@ -86,7 +86,7 @@ impl Context {
         current_scope.namespaces.insert(name, Box::from(namespace));
     }
 
-    pub fn lookup_value(&self, name: &str) -> Result<Type, String> {
+    pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
             match scope.values.get(name) {
                 Some(scheme) => return Ok(self.instantiate(scheme)),
@@ -107,7 +107,7 @@ impl Context {
     }
 
     // TODO: Make this return a Result<Type, String>
-    pub fn lookup_type(&self, name: &str) -> Result<Type, String> {
+    pub fn lookup_type_and_instantiate(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
             match scope.types.get(name) {
                 Some(scheme) => return Ok(self.instantiate(scheme)),

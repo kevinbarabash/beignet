@@ -85,7 +85,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let t = if name == "_" {
                 Type::Wildcard
             } else {
-                ctx.lookup_value(name)?
+                ctx.lookup_value_and_instantiate(name)?
             };
             Ok((s, t))
         }
@@ -160,7 +160,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let first_char = name.chars().next().unwrap();
             // JSXElement's starting with an uppercase char are user defined.
             if first_char.is_uppercase() {
-                let t = ctx.lookup_value(name)?;
+                let t = ctx.lookup_value_and_instantiate(name)?;
                 match t {
                     Type::Lam(_) => {
                         let mut ss: Vec<_> = vec![];
@@ -345,7 +345,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                     PropOrSpread::Prop(p) => {
                         match p.as_ref() {
                             Prop::Shorthand(Ident { name, .. }) => {
-                                let t = ctx.lookup_value(name)?;
+                                let t = ctx.lookup_value_and_instantiate(name)?;
                                 ps.push(types::TProp {
                                     name: name.to_owned(),
                                     optional: false,
@@ -588,35 +588,35 @@ fn infer_property_type(
         }
         Type::Lit(lit) => match lit {
             types::TLit::Num(_) => {
-                let t = ctx.lookup_type("Number")?;
+                let t = ctx.lookup_type_and_instantiate("Number")?;
                 infer_property_type(&t, prop, ctx)
             }
             types::TLit::Bool(_) => {
-                let t = ctx.lookup_type("Boolean")?;
+                let t = ctx.lookup_type_and_instantiate("Boolean")?;
                 infer_property_type(&t, prop, ctx)
             }
             types::TLit::Str(_) => {
-                let t = ctx.lookup_type("String")?;
+                let t = ctx.lookup_type_and_instantiate("String")?;
                 infer_property_type(&t, prop, ctx)
             }
         },
         Type::Prim(prim) => match prim {
             TPrim::Num => {
-                let t = ctx.lookup_type("Number")?;
+                let t = ctx.lookup_type_and_instantiate("Number")?;
                 infer_property_type(&t, prop, ctx)
             }
             TPrim::Bool => {
-                let t = ctx.lookup_type("Boolean")?;
+                let t = ctx.lookup_type_and_instantiate("Boolean")?;
                 infer_property_type(&t, prop, ctx)
             }
             TPrim::Str => {
-                let t = ctx.lookup_type("String")?;
+                let t = ctx.lookup_type_and_instantiate("String")?;
                 infer_property_type(&t, prop, ctx)
             }
         },
         Type::Keyword(keyword) => match keyword {
             TKeyword::Symbol => {
-                let t = ctx.lookup_type("Symbol")?;
+                let t = ctx.lookup_type_and_instantiate("Symbol")?;
                 infer_property_type(&t, prop, ctx)
             }
             TKeyword::Null => Err("Cannot read property on 'null'".to_owned()),
