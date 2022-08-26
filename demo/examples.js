@@ -60,7 +60,7 @@ let rec fib = (n) => if (n == 0) {
 `;
 
 export const functionOverloading = `
-declare let add: ((number, number) => number) & ((string, string) => string)
+declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string)
 
 let num = add(5, 10)
 let str = add("hello, ", "world")
