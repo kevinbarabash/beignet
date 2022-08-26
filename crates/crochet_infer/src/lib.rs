@@ -2313,4 +2313,15 @@ mod tests {
 
         assert_eq!(get_type("result", &ctx), "string");
     }
+
+    #[test]
+    fn recursive_data_type() {
+        let src = r#"
+        type Tree = {type: "tree", children: Tree[] } | {type: "leaf"}
+        let tree: Tree = {type: "tree", children: [{type: "leaf"}, {type: "leaf"}] }
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type("tree", &ctx), "Tree");
+    }
 }

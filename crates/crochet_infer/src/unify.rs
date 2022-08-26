@@ -332,6 +332,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let mut b = false;
             let mut ss = vec![];
             for t2 in types.iter() {
+                // Should we stop after the first successful call to unify()?
                 if let Ok(s) = unify(t1, t2, ctx) {
                     b = true;
                     ss.push(s);
@@ -460,7 +461,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         }
     };
     if result.is_err() {
-        println!("Can't unify t1 = {t1:#?} with t2 = {t2:#?}");
+        println!("Can't unify t1 = {t1} with t2 = {t2}");
     }
     result
 }
