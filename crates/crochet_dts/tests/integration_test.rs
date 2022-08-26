@@ -37,7 +37,7 @@ fn infer_adding_variables() {
 }
 
 #[test]
-fn infer_method_on_array() {
+fn infer_method_on_readonly_array() {
     let src = r#"
     declare let arr: string[]
     let map = arr.map
@@ -46,12 +46,23 @@ fn infer_method_on_array() {
     let result = format!("{}", ctx.lookup_value_scheme("map").unwrap());
     assert_eq!(
         result,
-        "<t0>(callbackfn: (value: string, index: number, array: string[]) => U, thisArg?: t0) => U[]"
+        "<t0>(callbackfn: (value: string, index: number) => U, thisArg?: t0) => U[]"
     );
 }
 
 #[test]
-fn infer_method_on_arrays_of_different_things() {
+#[should_panic = "Object type doesn't contain key splice."]
+fn infer_mutable_method_on_readonly_array_errors() {
+    let src = r#"
+    declare let arr: string[]
+    let splice = arr.splice
+    "#;
+
+    infer_prog(src);
+}
+
+#[test]
+fn infer_method_on_readonly_arrays_of_different_things() {
     let src = r#"
     declare let str_arr: string[]
     declare let num_arr: number[]
@@ -63,12 +74,12 @@ fn infer_method_on_arrays_of_different_things() {
     let result = format!("{}", ctx.lookup_value_scheme("map1").unwrap());
     assert_eq!(
         result,
-        "<t0>(callbackfn: (value: string, index: number, array: string[]) => U, thisArg?: t0) => U[]"
+        "<t0>(callbackfn: (value: string, index: number) => U, thisArg?: t0) => U[]"
     );
     let result = format!("{}", ctx.lookup_value_scheme("map2").unwrap());
     assert_eq!(
         result,
-        "<t0>(callbackfn: (value: number, index: number, array: number[]) => U, thisArg?: t0) => U[]"
+        "<t0>(callbackfn: (value: number, index: number) => U, thisArg?: t0) => U[]"
     );
 }
 
@@ -82,7 +93,7 @@ fn infer_array_method_on_tuple() {
     let result = format!("{}", ctx.lookup_value_scheme("map").unwrap());
     assert_eq!(
         result,
-        "<t0>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: \"hello\" | 5 | true[]) => U, thisArg?: t0) => U[]"
+        "<t0>(callbackfn: (value: \"hello\" | 5 | true, index: number) => U, thisArg?: t0) => U[]"
     );
 }
 
