@@ -309,27 +309,21 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Scheme,
 
     let t = Type::Object(props);
 
-    let scheme = if decl.id.to_string() == "Array#0" {
-        println!("Array: ");
-        println!("    t = {t}");
-        let type_param_map: HashMap<String, Type> = match &decl.type_params {
-            Some(type_params) => type_params
+    let scheme = match &decl.type_params {
+        Some(type_params) => {
+            let type_param_map: HashMap<String, Type> = type_params
                 .params
                 .iter()
                 .map(|tp| (tp.name.sym.to_string(), ctx.fresh_var()))
-                .collect(),
-            None => HashMap::default(),
-        };
-        let t = replace_aliases(&t, &type_param_map);
-        println!("    t = {t}");
+                .collect();
 
-        // let empty_s = Subst::default();
-        // let scheme = close_over(&type_param_map, &t, ctx);
-
-        generalize_type_map(&HashMap::default(), &t)
-    } else {
-        let empty_s = Subst::default();
-        close_over(&empty_s, &t, ctx)
+            let t = replace_aliases(&t, &type_param_map);
+            generalize_type_map(&HashMap::default(), &t)
+        }
+        None => {
+            let empty_s = Subst::default();
+            close_over(&empty_s, &t, ctx)
+        }
     };
 
     Ok(scheme)
