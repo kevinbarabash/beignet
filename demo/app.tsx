@@ -10,7 +10,7 @@ type Crochet = typeof import("../crates/crochet/pkg");
 const DEFAULT_CODE = `
 // Welcome to the Crochet Playground!
 let add = (a, b) => a + b
-let add5 = add(5, _)
+let add5 = (b) => add(5, b)
 let sum = add5(10)
 `;
 
@@ -31,9 +31,11 @@ export const App = () => {
   }, []);
 
   React.useEffect(() => {
-    fetch(libPath).then(res => res.text()).then(text => {
-      setLib(text);
-    });
+    fetch(libPath)
+      .then((res) => res.text())
+      .then((text) => {
+        setLib(text);
+      });
   }, []);
 
   let output = React.useMemo(() => {

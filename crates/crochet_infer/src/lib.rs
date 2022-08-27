@@ -1162,84 +1162,6 @@ mod tests {
     }
 
     #[test]
-    fn call_partially_applied_fn_immediately() {
-        let src = r#"
-        declare let add: (a: number, b: number) => number
-        let sum = add(5, _)(10)
-        "#;
-
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type("sum", &ctx), "number");
-    }
-
-    #[test]
-    fn partially_apply_first_param() {
-        let src = r#"
-        declare let foo: (a: number, b: string) => bool
-        let foo_num = foo(5, _)
-        "#;
-
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type("foo_num", &ctx), "(b: string) => bool");
-    }
-
-    #[test]
-    fn partially_apply_second_param() {
-        let src = r#"
-        declare let foo: (a: number, b: string) => bool
-        let foo_str = foo(_, "hello")
-        "#;
-
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type("foo_str", &ctx), "(a: number) => bool");
-    }
-
-    #[test]
-    fn partially_apply_multiple_params() {
-        let src = r#"
-        declare let foo: (a: number, b: string, c: bool) => undefined
-        let foo_bool = foo(5, "hello", _)
-        "#;
-
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type("foo_bool", &ctx), "(c: bool) => undefined");
-    }
-
-    #[test]
-    fn multiple_placeholders() {
-        let src = r#"
-        declare let foo: (a: number, b: string, c: bool) => undefined
-        let foo_num_bool = foo(_, "hello", _)
-        "#;
-
-        let ctx = infer_prog(src);
-
-        assert_eq!(
-            get_type("foo_num_bool", &ctx),
-            "(a: number, c: bool) => undefined"
-        );
-    }
-
-    #[test]
-    fn all_multiple_placeholders() {
-        let src = r#"
-        declare let foo: (a: number, b: string, c: bool) => undefined
-        let foo_num_str_bool = foo(_, _, _)
-        "#;
-
-        let ctx = infer_prog(src);
-
-        assert_eq!(
-            get_type("foo_num_str_bool", &ctx),
-            "(a: number, b: string, c: bool) => undefined"
-        );
-    }
-
-    #[test]
     fn pass_callback_with_too_few_params() {
         let src = r#"
         declare let fold_num: (cb: (a: number, b: number) => boolean, seed: number) => number
@@ -1334,33 +1256,6 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(get_type("result", &ctx), "number");
-    }
-
-    #[test]
-    fn spread_param_tuple_with_not_enough_elements_and_placeholder_is_partial_application() {
-        let src = r#"
-        declare let add: (a: number, b: number) => number
-        let args = [5]
-        let result1 = add(...args, _)
-        let result2 = add(_, ...args)
-        "#;
-
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type("result1", &ctx), "(b: number) => number");
-        assert_eq!(get_type("result2", &ctx), "(a: number) => number");
-    }
-
-    #[test]
-    fn partial_application_with_placeholder_rest() {
-        let src = r#"
-        declare let add: (a: number, b: number, c: number) => number
-        let add5 = add(5, ..._)
-        "#;
-
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type("add5", &ctx), "(b: number, c: number) => number");
     }
 
     #[test]
