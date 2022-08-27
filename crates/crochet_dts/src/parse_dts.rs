@@ -346,7 +346,6 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                 .collect(),
             ret: Box::from(replace_aliases(ret, map)),
         }),
-        Type::Wildcard => t.to_owned(),
         Type::Prim(_) => t.to_owned(),
         Type::Lit(_) => t.to_owned(),
         Type::Keyword(_) => t.to_owned(),

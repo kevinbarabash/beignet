@@ -26,7 +26,6 @@ impl Substitutable for Type {
                 params: lam.params.iter().map(|param| param.apply(sub)).collect(),
                 ret: Box::from(lam.ret.apply(sub)),
             }),
-            Type::Wildcard => self.to_owned(),
             Type::Prim(_) => self.to_owned(),
             Type::Lit(_) => self.to_owned(),
             Type::Keyword(_) => self.to_owned(),
@@ -56,7 +55,6 @@ impl Substitutable for Type {
                 result.extend(ret.ftv());
                 result
             }
-            Type::Wildcard => HashSet::new(),
             Type::Prim(_) => HashSet::new(),
             Type::Lit(_) => HashSet::new(),
             Type::Keyword(_) => HashSet::new(),

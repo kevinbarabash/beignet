@@ -261,7 +261,6 @@ pub enum Type {
     Var(i32), // i32 is the if of the type variable
     App(TApp),
     Lam(TLam),
-    Wildcard,
     // Query, // use for typed holes
     Prim(TPrim),
     Lit(TLit),
@@ -292,7 +291,6 @@ impl fmt::Display for Type {
             Type::Lam(TLam { params, ret, .. }) => {
                 write!(f, "({}) => {}", join(params, ", "), ret)
             }
-            Type::Wildcard => write!(f, "_"),
             Type::Prim(prim) => write!(f, "{}", prim),
             Type::Lit(lit) => write!(f, "{}", lit),
             Type::Keyword(keyword) => write!(f, "{}", keyword),
