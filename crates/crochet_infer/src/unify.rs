@@ -1,7 +1,7 @@
 use std::cmp;
 use std::collections::HashSet;
 
-use crochet_types::{self as types, TFnParam, TPrim, Type};
+use crochet_types::{self as types, TPrim, Type};
 
 use super::context::Context;
 use super::substitutable::{Subst, Substitutable};
@@ -106,20 +106,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             // of array spreads, they also need to come after the start of a rest param.
 
             let mut args: Vec<Type> = vec![];
-            for (i, arg) in app.args.iter().enumerate() {
-                let is_last = i == app.args.len() - 1;
+            // TODO: disallow spreading an array if it isn't the last arg
+            for arg in app.args.iter() {
                 match &arg {
                     Type::Rest(spread) => match &spread.as_ref() {
-                        Type::Wildcard => {
-                            if is_last {
-                                let spread_count = param_count_low_bound - args.len();
-                                for _ in 0..spread_count {
-                                    args.push(Type::Wildcard);
-                                }
-                            } else {
-                                return Err(String::from("Placeholder spread must appear last"));
-                            }
-                        }
                         Type::Tuple(types) => args.extend(types.to_owned()),
                         _ => return Err(format!("spread of type {spread} not allowed")),
                     },
@@ -167,42 +157,16 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             } else if args.len() >= param_count_low_bound {
                 // NOTE: Any extra args are ignored.
 
-                let is_partial = args.iter().any(|arg| matches!(arg, Type::Wildcard));
-
-                if is_partial {
-                    // Partial Application
-                    let mut partial_params: Vec<TFnParam> = vec![];
-                    for (arg, param) in args.iter().zip(&lam.params) {
-                        match arg {
-                            Type::Wildcard => partial_params.push(param.to_owned()),
-                            _ => {
-                                let arg = arg.apply(&s);
-                                let param = param.apply(&s);
-                                let s1 = unify(&arg, &param.get_type(), ctx)?;
-                                s = compose_subs(&s, &s1);
-                            }
-                        };
-                    }
-
-                    let partial_ret = Type::Lam(types::TLam {
-                        params: partial_params,
-                        ret: lam.ret.clone(),
-                    });
-                    let s1 = unify(&app.ret.apply(&s), &partial_ret, ctx)?;
-
-                    Ok(compose_subs(&s, &s1))
-                } else {
-                    // Regular Application
-                    for (p1, p2) in args.iter().zip(&lam.params) {
-                        // Each argument must be a subtype of the corresponding param.
-                        let arg = p1.apply(&s);
-                        let param = p2.get_type().apply(&s);
-                        let s1 = unify(&arg, &param, ctx)?;
-                        s = compose_subs(&s, &s1);
-                    }
-                    let s1 = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
-                    Ok(compose_subs(&s, &s1))
+                // Regular Application
+                for (p1, p2) in args.iter().zip(&lam.params) {
+                    // Each argument must be a subtype of the corresponding param.
+                    let arg = p1.apply(&s);
+                    let param = p2.get_type().apply(&s);
+                    let s1 = unify(&arg, &param, ctx)?;
+                    s = compose_subs(&s, &s1);
                 }
+                let s1 = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
+                Ok(compose_subs(&s, &s1))
             } else {
                 Err(String::from("Not enough params provided"))
             }

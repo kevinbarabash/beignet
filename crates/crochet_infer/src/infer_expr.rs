@@ -82,11 +82,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         }
         Expr::Ident(Ident { name, .. }) => {
             let s = Subst::default();
-            let t = if name == "_" {
-                Type::Wildcard
-            } else {
-                ctx.lookup_value_and_instantiate(name)?
-            };
+            let t = ctx.lookup_value_and_instantiate(name)?;
             Ok((s, t))
         }
         Expr::IfElse(IfElse {

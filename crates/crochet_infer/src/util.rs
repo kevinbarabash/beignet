@@ -43,7 +43,6 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
                 Type::Lam(TLam { params, ret })
             }
-            Type::Wildcard => ty.to_owned(),
             Type::Prim(_) => ty.to_owned(),
             Type::Lit(_) => ty.to_owned(),
             Type::Keyword(_) => ty.to_owned(),
