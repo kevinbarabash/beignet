@@ -1,7 +1,7 @@
 use chumsky::prelude::*;
+use crochet_dts::parse_dts::parse_dts;
 use crochet_infer::*;
 use crochet_parser::parser;
-use crochet_dts::parse_dts::parse_dts;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
