@@ -196,6 +196,8 @@ dependencies = [
  "insta",
  "pretty_assertions",
  "testing_macros",
+ "tree-sitter",
+ "tree_sitter_crochet",
  "wasm-bindgen",
 ]
 
