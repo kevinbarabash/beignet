@@ -1,11 +1,16 @@
 import * as React from "react";
 
 import libPath from "../node_modules/typescript/lib/lib.es5.d.ts";
+import crochetWasmPath from "../target/wasm32-wasi/release/crochet.wasm";
+
+import { loadWasm } from "./wasm";
+
+loadWasm(crochetWasmPath).then((instance) => {
+  console.log(instance);
+});
 
 import Dropdown from "./dropdown";
 import { getPermalinkHref } from "./util";
-
-type Crochet = typeof import("../crates/crochet/pkg");
 
 const DEFAULT_CODE = `
 // Welcome to the Crochet Playground!
@@ -22,12 +27,12 @@ export const App = () => {
       ? window.atob(window.decodeURIComponent(code))
       : DEFAULT_CODE.trim();
   });
-  let [crochet, setCrochet] = React.useState<Crochet | null>(null);
+  let [crochet, setCrochet] = React.useState<any>(null);
   let [outputTab, setOutputTab] = React.useState<"js" | "dts">("js");
   let [lib, setLib] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    import("../crates/crochet/pkg").then(setCrochet);
+    // TODO
   }, []);
 
   React.useEffect(() => {

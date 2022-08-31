@@ -1,6 +1,6 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
+const webpack = require("webpack");
 
 module.exports = {
   entry: "./demo/index.tsx",
@@ -12,15 +12,8 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: "index.html",
     }),
-    new WasmPackPlugin({
-      crateDirectory: path.resolve(__dirname, "./crates/crochet"),
-      watchDirectories: [
-        path.resolve(__dirname, "./crates/crochet_ast/src"),
-        path.resolve(__dirname, "./crates/crochet_codegen/src"),
-        path.resolve(__dirname, "./crates/crochet_dst/src"),
-        path.resolve(__dirname, "./crates/crochet_infer/src"),
-        path.resolve(__dirname, "./crates/crochet_parser/src"),
-      ],
+    new webpack.ProvidePlugin({
+      Buffer: ["buffer", "Buffer"],
     }),
   ],
   module: {
@@ -35,16 +28,19 @@ module.exports = {
         exclude: /node_modules/,
       },
       {
-        test: /\.(png|svg|jpg|jpeg|gif)$/i,
+        test: /\.(png|svg|jpg|jpeg|gif|wasm)$/i,
         type: "asset/resource",
       },
     ],
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
+    fallback: {
+      buffer: require.resolve("buffer/"),
+    },
   },
-  mode: "production", // wasm-pack can't handle source map section 0x20
-  experiments: {
-    asyncWebAssembly: true,
+  externals: {
+    "wasmer_wasi_js_bg.wasm": true,
   },
+  mode: "production",
 };
