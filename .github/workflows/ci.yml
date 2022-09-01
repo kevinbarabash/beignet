@@ -34,6 +34,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Install wasm32-wasi target
+        uses: actions-rs/toolchain@v1
+        with:
+          target: wasm32-wasi
+
       - name: Install node_modules
         run: yarn install --frozen-lockfile
 
