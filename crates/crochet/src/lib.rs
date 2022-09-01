@@ -110,4 +110,5 @@ pub unsafe extern "C" fn parse(c_buf: *const c_char) -> *const WasmString {
 }
 
 #[no_mangle]
+#[cfg(target_family = "wasm")]
 pub extern "C" fn _start() {}
