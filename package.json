@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
+    "build-wasm": "cd crates/crochet && cargo build --target wasm32-wasi --release",
     "build": "webpack && cp scarf.png build",
     "serve": "webpack serve"
   },
@@ -18,7 +19,7 @@
     "webpack-dev-server": "^3.11.2"
   },
   "dependencies": {
-    "@wasmer/wasi": "^1.1.0",
+    "@wasmer/wasi": "1.1.1",
     "buffer": "^6.0.3",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"

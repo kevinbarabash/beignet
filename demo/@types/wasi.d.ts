@@ -1,9 +1,10 @@
 declare module "@wasmer/wasi" {
-  /* tslint:disable */
-  /* eslint-disable */
   /**
    */
   export class JSVirtualFile {
+    static __wrap(ptr: any): any;
+    __destroy_into_raw(): number;
+    ptr: number;
     free(): void;
     /**
      * @returns {BigInt}
@@ -55,10 +56,10 @@ declare module "@wasmer/wasi" {
   /**
    */
   export class MemFS {
+    static __wrap(ptr: any): any;
+    __destroy_into_raw(): number;
+    ptr: number;
     free(): void;
-    /**
-     */
-    constructor();
     /**
      * @param {string} path
      * @returns {Array<any>}
@@ -96,22 +97,29 @@ declare module "@wasmer/wasi" {
   /**
    */
   export class WASI {
-    free(): void;
+    static __wrap(ptr: any): any;
     /**
      * @param {any} config
      */
     constructor(config: any);
+    __destroy_into_raw(): number;
+    ptr: number;
+    free(): void;
+    /**
+     * @returns {MemFS}
+     */
+    get fs(): MemFS;
     /**
      * @param {WebAssembly.Module} module
      * @returns {object}
      */
-    get_imports(module: WebAssembly.Module): WebAssembly.Imports;
+    getImports(module: WebAssembly.Module): WebAssembly.Imports;
     /**
      * @param {any} module
      * @param {object | undefined} imports
      * @returns {WebAssembly.Instance}
      */
-    instantiate(module: any, imports?: object): WebAssembly.Instance;
+    instantiate(module: any, imports: object | undefined): WebAssembly.Instance;
     /**
      * Start the WASI Instance, it returns the status code when calling the start
      * function
@@ -153,89 +161,17 @@ declare module "@wasmer/wasi" {
      * @param {string} input
      */
     setStdinString(input: string): void;
-    /**
-     * @returns {MemFS}
-     */
-    readonly fs: MemFS;
   }
   /**
    * A struct representing an aborted instruction execution, with a message
    * indicating the cause.
    */
   export class WasmerRuntimeError {
+    static __wrap(ptr: any): any;
+    __destroy_into_raw(): number;
+    ptr: number;
     free(): void;
   }
-
-  export type InitInput =
-    | RequestInfo
-    | URL
-    | Response
-    | BufferSource
-    | WebAssembly.Module;
-
-  export interface InitOutput {
-    readonly memory: WebAssembly.Memory;
-    readonly __wbg_wasmerruntimeerror_free: (a: number) => void;
-    readonly __wbg_wasi_free: (a: number) => void;
-    readonly wasi_new: (a: number) => number;
-    readonly wasi_fs: (a: number) => number;
-    readonly wasi_get_imports: (a: number, b: number) => number;
-    readonly wasi_instantiate: (a: number, b: number, c: number) => number;
-    readonly wasi_start: (a: number, b: number) => number;
-    readonly wasi_getStdoutBuffer: (a: number, b: number) => void;
-    readonly wasi_getStdoutString: (a: number, b: number) => void;
-    readonly wasi_getStderrBuffer: (a: number, b: number) => void;
-    readonly wasi_getStderrString: (a: number, b: number) => void;
-    readonly wasi_setStdinBuffer: (a: number, b: number, c: number) => void;
-    readonly wasi_setStdinString: (a: number, b: number, c: number) => void;
-    readonly __wbg_memfs_free: (a: number) => void;
-    readonly memfs_new: () => number;
-    readonly memfs_readDir: (a: number, b: number, c: number) => number;
-    readonly memfs_createDir: (a: number, b: number, c: number) => void;
-    readonly memfs_removeDir: (a: number, b: number, c: number) => void;
-    readonly memfs_removeFile: (a: number, b: number, c: number) => void;
-    readonly memfs_rename: (
-      a: number,
-      b: number,
-      c: number,
-      d: number,
-      e: number
-    ) => void;
-    readonly memfs_metadata: (a: number, b: number, c: number) => number;
-    readonly memfs_open: (a: number, b: number, c: number, d: number) => number;
-    readonly __wbg_jsvirtualfile_free: (a: number) => void;
-    readonly jsvirtualfile_lastAccessed: (a: number, b: number) => void;
-    readonly jsvirtualfile_lastModified: (a: number, b: number) => void;
-    readonly jsvirtualfile_createdTime: (a: number, b: number) => void;
-    readonly jsvirtualfile_size: (a: number, b: number) => void;
-    readonly jsvirtualfile_setLength: (a: number, b: number, c: number) => void;
-    readonly jsvirtualfile_read: (a: number, b: number) => void;
-    readonly jsvirtualfile_readString: (a: number, b: number) => void;
-    readonly jsvirtualfile_write: (a: number, b: number, c: number) => number;
-    readonly jsvirtualfile_writeString: (
-      a: number,
-      b: number,
-      c: number
-    ) => number;
-    readonly jsvirtualfile_flush: (a: number) => void;
-    readonly jsvirtualfile_seek: (a: number, b: number) => number;
-    readonly __wbindgen_malloc: (a: number) => number;
-    readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
-    readonly __wbindgen_export_2: WebAssembly.Table;
-    readonly __wbindgen_exn_store: (a: number) => void;
-    readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
-    readonly __wbindgen_free: (a: number, b: number) => void;
-  }
-
-  /**
-   * If `module_or_path` is {RequestInfo} or {URL}, makes a request and
-   * for everything else, calls `WebAssembly.instantiate` directly.
-   *
-   * @param {InitInput | Promise<InitInput>} module_or_path
-   *
-   * @returns {Promise<InitOutput>}
-   */
-  export function init(
-    module_or_path?: InitInput | Promise<InitInput>
-  ): Promise<InitOutput>;
+  export default init;
+  export function init(input: any): Promise<WebAssembly.Exports>;
 }

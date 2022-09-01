@@ -65,15 +65,6 @@ unsafe fn string_to_wasm_string(input: &str) -> WasmString {
 /// # Safety
 ///
 #[no_mangle]
-pub unsafe extern "C" fn echo(input: *const c_char) {
-    let input = CStr::from_ptr(input).to_str().unwrap();
-    println!("echo = {input}");
-}
-
-///
-/// # Safety
-///
-#[no_mangle]
 pub unsafe extern "C" fn compile(input: *const c_char, lib: *const c_char) -> *const CompileResult {
     let input = CStr::from_ptr(input).to_str().unwrap();
     let lib = CStr::from_ptr(lib).to_str().unwrap();
@@ -116,11 +107,6 @@ pub unsafe extern "C" fn parse(c_buf: *const c_char) -> *const WasmString {
     let result = format!("{root:#?}");
 
     Box::into_raw(Box::new(string_to_wasm_string(&result)))
-}
-
-#[no_mangle]
-pub extern "C" fn print_hello() {
-    println!("Hello, world!");
 }
 
 #[no_mangle]

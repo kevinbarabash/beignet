@@ -82,10 +82,10 @@
   resolved "https://registry.yarnpkg.com/@types/scheduler/-/scheduler-0.16.2.tgz#1a62f89525723dde24ba1b01b092bf5df8ad4d39"
   integrity sha512-hppQEBDmlwhFAXKJX2KnWLYu5yMfi91yazPb2l+lbJiwW+wdo1gNeRA+3RgNSO39WYX2euey41KEwnqesU2Jew==
 
-"@wasmer/wasi@^1.1.0":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@wasmer/wasi/-/wasi-1.1.0.tgz#713ef514e13fd9b8ab3e98236fe807c7542ad01a"
-  integrity sha512-dM4mBw79HMMcRK9jdcBWIq52V+3fNeBD38V5yQOJSlAR3fP8MMSfjwR2qOtcpQ4dwlzfW1peAjHwa64l9ABVXQ==
+"@wasmer/wasi@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@wasmer/wasi/-/wasi-1.1.1.tgz#0c99dd9f27991a785f55f216048e679e0492b2ba"
+  integrity sha512-RASwlTETKAG4ZfwneMTPGF6ostGQoesNTaLikPlDSpZ7mYY00mKZDvHwKwUS1EtherpOw7BTr8HDZu52xazlwg==
 
 "@webassemblyjs/ast@1.11.1":
   version "1.11.1"
