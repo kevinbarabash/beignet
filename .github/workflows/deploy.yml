@@ -13,6 +13,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Install wasi-sdk
+        run: |
+          export WASI_VERSION=16
+          export WASI_VERSION_FULL=${WASI_VERSION}.0
+          wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_VERSION}/wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz
+          tar xvf wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz
+          export WASI_SDK_PATH=`pwd`/wasi-sdk-${WASI_VERSION_FULL}
+          echo "$WASI_SDK_PATH/bin" >> $GITHUB_PATH
+
+      - name: Install wasm32-wasi target for rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-wasi
+
       - name: Cache
         uses: actions/cache@v3
         with:
@@ -21,11 +36,15 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
+            node_modules/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-build-wasm
 
       - name: Install Dependencies
-        run: yarn
+        run: yarn install --frozen-lockfile
+
+      - name: Build .wasm Bundle
+        run: yarn build-wasm
 
       - name: Build Demo
         run: yarn build

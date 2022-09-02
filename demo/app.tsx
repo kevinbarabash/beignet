@@ -1,11 +1,11 @@
 import * as React from "react";
 
 import libPath from "../node_modules/typescript/lib/lib.es5.d.ts";
+import crochetWasmPath from "../target/wasm32-wasi/release/crochet.wasm";
 
 import Dropdown from "./dropdown";
 import { getPermalinkHref } from "./util";
-
-type Crochet = typeof import("../crates/crochet/pkg");
+import { loadWasm, Compiler, CompilerResult } from "./wasm";
 
 const DEFAULT_CODE = `
 // Welcome to the Crochet Playground!
@@ -22,34 +22,31 @@ export const App = () => {
       ? window.atob(window.decodeURIComponent(code))
       : DEFAULT_CODE.trim();
   });
-  let [crochet, setCrochet] = React.useState<Crochet | null>(null);
+  let [crochet, setCrochet] = React.useState<Compiler | null>(null);
   let [outputTab, setOutputTab] = React.useState<"js" | "dts">("js");
-  let [lib, setLib] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    import("../crates/crochet/pkg").then(setCrochet);
-  }, []);
 
   React.useEffect(() => {
     fetch(libPath)
       .then((res) => res.text())
-      .then((text) => {
-        setLib(text);
+      .then((lib) => {
+        // TODO: fetch crochet code in parallel with fetch lib src
+        loadWasm(crochetWasmPath, lib).then((compiler) => {
+          setCrochet(compiler);
+        });
       });
   }, []);
 
-  let output = React.useMemo(() => {
+  let output = React.useMemo<CompilerResult>(() => {
     try {
-      if (crochet && lib) {
-        return crochet.compile(source, lib);
+      if (crochet) {
+        return crochet.compile(source);
       } else {
-        return { js: "", dts: "" };
+        return { type: "ok", data: { js: "", dts: "" } };
       }
     } catch (e) {
-      console.log(e);
-      return { js: "", dts: "" };
+      return { type: "err", error: (e as Error).message };
     }
-  }, [source, crochet, lib]);
+  }, [source, crochet]);
 
   const updateSource = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setSource(e.target.value);
@@ -143,7 +140,7 @@ export const App = () => {
         />
         <textarea
           style={styles.editor}
-          value={output[outputTab]}
+          value={output.type === "ok" ? output.data[outputTab] : output.error}
           readOnly={true}
         />
       </div>

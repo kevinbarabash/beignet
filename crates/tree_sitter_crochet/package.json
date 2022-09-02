@@ -1,0 +1,17 @@
+{
+  "name": "crochet_tree_sitter",
+  "version": "0.0.1",
+  "main": "bindings/node",
+  "license": "MIT",
+  "devDependencies": {
+    "nan": "^2.16.0",
+    "node-gyp": "^9.1.0",
+    "tree-sitter-cli": "^0.20.6"
+  },
+  "scripts": {
+    "build": "tree-sitter generate && node-gyp build",
+    "build-wasm": "tree-sitter build-wasm",
+    "playground": "tree-sitter playground",
+    "test": "tree-sitter test"
+  }
+}

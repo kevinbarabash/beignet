@@ -3,9 +3,11 @@
 members = [
     "crates/crochet",
     "crates/crochet_ast",
+    "crates/crochet_cli",
     "crates/crochet_codegen",
     "crates/crochet_dts",
     "crates/crochet_infer",
     "crates/crochet_parser",
+    "crates/tree_sitter_crochet",
     "crates/crochet_types",
 ]
