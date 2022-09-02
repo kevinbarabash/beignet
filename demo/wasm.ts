@@ -12,10 +12,10 @@ const encodeString = (str: string) => {
   return buf;
 };
 
-const decodeString = (memory: WebAssembly.Memory, offsetAndLength: number) => {
+const decodeString = (memory: WebAssembly.Memory, offsetThenLength: number) => {
   const view = new DataView(memory.buffer);
-  const offset = view.getUint32(offsetAndLength, true);
-  const length = view.getUint32(offsetAndLength + 4, true);
+  const offset = view.getUint32(offsetThenLength, true);
+  const length = view.getUint32(offsetThenLength + 4, true);
 
   const stringView = new DataView(memory.buffer, offset, length);
   return new TextDecoder().decode(stringView);
@@ -23,7 +23,7 @@ const decodeString = (memory: WebAssembly.Memory, offsetAndLength: number) => {
 
 const stringToCString = (
   memory: WebAssembly.Memory,
-  allocate: Function,
+  allocate: (size: number) => number,
   str: string
 ): { ptr: any; size: number } => {
   const buf = encodeString(str);
@@ -43,7 +43,10 @@ export interface Compiler {
   compile(input: string): CompilerResult;
 }
 
-export const loadWasm = async (url: string, lib: string): Promise<Compiler> => {
+export const loadWasm = async (
+  url: string,
+  libCode: string
+): Promise<Compiler> => {
   await init(null);
 
   const wasi = new WASI({});
@@ -56,27 +59,34 @@ export const loadWasm = async (url: string, lib: string): Promise<Compiler> => {
   const instance = await WebAssembly.instantiate(wasm, imports);
   wasi.start(instance);
 
-  const { parse, print_hello, echo } = instance.exports;
-
   const memory = instance.exports.memory as WebAssembly.Memory;
-  const allocate = instance.exports.allocate as (size: number) => any;
+  const allocate = instance.exports.allocate as (size: number) => number;
   const deallocate = instance.exports.allocate as (
-    ptr: any,
+    ptr: number,
     size: number
   ) => void;
-  const compile = instance.exports.compile as Function;
 
-  let libPtr = stringToCString(memory, allocate, lib);
+  const parse = instance.exports.parse as (inputPtr: number) => number;
+  const input = stringToCString(memory, allocate, "x := 1 * 2 + 5 - 4");
+  const output = decodeString(memory, parse(input.ptr));
+  console.log(`parse("x := 1 * 2 + 5 - 4") = ${output}`);
+  deallocate(input.ptr, input.size);
+
+  const compile = instance.exports.compile as (
+    inputPtr: number,
+    libPtr: number
+  ) => number;
+
+  const lib = stringToCString(memory, allocate, libCode);
 
   return {
     compile: (code) => {
-      // TODO: deallocate inputPtr before returning
-      let input = stringToCString(memory, allocate, code);
-      let outPtr = compile(input.ptr, libPtr);
+      const input = stringToCString(memory, allocate, code);
+      const outPtr = compile(input.ptr, lib.ptr);
 
-      let js = decodeString(memory, outPtr);
-      let dts = decodeString(memory, outPtr + 8);
-      let error = decodeString(memory, outPtr + 16);
+      const js = decodeString(memory, outPtr);
+      const dts = decodeString(memory, outPtr + 8);
+      const error = decodeString(memory, outPtr + 16);
 
       deallocate(input.ptr, input.size);
 

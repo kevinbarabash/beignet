@@ -9,9 +9,8 @@
     "tree-sitter-cli": "^0.20.6"
   },
   "scripts": {
-    "build": "tree-sitter generate && node-gyp build",
-    "build-wasm": "tree-sitter build-wasm",
-    "playground": "tree-sitter playground",
+    "generate": "tree-sitter generate",
+    "playground": "tree-sitter build-wasm && tree-sitter playground",
     "test": "tree-sitter test"
   }
 }

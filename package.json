@@ -4,6 +4,7 @@
   "license": "MIT",
   "scripts": {
     "build-wasm": "cd crates/crochet && cargo build --target wasm32-wasi --release",
+    "watch-wasm": "cargo watch -- cargo build --target wasm32-wasi --release",
     "build": "webpack && cp scarf.png build",
     "serve": "webpack serve"
   },
