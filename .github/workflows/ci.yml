@@ -52,11 +52,20 @@ jobs:
       - name: Install node_modules
         run: yarn install --frozen-lockfile
 
-      - name: yarn build-wasm
-        run: |
-          echo $PATH
-          clang --version
-          yarn build-wasm
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            node_modules/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-build-wasm
+
+      - name: Build .wasm Bundle
+        run: yarn build-wasm
 
   test:
     name: Test
