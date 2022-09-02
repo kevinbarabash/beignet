@@ -41,9 +41,7 @@ jobs:
           wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_VERSION}/wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz
           tar xvf wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz
           export WASI_SDK_PATH=`pwd`/wasi-sdk-${WASI_VERSION_FULL}
-          export PATH=${WASI_SDK_PATH}/bin:$PATH
-          echo $PATH
-          clang --version
+          echo "::set-env name=WASI_SDK_PATH::$WASI_SDK_PATH"
 
       - name: Install wasm32-wasi target for rust
         uses: actions-rs/toolchain@v1
@@ -56,6 +54,7 @@ jobs:
 
       - name: yarn build-wasm
         run: |
+          export PATH=${WASI_SDK_PATH}/bin:$PATH
           echo $PATH
           clang --version
           yarn build-wasm
