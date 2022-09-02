@@ -42,6 +42,8 @@ jobs:
           tar xvf wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz
           export WASI_SDK_PATH=`pwd`/wasi-sdk-${WASI_VERSION_FULL}
           export PATH=${WASI_SDK_PATH}/bin:$PATH
+          echo $PATH
+          clang --version
 
       - name: Install wasm32-wasi target for rust
         uses: actions-rs/toolchain@v1
@@ -53,7 +55,10 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: yarn build-wasm
-        run: yarn build-wasm
+        run: |
+          echo $PATH
+          clang --version
+          yarn build-wasm
 
   test:
     name: Test
