@@ -35,12 +35,13 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install wasi-sdk
-        run: export WASI_VERSION=16
-        run: export WASI_VERSION_FULL=${WASI_VERSION}.0
-        run: wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_VERSION}/wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz
-        run: tar xvf wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz
-        run: export WASI_SDK_PATH=`pwd`/wasi-sdk-${WASI_VERSION_FULL}
-        run: export PATH=${WASI_SDK_PATH}/bin:$PATH
+        run: |
+          export WASI_VERSION=16
+          export WASI_VERSION_FULL=${WASI_VERSION}.0
+          wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_VERSION}/wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz
+          tar xvf wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz
+          export WASI_SDK_PATH=`pwd`/wasi-sdk-${WASI_VERSION_FULL}
+          export PATH=${WASI_SDK_PATH}/bin:$PATH
 
       - name: Install wasm32-wasi target for rust
         uses: actions-rs/toolchain@v1
