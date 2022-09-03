@@ -16,7 +16,7 @@ fn test_can_parse_simple_expressions() {
         .set_language(language())
         .expect("Error loading crochet language");
 
-    let code = "x := 1 * 2 + 5 - 4";
+    let code = "const a = 1 + 2 * 3 - 4 / 5";
 
     let tree = parser.parse(code, None).unwrap();
     println!("tree = {tree:#?}");
