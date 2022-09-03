@@ -23,18 +23,35 @@ fn test_can_parse_simple_expressions() {
 
     let root = tree.root_node();
     println!("root = {root:#?}");
-    println!("child_count = {}", root.child_count());
+    println!("root.child_count = {}", root.child_count());
 
     let child = root.child(0).unwrap();
-    println!("child = {child:#?}");
+    println!("child[0] = {child:#?}");
+    println!("child.child_count = {}", child.child_count());
+
+    let grandchild = child.child(0).unwrap();
+    println!("child.child[0] = {grandchild:#?}");
+    println!("child.child.child_count = {}", grandchild.child_count());
+
+    let child = child.child(1).unwrap();
+    println!("child[1] = {child:#?}");
     println!("child_count = {}", child.child_count());
 
-    let child = child.child(0).unwrap();
-    println!("child = {child:#?}");
-    println!("child_count = {}", child.child_count());
+    let grandchild = child.child(0).unwrap();
+    println!("child.child[0] = {grandchild:#?}");
+    println!("child.child.child_count = {}", grandchild.child_count());
 
-    for i in 0..3 {
-        let child = child.child(i).unwrap();
-        println!("child[{i}] = {child:#?}");
-    }
+    let grandchild = child.child(1).unwrap();
+    println!("child.child[1] = {grandchild:#?}");
+    println!("child.child.child_count = {}", grandchild.child_count());
+    let range = grandchild.range();
+    let slice = code.get(range.start_byte..range.end_byte).unwrap();
+    println!("child.child[2] = {:#?}", slice);
+
+    let grandchild = child.child(2).unwrap();
+    println!("child.child[2] = {grandchild:#?}");
+    println!("child.child.child_count = {}", grandchild.child_count());
+    let range = grandchild.range();
+    let slice = code.get(range.start_byte..range.end_byte).unwrap();
+    println!("child.child[2] = {:#?}", slice);
 }
