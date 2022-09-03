@@ -290,9 +290,11 @@ version = "0.1.0"
 dependencies = [
  "crochet_ast",
  "insta",
+ "itertools",
  "pretty_assertions",
  "tree-sitter",
  "tree_sitter_crochet",
+ "unescape",
 ]
 
 [[package]]

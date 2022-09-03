@@ -1,3 +1,6 @@
+use itertools::free::join;
+use unescape::unescape;
+
 use crochet_ast::*;
 
 pub fn parse(src: &str) -> Result<Program, String> {
@@ -31,8 +34,45 @@ pub fn parse(src: &str) -> Result<Program, String> {
 fn parse_statement(node: &tree_sitter::Node, src: &str) -> Vec<Statement> {
     match node.kind() {
         "lexical_declaration" => parse_declaration(node, src),
+        "expression_statement" => {
+            let mut cursor = node.walk();
+            let expressions = node.children(&mut cursor);
+            expressions
+                .into_iter()
+                .map(|expr| {
+                    let expr = parse_expression(&expr, src);
+                    Statement::Expr {
+                        span: node.byte_range(),
+                        expr,
+                    }
+                })
+                .collect()
+        }
         _ => todo!("unhandled: {:#?}", node),
     }
+
+    // $.export_statement,
+    // $.import_statement,
+    // $.debugger_statement,
+    // $.expression_statement,
+    // $.declaration,
+    // $.statement_block,
+
+    // $.if_statement,
+    // $.switch_statement,
+    // $.for_statement,
+    // $.for_in_statement,
+    // $.while_statement,
+    // $.do_statement,
+    // $.try_statement,
+    // $.with_statement,
+
+    // $.break_statement,
+    // $.continue_statement,
+    // $.return_statement,
+    // $.throw_statement,
+    // $.empty_statement,
+    // $.labeled_statement
 }
 
 fn text_for_node(node: &tree_sitter::Node, src: &str) -> String {
@@ -175,6 +215,24 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                 right,
             })
         }
+        "unary_expression" => {
+            let operator = node.child_by_field_name("operator").unwrap();
+            let operator = text_for_node(&operator, src);
+            let arg = node.child_by_field_name("argument").unwrap();
+            let arg = Box::from(parse_expression(&arg, src));
+
+            // choice("!", "~", "-", "+", "typeof", "void", "delete")
+            let op = match operator.as_str() {
+                "-" => UnaryOp::Minus,
+                _ => todo!("Unhandle operator: {operator}"),
+            };
+
+            Expr::UnaryExpr(UnaryExpr {
+                span: node.byte_range(),
+                arg,
+                op,
+            })
+        }
         "call_expression" => {
             let func = node.child_by_field_name("function").unwrap();
             let func = parse_expression(&func, src);
@@ -212,12 +270,16 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             node.byte_range(),
         )),
         "string" => {
-            // TODO: interpret escapes to generate "cooked" version of string
-            let str_frag = node.child_by_field_name("string_fragment").unwrap();
-            Expr::Lit(Lit::str(
-                src.get(str_frag.byte_range()).unwrap().to_owned(),
-                node.byte_range(),
-            ))
+            let mut cursor = node.walk();
+            let raw = join(
+                node.named_children(&mut cursor)
+                    .into_iter()
+                    .map(|fragment_or_escape| text_for_node(&fragment_or_escape, src)),
+                "",
+            );
+
+            let cooked = unescape(&raw).unwrap();
+            Expr::Lit(Lit::str(cooked, node.byte_range()))
         }
         "true" => Expr::Lit(Lit::bool(true, node.byte_range())),
         "false" => Expr::Lit(Lit::bool(false, node.byte_range())),
@@ -226,6 +288,48 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             todo!("unhandled {node:#?} = '{}'", text_for_node(node, src))
         }
     }
+
+    // Expression
+
+    // $.primary_expression,
+    // $.glimmer_template,
+    // $._jsx_element,
+    // $.jsx_fragment,
+    // $.assignment_expression,
+    // $.augmented_assignment_expression,
+    // $.await_expression,
+    // $.unary_expression,
+    // $.binary_expression,
+    // $.ternary_expression,
+    // $.update_expression,
+    // $.new_expression,
+    // $.yield_expression
+
+    // Primary Expressions
+
+    // $.subscript_expression,
+    // $.member_expression,
+    // $.parenthesized_expression,
+    // $._identifier,
+    // alias($._reserved_identifier, $.identifier),
+    // $.this,
+    // $.super,
+    // $.number,
+    // $.string,
+    // $.template_string,
+    // $.regex,
+    // $.true,
+    // $.false,
+    // $.null,
+    // $.import,
+    // $.object,
+    // $.array,
+    // $.function,
+    // $.arrow_function,
+    // $.generator_function,
+    // $.class,
+    // $.meta_property,
+    // $.call_expression
 }
 
 #[cfg(test)]
@@ -237,6 +341,298 @@ mod tests {
         let src = r#"
         const add = (a, b) => a + b, sub = (a, b) => a - b;
         const sum = add(5, 10);
+        "#;
+        insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    fn numbers() {
+        insta::assert_debug_snapshot!(parse("10"));
+        insta::assert_debug_snapshot!(parse("1.23"));
+        insta::assert_debug_snapshot!(parse("-10"));
+    }
+
+    #[test]
+    fn strings() {
+        insta::assert_debug_snapshot!(parse(r#""""#));
+        insta::assert_debug_snapshot!(parse(r#""hello""#));
+        insta::assert_debug_snapshot!(parse("\"line 1\\nline 2\\nline 3\""));
+        insta::assert_debug_snapshot!(parse("\"a \\u2212 b\""));
+        insta::assert_debug_snapshot!(parse("\"hello, \\\"world\\\"!\""));
+    }
+
+    #[test]
+    #[ignore]
+    fn template_literals() {
+        insta::assert_debug_snapshot!(parse("`Hello, world`"));
+        insta::assert_debug_snapshot!(parse("`Hello, ${name}`"));
+        insta::assert_debug_snapshot!(parse("`(${x}, ${y})`"));
+        insta::assert_debug_snapshot!(parse("`Hello, \"world\"`"));
+        insta::assert_debug_snapshot!(parse("`foo ${`bar ${baz}`}`"));
+        insta::assert_debug_snapshot!(parse("sql`SELECT * FROM ${table} WHERE id = ${id}`"));
+        insta::assert_debug_snapshot!(parse("`line 1\\nline 2\\nline 3`"));
+        insta::assert_debug_snapshot!(parse("`a \\u2212 b`"));
+        insta::assert_debug_snapshot!(parse(r#"if cond { `${foo}` } else { `${bar}` }"#));
+    }
+
+    #[test]
+    #[ignore]
+    fn template_literal_with_mismatched_backtick() {
+        insta::assert_debug_snapshot!(parse("`foo ${bar`}`"));
+    }
+
+    #[test]
+    #[ignore]
+    fn interpolation_outside_of_template_literal() {
+        insta::assert_debug_snapshot!(parse("`foo ${bar}`${baz}`"));
+    }
+
+    #[test]
+    #[ignore]
+    fn operations() {
+        insta::assert_debug_snapshot!(parse("1 + 2 - 3"));
+        insta::assert_debug_snapshot!(parse("x * y / z"));
+        insta::assert_debug_snapshot!(parse("(a + b) * c"));
+        insta::assert_debug_snapshot!(parse("a == b"));
+        insta::assert_debug_snapshot!(parse("a != b"));
+        insta::assert_debug_snapshot!(parse("a > b"));
+        insta::assert_debug_snapshot!(parse("a >= b"));
+        insta::assert_debug_snapshot!(parse("a < b"));
+        insta::assert_debug_snapshot!(parse("a <= b"));
+        insta::assert_debug_snapshot!(parse("let cond = a != b"));
+        insta::assert_debug_snapshot!(parse("-a"));
+        insta::assert_debug_snapshot!(parse("-(a + b)"));
+    }
+
+    #[test]
+    #[ignore]
+    fn function_definition() {
+        insta::assert_debug_snapshot!(parse("(a, b) => c"));
+        insta::assert_debug_snapshot!(parse("() => 10"));
+        insta::assert_debug_snapshot!(parse("(a) => \"hello\""));
+        insta::assert_debug_snapshot!(parse("(a, ...b) => true"));
+        insta::assert_debug_snapshot!(parse("({x, y}) => x + y"));
+        insta::assert_debug_snapshot!(parse("({x: p, y: q}) => p + q"));
+        insta::assert_debug_snapshot!(parse("(a?: bool, b?) => c"));
+    }
+
+    #[test]
+    #[ignore]
+    fn multiple_rest_params() {
+        assert_eq!(
+            parse("(...a, ...b) => true"),
+            Err("rest params must come last".to_string())
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn optional_params_must_appear_last() {
+        assert_eq!(
+            parse("(a?, b) => true"),
+            Err("optional params must come last".to_string()),
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn async_await() {
+        insta::assert_debug_snapshot!(parse("async () => 10"));
+        insta::assert_debug_snapshot!(parse("let foo = async () => { await 10 }"));
+        insta::assert_debug_snapshot!(parse("let foo = async () => await a + await b"));
+        insta::assert_debug_snapshot!(parse("let foo = async () => await bar()"));
+    }
+
+    #[test]
+    #[ignore]
+    fn function_application() {
+        insta::assert_debug_snapshot!(parse("foo()"));
+        insta::assert_debug_snapshot!(parse("foo(a, b)"));
+        insta::assert_debug_snapshot!(parse("foo(10, \"hello\")"));
+        insta::assert_debug_snapshot!(parse("f(x)(g(x))"));
+        insta::assert_debug_snapshot!(parse("foo(a, ...b)"));
+        let src = r#"
+        let S = (f) => (g) => (x) => f(x)(g(x))
+        let K = (x) => (y) => x
+        let I = S(K)(K)
+        "#;
+        insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    #[ignore]
+    fn declarations() {
+        insta::assert_debug_snapshot!(parse("let x = 5"));
+        insta::assert_debug_snapshot!(parse("let x = (a, b) => a + b"));
+        insta::assert_debug_snapshot!(parse("let foo = {let x = 5; x}"));
+        insta::assert_debug_snapshot!(parse("let rec f = () => f()")); // recursive
+    }
+
+    #[test]
+    #[ignore]
+    fn top_level_expressions() {
+        insta::assert_debug_snapshot!(parse("a + b"));
+        insta::assert_debug_snapshot!(parse("123\n\"hello\""));
+    }
+
+    #[test]
+    #[ignore]
+    fn if_else() {
+        insta::assert_debug_snapshot!(parse("if true { 5 } else { 10 }"));
+        insta::assert_debug_snapshot!(parse("if a { 5 } else if b { 10 } else { 20 }"));
+    }
+
+    #[test]
+    #[ignore]
+    fn objects() {
+        insta::assert_debug_snapshot!(parse("{x: 5, y: 10}"));
+        insta::assert_debug_snapshot!(parse("let obj = {x, y}"));
+        insta::assert_debug_snapshot!(parse("let obj = {a, b, ...others}"));
+    }
+
+    #[test]
+    #[ignore]
+    fn jsx() {
+        insta::assert_debug_snapshot!(parse("<Foo>Hello</Foo>"));
+        insta::assert_debug_snapshot!(parse("<Foo>{bar}</Foo>"));
+        insta::assert_debug_snapshot!(parse("<Foo>Hello {world}!</Foo>"));
+        insta::assert_debug_snapshot!(parse("<Foo>{<Bar>{baz}</Bar>}</Foo>"));
+        insta::assert_debug_snapshot!(parse("<Foo></Foo>"));
+        insta::assert_debug_snapshot!(parse("<Foo bar={baz} />"));
+        insta::assert_debug_snapshot!(parse("<Foo msg=\"hello\" bar={baz}></Foo>"));
+        insta::assert_debug_snapshot!(parse("<Foo><Bar>{baz}</Bar></Foo>"));
+        insta::assert_debug_snapshot!(parse("<Foo>hello<Bar/>{world}<Baz/></Foo>"));
+        insta::assert_debug_snapshot!(parse(
+            "let elem = <div point={point} id=\"point\">Hello, {msg}</div>"
+        ));
+    }
+
+    #[test]
+    #[ignore]
+    fn jsx_head_and_tail_must_match() {
+        assert_eq!(
+            parse("<Foo>Hello</Bar>"),
+            Err("JSX head and tail elements must match".to_string()),
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn type_annotations() {
+        insta::assert_debug_snapshot!(parse("let x: number = 5"));
+        insta::assert_debug_snapshot!(parse("let msg: string = \"hello\""));
+        insta::assert_debug_snapshot!(parse("let add = (a: number, b: number) => a + b"));
+        insta::assert_debug_snapshot!(parse("let p: Point = {x: 5, y: 10}"));
+        insta::assert_debug_snapshot!(parse("let FOO: \"foo\" = \"foo\""));
+    }
+
+    #[test]
+    #[ignore]
+    fn decls() {
+        insta::assert_debug_snapshot!(parse("let x = 5"));
+        insta::assert_debug_snapshot!(parse("   let x = 5")); // with leading whitespace
+        insta::assert_debug_snapshot!(parse("declare let x: number"));
+        insta::assert_debug_snapshot!(parse("declare let foo: Foo<string>"));
+    }
+
+    #[test]
+    #[ignore]
+    fn tuples() {
+        insta::assert_debug_snapshot!(parse("let x = []"));
+        insta::assert_debug_snapshot!(parse("let x = [1, 2, 3]"));
+        insta::assert_debug_snapshot!(parse("let x = [1, [a, b]]"));
+        insta::assert_debug_snapshot!(parse("let foo = () => [a, b]"));
+    }
+
+    #[test]
+    #[ignore]
+    fn member_access() {
+        insta::assert_debug_snapshot!(parse("a.b.c"));
+        insta::assert_debug_snapshot!(parse("foo.bar()"));
+        insta::assert_debug_snapshot!(parse("p.x * p.x + p.y * p.y"));
+        insta::assert_debug_snapshot!(parse("foo().bar()"));
+        insta::assert_debug_snapshot!(parse("arr[0][1]"));
+        insta::assert_debug_snapshot!(parse("arr[x](y)"));
+        insta::assert_debug_snapshot!(parse("arr[arr.length - 1]"));
+        insta::assert_debug_snapshot!(parse("foo[bar[-1]]"));
+    }
+
+    #[test]
+    #[ignore]
+    fn type_decls() {
+        insta::assert_debug_snapshot!(parse("type Num = number"));
+        insta::assert_debug_snapshot!(parse("type Point = {x: number, y: number}"));
+        insta::assert_debug_snapshot!(parse("type Foo<T> = {bar: T}"));
+        insta::assert_debug_snapshot!(parse("type Foo<T extends string> = {bar: T}"));
+        insta::assert_debug_snapshot!(parse(r#"type Foo<T = "foo"> = {bar: T}"#));
+        insta::assert_debug_snapshot!(parse(r#"type Foo<T extends string = "foo"> = {bar: T}"#));
+    }
+
+    #[test]
+    #[ignore]
+    fn blocks() {
+        insta::assert_debug_snapshot!(parse("let foo = {let x = 5; x}"));
+        insta::assert_debug_snapshot!(parse("let foo = {let x = 5; let y = 10; x + y}"));
+        insta::assert_debug_snapshot!(parse("{let x = 5; let y = 10; x + y}"));
+        insta::assert_debug_snapshot!(parse("{let sum = {let x = 5; let y = 10; x + y}; sum}"));
+        insta::assert_debug_snapshot!(parse("let foo = {let x = 5; console.log(x); x}"));
+        insta::assert_debug_snapshot!(parse("let foo = {console.log(x); x}"));
+    }
+
+    #[test]
+    #[ignore]
+    fn destructuring() {
+        insta::assert_debug_snapshot!(parse("let {x, y} = point"));
+        insta::assert_debug_snapshot!(parse("let {a, b, ...rest} = letters"));
+        insta::assert_debug_snapshot!(parse("let {p0: {x, y}, p1: {x, y}} = line"));
+        insta::assert_debug_snapshot!(parse("let [a, b, ...rest] = letters"));
+        insta::assert_debug_snapshot!(parse("let [foo, ...[bar, ...rest]] = baz"));
+        insta::assert_debug_snapshot!(parse("let foo = ([a, b]) => a"));
+        insta::assert_debug_snapshot!(parse("let foo = ([a, b]: [string, number]) => a"));
+        insta::assert_debug_snapshot!(parse("let foo = ({a, b}) => b"));
+        insta::assert_debug_snapshot!(parse("let foo = ({a, b}: {a: string, b: number}) => b"));
+        insta::assert_debug_snapshot!(parse("let [_, b] = letters"));
+        // TODO: assigning defaults
+        // TODO: type annotations
+        // TODO: function params
+        // TODO: disallowed patterns, e.g. top-level rest, non-top-level type annotations
+    }
+
+    #[test]
+    #[ignore]
+    fn array_spread() {
+        insta::assert_debug_snapshot!(parse("let tuple = [...a, b]"));
+        insta::assert_debug_snapshot!(parse("let tuple = [a, ...b]"));
+        insta::assert_debug_snapshot!(parse("let tuple = [1, ...[2, 3]]"));
+    }
+
+    #[test]
+    #[ignore]
+    #[should_panic = "Only one rest is allowed in an object pattern"]
+    fn multiple_rests_is_invalid() {
+        insta::assert_debug_snapshot!(parse("let {z, ...p, ...q} = point"));
+    }
+
+    #[test]
+    #[ignore]
+    #[should_panic = "Rest should come last in object pattern"]
+    fn rest_that_isnt_last_is_invalid() {
+        insta::assert_debug_snapshot!(parse("let {...p, z} = point"));
+    }
+
+    #[test]
+    #[ignore]
+    fn types() {
+        insta::assert_debug_snapshot!(parse("let get_bar = <T>(foo: Foo<T>) => foo.bar"));
+        insta::assert_debug_snapshot!(parse("declare let get_bar: (foo: Foo) => T"));
+        insta::assert_debug_snapshot!(parse("let str_arr: string[] = []"));
+        insta::assert_debug_snapshot!(parse("let thunk_arr: (() => undefined)[] = []"));
+        insta::assert_debug_snapshot!(parse("let arr: string[] | number[] = []"));
+        insta::assert_debug_snapshot!(parse("let nested_arr: string[][] = []"));
+        let src = r#"
+        type Event = 
+          | {type: "mousedown", x: number, y: number}
+          | {type: "keydown", key: string}
         "#;
         insta::assert_debug_snapshot!(parse(src));
     }
