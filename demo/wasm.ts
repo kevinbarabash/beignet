@@ -67,9 +67,9 @@ export const loadWasm = async (
   ) => void;
 
   const parse = instance.exports.parse as (inputPtr: number) => number;
-  const input = stringToCString(memory, allocate, "x := 1 * 2 + 5 - 4");
+  const input = stringToCString(memory, allocate, "const x = 1 * 2 + 5 - 4");
   const output = decodeString(memory, parse(input.ptr));
-  console.log(`parse("x := 1 * 2 + 5 - 4") = ${output}`);
+  console.log(`parse("const x = 1 * 2 + 5 - 4") = ${output}`);
   deallocate(input.ptr, input.size);
 
   const compile = instance.exports.compile as (
