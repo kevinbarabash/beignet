@@ -1,0 +1,21 @@
+---
+source: crates/crochet_tree_sitter_parser/src/lib.rs
+expression: "parse(\"\\\"line 1\\\\nline 2\\\\nline 3\\\"\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..24,
+                expr: Lit(
+                    Str(
+                        Str {
+                            span: 0..24,
+                            value: "line 1\nline 2\nline 3",
+                        },
+                    ),
+                ),
+            },
+        ],
+    },
+)
