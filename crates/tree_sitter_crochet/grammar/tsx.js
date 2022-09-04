@@ -861,7 +861,7 @@ module.exports = grammar(require("./js"), {
         "symbol",
         "void",
         "unknown",
-        "string",
+        "string", // TODO: remove duplicates from choice()
         "never",
         "object"
       ),

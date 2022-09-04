@@ -953,6 +953,7 @@ module.exports = grammar({
         )
       ),
 
+    // TODO: remove sequence expressions
     sequence_expression: ($) =>
       seq(
         field("left", $.expression),

@@ -123,7 +123,7 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
     }
 }
 
-fn parse_func_param(node: &tree_sitter::Node, src: &str) -> EFnParamPat {
+fn parse_func_param_pattern(node: &tree_sitter::Node, src: &str) -> EFnParamPat {
     match node.kind() {
         "identifier" => {
             let span = node.byte_range();
@@ -133,9 +133,72 @@ fn parse_func_param(node: &tree_sitter::Node, src: &str) -> EFnParamPat {
                 id: Ident { span, name },
             })
         }
-        "object_pattern" => todo!(),
+        "object_pattern" => {
+            let mut cursor = node.walk();
+            let props = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|child| match child.kind() {
+                    "pair_pattern" => {
+                        // NOTE: _property_name is defined as:
+                        // choice(
+                        //   alias(
+                        //     choice($.identifier, $._reserved_identifier),
+                        //     $.property_identifier
+                        //   ),
+                        //   $.private_property_identifier,
+                        //   $.string,
+                        //   $.number,
+                        //   $.computed_property_name
+                        // ),
+                        // TODO: handle more than just "identifier"
+                        let key_node = child.child_by_field_name("key").unwrap();
+                        let key = Ident {
+                            span: key_node.byte_range(),
+                            name: text_for_node(&key_node, src),
+                        };
+                        // value is choice($.pattern, $.assignment_pattern)
+                        // TODO: handle assignment_pattern
+                        let value = Box::from(parse_func_param_pattern(
+                            &child.child_by_field_name("value").unwrap(),
+                            src,
+                        ));
+                        EFnParamObjectPatProp::KeyValue(EFnParamKeyValuePatProp { key, value })
+                    }
+                    "rest_pattern" => {
+                        // TODO: dedup with "rest_pattern" arm below
+                        let arg = node.child(1).unwrap(); // child(0) is the '...'
+                        EFnParamObjectPatProp::Rest(EFnParamRestPat {
+                            span: node.byte_range(),
+                            arg: Box::from(parse_func_param_pattern(&arg, src)),
+                        })
+                    }
+                    "object_assign_pattern" => todo!(),
+                    "shorthand_property_identifier_pattern" => {
+                        // alias of choice($.identifier, $._reserved_identifier),
+                        let key = Ident {
+                            span: child.byte_range(),
+                            name: text_for_node(&child, src),
+                        };
+                        EFnParamObjectPatProp::Assign(EFnParamAssignPatProp { key, value: None })
+                    }
+                    kind => panic!("Unexpected object_pattern prop kind: {kind}"),
+                })
+                .collect();
+
+            EFnParamPat::Object(EFnParamObjectPat {
+                span: node.byte_range(),
+                props,
+            })
+        }
         "array_pattern" => todo!(),
-        "rest_pattern" => todo!(),
+        "rest_pattern" => {
+            let arg = node.child(1).unwrap(); // child(0) is the '...'
+            EFnParamPat::Rest(EFnParamRestPat {
+                span: node.byte_range(),
+                arg: Box::from(parse_func_param_pattern(&arg, src)),
+            })
+        }
         _ => panic!("unrecognized pattern {node:#?}"),
     }
 }
@@ -152,11 +215,15 @@ fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Vec<EFnParam>
                 "optional_parameter" => true,
                 kind => panic!("Unexpected param kind: {kind}"),
             };
-            let name = param.child(0).unwrap();
+            let pattern = param.child_by_field_name("pattern").unwrap();
+            let type_ann = param.child_by_field_name("type").map(|type_ann| {
+                let t = type_ann.named_child(0).unwrap();
+                parse_type_ann(&t, src)
+            });
 
             EFnParam {
-                pat: parse_func_param(&name, src),
-                type_ann: None,
+                pat: parse_func_param_pattern(&pattern, src),
+                type_ann,
                 optional,
                 mutable: false,
             }
@@ -203,8 +270,32 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             let right = Box::from(parse_expression(&right, src));
 
             let op = match operator.as_str() {
+                "&&" => todo!(),
+                "||" => todo!(),
+                // TODO: decide what to do with bitwise operators
+                ">>" => todo!(),
+                ">>>" => todo!(),
+                "<<" => todo!(),
+                "&" => todo!(),
+                "^" => todo!(),
+                "|" => todo!(),
                 "+" => BinOp::Add,
                 "-" => BinOp::Sub,
+                "*" => BinOp::Mul,
+                "/" => BinOp::Div,
+                "%" => todo!(),
+                "**" => todo!(),
+                "<" => BinOp::Lt,
+                "<=" => BinOp::LtEq,
+                "==" => BinOp::EqEq,
+                "===" => todo!("remove ==="),
+                "!=" => BinOp::NotEq,
+                "!==" => todo!("remove !=="),
+                ">=" => BinOp::GtEq,
+                ">" => BinOp::Gt,
+                "??" => todo!(),
+                "instanceof" => todo!(),
+                "in" => todo!(),
                 _ => todo!("Unhandle operator: {operator}"),
             };
 
@@ -232,6 +323,10 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                 arg,
                 op,
             })
+        }
+        "parenthesized_expression" => {
+            let expr = node.child(1).unwrap();
+            parse_expression(&expr, src)
         }
         "call_expression" => {
             let func = node.child_by_field_name("function").unwrap();
@@ -332,6 +427,107 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
     // $.call_expression
 }
 
+fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
+    match node.kind() {
+        // Primary types
+        "parenthesized_type" => todo!(),
+        "predefined_type" => match text_for_node(node, src).as_str() {
+            "any" => todo!("remove support for 'any'"),
+            "number" => TypeAnn::Prim(PrimType {
+                span: node.byte_range(),
+                prim: Primitive::Num,
+            }),
+            "boolean" => TypeAnn::Prim(PrimType {
+                span: node.byte_range(),
+                prim: Primitive::Bool,
+            }),
+            "string" => TypeAnn::Prim(PrimType {
+                span: node.byte_range(),
+                prim: Primitive::Str,
+            }),
+            "symbol" => todo!(),
+            "void" => todo!(),
+            "unknown" => todo!(),
+            "never" => todo!(),
+            "object" => todo!("remove support for 'object'"),
+            name => panic!("Unkwnown predefined_type: '{name}'"),
+        },
+        "type_identifier" => TypeAnn::TypeRef(TypeRef {
+            span: node.byte_range(),
+            name: text_for_node(node, src),
+            type_params: None,
+        }),
+        "nested_type_identifier" => todo!(),
+        "generic_type" => {
+            let name = node.child_by_field_name("name").unwrap();
+            let type_arguments = node.child_by_field_name("type_arguments").unwrap();
+            let mut cursor = type_arguments.walk();
+            let type_params = type_arguments
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|arg| parse_type_ann(&arg, src))
+                .collect();
+
+            TypeAnn::TypeRef(TypeRef {
+                span: node.byte_range(),
+                name: text_for_node(&name, src),
+                type_params: Some(type_params),
+            })
+        }
+        "object_type" => todo!(),
+        "array_type" => todo!(),
+        "tuple_type" => todo!(),
+        "flow_maybe_type" => todo!(),
+        "type_query" => todo!(),
+        "index_type_query" => todo!(),
+        // alias($.this, $.this_type),
+        "existential_type" => todo!(),
+        "literal_type" => todo!(),
+        "lookup_type" => todo!(),
+        "conditional_type" => todo!(),
+        "template_literal_type" => todo!(),
+        "intersection_type" => todo!(),
+        "union_type" => todo!(),
+
+        // Non-primary types
+        "function_type" => todo!(),
+        "readonly_type" => todo!(),
+        "constructor_type" => todo!(),
+        "infer_type" => todo!(),
+
+        kind => panic!("Unexpected type_annotation kind: '{kind}'"),
+    }
+
+    // _primary_type: ($) =>
+    // choice(
+    //   $.parenthesized_type,
+    //   $.predefined_type,
+    //   $._type_identifier,
+    //   $.nested_type_identifier,
+    //   $.generic_type,
+    //   $.object_type,
+    //   $.array_type,
+    //   $.tuple_type,
+    //   $.flow_maybe_type,
+    //   $.type_query,
+    //   $.index_type_query,
+    //   alias($.this, $.this_type),
+    //   $.existential_type,
+    //   $.literal_type,
+    //   $.lookup_type,
+    //   $.conditional_type,
+    //   $.template_literal_type,
+    //   $.intersection_type,
+    //   $.union_type
+    // ),
+
+    // $._primary_type,
+    // $.function_type,
+    // $.readonly_type,
+    // $.constructor_type,
+    // $.infer_type
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -388,7 +584,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn operations() {
         insta::assert_debug_snapshot!(parse("1 + 2 - 3"));
         insta::assert_debug_snapshot!(parse("x * y / z"));
@@ -405,7 +600,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn function_definition() {
         insta::assert_debug_snapshot!(parse("(a, b) => c"));
         insta::assert_debug_snapshot!(parse("() => 10"));
@@ -413,7 +607,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("(a, ...b) => true"));
         insta::assert_debug_snapshot!(parse("({x, y}) => x + y"));
         insta::assert_debug_snapshot!(parse("({x: p, y: q}) => p + q"));
-        insta::assert_debug_snapshot!(parse("(a?: bool, b?) => c"));
+        insta::assert_debug_snapshot!(parse("(a?: boolean, b?) => c"));
     }
 
     #[test]
