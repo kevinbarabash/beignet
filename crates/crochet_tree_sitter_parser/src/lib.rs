@@ -91,17 +91,20 @@ fn parse_declaration(node: &tree_sitter::Node, src: &str) -> Vec<Statement> {
 
 fn parse_declarator(node: &tree_sitter::Node, src: &str) -> Statement {
     let name = node.child_by_field_name("name").unwrap();
-    let name = parse_pattern(&name, src);
+    let pattern = parse_pattern(&name, src);
 
-    // We skip index:1 because that's the '='
-    let init = node.child(2).unwrap();
-    let init = parse_expression(&init, src);
+    let init = node.child_by_field_name("value").unwrap();
+    let init = Some(parse_expression(&init, src));
+
+    let type_ann = node
+        .child_by_field_name("type")
+        .map(|type_ann| parse_type_ann(&type_ann, src));
 
     Statement::VarDecl {
         span: node.byte_range(),
-        pattern: name,
-        type_ann: None,
-        init: Some(init),
+        pattern,
+        type_ann,
+        init,
         declare: false,
     }
 }
@@ -216,10 +219,9 @@ fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Vec<EFnParam>
                 kind => panic!("Unexpected param kind: {kind}"),
             };
             let pattern = param.child_by_field_name("pattern").unwrap();
-            let type_ann = param.child_by_field_name("type").map(|type_ann| {
-                let t = type_ann.named_child(0).unwrap();
-                parse_type_ann(&t, src)
-            });
+            let type_ann = param
+                .child_by_field_name("type")
+                .map(|type_ann| parse_type_ann(&type_ann, src));
 
             EFnParam {
                 pat: parse_func_param_pattern(&pattern, src),
@@ -234,11 +236,8 @@ fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Vec<EFnParam>
 fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
     match node.kind() {
         "arrow_function" => {
-            let is_async = match node.child_count() {
-                3 => false,
-                4 => true,
-                _ => panic!("incorrect child_count for arrow function"),
-            };
+            let first_child = node.child(0).unwrap();
+            let is_async = text_for_node(&first_child, src) == *"async";
 
             // TODO: check if the body is a statement_block otherwise parse
             // as a simple expression
@@ -251,6 +250,10 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             let params = node.child_by_field_name("parameters").unwrap();
             let params = parse_formal_parameters(&params, src);
 
+            let return_type = node
+                .child_by_field_name("return_type")
+                .map(|return_type| parse_type_ann(&return_type, src));
+
             // TODO: report an error if there are multiple rest params
 
             Expr::Lambda(Lambda {
@@ -258,7 +261,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                 params,
                 is_async,
                 body: Box::from(body),
-                return_type: None,
+                return_type,
                 type_params: None,
             })
         }
@@ -371,25 +374,10 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             let name = src.get(span.clone()).unwrap().to_owned();
             Expr::Ident(Ident { span, name })
         }
-        "number" => Expr::Lit(Lit::num(
-            src.get(node.byte_range()).unwrap().to_owned(),
-            node.byte_range(),
-        )),
-        "string" => {
-            let mut cursor = node.walk();
-            let raw = join(
-                node.named_children(&mut cursor)
-                    .into_iter()
-                    .map(|fragment_or_escape| text_for_node(&fragment_or_escape, src)),
-                "",
-            );
-
-            let cooked = unescape(&raw).unwrap();
-            Expr::Lit(Lit::str(cooked, node.byte_range()))
+        "number" | "string" | "true" | "false" | "null" | "undefined" => {
+            let lit = parse_literal(node, src);
+            Expr::Lit(lit)
         }
-        "true" => Expr::Lit(Lit::bool(true, node.byte_range())),
-        "false" => Expr::Lit(Lit::bool(false, node.byte_range())),
-        // TODO: handle null and undefined
         "object" => {
             let mut cursor = node.walk();
             let props = node
@@ -498,10 +486,11 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
 }
 
 fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
+    let node = node.named_child(0).unwrap();
     match node.kind() {
         // Primary types
         "parenthesized_type" => todo!(),
-        "predefined_type" => match text_for_node(node, src).as_str() {
+        "predefined_type" => match text_for_node(&node, src).as_str() {
             "any" => todo!("remove support for 'any'"),
             "number" => TypeAnn::Prim(PrimType {
                 span: node.byte_range(),
@@ -524,7 +513,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         },
         "type_identifier" => TypeAnn::TypeRef(TypeRef {
             span: node.byte_range(),
-            name: text_for_node(node, src),
+            name: text_for_node(&node, src),
             type_params: None,
         }),
         "nested_type_identifier" => todo!(),
@@ -552,7 +541,11 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         "index_type_query" => todo!(),
         // alias($.this, $.this_type),
         "existential_type" => todo!(),
-        "literal_type" => todo!(),
+        "literal_type" => {
+            let child = node.named_child(0).unwrap();
+            let lit = parse_literal(&child, src);
+            TypeAnn::Lit(lit)
+        }
         "lookup_type" => todo!(),
         "conditional_type" => todo!(),
         "template_literal_type" => todo!(),
@@ -596,6 +589,32 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
     // $.readonly_type,
     // $.constructor_type,
     // $.infer_type
+}
+
+fn parse_literal(node: &tree_sitter::Node, src: &str) -> Lit {
+    match node.kind() {
+        "number" => Lit::num(
+            src.get(node.byte_range()).unwrap().to_owned(),
+            node.byte_range(),
+        ),
+        "string" => {
+            let mut cursor = node.walk();
+            let raw = join(
+                node.named_children(&mut cursor)
+                    .into_iter()
+                    .map(|fragment_or_escape| text_for_node(&fragment_or_escape, src)),
+                "",
+            );
+
+            let cooked = unescape(&raw).unwrap();
+            Lit::str(cooked, node.byte_range())
+        }
+        "true" => Lit::bool(true, node.byte_range()),
+        "false" => Lit::bool(false, node.byte_range()),
+        "null" => todo!(),
+        "undefined" => todo!(),
+        kind => panic!("Unexpected literal kind: '{kind}'"),
+    }
 }
 
 #[cfg(test)]
@@ -778,11 +797,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn type_annotations() {
         insta::assert_debug_snapshot!(parse("let x: number = 5"));
         insta::assert_debug_snapshot!(parse("let msg: string = \"hello\""));
-        insta::assert_debug_snapshot!(parse("let add = (a: number, b: number) => a + b"));
+        insta::assert_debug_snapshot!(parse("let add = (a: number, b: number): number => a + b"));
         insta::assert_debug_snapshot!(parse("let p: Point = {x: 5, y: 10}"));
         insta::assert_debug_snapshot!(parse("let FOO: \"foo\" = \"foo\""));
     }
