@@ -808,8 +808,45 @@ fn parse_literal(node: &tree_sitter::Node, src: &str) -> Lit {
     }
 }
 
+fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Vec<JSXAttr> {
+    let mut cursor = node.walk();
+    let attrs = node.children_by_field_name("attribute", &mut cursor);
+    attrs
+        .into_iter()
+        .map(|attr| {
+            let ident = attr.named_child(0).unwrap();
+            let ident = Ident {
+                span: ident.byte_range(),
+                name: text_for_node(&ident, src),
+            };
+            // TODO: handle JSX attr shorthand
+            let value = attr.named_child(1).unwrap();
+            let value = match value.kind() {
+                "jsx_expression" => {
+                    // TODO: handle None case
+                    let expr = value.named_child(0).unwrap();
+                    let expr = parse_expression(&expr, src);
+                    JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                        span: value.byte_range(),
+                        expr,
+                    })
+                }
+                "string" => {
+                    let lit = parse_literal(&value, src);
+                    JSXAttrValue::Lit(lit)
+                }
+                kind => panic!("Unexpected JSX attr value with kind: '{kind}'"),
+            };
+            JSXAttr {
+                span: attr.byte_range(),
+                ident,
+                value,
+            }
+        })
+        .collect()
+}
+
 fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> JSXElement {
-    println!("parse_jsx_element()");
     match node.kind() {
         "jsx_element" => {
             let mut cursor = node.walk();
@@ -842,93 +879,21 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> JSXElement {
                 .collect();
 
             let open_tag = node.child_by_field_name("open_tag").unwrap();
-            let attrs = open_tag.children_by_field_name("attribute", &mut cursor);
-            // TODO: dedupe attr parsing with jsx_self_closing_element
-            let attrs: Vec<JSXAttr> = attrs
-                .into_iter()
-                .map(|attr| {
-                    let ident = attr.named_child(0).unwrap();
-                    let ident = Ident {
-                        span: ident.byte_range(),
-                        name: text_for_node(&ident, src),
-                    };
-                    // TODO: handle JSX attr shorthand
-                    let value = attr.named_child(1).unwrap();
-                    let value = match value.kind() {
-                        "jsx_expression" => {
-                            // TODO: handle None case
-                            let expr = value.named_child(0).unwrap();
-                            let expr = parse_expression(&expr, src);
-                            JSXAttrValue::JSXExprContainer(JSXExprContainer {
-                                span: value.byte_range(),
-                                expr,
-                            })
-                        }
-                        "string" => {
-                            let lit = parse_literal(&value, src);
-                            JSXAttrValue::Lit(lit)
-                        }
-                        kind => panic!("Unexpected JSX attr value with kind: '{kind}'"),
-                    };
-                    JSXAttr {
-                        span: attr.byte_range(),
-                        ident,
-                        value,
-                    }
-                })
-                .collect();
             let name = open_tag.child_by_field_name("name").unwrap();
 
             JSXElement {
                 span: node.byte_range(),
                 name: text_for_node(&name, src),
-                attrs,
+                attrs: parse_jsx_attrs(&open_tag, src),
                 children,
             }
         }
         "jsx_self_closing_element" => {
-            let mut cursor = node.walk();
             let name = node.child_by_field_name("name").unwrap();
-            // TODO: dedupe attr parsing with jsx_element
-            let attrs = node.children_by_field_name("attribute", &mut cursor);
-            let attrs: Vec<JSXAttr> = attrs
-                .into_iter()
-                .map(|attr| {
-                    let ident = attr.named_child(0).unwrap();
-                    let ident = Ident {
-                        span: ident.byte_range(),
-                        name: text_for_node(&ident, src),
-                    };
-                    // TODO: handle JSX attr shorthand
-                    let value = attr.named_child(1).unwrap();
-                    let value = match value.kind() {
-                        "jsx_expression" => {
-                            // TODO: handle None case
-                            let expr = value.named_child(0).unwrap();
-                            let expr = parse_expression(&expr, src);
-                            JSXAttrValue::JSXExprContainer(JSXExprContainer {
-                                span: value.byte_range(),
-                                expr,
-                            })
-                        }
-                        "string" => {
-                            let lit = parse_literal(&value, src);
-                            JSXAttrValue::Lit(lit)
-                        }
-                        kind => panic!("Unexpected JSX attr value with kind: '{kind}'"),
-                    };
-                    JSXAttr {
-                        span: attr.byte_range(),
-                        ident,
-                        value,
-                    }
-                })
-                .collect();
-
             JSXElement {
                 span: node.byte_range(),
                 name: text_for_node(&name, src),
-                attrs,
+                attrs: parse_jsx_attrs(node, src),
                 children: vec![],
             }
         }
