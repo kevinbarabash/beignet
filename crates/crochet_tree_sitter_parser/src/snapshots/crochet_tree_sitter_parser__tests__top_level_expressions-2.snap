@@ -1,0 +1,32 @@
+---
+source: crates/crochet_tree_sitter_parser/src/lib.rs
+expression: "parse(\"123\\n\\\"hello\\\"\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..3,
+                expr: Lit(
+                    Num(
+                        Num {
+                            span: 0..3,
+                            value: "123",
+                        },
+                    ),
+                ),
+            },
+            Expr {
+                span: 4..11,
+                expr: Lit(
+                    Str(
+                        Str {
+                            span: 4..11,
+                            value: "hello",
+                        },
+                    ),
+                ),
+            },
+        ],
+    },
+)
