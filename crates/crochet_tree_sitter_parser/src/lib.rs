@@ -562,6 +562,36 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
         "jsx_element" | "jsx_self_closing_element" => {
             Expr::JSXElement(parse_jsx_element(node, src))
         }
+        "member_expression" => {
+            let obj = node.child_by_field_name("object").unwrap();
+            let obj = parse_expression(&obj, src);
+            let prop = node.child_by_field_name("property").unwrap();
+            let name = text_for_node(&prop, src);
+
+            Expr::Member(Member {
+                span: node.byte_range(),
+                obj: Box::from(obj),
+                prop: MemberProp::Ident(Ident {
+                    span: prop.byte_range(),
+                    name,
+                }),
+            })
+        }
+        "subscript_expression" => {
+            let obj = node.child_by_field_name("object").unwrap();
+            let obj = parse_expression(&obj, src);
+            let index = node.child_by_field_name("index").unwrap();
+            let expr = parse_expression(&index, src);
+
+            Expr::Member(Member {
+                span: node.byte_range(),
+                obj: Box::from(obj),
+                prop: MemberProp::Computed(ComputedPropName {
+                    span: index.byte_range(),
+                    expr: Box::from(expr),
+                }),
+            })
+        }
         _ => {
             todo!("unhandled {node:#?} = '{}'", text_for_node(node, src))
         }
@@ -1106,7 +1136,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn member_access() {
         insta::assert_debug_snapshot!(parse("a.b.c"));
         insta::assert_debug_snapshot!(parse("foo.bar()"));
