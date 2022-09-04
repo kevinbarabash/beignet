@@ -1,0 +1,84 @@
+---
+source: crates/crochet_tree_sitter_parser/src/lib.rs
+expression: "parse(\"let [foo, ...[bar, ...rest]] = baz\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 4..34,
+                pattern: Array(
+                    ArrayPat {
+                        span: 4..28,
+                        elems: [
+                            Some(
+                                Ident(
+                                    BindingIdent {
+                                        span: 5..8,
+                                        id: Ident {
+                                            span: 5..8,
+                                            name: "foo",
+                                        },
+                                    },
+                                ),
+                            ),
+                            Some(
+                                Rest(
+                                    RestPat {
+                                        span: 10..27,
+                                        arg: Array(
+                                            ArrayPat {
+                                                span: 13..27,
+                                                elems: [
+                                                    Some(
+                                                        Ident(
+                                                            BindingIdent {
+                                                                span: 14..17,
+                                                                id: Ident {
+                                                                    span: 14..17,
+                                                                    name: "bar",
+                                                                },
+                                                            },
+                                                        ),
+                                                    ),
+                                                    Some(
+                                                        Rest(
+                                                            RestPat {
+                                                                span: 19..26,
+                                                                arg: Ident(
+                                                                    BindingIdent {
+                                                                        span: 22..26,
+                                                                        id: Ident {
+                                                                            span: 22..26,
+                                                                            name: "rest",
+                                                                        },
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                    ),
+                                                ],
+                                                optional: false,
+                                            },
+                                        ),
+                                    },
+                                ),
+                            ),
+                        ],
+                        optional: false,
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Ident(
+                        Ident {
+                            span: 31..34,
+                            name: "baz",
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

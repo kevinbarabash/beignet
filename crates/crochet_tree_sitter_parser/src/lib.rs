@@ -119,9 +119,87 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 id: Ident { span, name },
             })
         }
-        "object_pattern" => todo!(),
-        "array_pattern" => todo!(),
-        "rest_pattern" => todo!(),
+        "object_pattern" => {
+            let mut cursor = node.walk();
+            let props = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|child| match child.kind() {
+                    "pair_pattern" => {
+                        let key_node = child.child_by_field_name("key").unwrap();
+                        let key = Ident {
+                            span: key_node.byte_range(),
+                            name: text_for_node(&key_node, src),
+                        };
+
+                        let value = Box::from(parse_pattern(
+                            &child.child_by_field_name("value").unwrap(),
+                            src,
+                        ));
+
+                        // TODO: include `span` in this node
+                        ObjectPatProp::KeyValue(KeyValuePatProp { key, value })
+                    }
+                    "rest_pattern" => {
+                        let pattern = child.named_child(0).unwrap();
+                        let pattern = parse_pattern(&pattern, src);
+
+                        ObjectPatProp::Rest(RestPat {
+                            span: child.byte_range(),
+                            arg: Box::from(pattern),
+                        })
+                    }
+                    "object_assignment_pattern" => todo!(),
+                    "shorthand_property_identifier_pattern" => {
+                        let key = Ident {
+                            span: child.byte_range(),
+                            name: text_for_node(&child, src),
+                        };
+
+                        ObjectPatProp::Assign(AssignPatProp {
+                            span: child.byte_range(),
+                            key,
+                            value: None,
+                        })
+                    }
+                    kind => panic!("Unexpected object property kind: '{kind}'"),
+                })
+                .collect();
+
+            Pattern::Object(ObjectPat {
+                span: node.byte_range(),
+                props,
+                optional: false,
+            })
+        }
+        "array_pattern" => {
+            let mut cursor = node.walk();
+            // TODO: handle sparse array patterns
+            // NOTE: named_children() does not include gaps in the array
+            let elems = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|child| match child.kind() {
+                    "assignment_pattern" => todo!(),
+                    _ => Some(parse_pattern(&child, src)),
+                })
+                .collect();
+
+            Pattern::Array(ArrayPat {
+                span: node.byte_range(),
+                elems,
+                optional: false,
+            })
+        }
+        "rest_pattern" => {
+            let arg = node.named_child(0).unwrap();
+            let arg = parse_pattern(&arg, src);
+
+            Pattern::Rest(RestPat {
+                span: node.byte_range(),
+                arg: Box::from(arg),
+            })
+        }
         _ => panic!("unrecognized pattern {node:#?}"),
     }
 }
@@ -194,9 +272,26 @@ fn parse_func_param_pattern(node: &tree_sitter::Node, src: &str) -> EFnParamPat 
                 props,
             })
         }
-        "array_pattern" => todo!(),
+        "array_pattern" => {
+            let mut cursor = node.walk();
+            // TODO: handle sparse array patterns
+            // NOTE: named_children() does not include gaps in the array
+            let elems = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|child| match child.kind() {
+                    "assignment_pattern" => todo!(),
+                    _ => Some(parse_func_param_pattern(&child, src)),
+                })
+                .collect();
+
+            EFnParamPat::Array(EFnParamArrayPat {
+                span: node.byte_range(),
+                elems,
+            })
+        }
         "rest_pattern" => {
-            let arg = node.child(1).unwrap(); // child(0) is the '...'
+            let arg = node.named_child(0).unwrap();
             EFnParamPat::Rest(EFnParamRestPat {
                 span: node.byte_range(),
                 arg: Box::from(parse_func_param_pattern(&arg, src)),
@@ -412,7 +507,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                         })))
                     }
                     "spread_element" => {
-                        let expr = child.named_child(0).unwrap(); // child(0) is the '...'
+                        let expr = child.named_child(0).unwrap();
                         PropOrSpread::Spread(SpreadElement {
                             span: node.byte_range(),
                             expr: Box::from(parse_expression(&expr, src)),
@@ -486,7 +581,11 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
 }
 
 fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
-    let node = node.named_child(0).unwrap();
+    let node = if node.kind() == "type_annotation" {
+        node.named_child(0).unwrap()
+    } else {
+        node.to_owned()
+    };
     match node.kind() {
         // Primary types
         "parenthesized_type" => todo!(),
@@ -533,9 +632,71 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 type_params: Some(type_params),
             })
         }
-        "object_type" => todo!(),
+        "object_type" => {
+            let mut cursor = node.walk();
+            let props = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|prop| match prop.kind() {
+                    "export_statement" => todo!("remove export_statement from object_type"),
+                    "property_signature" => {
+                        // NOTE: _property_name is defined as:
+                        // choice(
+                        //   alias(
+                        //     choice($.identifier, $._reserved_identifier),
+                        //     $.property_identifier
+                        //   ),
+                        //   $.private_property_identifier,
+                        //   $.string,
+                        //   $.number,
+                        //   $.computed_property_name
+                        // ),
+                        // TODO: handle more than just "identifier"
+                        let name_node = prop.child_by_field_name("name").unwrap();
+                        let name = text_for_node(&name_node, src);
+
+                        let type_ann = prop.child_by_field_name("type").unwrap();
+                        let type_ann = parse_type_ann(&type_ann, src);
+
+                        TProp {
+                            span: prop.byte_range(),
+                            name,
+                            optional: false, // TODO
+                            mutable: false,  // TODO,
+                            type_ann: Box::from(type_ann),
+                        }
+                    }
+                    "call_signature" => todo!("call_signature"),
+                    "construct_signature" => todo!("construct_signature"),
+                    "index_signature" => todo!("index_signature"),
+                    // TODO: remove method_signature, methods should look the same as properties
+                    "method_signature" => todo!("remove method_signature from object_type"),
+                    kind => panic!("Unsupport prop kind in object_type: '{kind}'"),
+                })
+                .collect();
+
+            TypeAnn::Object(ObjectType {
+                span: node.byte_range(),
+                props,
+            })
+        }
         "array_type" => todo!(),
-        "tuple_type" => todo!(),
+        "tuple_type" => {
+            let mut cursor = node.walk();
+            let types = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|elem| {
+                    println!("parsing elem: {elem:#?}");
+                    parse_type_ann(&elem, src)
+                })
+                .collect();
+
+            TypeAnn::Tuple(TupleType {
+                span: node.byte_range(),
+                types,
+            })
+        }
         "flow_maybe_type" => todo!(),
         "type_query" => todo!(),
         "index_type_query" => todo!(),
@@ -859,7 +1020,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn destructuring() {
         insta::assert_debug_snapshot!(parse("let {x, y} = point"));
         insta::assert_debug_snapshot!(parse("let {a, b, ...rest} = letters"));
@@ -870,7 +1030,6 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let foo = ([a, b]: [string, number]) => a"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}) => b"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}: {a: string, b: number}) => b"));
-        insta::assert_debug_snapshot!(parse("let [_, b] = letters"));
         // TODO: assigning defaults
         // TODO: type annotations
         // TODO: function params
