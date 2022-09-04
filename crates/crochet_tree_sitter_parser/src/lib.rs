@@ -531,7 +531,33 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                 props,
             })
         }
-        "array" => todo!(),
+        "array" => {
+            // TODO: handle sparse tuples
+            let mut cursor = node.walk();
+            let elems = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|elem| match elem.kind() {
+                    "spread_element" => {
+                        let expr = elem.named_child(0).unwrap();
+                        let expr = Box::from(parse_expression(&expr, src));
+                        ExprOrSpread {
+                            spread: Some(elem.byte_range()),
+                            expr,
+                        }
+                    }
+                    _ => ExprOrSpread {
+                        spread: None,
+                        expr: Box::from(parse_expression(&elem, src)),
+                    },
+                })
+                .collect();
+
+            Expr::Tuple(Tuple {
+                span: node.byte_range(),
+                elems,
+            })
+        }
         _ => {
             todo!("unhandled {node:#?} = '{}'", text_for_node(node, src))
         }
@@ -976,7 +1002,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn tuples() {
         insta::assert_debug_snapshot!(parse("let x = []"));
         insta::assert_debug_snapshot!(parse("let x = [1, 2, 3]"));
@@ -1037,7 +1062,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn array_spread() {
         insta::assert_debug_snapshot!(parse("let tuple = [...a, b]"));
         insta::assert_debug_snapshot!(parse("let tuple = [a, ...b]"));
