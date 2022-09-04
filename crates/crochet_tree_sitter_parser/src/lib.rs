@@ -75,6 +75,7 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Vec<Statement> {
     // $.labeled_statement
 }
 
+// TODO: replace with node.utf8_text()
 fn text_for_node(node: &tree_sitter::Node, src: &str) -> String {
     src.get(node.byte_range()).unwrap().to_owned()
 }
@@ -558,6 +559,9 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                 elems,
             })
         }
+        "jsx_element" | "jsx_self_closing_element" => {
+            Expr::JSXElement(parse_jsx_element(node, src))
+        }
         _ => {
             todo!("unhandled {node:#?} = '{}'", text_for_node(node, src))
         }
@@ -804,6 +808,134 @@ fn parse_literal(node: &tree_sitter::Node, src: &str) -> Lit {
     }
 }
 
+fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> JSXElement {
+    println!("parse_jsx_element()");
+    match node.kind() {
+        "jsx_element" => {
+            let mut cursor = node.walk();
+            let children: Vec<JSXElementChild> = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .filter(|child| {
+                    child.kind() != "jsx_opening_element" && child.kind() != "jsx_closing_element"
+                })
+                .map(|child| match child.kind() {
+                    "jsx_text" => JSXElementChild::JSXText(JSXText {
+                        span: child.byte_range(),
+                        value: text_for_node(&child, src),
+                    }),
+                    "jsx_element" | "jsx_self_closing_element" => {
+                        JSXElementChild::JSXElement(Box::from(parse_jsx_element(&child, src)))
+                    }
+                    "jsx_fragment" => todo!(),
+                    "jsx_expression" => {
+                        // TODO: handle None case
+                        let expr = child.named_child(0).unwrap();
+                        let expr = parse_expression(&expr, src);
+                        JSXElementChild::JSXExprContainer(JSXExprContainer {
+                            span: child.byte_range(),
+                            expr,
+                        })
+                    }
+                    kind => panic!("Unexpected JSXElementChild kind: '{kind}'"),
+                })
+                .collect();
+
+            let open_tag = node.child_by_field_name("open_tag").unwrap();
+            let attrs = open_tag.children_by_field_name("attribute", &mut cursor);
+            // TODO: dedupe attr parsing with jsx_self_closing_element
+            let attrs: Vec<JSXAttr> = attrs
+                .into_iter()
+                .map(|attr| {
+                    let ident = attr.named_child(0).unwrap();
+                    let ident = Ident {
+                        span: ident.byte_range(),
+                        name: text_for_node(&ident, src),
+                    };
+                    // TODO: handle JSX attr shorthand
+                    let value = attr.named_child(1).unwrap();
+                    let value = match value.kind() {
+                        "jsx_expression" => {
+                            // TODO: handle None case
+                            let expr = value.named_child(0).unwrap();
+                            let expr = parse_expression(&expr, src);
+                            JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                                span: value.byte_range(),
+                                expr,
+                            })
+                        }
+                        "string" => {
+                            let lit = parse_literal(&value, src);
+                            JSXAttrValue::Lit(lit)
+                        }
+                        kind => panic!("Unexpected JSX attr value with kind: '{kind}'"),
+                    };
+                    JSXAttr {
+                        span: attr.byte_range(),
+                        ident,
+                        value,
+                    }
+                })
+                .collect();
+            let name = open_tag.child_by_field_name("name").unwrap();
+
+            JSXElement {
+                span: node.byte_range(),
+                name: text_for_node(&name, src),
+                attrs,
+                children,
+            }
+        }
+        "jsx_self_closing_element" => {
+            let mut cursor = node.walk();
+            let name = node.child_by_field_name("name").unwrap();
+            // TODO: dedupe attr parsing with jsx_element
+            let attrs = node.children_by_field_name("attribute", &mut cursor);
+            let attrs: Vec<JSXAttr> = attrs
+                .into_iter()
+                .map(|attr| {
+                    let ident = attr.named_child(0).unwrap();
+                    let ident = Ident {
+                        span: ident.byte_range(),
+                        name: text_for_node(&ident, src),
+                    };
+                    // TODO: handle JSX attr shorthand
+                    let value = attr.named_child(1).unwrap();
+                    let value = match value.kind() {
+                        "jsx_expression" => {
+                            // TODO: handle None case
+                            let expr = value.named_child(0).unwrap();
+                            let expr = parse_expression(&expr, src);
+                            JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                                span: value.byte_range(),
+                                expr,
+                            })
+                        }
+                        "string" => {
+                            let lit = parse_literal(&value, src);
+                            JSXAttrValue::Lit(lit)
+                        }
+                        kind => panic!("Unexpected JSX attr value with kind: '{kind}'"),
+                    };
+                    JSXAttr {
+                        span: attr.byte_range(),
+                        ident,
+                        value,
+                    }
+                })
+                .collect();
+
+            JSXElement {
+                span: node.byte_range(),
+                name: text_for_node(&name, src),
+                attrs,
+                children: vec![],
+            }
+        }
+        kind => panic!("Unexpected kind when parsing jsx: '{kind}'"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -958,7 +1090,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn jsx() {
         insta::assert_debug_snapshot!(parse("<Foo>Hello</Foo>"));
         insta::assert_debug_snapshot!(parse("<Foo>{bar}</Foo>"));
