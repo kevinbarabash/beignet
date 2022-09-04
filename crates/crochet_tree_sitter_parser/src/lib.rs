@@ -234,7 +234,6 @@ fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Vec<EFnParam>
 fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
     match node.kind() {
         "arrow_function" => {
-            println!("arrow_function = {}", text_for_node(node, src));
             let is_async = match node.child_count() {
                 3 => false,
                 4 => true,
@@ -251,6 +250,8 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
 
             let params = node.child_by_field_name("parameters").unwrap();
             let params = parse_formal_parameters(&params, src);
+
+            // TODO: report an error if there are multiple rest params
 
             Expr::Lambda(Lambda {
                 span: node.byte_range(),
@@ -340,10 +341,20 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             let args = args
                 .into_iter()
                 .map(|arg| {
-                    let expr = parse_expression(&arg, src);
-                    ExprOrSpread {
-                        spread: None,
-                        expr: Box::from(expr),
+                    if arg.kind() == "spread_element" {
+                        let spread = arg.child(0).unwrap();
+                        let arg = arg.child(1).unwrap();
+                        let expr = parse_expression(&arg, src);
+                        ExprOrSpread {
+                            spread: Some(spread.byte_range()),
+                            expr: Box::from(expr),
+                        }
+                    } else {
+                        let expr = parse_expression(&arg, src);
+                        ExprOrSpread {
+                            spread: None,
+                            expr: Box::from(expr),
+                        }
                     }
                 })
                 .collect();
@@ -379,6 +390,65 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
         "true" => Expr::Lit(Lit::bool(true, node.byte_range())),
         "false" => Expr::Lit(Lit::bool(false, node.byte_range())),
         // TODO: handle null and undefined
+        "object" => {
+            let mut cursor = node.walk();
+            let props = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|child| match child.kind() {
+                    "pair" => {
+                        // NOTE: _property_name is defined as:
+                        // choice(
+                        //   alias(
+                        //     choice($.identifier, $._reserved_identifier),
+                        //     $.property_identifier
+                        //   ),
+                        //   $.private_property_identifier,
+                        //   $.string,
+                        //   $.number,
+                        //   $.computed_property_name
+                        // ),
+                        // TODO: handle more than just "identifier"
+                        let key_node = child.child_by_field_name("key").unwrap();
+                        // let key = Ident {
+                        //     span: key_node.byte_range(),
+                        //     name: text_for_node(&key_node, src),
+                        // };
+                        let name = text_for_node(&key_node, src);
+                        let value = child.child_by_field_name("value").unwrap();
+                        let value = parse_expression(&value, src);
+                        PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
+                            span: child.byte_range(),
+                            name,
+                            value: Box::from(value),
+                        })))
+                    }
+                    "spread_element" => {
+                        let expr = child.named_child(0).unwrap(); // child(0) is the '...'
+                        PropOrSpread::Spread(SpreadElement {
+                            span: node.byte_range(),
+                            expr: Box::from(parse_expression(&expr, src)),
+                        })
+                    }
+                    "method_definition" => todo!(),
+                    "shorthand_property_identifier" => {
+                        // choice($.identifier, $._reserved_identifier),
+                        let name = text_for_node(&child, src);
+                        PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
+                            span: node.byte_range(),
+                            name,
+                        })))
+                    }
+                    kind => panic!("Unexpect object property kind: {kind}"),
+                })
+                .collect();
+
+            Expr::Obj(Obj {
+                span: node.byte_range(),
+                props,
+            })
+        }
+        "array" => todo!(),
         _ => {
             todo!("unhandled {node:#?} = '{}'", text_for_node(node, src))
         }
@@ -638,7 +708,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn function_application() {
         insta::assert_debug_snapshot!(parse("foo()"));
         insta::assert_debug_snapshot!(parse("foo(a, b)"));
@@ -663,7 +732,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn top_level_expressions() {
         insta::assert_debug_snapshot!(parse("a + b"));
         insta::assert_debug_snapshot!(parse("123\n\"hello\""));
@@ -677,7 +745,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn objects() {
         insta::assert_debug_snapshot!(parse("{x: 5, y: 10}"));
         insta::assert_debug_snapshot!(parse("let obj = {x, y}"));
