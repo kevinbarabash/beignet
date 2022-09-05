@@ -1,14 +1,7 @@
-const javascript = require("./grammar/tsx");
+const tsx = require("tree-sitter-typescript/tsx/grammar.js");
 
-module.exports = grammar(javascript, {
+module.exports = grammar(tsx, {
   name: "crochet",
-
-  // _expressions: ($, previous) => {
-  //   const choices = previous.choices.filter(
-  //     (choice) => choice === $.expression
-  //   );
-  //   return choice(...choices);
-  // },
 
   rules: {
     // remove sequence expression and optional flow-style type assertion
