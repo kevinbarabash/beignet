@@ -2066,10 +2066,6 @@
         {
           "type": "expression",
           "named": true
-        },
-        {
-          "type": "sequence_expression",
-          "named": true
         }
       ]
     }
@@ -2246,10 +2242,6 @@
           {
             "type": "expression",
             "named": true
-          },
-          {
-            "type": "sequence_expression",
-            "named": true
           }
         ]
       },
@@ -2299,10 +2291,6 @@
         "types": [
           {
             "type": "expression",
-            "named": true
-          },
-          {
-            "type": "sequence_expression",
             "named": true
           }
         ]
@@ -4471,28 +4459,13 @@
   {
     "type": "parenthesized_expression",
     "named": true,
-    "fields": {
-      "type": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "type_annotation",
-            "named": true
-          }
-        ]
-      }
-    },
+    "fields": {},
     "children": {
       "multiple": false,
       "required": true,
       "types": [
         {
           "type": "expression",
-          "named": true
-        },
-        {
-          "type": "sequence_expression",
           "named": true
         }
       ]
@@ -4891,10 +4864,6 @@
         {
           "type": "expression",
           "named": true
-        },
-        {
-          "type": "sequence_expression",
-          "named": true
         }
       ]
     }
@@ -4999,10 +4968,6 @@
             "named": true
           },
           {
-            "type": "sequence_expression",
-            "named": true
-          },
-          {
             "type": "string",
             "named": true
           }
@@ -5069,10 +5034,6 @@
         "types": [
           {
             "type": "expression",
-            "named": true
-          },
-          {
-            "type": "sequence_expression",
             "named": true
           }
         ]
@@ -5166,10 +5127,6 @@
         {
           "type": "expression",
           "named": true
-        },
-        {
-          "type": "sequence_expression",
-          "named": true
         }
       ]
     }
@@ -5239,10 +5196,6 @@
       "types": [
         {
           "type": "expression",
-          "named": true
-        },
-        {
-          "type": "sequence_expression",
           "named": true
         }
       ]

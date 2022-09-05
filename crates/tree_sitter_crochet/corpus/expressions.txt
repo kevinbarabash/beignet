@@ -50,7 +50,7 @@ Template strings
 `multi
   ${2 + 2}
   hello
-  ${1 + 1, 2 + 2}
+  ${1 + 1}
   line`;
 
 `$$$$`;
@@ -84,13 +84,9 @@ Template strings
           (number)
           (number)))
       (template_substitution
-        (sequence_expression
-          (binary_expression
-            (number)
-            (number))
-          (binary_expression
-            (number)
-            (number))))))
+        (binary_expression
+          (number)
+          (number)))))
   (expression_statement
     (template_string))
   (expression_statement
@@ -1529,39 +1525,6 @@ x &&= 0;
     (augmented_assignment_expression
       (identifier)
       (number))))
-
-================================================================================
-The comma operator
-================================================================================
-
-a = 1, b = 2;
-c = {d: (3, 4 + 5, 6)};
-
---------------------------------------------------------------------------------
-
-(program
-  (expression_statement
-    (sequence_expression
-      (assignment_expression
-        (identifier)
-        (number))
-      (assignment_expression
-        (identifier)
-        (number))))
-  (expression_statement
-    (assignment_expression
-      (identifier)
-      (object
-        (pair
-          (property_identifier)
-          (parenthesized_expression
-            (sequence_expression
-              (number)
-              (sequence_expression
-                (binary_expression
-                  (number)
-                  (number))
-                (number)))))))))
 
 ================================================================================
 Ternaries
