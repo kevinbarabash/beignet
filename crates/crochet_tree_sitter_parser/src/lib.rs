@@ -329,6 +329,61 @@ fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Vec<EFnParam>
         .collect()
 }
 
+fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
+    assert_eq!(node.kind(), "statement_block");
+
+    let mut cursor = node.walk();
+    let stmts: Vec<Statement> = node
+        .named_children(&mut cursor)
+        .into_iter()
+        .flat_map(|stmt| parse_statement(&stmt, src))
+        .collect();
+
+    let mut iter = stmts.iter().rev();
+
+    let last = match iter.next() {
+        Some(term) => match term {
+            Statement::VarDecl { .. } => panic!("Didn't expect `let` here"),
+            Statement::TypeDecl { .. } => {
+                todo!("decide how to handle type decls within BlockStatements")
+            }
+            Statement::Expr { expr, .. } => expr.to_owned(),
+        },
+        None => Expr::Empty(Empty { span: 0..0 }),
+    };
+
+    let result: Expr = iter.fold(last, |body, stmt| {
+        match stmt {
+            Statement::VarDecl {
+                span,
+                pattern,
+                type_ann,
+                init,
+                declare: _,
+            } => Expr::Let(Let {
+                span: span.to_owned(),
+                pattern: Some(pattern.to_owned()),
+                type_ann: type_ann.to_owned(),
+                // TODO: decide if we need to keep uninitialized variable declarations
+                init: Box::new(init.to_owned().unwrap()),
+                body: Box::new(body),
+            }),
+            Statement::TypeDecl { .. } => {
+                todo!("decide how to handle type decls within BlockStatements")
+            }
+            Statement::Expr { span, expr } => Expr::Let(Let {
+                span: span.to_owned(),
+                pattern: None,
+                type_ann: None,
+                init: Box::new(expr.to_owned()),
+                body: Box::new(body),
+            }),
+        }
+    });
+
+    result
+}
+
 fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
     match node.kind() {
         "arrow_function" => {
@@ -339,7 +394,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             // as a simple expression
             let body = node.child_by_field_name("body").unwrap();
             let body = match body.kind() {
-                "statement_block" => todo!(),
+                "statement_block" => parse_block_statement(&body, src),
                 _ => parse_expression(&body, src),
             };
 
@@ -590,6 +645,15 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                     span: index.byte_range(),
                     expr: Box::from(expr),
                 }),
+            })
+        }
+        "await_expression" => {
+            let expr = node.named_child(0).unwrap();
+            let expr = parse_expression(&expr, src);
+
+            Expr::Await(Await {
+                span: node.byte_range(),
+                expr: Box::from(expr),
             })
         }
         _ => {
@@ -1032,7 +1096,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn async_await() {
         insta::assert_debug_snapshot!(parse("async () => 10"));
         insta::assert_debug_snapshot!(parse("let foo = async () => { await 10 }"));
