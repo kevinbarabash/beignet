@@ -61,39 +61,7 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Vec<Statement> {
             let type_ann = node.child_by_field_name("value").unwrap();
             let type_ann = parse_type_ann(&type_ann, src);
 
-            let type_params = match node.child_by_field_name("type_parameters") {
-                Some(type_params) => {
-                    let mut cursor = type_params.walk();
-                    let type_params = type_params
-                        .named_children(&mut cursor)
-                        .into_iter()
-                        .map(|type_param| {
-                            let name = type_param.child_by_field_name("name").unwrap();
-                            let name = Ident {
-                                span: name.byte_range(),
-                                name: text_for_node(&name, src),
-                            };
-
-                            let constraint = type_param
-                                .child_by_field_name("constraint")
-                                .map(|constraint| Box::from(parse_type_ann(&constraint, src)));
-
-                            let default = type_param
-                                .child_by_field_name("value")
-                                .map(|value| Box::from(parse_type_ann(&value, src)));
-
-                            TypeParam {
-                                span: type_param.byte_range(),
-                                name,
-                                constraint,
-                                default,
-                            }
-                        })
-                        .collect();
-                    Some(type_params)
-                }
-                None => None,
-            };
+            let type_params = parse_type_params_for_node(node, src);
 
             vec![Statement::TypeDecl {
                 span: node.byte_range(),
@@ -511,6 +479,8 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                 .child_by_field_name("return_type")
                 .map(|return_type| parse_type_ann(&return_type, src));
 
+            let type_params = parse_type_params_for_node(node, src);
+
             // TODO: report an error if there are multiple rest params
 
             Expr::Lambda(Lambda {
@@ -519,7 +489,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                 is_async,
                 body: Box::from(body),
                 return_type,
-                type_params: None,
+                type_params,
             })
         }
         "binary_expression" => {
@@ -839,7 +809,10 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
     };
     match node.kind() {
         // Primary types
-        "parenthesized_type" => todo!(),
+        "parenthesized_type" => {
+            let wrapped_type = node.named_child(0).unwrap();
+            parse_type_ann(&wrapped_type, src)
+        }
         "predefined_type" => match text_for_node(&node, src).as_str() {
             "any" => todo!("remove support for 'any'"),
             "number" => TypeAnn::Prim(PrimType {
@@ -931,7 +904,15 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 props,
             })
         }
-        "array_type" => todo!(),
+        "array_type" => {
+            let elem_type = node.named_child(0).unwrap();
+            let elem_type = parse_type_ann(&elem_type, src);
+
+            TypeAnn::Array(ArrayType {
+                span: node.byte_range(),
+                elem_type: Box::from(elem_type),
+            })
+        }
         "tuple_type" => {
             let mut cursor = node.walk();
             let types = node
@@ -955,17 +936,86 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         "existential_type" => todo!(),
         "literal_type" => {
             let child = node.named_child(0).unwrap();
-            let lit = parse_literal(&child, src);
-            TypeAnn::Lit(lit)
+            match child.kind() {
+                "undefined" => TypeAnn::Keyword(KeywordType {
+                    span: node.byte_range(),
+                    keyword: Keyword::Undefined,
+                }),
+                "null" => TypeAnn::Keyword(KeywordType {
+                    span: node.byte_range(),
+                    keyword: Keyword::Null,
+                }),
+                _ => {
+                    let lit = parse_literal(&child, src);
+                    TypeAnn::Lit(lit)
+                }
+            }
         }
         "lookup_type" => todo!(),
         "conditional_type" => todo!(),
         "template_literal_type" => todo!(),
-        "intersection_type" => todo!(),
-        "union_type" => todo!(),
+        "intersection_type" => {
+            let mut cursor = node.walk();
+            let types = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|t| parse_type_ann(&t, src))
+                .collect();
+            TypeAnn::Intersection(IntersectionType {
+                span: node.byte_range(),
+                types,
+            })
+        }
+        "union_type" => {
+            let mut cursor = node.walk();
+            let types = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|t| parse_type_ann(&t, src))
+                .collect();
+            TypeAnn::Union(UnionType {
+                span: node.byte_range(),
+                types,
+            })
+        }
 
         // Non-primary types
-        "function_type" => todo!(),
+        "function_type" => {
+            let params = node.child_by_field_name("parameters").unwrap();
+            let mut cursor = params.walk();
+            let params = params
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|param| {
+                    let optional = match param.kind() {
+                        "required_parameter" => false,
+                        "optional_parameter" => true,
+                        kind => panic!("Unexpected param kind: {kind}"),
+                    };
+                    let pattern = param.child_by_field_name("pattern").unwrap();
+                    let type_ann = param.child_by_field_name("type").unwrap();
+                    let type_ann = parse_type_ann(&type_ann, src);
+
+                    TypeAnnFnParam {
+                        pat: parse_func_param_pattern(&pattern, src),
+                        type_ann,
+                        optional,
+                    }
+                })
+                .collect();
+
+            let return_type = node.child_by_field_name("return_type").unwrap();
+            let return_type = parse_type_ann(&return_type, src);
+
+            let type_params = parse_type_params_for_node(&node, src);
+
+            TypeAnn::Lam(LamType {
+                span: node.byte_range(),
+                params,
+                ret: Box::from(return_type),
+                type_params,
+            })
+        }
         "readonly_type" => todo!(),
         "constructor_type" => todo!(),
         "infer_type" => todo!(),
@@ -1001,6 +1051,42 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
     // $.readonly_type,
     // $.constructor_type,
     // $.infer_type
+}
+
+fn parse_type_params_for_node(node: &tree_sitter::Node, src: &str) -> Option<Vec<TypeParam>> {
+    match node.child_by_field_name("type_parameters") {
+        Some(type_params) => {
+            let mut cursor = type_params.walk();
+            let type_params = type_params
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|type_param| {
+                    let name = type_param.child_by_field_name("name").unwrap();
+                    let name = Ident {
+                        span: name.byte_range(),
+                        name: text_for_node(&name, src),
+                    };
+
+                    let constraint = type_param
+                        .child_by_field_name("constraint")
+                        .map(|constraint| Box::from(parse_type_ann(&constraint, src)));
+
+                    let default = type_param
+                        .child_by_field_name("value")
+                        .map(|value| Box::from(parse_type_ann(&value, src)));
+
+                    TypeParam {
+                        span: type_param.byte_range(),
+                        name,
+                        constraint,
+                        default,
+                    }
+                })
+                .collect();
+            Some(type_params)
+        }
+        None => None,
+    }
 }
 
 fn parse_literal(node: &tree_sitter::Node, src: &str) -> Lit {
@@ -1399,13 +1485,15 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn types() {
         insta::assert_debug_snapshot!(parse("let get_bar = <T>(foo: Foo<T>) => foo.bar"));
         insta::assert_debug_snapshot!(parse("declare let get_bar: (foo: Foo) => T"));
         insta::assert_debug_snapshot!(parse("let str_arr: string[] = []"));
         insta::assert_debug_snapshot!(parse("let thunk_arr: (() => undefined)[] = []"));
         insta::assert_debug_snapshot!(parse("let arr: string[] | number[] = []"));
+        insta::assert_debug_snapshot!(parse(
+            "declare let add: ((a: number, b: number) => number) & (a: string, b: string) => string"
+        ));
         insta::assert_debug_snapshot!(parse("let nested_arr: string[][] = []"));
         let src = r#"
         type Event = 
