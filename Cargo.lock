@@ -285,6 +285,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "crochet_tree_sitter_parser"
+version = "0.1.0"
+dependencies = [
+ "crochet_ast",
+ "insta",
+ "itertools",
+ "pretty_assertions",
+ "tree-sitter",
+ "tree_sitter_crochet",
+ "unescape",
+]
+
+[[package]]
 name = "crochet_types"
 version = "0.1.0"
 dependencies = [

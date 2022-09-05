@@ -1,0 +1,34 @@
+---
+source: crates/crochet_tree_sitter_parser/src/lib.rs
+expression: "parse(\"   let x = 5\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 7..12,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 7..8,
+                        id: Ident {
+                            span: 7..8,
+                            name: "x",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Lit(
+                        Num(
+                            Num {
+                                span: 11..12,
+                                value: "5",
+                            },
+                        ),
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

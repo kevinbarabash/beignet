@@ -3,8 +3,13 @@ use crate::ident::Ident;
 use crate::span::Span;
 use crate::Lit;
 
+// TODO: split this into separate patterns:
+// - one for assignment (obj, ident, array, rest)
+// - one for pattern matching/if let
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern {
+    // TODO: use Ident instead of BindingIdent, there's no need to
+    // have BindingIdent which simply wraps Ident
     Ident(BindingIdent),
     Rest(RestPat),
     Object(ObjectPat),

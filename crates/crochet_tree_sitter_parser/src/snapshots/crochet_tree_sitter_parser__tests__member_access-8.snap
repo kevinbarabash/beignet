@@ -1,0 +1,59 @@
+---
+source: crates/crochet_tree_sitter_parser/src/lib.rs
+expression: "parse(\"foo[bar[-1]]\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..12,
+                expr: Member(
+                    Member {
+                        span: 0..12,
+                        obj: Ident(
+                            Ident {
+                                span: 0..3,
+                                name: "foo",
+                            },
+                        ),
+                        prop: Computed(
+                            ComputedPropName {
+                                span: 4..11,
+                                expr: Member(
+                                    Member {
+                                        span: 4..11,
+                                        obj: Ident(
+                                            Ident {
+                                                span: 4..7,
+                                                name: "bar",
+                                            },
+                                        ),
+                                        prop: Computed(
+                                            ComputedPropName {
+                                                span: 8..10,
+                                                expr: UnaryExpr(
+                                                    UnaryExpr {
+                                                        span: 8..10,
+                                                        op: Minus,
+                                                        arg: Lit(
+                                                            Num(
+                                                                Num {
+                                                                    span: 9..10,
+                                                                    value: "1",
+                                                                },
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+            },
+        ],
+    },
+)

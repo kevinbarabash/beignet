@@ -8,6 +8,7 @@ members = [
     "crates/crochet_dts",
     "crates/crochet_infer",
     "crates/crochet_parser",
-    "crates/tree_sitter_crochet",
+    "crates/crochet_tree_sitter_parser",
     "crates/crochet_types",
+    "crates/tree_sitter_crochet",
 ]

@@ -651,6 +651,9 @@ module.exports = grammar({
     jsx_attribute: ($) =>
       seq($._jsx_attribute_name, optional(seq("=", $._jsx_attribute_value))),
 
+    // TODO: It seems like we should be able to simplify this since
+    // jsx_expression should always match anythign that _jsx_element or
+    // jsx_fragment would.
     _jsx_attribute_value: ($) =>
       choice($.string, $.jsx_expression, $._jsx_element, $.jsx_fragment),
 
@@ -953,6 +956,7 @@ module.exports = grammar({
         )
       ),
 
+    // TODO: remove sequence expressions
     sequence_expression: ($) =>
       seq(
         field("left", $.expression),

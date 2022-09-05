@@ -1,0 +1,51 @@
+---
+source: crates/crochet_tree_sitter_parser/src/lib.rs
+expression: "parse(\"type Foo<T> = {bar: T}\")"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                span: 0..22,
+                declare: false,
+                id: Ident {
+                    span: 5..8,
+                    name: "Foo",
+                },
+                type_ann: Object(
+                    ObjectType {
+                        span: 14..22,
+                        props: [
+                            TProp {
+                                span: 15..21,
+                                name: "bar",
+                                optional: false,
+                                mutable: false,
+                                type_ann: TypeRef(
+                                    TypeRef {
+                                        span: 20..21,
+                                        name: "T",
+                                        type_params: None,
+                                    },
+                                ),
+                            },
+                        ],
+                    },
+                ),
+                type_params: Some(
+                    [
+                        TypeParam {
+                            span: 9..10,
+                            name: Ident {
+                                span: 9..10,
+                                name: "T",
+                            },
+                            constraint: None,
+                            default: None,
+                        },
+                    ],
+                ),
+            },
+        ],
+    },
+)

@@ -1,0 +1,53 @@
+---
+source: crates/crochet_tree_sitter_parser/src/lib.rs
+expression: "parse(\"let tuple = [...a, b]\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 4..21,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 4..9,
+                        id: Ident {
+                            span: 4..9,
+                            name: "tuple",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Tuple(
+                        Tuple {
+                            span: 12..21,
+                            elems: [
+                                ExprOrSpread {
+                                    spread: Some(
+                                        13..17,
+                                    ),
+                                    expr: Ident(
+                                        Ident {
+                                            span: 16..17,
+                                            name: "a",
+                                        },
+                                    ),
+                                },
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Ident(
+                                        Ident {
+                                            span: 19..20,
+                                            name: "b",
+                                        },
+                                    ),
+                                },
+                            ],
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

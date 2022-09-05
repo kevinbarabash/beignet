@@ -861,7 +861,7 @@ module.exports = grammar(require("./js"), {
         "symbol",
         "void",
         "unknown",
-        "string",
+        "string", // TODO: remove duplicates from choice()
         "never",
         "object"
       ),
@@ -898,6 +898,8 @@ module.exports = grammar(require("./js"), {
         optional($.accessibility_modifier),
         optional("static"),
         optional($.override_modifier),
+        // TODO: change this to "mutable" or just "mut" since everything
+        // will immutable by default
         optional("readonly"),
         field("name", $._property_name),
         optional("?"),

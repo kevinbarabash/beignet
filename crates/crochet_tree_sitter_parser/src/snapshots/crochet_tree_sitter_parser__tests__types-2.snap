@@ -1,0 +1,60 @@
+---
+source: crates/crochet_tree_sitter_parser/src/lib.rs
+expression: "parse(\"declare let get_bar: (foo: Foo) => T\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 12..36,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 12..19,
+                        id: Ident {
+                            span: 12..19,
+                            name: "get_bar",
+                        },
+                    },
+                ),
+                type_ann: Some(
+                    Lam(
+                        LamType {
+                            span: 21..36,
+                            params: [
+                                TypeAnnFnParam {
+                                    pat: Ident(
+                                        EFnParamBindingIdent {
+                                            span: 22..25,
+                                            id: Ident {
+                                                span: 22..25,
+                                                name: "foo",
+                                            },
+                                        },
+                                    ),
+                                    type_ann: TypeRef(
+                                        TypeRef {
+                                            span: 27..30,
+                                            name: "Foo",
+                                            type_params: None,
+                                        },
+                                    ),
+                                    optional: false,
+                                },
+                            ],
+                            ret: TypeRef(
+                                TypeRef {
+                                    span: 35..36,
+                                    name: "T",
+                                    type_params: None,
+                                },
+                            ),
+                            type_params: None,
+                        },
+                    ),
+                ),
+                init: None,
+                declare: true,
+            },
+        ],
+    },
+)
