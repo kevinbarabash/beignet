@@ -33,7 +33,7 @@ pub fn parse(src: &str) -> Result<Program, String> {
 
 fn parse_statement(node: &tree_sitter::Node, src: &str) -> Vec<Statement> {
     match node.kind() {
-        "lexical_declaration" => parse_declaration(node, src),
+        "lexical_declaration" => parse_declaration(node, false, src),
         "expression_statement" => {
             let mut cursor = node.walk();
             let expressions = node.children(&mut cursor);
@@ -47,6 +47,61 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Vec<Statement> {
                     }
                 })
                 .collect()
+        }
+        "ambient_declaration" => {
+            let decl = node.named_child(0).unwrap();
+            parse_declaration(&decl, true, src)
+        }
+        "type_alias_declaration" => {
+            let name = node.child_by_field_name("name").unwrap();
+            let id = Ident {
+                span: name.byte_range(),
+                name: text_for_node(&name, src),
+            };
+            let type_ann = node.child_by_field_name("value").unwrap();
+            let type_ann = parse_type_ann(&type_ann, src);
+
+            let type_params = match node.child_by_field_name("type_parameters") {
+                Some(type_params) => {
+                    let mut cursor = type_params.walk();
+                    let type_params = type_params
+                        .named_children(&mut cursor)
+                        .into_iter()
+                        .map(|type_param| {
+                            let name = type_param.child_by_field_name("name").unwrap();
+                            let name = Ident {
+                                span: name.byte_range(),
+                                name: text_for_node(&name, src),
+                            };
+
+                            let constraint = type_param
+                                .child_by_field_name("constraint")
+                                .map(|constraint| Box::from(parse_type_ann(&constraint, src)));
+
+                            let default = type_param
+                                .child_by_field_name("value")
+                                .map(|value| Box::from(parse_type_ann(&value, src)));
+
+                            TypeParam {
+                                span: type_param.byte_range(),
+                                name,
+                                constraint,
+                                default,
+                            }
+                        })
+                        .collect();
+                    Some(type_params)
+                }
+                None => None,
+            };
+
+            vec![Statement::TypeDecl {
+                span: node.byte_range(),
+                declare: false,
+                id,
+                type_ann,
+                type_params,
+            }]
         }
         _ => todo!("unhandled: {:#?}", node),
     }
@@ -80,22 +135,23 @@ fn text_for_node(node: &tree_sitter::Node, src: &str) -> String {
     src.get(node.byte_range()).unwrap().to_owned()
 }
 
-fn parse_declaration(node: &tree_sitter::Node, src: &str) -> Vec<Statement> {
+fn parse_declaration(node: &tree_sitter::Node, declare: bool, src: &str) -> Vec<Statement> {
     let mut cursor = node.child(1).unwrap().walk();
     let declarators = node.named_children(&mut cursor);
 
     declarators
         .into_iter()
-        .map(|decl| parse_declarator(&decl, src))
+        .map(|decl| parse_declarator(&decl, declare, src))
         .collect()
 }
 
-fn parse_declarator(node: &tree_sitter::Node, src: &str) -> Statement {
+fn parse_declarator(node: &tree_sitter::Node, declare: bool, src: &str) -> Statement {
     let name = node.child_by_field_name("name").unwrap();
     let pattern = parse_pattern(&name, src);
 
-    let init = node.child_by_field_name("value").unwrap();
-    let init = Some(parse_expression(&init, src));
+    let init = node
+        .child_by_field_name("value")
+        .map(|init| parse_expression(&init, src));
 
     let type_ann = node
         .child_by_field_name("type")
@@ -106,7 +162,7 @@ fn parse_declarator(node: &tree_sitter::Node, src: &str) -> Statement {
         pattern,
         type_ann,
         init,
-        declare: false,
+        declare,
     }
 }
 
@@ -705,7 +761,10 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
 }
 
 fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
-    let node = if node.kind() == "type_annotation" {
+    let node = if node.kind() == "type_annotation"
+        || node.kind() == "constraint"
+        || node.kind() == "default_type"
+    {
         node.named_child(0).unwrap()
     } else {
         node.to_owned()
@@ -1182,7 +1241,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn decls() {
         insta::assert_debug_snapshot!(parse("let x = 5"));
         insta::assert_debug_snapshot!(parse("   let x = 5")); // with leading whitespace
@@ -1211,7 +1269,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn type_decls() {
         insta::assert_debug_snapshot!(parse("type Num = number"));
         insta::assert_debug_snapshot!(parse("type Point = {x: number, y: number}"));
