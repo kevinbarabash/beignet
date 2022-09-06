@@ -4,17 +4,25 @@ module.exports = grammar(tsx, {
   name: "crochet",
 
   rules: {
-    // remove sequence expression and optional flow-style type assertion
+    // removes sequence expression and optional flow-style type assertion
     parenthesized_expression: ($, previous) => {
       return seq("(", $.expression, ")");
     },
-    // remove sequence expression
+    // removes sequence expression
     _expressions: ($, previous) => {
       return $.expression;
     },
+    // removes ternary expression
     expression: ($, previous) => {
       const choices = previous.members.filter(
         (member) => member.name !== "ternary_expression"
+      );
+      return choice(...choices);
+    },
+    // removes with statement
+    statement: ($, previous) => {
+      const choices = previous.members.filter(
+        (member) => member.name !== "with_statement"
       );
       return choice(...choices);
     },

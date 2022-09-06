@@ -1069,28 +1069,6 @@ debugger
   (debugger_statement))
 
 ================================================================================
-With statements
-================================================================================
-
-with (x) { i; }
-
-with (x) { }
-
---------------------------------------------------------------------------------
-
-(program
-  (with_statement
-    object: (parenthesized_expression
-      (identifier))
-    body: (statement_block
-      (expression_statement
-        (identifier))))
-  (with_statement
-    object: (parenthesized_expression
-      (identifier))
-    body: (statement_block)))
-
-================================================================================
 Hash bang lines
 ================================================================================
 

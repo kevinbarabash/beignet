@@ -768,10 +768,6 @@
         },
         {
           "type": "SYMBOL",
-          "name": "with_statement"
-        },
-        {
-          "type": "SYMBOL",
           "name": "break_statement"
         },
         {

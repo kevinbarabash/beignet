@@ -428,10 +428,6 @@
       {
         "type": "while_statement",
         "named": true
-      },
-      {
-        "type": "with_statement",
-        "named": true
       }
     ]
   },
@@ -5698,32 +5694,6 @@
     }
   },
   {
-    "type": "with_statement",
-    "named": true,
-    "fields": {
-      "body": {
-        "multiple": false,
-        "required": true,
-        "types": [
-          {
-            "type": "statement",
-            "named": true
-          }
-        ]
-      },
-      "object": {
-        "multiple": false,
-        "required": true,
-        "types": [
-          {
-            "type": "parenthesized_expression",
-            "named": true
-          }
-        ]
-      }
-    }
-  },
-  {
     "type": "yield_expression",
     "named": true,
     "fields": {},
@@ -6168,11 +6138,11 @@
   },
   {
     "type": "number",
-    "named": true
+    "named": false
   },
   {
     "type": "number",
-    "named": false
+    "named": true
   },
   {
     "type": "object",
