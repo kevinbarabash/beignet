@@ -12,5 +12,11 @@ module.exports = grammar(tsx, {
     _expressions: ($, previous) => {
       return $.expression;
     },
+    expression: ($, previous) => {
+      const choices = previous.members.filter(
+        (member) => member.name !== "ternary_expression"
+      );
+      return choice(...choices);
+    },
   },
 });

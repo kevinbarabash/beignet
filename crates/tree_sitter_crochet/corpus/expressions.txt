@@ -285,18 +285,15 @@ Regexps
 Comments take precedence over regexes
 ================================================================================
 
-  foo
-    ? /* comment */bar
-    : baz
+let foo = /* comment */bar
 
 --------------------------------------------------------------------------------
 
 (program
-  (expression_statement
-    (ternary_expression
+  (lexical_declaration
+    (variable_declarator
       (identifier)
       (comment)
-      (identifier)
       (identifier))))
 
 ================================================================================
@@ -1527,49 +1524,6 @@ x &&= 0;
       (number))))
 
 ================================================================================
-Ternaries
-================================================================================
-
-condition ? case1 : case2;
-
-x.y = some.condition ?
-  some.case :
-  some.other.case;
-
-a?.1:.2
-
---------------------------------------------------------------------------------
-
-(program
-  (expression_statement
-    (ternary_expression
-      (identifier)
-      (identifier)
-      (identifier)))
-  (expression_statement
-    (assignment_expression
-      (member_expression
-        (identifier)
-        (property_identifier))
-      (ternary_expression
-        (member_expression
-          (identifier)
-          (property_identifier))
-        (member_expression
-          (identifier)
-          (property_identifier))
-        (member_expression
-          (member_expression
-            (identifier)
-            (property_identifier))
-          (property_identifier)))))
-  (ERROR
-    (identifier)
-    (number))
-  (expression_statement
-    (number)))
-
-================================================================================
 Type operators
 ================================================================================
 
@@ -1592,7 +1546,7 @@ The delete operator
 ================================================================================
 
 delete thing['prop'];
-true ? delete thing.prop : null;
+let x = delete thing.prop;
 
 --------------------------------------------------------------------------------
 
@@ -1603,14 +1557,13 @@ true ? delete thing.prop : null;
         (identifier)
         (string
           (string_fragment)))))
-  (expression_statement
-    (ternary_expression
-      (true)
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
       (unary_expression
         (member_expression
           (identifier)
-          (property_identifier)))
-      (null))))
+          (property_identifier))))))
 
 ================================================================================
 The void operator
@@ -1690,7 +1643,7 @@ Operator precedence
 ================================================================================
 
 a <= b && c >= d;
-a.b = c ? d : e;
+a.b = c[d];
 a && b(c) && d;
 a && new b(c) && d;
 typeof a == b && c instanceof d
@@ -1715,8 +1668,7 @@ await a || b;
       (member_expression
         (identifier)
         (property_identifier))
-      (ternary_expression
-        (identifier)
+      (subscript_expression
         (identifier)
         (identifier))))
   (expression_statement

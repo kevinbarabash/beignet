@@ -1903,10 +1903,6 @@
         },
         {
           "type": "SYMBOL",
-          "name": "ternary_expression"
-        },
-        {
-          "type": "SYMBOL",
           "name": "update_expression"
         },
         {
