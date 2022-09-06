@@ -1907,7 +1907,7 @@ Forward slashes after parenthesized expressions
 ================================================================================
 
 (foo - bar) / baz
-if (foo - bar) /baz/;
+if (foo - bar) { /baz/ };
 (this.a() / this.b() - 1) / 2
 
 --------------------------------------------------------------------------------
@@ -1920,14 +1920,16 @@ if (foo - bar) /baz/;
           (identifier)
           (identifier)))
       (identifier)))
-  (if_statement
-    (parenthesized_expression
-      (binary_expression
-        (identifier)
-        (identifier)))
-    (expression_statement
-      (regex
-        (regex_pattern))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (binary_expression
+          (identifier)
+          (identifier)))
+      (statement_block
+        (expression_statement
+          (regex
+            (regex_pattern))))))
   (expression_statement
     (binary_expression
       (parenthesized_expression

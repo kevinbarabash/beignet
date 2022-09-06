@@ -172,6 +172,10 @@
         "named": true
       },
       {
+        "type": "if_expression",
+        "named": true
+      },
+      {
         "type": "internal_module",
         "named": true
       },
@@ -391,10 +395,6 @@
       },
       {
         "type": "for_statement",
-        "named": true
-      },
-      {
-        "type": "if_statement",
         "named": true
       },
       {
@@ -1812,7 +1812,11 @@
       "required": true,
       "types": [
         {
-          "type": "statement",
+          "type": "if_expression",
+          "named": true
+        },
+        {
+          "type": "statement_block",
           "named": true
         }
       ]
@@ -2768,7 +2772,7 @@
     "fields": {}
   },
   {
-    "type": "if_statement",
+    "type": "if_expression",
     "named": true,
     "fields": {
       "alternative": {
@@ -2796,7 +2800,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement",
+            "type": "statement_block",
             "named": true
           }
         ]

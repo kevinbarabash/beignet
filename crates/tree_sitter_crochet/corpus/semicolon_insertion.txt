@@ -12,57 +12,64 @@ if (a) {
 --------------------------------------------------------------------------------
 
 (program
-  (if_statement
-    (parenthesized_expression
-      (identifier))
-    (statement_block
-      (variable_declaration
-        (variable_declarator
-          (identifier)
-          (identifier)))
-      (expression_statement
-        (call_expression
-          (identifier)
-          (arguments)))
-      (expression_statement
-        (call_expression
-          (identifier)
-          (arguments)))
-      (return_statement
-        (identifier)))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (identifier))
+      (statement_block
+        (variable_declaration
+          (variable_declarator
+            (identifier)
+            (identifier)))
+        (expression_statement
+          (call_expression
+            (identifier)
+            (arguments)))
+        (expression_statement
+          (call_expression
+            (identifier)
+            (arguments)))
+        (return_statement
+          (identifier))))))
 
 ================================================================================
 Semicolon insertion before update expressions
 ================================================================================
 
-if (a)
+if (a) {
   d()
+}
 ++b
 
-if (a)
+if (a) {
   d()
+}
 --b
 
 --------------------------------------------------------------------------------
 
 (program
-  (if_statement
-    (parenthesized_expression
-      (identifier))
-    (expression_statement
-      (call_expression
-        (identifier)
-        (arguments))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (identifier))
+      (statement_block
+        (expression_statement
+          (call_expression
+            (identifier)
+            (arguments))))))
   (expression_statement
     (update_expression
       (identifier)))
-  (if_statement
-    (parenthesized_expression
-      (identifier))
-    (expression_statement
-      (call_expression
-        (identifier)
-        (arguments))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (identifier))
+      (statement_block
+        (expression_statement
+          (call_expression
+            (identifier)
+            (arguments))))))
   (expression_statement
     (update_expression
       (identifier))))
@@ -199,16 +206,17 @@ if (a) {b} else {c}
 --------------------------------------------------------------------------------
 
 (program
-  (if_statement
-    (parenthesized_expression
-      (identifier))
-    (statement_block
-      (expression_statement
-        (identifier)))
-    (else_clause
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (identifier))
       (statement_block
         (expression_statement
-          (identifier))))))
+          (identifier)))
+      (else_clause
+        (statement_block
+          (expression_statement
+            (identifier)))))))
 
 ================================================================================
 single-line blocks without semicolons
@@ -268,7 +276,7 @@ var a = new A()
 if/for/while/do statements without semicolons
 ================================================================================
 
-if (a) { if (b) return c }
+if (a) { if (b) { return c } }
 if (d) { for (;;) break }
 if (e) { for (f in g) break }
 if (h) { for (i of j) continue }
@@ -279,64 +287,73 @@ if (p) { var q }
 --------------------------------------------------------------------------------
 
 (program
-  (if_statement
-    (parenthesized_expression
-      (identifier))
-    (statement_block
-      (if_statement
-        (parenthesized_expression
-          (identifier))
-        (return_statement
-          (identifier)))))
-  (if_statement
-    (parenthesized_expression
-      (identifier))
-    (statement_block
-      (for_statement
-        (empty_statement)
-        (empty_statement)
-        (break_statement))))
-  (if_statement
-    (parenthesized_expression
-      (identifier))
-    (statement_block
-      (for_in_statement
-        (identifier)
-        (identifier)
-        (break_statement))))
-  (if_statement
-    (parenthesized_expression
-      (identifier))
-    (statement_block
-      (for_in_statement
-        (identifier)
-        (identifier)
-        (continue_statement))))
-  (if_statement
-    (parenthesized_expression
-      (identifier))
-    (statement_block
-      (while_statement
-        (parenthesized_expression
-          (identifier))
-        (break_statement))))
-  (if_statement
-    (parenthesized_expression
-      (identifier))
-    (statement_block
-      (do_statement
-        (statement_block
-          (expression_statement
-            (identifier)))
-        (parenthesized_expression
-          (identifier)))))
-  (if_statement
-    (parenthesized_expression
-      (identifier))
-    (statement_block
-      (variable_declaration
-        (variable_declarator
-          (identifier))))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (identifier))
+      (statement_block
+        (expression_statement
+          (if_expression
+            (parenthesized_expression
+              (identifier))
+            (statement_block
+              (return_statement
+                (identifier))))))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (identifier))
+      (statement_block
+        (for_statement
+          (empty_statement)
+          (empty_statement)
+          (break_statement)))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (identifier))
+      (statement_block
+        (for_in_statement
+          (identifier)
+          (identifier)
+          (break_statement)))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (identifier))
+      (statement_block
+        (for_in_statement
+          (identifier)
+          (identifier)
+          (continue_statement)))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (identifier))
+      (statement_block
+        (while_statement
+          (parenthesized_expression
+            (identifier))
+          (break_statement)))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (identifier))
+      (statement_block
+        (do_statement
+          (statement_block
+            (expression_statement
+              (identifier)))
+          (parenthesized_expression
+            (identifier))))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (identifier))
+      (statement_block
+        (variable_declaration
+          (variable_declarator
+            (identifier)))))))
 
 ================================================================================
 Single-line declarations without semicolons

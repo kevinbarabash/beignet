@@ -311,11 +311,12 @@ export class Foo {
       body: (class_body))))
 
 ================================================================================
-If statements
+If expressions
 ================================================================================
 
-if (x)
+if (x) {
   log(y);
+}
 
 if (a.b) {
   log(c);
@@ -325,38 +326,44 @@ if (a.b) {
 --------------------------------------------------------------------------------
 
 (program
-  (if_statement
-    condition: (parenthesized_expression
-      (identifier))
-    consequence: (expression_statement
-      (call_expression
-        function: (identifier)
-        arguments: (arguments
-          (identifier)))))
-  (if_statement
-    condition: (parenthesized_expression
-      (member_expression
-        object: (identifier)
-        property: (property_identifier)))
-    consequence: (statement_block
-      (expression_statement
-        (call_expression
-          function: (identifier)
-          arguments: (arguments
-            (identifier))))
-      (expression_statement
-        (identifier)))))
+  (expression_statement
+    (if_expression
+      condition: (parenthesized_expression
+        (identifier))
+      consequence: (statement_block
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (identifier)))))))
+  (expression_statement
+    (if_expression
+      condition: (parenthesized_expression
+        (member_expression
+          object: (identifier)
+          property: (property_identifier)))
+      consequence: (statement_block
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (identifier))))
+        (expression_statement
+          (identifier))))))
 
 ================================================================================
-If-else statements
+If-else expressions
 ================================================================================
 
-if (x)
+if (x) {
   y;
-else if (a)
+} else if (a) {
   b;
+} else {
+  null;
+}
 
-if (a) {
+let result = if (a) {
   c;
   d;
 } else {
@@ -366,29 +373,39 @@ if (a) {
 --------------------------------------------------------------------------------
 
 (program
-  (if_statement
-    condition: (parenthesized_expression
-      (identifier))
-    consequence: (expression_statement
-      (identifier))
-    alternative: (else_clause
-      (if_statement
+  (expression_statement
+    (if_expression
+      condition: (parenthesized_expression
+        (identifier))
+      consequence: (statement_block
+        (expression_statement
+          (identifier)))
+      alternative: (else_clause
+        (if_expression
+          condition: (parenthesized_expression
+            (identifier))
+          consequence: (statement_block
+            (expression_statement
+              (identifier)))
+          alternative: (else_clause
+            (statement_block
+              (expression_statement
+                (null))))))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (if_expression
         condition: (parenthesized_expression
           (identifier))
-        consequence: (expression_statement
-          (identifier)))))
-  (if_statement
-    condition: (parenthesized_expression
-      (identifier))
-    consequence: (statement_block
-      (expression_statement
-        (identifier))
-      (expression_statement
-        (identifier)))
-    alternative: (else_clause
-      (statement_block
-        (expression_statement
-          (identifier))))))
+        consequence: (statement_block
+          (expression_statement
+            (identifier))
+          (expression_statement
+            (identifier)))
+        alternative: (else_clause
+          (statement_block
+            (expression_statement
+              (identifier))))))))
 
 ================================================================================
 For statements
@@ -984,20 +1001,21 @@ if (true) {} else {}
 --------------------------------------------------------------------------------
 
 (program
-  (if_statement
-    (parenthesized_expression
-      (true))
-    (statement_block
-      (empty_statement)))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (true))
+      (statement_block
+        (empty_statement))))
   (empty_statement)
   (empty_statement)
-  (empty_statement)
-  (if_statement
-    (parenthesized_expression
-      (true))
-    (statement_block)
-    (else_clause
-      (statement_block))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (true))
+      (statement_block)
+      (else_clause
+        (statement_block)))))
 
 ================================================================================
 Labeled statements
@@ -1031,16 +1049,17 @@ while (true) {
       initializer: (empty_statement)
       condition: (empty_statement)
       body: (statement_block
-        (if_statement
-          condition: (parenthesized_expression
-            (identifier))
-          consequence: (statement_block
-            (break_statement
-              label: (statement_identifier)))
-          alternative: (else_clause
-            (statement_block
-              (continue_statement
-                label: (statement_identifier))))))))
+        (expression_statement
+          (if_expression
+            condition: (parenthesized_expression
+              (identifier))
+            consequence: (statement_block
+              (break_statement
+                label: (statement_identifier)))
+            alternative: (else_clause
+              (statement_block
+                (continue_statement
+                  label: (statement_identifier)))))))))
   (labeled_statement
     label: (statement_identifier)
     body: (statement_block
