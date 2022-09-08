@@ -32,8 +32,9 @@ module.exports = grammar(tsx, {
         (member) => member.name !== "ternary_expression"
       );
 
-      choices.push($.if_expression);
+      choices.push(alias($.if_statement, $.if_expression));
       choices.push($.do_expression);
+      // choices.push($.try_statement);
 
       return choice(...choices);
     },
@@ -45,7 +46,7 @@ module.exports = grammar(tsx, {
           ![
             "with_statement",
             "if_statement",
-            "label_statement",
+            // "try_statement",
             "statement_block",
           ].includes(member.name)
       );
@@ -66,18 +67,13 @@ module.exports = grammar(tsx, {
     switch_case: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
     switch_default: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
 
-    if_expression: ($, prev) =>
-      prec.right(
-        seq(
-          "if",
-          field("condition", $.parenthesized_expression),
-          // Always require the consequence to be a block
-          field("consequence", $.statement_block),
-          optional(field("alternative", $.else_clause))
-        )
-      ),
+    if_statement: ($, prev) =>
+      prec.right(replaceField(prev.content, "consequence", $.statement_block)),
     else_clause: ($, prev) =>
       // Always require the alternative to be a block
-      seq("else", choice($.if_expression, $.statement_block)),
+      seq(
+        "else",
+        choice(alias($.if_statement, $.if_expression), $.statement_block)
+      ),
   },
 });
