@@ -315,8 +315,8 @@ Objects
 --------------------------------------------------------------------------------
 
 (program
-  (statement_block)
-  (empty_statement)
+  (expression_statement
+    (object))
   (expression_statement
     (object
       (pair

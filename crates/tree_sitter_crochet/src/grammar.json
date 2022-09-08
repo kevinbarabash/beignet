@@ -736,10 +736,6 @@
         },
         {
           "type": "SYMBOL",
-          "name": "statement_block"
-        },
-        {
-          "type": "SYMBOL",
           "name": "switch_statement"
         },
         {
@@ -994,18 +990,6 @@
           {
             "type": "STRING",
             "value": "}"
-          },
-          {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "_automatic_semicolon"
-              },
-              {
-                "type": "BLANK"
-              }
-            ]
           }
         ]
       }
@@ -1180,7 +1164,7 @@
           "name": "body",
           "content": {
             "type": "SYMBOL",
-            "name": "statement"
+            "name": "statement_block"
           }
         }
       ]
@@ -1213,7 +1197,7 @@
           "name": "body",
           "content": {
             "type": "SYMBOL",
-            "name": "statement"
+            "name": "statement_block"
           }
         }
       ]
@@ -1379,7 +1363,7 @@
           "name": "body",
           "content": {
             "type": "SYMBOL",
-            "name": "statement"
+            "name": "statement_block"
           }
         }
       ]
@@ -1396,7 +1380,7 @@
           "name": "body",
           "content": {
             "type": "SYMBOL",
-            "name": "statement"
+            "name": "statement_block"
           }
         },
         {
@@ -1713,11 +1697,8 @@
           "type": "FIELD",
           "name": "body",
           "content": {
-            "type": "REPEAT",
-            "content": {
-              "type": "SYMBOL",
-              "name": "statement"
-            }
+            "type": "SYMBOL",
+            "name": "statement_block"
           }
         }
       ]
@@ -1737,11 +1718,8 @@
           "type": "FIELD",
           "name": "body",
           "content": {
-            "type": "REPEAT",
-            "content": {
-              "type": "SYMBOL",
-              "name": "statement"
-            }
+            "type": "SYMBOL",
+            "name": "statement_block"
           }
         }
       ]
@@ -1917,6 +1895,10 @@
         {
           "type": "SYMBOL",
           "name": "if_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "do_expression"
         }
       ]
     },
@@ -10247,6 +10229,30 @@
       },
       "named": true,
       "value": "type_identifier"
+    },
+    "do_expression": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "do"
+        },
+        {
+          "type": "STRING",
+          "value": "{"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "statement"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "}"
+        }
+      ]
     },
     "if_expression": {
       "type": "PREC_RIGHT",

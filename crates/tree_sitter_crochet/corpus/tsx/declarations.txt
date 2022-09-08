@@ -46,10 +46,12 @@ declare module Foo {
   1;
   return;
   switch (x) {
-      case 1:
+      case 1: {
           break;
-      default:
+      }
+      default: {
           break;
+      }
   }
   throw "hello";
   try { }
@@ -196,9 +198,11 @@ declare module Foo {
           body: (switch_body
             (switch_case
               value: (number)
-              body: (break_statement))
+              body: (statement_block
+                (break_statement)))
             (switch_default
-              body: (break_statement))))
+              body: (statement_block
+                (break_statement)))))
         (throw_statement
           (string
             (string_fragment)))

@@ -277,10 +277,10 @@ if/for/while/do statements without semicolons
 ================================================================================
 
 if (a) { if (b) { return c } }
-if (d) { for (;;) break }
-if (e) { for (f in g) break }
-if (h) { for (i of j) continue }
-if (k) { while (l) break }
+if (d) { for (;;) { break } }
+if (e) { for (f in g) { break } }
+if (h) { for (i of j) { continue } }
+if (k) { while (l) { break } }
 if (m) { do { n; } while (o) }
 if (p) { var q }
 
@@ -307,7 +307,8 @@ if (p) { var q }
         (for_statement
           (empty_statement)
           (empty_statement)
-          (break_statement)))))
+          (statement_block
+            (break_statement))))))
   (expression_statement
     (if_expression
       (parenthesized_expression
@@ -316,7 +317,8 @@ if (p) { var q }
         (for_in_statement
           (identifier)
           (identifier)
-          (break_statement)))))
+          (statement_block
+            (break_statement))))))
   (expression_statement
     (if_expression
       (parenthesized_expression
@@ -325,7 +327,8 @@ if (p) { var q }
         (for_in_statement
           (identifier)
           (identifier)
-          (continue_statement)))))
+          (statement_block
+            (continue_statement))))))
   (expression_statement
     (if_expression
       (parenthesized_expression
@@ -334,7 +337,8 @@ if (p) { var q }
         (while_statement
           (parenthesized_expression
             (identifier))
-          (break_statement)))))
+          (statement_block
+            (break_statement))))))
   (expression_statement
     (if_expression
       (parenthesized_expression

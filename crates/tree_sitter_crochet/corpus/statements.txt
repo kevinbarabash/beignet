@@ -411,11 +411,13 @@ let result = if (a) {
 For statements
 ================================================================================
 
-for (var a; c; d)
+for (var a; c; d) {
   e;
+}
 
-for (i = 0; i < 10; i++)
+for (i = 0; i < 10; i++) {
   log(y);
+}
 
 for (;;) {
   z;
@@ -437,8 +439,9 @@ for (var i = 0
     condition: (expression_statement
       (identifier))
     increment: (identifier)
-    body: (expression_statement
-      (identifier)))
+    body: (statement_block
+      (expression_statement
+        (identifier))))
   (for_statement
     initializer: (expression_statement
       (assignment_expression
@@ -450,11 +453,12 @@ for (var i = 0
         right: (number)))
     increment: (update_expression
       argument: (identifier))
-    body: (expression_statement
-      (call_expression
-        function: (identifier)
-        arguments: (arguments
-          (identifier)))))
+    body: (statement_block
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (arguments
+            (identifier))))))
   (for_statement
     initializer: (empty_statement)
     condition: (empty_statement)
@@ -479,14 +483,17 @@ for (var i = 0
 For-in statements
 ================================================================================
 
-for (item in items)
+for (item in items) {
   item();
+}
 
-for (var item in items || {})
+for (var item in items || {}) {
   item();
+}
 
-for (const {thing} in things)
+for (const {thing} in things) {
   thing();
+}
 
 for (x[i] in a) {}
 
@@ -504,27 +511,30 @@ for (var foo = bar in baz) {}
   (for_in_statement
     (identifier)
     (identifier)
-    (expression_statement
-      (call_expression
-        (identifier)
-        (arguments))))
+    (statement_block
+      (expression_statement
+        (call_expression
+          (identifier)
+          (arguments)))))
   (for_in_statement
     (identifier)
     (binary_expression
       (identifier)
       (object))
-    (expression_statement
-      (call_expression
-        (identifier)
-        (arguments))))
+    (statement_block
+      (expression_statement
+        (call_expression
+          (identifier)
+          (arguments)))))
   (for_in_statement
     (object_pattern
       (shorthand_property_identifier_pattern))
     (identifier)
-    (expression_statement
-      (call_expression
-        (identifier)
-        (arguments))))
+    (statement_block
+      (expression_statement
+        (call_expression
+          (identifier)
+          (arguments)))))
   (for_in_statement
     (subscript_expression
       (identifier)
@@ -590,11 +600,13 @@ for (key in something && i = 0; i < n; i++) {
 For-of statements
 ================================================================================
 
-for (a of b)
+for (a of b) {
   process(a);
+}
 
-for (let {a, b} of items || [])
+for (let {a, b} of items || []) {
   process(a, b);
+}
 
 --------------------------------------------------------------------------------
 
@@ -602,11 +614,12 @@ for (let {a, b} of items || [])
   (for_in_statement
     (identifier)
     (identifier)
-    (expression_statement
-      (call_expression
-        (identifier)
-        (arguments
-          (identifier)))))
+    (statement_block
+      (expression_statement
+        (call_expression
+          (identifier)
+          (arguments
+            (identifier))))))
   (for_in_statement
     (object_pattern
       (shorthand_property_identifier_pattern)
@@ -614,12 +627,13 @@ for (let {a, b} of items || [])
     (binary_expression
       (identifier)
       (array))
-    (expression_statement
-      (call_expression
-        (identifier)
-        (arguments
+    (statement_block
+      (expression_statement
+        (call_expression
           (identifier)
-          (identifier))))))
+          (arguments
+            (identifier)
+            (identifier)))))))
 
 ================================================================================
 For-await-of statements
@@ -645,8 +659,9 @@ for await (const chunk of stream) {
 While statements
 ================================================================================
 
-while (a)
+while (a) {
   b();
+}
 
 while (a) {
 
@@ -658,10 +673,11 @@ while (a) {
   (while_statement
     condition: (parenthesized_expression
       (identifier))
-    body: (expression_statement
-      (call_expression
-        function: (identifier)
-        arguments: (arguments))))
+    body: (statement_block
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (arguments)))))
   (while_statement
     condition: (parenthesized_expression
       (identifier))
@@ -675,8 +691,6 @@ do {
   a;
 } while (b)
 
-do a; while (b)
-
 do {} while (b)
 
 --------------------------------------------------------------------------------
@@ -686,11 +700,6 @@ do {} while (b)
     body: (statement_block
       (expression_statement
         (identifier)))
-    condition: (parenthesized_expression
-      (identifier)))
-  (do_statement
-    body: (expression_statement
-      (identifier))
     condition: (parenthesized_expression
       (identifier)))
   (do_statement
@@ -884,14 +893,17 @@ Switch statements
 
 switch (x) {
   case 1:
-  case 2:
+  case 2: {
     something();
     break;
-  case "three":
+  }
+  case "three": {
     somethingElse();
     break;
-  default:
+  }
+  default: {
     return 4;
+  }
 }
 
 --------------------------------------------------------------------------------
@@ -902,25 +914,29 @@ switch (x) {
       (identifier))
     (switch_body
       (switch_case
-        (number))
-      (switch_case
         (number)
-        (expression_statement
-          (call_expression
-            (identifier)
-            (arguments)))
-        (break_statement))
+        (ERROR
+          (identifier)
+          (number))
+        (statement_block
+          (expression_statement
+            (call_expression
+              (identifier)
+              (arguments)))
+          (break_statement)))
       (switch_case
         (string
           (string_fragment))
-        (expression_statement
-          (call_expression
-            (identifier)
-            (arguments)))
-        (break_statement))
+        (statement_block
+          (expression_statement
+            (call_expression
+              (identifier)
+              (arguments)))
+          (break_statement)))
       (switch_default
-        (return_statement
-          (number))))))
+        (statement_block
+          (return_statement
+            (number)))))))
 
 ================================================================================
 Throw statements
@@ -1031,7 +1047,7 @@ for (;;) {
 }
 
 label
-: {
+: do {
   break label;
 }
 
@@ -1062,9 +1078,10 @@ while (true) {
                   label: (statement_identifier)))))))))
   (labeled_statement
     label: (statement_identifier)
-    body: (statement_block
-      (break_statement
-        label: (statement_identifier))))
+    body: (expression_statement
+      (do_expression
+        (break_statement
+          label: (statement_identifier)))))
   (labeled_statement
     label: (statement_identifier)
     body: (while_statement
