@@ -38,11 +38,6 @@ pub fn codegen_js(program: &ast::Program) -> String {
         runtime: Some(Runtime::Automatic),
         ..Default::default()
     };
-    let x = {
-        let y = 10;
-        let z = 15;
-        y + z
-    };
 
     let globals = Globals::default();
     // The call to Mark::new() must be wrapped in a GLOBALS.set() closure

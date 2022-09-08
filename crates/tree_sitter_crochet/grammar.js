@@ -15,30 +15,6 @@ const replaceField = (prev, name, replacement) => {
 module.exports = grammar(tsx, {
   name: "crochet",
 
-  // conflicts: ($, previous) =>
-  //   previous.concat([
-  //     [$.object, $.object_type, $.statement_block],
-  //     [$.object, $.object_pattern, $.object_type, $.statement_block],
-  //     [$.object_type, $.statement_block],
-  //     [$.object_type, $.empty_statement],
-
-  //     [$.primary_expression, $.method_definition, $.method_signature],
-  //     [
-  //       $.primary_expression,
-  //       $.method_definition,
-  //       $.method_signature,
-  //       $.property_signature,
-  //     ],
-  //     [
-  //       $.primary_expression,
-  //       $.method_definition,
-  //       $.method_signature,
-  //       $.property_signature,
-  //       $.index_signature,
-  //     ],
-  //     [$.primary_expression, $.index_signature],
-  //   ]),
-
   rules: {
     // Removes sequence expression and optional flow-style type assertion
     parenthesized_expression: ($, prev) => {
@@ -56,7 +32,6 @@ module.exports = grammar(tsx, {
         (member) => member.name !== "ternary_expression"
       );
 
-      // Makes if-else an expression
       choices.push($.if_expression);
       choices.push($.do_expression);
 
