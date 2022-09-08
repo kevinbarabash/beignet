@@ -311,11 +311,12 @@ export class Foo {
       body: (class_body))))
 
 ================================================================================
-If statements
+If expressions
 ================================================================================
 
-if (x)
+if (x) {
   log(y);
+}
 
 if (a.b) {
   log(c);
@@ -325,38 +326,44 @@ if (a.b) {
 --------------------------------------------------------------------------------
 
 (program
-  (if_statement
-    condition: (parenthesized_expression
-      (identifier))
-    consequence: (expression_statement
-      (call_expression
-        function: (identifier)
-        arguments: (arguments
-          (identifier)))))
-  (if_statement
-    condition: (parenthesized_expression
-      (member_expression
-        object: (identifier)
-        property: (property_identifier)))
-    consequence: (statement_block
-      (expression_statement
-        (call_expression
-          function: (identifier)
-          arguments: (arguments
-            (identifier))))
-      (expression_statement
-        (identifier)))))
+  (expression_statement
+    (if_expression
+      condition: (parenthesized_expression
+        (identifier))
+      consequence: (statement_block
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (identifier)))))))
+  (expression_statement
+    (if_expression
+      condition: (parenthesized_expression
+        (member_expression
+          object: (identifier)
+          property: (property_identifier)))
+      consequence: (statement_block
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (identifier))))
+        (expression_statement
+          (identifier))))))
 
 ================================================================================
-If-else statements
+If-else expressions
 ================================================================================
 
-if (x)
+if (x) {
   y;
-else if (a)
+} else if (a) {
   b;
+} else {
+  null;
+}
 
-if (a) {
+let result = if (a) {
   c;
   d;
 } else {
@@ -366,38 +373,48 @@ if (a) {
 --------------------------------------------------------------------------------
 
 (program
-  (if_statement
-    condition: (parenthesized_expression
-      (identifier))
-    consequence: (expression_statement
-      (identifier))
-    alternative: (else_clause
-      (if_statement
+  (expression_statement
+    (if_expression
+      condition: (parenthesized_expression
+        (identifier))
+      consequence: (statement_block
+        (expression_statement
+          (identifier)))
+      alternative: (else_clause
+        (if_expression
+          condition: (parenthesized_expression
+            (identifier))
+          consequence: (statement_block
+            (expression_statement
+              (identifier)))
+          alternative: (else_clause
+            (statement_block
+              (expression_statement
+                (null))))))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (if_expression
         condition: (parenthesized_expression
           (identifier))
-        consequence: (expression_statement
-          (identifier)))))
-  (if_statement
-    condition: (parenthesized_expression
-      (identifier))
-    consequence: (statement_block
-      (expression_statement
-        (identifier))
-      (expression_statement
-        (identifier)))
-    alternative: (else_clause
-      (statement_block
-        (expression_statement
-          (identifier))))))
+        consequence: (statement_block
+          (expression_statement
+            (identifier))
+          (expression_statement
+            (identifier)))
+        alternative: (else_clause
+          (statement_block
+            (expression_statement
+              (identifier))))))))
 
 ================================================================================
 For statements
 ================================================================================
 
-for (var a, b; c; d)
+for (var a; c; d)
   e;
 
-for (i = 0, init(); i < 10; i++)
+for (i = 0; i < 10; i++)
   log(y);
 
 for (;;) {
@@ -416,8 +433,6 @@ for (var i = 0
   (for_statement
     initializer: (variable_declaration
       (variable_declarator
-        name: (identifier))
-      (variable_declarator
         name: (identifier)))
     condition: (expression_statement
       (identifier))
@@ -426,13 +441,9 @@ for (var i = 0
       (identifier)))
   (for_statement
     initializer: (expression_statement
-      (sequence_expression
-        left: (assignment_expression
-          left: (identifier)
-          right: (number))
-        right: (call_expression
-          function: (identifier)
-          arguments: (arguments))))
+      (assignment_expression
+        left: (identifier)
+        right: (number)))
     condition: (expression_statement
       (binary_expression
         left: (identifier)
@@ -477,9 +488,6 @@ for (var item in items || {})
 for (const {thing} in things)
   thing();
 
-for (x in a, b, c)
-  foo();
-
 for (x[i] in a) {}
 
 for (x.y in a) {}
@@ -513,17 +521,6 @@ for (var foo = bar in baz) {}
     (object_pattern
       (shorthand_property_identifier_pattern))
     (identifier)
-    (expression_statement
-      (call_expression
-        (identifier)
-        (arguments))))
-  (for_in_statement
-    (identifier)
-    (sequence_expression
-      (identifier)
-      (sequence_expression
-        (identifier)
-        (identifier)))
     (expression_statement
       (call_expression
         (identifier)
@@ -707,7 +704,6 @@ Return statements
 
 return;
 return 5;
-return 1,2;
 return async;
 return a;
 
@@ -717,10 +713,6 @@ return a;
   (return_statement)
   (return_statement
     (number))
-  (return_statement
-    (sequence_expression
-      (number)
-      (number)))
   (return_statement
     (identifier))
   (return_statement
@@ -947,28 +939,6 @@ throw new Error("uh oh");
           (string_fragment))))))
 
 ================================================================================
-Throw statements with sequence expressions
-================================================================================
-
-throw f = 1, f;
-throw g = 2, g
---------------------------------------------------------------------------------
-
-(program
-  (throw_statement
-    (sequence_expression
-      (assignment_expression
-        (identifier)
-        (number))
-      (identifier)))
-  (throw_statement
-    (sequence_expression
-      (assignment_expression
-        (identifier)
-        (number))
-      (identifier))))
-
-================================================================================
 Try catch finally statements
 ================================================================================
 
@@ -1031,20 +1001,21 @@ if (true) {} else {}
 --------------------------------------------------------------------------------
 
 (program
-  (if_statement
-    (parenthesized_expression
-      (true))
-    (statement_block
-      (empty_statement)))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (true))
+      (statement_block
+        (empty_statement))))
   (empty_statement)
   (empty_statement)
-  (empty_statement)
-  (if_statement
-    (parenthesized_expression
-      (true))
-    (statement_block)
-    (else_clause
-      (statement_block))))
+  (expression_statement
+    (if_expression
+      (parenthesized_expression
+        (true))
+      (statement_block)
+      (else_clause
+        (statement_block)))))
 
 ================================================================================
 Labeled statements
@@ -1078,16 +1049,17 @@ while (true) {
       initializer: (empty_statement)
       condition: (empty_statement)
       body: (statement_block
-        (if_statement
-          condition: (parenthesized_expression
-            (identifier))
-          consequence: (statement_block
-            (break_statement
-              label: (statement_identifier)))
-          alternative: (else_clause
-            (statement_block
-              (continue_statement
-                label: (statement_identifier))))))))
+        (expression_statement
+          (if_expression
+            condition: (parenthesized_expression
+              (identifier))
+            consequence: (statement_block
+              (break_statement
+                label: (statement_identifier)))
+            alternative: (else_clause
+              (statement_block
+                (continue_statement
+                  label: (statement_identifier)))))))))
   (labeled_statement
     label: (statement_identifier)
     body: (statement_block
@@ -1114,28 +1086,6 @@ debugger
 (program
   (debugger_statement)
   (debugger_statement))
-
-================================================================================
-With statements
-================================================================================
-
-with (x) { i; }
-
-with (x) { }
-
---------------------------------------------------------------------------------
-
-(program
-  (with_statement
-    object: (parenthesized_expression
-      (identifier))
-    body: (statement_block
-      (expression_statement
-        (identifier))))
-  (with_statement
-    object: (parenthesized_expression
-      (identifier))
-    body: (statement_block)))
 
 ================================================================================
 Hash bang lines

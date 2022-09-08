@@ -750,6 +750,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             })
         }
         "template_string" => Expr::TemplateLiteral(parse_template_string(node, src)),
+        "if_expression" => parse_if_expression(node, src),
         _ => {
             todo!("unhandled {node:#?} = '{}'", text_for_node(node, src))
         }
@@ -796,6 +797,37 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
     // $.class,
     // $.meta_property,
     // $.call_expression
+}
+
+fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Expr {
+    assert_eq!(node.kind(), "if_expression");
+
+    let condition = node.child_by_field_name("condition").unwrap();
+    let condition = parse_expression(&condition, src);
+    let consequent = node.child_by_field_name("consequence").unwrap();
+    let consequent = parse_block_statement(&consequent, src);
+    let alternate = node.child_by_field_name("alternative").map(|alt| {
+        let expr = match alt.kind() {
+            "statement_block" => parse_block_statement(&alt, src),
+            "else_clause" => {
+                let else_clause = alt.named_child(0).unwrap();
+                match else_clause.kind() {
+                    "if_expression" => parse_if_expression(&else_clause, src),
+                    "statement_block" => parse_block_statement(&else_clause, src),
+                    kind => panic!("Unexpected else_clause child kind: '{kind}'"),
+                }
+            }
+            kind => panic!("Unexpected alternative kind: '{kind}'"),
+        };
+        Box::from(expr)
+    });
+
+    Expr::IfElse(IfElse {
+        span: node.byte_range(),
+        cond: Box::from(condition),
+        consequent: Box::from(consequent),
+        alternate,
+    })
 }
 
 fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
@@ -1350,10 +1382,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn if_else() {
-        insta::assert_debug_snapshot!(parse("if true { 5 } else { 10 }"));
-        insta::assert_debug_snapshot!(parse("if a { 5 } else if b { 10 } else { 20 }"));
+        insta::assert_debug_snapshot!(parse("if (true) { 5 } else { 10 }"));
+        insta::assert_debug_snapshot!(parse("if (a) { 5 } else if (b) { 10 } else { 20 }"));
     }
 
     #[test]

@@ -1,6 +1,6 @@
-==================================
+================================================================================
 Ambient declarations
-==================================
+================================================================================
 
 declare class Error {
   constructor: Function
@@ -57,7 +57,7 @@ declare module Foo {
   finally { }
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (ambient_declaration
@@ -66,47 +66,70 @@ declare module Foo {
       body: (class_body
         (public_field_definition
           name: (property_identifier)
-          type: (type_annotation (type_identifier))))))
+          type: (type_annotation
+            (type_identifier))))))
   (ambient_declaration
     (variable_declaration
       (variable_declarator
         name: (identifier)
-        type: (type_annotation (predefined_type)))))
+        type: (type_annotation
+          (predefined_type)))))
   (ambient_declaration
     (lexical_declaration
       (variable_declarator
         name: (identifier)
-        value: (string (string_fragment)))))
+        value: (string
+          (string_fragment)))))
   (ambient_declaration
     (function_signature
       name: (identifier)
-      parameters: (formal_parameters (required_parameter pattern: (identifier) type: (type_annotation (predefined_type))))
-      return_type: (type_annotation (predefined_type))))
-
+      parameters: (formal_parameters
+        (required_parameter
+          pattern: (identifier)
+          type: (type_annotation
+            (predefined_type))))
+      return_type: (type_annotation
+        (predefined_type))))
   (ambient_declaration
     (internal_module
       name: (identifier)
       body: (statement_block
         (function_signature
           name: (identifier)
-          parameters: (formal_parameters (required_parameter pattern: (identifier) type: (type_annotation (predefined_type))))
-          return_type: (type_annotation (predefined_type)))
-        (lexical_declaration (variable_declarator
-          name: (identifier)
-          type: (type_annotation (predefined_type))))
+          parameters: (formal_parameters
+            (required_parameter
+              pattern: (identifier)
+              type: (type_annotation
+                (predefined_type))))
+          return_type: (type_annotation
+            (predefined_type)))
+        (lexical_declaration
+          (variable_declarator
+            name: (identifier)
+            type: (type_annotation
+              (predefined_type))))
         (interface_declaration
           name: (type_identifier)
           body: (object_type
             (property_signature
               name: (property_identifier)
-              type: (type_annotation (predefined_type)))))
+              type: (type_annotation
+                (predefined_type)))))
         (interface_declaration
           name: (type_identifier)
           body: (object_type
-            (property_signature name: (property_identifier) type: (type_annotation (predefined_type)))
-            (property_signature name: (property_identifier) type: (type_annotation (predefined_type)))
-            (property_signature name: (property_identifier) type: (type_annotation (predefined_type))))))))
-
+            (property_signature
+              name: (property_identifier)
+              type: (type_annotation
+                (predefined_type)))
+            (property_signature
+              name: (property_identifier)
+              type: (type_annotation
+                (predefined_type)))
+            (property_signature
+              name: (property_identifier)
+              type: (type_annotation
+                (predefined_type))))))))
   (ambient_declaration
     (class_declaration
       name: (type_identifier)
@@ -114,24 +137,30 @@ declare module Foo {
         (method_signature
           name: (property_identifier)
           parameters: (formal_parameters
-            (required_parameter pattern: (identifier) type: (type_annotation (predefined_type)))))
+            (required_parameter
+              pattern: (identifier)
+              type: (type_annotation
+                (predefined_type)))))
         (public_field_definition
           name: (property_identifier)
-          type: (type_annotation (predefined_type)))
+          type: (type_annotation
+            (predefined_type)))
         (method_signature
           name: (property_identifier)
           parameters: (formal_parameters)
-          return_type: (type_annotation (predefined_type))))))
-
+          return_type: (type_annotation
+            (predefined_type))))))
   (ambient_declaration
     (module
-      name: (nested_identifier (identifier) (identifier))
+      name: (nested_identifier
+        (identifier)
+        (identifier))
       body: (statement_block
         (export_statement
-          declaration: (variable_declaration (variable_declarator name: (identifier)))))))
-
+          declaration: (variable_declaration
+            (variable_declarator
+              name: (identifier)))))))
   (empty_statement)
-
   (ambient_declaration
     (module
       name: (identifier)
@@ -141,7 +170,8 @@ declare module Foo {
         (debugger_statement)
         (do_statement
           body: (statement_block)
-          condition: (parenthesized_expression (true)))
+          condition: (parenthesized_expression
+            (true)))
         (for_in_statement
           left: (identifier)
           right: (null)
@@ -150,54 +180,60 @@ declare module Foo {
           initializer: (empty_statement)
           condition: (empty_statement)
           body: (statement_block))
-        (if_statement
-          condition: (parenthesized_expression (true))
-          consequence: (statement_block)
-          alternative: (else_clause (statement_block)))
-        (expression_statement (number))
+        (expression_statement
+          (if_expression
+            condition: (parenthesized_expression
+              (true))
+            consequence: (statement_block)
+            alternative: (else_clause
+              (statement_block))))
+        (expression_statement
+          (number))
         (return_statement)
         (switch_statement
-          value: (parenthesized_expression (identifier))
+          value: (parenthesized_expression
+            (identifier))
           body: (switch_body
-            (switch_case value: (number) body: (break_statement))
-            (switch_default body: (break_statement))))
-        (throw_statement (string (string_fragment)))
+            (switch_case
+              value: (number)
+              body: (break_statement))
+            (switch_default
+              body: (break_statement))))
+        (throw_statement
+          (string
+            (string_fragment)))
         (try_statement
           body: (statement_block)
           handler: (catch_clause
             parameter: (identifier)
             body: (statement_block))
-          finalizer: (finally_clause body: (statement_block)))
-      )
-    )
-  )
-)
+          finalizer: (finally_clause
+            body: (statement_block)))))))
 
-==================================================
+================================================================================
 Exception handling
-==================================================
+================================================================================
 
 try {}
 catch (e: unknown) {}
 finally {}
 
----
+--------------------------------------------------------------------------------
 
 (program
   (try_statement
     body: (statement_block)
     handler: (catch_clause
       parameter: (identifier)
-      type: (type_annotation (predefined_type))
-      body: (statement_block)
-    )
-    finalizer: (finally_clause body: (statement_block))
-  )
-)
+      type: (type_annotation
+        (predefined_type))
+      body: (statement_block))
+    finalizer: (finally_clause
+      body: (statement_block))))
 
-==================================================
+================================================================================
 Flow-style ambient class declarations with commas
-==================================================
+================================================================================
 
 declare interface IFoo {
   bar(): number,
@@ -209,47 +245,60 @@ declare class Foo {
   baz(): Baz,
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (ambient_declaration
-    (interface_declaration (type_identifier) (object_type
-      (method_signature
-        (property_identifier)
-        (formal_parameters)
-        (type_annotation (predefined_type)))
-      (method_signature
-        (property_identifier)
-        (formal_parameters)
-        (type_annotation (type_identifier))))))
+    (interface_declaration
+      (type_identifier)
+      (object_type
+        (method_signature
+          (property_identifier)
+          (formal_parameters)
+          (type_annotation
+            (predefined_type)))
+        (method_signature
+          (property_identifier)
+          (formal_parameters)
+          (type_annotation
+            (type_identifier))))))
   (ambient_declaration
-    (class_declaration (type_identifier) (class_body
-      (method_signature
-        (property_identifier)
-        (formal_parameters)
-        (type_annotation (predefined_type)))
-      (method_signature
-        (property_identifier)
-        (formal_parameters)
-        (type_annotation (type_identifier)))))))
+    (class_declaration
+      (type_identifier)
+      (class_body
+        (method_signature
+          (property_identifier)
+          (formal_parameters)
+          (type_annotation
+            (predefined_type)))
+        (method_signature
+          (property_identifier)
+          (formal_parameters)
+          (type_annotation
+            (type_identifier)))))))
 
-==================================
+================================================================================
 Flow module.exports declarations
-==================================
+================================================================================
 
 declare module.exports: {
   foo: string;
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
-  (ambient_declaration (property_identifier) (object_type
-    (property_signature (property_identifier) (type_annotation (predefined_type))))))
+  (ambient_declaration
+    (property_identifier)
+    (object_type
+      (property_signature
+        (property_identifier)
+        (type_annotation
+          (predefined_type))))))
 
-==================================
+================================================================================
 Ambient exports
-==================================
+================================================================================
 
 export default function point(x: number, y: number) {
     return { x, y };
@@ -261,33 +310,54 @@ export default class A {}
 
 export async function readFile(filename: string): Promise<Buffer>
 
----
+--------------------------------------------------------------------------------
 
 (program
   (export_statement
     (function_declaration
       (identifier)
       (formal_parameters
-        (required_parameter (identifier) (type_annotation (predefined_type)))
-        (required_parameter (identifier) (type_annotation (predefined_type))))
+        (required_parameter
+          (identifier)
+          (type_annotation
+            (predefined_type)))
+        (required_parameter
+          (identifier)
+          (type_annotation
+            (predefined_type))))
       (statement_block
-        (return_statement (object (shorthand_property_identifier) (shorthand_property_identifier))))))
+        (return_statement
+          (object
+            (shorthand_property_identifier)
+            (shorthand_property_identifier))))))
   (comment)
-  (export_statement (class_declaration (type_identifier) (class_body)))
-  (export_statement (function_signature
-    (identifier)
-    (formal_parameters (required_parameter (identifier) (type_annotation (predefined_type))))
-    (type_annotation (generic_type (type_identifier) (type_arguments (type_identifier)))))))
+  (export_statement
+    (class_declaration
+      (type_identifier)
+      (class_body)))
+  (export_statement
+    (function_signature
+      (identifier)
+      (formal_parameters
+        (required_parameter
+          (identifier)
+          (type_annotation
+            (predefined_type))))
+      (type_annotation
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (type_identifier)))))))
 
-==================================
+================================================================================
 Typeof types
-==================================
+================================================================================
 
 declare class Linter {
     static findConfiguration: typeof findConfiguration;
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (ambient_declaration
@@ -296,49 +366,63 @@ declare class Linter {
       (class_body
         (public_field_definition
           (property_identifier)
-          (type_annotation (type_query (identifier))))))))
+          (type_annotation
+            (type_query
+              (identifier))))))))
 
-==================================
+================================================================================
 Export assignments
-==================================
+================================================================================
 
 export = Linter;
 export = {};
 
----
+--------------------------------------------------------------------------------
 
 (program
-  (export_statement (identifier))
-  (export_statement (object)))
+  (export_statement
+    (identifier))
+  (export_statement
+    (object)))
 
-==================================
+================================================================================
 Import aliases
-==================================
+================================================================================
 
 import r = X.N;
 
----
+--------------------------------------------------------------------------------
 
 (program
-  (import_alias (identifier) (nested_identifier (identifier) (identifier))))
+  (import_alias
+    (identifier)
+    (nested_identifier
+      (identifier)
+      (identifier))))
 
-==================================
+================================================================================
 Import aliases in modules
-==================================
+================================================================================
 
 module C {
   import r = X.N;
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
-  (module (identifier) (statement_block
-		(import_alias (identifier) (nested_identifier (identifier) (identifier))))))
+  (module
+    (identifier)
+    (statement_block
+      (import_alias
+        (identifier)
+        (nested_identifier
+          (identifier)
+          (identifier))))))
 
-==================================
+================================================================================
 Export import aliases
-==================================
+================================================================================
 
 module M {
     export module N {
@@ -346,16 +430,24 @@ module M {
     export import X = N;
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
-  (module (identifier) (statement_block
-    (export_statement (module (identifier) (statement_block)))
-    (export_statement (import_alias (identifier) (identifier))))))
+  (module
+    (identifier)
+    (statement_block
+      (export_statement
+        (module
+          (identifier)
+          (statement_block)))
+      (export_statement
+        (import_alias
+          (identifier)
+          (identifier))))))
 
-==================================
+================================================================================
 Property signatures with accessibility modifiers
-==================================
+================================================================================
 
 export interface IAppState {
   public readonly users: ReadonlyArray<User>
@@ -366,7 +458,7 @@ export class CloningRepository {
 }
 
 
----
+--------------------------------------------------------------------------------
 
 (program
   (export_statement
@@ -376,22 +468,28 @@ export class CloningRepository {
         (property_signature
           (accessibility_modifier)
           (property_identifier)
-          (type_annotation (generic_type (type_identifier) (type_arguments (type_identifier))))))))
+          (type_annotation
+            (generic_type
+              (type_identifier)
+              (type_arguments
+                (type_identifier))))))))
   (export_statement
     (class_declaration
       (type_identifier)
       (class_body
         (public_field_definition
-        (accessibility_modifier)
-        (property_identifier) (update_expression (identifier)))))))
+          (accessibility_modifier)
+          (property_identifier)
+          (update_expression
+            (identifier)))))))
 
-==================================
+================================================================================
 Ambient type declarations
-==================================
+================================================================================
 
 declare type IndexableType = string | number | Date | Array<string | number | Date>;
 
----
+--------------------------------------------------------------------------------
 
 (program
   (ambient_declaration
@@ -399,15 +497,22 @@ declare type IndexableType = string | number | Date | Array<string | number | Da
       (type_identifier)
       (union_type
         (union_type
-          (union_type (predefined_type) (predefined_type))
+          (union_type
+            (predefined_type)
+            (predefined_type))
           (type_identifier))
-          (generic_type
-            (type_identifier)
-            (type_arguments (union_type (union_type (predefined_type) (predefined_type)) (type_identifier))))))))
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (union_type
+              (union_type
+                (predefined_type)
+                (predefined_type))
+              (type_identifier))))))))
 
-==================================
+================================================================================
 Ambient module declarations
-==================================
+================================================================================
 
 module Promise {
     var on: {}
@@ -418,62 +523,93 @@ declare module "example"
 
 declare module "example" { }
 
----
+--------------------------------------------------------------------------------
 
 (program
-  (module (identifier) (statement_block
-    (variable_declaration (variable_declarator
-      (identifier)
-      (type_annotation (object_type))))
-    (export_statement (function_signature
-      (identifier)
-      (type_parameters (type_parameter (type_identifier)))
-      (formal_parameters
-        (optional_parameter
+  (module
+    (identifier)
+    (statement_block
+      (variable_declaration
+        (variable_declarator
           (identifier)
-          (type_annotation (generic_type (type_identifier) (type_arguments (type_identifier))))))
-      (type_annotation (generic_type (type_identifier) (type_arguments (type_identifier))))))))
-  (ambient_declaration (module (string (string_fragment))))
-  (ambient_declaration (module (string (string_fragment)) (statement_block))))
+          (type_annotation
+            (object_type))))
+      (export_statement
+        (function_signature
+          (identifier)
+          (type_parameters
+            (type_parameter
+              (type_identifier)))
+          (formal_parameters
+            (optional_parameter
+              (identifier)
+              (type_annotation
+                (generic_type
+                  (type_identifier)
+                  (type_arguments
+                    (type_identifier))))))
+          (type_annotation
+            (generic_type
+              (type_identifier)
+              (type_arguments
+                (type_identifier))))))))
+  (ambient_declaration
+    (module
+      (string
+        (string_fragment))))
+  (ambient_declaration
+    (module
+      (string
+        (string_fragment))
+      (statement_block))))
 
-=================================
+================================================================================
 Accessibility modifiers as pair keywords
-=================================
+================================================================================
 
 x = { name, description, private: private_ }
 
----
+--------------------------------------------------------------------------------
 
-(program (expression_statement (assignment_expression
-  (identifier)
-  (object
-    (shorthand_property_identifier)
-    (shorthand_property_identifier)
-    (pair (property_identifier) (identifier))))))
+(program
+  (expression_statement
+    (assignment_expression
+      (identifier)
+      (object
+        (shorthand_property_identifier)
+        (shorthand_property_identifier)
+        (pair
+          (property_identifier)
+          (identifier))))))
 
-=================================
+================================================================================
 Type casts
-=================================
+================================================================================
 
 foo as any as Array<number>
 
----
+--------------------------------------------------------------------------------
 
 (program
   (expression_statement
     (as_expression
-      (as_expression (identifier) (predefined_type))
-      (generic_type (type_identifier) (type_arguments (predefined_type))))))
+      (as_expression
+        (identifier)
+        (predefined_type))
+      (generic_type
+        (type_identifier)
+        (type_arguments
+          (predefined_type))))))
 
-=================================
+================================================================================
 Ambient export function declarations
-=================================
+================================================================================
 
 export interface Foo {
   export function OrderedMap<K, V>(iter: Iterable.Keyed<K, V>): OrderedMap<K, V>;
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (export_statement
@@ -483,19 +619,32 @@ export interface Foo {
         (export_statement
           (function_signature
             (identifier)
-            (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier)))
+            (type_parameters
+              (type_parameter
+                (type_identifier))
+              (type_parameter
+                (type_identifier)))
             (formal_parameters
               (required_parameter
                 (identifier)
                 (type_annotation
                   (generic_type
-                    (nested_type_identifier (identifier) (type_identifier))
-                    (type_arguments (type_identifier) (type_identifier))))))
-            (type_annotation (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))))))))))
+                    (nested_type_identifier
+                      (identifier)
+                      (type_identifier))
+                    (type_arguments
+                      (type_identifier)
+                      (type_identifier))))))
+            (type_annotation
+              (generic_type
+                (type_identifier)
+                (type_arguments
+                  (type_identifier)
+                  (type_identifier))))))))))
 
-=================================
+================================================================================
 Ambient type alias declarations in namespaces
-=================================
+================================================================================
 
 declare namespace moment {
   type formatFunction = () => string;
@@ -508,44 +657,66 @@ declare namespace moment {
   export const enum Blah { Blaz, Bloz, Bleez }
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (ambient_declaration
-    (internal_module (identifier) (statement_block
-      (type_alias_declaration (type_identifier) (function_type (formal_parameters) (predefined_type)))
-      (export_statement (variable_declaration (variable_declarator (identifier) (type_annotation (predefined_type)))))
-      (export_statement (class_declaration (type_identifier) (class_body)))
-      (export_statement
-        (function_signature
-          (identifier)
-          (formal_parameters)
-          (type_annotation (type_identifier))))
-      (export_statement (enum_declaration (identifier) (enum_body
-        (property_identifier)
-        (property_identifier)
-        (property_identifier))))))))
+    (internal_module
+      (identifier)
+      (statement_block
+        (type_alias_declaration
+          (type_identifier)
+          (function_type
+            (formal_parameters)
+            (predefined_type)))
+        (export_statement
+          (variable_declaration
+            (variable_declarator
+              (identifier)
+              (type_annotation
+                (predefined_type)))))
+        (export_statement
+          (class_declaration
+            (type_identifier)
+            (class_body)))
+        (export_statement
+          (function_signature
+            (identifier)
+            (formal_parameters)
+            (type_annotation
+              (type_identifier))))
+        (export_statement
+          (enum_declaration
+            (identifier)
+            (enum_body
+              (property_identifier)
+              (property_identifier)
+              (property_identifier))))))))
 
-=================================
+================================================================================
 Export interfaces in namespaces
-=================================
+================================================================================
 
 declare namespace Foo {
   export interface Bar {
   }
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (ambient_declaration
     (internal_module
       (identifier)
-      (statement_block (export_statement (interface_declaration (type_identifier) (object_type)))))))
+      (statement_block
+        (export_statement
+          (interface_declaration
+            (type_identifier)
+            (object_type)))))))
 
-=================================
+================================================================================
 Namespaces as internal modules
-=================================
+================================================================================
 
 namespace Foo {
 }
@@ -554,19 +725,24 @@ namespace Bar {
   var x;
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (expression_statement
-    (internal_module (identifier) (statement_block)))
-
+    (internal_module
+      (identifier)
+      (statement_block)))
   (expression_statement
-    (internal_module (identifier) (statement_block
-    (variable_declaration (variable_declarator (identifier)))))))
+    (internal_module
+      (identifier)
+      (statement_block
+        (variable_declaration
+          (variable_declarator
+            (identifier)))))))
 
-===========================================
+================================================================================
 Method declarations with keywords as names
-===========================================
+================================================================================
 
 class Foo {
   private async() {};
@@ -574,7 +750,7 @@ class Foo {
   private set(plugin) {};
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (class_declaration
@@ -588,17 +764,20 @@ class Foo {
       (method_definition
         (property_identifier)
         (formal_parameters)
-        (type_annotation (type_identifier))
+        (type_annotation
+          (type_identifier))
         (statement_block))
       (method_definition
         (accessibility_modifier)
         (property_identifier)
-        (formal_parameters (required_parameter (identifier)))
+        (formal_parameters
+          (required_parameter
+            (identifier)))
         (statement_block)))))
 
-=======================================
+================================================================================
 Classes with method signatures
-=======================================
+================================================================================
 
 class Foo {
   public async waitFor<T>(func: () => T | Promise<T | undefined>, accept?: (result: T) => boolean | Promise<boolean>, timeoutMessage?: string, retryCount?: number): Promise<T>;
@@ -608,7 +787,7 @@ class Foo {
   private static async bar(): T;
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (class_declaration
@@ -617,36 +796,58 @@ class Foo {
       (method_signature
         (accessibility_modifier)
         (property_identifier)
-        (type_parameters (type_parameter (type_identifier)))
+        (type_parameters
+          (type_parameter
+            (type_identifier)))
         (formal_parameters
           (required_parameter
             (identifier)
-            (type_annotation (function_type
-              (formal_parameters)
-              (union_type
-                (type_identifier)
-                (generic_type
+            (type_annotation
+              (function_type
+                (formal_parameters)
+                (union_type
                   (type_identifier)
-                  (type_arguments
-                  (union_type
+                  (generic_type
                     (type_identifier)
-                    (literal_type (undefined)))))))))
+                    (type_arguments
+                      (union_type
+                        (type_identifier)
+                        (literal_type
+                          (undefined)))))))))
           (optional_parameter
             (identifier)
-            (type_annotation (function_type
-              (formal_parameters (required_parameter (identifier) (type_annotation (type_identifier))))
-              (union_type (predefined_type) (generic_type (type_identifier) (type_arguments (predefined_type)))))))
+            (type_annotation
+              (function_type
+                (formal_parameters
+                  (required_parameter
+                    (identifier)
+                    (type_annotation
+                      (type_identifier))))
+                (union_type
+                  (predefined_type)
+                  (generic_type
+                    (type_identifier)
+                    (type_arguments
+                      (predefined_type)))))))
           (optional_parameter
             (identifier)
-            (type_annotation (predefined_type)))
+            (type_annotation
+              (predefined_type)))
           (optional_parameter
             (identifier)
-            (type_annotation (predefined_type))))
-        (type_annotation (generic_type (type_identifier) (type_arguments (type_identifier)))))
+            (type_annotation
+              (predefined_type))))
+        (type_annotation
+          (generic_type
+            (type_identifier)
+            (type_arguments
+              (type_identifier)))))
       (method_signature
         (accessibility_modifier)
         (property_identifier)
-        (type_parameters (type_parameter (type_identifier)))
+        (type_parameters
+          (type_parameter
+            (type_identifier)))
         (formal_parameters))
       (method_signature
         (accessibility_modifier)
@@ -656,11 +857,12 @@ class Foo {
         (accessibility_modifier)
         (property_identifier)
         (formal_parameters)
-        (type_annotation (type_identifier))))))
+        (type_annotation
+          (type_identifier))))))
 
-=======================================
+================================================================================
 Classes with property names as strings or numbers
-=======================================
+================================================================================
 
 class Foo {
   static 2: string;
@@ -670,21 +872,49 @@ class Foo {
   readonly 'hello'?: int = 'string';
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (class_declaration
     (type_identifier)
     (class_body
-      (public_field_definition (number) (type_annotation (predefined_type)))
-      (public_field_definition (accessibility_modifier) (number) (type_annotation (predefined_type)) (string (string_fragment)))
-      (public_field_definition (accessibility_modifier) (string (string_fragment)) (type_annotation (type_identifier)) (string (string_fragment)))
-      (public_field_definition (string (string_fragment)) (type_annotation (type_identifier)) (string (string_fragment)))
-      (public_field_definition (string (string_fragment)) (type_annotation (type_identifier)) (string (string_fragment))))))
+      (public_field_definition
+        (number)
+        (type_annotation
+          (predefined_type)))
+      (public_field_definition
+        (accessibility_modifier)
+        (number)
+        (type_annotation
+          (predefined_type))
+        (string
+          (string_fragment)))
+      (public_field_definition
+        (accessibility_modifier)
+        (string
+          (string_fragment))
+        (type_annotation
+          (type_identifier))
+        (string
+          (string_fragment)))
+      (public_field_definition
+        (string
+          (string_fragment))
+        (type_annotation
+          (type_identifier))
+        (string
+          (string_fragment)))
+      (public_field_definition
+        (string
+          (string_fragment))
+        (type_annotation
+          (type_identifier))
+        (string
+          (string_fragment))))))
 
-=======================================
+================================================================================
 Classes with decorators
-=======================================
+================================================================================
 
 @baz @bam class Foo {
   @foo static 2: string;
@@ -694,78 +924,126 @@ Classes with decorators
   }
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (class_declaration
-    (decorator (identifier))
-    (decorator (identifier))
+    (decorator
+      (identifier))
+    (decorator
+      (identifier))
     (type_identifier)
     (class_body
-      (decorator (identifier))
-      (public_field_definition (number) (type_annotation (predefined_type)))
-
-      (decorator (call_expression (member_expression (identifier) (property_identifier)) (arguments (identifier))))
-      (public_field_definition (accessibility_modifier) (number) (type_annotation (predefined_type)) (string (string_fragment)))
-
-      (decorator (identifier))
-      (public_field_definition (string (string_fragment)) (type_annotation (type_identifier)) (string (string_fragment)))
-
-      (decorator (identifier))
+      (decorator
+        (identifier))
+      (public_field_definition
+        (number)
+        (type_annotation
+          (predefined_type)))
+      (decorator
+        (call_expression
+          (member_expression
+            (identifier)
+            (property_identifier))
+          (arguments
+            (identifier))))
+      (public_field_definition
+        (accessibility_modifier)
+        (number)
+        (type_annotation
+          (predefined_type))
+        (string
+          (string_fragment)))
+      (decorator
+        (identifier))
+      (public_field_definition
+        (string
+          (string_fragment))
+        (type_annotation
+          (type_identifier))
+        (string
+          (string_fragment)))
+      (decorator
+        (identifier))
       (method_definition
         (property_identifier)
         (formal_parameters
           (required_parameter
-            (decorator (identifier))
+            (decorator
+              (identifier))
             (identifier)
-            (type_annotation (predefined_type)))
+            (type_annotation
+              (predefined_type)))
           (optional_parameter
-            (decorator (identifier))
+            (decorator
+              (identifier))
             (identifier)
-            (type_annotation (predefined_type))))
+            (type_annotation
+              (predefined_type))))
         (statement_block)))))
 
-=======================================
+================================================================================
 Classes with methods with and without trailing semicolons on one line
-=======================================
+================================================================================
 
 class Foo<Bar> extends Baz { bar = 5; static one(a) { return a; }; two(b) { return b; } three(c) { return c; } }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (class_declaration
     (type_identifier)
-    (type_parameters (type_parameter (type_identifier)))
-    (class_heritage (extends_clause (identifier)))
+    (type_parameters
+      (type_parameter
+        (type_identifier)))
+    (class_heritage
+      (extends_clause
+        (identifier)))
     (class_body
-      (public_field_definition (property_identifier) (number))
-      (method_definition (property_identifier)
-        (formal_parameters (required_parameter (identifier)))
-        (statement_block (return_statement (identifier))))
+      (public_field_definition
+        (property_identifier)
+        (number))
       (method_definition
         (property_identifier)
-        (formal_parameters (required_parameter (identifier)))
-        (statement_block (return_statement (identifier))))
+        (formal_parameters
+          (required_parameter
+            (identifier)))
+        (statement_block
+          (return_statement
+            (identifier))))
       (method_definition
         (property_identifier)
-        (formal_parameters (required_parameter (identifier)))
-        (statement_block (return_statement (identifier)))))))
+        (formal_parameters
+          (required_parameter
+            (identifier)))
+        (statement_block
+          (return_statement
+            (identifier))))
+      (method_definition
+        (property_identifier)
+        (formal_parameters
+          (required_parameter
+            (identifier)))
+        (statement_block
+          (return_statement
+            (identifier)))))))
 
-=======================================
+================================================================================
 Global namespace declarations
-=======================================
+================================================================================
 
 declare global {
 }
 
----
+--------------------------------------------------------------------------------
 
-(program (ambient_declaration (statement_block)))
+(program
+  (ambient_declaration
+    (statement_block)))
 
-=======================================
+================================================================================
 Abstract classes
-=======================================
+================================================================================
 
 abstract class Foo {
 }
@@ -785,7 +1063,7 @@ abstract class Animal {
 abstract class Foo {
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (abstract_class_declaration
@@ -796,45 +1074,55 @@ abstract class Foo {
     body: (class_body
       (public_field_definition
         name: (property_identifier)
-        type: (type_annotation (predefined_type)))
+        type: (type_annotation
+          (predefined_type)))
       (public_field_definition
         name: (property_identifier)
-        type: (type_annotation (predefined_type)))
+        type: (type_annotation
+          (predefined_type)))
       (abstract_method_signature
         name: (property_identifier)
         parameters: (formal_parameters)
-        return_type: (type_annotation (predefined_type)))
+        return_type: (type_annotation
+          (predefined_type)))
       (abstract_method_signature
         name: (property_identifier)
         parameters: (formal_parameters)
-        return_type: (type_annotation (predefined_type)))
+        return_type: (type_annotation
+          (predefined_type)))
       (abstract_method_signature
         (accessibility_modifier)
         name: (property_identifier)
         parameters: (formal_parameters)
-        return_type: (type_annotation (predefined_type)))
+        return_type: (type_annotation
+          (predefined_type)))
       (method_definition
         name: (property_identifier)
         parameters: (formal_parameters)
-        return_type: (type_annotation (predefined_type))
+        return_type: (type_annotation
+          (predefined_type))
         body: (statement_block
-          (expression_statement (call_expression
-            function: (member_expression
-              object: (identifier)
-              property: (property_identifier))
-            arguments: (arguments (string (string_fragment)))))))))
+          (expression_statement
+            (call_expression
+              function: (member_expression
+                object: (identifier)
+                property: (property_identifier))
+              arguments: (arguments
+                (string
+                  (string_fragment)))))))))
   (abstract_class_declaration
-    decorator: (decorator (identifier))
+    decorator: (decorator
+      (identifier))
     name: (type_identifier)
     body: (class_body)))
 
-==================================
+================================================================================
 Index type queries
-==================================
+================================================================================
 
 export type Extracted = keyof Pick<Base, "id">
 
----
+--------------------------------------------------------------------------------
 
 (program
   (export_statement
@@ -846,32 +1134,33 @@ export type Extracted = keyof Pick<Base, "id">
           type_arguments: (type_arguments
             (type_identifier)
             (literal_type
-              (string (string_fragment)))))))))
+              (string
+                (string_fragment)))))))))
 
-==================================
+================================================================================
 Definite assignment assertions
-==================================
+================================================================================
 
 var a!: b;
 let a!: b;
 
----
+--------------------------------------------------------------------------------
 
 (program
   (variable_declaration
     (variable_declarator
       (identifier)
       (type_annotation
-      (type_identifier))))
+        (type_identifier))))
   (lexical_declaration
     (variable_declarator
       (identifier)
       (type_annotation
-      (type_identifier)))))
+        (type_identifier)))))
 
-====================================
+================================================================================
 Top-level exports
-====================================
+================================================================================
 
 export default abstract class C { }
 export default class C { }
@@ -879,18 +1168,33 @@ export class C { }
 export default interface I { }
 export interface I { }
 
----
+--------------------------------------------------------------------------------
 
 (program
-  (export_statement (abstract_class_declaration (type_identifier) (class_body)))
-  (export_statement (class_declaration (type_identifier) (class_body)))
-  (export_statement (class_declaration (type_identifier) (class_body)))
-  (export_statement (interface_declaration (type_identifier) (object_type)))
-  (export_statement (interface_declaration (type_identifier) (object_type))))
+  (export_statement
+    (abstract_class_declaration
+      (type_identifier)
+      (class_body)))
+  (export_statement
+    (class_declaration
+      (type_identifier)
+      (class_body)))
+  (export_statement
+    (class_declaration
+      (type_identifier)
+      (class_body)))
+  (export_statement
+    (interface_declaration
+      (type_identifier)
+      (object_type)))
+  (export_statement
+    (interface_declaration
+      (type_identifier)
+      (object_type))))
 
-=======================================
+================================================================================
 Classes with generic parameters
-=======================================
+================================================================================
 
 class A<
   B,
@@ -902,23 +1206,30 @@ class D extends A<
   Y,
 > {}
 
----
+--------------------------------------------------------------------------------
 
 (program
   (class_declaration
     (type_identifier)
-    (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier)))
+    (type_parameters
+      (type_parameter
+        (type_identifier))
+      (type_parameter
+        (type_identifier)))
     (class_body))
   (class_declaration
     (type_identifier)
-    (class_heritage (extends_clause
-      (identifier)
-      (type_arguments (type_identifier) (type_identifier))))
+    (class_heritage
+      (extends_clause
+        (identifier)
+        (type_arguments
+          (type_identifier)
+          (type_identifier))))
     (class_body)))
 
-=======================================
+================================================================================
 Classes with extensions
-=======================================
+================================================================================
 
 class A extends B<C>(D) implements C {}
 export class A extends B<C>(D) implements C {}
@@ -928,7 +1239,7 @@ export class A extends B<C>(D)<E> implements C {}
 
 export class A extends B<C, D> implements C {}
 
----
+--------------------------------------------------------------------------------
 
 (program
   (class_declaration
@@ -1002,9 +1313,9 @@ export class A extends B<C, D> implements C {}
           (type_identifier)))
       (class_body))))
 
-==========================================================================
+================================================================================
 Semicolon is not automatically inserted for method definitions with a body
-==========================================================================
+================================================================================
 
 class Foo {
   public bar()
@@ -1012,7 +1323,7 @@ class Foo {
   }
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (class_declaration
@@ -1022,11 +1333,11 @@ class Foo {
         (accessibility_modifier)
         (property_identifier)
         (formal_parameters)
-        (statement_block))))) 
+        (statement_block)))))
 
-=====================
+================================================================================
 Override modifier
-=====================
+================================================================================
 
 abstract class Foo {
   abstract baz(): void;
@@ -1036,7 +1347,7 @@ class Bar extends Foo {
   override baz() {}
 }
 
----
+--------------------------------------------------------------------------------
 
 (program
   (abstract_class_declaration
