@@ -892,7 +892,7 @@ Switch statements
 ================================================================================
 
 switch (x) {
-  case 1:
+  case 1: {}
   case 2: {
     something();
     break;
@@ -915,9 +915,9 @@ switch (x) {
     (switch_body
       (switch_case
         (number)
-        (ERROR
-          (identifier)
-          (number))
+        (statement_block))
+      (switch_case
+        (number)
         (statement_block
           (expression_statement
             (call_expression
