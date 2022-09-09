@@ -1,52 +1,79 @@
 const tsx = require("tree-sitter-typescript/tsx/grammar.js");
 
+const replaceField = (prev, name, replacement) => {
+  const members = prev.members.map((member) => {
+    if (member.type === "FIELD" && member.name === name) {
+      return field(name, replacement);
+    } else {
+      return member;
+    }
+  });
+
+  return seq(...members);
+};
+
 module.exports = grammar(tsx, {
   name: "crochet",
 
   rules: {
     // Removes sequence expression and optional flow-style type assertion
-    parenthesized_expression: ($, previous) => {
+    parenthesized_expression: ($, prev) => {
       return seq("(", $.expression, ")");
     },
 
     // Removes sequence expression
-    _expressions: ($, previous) => {
+    _expressions: ($, prev) => {
       return $.expression;
     },
 
-    expression: ($, previous) => {
+    expression: ($, prev) => {
       // Removes ternary expression
-      const choices = previous.members.filter(
+      const choices = prev.members.filter(
         (member) => member.name !== "ternary_expression"
       );
-      // Makes if-else an expression
-      choices.push($.if_expression);
+
+      choices.push(alias($.if_statement, $.if_expression));
+      choices.push($.do_expression);
+      // choices.push($.try_statement);
+
       return choice(...choices);
     },
 
     // Removes with statement
-    statement: ($, previous) => {
-      const choices = previous.members.filter(
+    statement: ($, prev) => {
+      const choices = prev.members.filter(
         (member) =>
-          member.name !== "with_statement" && member.name !== "if_statement"
+          ![
+            "with_statement",
+            "if_statement",
+            // "try_statement",
+            "statement_block",
+          ].includes(member.name)
       );
       return choice(...choices);
     },
 
-    else_clause: ($, previous) => {
-      // Always require the alternative to be in a block
-      return seq("else", choice($.if_expression, $.statement_block));
-    },
-    if_expression: ($, previous) => {
-      return prec.right(
-        seq(
-          "if",
-          field("condition", $.parenthesized_expression),
-          // Always require the alternative to be in a block
-          field("consequence", $.statement_block),
-          optional(field("alternative", $.else_clause))
-        )
-      );
-    },
+    // Removes the optional semicolon
+    statement_block: ($, prev) =>
+      prec.right(seq("{", repeat($.statement), "}")),
+
+    do_expression: ($) => seq("do", "{", repeat($.statement), "}"),
+
+    for_statement: ($, prev) => replaceField(prev, "body", $.statement_block),
+    for_in_statement: ($, prev) =>
+      replaceField(prev, "body", $.statement_block),
+    while_statement: ($, prev) => replaceField(prev, "body", $.statement_block),
+    do_statement: ($, prev) => replaceField(prev, "body", $.statement_block),
+    switch_case: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
+    switch_default: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
+
+    if_statement: ($, prev) =>
+      prec.right(replaceField(prev.content, "consequence", $.statement_block)),
+    else_clause: ($, prev) =>
+      // Always require the alternative to be a block
+      seq(
+        "else",
+        choice(alias($.if_statement, $.if_expression), $.statement_block)
+      ),
   },
 });

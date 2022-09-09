@@ -315,8 +315,8 @@ Objects
 --------------------------------------------------------------------------------
 
 (program
-  (statement_block)
-  (empty_statement)
+  (expression_statement
+    (object))
   (expression_statement
     (object
       (pair
@@ -2123,5 +2123,85 @@ i = <Foo:Bar bar={}>{...children}</Foo:Bar>
             (identifier)))
         (jsx_closing_element
           (jsx_namespace_name
+            (identifier)
+            (identifier)))))))
+
+================================================================================
+Do expressions
+================================================================================
+
+let sum = do {x = 5; y = 10; x + y}
+
+let nested = do { do { x = 5; y = 10; x + y} }
+
+let objectReturn = do { {x, y} }
+
+let sum = do { x } + do { y }
+
+do { x } while (do { x > y })
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (do_expression
+        (expression_statement
+          (assignment_expression
+            (identifier)
+            (number)))
+        (expression_statement
+          (assignment_expression
+            (identifier)
+            (number)))
+        (expression_statement
+          (binary_expression
+            (identifier)
+            (identifier))))))
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (do_expression
+        (expression_statement
+          (do_expression
+            (expression_statement
+              (assignment_expression
+                (identifier)
+                (number)))
+            (expression_statement
+              (assignment_expression
+                (identifier)
+                (number)))
+            (expression_statement
+              (binary_expression
+                (identifier)
+                (identifier))))))))
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (do_expression
+        (expression_statement
+          (object
+            (shorthand_property_identifier)
+            (shorthand_property_identifier))))))
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (binary_expression
+        (do_expression
+          (expression_statement
+            (identifier)))
+        (do_expression
+          (expression_statement
+            (identifier))))))
+  (do_statement
+    (statement_block
+      (expression_statement
+        (identifier)))
+    (parenthesized_expression
+      (do_expression
+        (expression_statement
+          (binary_expression
             (identifier)
             (identifier)))))))

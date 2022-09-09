@@ -168,6 +168,10 @@
         "named": true
       },
       {
+        "type": "do_expression",
+        "named": true
+      },
+      {
         "type": "glimmer_template",
         "named": true
       },
@@ -407,10 +411,6 @@
       },
       {
         "type": "return_statement",
-        "named": true
-      },
-      {
-        "type": "statement_block",
         "named": true
       },
       {
@@ -1778,6 +1778,21 @@
     }
   },
   {
+    "type": "do_expression",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "statement",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "do_statement",
     "named": true,
     "fields": {
@@ -1786,7 +1801,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement",
+            "type": "statement_block",
             "named": true
           }
         ]
@@ -2156,7 +2171,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement",
+            "type": "statement_block",
             "named": true
           }
         ]
@@ -2262,7 +2277,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement",
+            "type": "statement_block",
             "named": true
           }
         ]
@@ -5015,11 +5030,11 @@
     "named": true,
     "fields": {
       "body": {
-        "multiple": true,
-        "required": false,
+        "multiple": false,
+        "required": true,
         "types": [
           {
-            "type": "statement",
+            "type": "statement_block",
             "named": true
           }
         ]
@@ -5041,11 +5056,11 @@
     "named": true,
     "fields": {
       "body": {
-        "multiple": true,
-        "required": false,
+        "multiple": false,
+        "required": true,
         "types": [
           {
-            "type": "statement",
+            "type": "statement_block",
             "named": true
           }
         ]
@@ -5680,7 +5695,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement",
+            "type": "statement_block",
             "named": true
           }
         ]
@@ -6142,11 +6157,11 @@
   },
   {
     "type": "number",
-    "named": false
+    "named": true
   },
   {
     "type": "number",
-    "named": true
+    "named": false
   },
   {
     "type": "object",
