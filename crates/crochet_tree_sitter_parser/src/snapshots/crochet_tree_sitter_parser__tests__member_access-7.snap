@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"arr[arr.length - 1]\")"
+expression: "parse(\"arr[arr.length - 1];\")"
 ---
 Ok(
     Program {
         body: [
             Expr {
-                span: 0..19,
+                span: 0..20,
                 expr: Member(
                     Member {
                         span: 0..19,

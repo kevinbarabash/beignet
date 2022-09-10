@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"-a\")"
+expression: "parse(\"-a;\")"
 ---
 Ok(
     Program {
         body: [
             Expr {
-                span: 0..2,
+                span: 0..3,
                 expr: UnaryExpr(
                     UnaryExpr {
                         span: 0..2,
