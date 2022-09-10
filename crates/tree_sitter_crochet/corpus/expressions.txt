@@ -1237,7 +1237,7 @@ class Foo {
 
 async (a) => { return foo; };
 
-async function* foo() { yield 1; }
+async function* foo() { yield 1 }
 
 --------------------------------------------------------------------------------
 
@@ -1271,9 +1271,8 @@ async function* foo() { yield 1; }
     (identifier)
     (formal_parameters)
     (statement_block
-      (expression_statement
-        (yield_expression
-          (number))))))
+      (yield_expression
+        (number)))))
 
 ================================================================================
 Math operators
@@ -1907,7 +1906,7 @@ Forward slashes after parenthesized expressions
 ================================================================================
 
 (foo - bar) / baz;
-if (foo - bar) { /baz/; };
+if (foo - bar) { /baz/ };
 (this.a() / this.b() - 1) / 2;
 
 --------------------------------------------------------------------------------
@@ -1927,9 +1926,8 @@ if (foo - bar) { /baz/; };
           (identifier)
           (identifier)))
       (statement_block
-        (expression_statement
-          (regex
-            (regex_pattern))))))
+        (regex
+          (regex_pattern)))))
   (expression_statement
     (binary_expression
       (parenthesized_expression
@@ -2130,15 +2128,15 @@ i = <Foo:Bar bar={}>{...children}</Foo:Bar>;
 Do expressions
 ================================================================================
 
-let sum = do {x = 5; y = 10; x + y;};
+let sum = do {x = 5; y = 10; x + y};
 
-let nested = do { do { x = 5; y = 10; x + y;}; };
+let nested = do { do { x = 5; y = 10; x + y} };
 
-let objectReturn = do { {x, y}; };
+let objectReturn = do { {x, y} };
 
-let sum = do { x; } + do { y; };
+let sum = do { x } + do { y };
 
-do { x; } while (do { x > y; });
+do { x } while (do { x > y });
 
 --------------------------------------------------------------------------------
 
@@ -2147,15 +2145,15 @@ do { x; } while (do { x > y; });
     (variable_declarator
       (identifier)
       (do_expression
-        (expression_statement
-          (assignment_expression
-            (identifier)
-            (number)))
-        (expression_statement
-          (assignment_expression
-            (identifier)
-            (number)))
-        (expression_statement
+        (statement_block
+          (expression_statement
+            (assignment_expression
+              (identifier)
+              (number)))
+          (expression_statement
+            (assignment_expression
+              (identifier)
+              (number)))
           (binary_expression
             (identifier)
             (identifier))))))
@@ -2163,17 +2161,17 @@ do { x; } while (do { x > y; });
     (variable_declarator
       (identifier)
       (do_expression
-        (expression_statement
+        (statement_block
           (do_expression
-            (expression_statement
-              (assignment_expression
-                (identifier)
-                (number)))
-            (expression_statement
-              (assignment_expression
-                (identifier)
-                (number)))
-            (expression_statement
+            (statement_block
+              (expression_statement
+                (assignment_expression
+                  (identifier)
+                  (number)))
+              (expression_statement
+                (assignment_expression
+                  (identifier)
+                  (number)))
               (binary_expression
                 (identifier)
                 (identifier))))))))
@@ -2181,7 +2179,7 @@ do { x; } while (do { x > y; });
     (variable_declarator
       (identifier)
       (do_expression
-        (expression_statement
+        (statement_block
           (object
             (shorthand_property_identifier)
             (shorthand_property_identifier))))))
@@ -2190,18 +2188,17 @@ do { x; } while (do { x > y; });
       (identifier)
       (binary_expression
         (do_expression
-          (expression_statement
+          (statement_block
             (identifier)))
         (do_expression
-          (expression_statement
+          (statement_block
             (identifier))))))
   (do_statement
     (statement_block
-      (expression_statement
-        (identifier)))
+      (identifier))
     (parenthesized_expression
       (do_expression
-        (expression_statement
+        (statement_block
           (binary_expression
             (identifier)
             (identifier)))))))
@@ -2210,10 +2207,10 @@ do { x; } while (do { x > y; });
 Try catch finally expressions
 ================================================================================
 
-let result = try { a; } catch (b) { c; };
-let result = try { d; } finally { e; };
-let result = try { f; } catch { g; } finally { h; };
-let result = try { throw [a, b]; } catch ([c, d]) { };
+let result = try { a } catch (b) { c };
+let result = try { d } finally { e };
+let result = try { f } catch { g } finally { h };
+let result = try { throw [a, b] } catch ([c, d]) { };
 
 --------------------------------------------------------------------------------
 
@@ -2223,49 +2220,41 @@ let result = try { throw [a, b]; } catch ([c, d]) { };
       (identifier)
       (try_statement
         (statement_block
-          (expression_statement
-            (identifier)))
+          (identifier))
         (catch_clause
           (identifier)
           (statement_block
-            (expression_statement
-              (identifier)))))))
+            (identifier))))))
   (lexical_declaration
     (variable_declarator
       (identifier)
       (try_statement
         (statement_block
-          (expression_statement
-            (identifier)))
+          (identifier))
         (finally_clause
           (statement_block
-            (expression_statement
-              (identifier)))))))
+            (identifier))))))
   (lexical_declaration
     (variable_declarator
       (identifier)
       (try_statement
         (statement_block
-          (expression_statement
-            (identifier)))
+          (identifier))
         (catch_clause
           (statement_block
-            (expression_statement
-              (identifier))))
+            (identifier)))
         (finally_clause
           (statement_block
-            (expression_statement
-              (identifier)))))))
+            (identifier))))))
   (lexical_declaration
     (variable_declarator
       (identifier)
       (try_statement
         (statement_block
-          (expression_statement
-            (unary_expression
-              (array
-                (identifier)
-                (identifier)))))
+          (unary_expression
+            (array
+              (identifier)
+              (identifier))))
         (catch_clause
           (array_pattern
             (identifier)

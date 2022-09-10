@@ -58,13 +58,15 @@ module.exports = grammar(tsx, {
     },
 
     // Removes the automatic semicolon insertion from these nodes
-    statement_block: ($, prev) => prec.right(dropLastMember(prev.content)),
     class_declaration: ($, prev) =>
       prec("declaration", dropLastMember(prev.content)),
     function_declaration: ($, prev) =>
       prec.right("declaration", dropLastMember(prev.content)),
     generator_function_declaration: ($, prev) =>
       prec.right("declaration", dropLastMember(prev.content)),
+
+    statement_block: ($, prev) =>
+      seq("{", repeat($.statement), optional($.expression), "}"),
 
     // Requires these statements ot use { }
     for_statement: ($, prev) => replaceField(prev, "body", $.statement_block),
@@ -76,7 +78,7 @@ module.exports = grammar(tsx, {
     switch_default: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
 
     // Add do-expressions
-    do_expression: ($) => seq("do", "{", repeat($.statement), "}"),
+    do_expression: ($) => seq("do", $.statement_block),
 
     // Make if-else an expression
     if_statement: ($, prev) =>
