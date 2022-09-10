@@ -206,13 +206,15 @@ declare module Foo {
         (throw_statement
           (string
             (string_fragment)))
-        (try_statement
-          body: (statement_block)
-          handler: (catch_clause
-            parameter: (identifier)
-            body: (statement_block))
-          finalizer: (finally_clause
-            body: (statement_block)))))))
+        (expression_statement
+          (try_statement
+            body: (statement_block)
+            handler: (catch_clause
+              parameter: (identifier)
+              body: (statement_block))
+            finalizer: (finally_clause
+              body: (statement_block)))
+          (MISSING ";"))))))
 
 ================================================================================
 Exception handling
@@ -225,15 +227,17 @@ finally {}
 --------------------------------------------------------------------------------
 
 (program
-  (try_statement
-    body: (statement_block)
-    handler: (catch_clause
-      parameter: (identifier)
-      type: (type_annotation
-        (predefined_type))
-      body: (statement_block))
-    finalizer: (finally_clause
-      body: (statement_block))))
+  (expression_statement
+    (try_statement
+      body: (statement_block)
+      handler: (catch_clause
+        parameter: (identifier)
+        type: (type_annotation
+          (predefined_type))
+        body: (statement_block))
+      finalizer: (finally_clause
+        body: (statement_block)))
+    (MISSING ";")))
 
 ================================================================================
 Flow-style ambient class declarations with commas

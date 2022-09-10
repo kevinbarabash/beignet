@@ -204,6 +204,10 @@
         "named": true
       },
       {
+        "type": "try_statement",
+        "named": true
+      },
+      {
         "type": "unary_expression",
         "named": true
       },
@@ -419,10 +423,6 @@
       },
       {
         "type": "throw_statement",
-        "named": true
-      },
-      {
-        "type": "try_statement",
         "named": true
       },
       {
