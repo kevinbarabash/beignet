@@ -2261,12 +2261,35 @@ let result = try { throw [a, b]; } catch ([c, d]) { };
       (identifier)
       (try_statement
         (statement_block
-          (throw_statement
-            (array
-              (identifier)
-              (identifier))))
+          (expression_statement
+            (unary_expression
+              (array
+                (identifier)
+                (identifier)))))
         (catch_clause
           (array_pattern
             (identifier)
             (identifier))
           (statement_block))))))
+
+================================================================================
+Throw expressions
+================================================================================
+
+const foo = (msg) => throw new Error(msg);
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (arrow_function
+        (formal_parameters
+          (required_parameter
+            (identifier)))
+        (unary_expression
+          (new_expression
+            (identifier)
+            (arguments
+              (identifier))))))))

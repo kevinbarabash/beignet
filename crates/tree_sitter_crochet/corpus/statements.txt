@@ -948,12 +948,13 @@ throw new Error("uh oh");
 --------------------------------------------------------------------------------
 
 (program
-  (throw_statement
-    (new_expression
-      (identifier)
-      (arguments
-        (string
-          (string_fragment))))))
+  (expression_statement
+    (unary_expression
+      (new_expression
+        (identifier)
+        (arguments
+          (string
+            (string_fragment)))))))
 
 ================================================================================
 Try catch finally statements
@@ -1002,10 +1003,11 @@ try { throw [a, b]; } catch ([c, d]) { };
   (expression_statement
     (try_statement
       (statement_block
-        (throw_statement
-          (array
-            (identifier)
-            (identifier))))
+        (expression_statement
+          (unary_expression
+            (array
+              (identifier)
+              (identifier)))))
       (catch_clause
         (array_pattern
           (identifier)

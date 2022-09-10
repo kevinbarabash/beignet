@@ -422,10 +422,6 @@
         "named": true
       },
       {
-        "type": "throw_statement",
-        "named": true
-      },
-      {
         "type": "while_statement",
         "named": true
       }
@@ -5162,21 +5158,6 @@
     }
   },
   {
-    "type": "throw_statement",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": false,
-      "required": true,
-      "types": [
-        {
-          "type": "expression",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "try_statement",
     "named": true,
     "fields": {
@@ -5548,6 +5529,10 @@
           },
           {
             "type": "delete",
+            "named": false
+          },
+          {
+            "type": "throw",
             "named": false
           },
           {
@@ -6157,11 +6142,11 @@
   },
   {
     "type": "number",
-    "named": true
+    "named": false
   },
   {
     "type": "number",
-    "named": false
+    "named": true
   },
   {
     "type": "object",
