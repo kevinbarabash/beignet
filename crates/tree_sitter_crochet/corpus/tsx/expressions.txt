@@ -2,9 +2,9 @@
 As expressions
 ================================================================================
 
-h as `hello`
-T as {} & { [t: T]: T }
-T as {} & { [t: T]: T } & { [g: G]: G }
+h as `hello`;
+T as {} & { [t: T]: T };
+T as {} & { [t: T]: T } & { [g: G]: G };
 
 --------------------------------------------------------------------------------
 
@@ -49,7 +49,7 @@ Typeof expressions
 
 typeof class {} === "function";
 
-typeof module === "object" && typeof module.exports === "object"
+typeof module === "object" && typeof module.exports === "object";
 
 --------------------------------------------------------------------------------
 
@@ -80,7 +80,7 @@ typeof module === "object" && typeof module.exports === "object"
 Array with empty elements
 ================================================================================
 
-[, a, , b, , , , s, , , ]
+[, a, , b, , , , s, , , ];
 
 --------------------------------------------------------------------------------
 
@@ -113,7 +113,7 @@ Multi-line variable declarations
 
 var a = b
   , c = d
-  , e = f
+  , e = f;
 
 --------------------------------------------------------------------------------
 
@@ -164,7 +164,7 @@ Subscript expressions in if statements
 ================================================================================
 
 if ( foo ) {
-	set[ 1 ].apply()
+	set[ 1 ].apply();
 }
 
 --------------------------------------------------------------------------------
@@ -182,7 +182,8 @@ if ( foo ) {
                 (identifier)
                 (number))
               (property_identifier))
-            (arguments)))))))
+            (arguments)))))
+    (MISSING ";")))
 
 ================================================================================
 Objects with reserved words as keys
@@ -192,7 +193,7 @@ Objects with reserved words as keys
   public: true,
   private: true,
   readonly: true
-}
+};
 
 --------------------------------------------------------------------------------
 

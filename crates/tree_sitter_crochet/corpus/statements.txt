@@ -182,9 +182,9 @@ export let name1, name2, nameN;
 export let name1 = value1, name2 = value2, name3, nameN;
 
 export default expression;
-export default { field1: 42, field2: [] }
-export default function () { }
-export default function name1() { }
+export default { field1: 42, field2: [] };
+export default function () { };
+export default function name1() { };
 export { name1 as default };
 
 export * from 'foo';
@@ -254,6 +254,7 @@ export { import1 as name1, import2 as name2, nameN } from 'foo';
       name: (identifier)
       parameters: (formal_parameters)
       body: (statement_block)))
+  (empty_statement)
   (export_statement
     (export_clause
       (export_specifier
@@ -316,12 +317,12 @@ If expressions
 
 if (x) {
   log(y);
-}
+};
 
 if (a.b) {
   log(c);
   d;
-}
+};
 
 --------------------------------------------------------------------------------
 
@@ -361,14 +362,14 @@ if (x) {
   b;
 } else {
   null;
-}
+};
 
 let result = if (a) {
   c;
   d;
 } else {
   e;
-}
+};
 
 --------------------------------------------------------------------------------
 
@@ -689,9 +690,9 @@ Do statements
 
 do {
   a;
-} while (b)
+} while (b);
 
-do {} while (b)
+do {} while (b);
 
 --------------------------------------------------------------------------------
 
@@ -958,10 +959,10 @@ throw new Error("uh oh");
 Try catch finally statements
 ================================================================================
 
-try { a; } catch (b) { c; }
-try { d; } finally { e; }
-try { f; } catch { g; } finally { h; }
-try { throw [a, b] } catch ([c, d]) { }
+try { a; } catch (b) { c; };
+try { d; } finally { e; };
+try { f; } catch { g; } finally { h; };
+try { throw [a, b]; } catch ([c, d]) { };
 
 --------------------------------------------------------------------------------
 
@@ -975,6 +976,7 @@ try { throw [a, b] } catch ([c, d]) { }
       (statement_block
         (expression_statement
           (identifier)))))
+  (empty_statement)
   (try_statement
     (statement_block
       (expression_statement
@@ -983,6 +985,7 @@ try { throw [a, b] } catch ([c, d]) { }
       (statement_block
         (expression_statement
           (identifier)))))
+  (empty_statement)
   (try_statement
     (statement_block
       (expression_statement
@@ -995,6 +998,7 @@ try { throw [a, b] } catch ([c, d]) { }
       (statement_block
         (expression_statement
           (identifier)))))
+  (empty_statement)
   (try_statement
     (statement_block
       (throw_statement
@@ -1005,14 +1009,15 @@ try { throw [a, b] } catch ([c, d]) { }
       (array_pattern
         (identifier)
         (identifier))
-      (statement_block))))
+      (statement_block)))
+  (empty_statement))
 
 ================================================================================
 Empty statements
 ================================================================================
 
 if (true) { ; };;;
-if (true) {} else {}
+if (true) {} else {};
 
 --------------------------------------------------------------------------------
 
@@ -1043,13 +1048,13 @@ for (;;) {
     break theLoop;
   } else {
     continue theLoop;
-  }
+  };
 }
 
 label
 : do {
   break label;
-}
+};
 
 async:
 while (true) {
@@ -1096,12 +1101,10 @@ Debugger statements
 ================================================================================
 
 debugger;
-debugger
 
 --------------------------------------------------------------------------------
 
 (program
-  (debugger_statement)
   (debugger_statement))
 
 ================================================================================
@@ -1110,7 +1113,7 @@ Hash bang lines
 
 #!/usr/bin/env node
 
-console.log("HI")
+console.log("HI");
 
 --------------------------------------------------------------------------------
 

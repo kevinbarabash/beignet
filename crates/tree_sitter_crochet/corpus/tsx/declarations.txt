@@ -3,7 +3,7 @@ Ambient declarations
 ================================================================================
 
 declare class Error {
-  constructor: Function
+  constructor: Function;
 }
 
 declare var foo: number;
@@ -42,7 +42,7 @@ declare module Foo {
   do { } while (true);
   for (x in null) { }
   for (;;) { }
-  if (true) { } else { }
+  if (true) { } else { };
   1;
   return;
   switch (x) {
@@ -287,7 +287,7 @@ Flow module.exports declarations
 
 declare module.exports: {
   foo: string;
-}
+};
 
 --------------------------------------------------------------------------------
 
@@ -312,7 +312,7 @@ export default function point(x: number, y: number) {
 
 export default class A {}
 
-export async function readFile(filename: string): Promise<Buffer>
+export async function readFile(filename: string): Promise<Buffer>;
 
 --------------------------------------------------------------------------------
 
@@ -454,11 +454,11 @@ Property signatures with accessibility modifiers
 ================================================================================
 
 export interface IAppState {
-  public readonly users: ReadonlyArray<User>
+  public readonly users: ReadonlyArray<User>;
 }
 
 export class CloningRepository {
-  public readonly id = CloningRepositoryID++
+  public readonly id = CloningRepositoryID++;
 }
 
 
@@ -519,7 +519,7 @@ Ambient module declarations
 ================================================================================
 
 module Promise {
-    var on: {}
+    var on: {};
     export function resolve<R>(value?: Thenable<R>): Promise<R>;
 }
 
@@ -571,7 +571,7 @@ declare module "example" { }
 Accessibility modifiers as pair keywords
 ================================================================================
 
-x = { name, description, private: private_ }
+x = { name, description, private: private_ };
 
 --------------------------------------------------------------------------------
 
@@ -590,7 +590,7 @@ x = { name, description, private: private_ }
 Type casts
 ================================================================================
 
-foo as any as Array<number>
+foo as any as Array<number>;
 
 --------------------------------------------------------------------------------
 
@@ -732,17 +732,15 @@ namespace Bar {
 --------------------------------------------------------------------------------
 
 (program
-  (expression_statement
-    (internal_module
-      (identifier)
-      (statement_block)))
-  (expression_statement
-    (internal_module
-      (identifier)
-      (statement_block
-        (variable_declaration
-          (variable_declarator
-            (identifier)))))))
+  (internal_module
+    (identifier)
+    (statement_block))
+  (internal_module
+    (identifier)
+    (statement_block
+      (variable_declaration
+        (variable_declarator
+          (identifier))))))
 
 ================================================================================
 Method declarations with keywords as names
@@ -1124,7 +1122,7 @@ abstract class Foo {
 Index type queries
 ================================================================================
 
-export type Extracted = keyof Pick<Base, "id">
+export type Extracted = keyof Pick<Base, "id">;
 
 --------------------------------------------------------------------------------
 
