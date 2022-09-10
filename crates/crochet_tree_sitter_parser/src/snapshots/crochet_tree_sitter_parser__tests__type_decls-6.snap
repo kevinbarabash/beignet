@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(r#\"type Foo<T extends string = \"foo\"> = {bar: T}\"#)"
+expression: "parse(r#\"type Foo<T extends string = \"foo\"> = {bar: T};\"#)"
 ---
 Ok(
     Program {
         body: [
             TypeDecl {
-                span: 0..45,
+                span: 0..46,
                 declare: false,
                 id: Ident {
                     span: 5..8,

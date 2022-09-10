@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"type Point = {x: number, y: number}\")"
+expression: "parse(\"type Point = {x: number, y: number};\")"
 ---
 Ok(
     Program {
         body: [
             TypeDecl {
-                span: 0..35,
+                span: 0..36,
                 declare: false,
                 id: Ident {
                     span: 5..10,

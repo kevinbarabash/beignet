@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"({x: p, y: q}) => p + q\")"
+expression: "parse(\"({x: p, y: q}) => p + q;\")"
 ---
 Ok(
     Program {
         body: [
             Expr {
-                span: 0..23,
+                span: 0..24,
                 expr: Lambda(
                     Lambda {
                         span: 0..23,

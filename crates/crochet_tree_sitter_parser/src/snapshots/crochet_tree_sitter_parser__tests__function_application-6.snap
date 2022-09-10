@@ -148,12 +148,12 @@ Ok(
                 declare: false,
             },
             VarDecl {
-                span: 61..80,
+                span: 62..81,
                 pattern: Ident(
                     BindingIdent {
-                        span: 61..62,
+                        span: 62..63,
                         id: Ident {
-                            span: 61..62,
+                            span: 62..63,
                             name: "K",
                         },
                     },
@@ -162,14 +162,14 @@ Ok(
                 init: Some(
                     Lambda(
                         Lambda {
-                            span: 65..80,
+                            span: 66..81,
                             params: [
                                 EFnParam {
                                     pat: Ident(
                                         EFnParamBindingIdent {
-                                            span: 66..67,
+                                            span: 67..68,
                                             id: Ident {
-                                                span: 66..67,
+                                                span: 67..68,
                                                 name: "x",
                                             },
                                         },
@@ -181,14 +181,14 @@ Ok(
                             ],
                             body: Lambda(
                                 Lambda {
-                                    span: 72..80,
+                                    span: 73..81,
                                     params: [
                                         EFnParam {
                                             pat: Ident(
                                                 EFnParamBindingIdent {
-                                                    span: 73..74,
+                                                    span: 74..75,
                                                     id: Ident {
-                                                        span: 73..74,
+                                                        span: 74..75,
                                                         name: "y",
                                                     },
                                                 },
@@ -200,7 +200,7 @@ Ok(
                                     ],
                                     body: Ident(
                                         Ident {
-                                            span: 79..80,
+                                            span: 80..81,
                                             name: "x",
                                         },
                                     ),
@@ -218,12 +218,12 @@ Ok(
                 declare: false,
             },
             VarDecl {
-                span: 93..104,
+                span: 95..106,
                 pattern: Ident(
                     BindingIdent {
-                        span: 93..94,
+                        span: 95..96,
                         id: Ident {
-                            span: 93..94,
+                            span: 95..96,
                             name: "I",
                         },
                     },
@@ -232,13 +232,13 @@ Ok(
                 init: Some(
                     App(
                         App {
-                            span: 97..104,
+                            span: 99..106,
                             lam: App(
                                 App {
-                                    span: 97..101,
+                                    span: 99..103,
                                     lam: Ident(
                                         Ident {
-                                            span: 97..98,
+                                            span: 99..100,
                                             name: "S",
                                         },
                                     ),
@@ -247,7 +247,7 @@ Ok(
                                             spread: None,
                                             expr: Ident(
                                                 Ident {
-                                                    span: 99..100,
+                                                    span: 101..102,
                                                     name: "K",
                                                 },
                                             ),
@@ -260,7 +260,7 @@ Ok(
                                     spread: None,
                                     expr: Ident(
                                         Ident {
-                                            span: 102..103,
+                                            span: 104..105,
                                             name: "K",
                                         },
                                     ),
