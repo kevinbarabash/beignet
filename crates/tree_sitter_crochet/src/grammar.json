@@ -756,10 +756,6 @@
         },
         {
           "type": "SYMBOL",
-          "name": "try_statement"
-        },
-        {
-          "type": "SYMBOL",
           "name": "break_statement"
         },
         {
@@ -1909,6 +1905,10 @@
         {
           "type": "SYMBOL",
           "name": "do_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "try_statement"
         }
       ]
     },

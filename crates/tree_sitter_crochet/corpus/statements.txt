@@ -967,50 +967,50 @@ try { throw [a, b]; } catch ([c, d]) { };
 --------------------------------------------------------------------------------
 
 (program
-  (try_statement
-    (statement_block
-      (expression_statement
-        (identifier)))
-    (catch_clause
-      (identifier)
+  (expression_statement
+    (try_statement
       (statement_block
         (expression_statement
-          (identifier)))))
-  (empty_statement)
-  (try_statement
-    (statement_block
-      (expression_statement
-        (identifier)))
-    (finally_clause
-      (statement_block
-        (expression_statement
-          (identifier)))))
-  (empty_statement)
-  (try_statement
-    (statement_block
-      (expression_statement
-        (identifier)))
-    (catch_clause
-      (statement_block
-        (expression_statement
-          (identifier))))
-    (finally_clause
-      (statement_block
-        (expression_statement
-          (identifier)))))
-  (empty_statement)
-  (try_statement
-    (statement_block
-      (throw_statement
-        (array
-          (identifier)
-          (identifier))))
-    (catch_clause
-      (array_pattern
+          (identifier)))
+      (catch_clause
         (identifier)
-        (identifier))
-      (statement_block)))
-  (empty_statement))
+        (statement_block
+          (expression_statement
+            (identifier))))))
+  (expression_statement
+    (try_statement
+      (statement_block
+        (expression_statement
+          (identifier)))
+      (finally_clause
+        (statement_block
+          (expression_statement
+            (identifier))))))
+  (expression_statement
+    (try_statement
+      (statement_block
+        (expression_statement
+          (identifier)))
+      (catch_clause
+        (statement_block
+          (expression_statement
+            (identifier))))
+      (finally_clause
+        (statement_block
+          (expression_statement
+            (identifier))))))
+  (expression_statement
+    (try_statement
+      (statement_block
+        (throw_statement
+          (array
+            (identifier)
+            (identifier))))
+      (catch_clause
+        (array_pattern
+          (identifier)
+          (identifier))
+        (statement_block)))))
 
 ================================================================================
 Empty statements

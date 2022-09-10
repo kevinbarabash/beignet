@@ -37,7 +37,7 @@ module.exports = grammar(tsx, {
 
       choices.push(alias($.if_statement, $.if_expression));
       choices.push($.do_expression);
-      // choices.push($.try_statement);
+      choices.push($.try_statement);
 
       return choice(...choices);
     },
@@ -49,7 +49,7 @@ module.exports = grammar(tsx, {
           ![
             "with_statement",
             "if_statement",
-            // "try_statement",
+            "try_statement",
             "statement_block",
           ].includes(member.name)
       );
