@@ -50,6 +50,7 @@ module.exports = grammar(tsx, {
             "with_statement",
             "if_statement",
             "try_statement",
+            "throw_statement",
             "statement_block",
           ].includes(member.name)
       );
@@ -85,6 +86,19 @@ module.exports = grammar(tsx, {
       seq(
         "else",
         choice(alias($.if_statement, $.if_expression), $.statement_block)
+      ),
+
+    // Adds `throw` to the list of unary expressions
+    unary_expression: ($) =>
+      prec.left(
+        "unary_void",
+        seq(
+          field(
+            "operator",
+            choice("!", "~", "-", "+", "typeof", "void", "delete", "throw")
+          ),
+          field("argument", $.expression)
+        )
       ),
   },
 });

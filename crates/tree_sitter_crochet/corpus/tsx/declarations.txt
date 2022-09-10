@@ -203,9 +203,10 @@ declare module Foo {
             (switch_default
               body: (statement_block
                 (break_statement)))))
-        (throw_statement
-          (string
-            (string_fragment)))
+        (expression_statement
+          (unary_expression
+            argument: (string
+              (string_fragment))))
         (expression_statement
           (try_statement
             body: (statement_block)

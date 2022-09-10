@@ -768,10 +768,6 @@
         },
         {
           "type": "SYMBOL",
-          "name": "throw_statement"
-        },
-        {
-          "type": "SYMBOL",
           "name": "empty_statement"
         },
         {
@@ -4985,6 +4981,10 @@
                 {
                   "type": "STRING",
                   "value": "delete"
+                },
+                {
+                  "type": "STRING",
+                  "value": "throw"
                 }
               ]
             }
