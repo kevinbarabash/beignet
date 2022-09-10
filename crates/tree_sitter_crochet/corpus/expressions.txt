@@ -2205,3 +2205,68 @@ do { x; } while (do { x > y; });
           (binary_expression
             (identifier)
             (identifier)))))))
+
+================================================================================
+Try catch finally expressions
+================================================================================
+
+let result = try { a; } catch (b) { c; };
+let result = try { d; } finally { e; };
+let result = try { f; } catch { g; } finally { h; };
+let result = try { throw [a, b]; } catch ([c, d]) { };
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (try_statement
+        (statement_block
+          (expression_statement
+            (identifier)))
+        (catch_clause
+          (identifier)
+          (statement_block
+            (expression_statement
+              (identifier)))))))
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (try_statement
+        (statement_block
+          (expression_statement
+            (identifier)))
+        (finally_clause
+          (statement_block
+            (expression_statement
+              (identifier)))))))
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (try_statement
+        (statement_block
+          (expression_statement
+            (identifier)))
+        (catch_clause
+          (statement_block
+            (expression_statement
+              (identifier))))
+        (finally_clause
+          (statement_block
+            (expression_statement
+              (identifier)))))))
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (try_statement
+        (statement_block
+          (throw_statement
+            (array
+              (identifier)
+              (identifier))))
+        (catch_clause
+          (array_pattern
+            (identifier)
+            (identifier))
+          (statement_block))))))
