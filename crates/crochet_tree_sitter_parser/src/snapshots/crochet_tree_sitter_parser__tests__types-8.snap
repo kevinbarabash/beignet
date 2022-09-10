@@ -6,7 +6,7 @@ Ok(
     Program {
         body: [
             TypeDecl {
-                span: 9..119,
+                span: 9..120,
                 declare: false,
                 id: Ident {
                     span: 14..19,

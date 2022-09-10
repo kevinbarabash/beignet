@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"{x: 5, y: 10}\")"
+expression: "parse(\"{x: 5, y: 10};\")"
 ---
 Ok(
     Program {
         body: [
             Expr {
-                span: 0..13,
+                span: 0..14,
                 expr: Obj(
                     Obj {
                         span: 0..13,
