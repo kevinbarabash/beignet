@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"(a, ...b) => true\")"
+expression: "parse(\"(a, ...b) => true;\")"
 ---
 Ok(
     Program {
         body: [
             Expr {
-                span: 0..17,
+                span: 0..18,
                 expr: Lambda(
                     Lambda {
                         span: 0..17,

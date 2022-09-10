@@ -12,19 +12,22 @@ const replaceField = (prev, name, replacement) => {
   return seq(...members);
 };
 
+const dropLastMember = (node) => {
+  return node.type === "SEQ" ? seq(...node.members.slice(0, -1)) : node;
+};
+
 module.exports = grammar(tsx, {
   name: "crochet",
 
   rules: {
     // Removes sequence expression and optional flow-style type assertion
-    parenthesized_expression: ($, prev) => {
-      return seq("(", $.expression, ")");
-    },
+    parenthesized_expression: ($, prev) => seq("(", $.expression, ")"),
 
     // Removes sequence expression
-    _expressions: ($, prev) => {
-      return $.expression;
-    },
+    _expressions: ($, prev) => $.expression,
+
+    // Removes automatic semicolon insertion
+    _semicolon: ($, prev) => ";",
 
     expression: ($, prev) => {
       // Removes ternary expression
@@ -53,12 +56,16 @@ module.exports = grammar(tsx, {
       return choice(...choices);
     },
 
-    // Removes the optional semicolon
-    statement_block: ($, prev) =>
-      prec.right(seq("{", repeat($.statement), "}")),
+    // Removes the automatic semicolon insertion from these nodes
+    statement_block: ($, prev) => prec.right(dropLastMember(prev.content)),
+    class_declaration: ($, prev) =>
+      prec("declaration", dropLastMember(prev.content)),
+    function_declaration: ($, prev) =>
+      prec.right("declaration", dropLastMember(prev.content)),
+    generator_function_declaration: ($, prev) =>
+      prec.right("declaration", dropLastMember(prev.content)),
 
-    do_expression: ($) => seq("do", "{", repeat($.statement), "}"),
-
+    // Requires these statements ot use { }
     for_statement: ($, prev) => replaceField(prev, "body", $.statement_block),
     for_in_statement: ($, prev) =>
       replaceField(prev, "body", $.statement_block),
@@ -67,6 +74,10 @@ module.exports = grammar(tsx, {
     switch_case: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
     switch_default: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
 
+    // Add do-expressions
+    do_expression: ($) => seq("do", "{", repeat($.statement), "}"),
+
+    // Make if-else an expression
     if_statement: ($, prev) =>
       prec.right(replaceField(prev.content, "consequence", $.statement_block)),
     else_clause: ($, prev) =>

@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"p.x * p.x + p.y * p.y\")"
+expression: "parse(\"p.x * p.x + p.y * p.y;\")"
 ---
 Ok(
     Program {
         body: [
             Expr {
-                span: 0..21,
+                span: 0..22,
                 expr: Op(
                     Op {
                         span: 0..21,

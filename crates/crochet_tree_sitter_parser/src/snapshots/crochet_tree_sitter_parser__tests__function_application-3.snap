@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"foo(10, \\\"hello\\\")\")"
+expression: "parse(\"foo(10, \\\"hello\\\");\")"
 ---
 Ok(
     Program {
         body: [
             Expr {
-                span: 0..16,
+                span: 0..17,
                 expr: App(
                     App {
                         span: 0..16,
