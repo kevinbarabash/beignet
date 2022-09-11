@@ -351,10 +351,38 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
     assert_eq!(node.kind(), "statement_block");
 
     let mut cursor = node.walk();
+
+    let child_count = node.named_child_count();
     let stmts: Vec<Statement> = node
         .named_children(&mut cursor)
         .into_iter()
-        .flat_map(|stmt| parse_statement(&stmt, src))
+        .enumerate()
+        .flat_map(|(i, child)| {
+            let is_last = i == child_count - 1;
+            if is_last {
+                // This is the only place where a named `expression` node
+                // should exist.  Everywhere else its contents should be
+                // inline.
+                if child.kind() == "expression" {
+                    let expr = child.named_child(0).unwrap();
+                    let expr = parse_expression(&expr, src);
+                    vec![Statement::Expr {
+                        span: child.byte_range(),
+                        expr,
+                    }]
+                } else {
+                    let mut result = parse_statement(&child, src);
+                    // TODO: get the span of the semicolon
+                    result.push(Statement::Expr {
+                        span: 0..0,
+                        expr: Expr::Empty(Empty { span: 0..0 }),
+                    });
+                    result
+                }
+            } else {
+                parse_statement(&child, src)
+            }
+        })
         .collect();
 
     let mut iter = stmts.iter().rev();
@@ -1320,6 +1348,12 @@ mod tests {
     }
 
     #[test]
+    fn rust_style_functions() {
+        insta::assert_debug_snapshot!(parse("let foo = () => { let x = Math.random(); x };"));
+        insta::assert_debug_snapshot!(parse("let bar = () => { let x = Math.random(); x; };"));
+    }
+
+    #[test]
     #[ignore]
     fn multiple_rest_params() {
         assert_eq!(
@@ -1340,7 +1374,7 @@ mod tests {
     #[test]
     fn async_await() {
         insta::assert_debug_snapshot!(parse("async () => 10;"));
-        insta::assert_debug_snapshot!(parse("let foo = async () => { await 10; };"));
+        insta::assert_debug_snapshot!(parse("let foo = async () => { await 10 };"));
         insta::assert_debug_snapshot!(parse("let foo = async () => await a + await b;"));
         insta::assert_debug_snapshot!(parse("let foo = async () => await bar();"));
     }
@@ -1377,8 +1411,8 @@ mod tests {
 
     #[test]
     fn if_else() {
-        insta::assert_debug_snapshot!(parse("if (true) { 5; } else { 10; };"));
-        insta::assert_debug_snapshot!(parse("if (a) { 5; } else if (b) { 10; } else { 20; };"));
+        insta::assert_debug_snapshot!(parse("if (true) { 5 } else { 10 };"));
+        insta::assert_debug_snapshot!(parse("if (a) { 5 } else if (b) { 10 } else { 20 };"));
     }
 
     #[test]

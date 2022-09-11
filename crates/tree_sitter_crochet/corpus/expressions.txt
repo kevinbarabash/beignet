@@ -1271,8 +1271,9 @@ async function* foo() { yield 1 }
     (identifier)
     (formal_parameters)
     (statement_block
-      (yield_expression
-        (number)))))
+      (expression
+        (yield_expression
+          (number))))))
 
 ================================================================================
 Math operators
@@ -1926,8 +1927,9 @@ if (foo - bar) { /baz/ };
           (identifier)
           (identifier)))
       (statement_block
-        (regex
-          (regex_pattern)))))
+        (expression
+          (regex
+            (regex_pattern))))))
   (expression_statement
     (binary_expression
       (parenthesized_expression
@@ -2154,54 +2156,62 @@ do { x } while (do { x > y });
             (assignment_expression
               (identifier)
               (number)))
-          (binary_expression
-            (identifier)
-            (identifier))))))
+          (expression
+            (binary_expression
+              (identifier)
+              (identifier)))))))
   (lexical_declaration
     (variable_declarator
       (identifier)
       (do_expression
         (statement_block
-          (do_expression
-            (statement_block
-              (expression_statement
-                (assignment_expression
-                  (identifier)
-                  (number)))
-              (expression_statement
-                (assignment_expression
-                  (identifier)
-                  (number)))
-              (binary_expression
-                (identifier)
-                (identifier))))))))
+          (expression
+            (do_expression
+              (statement_block
+                (expression_statement
+                  (assignment_expression
+                    (identifier)
+                    (number)))
+                (expression_statement
+                  (assignment_expression
+                    (identifier)
+                    (number)))
+                (expression
+                  (binary_expression
+                    (identifier)
+                    (identifier))))))))))
   (lexical_declaration
     (variable_declarator
       (identifier)
       (do_expression
         (statement_block
-          (object
-            (shorthand_property_identifier)
-            (shorthand_property_identifier))))))
+          (expression
+            (object
+              (shorthand_property_identifier)
+              (shorthand_property_identifier)))))))
   (lexical_declaration
     (variable_declarator
       (identifier)
       (binary_expression
         (do_expression
           (statement_block
-            (identifier)))
+            (expression
+              (identifier))))
         (do_expression
           (statement_block
-            (identifier))))))
+            (expression
+              (identifier)))))))
   (do_statement
     (statement_block
-      (identifier))
+      (expression
+        (identifier)))
     (parenthesized_expression
       (do_expression
         (statement_block
-          (binary_expression
-            (identifier)
-            (identifier)))))))
+          (expression
+            (binary_expression
+              (identifier)
+              (identifier))))))))
 
 ================================================================================
 Try catch finally expressions
@@ -2220,41 +2230,49 @@ let result = try { throw [a, b] } catch ([c, d]) { };
       (identifier)
       (try_statement
         (statement_block
-          (identifier))
+          (expression
+            (identifier)))
         (catch_clause
           (identifier)
           (statement_block
-            (identifier))))))
+            (expression
+              (identifier)))))))
   (lexical_declaration
     (variable_declarator
       (identifier)
       (try_statement
         (statement_block
-          (identifier))
-        (finally_clause
-          (statement_block
-            (identifier))))))
-  (lexical_declaration
-    (variable_declarator
-      (identifier)
-      (try_statement
-        (statement_block
-          (identifier))
-        (catch_clause
-          (statement_block
+          (expression
             (identifier)))
         (finally_clause
           (statement_block
-            (identifier))))))
+            (expression
+              (identifier)))))))
   (lexical_declaration
     (variable_declarator
       (identifier)
       (try_statement
         (statement_block
-          (unary_expression
-            (array
-              (identifier)
+          (expression
+            (identifier)))
+        (catch_clause
+          (statement_block
+            (expression
               (identifier))))
+        (finally_clause
+          (statement_block
+            (expression
+              (identifier)))))))
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (try_statement
+        (statement_block
+          (expression
+            (unary_expression
+              (array
+                (identifier)
+                (identifier)))))
         (catch_clause
           (array_pattern
             (identifier)

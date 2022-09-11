@@ -66,7 +66,14 @@ module.exports = grammar(tsx, {
       prec.right("declaration", dropLastMember(prev.content)),
 
     statement_block: ($, prev) =>
-      seq("{", repeat($.statement), optional($.expression), "}"),
+      seq(
+        "{",
+        repeat($.statement),
+        // We define an alias here so that it's easyt to check if the
+        // last named child in the block is an expression or not.
+        optional(alias($.expression, $.expression)),
+        "}"
+      ),
 
     // Requires these statements ot use { }
     for_statement: ($, prev) => replaceField(prev, "body", $.statement_block),
