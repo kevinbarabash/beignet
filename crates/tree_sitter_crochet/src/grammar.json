@@ -980,8 +980,13 @@
           "type": "CHOICE",
           "members": [
             {
-              "type": "SYMBOL",
-              "name": "expression"
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "expression"
+              },
+              "named": true,
+              "value": "expression"
             },
             {
               "type": "BLANK"
