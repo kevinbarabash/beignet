@@ -1778,11 +1778,11 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": true,
-      "required": false,
+      "multiple": false,
+      "required": true,
       "types": [
         {
-          "type": "statement",
+          "type": "statement_block",
           "named": true
         }
       ]
@@ -4928,6 +4928,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "expression",
+          "named": true
+        },
         {
           "type": "statement",
           "named": true
