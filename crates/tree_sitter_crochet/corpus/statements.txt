@@ -971,35 +971,43 @@ try { throw [a, b] } catch ([c, d]) { };
   (expression_statement
     (try_statement
       (statement_block
-        (identifier))
+        (expression
+          (identifier)))
       (catch_clause
         (identifier)
         (statement_block
-          (identifier)))))
+          (expression
+            (identifier))))))
   (expression_statement
     (try_statement
       (statement_block
-        (identifier))
-      (finally_clause
-        (statement_block
-          (identifier)))))
-  (expression_statement
-    (try_statement
-      (statement_block
-        (identifier))
-      (catch_clause
-        (statement_block
+        (expression
           (identifier)))
       (finally_clause
         (statement_block
-          (identifier)))))
+          (expression
+            (identifier))))))
   (expression_statement
     (try_statement
       (statement_block
-        (unary_expression
-          (array
-            (identifier)
+        (expression
+          (identifier)))
+      (catch_clause
+        (statement_block
+          (expression
             (identifier))))
+      (finally_clause
+        (statement_block
+          (expression
+            (identifier))))))
+  (expression_statement
+    (try_statement
+      (statement_block
+        (expression
+          (unary_expression
+            (array
+              (identifier)
+              (identifier)))))
       (catch_clause
         (array_pattern
           (identifier)

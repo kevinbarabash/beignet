@@ -207,13 +207,14 @@ declare module Foo {
           (unary_expression
             argument: (string
               (string_fragment))))
-        (try_statement
-          body: (statement_block)
-          handler: (catch_clause
-            parameter: (identifier)
-            body: (statement_block))
-          finalizer: (finally_clause
-            body: (statement_block)))))))
+        (expression
+          (try_statement
+            body: (statement_block)
+            handler: (catch_clause
+              parameter: (identifier)
+              body: (statement_block))
+            finalizer: (finally_clause
+              body: (statement_block))))))))
 
 ================================================================================
 Exception handling
