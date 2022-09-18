@@ -184,8 +184,7 @@ declare module Foo {
           body: (statement_block))
         (expression_statement
           (if_expression
-            condition: (parenthesized_expression
-              (true))
+            condition: (true)
             consequence: (statement_block)
             alternative: (else_clause
               (statement_block))))

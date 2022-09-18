@@ -1922,10 +1922,9 @@ if (foo - bar) { /baz/ };
       (identifier)))
   (expression_statement
     (if_expression
-      (parenthesized_expression
-        (binary_expression
-          (identifier)
-          (identifier)))
+      (binary_expression
+        (identifier)
+        (identifier))
       (statement_block
         (expression
           (regex
