@@ -773,6 +773,10 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
         }
         "template_string" => Expr::TemplateLiteral(parse_template_string(node, src)),
         "if_expression" => parse_if_expression(node, src),
+        "do_expression" => {
+            let child = node.named_child(0).unwrap();
+            parse_block_statement(&child, src)
+        }
         _ => {
             todo!("unhandled {node:#?} = '{}'", text_for_node(node, src))
         }
@@ -1495,16 +1499,15 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn blocks() {
-        insta::assert_debug_snapshot!(parse("let foo = do {let x = 5; x;};"));
-        insta::assert_debug_snapshot!(parse("let foo = do {let x = 5; let y = 10; x + y;};"));
-        insta::assert_debug_snapshot!(parse("do {let x = 5; let y = 10; x + y;};"));
+        insta::assert_debug_snapshot!(parse("let foo = do {let x = 5; x};"));
+        insta::assert_debug_snapshot!(parse("let foo = do {let x = 5; let y = 10; x + y};"));
+        insta::assert_debug_snapshot!(parse("do {let x = 5; let y = 10; x + y};"));
         insta::assert_debug_snapshot!(parse(
-            "do {let sum = do {let x = 5; let y = 10; x + y;}; sum;};"
+            "do {let sum = do {let x = 5; let y = 10; x + y}; sum};"
         ));
-        insta::assert_debug_snapshot!(parse("let foo = do {let x = 5; console.log(x); x;};"));
-        insta::assert_debug_snapshot!(parse("let foo = do {console.log(x); x;};"));
+        insta::assert_debug_snapshot!(parse("let foo = do {let x = 5; console.log(x); x};"));
+        insta::assert_debug_snapshot!(parse("let foo = do {console.log(x); x};"));
     }
 
     #[test]
