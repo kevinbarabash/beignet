@@ -35,8 +35,9 @@ module.exports = grammar(tsx, {
         (member) => member.name !== "ternary_expression"
       );
 
-      choices.push(alias($.if_statement, $.if_expression));
       choices.push($.do_expression);
+      choices.push($.if_expression);
+      choices.push($.match_expression);
       choices.push($.try_statement);
 
       return choice(...choices);
@@ -84,18 +85,19 @@ module.exports = grammar(tsx, {
     switch_case: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
     switch_default: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
 
-    // Add do-expressions
-    do_expression: ($) => seq("do", $.statement_block),
-
-    // Make if-else an expression
-    if_statement: ($, prev) =>
-      prec.right(replaceField(prev.content, "consequence", $.statement_block)),
-    else_clause: ($, prev) =>
-      // Always require the alternative to be a block
-      seq(
-        "else",
-        choice(alias($.if_statement, $.if_expression), $.statement_block)
+    if_expression: ($) =>
+      prec.right(
+        seq(
+          "if",
+          "(",
+          field("condition", choice($.let_expression, $.expression)),
+          ")",
+          field("consequence", $.statement_block),
+          optional(field("alternative", $.else_clause))
+        )
       ),
+    else_clause: ($, prev) =>
+      seq("else", choice($.if_expression, $.statement_block)),
 
     // Adds `throw` to the list of unary expressions
     unary_expression: ($) =>
@@ -109,5 +111,108 @@ module.exports = grammar(tsx, {
           field("argument", $.expression)
         )
       ),
+
+    //
+    // New expressions
+    //
+
+    do_expression: ($) => seq("do", $.statement_block),
+
+    let_expression: ($) =>
+      seq("let", field("name", $.refutable_pattern), $._initializer),
+
+    match_expression: ($) =>
+      seq(
+        "match",
+        field("expression", seq("(", $.expression, ")")),
+        "{",
+        commaSep($.match_arm),
+        "}"
+      ),
+
+    match_arm: ($) =>
+      seq(
+        field("pattern", $.refutable_pattern),
+        // NOTE: we use "->" instead of "=>" to help indicate that there isn't
+        // a new stack frame when stepping through match expressions like there
+        // is with an arrow expression.
+        "->",
+        field("value", choice($.expression, $.statement_block))
+      ),
+
+    //
+    // Refutable patterns
+    //
+
+    refutable_pattern: ($) =>
+      choice(
+        // literals
+        $.number,
+        $.string,
+        $.true,
+        $.false,
+        // TOOD: support regex literals
+
+        $._identifier, // identifiers + undefined
+
+        $.refutable_array_pattern,
+        $.refutable_is_pattern,
+        $.refutable_object_pattern
+      ),
+
+    refutable_array_pattern: ($) =>
+      seq(
+        "[",
+        commaSep(choice($.refutable_pattern, $.refutable_rest_pattern)),
+        "]"
+      ),
+
+    refutable_is_pattern: ($) => seq($.identifier, "is", $.identifier),
+
+    refutable_object_pattern: ($) =>
+      prec(
+        "object",
+        seq(
+          "{",
+          commaSep(
+            optional(
+              choice(
+                $.refutable_pair_pattern,
+                $.rest_pattern,
+                alias(
+                  choice($.identifier, $._reserved_identifier),
+                  $.shorthand_property_identifier_pattern
+                )
+              )
+            )
+          ),
+          "}"
+        )
+      ),
+
+    refutable_pair_pattern: ($) =>
+      seq(
+        field("key", $._property_name),
+        ":",
+        field("value", $.refutable_pattern)
+      ),
+
+    refutable_rest_pattern: ($) =>
+      seq(
+        "...",
+        choice(
+          $.identifier,
+          $.refutable_array_pattern,
+          $.refutable_object_pattern
+        )
+      ),
   },
 });
+
+function commaSep1(rule) {
+  return seq(rule, repeat(seq(",", rule)));
+}
+
+function commaSep(rule) {
+  return optional(commaSep1(rule));
+}

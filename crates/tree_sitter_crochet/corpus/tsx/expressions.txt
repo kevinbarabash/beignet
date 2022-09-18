@@ -172,8 +172,7 @@ if ( foo ) {
 (program
   (expression_statement
     (if_expression
-      (parenthesized_expression
-        (identifier))
+      (identifier)
       (statement_block
         (expression_statement
           (call_expression

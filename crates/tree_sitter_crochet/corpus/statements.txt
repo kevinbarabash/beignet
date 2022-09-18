@@ -329,8 +329,7 @@ if (a.b) {
 (program
   (expression_statement
     (if_expression
-      condition: (parenthesized_expression
-        (identifier))
+      condition: (identifier)
       consequence: (statement_block
         (expression_statement
           (call_expression
@@ -339,10 +338,9 @@ if (a.b) {
               (identifier)))))))
   (expression_statement
     (if_expression
-      condition: (parenthesized_expression
-        (member_expression
-          object: (identifier)
-          property: (property_identifier)))
+      condition: (member_expression
+        object: (identifier)
+        property: (property_identifier))
       consequence: (statement_block
         (expression_statement
           (call_expression
@@ -376,15 +374,13 @@ let result = if (a) {
 (program
   (expression_statement
     (if_expression
-      condition: (parenthesized_expression
-        (identifier))
+      condition: (identifier)
       consequence: (statement_block
         (expression_statement
           (identifier)))
       alternative: (else_clause
         (if_expression
-          condition: (parenthesized_expression
-            (identifier))
+          condition: (identifier)
           consequence: (statement_block
             (expression_statement
               (identifier)))
@@ -396,8 +392,7 @@ let result = if (a) {
     (variable_declarator
       name: (identifier)
       value: (if_expression
-        condition: (parenthesized_expression
-          (identifier))
+        condition: (identifier)
         consequence: (statement_block
           (expression_statement
             (identifier))
@@ -1026,16 +1021,14 @@ if (true) {} else {};
 (program
   (expression_statement
     (if_expression
-      (parenthesized_expression
-        (true))
+      (true)
       (statement_block
         (empty_statement))))
   (empty_statement)
   (empty_statement)
   (expression_statement
     (if_expression
-      (parenthesized_expression
-        (true))
+      (true)
       (statement_block)
       (else_clause
         (statement_block)))))
@@ -1074,8 +1067,7 @@ while (true) {
       body: (statement_block
         (expression_statement
           (if_expression
-            condition: (parenthesized_expression
-              (identifier))
+            condition: (identifier)
             consequence: (statement_block
               (break_statement
                 label: (statement_identifier)))
