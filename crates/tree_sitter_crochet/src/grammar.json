@@ -10289,7 +10289,7 @@
           "name": "name",
           "content": {
             "type": "SYMBOL",
-            "name": "_destructuring_pattern"
+            "name": "refutable_pattern"
           }
         },
         {
@@ -10432,6 +10432,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "refutable_is_pattern"
+        },
+        {
+          "type": "SYMBOL",
           "name": "refutable_object_pattern"
         }
       ]
@@ -10497,6 +10501,23 @@
         {
           "type": "STRING",
           "value": "]"
+        }
+      ]
+    },
+    "refutable_is_pattern": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        },
+        {
+          "type": "STRING",
+          "value": "is"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
         }
       ]
     },

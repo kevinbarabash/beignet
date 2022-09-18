@@ -3522,11 +3522,7 @@
         "required": true,
         "types": [
           {
-            "type": "array_pattern",
-            "named": true
-          },
-          {
-            "type": "object_pattern",
+            "type": "refutable_pattern",
             "named": true
           }
         ]
@@ -4808,6 +4804,21 @@
     }
   },
   {
+    "type": "refutable_is_pattern",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "refutable_object_pattern",
     "named": true,
     "fields": {},
@@ -4894,6 +4905,10 @@
         },
         {
           "type": "refutable_array_pattern",
+          "named": true
+        },
+        {
+          "type": "refutable_is_pattern",
           "named": true
         },
         {
@@ -6406,11 +6421,11 @@
   },
   {
     "type": "number",
-    "named": true
+    "named": false
   },
   {
     "type": "number",
-    "named": false
+    "named": true
   },
   {
     "type": "object",

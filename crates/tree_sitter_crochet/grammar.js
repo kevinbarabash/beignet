@@ -118,9 +118,8 @@ module.exports = grammar(tsx, {
 
     do_expression: ($) => seq("do", $.statement_block),
 
-    // TODO: support "is" checks
     let_expression: ($) =>
-      seq("let", field("name", $._destructuring_pattern), $._initializer),
+      seq("let", field("name", $.refutable_pattern), $._initializer),
 
     match_expression: ($) =>
       seq(
@@ -153,9 +152,11 @@ module.exports = grammar(tsx, {
         $.true,
         $.false,
         // TOOD: support regex literals
-        // identifiers + undefined
-        $._identifier,
+
+        $._identifier, // identifiers + undefined
+
         $.refutable_array_pattern,
+        $.refutable_is_pattern,
         $.refutable_object_pattern
       ),
 
@@ -165,6 +166,8 @@ module.exports = grammar(tsx, {
         commaSep(choice($.refutable_pattern, $.refutable_rest_pattern)),
         "]"
       ),
+
+    refutable_is_pattern: ($) => seq($.identifier, "is", $.identifier),
 
     refutable_object_pattern: ($) =>
       prec(
