@@ -1,17 +1,17 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(r#\"\n        let bar = match (foo) {\n            {x, y: b, z: 5, ...rest} -> \"object\",\n            [a, _, ...rest] -> \"array\",\n            \"string\" -> \"string\",\n            true -> \"true\",\n            false -> \"false\",\n            n -> \"variable\",\n            _ -> \"wildcard\"\n          };\n        \"#)"
+expression: "parse(r#\"\n            let bar = match (foo) {\n                {x, y: b, z: 5, ...rest} -> \"object\",\n                [a, _, ...rest] -> \"array\",\n                \"string\" -> \"string\",\n                true -> \"true\",\n                false -> \"false\",\n                n -> \"variable\",\n                _ -> \"wildcard\"\n            };\n        \"#)"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 13..283,
+                span: 17..317,
                 pattern: Ident(
                     BindingIdent {
-                        span: 13..16,
+                        span: 17..20,
                         id: Ident {
-                            span: 13..16,
+                            span: 17..20,
                             name: "bar",
                         },
                     },
@@ -20,25 +20,25 @@ Ok(
                 init: Some(
                     Match(
                         Match {
-                            span: 19..283,
+                            span: 23..317,
                             expr: Ident(
                                 Ident {
-                                    span: 26..29,
+                                    span: 30..33,
                                     name: "foo",
                                 },
                             ),
                             arms: [
                                 Arm {
-                                    span: 45..81,
+                                    span: 53..89,
                                     pattern: Object(
                                         ObjectPat {
-                                            span: 45..69,
+                                            span: 53..77,
                                             props: [
                                                 Assign(
                                                     AssignPatProp {
-                                                        span: 46..47,
+                                                        span: 54..55,
                                                         key: Ident {
-                                                            span: 46..47,
+                                                            span: 54..55,
                                                             name: "x",
                                                         },
                                                         value: None,
@@ -47,14 +47,14 @@ Ok(
                                                 KeyValue(
                                                     KeyValuePatProp {
                                                         key: Ident {
-                                                            span: 49..50,
+                                                            span: 57..58,
                                                             name: "y",
                                                         },
                                                         value: Ident(
                                                             BindingIdent {
-                                                                span: 52..53,
+                                                                span: 60..61,
                                                                 id: Ident {
-                                                                    span: 52..53,
+                                                                    span: 60..61,
                                                                     name: "b",
                                                                 },
                                                             },
@@ -64,15 +64,15 @@ Ok(
                                                 KeyValue(
                                                     KeyValuePatProp {
                                                         key: Ident {
-                                                            span: 55..56,
+                                                            span: 63..64,
                                                             name: "z",
                                                         },
                                                         value: Lit(
                                                             LitPat {
-                                                                span: 58..59,
+                                                                span: 66..67,
                                                                 lit: Num(
                                                                     Num {
-                                                                        span: 58..59,
+                                                                        span: 66..67,
                                                                         value: "5",
                                                                     },
                                                                 ),
@@ -82,12 +82,12 @@ Ok(
                                                 ),
                                                 Rest(
                                                     RestPat {
-                                                        span: 61..68,
+                                                        span: 69..76,
                                                         arg: Ident(
                                                             BindingIdent {
-                                                                span: 64..68,
+                                                                span: 72..76,
                                                                 id: Ident {
-                                                                    span: 64..68,
+                                                                    span: 72..76,
                                                                     name: "rest",
                                                                 },
                                                             },
@@ -102,24 +102,24 @@ Ok(
                                     expr: Lit(
                                         Str(
                                             Str {
-                                                span: 73..81,
+                                                span: 81..89,
                                                 value: "object",
                                             },
                                         ),
                                     ),
                                 },
                                 Arm {
-                                    span: 95..121,
+                                    span: 107..133,
                                     pattern: Array(
                                         ArrayPat {
-                                            span: 95..110,
+                                            span: 107..122,
                                             elems: [
                                                 Some(
                                                     Ident(
                                                         BindingIdent {
-                                                            span: 96..97,
+                                                            span: 108..109,
                                                             id: Ident {
-                                                                span: 96..97,
+                                                                span: 108..109,
                                                                 name: "a",
                                                             },
                                                         },
@@ -128,19 +128,19 @@ Ok(
                                                 Some(
                                                     Wildcard(
                                                         WildcardPat {
-                                                            span: 99..100,
+                                                            span: 111..112,
                                                         },
                                                     ),
                                                 ),
                                                 Some(
                                                     Rest(
                                                         RestPat {
-                                                            span: 102..109,
+                                                            span: 114..121,
                                                             arg: Ident(
                                                                 BindingIdent {
-                                                                    span: 105..109,
+                                                                    span: 117..121,
                                                                     id: Ident {
-                                                                        span: 105..109,
+                                                                        span: 117..121,
                                                                         name: "rest",
                                                                     },
                                                                 },
@@ -156,20 +156,20 @@ Ok(
                                     expr: Lit(
                                         Str(
                                             Str {
-                                                span: 114..121,
+                                                span: 126..133,
                                                 value: "array",
                                             },
                                         ),
                                     ),
                                 },
                                 Arm {
-                                    span: 135..155,
+                                    span: 151..171,
                                     pattern: Lit(
                                         LitPat {
-                                            span: 135..143,
+                                            span: 151..159,
                                             lit: Str(
                                                 Str {
-                                                    span: 135..143,
+                                                    span: 151..159,
                                                     value: "string",
                                                 },
                                             ),
@@ -179,20 +179,20 @@ Ok(
                                     expr: Lit(
                                         Str(
                                             Str {
-                                                span: 147..155,
+                                                span: 163..171,
                                                 value: "string",
                                             },
                                         ),
                                     ),
                                 },
                                 Arm {
-                                    span: 169..183,
+                                    span: 189..203,
                                     pattern: Lit(
                                         LitPat {
-                                            span: 169..173,
+                                            span: 189..193,
                                             lit: Bool(
                                                 Bool {
-                                                    span: 169..173,
+                                                    span: 189..193,
                                                     value: true,
                                                 },
                                             ),
@@ -202,20 +202,20 @@ Ok(
                                     expr: Lit(
                                         Str(
                                             Str {
-                                                span: 177..183,
+                                                span: 197..203,
                                                 value: "true",
                                             },
                                         ),
                                     ),
                                 },
                                 Arm {
-                                    span: 197..213,
+                                    span: 221..237,
                                     pattern: Lit(
                                         LitPat {
-                                            span: 197..202,
+                                            span: 221..226,
                                             lit: Bool(
                                                 Bool {
-                                                    span: 197..202,
+                                                    span: 221..226,
                                                     value: false,
                                                 },
                                             ),
@@ -225,19 +225,19 @@ Ok(
                                     expr: Lit(
                                         Str(
                                             Str {
-                                                span: 206..213,
+                                                span: 230..237,
                                                 value: "false",
                                             },
                                         ),
                                     ),
                                 },
                                 Arm {
-                                    span: 227..242,
+                                    span: 255..270,
                                     pattern: Ident(
                                         BindingIdent {
-                                            span: 227..228,
+                                            span: 255..256,
                                             id: Ident {
-                                                span: 227..228,
+                                                span: 255..256,
                                                 name: "n",
                                             },
                                         },
@@ -246,24 +246,24 @@ Ok(
                                     expr: Lit(
                                         Str(
                                             Str {
-                                                span: 232..242,
+                                                span: 260..270,
                                                 value: "variable",
                                             },
                                         ),
                                     ),
                                 },
                                 Arm {
-                                    span: 256..271,
+                                    span: 288..303,
                                     pattern: Wildcard(
                                         WildcardPat {
-                                            span: 256..257,
+                                            span: 288..289,
                                         },
                                     ),
                                     guard: None,
                                     expr: Lit(
                                         Str(
                                             Str {
-                                                span: 261..271,
+                                                span: 293..303,
                                                 value: "wildcard",
                                             },
                                         ),

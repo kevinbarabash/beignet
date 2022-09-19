@@ -968,6 +968,22 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 arg: Box::from(arg),
             })
         }
+        "refutable_is_pattern" => {
+            let left = child.named_child(0).unwrap();
+            let right = child.named_child(1).unwrap();
+
+            Pattern::Is(IsPat {
+                span: child.byte_range(),
+                id: Ident {
+                    span: left.byte_range(),
+                    name: text_for_node(&left, src),
+                },
+                is_id: Ident {
+                    span: right.byte_range(),
+                    name: text_for_node(&right, src),
+                },
+            })
+        }
         kind => todo!("Unhandled refutable pattern of kind '{kind}'"),
     }
 }
@@ -1718,16 +1734,33 @@ mod tests {
     fn pattern_matching() {
         insta::assert_debug_snapshot!(parse(
             r#"
-        let bar = match (foo) {
-            {x, y: b, z: 5, ...rest} -> "object",
-            [a, _, ...rest] -> "array",
-            "string" -> "string",
-            true -> "true",
-            false -> "false",
-            n -> "variable",
-            _ -> "wildcard"
-          };
+            let bar = match (foo) {
+                {x, y: b, z: 5, ...rest} -> "object",
+                [a, _, ...rest] -> "array",
+                "string" -> "string",
+                true -> "true",
+                false -> "false",
+                n -> "variable",
+                _ -> "wildcard"
+            };
         "#
+        ));
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            let bar = match (foo) {
+                {a: {b: {c}}} -> "object",
+                _ -> "fallthrough"
+            };              
+            "#
+        ));
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            let bar = match (foo) {
+                n is number -> "number",
+                {a: a is Array} -> "Array",
+                _ -> "fallthrough"
+            };
+            "#
         ));
         insta::assert_debug_snapshot!(parse(
             r#"
@@ -1736,7 +1769,7 @@ mod tests {
                 2 -> "two",
                 n if (n < 5) -> "few",
                 _ -> "many"
-              };
+            };
             "#
         ))
     }

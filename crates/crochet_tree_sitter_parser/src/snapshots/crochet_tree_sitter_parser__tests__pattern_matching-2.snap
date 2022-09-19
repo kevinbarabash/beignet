@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(r#\"\n            let bar = match (foo) {\n                1 -> \"one\",\n                2 -> \"two\",\n                n if (n < 5) -> \"few\",\n                _ -> \"many\"\n              };\n            \"#)"
+expression: "parse(r#\"\n            let bar = match (foo) {\n                {a: {b: {c}}} -> \"object\",\n                _ -> \"fallthrough\"\n            };              \n            \"#)"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 17..175,
+                span: 17..128,
                 pattern: Ident(
                     BindingIdent {
                         span: 17..20,
@@ -20,7 +20,7 @@ Ok(
                 init: Some(
                     Match(
                         Match {
-                            span: 23..175,
+                            span: 23..128,
                             expr: Ident(
                                 Ident {
                                     span: 30..33,
@@ -29,106 +29,80 @@ Ok(
                             ),
                             arms: [
                                 Arm {
-                                    span: 53..63,
-                                    pattern: Lit(
-                                        LitPat {
-                                            span: 53..54,
-                                            lit: Num(
-                                                Num {
-                                                    span: 53..54,
-                                                    value: "1",
-                                                },
-                                            ),
-                                        },
-                                    ),
-                                    guard: None,
-                                    expr: Lit(
-                                        Str(
-                                            Str {
-                                                span: 58..63,
-                                                value: "one",
-                                            },
-                                        ),
-                                    ),
-                                },
-                                Arm {
-                                    span: 81..91,
-                                    pattern: Lit(
-                                        LitPat {
-                                            span: 81..82,
-                                            lit: Num(
-                                                Num {
-                                                    span: 81..82,
-                                                    value: "2",
-                                                },
-                                            ),
-                                        },
-                                    ),
-                                    guard: None,
-                                    expr: Lit(
-                                        Str(
-                                            Str {
-                                                span: 86..91,
-                                                value: "two",
-                                            },
-                                        ),
-                                    ),
-                                },
-                                Arm {
-                                    span: 109..130,
-                                    pattern: Ident(
-                                        BindingIdent {
-                                            span: 109..110,
-                                            id: Ident {
-                                                span: 109..110,
-                                                name: "n",
-                                            },
-                                        },
-                                    ),
-                                    guard: Some(
-                                        Op(
-                                            Op {
-                                                span: 115..120,
-                                                op: Lt,
-                                                left: Ident(
-                                                    Ident {
-                                                        span: 115..116,
-                                                        name: "n",
+                                    span: 53..78,
+                                    pattern: Object(
+                                        ObjectPat {
+                                            span: 53..66,
+                                            props: [
+                                                KeyValue(
+                                                    KeyValuePatProp {
+                                                        key: Ident {
+                                                            span: 54..55,
+                                                            name: "a",
+                                                        },
+                                                        value: Object(
+                                                            ObjectPat {
+                                                                span: 57..65,
+                                                                props: [
+                                                                    KeyValue(
+                                                                        KeyValuePatProp {
+                                                                            key: Ident {
+                                                                                span: 58..59,
+                                                                                name: "b",
+                                                                            },
+                                                                            value: Object(
+                                                                                ObjectPat {
+                                                                                    span: 61..64,
+                                                                                    props: [
+                                                                                        Assign(
+                                                                                            AssignPatProp {
+                                                                                                span: 62..63,
+                                                                                                key: Ident {
+                                                                                                    span: 62..63,
+                                                                                                    name: "c",
+                                                                                                },
+                                                                                                value: None,
+                                                                                            },
+                                                                                        ),
+                                                                                    ],
+                                                                                    optional: false,
+                                                                                },
+                                                                            ),
+                                                                        },
+                                                                    ),
+                                                                ],
+                                                                optional: false,
+                                                            },
+                                                        ),
                                                     },
                                                 ),
-                                                right: Lit(
-                                                    Num(
-                                                        Num {
-                                                            span: 119..120,
-                                                            value: "5",
-                                                        },
-                                                    ),
-                                                ),
-                                            },
-                                        ),
-                                    ),
-                                    expr: Lit(
-                                        Str(
-                                            Str {
-                                                span: 125..130,
-                                                value: "few",
-                                            },
-                                        ),
-                                    ),
-                                },
-                                Arm {
-                                    span: 148..159,
-                                    pattern: Wildcard(
-                                        WildcardPat {
-                                            span: 148..149,
+                                            ],
+                                            optional: false,
                                         },
                                     ),
                                     guard: None,
                                     expr: Lit(
                                         Str(
                                             Str {
-                                                span: 153..159,
-                                                value: "many",
+                                                span: 70..78,
+                                                value: "object",
+                                            },
+                                        ),
+                                    ),
+                                },
+                                Arm {
+                                    span: 96..114,
+                                    pattern: Wildcard(
+                                        WildcardPat {
+                                            span: 96..97,
+                                        },
+                                    ),
+                                    guard: None,
+                                    expr: Lit(
+                                        Str(
+                                            Str {
+                                                span: 101..114,
+                                                value: "fallthrough",
                                             },
                                         ),
                                     ),
