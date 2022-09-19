@@ -135,6 +135,14 @@ module.exports = grammar(tsx, {
     match_arm: ($) =>
       seq(
         field("pattern", $.refutable_pattern),
+        optional(
+          seq(
+            "if",
+            "(",
+            field("condition", choice($.let_expression, $.expression)),
+            ")"
+          )
+        ),
         // NOTE: we use "->" instead of "=>" to help indicate that there isn't
         // a new stack frame when stepping through match expressions like there
         // is with an arrow expression.

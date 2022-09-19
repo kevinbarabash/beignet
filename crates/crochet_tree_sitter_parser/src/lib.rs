@@ -847,11 +847,14 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
 fn parse_arm(node: &tree_sitter::Node, src: &str) -> Arm {
     let pat = node.child_by_field_name("pattern").unwrap();
     let value = node.child_by_field_name("value").unwrap();
+    let guard = node
+        .child_by_field_name("condition")
+        .map(|cond| parse_expression(&cond, src));
 
     Arm {
         span: node.byte_range(),
         pattern: parse_refutable_pattern(&pat, src),
-        guard: None,
+        guard,
         expr: parse_expression(&value, src),
     }
 }
@@ -1726,5 +1729,15 @@ mod tests {
           };
         "#
         ));
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            let bar = match (foo) {
+                1 -> "one",
+                2 -> "two",
+                n if (n < 5) -> "few",
+                _ -> "many"
+              };
+            "#
+        ))
     }
 }

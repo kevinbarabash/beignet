@@ -119,8 +119,7 @@ Pattern matching ("is" patterns)
 
 let bar = match (foo) {
   n is number -> "number",
-  b is boolean -> "boolean",
-  a is Array -> "array",
+  {a: a is Array} -> "Array",
   _ -> "fallthrough"
 };
 
@@ -142,16 +141,57 @@ let bar = match (foo) {
               (string_fragment)))
           (match_arm
             (refutable_pattern
-              (refutable_is_pattern
-                (identifier)
-                (identifier)))
+              (refutable_object_pattern
+                (refutable_pair_pattern
+                  (property_identifier)
+                  (refutable_pattern
+                    (refutable_is_pattern
+                      (identifier)
+                      (identifier))))))
             (string
               (string_fragment)))
           (match_arm
             (refutable_pattern
-              (refutable_is_pattern
-                (identifier)
-                (identifier)))
+              (identifier))
+            (string
+              (string_fragment))))))))
+
+================================================================================
+Pattern matching (with guards)
+================================================================================
+
+let bar = match (foo) {
+  1 -> "one",
+  2 -> "two",
+  n if (n < 5) -> "few",
+  _ -> "many"
+};
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (match_expression
+        (identifier)
+        (match_arms
+          (match_arm
+            (refutable_pattern
+              (number))
+            (string
+              (string_fragment)))
+          (match_arm
+            (refutable_pattern
+              (number))
+            (string
+              (string_fragment)))
+          (match_arm
+            (refutable_pattern
+              (identifier))
+            (binary_expression
+              (identifier)
+              (number))
             (string
               (string_fragment)))
           (match_arm
