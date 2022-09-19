@@ -3738,28 +3738,9 @@
     }
   },
   {
-    "type": "match_expression",
+    "type": "match_arms",
     "named": true,
-    "fields": {
-      "expression": {
-        "multiple": true,
-        "required": true,
-        "types": [
-          {
-            "type": "(",
-            "named": false
-          },
-          {
-            "type": ")",
-            "named": false
-          },
-          {
-            "type": "expression",
-            "named": true
-          }
-        ]
-      }
-    },
+    "fields": {},
     "children": {
       "multiple": true,
       "required": false,
@@ -3769,6 +3750,32 @@
           "named": true
         }
       ]
+    }
+  },
+  {
+    "type": "match_expression",
+    "named": true,
+    "fields": {
+      "arms": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "match_arms",
+            "named": true
+          }
+        ]
+      },
+      "expression": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {
@@ -4831,7 +4838,7 @@
           "named": true
         },
         {
-          "type": "rest_pattern",
+          "type": "refutable_rest_pattern",
           "named": true
         },
         {
@@ -6421,11 +6428,11 @@
   },
   {
     "type": "number",
-    "named": false
+    "named": true
   },
   {
     "type": "number",
-    "named": true
+    "named": false
   },
   {
     "type": "object",

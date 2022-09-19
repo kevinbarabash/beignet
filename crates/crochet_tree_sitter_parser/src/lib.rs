@@ -777,6 +777,25 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             let child = node.named_child(0).unwrap();
             parse_block_statement(&child, src)
         }
+        "match_expression" => {
+            let expr = node.child_by_field_name("expression").unwrap();
+            println!("expr = {}", text_for_node(&expr, src));
+            let expr = parse_expression(&expr, src);
+            let arms = node.child_by_field_name("arms").unwrap();
+            println!("arms = {}", text_for_node(&arms, src));
+            let mut cursor = arms.walk();
+            let arms: Vec<Arm> = arms
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|arm| parse_arm(&arm, src))
+                .collect();
+
+            Expr::Match(Match {
+                span: node.byte_range(),
+                expr: Box::from(expr),
+                arms,
+            })
+        }
         _ => {
             todo!("unhandled {node:#?} = '{}'", text_for_node(node, src))
         }
@@ -823,6 +842,131 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
     // $.class,
     // $.meta_property,
     // $.call_expression
+}
+
+fn parse_arm(node: &tree_sitter::Node, src: &str) -> Arm {
+    let pat = node.child_by_field_name("pattern").unwrap();
+    let value = node.child_by_field_name("value").unwrap();
+
+    Arm {
+        span: node.byte_range(),
+        pattern: parse_refutable_pattern(&pat, src),
+        guard: None,
+        expr: parse_expression(&value, src),
+    }
+}
+
+fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
+    let child = if node.kind() == "refutable_pattern" {
+        node.named_child(0).unwrap()
+    } else {
+        node.to_owned()
+    };
+
+    match child.kind() {
+        "number" | "string" | "true" | "false" | "null" => {
+            let lit = parse_literal(&child, src);
+            Pattern::Lit(LitPat {
+                span: child.byte_range(),
+                lit,
+            })
+        }
+        "identifier" => {
+            let name = text_for_node(&child, src);
+            match name.as_str() {
+                "undefined" => {
+                    let lit = parse_literal(&child, src);
+                    Pattern::Lit(LitPat {
+                        span: child.byte_range(),
+                        lit,
+                    })
+                }
+                "_" => Pattern::Wildcard(WildcardPat {
+                    span: child.byte_range(),
+                }),
+                _ => Pattern::Ident(BindingIdent {
+                    span: child.byte_range(),
+                    id: Ident {
+                        span: child.byte_range(),
+                        name,
+                    },
+                }),
+            }
+        }
+        "refutable_array_pattern" => {
+            let mut cursor = child.walk();
+            let elems = child
+                .named_children(&mut cursor)
+                .into_iter()
+                // TODO: make elems in ArrayPat non-optional
+                .map(|elem| Some(parse_refutable_pattern(&elem, src)))
+                .collect();
+            Pattern::Array(ArrayPat {
+                span: child.byte_range(),
+                elems,
+                optional: false,
+            })
+        }
+        "refutable_object_pattern" => {
+            let mut cursor = child.walk();
+            let props: Vec<ObjectPatProp> = child
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|prop| match prop.kind() {
+                    "refutable_pair_pattern" => {
+                        let key_node = prop.child_by_field_name("key").unwrap();
+                        let key = text_for_node(&key_node, src);
+                        let value = prop.child_by_field_name("value").unwrap();
+                        let value = parse_refutable_pattern(&value, src);
+
+                        ObjectPatProp::KeyValue(KeyValuePatProp {
+                            key: Ident {
+                                span: key_node.byte_range(),
+                                name: key,
+                            },
+                            value: Box::from(value),
+                        })
+                    }
+                    "refutable_rest_pattern" => {
+                        let arg = prop.named_child(0).unwrap();
+                        let arg = parse_refutable_pattern(&arg, src);
+
+                        ObjectPatProp::Rest(RestPat {
+                            span: prop.byte_range(),
+                            arg: Box::from(arg),
+                        })
+                    }
+                    "shorthand_property_identifier_pattern" => {
+                        ObjectPatProp::Assign(AssignPatProp {
+                            span: prop.byte_range(),
+                            key: Ident {
+                                span: prop.byte_range(),
+                                name: text_for_node(&prop, src),
+                            },
+                            value: None,
+                        })
+                    }
+                    kind => panic!("Unexected prop.kind() = {kind}"),
+                })
+                .collect();
+
+            Pattern::Object(ObjectPat {
+                span: child.byte_range(),
+                props,
+                optional: false,
+            })
+        }
+        "refutable_rest_pattern" => {
+            let arg = child.named_child(0).unwrap();
+            let arg = parse_refutable_pattern(&arg, src);
+
+            Pattern::Rest(RestPat {
+                span: child.byte_range(),
+                arg: Box::from(arg),
+            })
+        }
+        kind => todo!("Unhandled refutable pattern of kind '{kind}'"),
+    }
 }
 
 fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Expr {
@@ -1565,5 +1709,22 @@ mod tests {
           | {type: "keydown", key: string};
         "#;
         insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    fn pattern_matching() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+        let bar = match (foo) {
+            {x, y: b, z: 5, ...rest} -> "object",
+            [a, _, ...rest] -> "array",
+            "string" -> "string",
+            true -> "true",
+            false -> "false",
+            n -> "variable",
+            _ -> "wildcard"
+          };
+        "#
+        ));
     }
 }

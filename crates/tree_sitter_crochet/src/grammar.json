@@ -10306,26 +10306,34 @@
           "value": "match"
         },
         {
+          "type": "STRING",
+          "value": "("
+        },
+        {
           "type": "FIELD",
           "name": "expression",
           "content": {
-            "type": "SEQ",
-            "members": [
-              {
-                "type": "STRING",
-                "value": "("
-              },
-              {
-                "type": "SYMBOL",
-                "name": "expression"
-              },
-              {
-                "type": "STRING",
-                "value": ")"
-              }
-            ]
+            "type": "SYMBOL",
+            "name": "expression"
           }
         },
+        {
+          "type": "STRING",
+          "value": ")"
+        },
+        {
+          "type": "FIELD",
+          "name": "arms",
+          "content": {
+            "type": "SYMBOL",
+            "name": "match_arms"
+          }
+        }
+      ]
+    },
+    "match_arms": {
+      "type": "SEQ",
+      "members": [
         {
           "type": "STRING",
           "value": "{"
@@ -10549,7 +10557,7 @@
                           },
                           {
                             "type": "SYMBOL",
-                            "name": "rest_pattern"
+                            "name": "refutable_rest_pattern"
                           },
                           {
                             "type": "ALIAS",
@@ -10597,7 +10605,7 @@
                                 },
                                 {
                                   "type": "SYMBOL",
-                                  "name": "rest_pattern"
+                                  "name": "refutable_rest_pattern"
                                 },
                                 {
                                   "type": "ALIAS",

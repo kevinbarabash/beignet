@@ -20,59 +20,60 @@ let bar = match (foo) {
       (identifier)
       (match_expression
         (identifier)
-        (match_arm
-          (refutable_pattern
-            (refutable_object_pattern
-              (shorthand_property_identifier_pattern)
-              (refutable_pair_pattern
-                (property_identifier)
-                (refutable_pattern
-                  (identifier)))
-              (refutable_pair_pattern
-                (property_identifier)
-                (refutable_pattern
-                  (number)))
-              (rest_pattern
-                (identifier))))
-          (string
-            (string_fragment)))
-        (match_arm
-          (refutable_pattern
-            (refutable_array_pattern
-              (refutable_pattern
-                (identifier))
-              (refutable_pattern
-                (identifier))
-              (refutable_rest_pattern
-                (identifier))))
-          (string
-            (string_fragment)))
-        (match_arm
-          (refutable_pattern
+        (match_arms
+          (match_arm
+            (refutable_pattern
+              (refutable_object_pattern
+                (shorthand_property_identifier_pattern)
+                (refutable_pair_pattern
+                  (property_identifier)
+                  (refutable_pattern
+                    (identifier)))
+                (refutable_pair_pattern
+                  (property_identifier)
+                  (refutable_pattern
+                    (number)))
+                (refutable_rest_pattern
+                  (identifier))))
             (string
               (string_fragment)))
-          (string
-            (string_fragment)))
-        (match_arm
-          (refutable_pattern
-            (true))
-          (string
-            (string_fragment)))
-        (match_arm
-          (refutable_pattern
-            (false))
-          (string
-            (string_fragment)))
-        (match_arm
-          (refutable_pattern
-            (identifier))
-          (string
-            (string_fragment)))
-        (match_arm
-          (refutable_pattern
-            (identifier))
-          (string
-            (string_fragment)))))))
+          (match_arm
+            (refutable_pattern
+              (refutable_array_pattern
+                (refutable_pattern
+                  (identifier))
+                (refutable_pattern
+                  (identifier))
+                (refutable_rest_pattern
+                  (identifier))))
+            (string
+              (string_fragment)))
+          (match_arm
+            (refutable_pattern
+              (string
+                (string_fragment)))
+            (string
+              (string_fragment)))
+          (match_arm
+            (refutable_pattern
+              (true))
+            (string
+              (string_fragment)))
+          (match_arm
+            (refutable_pattern
+              (false))
+            (string
+              (string_fragment)))
+          (match_arm
+            (refutable_pattern
+              (identifier))
+            (string
+              (string_fragment)))
+          (match_arm
+            (refutable_pattern
+              (identifier))
+            (string
+              (string_fragment))))))))
 
 ================================================================================
 Pattern matching (nested patterns)
@@ -91,25 +92,26 @@ let bar = match (foo) {
       (identifier)
       (match_expression
         (identifier)
-        (match_arm
-          (refutable_pattern
-            (refutable_object_pattern
-              (refutable_pair_pattern
-                (property_identifier)
-                (refutable_pattern
-                  (refutable_object_pattern
-                    (refutable_pair_pattern
-                      (property_identifier)
-                      (refutable_pattern
-                        (refutable_object_pattern
-                          (shorthand_property_identifier_pattern)))))))))
-          (string
-            (string_fragment)))
-        (match_arm
-          (refutable_pattern
-            (identifier))
-          (string
-            (string_fragment)))))))
+        (match_arms
+          (match_arm
+            (refutable_pattern
+              (refutable_object_pattern
+                (refutable_pair_pattern
+                  (property_identifier)
+                  (refutable_pattern
+                    (refutable_object_pattern
+                      (refutable_pair_pattern
+                        (property_identifier)
+                        (refutable_pattern
+                          (refutable_object_pattern
+                            (shorthand_property_identifier_pattern)))))))))
+            (string
+              (string_fragment)))
+          (match_arm
+            (refutable_pattern
+              (identifier))
+            (string
+              (string_fragment))))))))
 
 ================================================================================
 Pattern matching ("is" patterns)
@@ -130,32 +132,33 @@ let bar = match (foo) {
       (identifier)
       (match_expression
         (identifier)
-        (match_arm
-          (refutable_pattern
-            (refutable_is_pattern
-              (identifier)
-              (identifier)))
-          (string
-            (string_fragment)))
-        (match_arm
-          (refutable_pattern
-            (refutable_is_pattern
-              (identifier)
-              (identifier)))
-          (string
-            (string_fragment)))
-        (match_arm
-          (refutable_pattern
-            (refutable_is_pattern
-              (identifier)
-              (identifier)))
-          (string
-            (string_fragment)))
-        (match_arm
-          (refutable_pattern
-            (identifier))
-          (string
-            (string_fragment)))))))
+        (match_arms
+          (match_arm
+            (refutable_pattern
+              (refutable_is_pattern
+                (identifier)
+                (identifier)))
+            (string
+              (string_fragment)))
+          (match_arm
+            (refutable_pattern
+              (refutable_is_pattern
+                (identifier)
+                (identifier)))
+            (string
+              (string_fragment)))
+          (match_arm
+            (refutable_pattern
+              (refutable_is_pattern
+                (identifier)
+                (identifier)))
+            (string
+              (string_fragment)))
+          (match_arm
+            (refutable_pattern
+              (identifier))
+            (string
+              (string_fragment))))))))
 
 ================================================================================
 if-let (basic patterns)
@@ -184,7 +187,7 @@ let bar = if (let {x, y: b, ...rest} = foo) {
                 (property_identifier)
                 (refutable_pattern
                   (identifier)))
-              (rest_pattern
+              (refutable_rest_pattern
                 (identifier))))
           (identifier))
         (statement_block
