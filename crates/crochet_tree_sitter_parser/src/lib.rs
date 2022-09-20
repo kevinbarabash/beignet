@@ -669,9 +669,12 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             let name = src.get(span.clone()).unwrap().to_owned();
             Expr::Ident(Ident { span, name })
         }
-        "number" | "string" | "true" | "false" | "null" | "undefined" => {
+        "number" | "string" | "true" | "false" => {
             let lit = parse_literal(node, src);
             Expr::Lit(lit)
+        }
+        "null" | "undefined" => {
+            todo!()
         }
         "object" => {
             let mut cursor = node.walk();
@@ -908,7 +911,7 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
     };
 
     match child.kind() {
-        "number" | "string" | "true" | "false" | "null" => {
+        "number" | "string" | "true" | "false" | "null" | "undefined" => {
             let lit = parse_literal(&child, src);
             Pattern::Lit(LitPat {
                 span: child.byte_range(),
@@ -1141,14 +1144,22 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                         let name_node = prop.child_by_field_name("name").unwrap();
                         let name = text_for_node(&name_node, src);
 
+                        let mut optional = false;
+                        let mut cursor = prop.walk();
+                        for child in prop.children(&mut cursor) {
+                            if text_for_node(&child, src) == "?" {
+                                optional = true;
+                            }
+                        }
+
                         let type_ann = prop.child_by_field_name("type").unwrap();
                         let type_ann = parse_type_ann(&type_ann, src);
 
                         TProp {
                             span: prop.byte_range(),
                             name,
-                            optional: false, // TODO
-                            mutable: false,  // TODO,
+                            optional,
+                            mutable: false, // TODO,
                             type_ann: Box::from(type_ann),
                         }
                     }
