@@ -6,7 +6,7 @@ Ok(
     Program {
         body: [
             VarDecl {
-                span: 17..173,
+                span: 13..174,
                 pattern: Ident(
                     BindingIdent {
                         span: 17..20,

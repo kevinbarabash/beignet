@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"declare let get_bar: (foo: Foo) => T\")"
+expression: "parse(\"declare let get_bar: (foo: Foo) => T;\")"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 12..36,
+                span: 8..37,
                 pattern: Ident(
                     BindingIdent {
                         span: 12..19,

@@ -1,0 +1,76 @@
+---
+source: crates/crochet_tree_sitter_parser/src/lib.rs
+expression: "parse(\"let rec f = () => f();\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 0..22,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 8..9,
+                        id: Ident {
+                            span: 8..9,
+                            name: "f",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Fix(
+                        Fix {
+                            span: 8..21,
+                            expr: Lambda(
+                                Lambda {
+                                    span: 8..21,
+                                    params: [
+                                        EFnParam {
+                                            pat: Ident(
+                                                EFnParamBindingIdent {
+                                                    span: 0..0,
+                                                    id: Ident {
+                                                        span: 8..9,
+                                                        name: "f",
+                                                    },
+                                                },
+                                            ),
+                                            type_ann: None,
+                                            optional: false,
+                                            mutable: false,
+                                        },
+                                    ],
+                                    body: Lambda(
+                                        Lambda {
+                                            span: 12..21,
+                                            params: [],
+                                            body: App(
+                                                App {
+                                                    span: 18..21,
+                                                    lam: Ident(
+                                                        Ident {
+                                                            span: 18..19,
+                                                            name: "f",
+                                                        },
+                                                    ),
+                                                    args: [],
+                                                },
+                                            ),
+                                            is_async: false,
+                                            return_type: None,
+                                            type_params: None,
+                                        },
+                                    ),
+                                    is_async: false,
+                                    return_type: None,
+                                    type_params: None,
+                                },
+                            ),
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

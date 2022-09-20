@@ -6,7 +6,7 @@ Ok(
     Program {
         body: [
             VarDecl {
-                span: 4..27,
+                span: 0..28,
                 pattern: Ident(
                     BindingIdent {
                         span: 4..7,
@@ -20,7 +20,7 @@ Ok(
                 init: Some(
                     Let(
                         Let {
-                            span: 18..23,
+                            span: 14..24,
                             pattern: Some(
                                 Ident(
                                     BindingIdent {

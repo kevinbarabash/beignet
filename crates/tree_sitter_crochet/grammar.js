@@ -65,6 +65,14 @@ module.exports = grammar(tsx, {
       prec.right("declaration", dropLastMember(prev.content)),
     generator_function_declaration: ($, prev) =>
       prec.right("declaration", dropLastMember(prev.content)),
+    lexical_declaration: ($) =>
+      seq(
+        // TODO: get rid of "const"
+        field("kind", choice("let", "const")),
+        optional(field("rec", "rec")),
+        field("decl", $.variable_declarator),
+        $._semicolon
+      ),
 
     statement_block: ($, prev) =>
       seq(

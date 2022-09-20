@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"let thunk_arr: (() => undefined)[] = []\")"
+expression: "parse(\"let thunk_arr: (() => undefined)[] = [];\")"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 4..39,
+                span: 0..40,
                 pattern: Ident(
                     BindingIdent {
                         span: 4..13,
