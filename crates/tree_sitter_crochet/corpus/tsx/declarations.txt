@@ -78,7 +78,7 @@ declare module Foo {
           (predefined_type)))))
   (ambient_declaration
     (lexical_declaration
-      (variable_declarator
+      decl: (variable_declarator
         name: (identifier)
         value: (string
           (string_fragment)))))
@@ -106,7 +106,7 @@ declare module Foo {
           return_type: (type_annotation
             (predefined_type)))
         (lexical_declaration
-          (variable_declarator
+          decl: (variable_declarator
             name: (identifier)
             type: (type_annotation
               (predefined_type))))

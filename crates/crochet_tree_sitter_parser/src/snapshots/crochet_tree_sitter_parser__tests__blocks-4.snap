@@ -9,7 +9,7 @@ Ok(
                 span: 0..54,
                 expr: Let(
                     Let {
-                        span: 8..47,
+                        span: 4..48,
                         pattern: Some(
                             Ident(
                                 BindingIdent {
@@ -24,7 +24,7 @@ Ok(
                         type_ann: None,
                         init: Let(
                             Let {
-                                span: 22..27,
+                                span: 18..28,
                                 pattern: Some(
                                     Ident(
                                         BindingIdent {
@@ -47,7 +47,7 @@ Ok(
                                 ),
                                 body: Let(
                                     Let {
-                                        span: 33..39,
+                                        span: 29..40,
                                         pattern: Some(
                                             Ident(
                                                 BindingIdent {

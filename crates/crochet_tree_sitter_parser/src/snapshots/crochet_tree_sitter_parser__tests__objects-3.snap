@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"let obj = {a, b, ...others}\")"
+expression: "parse(\"let obj = {a, b, ...others};\")"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 4..27,
+                span: 0..28,
                 pattern: Ident(
                     BindingIdent {
                         span: 4..7,

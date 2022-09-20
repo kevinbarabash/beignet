@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"let x = []\")"
+expression: "parse(\"let x = [];\")"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 4..10,
+                span: 0..11,
                 pattern: Ident(
                     BindingIdent {
                         span: 4..5,

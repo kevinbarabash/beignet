@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_tree_sitter_parser/src/lib.rs
-expression: "parse(\"declare let add: ((a: number, b: number) => number) & (a: string, b: string) => string\")"
+expression: "parse(\"declare let add: ((a: number, b: number) => number) & (a: string, b: string) => string;\")"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 12..86,
+                span: 8..87,
                 pattern: Ident(
                     BindingIdent {
                         span: 12..15,

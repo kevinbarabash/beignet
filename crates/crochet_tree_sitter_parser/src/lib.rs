@@ -98,34 +98,63 @@ fn text_for_node(node: &tree_sitter::Node, src: &str) -> String {
 }
 
 fn parse_declaration(node: &tree_sitter::Node, declare: bool, src: &str) -> Vec<Statement> {
-    let mut cursor = node.child(1).unwrap().walk();
-    let declarators = node.named_children(&mut cursor);
+    let decl = node.child_by_field_name("decl").unwrap();
+    let rec = node.child_by_field_name("rec").is_some();
 
-    declarators
-        .into_iter()
-        .map(|decl| parse_declarator(&decl, declare, src))
-        .collect()
-}
-
-fn parse_declarator(node: &tree_sitter::Node, declare: bool, src: &str) -> Statement {
-    let name = node.child_by_field_name("name").unwrap();
+    let name = decl.child_by_field_name("name").unwrap();
     let pattern = parse_pattern(&name, src);
 
-    let init = node
+    let init = decl
         .child_by_field_name("value")
         .map(|init| parse_expression(&init, src));
 
-    let type_ann = node
+    let type_ann = decl
         .child_by_field_name("type")
         .map(|type_ann| parse_type_ann(&type_ann, src));
 
-    Statement::VarDecl {
-        span: node.byte_range(),
-        pattern,
-        type_ann,
-        init,
-        declare,
-    }
+    let stmt = if rec {
+        // `let fib = fix((fib) => (n) => ...)`
+        // TODO: Fix always wraps a lambda
+        let id = match &pattern {
+            Pattern::Ident(bi) => bi.id.to_owned(),
+            _ => panic!("rec can only be used with identifier patterns"),
+        };
+
+        let fix = Expr::Fix(Fix {
+            span: decl.byte_range(),
+            expr: Box::from(Expr::Lambda(Lambda {
+                span: decl.byte_range(),
+                params: vec![EFnParam {
+                    pat: EFnParamPat::Ident(EFnParamBindingIdent { span: 0..0, id }),
+                    type_ann: type_ann.clone(),
+                    optional: false,
+                    mutable: false,
+                }],
+                body: Box::from(init.unwrap()),
+                is_async: false,
+                return_type: None,
+                type_params: None, // TODO: support type params on VarDecls
+            })),
+        });
+
+        Statement::VarDecl {
+            span: node.byte_range(),
+            pattern,
+            type_ann,
+            init: Some(fix),
+            declare,
+        }
+    } else {
+        Statement::VarDecl {
+            span: node.byte_range(),
+            pattern,
+            type_ann,
+            init,
+            declare,
+        }
+    };
+
+    vec![stmt]
 }
 
 fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
@@ -1448,8 +1477,9 @@ mod tests {
     #[test]
     fn it_works() {
         let src = r#"
-        const add = (a, b) => a + b, sub = (a, b) => a - b;
-        const sum = add(5, 10);
+        let add = (a, b) => a + b;
+        let sub = (a, b) => a - b;
+        let sum = add(5, 10);
         "#;
         insta::assert_debug_snapshot!(parse(src));
     }
@@ -1574,11 +1604,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn declarations() {
         insta::assert_debug_snapshot!(parse("let x = 5;"));
         insta::assert_debug_snapshot!(parse("let x = (a, b) => a + b;"));
-        insta::assert_debug_snapshot!(parse("let foo = {let x = 5; x};"));
+        insta::assert_debug_snapshot!(parse("let foo = do {let x = 5; x};"));
         insta::assert_debug_snapshot!(parse("let rec f = () => f();")); // recursive
     }
 

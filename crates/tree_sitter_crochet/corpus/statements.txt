@@ -28,6 +28,24 @@ let d = 0;
       (number))))
 
 ================================================================================
+let-rec
+================================================================================
+
+let rec f = () => f();
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      (identifier)
+      (arrow_function
+        (formal_parameters)
+        (call_expression
+          (identifier)
+          (arguments))))))
+
+================================================================================
 'undefined' is a variable
 ================================================================================
 
@@ -178,8 +196,8 @@ Exports
 
 export { name1, name2, name3, nameN };
 export { variable1 as name1, variable2 as name2, nameN };
-export let name1, name2, nameN;
-export let name1 = value1, name2 = value2, name3, nameN;
+export let name1;
+export let name1 = value1;
 
 export default expression;
 export default { field1: 42, field2: [] };
@@ -217,24 +235,13 @@ export { import1 as name1, import2 as name2, nameN } from 'foo';
         name: (identifier))))
   (export_statement
     declaration: (lexical_declaration
-      (variable_declarator
-        name: (identifier))
-      (variable_declarator
-        name: (identifier))
-      (variable_declarator
+      decl: (variable_declarator
         name: (identifier))))
   (export_statement
     declaration: (lexical_declaration
-      (variable_declarator
+      decl: (variable_declarator
         name: (identifier)
-        value: (identifier))
-      (variable_declarator
-        name: (identifier)
-        value: (identifier))
-      (variable_declarator
-        name: (identifier))
-      (variable_declarator
-        name: (identifier))))
+        value: (identifier))))
   (export_statement
     value: (identifier))
   (export_statement
@@ -389,7 +396,7 @@ let result = if (a) {
               (expression_statement
                 (null))))))))
   (lexical_declaration
-    (variable_declarator
+    decl: (variable_declarator
       name: (identifier)
       value: (if_expression
         condition: (identifier)
