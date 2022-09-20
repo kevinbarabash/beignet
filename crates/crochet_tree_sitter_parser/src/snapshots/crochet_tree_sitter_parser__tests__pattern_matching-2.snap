@@ -1,0 +1,118 @@
+---
+source: crates/crochet_tree_sitter_parser/src/lib.rs
+expression: "parse(r#\"\n            let bar = match (foo) {\n                {a: {b: {c}}} -> \"object\",\n                _ -> \"fallthrough\"\n            };              \n            \"#)"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 17..128,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 17..20,
+                        id: Ident {
+                            span: 17..20,
+                            name: "bar",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Match(
+                        Match {
+                            span: 23..128,
+                            expr: Ident(
+                                Ident {
+                                    span: 30..33,
+                                    name: "foo",
+                                },
+                            ),
+                            arms: [
+                                Arm {
+                                    span: 53..78,
+                                    pattern: Object(
+                                        ObjectPat {
+                                            span: 53..66,
+                                            props: [
+                                                KeyValue(
+                                                    KeyValuePatProp {
+                                                        key: Ident {
+                                                            span: 54..55,
+                                                            name: "a",
+                                                        },
+                                                        value: Object(
+                                                            ObjectPat {
+                                                                span: 57..65,
+                                                                props: [
+                                                                    KeyValue(
+                                                                        KeyValuePatProp {
+                                                                            key: Ident {
+                                                                                span: 58..59,
+                                                                                name: "b",
+                                                                            },
+                                                                            value: Object(
+                                                                                ObjectPat {
+                                                                                    span: 61..64,
+                                                                                    props: [
+                                                                                        Assign(
+                                                                                            AssignPatProp {
+                                                                                                span: 62..63,
+                                                                                                key: Ident {
+                                                                                                    span: 62..63,
+                                                                                                    name: "c",
+                                                                                                },
+                                                                                                value: None,
+                                                                                            },
+                                                                                        ),
+                                                                                    ],
+                                                                                    optional: false,
+                                                                                },
+                                                                            ),
+                                                                        },
+                                                                    ),
+                                                                ],
+                                                                optional: false,
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                            ],
+                                            optional: false,
+                                        },
+                                    ),
+                                    guard: None,
+                                    expr: Lit(
+                                        Str(
+                                            Str {
+                                                span: 70..78,
+                                                value: "object",
+                                            },
+                                        ),
+                                    ),
+                                },
+                                Arm {
+                                    span: 96..114,
+                                    pattern: Wildcard(
+                                        WildcardPat {
+                                            span: 96..97,
+                                        },
+                                    ),
+                                    guard: None,
+                                    expr: Lit(
+                                        Str(
+                                            Str {
+                                                span: 101..114,
+                                                value: "fallthrough",
+                                            },
+                                        ),
+                                    ),
+                                },
+                            ],
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

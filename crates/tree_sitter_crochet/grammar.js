@@ -124,15 +124,25 @@ module.exports = grammar(tsx, {
     match_expression: ($) =>
       seq(
         "match",
-        field("expression", seq("(", $.expression, ")")),
-        "{",
-        commaSep($.match_arm),
-        "}"
+        "(",
+        field("expression", $.expression),
+        ")",
+        field("arms", $.match_arms)
       ),
+
+    match_arms: ($) => seq("{", commaSep($.match_arm), "}"),
 
     match_arm: ($) =>
       seq(
         field("pattern", $.refutable_pattern),
+        optional(
+          seq(
+            "if",
+            "(",
+            field("condition", choice($.let_expression, $.expression)),
+            ")"
+          )
+        ),
         // NOTE: we use "->" instead of "=>" to help indicate that there isn't
         // a new stack frame when stepping through match expressions like there
         // is with an arrow expression.
@@ -178,7 +188,7 @@ module.exports = grammar(tsx, {
             optional(
               choice(
                 $.refutable_pair_pattern,
-                $.rest_pattern,
+                $.refutable_rest_pattern,
                 alias(
                   choice($.identifier, $._reserved_identifier),
                   $.shorthand_property_identifier_pattern

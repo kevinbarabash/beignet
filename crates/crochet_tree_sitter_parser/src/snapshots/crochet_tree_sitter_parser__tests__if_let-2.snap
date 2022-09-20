@@ -1,0 +1,161 @@
+---
+source: crates/crochet_tree_sitter_parser/src/lib.rs
+expression: "parse(r#\"\n            let bar = if (let {x: x is string} = foo) {\n                \"object\"\n            } else if (let [a is Array, _, ...rest] = foo) {\n                \"array\"\n            } else {\n                \"other\"\n            };              \n            \"#)"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 17..225,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 17..20,
+                        id: Ident {
+                            span: 17..20,
+                            name: "bar",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    IfElse(
+                        IfElse {
+                            span: 23..225,
+                            cond: LetExpr(
+                                LetExpr {
+                                    span: 27..53,
+                                    pat: Object(
+                                        ObjectPat {
+                                            span: 31..47,
+                                            props: [
+                                                KeyValue(
+                                                    KeyValuePatProp {
+                                                        key: Ident {
+                                                            span: 32..33,
+                                                            name: "x",
+                                                        },
+                                                        value: Is(
+                                                            IsPat {
+                                                                span: 35..46,
+                                                                id: Ident {
+                                                                    span: 35..36,
+                                                                    name: "x",
+                                                                },
+                                                                is_id: Ident {
+                                                                    span: 40..46,
+                                                                    name: "string",
+                                                                },
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                            ],
+                                            optional: false,
+                                        },
+                                    ),
+                                    expr: Ident(
+                                        Ident {
+                                            span: 50..53,
+                                            name: "foo",
+                                        },
+                                    ),
+                                },
+                            ),
+                            consequent: Lit(
+                                Str(
+                                    Str {
+                                        span: 73..81,
+                                        value: "object",
+                                    },
+                                ),
+                            ),
+                            alternate: Some(
+                                IfElse(
+                                    IfElse {
+                                        span: 101..225,
+                                        cond: LetExpr(
+                                            LetExpr {
+                                                span: 105..139,
+                                                pat: Array(
+                                                    ArrayPat {
+                                                        span: 109..133,
+                                                        elems: [
+                                                            Some(
+                                                                Is(
+                                                                    IsPat {
+                                                                        span: 110..120,
+                                                                        id: Ident {
+                                                                            span: 110..111,
+                                                                            name: "a",
+                                                                        },
+                                                                        is_id: Ident {
+                                                                            span: 115..120,
+                                                                            name: "Array",
+                                                                        },
+                                                                    },
+                                                                ),
+                                                            ),
+                                                            Some(
+                                                                Wildcard(
+                                                                    WildcardPat {
+                                                                        span: 122..123,
+                                                                    },
+                                                                ),
+                                                            ),
+                                                            Some(
+                                                                Rest(
+                                                                    RestPat {
+                                                                        span: 125..132,
+                                                                        arg: Ident(
+                                                                            BindingIdent {
+                                                                                span: 128..132,
+                                                                                id: Ident {
+                                                                                    span: 128..132,
+                                                                                    name: "rest",
+                                                                                },
+                                                                            },
+                                                                        ),
+                                                                    },
+                                                                ),
+                                                            ),
+                                                        ],
+                                                        optional: false,
+                                                    },
+                                                ),
+                                                expr: Ident(
+                                                    Ident {
+                                                        span: 136..139,
+                                                        name: "foo",
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                        consequent: Lit(
+                                            Str(
+                                                Str {
+                                                    span: 159..166,
+                                                    value: "array",
+                                                },
+                                            ),
+                                        ),
+                                        alternate: Some(
+                                            Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 204..211,
+                                                        value: "other",
+                                                    },
+                                                ),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                            ),
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)
