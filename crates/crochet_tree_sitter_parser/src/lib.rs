@@ -773,6 +773,18 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
         }
         "template_string" => Expr::TemplateLiteral(parse_template_string(node, src)),
         "if_expression" => parse_if_expression(node, src),
+        "let_expression" => {
+            let pat = node.child_by_field_name("name").unwrap();
+            let pat = parse_refutable_pattern(&pat, src);
+            let expr = node.child_by_field_name("value").unwrap();
+            let expr = parse_expression(&expr, src);
+
+            Expr::LetExpr(LetExpr {
+                span: node.byte_range(),
+                pat,
+                expr: Box::from(expr),
+            })
+        }
         "do_expression" => {
             let child = node.named_child(0).unwrap();
             parse_block_statement(&child, src)
@@ -1772,5 +1784,31 @@ mod tests {
             };
             "#
         ))
+    }
+
+    #[test]
+    fn if_let() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            let bar = if (let {x, y: b, ...rest} = foo) {
+                "object"
+            } else if (let [a, _, ...rest] = foo) {
+                "array"
+            } else {
+                "other"
+            };              
+        "#
+        ));
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            let bar = if (let {x: x is string} = foo) {
+                "object"
+            } else if (let [a is Array, _, ...rest] = foo) {
+                "array"
+            } else {
+                "other"
+            };              
+            "#
+        ));
     }
 }
