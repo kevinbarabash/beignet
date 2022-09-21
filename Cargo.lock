@@ -274,17 +274,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crochet_parser"
-version = "0.1.0"
-dependencies = [
- "chumsky",
- "crochet_ast",
- "insta",
- "pretty_assertions",
- "unescape",
-]
-
-[[package]]
 name = "crochet_tree_sitter_parser"
 version = "0.1.0"
 dependencies = [
