@@ -1,7 +1,7 @@
 use crochet_ast::{Program, Statement};
 use crochet_codegen::*;
 use crochet_infer::*;
-use crochet_tree_sitter_parser::parse;
+use crochet_parser::parse;
 
 fn infer(input: &str) -> String {
     let mut ctx = crochet_infer::Context::default();

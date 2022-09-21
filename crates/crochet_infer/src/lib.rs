@@ -16,7 +16,7 @@ pub use util::{generalize, generalize_type_map, normalize};
 
 #[cfg(test)]
 mod tests {
-    use crochet_tree_sitter_parser::*;
+    use crochet_parser::*;
 
     use super::*;
 

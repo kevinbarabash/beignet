@@ -1,0 +1,62 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let arr: string[] | number[] = [];\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 0..34,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 4..7,
+                        id: Ident {
+                            span: 4..7,
+                            name: "arr",
+                        },
+                    },
+                ),
+                type_ann: Some(
+                    Union(
+                        UnionType {
+                            span: 9..28,
+                            types: [
+                                Array(
+                                    ArrayType {
+                                        span: 9..17,
+                                        elem_type: Prim(
+                                            PrimType {
+                                                span: 9..15,
+                                                prim: Str,
+                                            },
+                                        ),
+                                    },
+                                ),
+                                Array(
+                                    ArrayType {
+                                        span: 20..28,
+                                        elem_type: Prim(
+                                            PrimType {
+                                                span: 20..26,
+                                                prim: Num,
+                                            },
+                                        ),
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                ),
+                init: Some(
+                    Tuple(
+                        Tuple {
+                            span: 31..33,
+                            elems: [],
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

@@ -1,0 +1,48 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"foo(10, \\\"hello\\\");\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..17,
+                expr: App(
+                    App {
+                        span: 0..16,
+                        lam: Ident(
+                            Ident {
+                                span: 0..3,
+                                name: "foo",
+                            },
+                        ),
+                        args: [
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Lit(
+                                    Num(
+                                        Num {
+                                            span: 4..6,
+                                            value: "10",
+                                        },
+                                    ),
+                                ),
+                            },
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Lit(
+                                    Str(
+                                        Str {
+                                            span: 8..15,
+                                            value: "hello",
+                                        },
+                                    ),
+                                ),
+                            },
+                        ],
+                    },
+                ),
+            },
+        ],
+    },
+)

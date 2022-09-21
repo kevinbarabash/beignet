@@ -1,7 +1,7 @@
 use crochet_codegen::d_ts::codegen_d_ts;
 use crochet_codegen::js::codegen_js;
 use crochet_infer::{infer_prog, Context};
-use crochet_tree_sitter_parser::parse;
+use crochet_parser::parse;
 
 fn compile(input: &str) -> String {
     let program = parse(input).unwrap();

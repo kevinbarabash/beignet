@@ -1,6 +1,5 @@
-use crochet_tree_sitter_parser::parse;
-
 use crochet_codegen::js::*;
+use crochet_parser::parse;
 
 fn compile(input: &str) -> String {
     let program = parse(input).unwrap();

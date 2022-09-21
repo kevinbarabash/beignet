@@ -18,7 +18,7 @@ crochet_ast = { version = "0.1.0", path = "../crochet_ast" }
 crochet_codegen = { version = "0.1.0", path = "../crochet_codegen" }
 crochet_dts = { version = "0.1.0", path = "../crochet_dts" }
 crochet_infer = { version = "0.1.0", path = "../crochet_infer" }
-crochet_tree_sitter_parser = { version = "0.1.0", path = "../crochet_tree_sitter_parser" }
+crochet_parser = { version = "0.1.0", path = "../crochet_parser" }
 tree_sitter_crochet = { version = "0.1.0", path = "../tree_sitter_crochet" }
 
 [dev-dependencies]

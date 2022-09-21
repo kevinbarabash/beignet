@@ -1,0 +1,276 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: parse(src)
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 9..49,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 13..14,
+                        id: Ident {
+                            span: 13..14,
+                            name: "S",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Lambda(
+                        Lambda {
+                            span: 17..48,
+                            params: [
+                                EFnParam {
+                                    pat: Ident(
+                                        EFnParamBindingIdent {
+                                            span: 18..19,
+                                            id: Ident {
+                                                span: 18..19,
+                                                name: "f",
+                                            },
+                                        },
+                                    ),
+                                    type_ann: None,
+                                    optional: false,
+                                    mutable: false,
+                                },
+                            ],
+                            body: Lambda(
+                                Lambda {
+                                    span: 24..48,
+                                    params: [
+                                        EFnParam {
+                                            pat: Ident(
+                                                EFnParamBindingIdent {
+                                                    span: 25..26,
+                                                    id: Ident {
+                                                        span: 25..26,
+                                                        name: "g",
+                                                    },
+                                                },
+                                            ),
+                                            type_ann: None,
+                                            optional: false,
+                                            mutable: false,
+                                        },
+                                    ],
+                                    body: Lambda(
+                                        Lambda {
+                                            span: 31..48,
+                                            params: [
+                                                EFnParam {
+                                                    pat: Ident(
+                                                        EFnParamBindingIdent {
+                                                            span: 32..33,
+                                                            id: Ident {
+                                                                span: 32..33,
+                                                                name: "x",
+                                                            },
+                                                        },
+                                                    ),
+                                                    type_ann: None,
+                                                    optional: false,
+                                                    mutable: false,
+                                                },
+                                            ],
+                                            body: App(
+                                                App {
+                                                    span: 38..48,
+                                                    lam: App(
+                                                        App {
+                                                            span: 38..42,
+                                                            lam: Ident(
+                                                                Ident {
+                                                                    span: 38..39,
+                                                                    name: "f",
+                                                                },
+                                                            ),
+                                                            args: [
+                                                                ExprOrSpread {
+                                                                    spread: None,
+                                                                    expr: Ident(
+                                                                        Ident {
+                                                                            span: 40..41,
+                                                                            name: "x",
+                                                                        },
+                                                                    ),
+                                                                },
+                                                            ],
+                                                        },
+                                                    ),
+                                                    args: [
+                                                        ExprOrSpread {
+                                                            spread: None,
+                                                            expr: App(
+                                                                App {
+                                                                    span: 43..47,
+                                                                    lam: Ident(
+                                                                        Ident {
+                                                                            span: 43..44,
+                                                                            name: "g",
+                                                                        },
+                                                                    ),
+                                                                    args: [
+                                                                        ExprOrSpread {
+                                                                            spread: None,
+                                                                            expr: Ident(
+                                                                                Ident {
+                                                                                    span: 45..46,
+                                                                                    name: "x",
+                                                                                },
+                                                                            ),
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ),
+                                                        },
+                                                    ],
+                                                },
+                                            ),
+                                            is_async: false,
+                                            return_type: None,
+                                            type_params: None,
+                                        },
+                                    ),
+                                    is_async: false,
+                                    return_type: None,
+                                    type_params: None,
+                                },
+                            ),
+                            is_async: false,
+                            return_type: None,
+                            type_params: None,
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+            VarDecl {
+                span: 58..82,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 62..63,
+                        id: Ident {
+                            span: 62..63,
+                            name: "K",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Lambda(
+                        Lambda {
+                            span: 66..81,
+                            params: [
+                                EFnParam {
+                                    pat: Ident(
+                                        EFnParamBindingIdent {
+                                            span: 67..68,
+                                            id: Ident {
+                                                span: 67..68,
+                                                name: "x",
+                                            },
+                                        },
+                                    ),
+                                    type_ann: None,
+                                    optional: false,
+                                    mutable: false,
+                                },
+                            ],
+                            body: Lambda(
+                                Lambda {
+                                    span: 73..81,
+                                    params: [
+                                        EFnParam {
+                                            pat: Ident(
+                                                EFnParamBindingIdent {
+                                                    span: 74..75,
+                                                    id: Ident {
+                                                        span: 74..75,
+                                                        name: "y",
+                                                    },
+                                                },
+                                            ),
+                                            type_ann: None,
+                                            optional: false,
+                                            mutable: false,
+                                        },
+                                    ],
+                                    body: Ident(
+                                        Ident {
+                                            span: 80..81,
+                                            name: "x",
+                                        },
+                                    ),
+                                    is_async: false,
+                                    return_type: None,
+                                    type_params: None,
+                                },
+                            ),
+                            is_async: false,
+                            return_type: None,
+                            type_params: None,
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+            VarDecl {
+                span: 91..107,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 95..96,
+                        id: Ident {
+                            span: 95..96,
+                            name: "I",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    App(
+                        App {
+                            span: 99..106,
+                            lam: App(
+                                App {
+                                    span: 99..103,
+                                    lam: Ident(
+                                        Ident {
+                                            span: 99..100,
+                                            name: "S",
+                                        },
+                                    ),
+                                    args: [
+                                        ExprOrSpread {
+                                            spread: None,
+                                            expr: Ident(
+                                                Ident {
+                                                    span: 101..102,
+                                                    name: "K",
+                                                },
+                                            ),
+                                        },
+                                    ],
+                                },
+                            ),
+                            args: [
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Ident(
+                                        Ident {
+                                            span: 104..105,
+                                            name: "K",
+                                        },
+                                    ),
+                                },
+                            ],
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

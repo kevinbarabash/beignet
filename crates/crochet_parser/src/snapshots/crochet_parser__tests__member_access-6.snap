@@ -1,0 +1,51 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"arr[x](y);\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..10,
+                expr: App(
+                    App {
+                        span: 0..9,
+                        lam: Member(
+                            Member {
+                                span: 0..6,
+                                obj: Ident(
+                                    Ident {
+                                        span: 0..3,
+                                        name: "arr",
+                                    },
+                                ),
+                                prop: Computed(
+                                    ComputedPropName {
+                                        span: 4..5,
+                                        expr: Ident(
+                                            Ident {
+                                                span: 4..5,
+                                                name: "x",
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                        args: [
+                            ExprOrSpread {
+                                spread: None,
+                                expr: Ident(
+                                    Ident {
+                                        span: 7..8,
+                                        name: "y",
+                                    },
+                                ),
+                            },
+                        ],
+                    },
+                ),
+            },
+        ],
+    },
+)

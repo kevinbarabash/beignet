@@ -1,0 +1,55 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"<Foo>hello<Bar/>{world}<Baz/></Foo>\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..35,
+                expr: JSXElement(
+                    JSXElement {
+                        span: 0..35,
+                        name: "Foo",
+                        attrs: [],
+                        children: [
+                            JSXText(
+                                JSXText {
+                                    span: 5..10,
+                                    value: "hello",
+                                },
+                            ),
+                            JSXElement(
+                                JSXElement {
+                                    span: 10..16,
+                                    name: "Bar",
+                                    attrs: [],
+                                    children: [],
+                                },
+                            ),
+                            JSXExprContainer(
+                                JSXExprContainer {
+                                    span: 16..23,
+                                    expr: Ident(
+                                        Ident {
+                                            span: 17..22,
+                                            name: "world",
+                                        },
+                                    ),
+                                },
+                            ),
+                            JSXElement(
+                                JSXElement {
+                                    span: 23..29,
+                                    name: "Baz",
+                                    attrs: [],
+                                    children: [],
+                                },
+                            ),
+                        ],
+                    },
+                ),
+            },
+        ],
+    },
+)

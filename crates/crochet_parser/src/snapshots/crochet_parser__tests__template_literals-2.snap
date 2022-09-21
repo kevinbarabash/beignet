@@ -1,0 +1,58 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"`Hello, ${name}`\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..16,
+                expr: TemplateLiteral(
+                    TemplateLiteral {
+                        span: 0..16,
+                        exprs: [
+                            Ident(
+                                Ident {
+                                    span: 10..14,
+                                    name: "name",
+                                },
+                            ),
+                        ],
+                        quasis: [
+                            TemplateElem {
+                                span: 1..8,
+                                raw: Str(
+                                    Str {
+                                        span: 1..8,
+                                        value: "Hello, ",
+                                    },
+                                ),
+                                cooked: Str(
+                                    Str {
+                                        span: 1..8,
+                                        value: "Hello, ",
+                                    },
+                                ),
+                            },
+                            TemplateElem {
+                                span: 15..15,
+                                raw: Str(
+                                    Str {
+                                        span: 15..15,
+                                        value: "",
+                                    },
+                                ),
+                                cooked: Str(
+                                    Str {
+                                        span: 15..15,
+                                        value: "",
+                                    },
+                                ),
+                            },
+                        ],
+                    },
+                ),
+            },
+        ],
+    },
+)

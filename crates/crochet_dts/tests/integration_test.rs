@@ -1,7 +1,7 @@
 use std::fs;
 
 use crochet_ast::Program;
-use crochet_tree_sitter_parser::parse;
+use crochet_parser::parse;
 
 use crochet_dts::parse_dts::*;
 
