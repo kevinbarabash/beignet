@@ -30,7 +30,7 @@ Program {
                                 },
                             ),
                             guard: None,
-                            expr: Lit(
+                            body: Lit(
                                 Str(
                                     Str {
                                         span: 34..40,

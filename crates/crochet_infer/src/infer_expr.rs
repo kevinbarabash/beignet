@@ -475,7 +475,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                     &arm.pattern,
                     &None,
                     expr,
-                    &arm.expr,
+                    &arm.body,
                     ctx,
                     &PatternUsage::Match,
                 )?;

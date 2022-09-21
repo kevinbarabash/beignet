@@ -785,14 +785,14 @@ fn build_arm(
 ) -> (Option<Expr>, BlockStmt) {
     let ast::Arm {
         pattern: pat,
-        expr: consequent,
+        body,
         guard,
         ..
     } = arm;
 
     let cond = build_cond_for_pat(pat, id);
 
-    let mut block = build_expr_in_new_scope(consequent, ret_id, ctx);
+    let mut block = build_expr_in_new_scope(body, ret_id, ctx);
 
     // If pattern has assignables, assign them
     if let Some(name) = build_pattern(pat, stmts, ctx) {

@@ -32,7 +32,7 @@ Program {
                                 },
                             ),
                             guard: None,
-                            expr: Lambda(
+                            body: Lambda(
                                 Lambda {
                                     span: 44..58,
                                     params: [],
@@ -87,7 +87,7 @@ Program {
                                 },
                             ),
                             guard: None,
-                            expr: Lambda(
+                            body: Lambda(
                                 Lambda {
                                     span: 86..93,
                                     params: [],

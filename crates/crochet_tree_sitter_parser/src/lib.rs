@@ -906,8 +906,7 @@ fn parse_arm(node: &tree_sitter::Node, src: &str) -> Arm {
         span: node.byte_range(),
         pattern: parse_refutable_pattern(&pat, src),
         guard,
-        // TODO: rename this to body
-        expr: body,
+        body,
     }
 }
 

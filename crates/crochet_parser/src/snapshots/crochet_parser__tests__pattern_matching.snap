@@ -32,7 +32,7 @@ Program {
                                 },
                             ),
                             guard: None,
-                            expr: Member(
+                            body: Member(
                                 Member {
                                     span: 44..52,
                                     obj: Ident(
@@ -78,7 +78,7 @@ Program {
                                 },
                             ),
                             guard: None,
-                            expr: Ident(
+                            body: Ident(
                                 Ident {
                                     span: 80..81,
                                     name: "b",
@@ -129,7 +129,7 @@ Program {
                                     },
                                 ),
                             ),
-                            expr: Member(
+                            body: Member(
                                 Member {
                                     span: 117..124,
                                     obj: Ident(
@@ -155,7 +155,7 @@ Program {
                                 },
                             ),
                             guard: None,
-                            expr: Lit(
+                            body: Lit(
                                 Num(
                                     Num {
                                         span: 147..148,
