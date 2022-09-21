@@ -10312,8 +10312,17 @@
           "type": "FIELD",
           "name": "expression",
           "content": {
-            "type": "SYMBOL",
-            "name": "expression"
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "expression"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "statement_block"
+              }
+            ]
           }
         },
         {

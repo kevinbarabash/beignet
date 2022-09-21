@@ -42,7 +42,7 @@ Ok(
                                         },
                                     ),
                                     guard: None,
-                                    expr: Lit(
+                                    body: Lit(
                                         Str(
                                             Str {
                                                 span: 58..63,
@@ -65,7 +65,7 @@ Ok(
                                         },
                                     ),
                                     guard: None,
-                                    expr: Lit(
+                                    body: Lit(
                                         Str(
                                             Str {
                                                 span: 86..91,
@@ -107,7 +107,7 @@ Ok(
                                             },
                                         ),
                                     ),
-                                    expr: Lit(
+                                    body: Lit(
                                         Str(
                                             Str {
                                                 span: 125..130,
@@ -124,7 +124,7 @@ Ok(
                                         },
                                     ),
                                     guard: None,
-                                    expr: Lit(
+                                    body: Lit(
                                         Str(
                                             Str {
                                                 span: 153..159,

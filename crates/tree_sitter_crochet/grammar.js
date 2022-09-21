@@ -133,7 +133,7 @@ module.exports = grammar(tsx, {
       seq(
         "match",
         "(",
-        field("expression", $.expression),
+        field("expression", choice($.expression, $.statement_block)),
         ")",
         field("arms", $.match_arms)
       ),

@@ -294,7 +294,7 @@ pub struct Arm {
     pub span: Span,
     pub pattern: Pattern,
     pub guard: Option<Expr>,
-    pub expr: Expr,
+    pub body: Expr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

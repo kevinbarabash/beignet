@@ -2,10 +2,8 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
 use std::str;
 
-use chumsky::prelude::*;
 use crochet_dts::parse_dts::parse_dts;
 use crochet_infer::*;
-use crochet_parser::parser;
 
 #[repr(C)]
 pub struct WasmString {
@@ -43,7 +41,7 @@ pub unsafe extern "C" fn deallocate(ptr: *mut c_void, length: usize) {
 }
 
 fn _compile(input: &str, lib: &str) -> Result<(String, String), String> {
-    let program = parser().parse(input).unwrap();
+    let program = crochet_tree_sitter_parser::parse(input).unwrap();
 
     let js = crochet_codegen::js::codegen_js(&program);
 

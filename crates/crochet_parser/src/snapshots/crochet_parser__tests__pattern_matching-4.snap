@@ -49,7 +49,7 @@ Program {
                                 },
                             ),
                             guard: None,
-                            expr: Let(
+                            body: Let(
                                 Let {
                                     span: 66..102,
                                     pattern: Some(

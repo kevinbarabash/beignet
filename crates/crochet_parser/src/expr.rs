@@ -134,11 +134,11 @@ pub fn expr_parser() -> BoxedParser<'static, char, Expr, Simple<char>> {
             .then(just_with_padding("if").ignore_then(expr.clone()).or_not())
             .then_ignore(just_with_padding("=>"))
             .then(expr.clone())
-            .map_with_span(|((pattern, cond), expr), span: Span| Arm {
+            .map_with_span(|((pattern, cond), body), span: Span| Arm {
                 span,
                 pattern,
                 guard: cond,
-                expr,
+                body,
             });
 
         let r#match = just_with_padding("match")

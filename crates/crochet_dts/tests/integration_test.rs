@@ -1,8 +1,7 @@
-use chumsky::prelude::*;
 use std::fs;
 
 use crochet_ast::Program;
-use crochet_parser::parser;
+use crochet_tree_sitter_parser::parse;
 
 use crochet_dts::parse_dts::*;
 
@@ -12,7 +11,7 @@ fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
     let mut ctx = parse_dts(&lib).unwrap();
 
-    let result = parser().parse(src);
+    let result = parse(src);
     let prog = match result {
         Ok(prog) => prog,
         Err(err) => {
@@ -28,8 +27,8 @@ fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
 #[test]
 fn infer_adding_variables() {
     let src = r#"
-    let msg = "Hello, world!"
-    let len = msg.length.toString() // radix is optional
+    let msg = "Hello, world!";
+    let len = msg.length.toString(); // radix is optional
     "#;
     let (_, ctx) = infer_prog(src);
     let result = format!("{}", ctx.lookup_value_scheme("len").unwrap());
@@ -64,10 +63,10 @@ fn infer_mutable_method_on_readonly_array_errors() {
 #[test]
 fn infer_method_on_readonly_arrays_of_different_things() {
     let src = r#"
-    declare let str_arr: string[]
-    declare let num_arr: number[]
-    let map1 = str_arr.map
-    let map2 = num_arr.map
+    declare let str_arr: string[];
+    declare let num_arr: number[];
+    let map1 = str_arr.map;
+    let map2 = num_arr.map;
     "#;
     let (_, ctx) = infer_prog(src);
 
@@ -86,8 +85,8 @@ fn infer_method_on_readonly_arrays_of_different_things() {
 #[test]
 fn infer_array_method_on_tuple() {
     let src = r#"
-    let tuple = [5, "hello", true]
-    let map = tuple.map
+    let tuple = [5, "hello", true];
+    let map = tuple.map;
     "#;
     let (_, ctx) = infer_prog(src);
     let result = format!("{}", ctx.lookup_value_scheme("map").unwrap());
@@ -100,8 +99,8 @@ fn infer_array_method_on_tuple() {
 #[test]
 fn infer_static_properties() {
     let src = r#"
-    let max = Number.MAX_VALUE
-    let parse = Date.parse
+    let max = Number.MAX_VALUE;
+    let parse = Date.parse;
     "#;
     let (_, ctx) = infer_prog(src);
 

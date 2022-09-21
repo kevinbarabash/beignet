@@ -1,18 +1,16 @@
-use chumsky::prelude::*;
-
 use crochet_codegen::d_ts::codegen_d_ts;
 use crochet_codegen::js::codegen_js;
 use crochet_infer::{infer_prog, Context};
-use crochet_parser::parser;
+use crochet_tree_sitter_parser::parse;
 
 fn compile(input: &str) -> String {
-    let program = parser().parse(input).unwrap();
+    let program = parse(input).unwrap();
     codegen_js(&program)
 }
 
 #[test]
 fn js_print_multiple_decls() {
-    insta::assert_snapshot!(compile("let foo = \"hello\"\nlet bar = \"world\""), @r###"
+    insta::assert_snapshot!(compile("let foo = \"hello\";\nlet bar = \"world\";"), @r###"
     export const foo = "hello";
     export const bar = "world";
     "###);
@@ -21,7 +19,7 @@ fn js_print_multiple_decls() {
 #[test]
 fn unary_minus() {
     let src = r#"
-    let negate = (x) => -x
+    let negate = (x) => -x;
     "#;
 
     insta::assert_snapshot!(compile(src), @"export const negate = (x)=>-x;
@@ -31,9 +29,9 @@ fn unary_minus() {
 #[test]
 fn template_literals() {
     let src = r#"
-    let a = `hello, world`
-    let p = {x: 5, y: 10}
-    console.log(`p = (${p.x}, ${p.y})`)
+    let a = `hello, world`;
+    let p = {x: 5, y: 10};
+    console.log(`p = (${p.x}, ${p.y})`);
     "#;
     insta::assert_snapshot!(compile(src), @r###"
     export const a = `hello, world`;
@@ -48,8 +46,8 @@ fn template_literals() {
 #[test]
 fn tagged_template_literals() {
     let src = r#"
-    let id = "12345"
-    let query = sql`SELECT * FROM users WHERE id = "${id}"`
+    let id = "12345";
+    let query = sql`SELECT * FROM users WHERE id = "${id}"`;
     "#;
     insta::assert_snapshot!(compile(src), @r###"
     export const id = "12345";
@@ -60,19 +58,19 @@ fn tagged_template_literals() {
 #[test]
 fn pattern_matching() {
     let src = r#"
-    let result = match count + 1 {
-        0 => "none",
-        1 => "one",
-        2 => "a couple",
-        n if n < 5 => {
+    let result = match (count + 1) {
+        0 -> "none",
+        1 -> "one",
+        2 -> "a couple",
+        n if (n < 5) -> {
             console.log(`n = ${n}`);
             "a few"
         },
-        _ => {
+        _ -> {
             console.log("fallthrough");
             "many"
-        },
-    }
+        }
+    };
     "#;
     insta::assert_snapshot!(compile(src), @r###"
     let $temp_0;
@@ -98,12 +96,12 @@ fn pattern_matching() {
 #[test]
 fn pattern_matching_with_disjoint_union() {
     let src = r#"
-    type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}
-    declare let event: Event
-    let result = match event {
-        {type: "mousedown", x, y} => `mousedown: (${x}, ${y})`,
-        {type: "keydown", key} if key != "Escape" => key,
-    }
+    type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string};
+    declare let event: Event;
+    let result = match (event) {
+        {type: "mousedown", x, y} -> `mousedown: (${x}, ${y})`,
+        {type: "keydown", key} if (key != "Escape") -> key
+    };
     "#;
     insta::assert_snapshot!(compile(src), @r###"
     ;
@@ -125,9 +123,9 @@ fn pattern_matching_with_disjoint_union() {
 #[should_panic = "Catchall must appear last in match"]
 fn pattern_matching_multiple_catchall_panics() {
     let src = r#"
-    let result = match value {
-        n => "foo",
-        _ => "bar",
+    let result = match (value) {
+        n -> "foo",
+        _ -> "bar"
     }
     "#;
 
@@ -138,7 +136,7 @@ fn pattern_matching_multiple_catchall_panics() {
 #[should_panic = "No arms in match"]
 fn pattern_matching_no_arms_panics() {
     let src = r#"
-    let result = match value {
+    let result = match (value) {
     }
     "#;
 
@@ -148,13 +146,13 @@ fn pattern_matching_no_arms_panics() {
 #[test]
 fn simple_if_else() {
     let src = r#"
-    let result = if cond {
+    let result = if (cond) {
         console.log("true");
         5
     } else {
         console.log("false");
         10
-    }
+    };
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"
@@ -174,7 +172,7 @@ fn simple_if_else() {
 fn simple_if_else_inside_fn() {
     let src = r#"
     let foo = () => {
-        let result = if cond {
+        let result = if (cond) {
             console.log("true");
             5
         } else {
@@ -182,7 +180,7 @@ fn simple_if_else_inside_fn() {
             10
         };
         result
-    }
+    };
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"
@@ -204,13 +202,13 @@ fn simple_if_else_inside_fn() {
 #[test]
 fn simple_if_else_inside_fn_as_expr() {
     let src = r#"
-    let foo = () => if cond {
+    let foo = () => if (cond) {
         console.log("true");
         5
     } else {
         console.log("false");
         10
-    }
+    };
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"
@@ -231,19 +229,19 @@ fn simple_if_else_inside_fn_as_expr() {
 #[test]
 fn nested_if_else() {
     let src = r#"
-    let result = if c1 {
-        if c2 {
+    let result = if (c1) {
+        if (c2) {
             5
         } else {
             10
         }
     } else {
-        if c3 {
+        if (c3) {
             "hello"
         } else {
             "world"
         }
-    }
+    };
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"
@@ -277,7 +275,7 @@ fn multiple_lets_inside_a_function() {
         let y = 10;
         let result = x + y;
         result
-    }
+    };
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"
@@ -294,9 +292,9 @@ fn multiple_lets_inside_a_function() {
 fn codegen_if_let_with_rename() {
     // TODO: don't allow irrefutable patterns to be used with if-let
     let src = r#"
-    let result = if let {x: a, y: b} = {x: 5, y: 10} {
+    let result = if (let {x: a, y: b} = {x: 5, y: 10}) {
         a + b
-    }
+    };
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"
@@ -315,10 +313,10 @@ fn codegen_if_let_with_rename() {
 #[test]
 fn codegen_if_let_refutable_pattern_nested_obj() {
     let src = r#"
-    let action = {type: "moveto", point: {x: 5, y: 10}}
-    if let {type: "moveto", point: {x, y}} = action {
+    let action = {type: "moveto", point: {x: 5, y: 10}};
+    if (let {type: "moveto", point: {x, y}} = action) {
         x + y
-    }
+    };
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"
@@ -342,14 +340,14 @@ fn codegen_if_let_refutable_pattern_nested_obj() {
 #[test]
 fn codegen_if_let_with_else() {
     let src = r#"
-    declare let a: string | number
-    let result = if let x is number = a {
+    declare let a: string | number;
+    let result = if (let x is number = a) {
         x + 5
-    } else if let y is string = a {
+    } else if (let y is string = a) {
         y
     } else {
         true
-    }
+    };
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"
@@ -376,7 +374,7 @@ fn codegen_if_let_with_else() {
 
 #[test]
 fn codegen_block_with_multiple_non_let_lines() {
-    let src = "let result = {let x = 5; x + 0; x}";
+    let src = "let result = do {let x = 5; x + 0; x};";
 
     insta::assert_snapshot!(compile(src), @r###"
     let $temp_0;
@@ -391,13 +389,13 @@ fn codegen_block_with_multiple_non_let_lines() {
 #[test]
 fn destructuring_function_object_params() {
     let src = r#"
-    let foo = ({x, y: b}) => x + b
+    let foo = ({x, y: b}) => x + b;
     "#;
 
     insta::assert_snapshot!(compile(src), @"export const foo = ({ x , y: b  })=>x + b;
 ");
 
-    let program = parser().parse(src).unwrap();
+    let program = parse(src).unwrap();
     let mut ctx = Context::default();
     infer_prog(&program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
@@ -413,13 +411,13 @@ fn destructuring_function_object_params() {
 #[test]
 fn destructuring_function_array_params() {
     let src = r#"
-    let foo = ([a, b]) => a + b
+    let foo = ([a, b]) => a + b;
     "#;
 
     insta::assert_snapshot!(compile(src), @"export const foo = ([a, b])=>a + b;
 ");
 
-    let program = parser().parse(src).unwrap();
+    let program = parse(src).unwrap();
     let mut ctx = Context::default();
     infer_prog(&program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
@@ -432,13 +430,13 @@ fn destructuring_function_array_params() {
 #[test]
 fn function_with_rest_param() {
     let src = r#"
-    let foo = (x: number, ...y: number[]) => x
+    let foo = (x: number, ...y: number[]) => x;
     "#;
 
     insta::assert_snapshot!(compile(src), @"export const foo = (x, ...y)=>x;
 ");
 
-    let program = parser().parse(src).unwrap();
+    let program = parse(src).unwrap();
     let mut ctx = Context::default();
     infer_prog(&program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
@@ -450,13 +448,13 @@ fn function_with_rest_param() {
 #[test]
 fn function_with_optional_param() {
     let src = r#"
-    let foo = (x: number, y?: number) => x
+    let foo = (x: number, y?: number) => x;
     "#;
 
     insta::assert_snapshot!(compile(src), @"export const foo = (x, y)=>x;
 ");
 
-    let program = parser().parse(src).unwrap();
+    let program = parse(src).unwrap();
     let mut ctx = Context::default();
     infer_prog(&program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
@@ -468,13 +466,13 @@ fn function_with_optional_param() {
 #[test]
 fn function_with_optional_param_and_rest_param() {
     let src = r#"
-    let foo = (x?: number, ...y: number[]) => x
+    let foo = (x?: number, ...y: number[]) => x;
     "#;
 
     insta::assert_snapshot!(compile(src), @"export const foo = (x, ...y)=>x;
 ");
 
-    let program = parser().parse(src).unwrap();
+    let program = parse(src).unwrap();
     let mut ctx = Context::default();
     infer_prog(&program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
@@ -486,7 +484,7 @@ fn function_with_optional_param_and_rest_param() {
 #[test]
 fn variable_declaration_with_destructuring() {
     let src = r#"
-    let [x, y] = [5, 10]
+    let [x, y] = [5, 10];
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"
@@ -497,7 +495,7 @@ fn variable_declaration_with_destructuring() {
     "###);
 
     // TODO: Support destructuring in top-level decls
-    let program = parser().parse(src).unwrap();
+    let program = parse(src).unwrap();
     let mut ctx = Context::default();
     infer_prog(&program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
@@ -511,10 +509,10 @@ fn variable_declaration_with_destructuring() {
 #[test]
 fn computed_property() {
     let src = r#"
-    let p = {x: 5, y: 10}
-    let x = p["x"]
-    let q = [5, 10]
-    let y = q[1]
+    let p = {x: 5, y: 10};
+    let x = p["x"];
+    let q = [5, 10];
+    let y = q[1];
     "#;
     insta::assert_snapshot!(compile(src), @r###"
     export const p = {
@@ -533,9 +531,9 @@ fn computed_property() {
 #[test]
 fn partial_application() {
     let src = r#"
-    let add = (a, b) => a + b
-    let add5 = add(5, _)
-    let sum = add5(10)
+    let add = (a, b) => a + b;
+    let add5 = add(5, _);
+    let sum = add5(10);
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"
@@ -548,9 +546,9 @@ fn partial_application() {
 #[test]
 fn partial_application_with_spread() {
     let src = r#"
-    let add = (a, b, c) => a + b + c
-    let add5 = add(5, ..._)
-    let sum = add5(10, 15)
+    let add = (a, b, c) => a + b + c;
+    let add5 = add(5, ..._);
+    let sum = add5(10, 15);
     "#;
 
     // Instead of treating ..._ like a spread operation, it should just expand
@@ -568,42 +566,10 @@ fn partial_application_with_spread() {
 }
 
 #[test]
-#[ignore]
-fn partial_application_of_fn_with_rest_params() {
-    let _src = r#"
-    let add = (a, b, ...c) => a + b + c
-    let add5 = add(5, _, _)
-    let sum = add5(10, 15)
-    "#;
-
-    // What should the type of `add5` be?
-    // It should not have a rest param
-}
-
-#[test]
-#[ignore]
-fn partial_application_of_fn_with_rest_params_using_spread() {
-    let _src = r#"
-    let add = (a, b, ...c) => a + b + c
-    let add5 = add(5, ..._)
-    let sum = add5(10, 15)
-    "#;
-
-    // Instead of treating ..._ like a spread operation, it should just expand
-    // to add(5, _, ..._)
-
-    // We need to know the type of the callee  In order to build the partially
-    // applied function correctly.
-
-    // What should the type of `add5` be?
-    // add5: (arg0: number, ...rest: number[])
-}
-
-#[test]
 fn spread_args() {
     let src = r#"
-    let add = (a, b) => a + b
-    let sum = add(...[5, 10])
+    let add = (a, b) => a + b;
+    let sum = add(...[5, 10]);
     "#;
 
     insta::assert_snapshot!(compile(src), @r###"

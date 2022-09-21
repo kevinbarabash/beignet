@@ -65,6 +65,9 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Vec<Statement> {
                 type_params,
             }]
         }
+        "comment" => {
+            vec![] // ignore comments
+        }
         _ => todo!("unhandled: {:#?}", node),
     }
 
@@ -823,10 +826,9 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
         }
         "match_expression" => {
             let expr = node.child_by_field_name("expression").unwrap();
-            println!("expr = {}", text_for_node(&expr, src));
             let expr = parse_expression(&expr, src);
+
             let arms = node.child_by_field_name("arms").unwrap();
-            println!("arms = {}", text_for_node(&arms, src));
             let mut cursor = arms.walk();
             let arms: Vec<Arm> = arms
                 .named_children(&mut cursor)
@@ -890,7 +892,12 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
 
 fn parse_arm(node: &tree_sitter::Node, src: &str) -> Arm {
     let pat = node.child_by_field_name("pattern").unwrap();
-    let value = node.child_by_field_name("value").unwrap();
+    let body = node.child_by_field_name("value").unwrap();
+    let body = match body.kind() {
+        "statement_block" => parse_block_statement(&body, src),
+        _ => parse_expression(&body, src),
+    };
+
     let guard = node
         .child_by_field_name("condition")
         .map(|cond| parse_expression(&cond, src));
@@ -899,7 +906,7 @@ fn parse_arm(node: &tree_sitter::Node, src: &str) -> Arm {
         span: node.byte_range(),
         pattern: parse_refutable_pattern(&pat, src),
         guard,
-        expr: parse_expression(&value, src),
+        body,
     }
 }
 
