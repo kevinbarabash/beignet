@@ -20,12 +20,12 @@ mod tests {
 
     use super::*;
 
-    // fn infer(input: &str) -> String {
-    //     let mut ctx = Context::default();
-    //     let expr = expr_parser().parse(input).unwrap();
-    //     let scheme = infer::infer_expr(&mut ctx, &expr).unwrap();
-    //     format!("{scheme}")
-    // }
+    fn infer(input: &str) -> String {
+        let mut ctx = Context::default();
+        let prog = parse(&format!("let x = {input};")).unwrap();
+        let ctx = infer::infer_prog(&prog, &mut ctx).unwrap();
+        get_type("x", &ctx)
+    }
 
     fn infer_prog(input: &str) -> Context {
         let prog = parse(input).unwrap();
@@ -147,25 +147,25 @@ mod tests {
         assert_eq!(get_type("fib", &ctx), "(n: number) => number");
     }
 
-    // #[test]
-    // fn infer_app_of_lam() {
-    //     assert_eq!(infer("((x) => x)(5)"), "5");
-    // }
+    #[test]
+    fn infer_app_of_lam() {
+        assert_eq!(infer("((x) => x)(5)"), "5");
+    }
 
-    // #[test]
-    // fn inner_let() {
-    //     assert_eq!(infer("() => {let x = 5; x}"), "() => 5");
-    // }
+    #[test]
+    fn inner_let() {
+        assert_eq!(infer("() => {let x = 5; x}"), "() => 5");
+    }
 
-    // #[test]
-    // fn inner_let_with_type_annotation() {
-    //     assert_eq!(infer("() => {let x: number = 5; x}"), "() => number");
-    // }
+    #[test]
+    fn inner_let_with_type_annotation() {
+        assert_eq!(infer("() => {let x: number = 5; x}"), "() => number");
+    }
 
-    // #[test]
-    // fn infer_tuple() {
-    //     assert_eq!(infer("[5, true, \"hello\"]"), "[5, true, \"hello\"]");
-    // }
+    #[test]
+    fn infer_tuple() {
+        assert_eq!(infer("[5, true, \"hello\"]"), "[5, true, \"hello\"]");
+    }
 
     #[test]
     fn basic_subtyping_assignment() {
@@ -312,18 +312,18 @@ mod tests {
         infer_prog(src);
     }
 
-    // #[test]
-    // fn infer_obj() {
-    //     assert_eq!(infer("{x:5, y: 10}"), "{x: 5, y: 10}");
-    // }
+    #[test]
+    fn infer_obj() {
+        assert_eq!(infer("{x:5, y: 10}"), "{x: 5, y: 10}");
+    }
 
-    // #[test]
-    // fn infer_nested_obj() {
-    //     assert_eq!(
-    //         infer("{a: {b: {c: \"hello\"}}}"),
-    //         "{a: {b: {c: \"hello\"}}}"
-    //     );
-    // }
+    #[test]
+    fn infer_nested_obj() {
+        assert_eq!(
+            infer("{a: {b: {c: \"hello\"}}}"),
+            "{a: {b: {c: \"hello\"}}}"
+        );
+    }
 
     #[test]
     fn destructure_obj() {
@@ -491,51 +491,51 @@ mod tests {
         assert_eq!(x, "number | undefined");
     }
 
-    // #[test]
-    // fn obj_param_destructuring() {
-    //     assert_eq!(
-    //         infer("({x, y}) => x + y"),
-    //         "({x, y}: {x: number, y: number}) => number"
-    //     );
-    // }
+    #[test]
+    fn obj_param_destructuring() {
+        assert_eq!(
+            infer("({x, y}) => x + y"),
+            "({x, y}: {x: number, y: number}) => number"
+        );
+    }
 
-    // #[test]
-    // fn obj_param_destructuring_with_renaming() {
-    //     assert_eq!(
-    //         infer("({x: p, y: q}) => p + q"),
-    //         "({x: p, y: q}: {x: number, y: number}) => number"
-    //     );
-    // }
+    #[test]
+    fn obj_param_destructuring_with_renaming() {
+        assert_eq!(
+            infer("({x: p, y: q}) => p + q"),
+            "({x: p, y: q}: {x: number, y: number}) => number"
+        );
+    }
 
-    // #[test]
-    // fn obj_param_destructuring_with_type_annotation() {
-    //     assert_eq!(
-    //         infer("({x, y}: {x: 5, y: 10}) => x + y"),
-    //         "({x, y}: {x: 5, y: 10}) => number"
-    //     );
-    // }
+    #[test]
+    fn obj_param_destructuring_with_type_annotation() {
+        assert_eq!(
+            infer("({x, y}: {x: 5, y: 10}) => x + y"),
+            "({x, y}: {x: 5, y: 10}) => number"
+        );
+    }
 
-    // #[test]
-    // fn obj_param_partial_destructuring_with_type_annotation() {
-    //     assert_eq!(
-    //         infer("({a}: {a: string, b: boolean}) => a"),
-    //         "({a}: {a: string, b: boolean}) => string"
-    //     );
-    // }
+    #[test]
+    fn obj_param_partial_destructuring_with_type_annotation() {
+        assert_eq!(
+            infer("({a}: {a: string, b: boolean}) => a"),
+            "({a}: {a: string, b: boolean}) => string"
+        );
+    }
 
-    // #[test]
-    // #[should_panic = "Unification failure"]
-    // fn obj_destructuring_with_type_annotation_missing_param() {
-    //     infer("({c}: {a: string, b: boolean}) => c");
-    // }
+    #[test]
+    #[should_panic = "Unification failure"]
+    fn obj_destructuring_with_type_annotation_missing_param() {
+        infer("({c}: {a: string, b: boolean}) => c");
+    }
 
-    // #[test]
-    // fn destructuring_inside_lambda() {
-    //     assert_eq!(
-    //         infer("(p) => {let {x, y} = p; x + y}"),
-    //         "(p: {x: number, y: number}) => number"
-    //     );
-    // }
+    #[test]
+    fn destructuring_inside_lambda() {
+        assert_eq!(
+            infer("(p) => {let {x, y} = p; x + y}"),
+            "(p: {x: number, y: number}) => number"
+        );
+    }
 
     #[test]
     fn infer_if_let() {
@@ -836,13 +836,16 @@ mod tests {
     // if let {a, b} = bar { ... }
     // a and b will both be number | string
 
-    // #[test]
-    // fn infer_let_ignore_result() {
-    //     assert_eq!(infer("() => {let _ = 5; 10}"), "() => 10");
-    // }
+    #[test]
+    fn infer_let_ignore_result() {
+        assert_eq!(infer("() => {let _ = 5; 10}"), "() => 10");
+    }
 
     #[test]
+    #[ignore]
     fn infer_let_wildcard() {
+        // TODO: decide if we really want `_` identifiers to be
+        // ignored everywhere.
         let src = r#"
         let _ = 5;
         "#;
@@ -852,10 +855,10 @@ mod tests {
         assert!(ctx.lookup_value_scheme("_").is_err());
     }
 
-    // #[test]
-    // fn infer_expression_statements() {
-    //     assert_eq!(infer("() => {5; 10}"), "() => 10");
-    // }
+    #[test]
+    fn infer_expression_statements() {
+        assert_eq!(infer("() => {5; 10}"), "() => 10");
+    }
 
     #[test]
     fn type_decl() {
@@ -1046,7 +1049,7 @@ mod tests {
         let plus_one = (a, b?) => {
             match (b) {
                 c is string -> c,
-                undefined -> a + 1
+                _ -> a + 1
             }
         };
         "#;
