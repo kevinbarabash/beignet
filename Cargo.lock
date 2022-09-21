@@ -267,7 +267,7 @@ version = "0.1.0"
 dependencies = [
  "chumsky",
  "crochet_ast",
- "crochet_parser",
+ "crochet_tree_sitter_parser",
  "crochet_types",
  "defaultmap",
  "itertools",
