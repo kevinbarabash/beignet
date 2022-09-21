@@ -1,0 +1,31 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"a > b;\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..6,
+                expr: Op(
+                    Op {
+                        span: 0..5,
+                        op: Gt,
+                        left: Ident(
+                            Ident {
+                                span: 0..1,
+                                name: "a",
+                            },
+                        ),
+                        right: Ident(
+                            Ident {
+                                span: 4..5,
+                                name: "b",
+                            },
+                        ),
+                    },
+                ),
+            },
+        ],
+    },
+)

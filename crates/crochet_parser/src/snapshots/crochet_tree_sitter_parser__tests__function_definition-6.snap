@@ -1,0 +1,87 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"({x: p, y: q}) => p + q;\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..24,
+                expr: Lambda(
+                    Lambda {
+                        span: 0..23,
+                        params: [
+                            EFnParam {
+                                pat: Object(
+                                    EFnParamObjectPat {
+                                        span: 1..13,
+                                        props: [
+                                            KeyValue(
+                                                EFnParamKeyValuePatProp {
+                                                    key: Ident {
+                                                        span: 2..3,
+                                                        name: "x",
+                                                    },
+                                                    value: Ident(
+                                                        EFnParamBindingIdent {
+                                                            span: 5..6,
+                                                            id: Ident {
+                                                                span: 5..6,
+                                                                name: "p",
+                                                            },
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                            KeyValue(
+                                                EFnParamKeyValuePatProp {
+                                                    key: Ident {
+                                                        span: 8..9,
+                                                        name: "y",
+                                                    },
+                                                    value: Ident(
+                                                        EFnParamBindingIdent {
+                                                            span: 11..12,
+                                                            id: Ident {
+                                                                span: 11..12,
+                                                                name: "q",
+                                                            },
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                        ],
+                                    },
+                                ),
+                                type_ann: None,
+                                optional: false,
+                                mutable: false,
+                            },
+                        ],
+                        body: Op(
+                            Op {
+                                span: 18..23,
+                                op: Add,
+                                left: Ident(
+                                    Ident {
+                                        span: 18..19,
+                                        name: "p",
+                                    },
+                                ),
+                                right: Ident(
+                                    Ident {
+                                        span: 22..23,
+                                        name: "q",
+                                    },
+                                ),
+                            },
+                        ),
+                        is_async: false,
+                        return_type: None,
+                        type_params: None,
+                    },
+                ),
+            },
+        ],
+    },
+)

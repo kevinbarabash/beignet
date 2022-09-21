@@ -13,4 +13,4 @@ itertools = "0.10.3"
 
 [dev-dependencies]
 chumsky = "0.8.0"
-crochet_tree_sitter_parser = { version = "0.1.0", path = "../crochet_tree_sitter_parser" }
+crochet_parser = { version = "0.1.0", path = "../crochet_parser" }

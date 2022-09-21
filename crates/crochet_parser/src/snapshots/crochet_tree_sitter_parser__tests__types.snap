@@ -1,0 +1,97 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let get_bar = <T>(foo: Foo<T>) => foo.bar;\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 0..42,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 4..11,
+                        id: Ident {
+                            span: 4..11,
+                            name: "get_bar",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Lambda(
+                        Lambda {
+                            span: 14..41,
+                            params: [
+                                EFnParam {
+                                    pat: Ident(
+                                        EFnParamBindingIdent {
+                                            span: 18..21,
+                                            id: Ident {
+                                                span: 18..21,
+                                                name: "foo",
+                                            },
+                                        },
+                                    ),
+                                    type_ann: Some(
+                                        TypeRef(
+                                            TypeRef {
+                                                span: 23..29,
+                                                name: "Foo",
+                                                type_params: Some(
+                                                    [
+                                                        TypeRef(
+                                                            TypeRef {
+                                                                span: 27..28,
+                                                                name: "T",
+                                                                type_params: None,
+                                                            },
+                                                        ),
+                                                    ],
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                    optional: false,
+                                    mutable: false,
+                                },
+                            ],
+                            body: Member(
+                                Member {
+                                    span: 34..41,
+                                    obj: Ident(
+                                        Ident {
+                                            span: 34..37,
+                                            name: "foo",
+                                        },
+                                    ),
+                                    prop: Ident(
+                                        Ident {
+                                            span: 38..41,
+                                            name: "bar",
+                                        },
+                                    ),
+                                },
+                            ),
+                            is_async: false,
+                            return_type: None,
+                            type_params: Some(
+                                [
+                                    TypeParam {
+                                        span: 15..16,
+                                        name: Ident {
+                                            span: 15..16,
+                                            name: "T",
+                                        },
+                                        constraint: None,
+                                        default: None,
+                                    },
+                                ],
+                            ),
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

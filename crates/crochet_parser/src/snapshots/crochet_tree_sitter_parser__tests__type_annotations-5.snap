@@ -1,0 +1,43 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let FOO: \\\"foo\\\" = \\\"foo\\\";\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 0..23,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 4..7,
+                        id: Ident {
+                            span: 4..7,
+                            name: "FOO",
+                        },
+                    },
+                ),
+                type_ann: Some(
+                    Lit(
+                        Str(
+                            Str {
+                                span: 9..14,
+                                value: "foo",
+                            },
+                        ),
+                    ),
+                ),
+                init: Some(
+                    Lit(
+                        Str(
+                            Str {
+                                span: 17..22,
+                                value: "foo",
+                            },
+                        ),
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

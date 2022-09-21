@@ -1,0 +1,60 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let obj = {a, b, ...others};\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 0..28,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 4..7,
+                        id: Ident {
+                            span: 4..7,
+                            name: "obj",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Obj(
+                        Obj {
+                            span: 10..27,
+                            props: [
+                                Prop(
+                                    Shorthand(
+                                        Ident {
+                                            span: 10..27,
+                                            name: "a",
+                                        },
+                                    ),
+                                ),
+                                Prop(
+                                    Shorthand(
+                                        Ident {
+                                            span: 10..27,
+                                            name: "b",
+                                        },
+                                    ),
+                                ),
+                                Spread(
+                                    SpreadElement {
+                                        span: 10..27,
+                                        expr: Ident(
+                                            Ident {
+                                                span: 20..26,
+                                                name: "others",
+                                            },
+                                        ),
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

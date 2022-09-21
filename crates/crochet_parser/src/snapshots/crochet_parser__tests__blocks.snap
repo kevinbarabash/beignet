@@ -1,0 +1,57 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let foo = do {let x = 5; x};\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 0..28,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 4..7,
+                        id: Ident {
+                            span: 4..7,
+                            name: "foo",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Let(
+                        Let {
+                            span: 14..24,
+                            pattern: Some(
+                                Ident(
+                                    BindingIdent {
+                                        span: 18..19,
+                                        id: Ident {
+                                            span: 18..19,
+                                            name: "x",
+                                        },
+                                    },
+                                ),
+                            ),
+                            type_ann: None,
+                            init: Lit(
+                                Num(
+                                    Num {
+                                        span: 22..23,
+                                        value: "5",
+                                    },
+                                ),
+                            ),
+                            body: Ident(
+                                Ident {
+                                    span: 25..26,
+                                    name: "x",
+                                },
+                            ),
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

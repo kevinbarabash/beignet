@@ -1,0 +1,42 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"foo().bar();\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..12,
+                expr: App(
+                    App {
+                        span: 0..11,
+                        lam: Member(
+                            Member {
+                                span: 0..9,
+                                obj: App(
+                                    App {
+                                        span: 0..5,
+                                        lam: Ident(
+                                            Ident {
+                                                span: 0..3,
+                                                name: "foo",
+                                            },
+                                        ),
+                                        args: [],
+                                    },
+                                ),
+                                prop: Ident(
+                                    Ident {
+                                        span: 6..9,
+                                        name: "bar",
+                                    },
+                                ),
+                            },
+                        ),
+                        args: [],
+                    },
+                ),
+            },
+        ],
+    },
+)

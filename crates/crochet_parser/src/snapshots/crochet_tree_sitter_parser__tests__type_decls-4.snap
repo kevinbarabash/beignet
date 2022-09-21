@@ -1,0 +1,58 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"type Foo<T extends string> = {bar: T};\")"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                span: 0..38,
+                declare: false,
+                id: Ident {
+                    span: 5..8,
+                    name: "Foo",
+                },
+                type_ann: Object(
+                    ObjectType {
+                        span: 29..37,
+                        props: [
+                            TProp {
+                                span: 30..36,
+                                name: "bar",
+                                optional: false,
+                                mutable: false,
+                                type_ann: TypeRef(
+                                    TypeRef {
+                                        span: 35..36,
+                                        name: "T",
+                                        type_params: None,
+                                    },
+                                ),
+                            },
+                        ],
+                    },
+                ),
+                type_params: Some(
+                    [
+                        TypeParam {
+                            span: 9..25,
+                            name: Ident {
+                                span: 9..10,
+                                name: "T",
+                            },
+                            constraint: Some(
+                                Prim(
+                                    PrimType {
+                                        span: 19..25,
+                                        prim: Str,
+                                    },
+                                ),
+                            ),
+                            default: None,
+                        },
+                    ],
+                ),
+            },
+        ],
+    },
+)

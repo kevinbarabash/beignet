@@ -1,0 +1,133 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"declare let add: ((a: number, b: number) => number) & (a: string, b: string) => string;\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 8..87,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 12..15,
+                        id: Ident {
+                            span: 12..15,
+                            name: "add",
+                        },
+                    },
+                ),
+                type_ann: Some(
+                    Intersection(
+                        IntersectionType {
+                            span: 17..86,
+                            types: [
+                                Lam(
+                                    LamType {
+                                        span: 18..50,
+                                        params: [
+                                            TypeAnnFnParam {
+                                                pat: Ident(
+                                                    EFnParamBindingIdent {
+                                                        span: 19..20,
+                                                        id: Ident {
+                                                            span: 19..20,
+                                                            name: "a",
+                                                        },
+                                                    },
+                                                ),
+                                                type_ann: Prim(
+                                                    PrimType {
+                                                        span: 22..28,
+                                                        prim: Num,
+                                                    },
+                                                ),
+                                                optional: false,
+                                            },
+                                            TypeAnnFnParam {
+                                                pat: Ident(
+                                                    EFnParamBindingIdent {
+                                                        span: 30..31,
+                                                        id: Ident {
+                                                            span: 30..31,
+                                                            name: "b",
+                                                        },
+                                                    },
+                                                ),
+                                                type_ann: Prim(
+                                                    PrimType {
+                                                        span: 33..39,
+                                                        prim: Num,
+                                                    },
+                                                ),
+                                                optional: false,
+                                            },
+                                        ],
+                                        ret: Prim(
+                                            PrimType {
+                                                span: 44..50,
+                                                prim: Num,
+                                            },
+                                        ),
+                                        type_params: None,
+                                    },
+                                ),
+                                Lam(
+                                    LamType {
+                                        span: 54..86,
+                                        params: [
+                                            TypeAnnFnParam {
+                                                pat: Ident(
+                                                    EFnParamBindingIdent {
+                                                        span: 55..56,
+                                                        id: Ident {
+                                                            span: 55..56,
+                                                            name: "a",
+                                                        },
+                                                    },
+                                                ),
+                                                type_ann: Prim(
+                                                    PrimType {
+                                                        span: 58..64,
+                                                        prim: Str,
+                                                    },
+                                                ),
+                                                optional: false,
+                                            },
+                                            TypeAnnFnParam {
+                                                pat: Ident(
+                                                    EFnParamBindingIdent {
+                                                        span: 66..67,
+                                                        id: Ident {
+                                                            span: 66..67,
+                                                            name: "b",
+                                                        },
+                                                    },
+                                                ),
+                                                type_ann: Prim(
+                                                    PrimType {
+                                                        span: 69..75,
+                                                        prim: Str,
+                                                    },
+                                                ),
+                                                optional: false,
+                                            },
+                                        ],
+                                        ret: Prim(
+                                            PrimType {
+                                                span: 80..86,
+                                                prim: Str,
+                                            },
+                                        ),
+                                        type_params: None,
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                ),
+                init: None,
+                declare: true,
+            },
+        ],
+    },
+)

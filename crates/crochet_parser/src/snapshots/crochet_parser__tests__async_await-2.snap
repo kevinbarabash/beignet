@@ -1,0 +1,48 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let foo = async () => { await 10 };\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 0..35,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 4..7,
+                        id: Ident {
+                            span: 4..7,
+                            name: "foo",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Lambda(
+                        Lambda {
+                            span: 10..34,
+                            params: [],
+                            body: Await(
+                                Await {
+                                    span: 24..32,
+                                    expr: Lit(
+                                        Num(
+                                            Num {
+                                                span: 30..32,
+                                                value: "10",
+                                            },
+                                        ),
+                                    ),
+                                },
+                            ),
+                            is_async: true,
+                            return_type: None,
+                            type_params: None,
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

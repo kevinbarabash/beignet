@@ -1,0 +1,81 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"do {let x = 5; let y = 10; x + y};\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..34,
+                expr: Let(
+                    Let {
+                        span: 4..14,
+                        pattern: Some(
+                            Ident(
+                                BindingIdent {
+                                    span: 8..9,
+                                    id: Ident {
+                                        span: 8..9,
+                                        name: "x",
+                                    },
+                                },
+                            ),
+                        ),
+                        type_ann: None,
+                        init: Lit(
+                            Num(
+                                Num {
+                                    span: 12..13,
+                                    value: "5",
+                                },
+                            ),
+                        ),
+                        body: Let(
+                            Let {
+                                span: 15..26,
+                                pattern: Some(
+                                    Ident(
+                                        BindingIdent {
+                                            span: 19..20,
+                                            id: Ident {
+                                                span: 19..20,
+                                                name: "y",
+                                            },
+                                        },
+                                    ),
+                                ),
+                                type_ann: None,
+                                init: Lit(
+                                    Num(
+                                        Num {
+                                            span: 23..25,
+                                            value: "10",
+                                        },
+                                    ),
+                                ),
+                                body: Op(
+                                    Op {
+                                        span: 27..32,
+                                        op: Add,
+                                        left: Ident(
+                                            Ident {
+                                                span: 27..28,
+                                                name: "x",
+                                            },
+                                        ),
+                                        right: Ident(
+                                            Ident {
+                                                span: 31..32,
+                                                name: "y",
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+            },
+        ],
+    },
+)

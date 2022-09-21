@@ -186,7 +186,7 @@ dependencies = [
  "crochet_codegen",
  "crochet_dts",
  "crochet_infer",
- "crochet_tree_sitter_parser",
+ "crochet_parser",
  "insta",
  "pretty_assertions",
  "testing_macros",
@@ -213,7 +213,7 @@ dependencies = [
  "crochet_codegen",
  "crochet_dts",
  "crochet_infer",
- "crochet_tree_sitter_parser",
+ "crochet_parser",
  "insta",
  "pretty_assertions",
  "testing_macros",
@@ -225,10 +225,9 @@ dependencies = [
 name = "crochet_codegen"
 version = "0.1.0"
 dependencies = [
- "chumsky",
  "crochet_ast",
  "crochet_infer",
- "crochet_tree_sitter_parser",
+ "crochet_parser",
  "crochet_types",
  "insta",
  "itertools",
@@ -246,10 +245,9 @@ dependencies = [
 name = "crochet_dts"
 version = "0.1.0"
 dependencies = [
- "chumsky",
  "crochet_ast",
  "crochet_infer",
- "crochet_tree_sitter_parser",
+ "crochet_parser",
  "crochet_types",
  "defaultmap",
  "insta",
@@ -267,14 +265,14 @@ version = "0.1.0"
 dependencies = [
  "chumsky",
  "crochet_ast",
- "crochet_tree_sitter_parser",
+ "crochet_parser",
  "crochet_types",
  "defaultmap",
  "itertools",
 ]
 
 [[package]]
-name = "crochet_tree_sitter_parser"
+name = "crochet_parser"
 version = "0.1.0"
 dependencies = [
  "crochet_ast",

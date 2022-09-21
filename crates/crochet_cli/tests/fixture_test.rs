@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use crochet_codegen::d_ts::*;
 use crochet_codegen::js::*;
 use crochet_infer::*;
-use crochet_tree_sitter_parser::parse;
+use crochet_parser::parse;
 
 enum Mode {
     Check,

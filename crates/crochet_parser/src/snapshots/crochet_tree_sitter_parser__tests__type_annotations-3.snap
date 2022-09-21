@@ -1,0 +1,103 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let add = (a: number, b: number): number => a + b;\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 0..50,
+                pattern: Ident(
+                    BindingIdent {
+                        span: 4..7,
+                        id: Ident {
+                            span: 4..7,
+                            name: "add",
+                        },
+                    },
+                ),
+                type_ann: None,
+                init: Some(
+                    Lambda(
+                        Lambda {
+                            span: 10..49,
+                            params: [
+                                EFnParam {
+                                    pat: Ident(
+                                        EFnParamBindingIdent {
+                                            span: 11..12,
+                                            id: Ident {
+                                                span: 11..12,
+                                                name: "a",
+                                            },
+                                        },
+                                    ),
+                                    type_ann: Some(
+                                        Prim(
+                                            PrimType {
+                                                span: 14..20,
+                                                prim: Num,
+                                            },
+                                        ),
+                                    ),
+                                    optional: false,
+                                    mutable: false,
+                                },
+                                EFnParam {
+                                    pat: Ident(
+                                        EFnParamBindingIdent {
+                                            span: 22..23,
+                                            id: Ident {
+                                                span: 22..23,
+                                                name: "b",
+                                            },
+                                        },
+                                    ),
+                                    type_ann: Some(
+                                        Prim(
+                                            PrimType {
+                                                span: 25..31,
+                                                prim: Num,
+                                            },
+                                        ),
+                                    ),
+                                    optional: false,
+                                    mutable: false,
+                                },
+                            ],
+                            body: Op(
+                                Op {
+                                    span: 44..49,
+                                    op: Add,
+                                    left: Ident(
+                                        Ident {
+                                            span: 44..45,
+                                            name: "a",
+                                        },
+                                    ),
+                                    right: Ident(
+                                        Ident {
+                                            span: 48..49,
+                                            name: "b",
+                                        },
+                                    ),
+                                },
+                            ),
+                            is_async: false,
+                            return_type: Some(
+                                Prim(
+                                    PrimType {
+                                        span: 34..40,
+                                        prim: Num,
+                                    },
+                                ),
+                            ),
+                            type_params: None,
+                        },
+                    ),
+                ),
+                declare: false,
+            },
+        ],
+    },
+)
