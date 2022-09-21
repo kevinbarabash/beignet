@@ -1,4 +1,3 @@
-use chumsky::prelude::*;
 use pretty_assertions::assert_eq;
 
 use std::env;
@@ -9,7 +8,7 @@ use std::path::PathBuf;
 use crochet_codegen::d_ts::*;
 use crochet_codegen::js::*;
 use crochet_infer::*;
-use crochet_parser::parser;
+use crochet_tree_sitter_parser::parse;
 
 enum Mode {
     Check,
@@ -30,7 +29,7 @@ fn pass(in_path: PathBuf) {
 
     let input = fs::read_to_string(in_path).unwrap();
 
-    let program = parser().parse(input).unwrap();
+    let program = parse(&input).unwrap();
     let js_output = codegen_js(&program);
     match mode {
         Mode::Check => {

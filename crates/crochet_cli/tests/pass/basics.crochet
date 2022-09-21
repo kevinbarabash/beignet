@@ -1,13 +1,13 @@
-let a = 5
-let b = (x) => x
+let a = 5;
+let b = (x) => x;
 let c = () => {
     let x = 5;
     x
-}
-let d = 5 + 10
-let e = (f, x) => f(x) + x
-let g = (a: 5, b: 10) => a + b
-let h = (f, x, y) => f(x) + f(y)
+};
+let d = 5 + 10;
+let e = (f, x) => f(x) + x;
+let g = (a: 5, b: 10) => a + b;
+let h = (f, x, y) => f(x) + f(y);
 
-let foo = (a, b) => a + b
-let bar = foo(5, 10)
+let foo = (a, b) => a + b;
+let bar = foo(5, 10);
