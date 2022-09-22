@@ -148,12 +148,16 @@ impl Context {
                     let subs: Subst = match &alias.type_params {
                         Some(type_params) => {
                             if scheme.qualifiers.len() != type_params.len() {
+                                println!("scheme = {scheme}");
+                                println!("type_params = {type_params:#?}");
                                 return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
                             }
                             ids.zip(type_params.iter().cloned()).collect()
                         }
                         None => {
                             if !scheme.qualifiers.is_empty() {
+                                println!("scheme = {scheme}");
+                                println!("no type params");
                                 return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
                             }
                             ids.zip(scheme.qualifiers.iter().map(|_| self.fresh_var()))

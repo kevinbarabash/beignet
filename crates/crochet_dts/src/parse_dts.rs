@@ -171,13 +171,8 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
     }
 }
 
-fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, String> {
-    if sig.computed {
-        panic!("unexpected computed property in TypElement")
-    }
-
-    let params: Vec<TFnParam> = sig
-        .params
+fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>, String> {
+    let params: Vec<TFnParam> = params
         .iter()
         .enumerate()
         .filter_map(|(index, param)| match param {
@@ -222,6 +217,15 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
         })
         .collect();
 
+    Ok(params)
+}
+
+fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, String> {
+    if sig.computed {
+        panic!("unexpected computed property in TypElement")
+    }
+
+    let params = infer_fn_params(&sig.params, ctx)?;
     let ret = match &sig.type_ann {
         Some(type_ann) => infer_ts_type_ann(&type_ann.type_ann, ctx),
         None => Err(String::from("method has no return type")),
@@ -244,7 +248,19 @@ fn get_key_name(key: &Expr) -> Result<String, String> {
 
 fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem, String> {
     match elem {
-        TsTypeElement::TsCallSignatureDecl(_decl) => Err(String::from("TsCallSignatureDecl")),
+        TsTypeElement::TsCallSignatureDecl(decl) => {
+            match &decl.type_ann {
+                // TODO: we need a way for TObjElem::Call to be generalized in the same
+                // way that TObjElem::Prop is below.
+                Some(type_ann) => Ok(TObjElem::Call(TLam {
+                    params: infer_fn_params(&decl.params, ctx)?,
+                    ret: Box::from(infer_ts_type_ann(&type_ann.type_ann, ctx)?),
+                })),
+                None => Err(String::from("Property is missing type annotation")),
+            }
+
+            // Err(String::from("TsCallSignatureDecl"))
+        }
         TsTypeElement::TsConstructSignatureDecl(_decl) => {
             Err(String::from("TsConstructSignatureDecl"))
         }

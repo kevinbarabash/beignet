@@ -69,9 +69,9 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                         //     prop.scheme.to_owned()
                         // };
                         match elem {
-                            TObjElem::Call(_) => {
+                            TObjElem::Call(call) => {
                                 // What to do about Call signatures
-                                todo!()
+                                TObjElem::Call(call.clone())
                             }
                             TObjElem::Prop(prop) => {
                                 TObjElem::Prop(TProp {
