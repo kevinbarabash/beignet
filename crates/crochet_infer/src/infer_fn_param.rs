@@ -183,7 +183,7 @@ fn infer_param_pattern_rec(
         }
         EFnParamPat::Object(EFnParamObjectPat { props, .. }) => {
             let mut rest_opt_ty: Option<Type> = None;
-            let props: Vec<types::TProp> = props
+            let elems: Vec<types::TObjElem> = props
                 .iter()
                 .filter_map(|prop| {
                     match prop {
@@ -192,12 +192,12 @@ fn infer_param_pattern_rec(
                             // TODO: bubble the error up from infer_patter_rec() if there is one.
                             let value_type = infer_param_pattern_rec(value, ctx, assump).unwrap();
 
-                            Some(types::TProp {
+                            Some(types::TObjElem::Prop(types::TProp {
                                 name: key.name.to_owned(),
                                 optional: false,
                                 mutable: false,
                                 scheme: Scheme::from(value_type),
-                            })
+                            }))
                         }
                         EFnParamObjectPatProp::Assign(EFnParamAssignPatProp {
                             key,
@@ -214,12 +214,12 @@ fn infer_param_pattern_rec(
                                 todo!("return an error");
                             }
 
-                            Some(types::TProp {
+                            Some(types::TObjElem::Prop(types::TProp {
                                 name: key.name.to_owned(),
                                 optional: false,
                                 mutable: false,
                                 scheme: Scheme::from(tv),
-                            })
+                            }))
                         }
                         EFnParamObjectPatProp::Rest(rest) => {
                             if rest_opt_ty.is_some() {
@@ -238,7 +238,7 @@ fn infer_param_pattern_rec(
                 })
                 .collect();
 
-            let obj_type = Type::Object(props);
+            let obj_type = Type::Object(elems);
 
             match rest_opt_ty {
                 Some(rest_ty) => Ok(Type::Intersection(vec![obj_type, rest_ty])),

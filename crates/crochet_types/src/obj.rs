@@ -1,8 +1,28 @@
+use itertools::join;
 use std::fmt;
 
 use crate::keyword::TKeyword;
+use crate::lam::TLam;
 use crate::r#type::Type;
 use crate::Scheme;
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum TObjElem {
+    Call(TLam),
+    // Index(TIndex),
+    Prop(TProp),
+    // Getter
+    // Setter
+}
+
+impl fmt::Display for TObjElem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TObjElem::Call(lam) => write!(f, "({}) => {}", join(&lam.params, ", "), lam.ret),
+            TObjElem::Prop(prop) => write!(f, "{prop}"),
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TProp {

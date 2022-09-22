@@ -3,6 +3,7 @@ use std::iter::Iterator;
 
 use crochet_ast::*;
 use crochet_types::{self as types, Scheme, TFnParam, TProp, Type};
+use types::TObjElem;
 
 use super::context::Context;
 use super::infer_fn_param::e_pat_to_t_pat;
@@ -84,20 +85,22 @@ fn infer_type_ann_rec(
         TypeAnn::Prim(PrimType { prim, .. }) => Type::from(prim.to_owned()),
         TypeAnn::Keyword(KeywordType { keyword, .. }) => Type::from(keyword.to_owned()),
         TypeAnn::Object(ObjectType { props, .. }) => {
-            let props: Vec<_> = props
+            let elems: Vec<TObjElem> = props
                 .iter()
-                .map(|prop| TProp {
-                    name: prop.name.to_owned(),
-                    optional: prop.optional,
-                    mutable: prop.mutable,
-                    scheme: Scheme::from(infer_type_ann_rec(
-                        prop.type_ann.as_ref(),
-                        ctx,
-                        type_param_map,
-                    )),
+                .map(|prop| {
+                    TObjElem::Prop(TProp {
+                        name: prop.name.to_owned(),
+                        optional: prop.optional,
+                        mutable: prop.mutable,
+                        scheme: Scheme::from(infer_type_ann_rec(
+                            prop.type_ann.as_ref(),
+                            ctx,
+                            type_param_map,
+                        )),
+                    })
                 })
                 .collect();
-            Type::Object(props)
+            Type::Object(elems)
         }
         TypeAnn::TypeRef(TypeRef {
             name, type_params, ..

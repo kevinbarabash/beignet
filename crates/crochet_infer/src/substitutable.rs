@@ -22,10 +22,7 @@ impl Substitutable for Type {
                 ret: Box::from(app.ret.apply(sub)),
             }),
             // TODO: handle widening of lambdas
-            Type::Lam(lam) => Type::Lam(TLam {
-                params: lam.params.iter().map(|param| param.apply(sub)).collect(),
-                ret: Box::from(lam.ret.apply(sub)),
-            }),
+            Type::Lam(lam) => Type::Lam(lam.apply(sub)),
             Type::Prim(_) => self.to_owned(),
             Type::Lit(_) => self.to_owned(),
             Type::Keyword(_) => self.to_owned(),
@@ -50,11 +47,7 @@ impl Substitutable for Type {
                 result.extend(ret.ftv());
                 result
             }
-            Type::Lam(TLam { params, ret, .. }) => {
-                let mut result: HashSet<_> = params.ftv();
-                result.extend(ret.ftv());
-                result
-            }
+            Type::Lam(lam) => lam.ftv(),
             Type::Prim(_) => HashSet::new(),
             Type::Lit(_) => HashSet::new(),
             Type::Keyword(_) => HashSet::new(),
@@ -66,6 +59,35 @@ impl Substitutable for Type {
             Type::Array(t) => t.ftv(),
             Type::Rest(arg) => arg.ftv(),
         }
+    }
+}
+
+impl Substitutable for TObjElem {
+    fn apply(&self, sub: &Subst) -> Self {
+        match self {
+            TObjElem::Call(lam) => TObjElem::Call(lam.apply(sub)),
+            TObjElem::Prop(prop) => TObjElem::Prop(prop.apply(sub)),
+        }
+    }
+    fn ftv(&self) -> HashSet<i32> {
+        match self {
+            TObjElem::Call(lam) => lam.ftv(),
+            TObjElem::Prop(prop) => prop.scheme.ftv(),
+        }
+    }
+}
+
+impl Substitutable for TLam {
+    fn apply(&self, sub: &Subst) -> Self {
+        TLam {
+            params: self.params.iter().map(|param| param.apply(sub)).collect(),
+            ret: Box::from(self.ret.apply(sub)),
+        }
+    }
+    fn ftv(&self) -> HashSet<i32> {
+        let mut result: HashSet<_> = self.params.ftv();
+        result.extend(self.ret.ftv());
+        result
     }
 }
 

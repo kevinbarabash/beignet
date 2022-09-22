@@ -58,27 +58,35 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 let types: Vec<_> = types.iter().map(|ty| norm_type(ty, mapping, ctx)).collect();
                 simplify_intersection(&types)
             }
-            Type::Object(props) => {
-                let props = props
+            Type::Object(elems) => {
+                let elems = elems
                     .iter()
-                    .map(|prop| {
+                    .map(|elem| {
                         // TODO: figure out an algorithm for normalizing nested Scheme
                         // let scheme = if prop.scheme.qualifiers.is_empty() {
                         //     Scheme::from(norm_type(&prop.scheme.ty, mapping, ctx))
                         // } else {
                         //     prop.scheme.to_owned()
                         // };
-                        TProp {
-                            name: prop.name.clone(),
-                            optional: prop.optional,
-                            mutable: prop.mutable,
-                            // NOTE: we don't use prop.get_scheme(ctx) here because we're tracking
-                            // the optionality of the property in the TProp that's returned.
-                            scheme: prop.scheme.to_owned(),
+                        match elem {
+                            TObjElem::Call(_) => {
+                                // What to do about Call signatures
+                                todo!()
+                            }
+                            TObjElem::Prop(prop) => {
+                                TObjElem::Prop(TProp {
+                                    name: prop.name.clone(),
+                                    optional: prop.optional,
+                                    mutable: prop.mutable,
+                                    // NOTE: we don't use prop.get_scheme(ctx) here because we're tracking
+                                    // the optionality of the property in the TProp that's returned.
+                                    scheme: prop.scheme.to_owned(),
+                                })
+                            }
                         }
                     })
                     .collect();
-                Type::Object(props)
+                Type::Object(elems)
             }
             Type::Alias(TAlias { name, type_params }) => {
                 let type_params = type_params.clone().map(|params| {
@@ -137,20 +145,26 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let obj_types: Vec<_> = in_types
         .iter()
         .filter_map(|ty| match &ty {
-            Type::Object(props) => Some(props),
+            Type::Object(elems) => Some(elems),
             _ => None,
         })
         .collect();
 
     // The use of HashSet<Type> here is to avoid duplicate types
     let mut props_map: DefaultHashMap<String, HashSet<Scheme>> = defaulthashmap!();
-    for props in obj_types {
-        for prop in props {
-            props_map[prop.name.clone()].insert(prop.scheme.clone());
+    for elems in obj_types {
+        for elem in elems {
+            match elem {
+                // What do we do able Call signatures
+                TObjElem::Call(_) => todo!(),
+                TObjElem::Prop(prop) => {
+                    props_map[prop.name.clone()].insert(prop.scheme.clone());
+                }
+            }
         }
     }
 
-    let mut props: Vec<TProp> = props_map
+    let mut elems: Vec<TObjElem> = props_map
         .iter()
         .map(|(name, types)| {
             let schemes: Vec<_> = types.iter().cloned().collect();
@@ -167,7 +181,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
                     ty: Type::Intersection(types),
                 }
             };
-            TProp {
+            TObjElem::Prop(TProp {
                 name: name.to_owned(),
                 // TODO: determine this field from all of the TProps with
                 // the same name.  This should only be optional if all of
@@ -175,10 +189,14 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
                 optional: false,
                 mutable: false,
                 scheme,
-            }
+            })
         })
         .collect();
-    props.sort_by_key(|prop| prop.name.clone()); // ensure a stable order
+    // How do we sort call signatures?
+    elems.sort_by_key(|elem| match elem {
+        TObjElem::Call(_) => todo!(),
+        TObjElem::Prop(prop) => prop.name.clone(),
+    }); // ensure a stable order
 
     let mut not_obj_types: Vec<_> = in_types
         .iter()
@@ -188,8 +206,8 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
 
     let mut out_types = vec![];
     out_types.append(&mut not_obj_types);
-    if !props.is_empty() {
-        out_types.push(Type::Object(props));
+    if !elems.is_empty() {
+        out_types.push(Type::Object(elems));
     }
     // TODO: figure out a consistent way to sort types
     // out_types.sort_by_key(|ty| ty.id); // ensure a stable order
