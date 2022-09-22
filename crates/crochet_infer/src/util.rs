@@ -69,10 +69,17 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                         //     prop.scheme.to_owned()
                         // };
                         match elem {
-                            TObjElem::Call(call) => {
-                                // What to do about Call signatures
-                                TObjElem::Call(call.clone())
-                            }
+                            TObjElem::Call(call) => TObjElem::Call(TLam {
+                                params: call
+                                    .params
+                                    .iter()
+                                    .map(|param| TFnParam {
+                                        ty: norm_type(&param.ty, mapping, ctx),
+                                        ..param.to_owned()
+                                    })
+                                    .collect(),
+                                ret: Box::from(norm_type(&call.ret, mapping, ctx)),
+                            }),
                             TObjElem::Prop(prop) => {
                                 TObjElem::Prop(TProp {
                                     name: prop.name.clone(),
@@ -80,6 +87,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                                     mutable: prop.mutable,
                                     // NOTE: we don't use prop.get_scheme(ctx) here because we're tracking
                                     // the optionality of the property in the TProp that's returned.
+                                    // QUESTION: Should we be normalizing this scheme?
                                     scheme: prop.scheme.to_owned(),
                                 })
                             }
