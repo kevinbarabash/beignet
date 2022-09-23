@@ -23,7 +23,12 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
     // type variables that are bound to the object element as opposed to the encompassing object type.
     fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
         match &t {
-            Type::Var(id) => mapping.get(id).unwrap().to_owned(),
+            Type::Var(id) => match mapping.get(id) {
+                Some(t) => t.to_owned(),
+                // If `id` doesn't exist in `mapping` we return the original type variable.
+                // In this situation, it should appear in some other list of qualifiers.
+                None => t.to_owned(),
+            },
             Type::App(app) => {
                 let args: Vec<_> = app
                     .args
@@ -63,31 +68,32 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
             Type::Object(elems) => {
                 let elems = elems
                     .iter()
-                    .map(|elem| {
-                        // TODO: figure out an algorithm for normalizing nested Scheme
-                        // let scheme = if prop.scheme.qualifiers.is_empty() {
-                        //     Scheme::from(norm_type(&prop.scheme.t, mapping, ctx))
-                        // } else {
-                        //     prop.scheme.to_owned()
-                        // };
-
-                        // TODO: we have to traverse the children nodes, but while doing so
-                        // we need to ignore those ids that appear in the qualifiers of the
-                        // prop's scheme and the call's qualifiers.
-                        match elem {
-                            TObjElem::Call(call) => TObjElem::Call(call.to_owned()),
-                            TObjElem::Prop(prop) => {
-                                TObjElem::Prop(TProp {
-                                    name: prop.name.clone(),
-                                    optional: prop.optional,
-                                    mutable: prop.mutable,
-                                    // NOTE: we don't use prop.get_scheme(ctx) here because we're tracking
-                                    // the optionality of the property in the TProp that's returned.
-                                    // QUESTION: Should we be normalizing this scheme?
-                                    scheme: prop.scheme.to_owned(),
+                    .map(|elem| match elem {
+                        TObjElem::Call(call) => {
+                            let lam = &call.t;
+                            let params: Vec<_> = lam
+                                .params
+                                .iter()
+                                .map(|param| TFnParam {
+                                    t: norm_type(&param.t, mapping, ctx),
+                                    ..param.to_owned()
                                 })
-                            }
+                                .collect();
+                            let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
+                            TObjElem::Call(TCall {
+                                t: TLam { params, ret },
+                                ..call.to_owned()
+                            })
                         }
+                        TObjElem::Prop(prop) => TObjElem::Prop(TProp {
+                            name: prop.name.clone(),
+                            optional: prop.optional,
+                            mutable: prop.mutable,
+                            scheme: Scheme {
+                                t: norm_type(&prop.scheme.t, mapping, ctx),
+                                ..prop.scheme.to_owned()
+                            },
+                        }),
                     })
                     .collect();
                 Type::Object(elems)
