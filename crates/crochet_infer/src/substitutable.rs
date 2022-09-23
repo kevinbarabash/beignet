@@ -124,12 +124,12 @@ impl Substitutable for TProp {
 impl Substitutable for TFnParam {
     fn apply(&self, sub: &Subst) -> TFnParam {
         TFnParam {
-            ty: self.ty.apply(sub),
+            t: self.t.apply(sub),
             ..self.to_owned()
         }
     }
     fn ftv(&self) -> HashSet<i32> {
-        self.ty.ftv()
+        self.t.ftv()
     }
 }
 
@@ -137,12 +137,12 @@ impl Substitutable for Scheme {
     fn apply(&self, sub: &Subst) -> Scheme {
         Scheme {
             qualifiers: self.qualifiers.clone(),
-            ty: self.ty.apply(sub),
+            t: self.t.apply(sub),
         }
     }
     fn ftv(&self) -> HashSet<i32> {
         let qualifiers: HashSet<_> = self.qualifiers.iter().map(|id| id.to_owned()).collect();
-        self.ty.ftv().difference(&qualifiers).cloned().collect()
+        self.t.ftv().difference(&qualifiers).cloned().collect()
     }
 }
 
@@ -187,8 +187,8 @@ where
     }
 }
 
-fn norm_type(ty: Type) -> Type {
-    match &ty {
+fn norm_type(t: Type) -> Type {
+    match &t {
         Type::Union(types) => {
             // Removes duplicates
             let types: HashSet<Type> = types.clone().into_iter().collect();
@@ -213,6 +213,6 @@ fn norm_type(ty: Type) -> Type {
                 Type::Intersection(types)
             }
         }
-        _ => ty,
+        _ => t,
     }
 }

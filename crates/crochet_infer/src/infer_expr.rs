@@ -59,7 +59,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                     name: String::from("fix_param"),
                     mutable: false,
                 }),
-                ty: tv.clone(),
+                t: tv.clone(),
                 optional: false,
             };
             let s2 = unify(
@@ -524,8 +524,8 @@ fn infer_let(
     Ok((s, t))
 }
 
-fn is_promise(ty: &Type) -> bool {
-    matches!(&ty, Type::Alias(types::TAlias { name, .. }) if name == "Promise")
+fn is_promise(t: &Type) -> bool {
+    matches!(&t, Type::Alias(types::TAlias { name, .. }) if name == "Promise")
 }
 
 fn infer_property_type(
@@ -658,7 +658,7 @@ fn infer_property_type(
             // TODO: Instead of instantiating the whole interface for one method, do
             // the lookup call first and then instantiate the method.
             let s: Subst = Subst::from([(scheme.qualifiers[0], type_param.as_ref().to_owned())]);
-            let t = scheme.ty.apply(&s);
+            let t = scheme.t.apply(&s);
             infer_property_type(&t, prop, ctx)
         }
         Type::Tuple(elem_types) => {
@@ -672,7 +672,7 @@ fn infer_property_type(
                     // TODO: remove duplicate types
                     let type_param = Type::Union(elem_types.to_owned());
                     let s: Subst = Subst::from([(scheme.qualifiers[0], type_param)]);
-                    let t = scheme.ty.apply(&s);
+                    let t = scheme.t.apply(&s);
                     infer_property_type(&t, prop, ctx)
                 }
                 MemberProp::Computed(ComputedPropName { expr, .. }) => {

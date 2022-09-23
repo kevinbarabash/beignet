@@ -75,7 +75,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let last_param_2 = lam.params.last();
             let maybe_rest_param = if let Some(param) = last_param_2 {
                 match &param.pat {
-                    types::TPat::Rest(_) => Some(param.ty.to_owned()),
+                    types::TPat::Rest(_) => Some(param.t.to_owned()),
                     _ => None,
                 }
             } else {

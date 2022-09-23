@@ -8,7 +8,7 @@ use super::context::{Context, Env};
 use super::substitutable::{Subst, Substitutable};
 
 pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
-    let body = &sc.ty;
+    let body = &sc.t;
     let keys = body.ftv();
     let mut keys: Vec<_> = keys.iter().cloned().collect();
     keys.sort_unstable();
@@ -21,8 +21,8 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
     // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
     // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
     // type variables that are bound to the object element as opposed to the encompassing object type.
-    fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
-        match &ty {
+    fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
+        match &t {
             Type::Var(id) => mapping.get(id).unwrap().to_owned(),
             Type::App(app) => {
                 let args: Vec<_> = app
@@ -38,26 +38,26 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .params
                     .iter()
                     .map(|param| TFnParam {
-                        ty: norm_type(&param.ty, mapping, ctx),
+                        t: norm_type(&param.t, mapping, ctx),
                         ..param.to_owned()
                     })
                     .collect();
                 let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
                 Type::Lam(TLam { params, ret })
             }
-            Type::Prim(_) => ty.to_owned(),
-            Type::Lit(_) => ty.to_owned(),
-            Type::Keyword(_) => ty.to_owned(),
+            Type::Prim(_) => t.to_owned(),
+            Type::Lit(_) => t.to_owned(),
+            Type::Keyword(_) => t.to_owned(),
             Type::Union(types) => {
                 // TODO: update union_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
-                let types = types.iter().map(|ty| norm_type(ty, mapping, ctx)).collect();
+                let types = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
                 Type::Union(types)
             }
             Type::Intersection(types) => {
                 // TODO: update intersection_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
-                let types: Vec<_> = types.iter().map(|ty| norm_type(ty, mapping, ctx)).collect();
+                let types: Vec<_> = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
                 simplify_intersection(&types)
             }
             Type::Object(elems) => {
@@ -66,7 +66,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .map(|elem| {
                         // TODO: figure out an algorithm for normalizing nested Scheme
                         // let scheme = if prop.scheme.qualifiers.is_empty() {
-                        //     Scheme::from(norm_type(&prop.scheme.ty, mapping, ctx))
+                        //     Scheme::from(norm_type(&prop.scheme.t, mapping, ctx))
                         // } else {
                         //     prop.scheme.to_owned()
                         // };
@@ -93,19 +93,16 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 Type::Object(elems)
             }
             Type::Alias(TAlias { name, type_params }) => {
-                let type_params = type_params.clone().map(|params| {
-                    params
-                        .iter()
-                        .map(|ty| norm_type(ty, mapping, ctx))
-                        .collect()
-                });
+                let type_params = type_params
+                    .clone()
+                    .map(|params| params.iter().map(|t| norm_type(t, mapping, ctx)).collect());
                 Type::Alias(TAlias {
                     name: name.to_owned(),
                     type_params,
                 })
             }
             Type::Tuple(types) => {
-                let types = types.iter().map(|ty| norm_type(ty, mapping, ctx)).collect();
+                let types = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
                 Type::Tuple(types)
             }
             Type::Array(t) => Type::Array(Box::from(norm_type(t, mapping, ctx))),
@@ -115,29 +112,29 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
 
     Scheme {
         qualifiers: (0..keys.len()).map(|x| x as i32).collect(),
-        ty: norm_type(body, &mapping, ctx),
+        t: norm_type(body, &mapping, ctx),
     }
 }
 
-pub fn generalize(env: &Env, ty: &Type) -> Scheme {
+pub fn generalize(env: &Env, t: &Type) -> Scheme {
     // ftv() returns a Set which is not ordered
     // TODO: switch to an ordered set
-    let mut qualifiers: Vec<_> = ty.ftv().difference(&env.ftv()).cloned().collect();
+    let mut qualifiers: Vec<_> = t.ftv().difference(&env.ftv()).cloned().collect();
     qualifiers.sort_unstable();
     Scheme {
         qualifiers,
-        ty: ty.clone(),
+        t: t.clone(),
     }
 }
 
-pub fn generalize_type_map(env: &HashMap<String, Type>, ty: &Type) -> Scheme {
+pub fn generalize_type_map(env: &HashMap<String, Type>, t: &Type) -> Scheme {
     // ftv() returns a Set which is not ordered
     // TODO: switch to an ordered set
-    let mut qualifiers: Vec<_> = ty.ftv().difference(&env.ftv()).cloned().collect();
+    let mut qualifiers: Vec<_> = t.ftv().difference(&env.ftv()).cloned().collect();
     qualifiers.sort_unstable();
     Scheme {
         qualifiers,
-        ty: ty.clone(),
+        t: t.clone(),
     }
 }
 
@@ -148,7 +145,7 @@ pub fn generalize_type_map(env: &HashMap<String, Type>, ty: &Type) -> Scheme {
 pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let obj_types: Vec<_> = in_types
         .iter()
-        .filter_map(|ty| match &ty {
+        .filter_map(|t| match &t {
             Type::Object(elems) => Some(elems),
             _ => None,
         })
@@ -179,10 +176,10 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
                     .iter()
                     .flat_map(|scheme| scheme.qualifiers.clone())
                     .collect();
-                let types: Vec<Type> = schemes.iter().map(|scheme| scheme.ty.clone()).collect();
+                let types: Vec<Type> = schemes.iter().map(|scheme| scheme.t.clone()).collect();
                 Scheme {
                     qualifiers,
-                    ty: Type::Intersection(types),
+                    t: Type::Intersection(types),
                 }
             };
             TObjElem::Prop(TProp {
@@ -204,7 +201,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
 
     let mut not_obj_types: Vec<_> = in_types
         .iter()
-        .filter(|ty| !matches!(ty, Type::Object(_)))
+        .filter(|t| !matches!(t, Type::Object(_)))
         .cloned()
         .collect();
 
@@ -214,7 +211,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
         out_types.push(Type::Object(elems));
     }
     // TODO: figure out a consistent way to sort types
-    // out_types.sort_by_key(|ty| ty.id); // ensure a stable order
+    // out_types.sort_by_key(|t| t.id); // ensure a stable order
 
     if out_types.len() == 1 {
         out_types[0].clone()
@@ -223,10 +220,10 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     }
 }
 
-fn flatten_types(ty: &Type) -> Vec<Type> {
-    match &ty {
+fn flatten_types(t: &Type) -> Vec<Type> {
+    match &t {
         Type::Union(types) => types.iter().flat_map(flatten_types).collect(),
-        _ => vec![ty.to_owned()],
+        _ => vec![t.to_owned()],
     }
 }
 
@@ -242,13 +239,13 @@ pub fn union_many_types(ts: &[Type]) -> Type {
     let prim_types: HashSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|ty| matches!(ty, Type::Prim(_)))
+        .filter(|t| matches!(t, Type::Prim(_)))
         .collect();
 
     let lit_types: HashSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|ty| match &ty {
+        .filter(|t| match &t {
             // Primitive types subsume corresponding literal types
             Type::Lit(lit) => match lit {
                 TLit::Num(_) => !prim_types.contains(&Type::Prim(TPrim::Num)),
@@ -262,13 +259,13 @@ pub fn union_many_types(ts: &[Type]) -> Type {
     let keyword_types: HashSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|ty| matches!(ty, Type::Keyword(_)))
+        .filter(|t| matches!(t, Type::Keyword(_)))
         .collect();
 
     let rest_types: HashSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|ty| !matches!(ty, Type::Prim(_) | Type::Lit(_) | Type::Keyword(_)))
+        .filter(|t| !matches!(t, Type::Prim(_) | Type::Lit(_) | Type::Keyword(_)))
         .collect();
 
     let types: Vec<_> = prim_types

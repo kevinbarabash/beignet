@@ -165,7 +165,7 @@ impl Context {
                         }
                     };
 
-                    return Ok(scheme.ty.apply(&subs));
+                    return Ok(scheme.t.apply(&subs));
                 }
                 None => (),
             }
@@ -178,7 +178,7 @@ impl Context {
         let fresh_quals = scheme.qualifiers.iter().map(|_| self.fresh_var());
         let subs: Subst = ids.zip(fresh_quals).collect();
 
-        scheme.ty.apply(&subs)
+        scheme.t.apply(&subs)
     }
 
     pub fn fresh_id(&self) -> i32 {

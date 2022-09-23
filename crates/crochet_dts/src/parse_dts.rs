@@ -56,7 +56,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
                                     name: ident.id.sym.to_string(),
                                     mutable: false,
                                 }),
-                                ty: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
+                                t: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
                                 optional: ident.optional,
                             };
                             Some(param)
@@ -79,7 +79,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
                                         mutable: false,
                                     })),
                                 }),
-                                ty: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
+                                t: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
                                 optional: false,
                             };
                             Some(param)
@@ -185,7 +185,7 @@ fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>,
                         name: ident.id.sym.to_string(),
                         mutable: false,
                     }),
-                    ty: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
+                    t: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
                     optional: ident.optional,
                 };
                 Some(param)
@@ -207,7 +207,7 @@ fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>,
                             mutable: false,
                         })),
                     }),
-                    ty: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
+                    t: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
                     optional: false,
                 };
                 Some(param)
@@ -366,7 +366,7 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
             params: params
                 .iter()
                 .map(|param| TFnParam {
-                    ty: replace_aliases(&param.ty, map),
+                    t: replace_aliases(&param.t, map),
                     ..param.to_owned()
                 })
                 .collect(),
@@ -392,7 +392,7 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                             let params: Vec<TFnParam> = params
                                 .iter()
                                 .map(|t| TFnParam {
-                                    ty: replace_aliases(&t.ty, map),
+                                    t: replace_aliases(&t.t, map),
                                     ..t.to_owned()
                                 })
                                 .collect();
@@ -406,10 +406,10 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                         }
                         TObjElem::Prop(prop) => {
                             // TODO: handle qualifiers in each prop's .scheme field
-                            let ty = replace_aliases(&prop.scheme.ty, map);
+                            let t = replace_aliases(&prop.scheme.t, map);
                             TObjElem::Prop(types::TProp {
                                 scheme: Scheme {
-                                    ty,
+                                    t,
                                     ..prop.scheme.to_owned()
                                 },
                                 ..prop.to_owned()
@@ -431,7 +431,7 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
 }
 
 fn merge_schemes(s1: &Scheme, s2: &Scheme) -> Scheme {
-    match (&s1.ty, &s2.ty) {
+    match (&s1.t, &s2.t) {
         (Type::Object(props1), Type::Object(props2)) => {
             let props: Vec<_> = props1
                 .iter()

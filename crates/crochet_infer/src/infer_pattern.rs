@@ -64,7 +64,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
         }
         Pattern::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
         Pattern::Is(IsPat { id, is_id, .. }) => {
-            let ty = match is_id.name.as_str() {
+            let t = match is_id.name.as_str() {
                 "string" => Type::Prim(types::TPrim::Str),
                 "number" => Type::Prim(types::TPrim::Num),
                 "boolean" => Type::Prim(types::TPrim::Bool),
@@ -79,11 +79,11 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
             // TODO: we need a method on Context to get all types that currently in
             // scope so that we can pass them to generalize()
             let all_types = ctx.get_all_types();
-            let scheme = generalize(&all_types, &ty);
+            let scheme = generalize(&all_types, &t);
             if assump.insert(id.name.to_owned(), scheme).is_some() {
                 return Err(String::from("Duplicate identifier in pattern"));
             }
-            Ok(ty)
+            Ok(t)
         }
         Pattern::Rest(RestPat { arg, .. }) => {
             let t = infer_pattern_rec(arg.as_ref(), ctx, assump)?;

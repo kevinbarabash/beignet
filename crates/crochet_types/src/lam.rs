@@ -27,15 +27,15 @@ impl Hash for TLam {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TFnParam {
     pub pat: TPat,
-    pub ty: Type,
+    pub t: Type,
     pub optional: bool,
 }
 
 impl TFnParam {
     pub fn get_type(&self) -> Type {
         match self.optional {
-            true => Type::Union(vec![self.ty.to_owned(), Type::Keyword(TKeyword::Undefined)]),
-            false => self.ty.to_owned(),
+            true => Type::Union(vec![self.t.to_owned(), Type::Keyword(TKeyword::Undefined)]),
+            false => self.t.to_owned(),
         }
     }
     pub fn get_name(&self, index: &usize) -> String {
@@ -48,10 +48,10 @@ impl TFnParam {
 
 impl fmt::Display for TFnParam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { pat, ty, optional } = self;
+        let Self { pat, t, optional } = self;
         match optional {
-            true => write!(f, "{pat}?: {ty}"),
-            false => write!(f, "{pat}: {ty}"),
+            true => write!(f, "{pat}?: {t}"),
+            false => write!(f, "{pat}: {t}"),
         }
     }
 }

@@ -48,7 +48,7 @@ fn build_d_ts(_program: &ast::Program, ctx: &Context) -> Program {
             declare: true,
             id,
             type_params: build_type_params(scheme),
-            type_ann: Box::from(build_type(&scheme.ty, None)),
+            type_ann: Box::from(build_type(&scheme.t, None)),
         })));
 
         body.push(decl);
@@ -65,7 +65,7 @@ fn build_d_ts(_program: &ast::Program, ctx: &Context) -> Program {
             id,
             type_ann: Some(TsTypeAnn {
                 span: DUMMY_SP,
-                type_ann: Box::from(build_type(&scheme.ty, type_params)),
+                type_ann: Box::from(build_type(&scheme.t, type_params)),
             }),
         });
 
@@ -286,7 +286,7 @@ pub fn build_ts_fn_type_with_params(
         .map(|param| {
             let type_ann = Some(TsTypeAnn {
                 span: DUMMY_SP,
-                type_ann: Box::from(build_type(&param.ty, None)),
+                type_ann: Box::from(build_type(&param.t, None)),
             });
 
             let pat = tpat_to_pat(&param.pat, type_ann);
@@ -394,10 +394,10 @@ pub fn build_type_params(scheme: &Scheme) -> Option<TsTypeParamDecl> {
 
 /// Converts an internal Type to a TsType for eventual export to .d.ts.
 ///
-/// `expr` should be the original expression that `ty` was inferred
+/// `expr` should be the original expression that `t` was inferred
 /// from if it exists.
-pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
-    match &ty {
+pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
+    match &t {
         Type::Var(id) => {
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                 .chars()
@@ -473,7 +473,7 @@ pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                 span: DUMMY_SP,
                 types: sort_types(types)
                     .iter()
-                    .map(|ty| Box::from(build_type(ty, None)))
+                    .map(|t| Box::from(build_type(t, None)))
                     .collect(),
             }))
         }
@@ -482,7 +482,7 @@ pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                 span: DUMMY_SP,
                 types: sort_types(types)
                     .iter()
-                    .map(|ty| Box::from(build_type(ty, None)))
+                    .map(|t| Box::from(build_type(t, None)))
                     .collect(),
             }),
         ),
@@ -508,7 +508,7 @@ pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                                 type_ann: Some(TsTypeAnn {
                                     span: DUMMY_SP,
                                     // TODO: add build_type_from_scheme() helper that handles type params
-                                    type_ann: Box::from(build_type(&prop.scheme.ty, None)),
+                                    type_ann: Box::from(build_type(&prop.scheme.t, None)),
                                 }),
                                 type_params: None,
                             })
@@ -535,7 +535,7 @@ pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                 span: DUMMY_SP,
                 params: params
                     .iter()
-                    .map(|ty| Box::from(build_type(ty, None)))
+                    .map(|t| Box::from(build_type(t, None)))
                     .collect(),
             }),
         }),
@@ -543,10 +543,10 @@ pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
             span: DUMMY_SP,
             elem_types: types
                 .iter()
-                .map(|ty| TsTupleElement {
+                .map(|t| TsTupleElement {
                     span: DUMMY_SP,
                     label: None,
-                    ty: build_type(ty, None),
+                    ty: build_type(t, None),
                 })
                 .collect(),
         }),

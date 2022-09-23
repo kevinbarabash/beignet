@@ -24,6 +24,8 @@ impl fmt::Display for TObjElem {
     }
 }
 
+// This is really just a qualified TLam
+// What if we introduce a `Qualified` trait
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TCall {
     pub params: Vec<TFnParam>,
@@ -65,7 +67,7 @@ impl TProp {
     pub fn get_scheme(&self) -> Scheme {
         match self.optional {
             true => Scheme::from(Type::Union(vec![
-                self.scheme.ty.to_owned(),
+                self.scheme.t.to_owned(),
                 Type::Keyword(TKeyword::Undefined),
             ])),
             false => self.scheme.to_owned(),
@@ -79,13 +81,13 @@ impl fmt::Display for TProp {
             name,
             optional,
             mutable,
-            scheme: ty,
+            scheme,
         } = self;
         match (optional, mutable) {
-            (false, false) => write!(f, "{name}: {ty}"),
-            (true, false) => write!(f, "{name}?: {ty}"),
-            (false, true) => write!(f, "mut {name}: {ty}"),
-            (true, true) => write!(f, "mut {name}?: {ty}"),
+            (false, false) => write!(f, "{name}: {scheme}"),
+            (true, false) => write!(f, "{name}?: {scheme}"),
+            (false, true) => write!(f, "mut {name}: {scheme}"),
+            (true, true) => write!(f, "mut {name}?: {scheme}"),
         }
     }
 }

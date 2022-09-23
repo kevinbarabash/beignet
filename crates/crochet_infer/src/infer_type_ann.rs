@@ -47,7 +47,7 @@ pub fn infer_scheme_with_type_params(
                 _ => panic!("{t} is not a type variable"),
             })
             .collect(),
-        ty: type_ann_ty,
+        t: type_ann_ty,
     }
 }
 
@@ -74,7 +74,7 @@ fn infer_type_ann_rec(
                 .iter()
                 .map(|param| TFnParam {
                     pat: e_pat_to_t_pat(&param.pat),
-                    ty: infer_type_ann_rec(&param.type_ann, ctx, type_param_map),
+                    t: infer_type_ann_rec(&param.type_ann, ctx, type_param_map),
                     optional: param.optional,
                 })
                 .collect();

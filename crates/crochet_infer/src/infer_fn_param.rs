@@ -41,11 +41,10 @@ pub fn infer_fn_param(
 
             // TODO: handle schemes with type params
             if param.optional {
-                match a.iter().find(|(_, value)| type_ann_ty == value.ty) {
+                match a.iter().find(|(_, value)| type_ann_ty == value.t) {
                     Some((name, scheme)) => {
                         let mut scheme = scheme.to_owned();
-                        scheme.ty =
-                            Type::Union(vec![scheme.ty, Type::Keyword(TKeyword::Undefined)]);
+                        scheme.t = Type::Union(vec![scheme.t, Type::Keyword(TKeyword::Undefined)]);
                         a.insert(name.to_owned(), scheme);
                     }
                     None => (),
@@ -56,7 +55,7 @@ pub fn infer_fn_param(
                 pat,
                 // We don't modify the type annotation for the param since the optionality
                 // is already tracked by the `optional` field.
-                ty: type_ann_ty,
+                t: type_ann_ty,
                 optional: param.optional,
             };
 
@@ -65,11 +64,10 @@ pub fn infer_fn_param(
         None => {
             // TODO: handle schemes with type params
             if param.optional {
-                match new_vars.iter().find(|(_, value)| pat_type == value.ty) {
+                match new_vars.iter().find(|(_, value)| pat_type == value.t) {
                     Some((name, scheme)) => {
                         let mut scheme = scheme.to_owned();
-                        scheme.ty =
-                            Type::Union(vec![scheme.ty, Type::Keyword(TKeyword::Undefined)]);
+                        scheme.t = Type::Union(vec![scheme.t, Type::Keyword(TKeyword::Undefined)]);
                         new_vars.insert(name.to_owned(), scheme);
                     }
                     None => (),
@@ -78,7 +76,7 @@ pub fn infer_fn_param(
 
             let param = TFnParam {
                 pat,
-                ty: pat_type,
+                t: pat_type,
                 optional: param.optional,
             };
 
