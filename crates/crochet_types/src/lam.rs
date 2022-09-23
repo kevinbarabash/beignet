@@ -1,3 +1,4 @@
+use itertools::join;
 use std::fmt;
 use std::hash::Hash;
 
@@ -21,6 +22,13 @@ impl Hash for TLam {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.params.hash(state);
         self.ret.hash(state);
+    }
+}
+
+impl fmt::Display for TLam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self { params, ret } = self;
+        write!(f, "({}) => {}", join(params, ", "), ret)
     }
 }
 

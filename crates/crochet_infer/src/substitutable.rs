@@ -1,4 +1,6 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::hash;
 
 use crochet_types::*;
 
@@ -91,24 +93,6 @@ impl Substitutable for TLam {
     }
 }
 
-impl Substitutable for TCall {
-    fn apply(&self, sub: &Subst) -> TCall {
-        TCall {
-            params: self.params.iter().map(|param| param.apply(sub)).collect(),
-            ret: Box::from(self.ret.apply(sub)),
-            ..self.to_owned()
-        }
-    }
-    fn ftv(&self) -> HashSet<i32> {
-        let mut ftv: HashSet<_> = self.params.ftv();
-        ftv.extend(self.ret.ftv());
-
-        // This is very similar to what Scheme's implementation of .ftv() does
-        let qualifiers: HashSet<_> = self.qualifiers.iter().map(|id| id.to_owned()).collect();
-        ftv.difference(&qualifiers).cloned().collect()
-    }
-}
-
 impl Substitutable for TProp {
     fn apply(&self, sub: &Subst) -> TProp {
         TProp {
@@ -133,9 +117,12 @@ impl Substitutable for TFnParam {
     }
 }
 
-impl Substitutable for Scheme {
-    fn apply(&self, sub: &Subst) -> Scheme {
-        Scheme {
+impl<T> Substitutable for Qualified<T>
+where
+    T: Clone + fmt::Debug + fmt::Display + PartialEq + Eq + hash::Hash + Substitutable,
+{
+    fn apply(&self, sub: &Subst) -> Self {
+        Self {
             qualifiers: self.qualifiers.clone(),
             t: self.t.apply(sub),
         }

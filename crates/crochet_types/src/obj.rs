@@ -1,9 +1,12 @@
-use itertools::join;
 use std::fmt;
 
 use crate::keyword::TKeyword;
+use crate::lam::TLam;
+use crate::qualified::Qualified;
 use crate::r#type::Type;
-use crate::{Scheme, TFnParam};
+use crate::Scheme;
+
+pub type TCall = Qualified<TLam>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TObjElem {
@@ -18,39 +21,8 @@ pub enum TObjElem {
 impl fmt::Display for TObjElem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TObjElem::Call(lam) => write!(f, "({}) => {}", join(&lam.params, ", "), lam.ret),
+            TObjElem::Call(lam) => write!(f, "{lam}"),
             TObjElem::Prop(prop) => write!(f, "{prop}"),
-        }
-    }
-}
-
-// This is really just a qualified TLam
-// What if we introduce a `Qualified` trait
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TCall {
-    pub params: Vec<TFnParam>,
-    pub ret: Box<Type>,
-    pub qualifiers: Vec<i32>,
-}
-
-impl fmt::Display for TCall {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self {
-            params,
-            ret,
-            qualifiers,
-        } = self;
-
-        if qualifiers.is_empty() {
-            write!(f, "({}) => {}", join(params, ", "), ret)
-        } else {
-            write!(
-                f,
-                "<{}>({}) => {}",
-                join(qualifiers.iter().map(|id| { format!("t{id}") }), ", "),
-                join(params, ", "),
-                ret
-            )
         }
     }
 }
