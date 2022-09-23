@@ -19,6 +19,8 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
         .collect();
 
     // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
+    // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
+    // type variables that are bound to the object element as opposed to the encompassing object type.
     fn norm_type(ty: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
         match &ty {
             Type::Var(id) => mapping.get(id).unwrap().to_owned(),
