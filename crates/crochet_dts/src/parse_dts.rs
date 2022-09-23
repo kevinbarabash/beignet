@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use types::{Scheme, TCall, TLam, TObjElem};
+use types::{Scheme, TCall, TConstructor, TIndex, TLam, TObjElem};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
@@ -41,7 +41,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
                 Err(String::from("can't parse Intrinsics yet"))
             }
         },
-        TsType::TsThisType(_) => Err(String::from("can't parse this type yet")),
+        TsType::TsThisType(_) => Err(String::from("can't parse 'TsThisType' yet")),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
                 let params: Vec<TFnParam> = fn_type
@@ -270,14 +270,29 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 }
                 None => Err(String::from("Property is missing type annotation")),
             }
-
-            // Err(String::from("TsCallSignatureDecl"))
         }
-        TsTypeElement::TsConstructSignatureDecl(_decl) => {
-            Err(String::from("TsConstructSignatureDecl"))
+        TsTypeElement::TsConstructSignatureDecl(decl) => {
+            match &decl.type_ann {
+                // TODO: we need a way for TObjElem::Call to be generalized in the same
+                // way that TObjElem::Prop is below.
+                Some(type_ann) => {
+                    let params = infer_fn_params(&decl.params, ctx)?;
+                    let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
+                    let mut qualifiers: HashSet<_> = params.ftv();
+                    qualifiers.extend(ret.ftv());
+
+                    Ok(TObjElem::Constructor(TConstructor {
+                        t: TLam {
+                            params,
+                            ret: Box::from(ret),
+                        },
+                        qualifiers: qualifiers.into_iter().collect(),
+                    }))
+                }
+                None => Err(String::from("Property is missing type annotation")),
+            }
         }
         TsTypeElement::TsPropertySignature(sig) => {
-            // TODO: update TProp to include a readonly flag
             match &sig.type_ann {
                 Some(type_ann) => {
                     // TODO: do a better job of handling this
@@ -312,7 +327,22 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 scheme,
             }))
         }
-        TsTypeElement::TsIndexSignature(_sig) => Err(String::from("TsIndexSignature")),
+        TsTypeElement::TsIndexSignature(sig) => {
+            match &sig.type_ann {
+                Some(type_ann) => {
+                    // TODO: do a better job of handling this
+                    let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
+                    let params = infer_fn_params(&sig.params, ctx)?;
+                    let key = params.get(0).unwrap();
+                    Ok(TObjElem::Index(TIndex {
+                        key: key.to_owned(),
+                        mutable: !sig.readonly,
+                        scheme: Scheme::from(t),
+                    }))
+                }
+                None => Err(String::from("Index is missing type annotation")),
+            }
+        }
     }
 }
 
@@ -408,6 +438,41 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                                     ret: Box::from(ret),
                                 },
                                 qualifiers: qualifiers.to_owned(),
+                            })
+                        }
+                        TObjElem::Constructor(TConstructor {
+                            t,
+                            // params,
+                            // ret,
+                            qualifiers,
+                        }) => {
+                            let params: Vec<TFnParam> = t
+                                .params
+                                .iter()
+                                .map(|t| TFnParam {
+                                    t: replace_aliases(&t.t, map),
+                                    ..t.to_owned()
+                                })
+                                .collect();
+                            let ret = replace_aliases(t.ret.as_ref(), map);
+
+                            TObjElem::Constructor(types::TConstructor {
+                                t: TLam {
+                                    params,
+                                    ret: Box::from(ret),
+                                },
+                                qualifiers: qualifiers.to_owned(),
+                            })
+                        }
+                        TObjElem::Index(index) => {
+                            // TODO: handle qualifiers in each prop's .scheme field
+                            let t = replace_aliases(&index.scheme.t, map);
+                            TObjElem::Index(types::TIndex {
+                                scheme: Scheme {
+                                    t,
+                                    ..index.scheme.to_owned()
+                                },
+                                ..index.to_owned()
                             })
                         }
                         TObjElem::Prop(prop) => {

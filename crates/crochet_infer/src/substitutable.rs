@@ -67,13 +67,17 @@ impl Substitutable for Type {
 impl Substitutable for TObjElem {
     fn apply(&self, sub: &Subst) -> Self {
         match self {
-            TObjElem::Call(call) => TObjElem::Call(call.apply(sub)),
+            TObjElem::Call(qlam) => TObjElem::Call(qlam.apply(sub)),
+            TObjElem::Constructor(qlam) => TObjElem::Constructor(qlam.apply(sub)),
+            TObjElem::Index(index) => TObjElem::Index(index.apply(sub)),
             TObjElem::Prop(prop) => TObjElem::Prop(prop.apply(sub)),
         }
     }
     fn ftv(&self) -> HashSet<i32> {
         match self {
-            TObjElem::Call(call) => call.ftv(),
+            TObjElem::Call(qlam) => qlam.ftv(),
+            TObjElem::Constructor(qlam) => qlam.ftv(),
+            TObjElem::Index(index) => index.ftv(),
             TObjElem::Prop(prop) => prop.scheme.ftv(),
         }
     }
@@ -90,6 +94,18 @@ impl Substitutable for TLam {
         let mut result: HashSet<_> = self.params.ftv();
         result.extend(self.ret.ftv());
         result
+    }
+}
+
+impl Substitutable for TIndex {
+    fn apply(&self, sub: &Subst) -> Self {
+        TIndex {
+            scheme: self.scheme.apply(sub),
+            ..self.to_owned()
+        }
+    }
+    fn ftv(&self) -> HashSet<i32> {
+        self.scheme.ftv()
     }
 }
 

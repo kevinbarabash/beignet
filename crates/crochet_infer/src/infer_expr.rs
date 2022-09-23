@@ -537,8 +537,9 @@ fn infer_property_type(
         Type::Object(elems) => match prop {
             MemberProp::Ident(Ident { name, .. }) => {
                 let prop = elems.iter().find_map(|elem| match elem {
-                    // TODO: include index types in the future
                     types::TObjElem::Call(_) => None,
+                    types::TObjElem::Constructor(_) => None,
+                    types::TObjElem::Index(_) => None,
                     types::TObjElem::Prop(prop) => {
                         if prop.name == *name {
                             Some(prop)
@@ -569,6 +570,8 @@ fn infer_property_type(
                                     // Call signatures aren't included because they can't be accessed
                                     // as members.  What about .constructor?
                                     types::TObjElem::Call(_) => None,
+                                    types::TObjElem::Constructor(_) => None,
+                                    types::TObjElem::Index(_) => None,
                                     types::TObjElem::Prop(prop) => {
                                         Some(ctx.instantiate(&prop.scheme))
                                     }
@@ -587,8 +590,9 @@ fn infer_property_type(
                     Type::Lit(lit) => match lit {
                         types::TLit::Str(key) => {
                             let prop = elems.iter().find_map(|elem| match elem {
-                                // TODO: include index types in the future
                                 types::TObjElem::Call(_) => None,
+                                types::TObjElem::Constructor(_) => None,
+                                types::TObjElem::Index(_) => None,
                                 types::TObjElem::Prop(prop) => {
                                     if prop.name == key {
                                         Some(prop)

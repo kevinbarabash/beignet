@@ -4,14 +4,16 @@ use crate::keyword::TKeyword;
 use crate::lam::TLam;
 use crate::qualified::Qualified;
 use crate::r#type::Type;
-use crate::Scheme;
+use crate::{Scheme, TFnParam};
 
 pub type TCall = Qualified<TLam>;
+pub type TConstructor = Qualified<TLam>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TObjElem {
     Call(TCall),
-    // Index(TIndex),
+    Constructor(TConstructor),
+    Index(TIndex),
     Prop(TProp),
     // Getter
     // Setter
@@ -22,7 +24,30 @@ impl fmt::Display for TObjElem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             TObjElem::Call(lam) => write!(f, "{lam}"),
+            TObjElem::Constructor(lam) => write!(f, "new {lam}"),
+            TObjElem::Index(index) => write!(f, "{index}"),
             TObjElem::Prop(prop) => write!(f, "{prop}"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TIndex {
+    pub key: TFnParam, // identifier + type
+    pub mutable: bool,
+    pub scheme: Scheme,
+}
+
+impl fmt::Display for TIndex {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self {
+            key,
+            mutable,
+            scheme,
+        } = self;
+        match mutable {
+            false => write!(f, "[{key}]: {scheme}"),
+            true => write!(f, "mut [{key}]: {scheme}"),
         }
     }
 }

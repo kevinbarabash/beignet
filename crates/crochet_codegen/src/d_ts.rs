@@ -492,6 +492,8 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                 .map(|elem| {
                     match elem {
                         types::TObjElem::Call(_) => todo!(),
+                        types::TObjElem::Constructor(_) => todo!(),
+                        types::TObjElem::Index(_) => todo!(),
                         types::TObjElem::Prop(prop) => {
                             TsTypeElement::TsPropertySignature(TsPropertySignature {
                                 span: DUMMY_SP,
