@@ -65,9 +65,7 @@ impl fmt::Display for Type {
             Type::App(TApp { args, ret }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }
-            Type::Lam(TLam { params, ret, .. }) => {
-                write!(f, "({}) => {}", join(params, ", "), ret)
-            }
+            Type::Lam(lam) => write!(f, "{lam}"),
             Type::Prim(prim) => write!(f, "{}", prim),
             Type::Lit(lit) => write!(f, "{}", lit),
             Type::Keyword(keyword) => write!(f, "{}", keyword),

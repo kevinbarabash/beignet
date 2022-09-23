@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use types::{Scheme, TCall, TObjElem};
+use types::{Scheme, TCall, TLam, TObjElem};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
@@ -261,8 +261,10 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                     qualifiers.extend(ret.ftv());
 
                     Ok(TObjElem::Call(TCall {
-                        params,
-                        ret: Box::from(ret),
+                        t: TLam {
+                            params,
+                            ret: Box::from(ret),
+                        },
                         qualifiers: qualifiers.into_iter().collect(),
                     }))
                 }
@@ -385,22 +387,26 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                 .map(|elem| {
                     match elem {
                         TObjElem::Call(TCall {
-                            params,
-                            ret,
+                            t,
+                            // params,
+                            // ret,
                             qualifiers,
                         }) => {
-                            let params: Vec<TFnParam> = params
+                            let params: Vec<TFnParam> = t
+                                .params
                                 .iter()
                                 .map(|t| TFnParam {
                                     t: replace_aliases(&t.t, map),
                                     ..t.to_owned()
                                 })
                                 .collect();
-                            let ret = replace_aliases(ret, map);
+                            let ret = replace_aliases(t.ret.as_ref(), map);
 
                             TObjElem::Call(types::TCall {
-                                params,
-                                ret: Box::from(ret),
+                                t: TLam {
+                                    params,
+                                    ret: Box::from(ret),
+                                },
                                 qualifiers: qualifiers.to_owned(),
                             })
                         }
