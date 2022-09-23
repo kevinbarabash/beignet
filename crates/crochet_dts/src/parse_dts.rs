@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use types::Scheme;
+use types::{Scheme, TCall, TObjElem};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
@@ -9,7 +9,9 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
-use crochet_infer::{close_over, generalize, generalize_type_map, Context, Env, Subst};
+use crochet_infer::{
+    close_over, generalize, generalize_type_map, Context, Env, Subst, Substitutable,
+};
 use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TPrim, TProp, Type};
 
 #[derive(Debug, Clone)]
@@ -171,13 +173,8 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
     }
 }
 
-fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, String> {
-    if sig.computed {
-        panic!("unexpected computed property in TypElement")
-    }
-
-    let params: Vec<TFnParam> = sig
-        .params
+fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>, String> {
+    let params: Vec<TFnParam> = params
         .iter()
         .enumerate()
         .filter_map(|(index, param)| match param {
@@ -222,6 +219,15 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
         })
         .collect();
 
+    Ok(params)
+}
+
+fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, String> {
+    if sig.computed {
+        panic!("unexpected computed property in TypElement")
+    }
+
+    let params = infer_fn_params(&sig.params, ctx)?;
     let ret = match &sig.type_ann {
         Some(type_ann) => infer_ts_type_ann(&type_ann.type_ann, ctx),
         None => Err(String::from("method has no return type")),
@@ -242,9 +248,29 @@ fn get_key_name(key: &Expr) -> Result<String, String> {
     }
 }
 
-fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TProp, String> {
+fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem, String> {
     match elem {
-        TsTypeElement::TsCallSignatureDecl(_decl) => Err(String::from("TsCallSignatureDecl")),
+        TsTypeElement::TsCallSignatureDecl(decl) => {
+            match &decl.type_ann {
+                // TODO: we need a way for TObjElem::Call to be generalized in the same
+                // way that TObjElem::Prop is below.
+                Some(type_ann) => {
+                    let params = infer_fn_params(&decl.params, ctx)?;
+                    let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
+                    let mut qualifiers: HashSet<_> = params.ftv();
+                    qualifiers.extend(ret.ftv());
+
+                    Ok(TObjElem::Call(TCall {
+                        params,
+                        ret: Box::from(ret),
+                        qualifiers: qualifiers.into_iter().collect(),
+                    }))
+                }
+                None => Err(String::from("Property is missing type annotation")),
+            }
+
+            // Err(String::from("TsCallSignatureDecl"))
+        }
         TsTypeElement::TsConstructSignatureDecl(_decl) => {
             Err(String::from("TsConstructSignatureDecl"))
         }
@@ -255,12 +281,12 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TProp, S
                     // TODO: do a better job of handling this
                     let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
                     let name = get_key_name(sig.key.as_ref())?;
-                    Ok(TProp {
+                    Ok(TObjElem::Prop(TProp {
                         name,
                         optional: sig.optional,
                         mutable: !sig.readonly,
                         scheme: Scheme::from(t),
-                    })
+                    }))
                 }
                 None => Err(String::from("Property is missing type annotation")),
             }
@@ -277,12 +303,12 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TProp, S
             let t = infer_method_sig(sig, ctx)?;
             let name = get_key_name(sig.key.as_ref())?;
             let scheme = generalize(&Env::new(), &t);
-            Ok(TProp {
+            Ok(TObjElem::Prop(TProp {
                 name,
                 optional: sig.optional,
                 mutable: false, // All methods on interfaces are readonly
                 scheme,
-            })
+            }))
         }
         TsTypeElement::TsIndexSignature(_sig) => Err(String::from("TsIndexSignature")),
     }
@@ -290,7 +316,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TProp, S
 
 fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Scheme, String> {
     // TODO: skip properties we don't know how to deal with instead of return an error for the whole map
-    let props: Vec<_> = decl
+    let elems: Vec<TObjElem> = decl
         .body
         .body
         .iter()
@@ -307,7 +333,7 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Scheme,
         })
         .collect();
 
-    let t = Type::Object(props);
+    let t = Type::Object(elems);
 
     let scheme = match &decl.type_params {
         Some(type_params) => {
@@ -353,22 +379,46 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
         Type::Intersection(types) => {
             Type::Intersection(types.iter().map(|t| replace_aliases(t, map)).collect())
         }
-        Type::Object(props) => {
-            let props = props
+        Type::Object(elems) => {
+            let elems = elems
                 .iter()
-                .map(|prop| {
-                    // TODO: handle qualifiers in each prop's .scheme field
-                    let ty = replace_aliases(&prop.scheme.ty, map);
-                    types::TProp {
-                        scheme: Scheme {
-                            ty,
-                            ..prop.scheme.to_owned()
-                        },
-                        ..prop.to_owned()
+                .map(|elem| {
+                    match elem {
+                        TObjElem::Call(TCall {
+                            params,
+                            ret,
+                            qualifiers,
+                        }) => {
+                            let params: Vec<TFnParam> = params
+                                .iter()
+                                .map(|t| TFnParam {
+                                    ty: replace_aliases(&t.ty, map),
+                                    ..t.to_owned()
+                                })
+                                .collect();
+                            let ret = replace_aliases(ret, map);
+
+                            TObjElem::Call(types::TCall {
+                                params,
+                                ret: Box::from(ret),
+                                qualifiers: qualifiers.to_owned(),
+                            })
+                        }
+                        TObjElem::Prop(prop) => {
+                            // TODO: handle qualifiers in each prop's .scheme field
+                            let ty = replace_aliases(&prop.scheme.ty, map);
+                            TObjElem::Prop(types::TProp {
+                                scheme: Scheme {
+                                    ty,
+                                    ..prop.scheme.to_owned()
+                                },
+                                ..prop.to_owned()
+                            })
+                        }
                     }
                 })
                 .collect();
-            Type::Object(props)
+            Type::Object(elems)
         }
         Type::Alias(alias) => match map.get(&alias.name) {
             Some(replacement) => replacement.to_owned(),

@@ -178,7 +178,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                 mutable: false,
                                 scheme: Scheme::from(t),
                             };
-                            props.push(prop);
+                            props.push(types::TObjElem::Prop(prop));
                         }
 
                         let ret_type = Type::Alias(types::TAlias {
@@ -334,7 +334,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         }
         Expr::Obj(Obj { props, .. }) => {
             let mut ss: Vec<Subst> = vec![];
-            let mut ps: Vec<types::TProp> = vec![];
+            let mut ps: Vec<types::TObjElem> = vec![];
             let mut spread_types: Vec<_> = vec![];
             for p in props {
                 match p {
@@ -342,24 +342,24 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         match p.as_ref() {
                             Prop::Shorthand(Ident { name, .. }) => {
                                 let t = ctx.lookup_value_and_instantiate(name)?;
-                                ps.push(types::TProp {
+                                ps.push(types::TObjElem::Prop(types::TProp {
                                     name: name.to_owned(),
                                     optional: false,
                                     mutable: false,
                                     scheme: Scheme::from(t),
-                                });
+                                }));
                             }
                             Prop::KeyValue(KeyValueProp { name, value, .. }) => {
                                 let (s, t) = infer_expr(ctx, value)?;
                                 ss.push(s);
                                 // TODO: check if the inferred type is T | undefined and use that
                                 // determine the value of optional
-                                ps.push(types::TProp {
+                                ps.push(types::TObjElem::Prop(types::TProp {
                                     name: name.to_owned(),
                                     optional: false,
                                     mutable: false,
                                     scheme: Scheme::from(t),
-                                });
+                                }));
                             }
                         }
                     }
@@ -534,9 +534,20 @@ fn infer_property_type(
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t {
-        Type::Object(props) => match prop {
+        Type::Object(elems) => match prop {
             MemberProp::Ident(Ident { name, .. }) => {
-                let prop = props.iter().find(|prop| prop.name == *name);
+                let prop = elems.iter().find_map(|elem| match elem {
+                    // TODO: include index types in the future
+                    types::TObjElem::Call(_) => None,
+                    types::TObjElem::Prop(prop) => {
+                        if prop.name == *name {
+                            Some(prop)
+                        } else {
+                            None
+                        }
+                    }
+                });
+
                 match prop {
                     Some(prop) => {
                         let prop = ctx.instantiate(&prop.get_scheme());
@@ -551,19 +562,42 @@ fn infer_property_type(
                 match prop_t {
                     Type::Prim(prim) => match prim {
                         TPrim::Str => {
-                            let mut value_types: Vec<Type> = props
+                            let mut value_types: Vec<Type> = elems
                                 .iter()
-                                .map(|prop| ctx.instantiate(&prop.scheme))
+                                .filter_map(|elem| match elem {
+                                    // TODO: include index types in the future
+                                    // Call signatures aren't included because they can't be accessed
+                                    // as members.  What about .constructor?
+                                    types::TObjElem::Call(_) => None,
+                                    types::TObjElem::Prop(prop) => {
+                                        Some(ctx.instantiate(&prop.scheme))
+                                    }
+                                })
                                 .collect();
+
+                            // We can't tell if the property is in the object or not because the
+                            // key is a string whose exact value is unknown at compile time.
                             value_types.push(Type::Keyword(TKeyword::Undefined));
                             let t = Type::Union(value_types);
+
                             Ok((prop_s, t))
                         }
                         _ => Err(format!("{prim} is an invalid key for object types")),
                     },
                     Type::Lit(lit) => match lit {
                         types::TLit::Str(key) => {
-                            let prop = props.iter().find(|prop| prop.name == key);
+                            let prop = elems.iter().find_map(|elem| match elem {
+                                // TODO: include index types in the future
+                                types::TObjElem::Call(_) => None,
+                                types::TObjElem::Prop(prop) => {
+                                    if prop.name == key {
+                                        Some(prop)
+                                    } else {
+                                        None
+                                    }
+                                }
+                            });
+
                             match prop {
                                 Some(prop) => {
                                     let prop = ctx.instantiate(&prop.get_scheme());

@@ -489,26 +489,31 @@ pub fn build_type(ty: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
         Type::Object(props) => {
             let members: Vec<TsTypeElement> = props
                 .iter()
-                .map(|prop| {
-                    TsTypeElement::TsPropertySignature(TsPropertySignature {
-                        span: DUMMY_SP,
-                        readonly: !prop.mutable,
-                        key: Box::from(Expr::from(Ident {
-                            span: DUMMY_SP,
-                            sym: JsWord::from(prop.name.to_owned()),
-                            optional: false,
-                        })),
-                        computed: false,
-                        optional: prop.optional,
-                        init: None,
-                        params: vec![],
-                        type_ann: Some(TsTypeAnn {
-                            span: DUMMY_SP,
-                            // TODO: add build_type_from_scheme() helper that handles type params
-                            type_ann: Box::from(build_type(&prop.scheme.ty, None)),
-                        }),
-                        type_params: None,
-                    })
+                .map(|elem| {
+                    match elem {
+                        types::TObjElem::Call(_) => todo!(),
+                        types::TObjElem::Prop(prop) => {
+                            TsTypeElement::TsPropertySignature(TsPropertySignature {
+                                span: DUMMY_SP,
+                                readonly: !prop.mutable,
+                                key: Box::from(Expr::from(Ident {
+                                    span: DUMMY_SP,
+                                    sym: JsWord::from(prop.name.to_owned()),
+                                    optional: false,
+                                })),
+                                computed: false,
+                                optional: prop.optional,
+                                init: None,
+                                params: vec![],
+                                type_ann: Some(TsTypeAnn {
+                                    span: DUMMY_SP,
+                                    // TODO: add build_type_from_scheme() helper that handles type params
+                                    type_ann: Box::from(build_type(&prop.scheme.ty, None)),
+                                }),
+                                type_params: None,
+                            })
+                        }
+                    }
                 })
                 .collect();
 

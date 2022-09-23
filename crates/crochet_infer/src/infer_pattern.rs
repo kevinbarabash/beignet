@@ -113,7 +113,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
         }
         Pattern::Object(ObjectPat { props, .. }) => {
             let mut rest_opt_ty: Option<Type> = None;
-            let props: Vec<types::TProp> = props
+            let elems: Vec<types::TObjElem> = props
                 .iter()
                 .filter_map(|prop| {
                     match prop {
@@ -122,12 +122,12 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                             // TODO: bubble the error up from infer_patter_rec() if there is one.
                             let value_type = infer_pattern_rec(value, ctx, assump).unwrap();
 
-                            Some(types::TProp {
+                            Some(types::TObjElem::Prop(types::TProp {
                                 name: key.name.to_owned(),
                                 optional: false,
                                 mutable: false,
                                 scheme: Scheme::from(value_type),
-                            })
+                            }))
                         }
                         ObjectPatProp::Assign(AssignPatProp { key, value: _, .. }) => {
                             // We ignore the value for now, we can come back later to handle
@@ -140,12 +140,12 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                                 todo!("return an error");
                             }
 
-                            Some(types::TProp {
+                            Some(types::TObjElem::Prop(types::TProp {
                                 name: key.name.to_owned(),
                                 optional: false,
                                 mutable: false,
                                 scheme: Scheme::from(tv),
-                            })
+                            }))
                         }
                         ObjectPatProp::Rest(rest) => {
                             if rest_opt_ty.is_some() {
@@ -163,7 +163,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                 })
                 .collect();
 
-            let obj_type = Type::Object(props);
+            let obj_type = Type::Object(elems);
 
             match rest_opt_ty {
                 // TODO: Replace this with a proper Rest/Spread type

@@ -2,6 +2,7 @@ use std::cmp;
 use std::collections::HashSet;
 
 use crochet_types::{self as types, TPrim, Type};
+use types::TObjElem;
 
 use super::context::Context;
 use super::substitutable::{Subst, Substitutable};
@@ -180,33 +181,47 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
             Err(String::from("Couldn't unify lambda with intersection"))
         }
-        (Type::Object(props1), Type::Object(props2)) => {
+        (Type::Object(elems1), Type::Object(elems2)) => {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
-            let result: Result<Vec<_>, String> = props2
+            let result: Result<Vec<_>, String> = elems2
                 .iter()
-                .map(|prop2| {
+                .map(|e2| {
                     let mut b = false;
                     let mut ss = vec![];
-                    for prop1 in props1.iter() {
-                        if prop1.name == prop2.name {
-                            let prop1 = ctx.instantiate(&prop1.get_scheme());
-                            let prop2 = ctx.instantiate(&prop2.get_scheme());
-                            if let Ok(s) = unify(&prop1, &prop2, ctx) {
-                                b = true;
-                                ss.push(s);
+                    for e1 in elems1.iter() {
+                        match (e1, e2) {
+                            (TObjElem::Call(_), TObjElem::Call(_)) => {
+                                // What to do about Call signatures?
+                                todo!()
                             }
+                            (TObjElem::Prop(prop1), TObjElem::Prop(prop2)) => {
+                                if prop1.name == prop2.name {
+                                    let prop1 = ctx.instantiate(&prop1.get_scheme());
+                                    let prop2 = ctx.instantiate(&prop2.get_scheme());
+                                    if let Ok(s) = unify(&prop1, &prop2, ctx) {
+                                        b = true;
+                                        ss.push(s);
+                                    }
+                                }
+                            }
+                            // skip pairs that aren't the same
+                            _ => (),
                         }
                     }
 
                     match b {
                         true => Ok(compose_many_subs(&ss)),
-                        false => {
-                            if prop2.optional {
-                                Ok(Subst::default())
-                            } else {
-                                Err(String::from("Unification failure"))
+                        false => match e2 {
+                            TObjElem::Call(_) => Err(String::from("Unification failure")),
+                            TObjElem::Prop(prop2) => {
+                                // Will all optional properties to be missing
+                                if prop2.optional {
+                                    Ok(Subst::default())
+                                } else {
+                                    Err(String::from("Unification failure"))
+                                }
                             }
-                        }
+                        },
                     }
                 })
                 .collect();
@@ -308,12 +323,13 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 false => Err(String::from("Unification failure")),
             }
         }
-        (Type::Object(props), Type::Intersection(types)) => {
+        (Type::Object(elems), Type::Intersection(types)) => {
             let obj_types: Vec<_> = types
                 .iter()
                 .filter(|t| matches!(t, Type::Object(_)))
                 .cloned()
                 .collect();
+            // NOTE: {a, ...x} is converted to {a} & tvar
             let rest_types: Vec<_> = types
                 .iter()
                 .filter(|t| matches!(t, Type::Var(_)))
@@ -326,15 +342,20 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             match rest_types.len() {
                 0 => unify(t1, &obj_type, ctx),
                 1 => {
-                    let all_obj_props = match &obj_type {
-                        Type::Object(props) => props.to_owned(),
+                    let all_obj_elems = match &obj_type {
+                        Type::Object(elems) => elems.to_owned(),
                         _ => vec![],
                     };
 
-                    let (obj_props, rest_props): (Vec<_>, Vec<_>) = props
-                        .iter()
-                        .cloned()
-                        .partition(|p| all_obj_props.iter().any(|op| op.name == p.name));
+                    let (obj_props, rest_props): (Vec<_>, Vec<_>) =
+                        elems.iter().cloned().partition(|e| {
+                            all_obj_elems.iter().any(|oe| match (oe, e) {
+                                // What to do about Call signatures?
+                                (TObjElem::Call(_), TObjElem::Call(_)) => todo!(),
+                                (TObjElem::Prop(op), TObjElem::Prop(p)) => op.name == p.name,
+                                _ => false,
+                            })
+                        });
 
                     let s1 = unify(&Type::Object(obj_props), &obj_type, ctx)?;
 
@@ -347,12 +368,13 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 _ => Err(String::from("Unification is undecidable")),
             }
         }
-        (Type::Intersection(types), Type::Object(props)) => {
+        (Type::Intersection(types), Type::Object(elems)) => {
             let obj_types: Vec<_> = types
                 .iter()
                 .filter(|t| matches!(t, Type::Object(_)))
                 .cloned()
                 .collect();
+            // NOTE: {a, ...x} is converted to {a} & tvar
             let rest_types: Vec<_> = types
                 .iter()
                 .filter(|t| matches!(t, Type::Var(_)))
@@ -365,15 +387,20 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             match rest_types.len() {
                 0 => unify(&obj_type, t2, ctx),
                 1 => {
-                    let all_obj_props = match &obj_type {
-                        Type::Object(props) => props.to_owned(),
+                    let all_obj_elems = match &obj_type {
+                        Type::Object(elems) => elems.to_owned(),
                         _ => vec![],
                     };
 
-                    let (obj_props, rest_props): (Vec<_>, Vec<_>) = props
-                        .iter()
-                        .cloned()
-                        .partition(|p| all_obj_props.iter().any(|op| op.name == p.name));
+                    let (obj_props, rest_props): (Vec<_>, Vec<_>) =
+                        elems.iter().cloned().partition(|e| {
+                            all_obj_elems.iter().any(|oe| match (oe, e) {
+                                // What to do about Call signatures?
+                                (TObjElem::Call(_), TObjElem::Call(_)) => todo!(),
+                                (TObjElem::Prop(op), TObjElem::Prop(p)) => op.name == p.name,
+                                _ => false,
+                            })
+                        });
 
                     let s_obj = unify(&obj_type, &Type::Object(obj_props), ctx)?;
 
@@ -515,48 +542,48 @@ mod tests {
         let ctx = Context::default();
 
         let t1 = Type::Object(vec![
-            types::TProp {
+            types::TObjElem::Prop(types::TProp {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
                 scheme: types::Scheme::from(Type::from(num("5"))),
-            },
-            types::TProp {
+            }),
+            types::TObjElem::Prop(types::TProp {
                 name: String::from("bar"),
                 optional: false,
                 mutable: false,
                 scheme: types::Scheme::from(Type::from(bool(&true))),
-            },
+            }),
             // Having extra properties is okay
-            types::TProp {
+            types::TObjElem::Prop(types::TProp {
                 name: String::from("baz"),
                 optional: false,
                 mutable: false,
                 scheme: types::Scheme::from(Type::Prim(TPrim::Str)),
-            },
+            }),
         ]);
 
         let t2 = Type::Object(vec![
-            types::TProp {
+            types::TObjElem::Prop(types::TProp {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
                 scheme: types::Scheme::from(Type::Prim(TPrim::Num)),
-            },
-            types::TProp {
+            }),
+            types::TObjElem::Prop(types::TProp {
                 name: String::from("bar"),
                 optional: true,
                 mutable: false,
                 scheme: types::Scheme::from(Type::Prim(TPrim::Bool)),
-            },
+            }),
             // It's okay for qux to not appear in the subtype since
             // it's an optional property.
-            types::TProp {
+            types::TObjElem::Prop(types::TProp {
                 name: String::from("qux"),
                 optional: true,
                 mutable: false,
                 scheme: types::Scheme::from(Type::Prim(TPrim::Str)),
-            },
+            }),
         ]);
 
         let result = unify(&t1, &t2, &ctx);
