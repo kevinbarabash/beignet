@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use types::{Scheme, TLam, TObjElem};
+use types::{Scheme, TCall, TObjElem};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
@@ -9,7 +9,9 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
-use crochet_infer::{close_over, generalize, generalize_type_map, Context, Env, Subst};
+use crochet_infer::{
+    close_over, generalize, generalize_type_map, Context, Env, Subst, Substitutable,
+};
 use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TPrim, TProp, Type};
 
 #[derive(Debug, Clone)]
@@ -252,10 +254,18 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
             match &decl.type_ann {
                 // TODO: we need a way for TObjElem::Call to be generalized in the same
                 // way that TObjElem::Prop is below.
-                Some(type_ann) => Ok(TObjElem::Call(TLam {
-                    params: infer_fn_params(&decl.params, ctx)?,
-                    ret: Box::from(infer_ts_type_ann(&type_ann.type_ann, ctx)?),
-                })),
+                Some(type_ann) => {
+                    let params = infer_fn_params(&decl.params, ctx)?;
+                    let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
+                    let mut qualifiers: HashSet<_> = params.ftv();
+                    qualifiers.extend(ret.ftv());
+
+                    Ok(TObjElem::Call(TCall {
+                        params,
+                        ret: Box::from(ret),
+                        qualifiers: qualifiers.into_iter().collect(),
+                    }))
+                }
                 None => Err(String::from("Property is missing type annotation")),
             }
 
@@ -374,7 +384,11 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                 .iter()
                 .map(|elem| {
                     match elem {
-                        TObjElem::Call(TLam { params, ret }) => {
+                        TObjElem::Call(TCall {
+                            params,
+                            ret,
+                            qualifiers,
+                        }) => {
                             let params: Vec<TFnParam> = params
                                 .iter()
                                 .map(|t| TFnParam {
@@ -384,9 +398,10 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                                 .collect();
                             let ret = replace_aliases(ret, map);
 
-                            TObjElem::Call(types::TLam {
+                            TObjElem::Call(types::TCall {
                                 params,
                                 ret: Box::from(ret),
+                                qualifiers: qualifiers.to_owned(),
                             })
                         }
                         TObjElem::Prop(prop) => {

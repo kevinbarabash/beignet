@@ -68,18 +68,12 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                         // } else {
                         //     prop.scheme.to_owned()
                         // };
+
+                        // TODO: we have to traverse the children nodes, but while doing so
+                        // we need to ignore those ids that appear in the qualifiers of the
+                        // prop's scheme and the call's qualifiers.
                         match elem {
-                            TObjElem::Call(call) => TObjElem::Call(TLam {
-                                params: call
-                                    .params
-                                    .iter()
-                                    .map(|param| TFnParam {
-                                        ty: norm_type(&param.ty, mapping, ctx),
-                                        ..param.to_owned()
-                                    })
-                                    .collect(),
-                                ret: Box::from(norm_type(&call.ret, mapping, ctx)),
-                            }),
+                            TObjElem::Call(call) => TObjElem::Call(call.to_owned()),
                             TObjElem::Prop(prop) => {
                                 TObjElem::Prop(TProp {
                                     name: prop.name.clone(),

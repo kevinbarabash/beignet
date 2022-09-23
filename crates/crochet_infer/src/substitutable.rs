@@ -65,13 +65,13 @@ impl Substitutable for Type {
 impl Substitutable for TObjElem {
     fn apply(&self, sub: &Subst) -> Self {
         match self {
-            TObjElem::Call(lam) => TObjElem::Call(lam.apply(sub)),
+            TObjElem::Call(call) => TObjElem::Call(call.apply(sub)),
             TObjElem::Prop(prop) => TObjElem::Prop(prop.apply(sub)),
         }
     }
     fn ftv(&self) -> HashSet<i32> {
         match self {
-            TObjElem::Call(lam) => lam.ftv(),
+            TObjElem::Call(call) => call.ftv(),
             TObjElem::Prop(prop) => prop.scheme.ftv(),
         }
     }
@@ -88,6 +88,24 @@ impl Substitutable for TLam {
         let mut result: HashSet<_> = self.params.ftv();
         result.extend(self.ret.ftv());
         result
+    }
+}
+
+impl Substitutable for TCall {
+    fn apply(&self, sub: &Subst) -> TCall {
+        TCall {
+            params: self.params.iter().map(|param| param.apply(sub)).collect(),
+            ret: Box::from(self.ret.apply(sub)),
+            ..self.to_owned()
+        }
+    }
+    fn ftv(&self) -> HashSet<i32> {
+        let mut ftv: HashSet<_> = self.params.ftv();
+        ftv.extend(self.ret.ftv());
+
+        // This is very similar to what Scheme's implementation of .ftv() does
+        let qualifiers: HashSet<_> = self.qualifiers.iter().map(|id| id.to_owned()).collect();
+        ftv.difference(&qualifiers).cloned().collect()
     }
 }
 
