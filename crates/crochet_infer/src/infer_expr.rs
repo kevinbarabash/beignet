@@ -723,7 +723,7 @@ fn get_prop_value(
 
             match result {
                 Ok((s, t)) => Ok((s, t)),
-                Err(_) => {
+                Err(err) => {
                     // TODO:
                     // - look for indexers
                     let indexers: Vec<_> = elems
@@ -735,7 +735,7 @@ fn get_prop_value(
                         .collect();
 
                     if indexers.is_empty() {
-                        Err(format!("{prop_t_clone} is an invalid key for object types"))
+                        Err(err)
                     } else {
                         for indexer in indexers {
                             let result = unify(&prop_t_clone, &indexer.key.t, ctx);
