@@ -213,6 +213,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         true => Ok(compose_many_subs(&ss)),
                         false => match e2 {
                             TObjElem::Call(_) => Err(String::from("Unification failure")),
+                            TObjElem::Constructor(_) => Err(String::from("Unification failure")),
+                            TObjElem::Index(_) => Err(String::from("Unification failure")),
                             TObjElem::Prop(prop2) => {
                                 // Will all optional properties to be missing
                                 if prop2.optional {

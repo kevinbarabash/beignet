@@ -69,9 +69,9 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 let elems = elems
                     .iter()
                     .map(|elem| match elem {
-                        TObjElem::Call(call) => {
-                            let lam = &call.t;
-                            let params: Vec<_> = lam
+                        TObjElem::Call(qlam) => {
+                            let params: Vec<_> = qlam
+                                .t
                                 .params
                                 .iter()
                                 .map(|param| TFnParam {
@@ -79,12 +79,36 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                                     ..param.to_owned()
                                 })
                                 .collect();
-                            let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
+                            let ret = Box::from(norm_type(&qlam.t.ret, mapping, ctx));
                             TObjElem::Call(TCall {
                                 t: TLam { params, ret },
-                                ..call.to_owned()
+                                ..qlam.to_owned()
                             })
                         }
+                        TObjElem::Constructor(qlam) => {
+                            let params: Vec<_> = qlam
+                                .t
+                                .params
+                                .iter()
+                                .map(|param| TFnParam {
+                                    t: norm_type(&param.t, mapping, ctx),
+                                    ..param.to_owned()
+                                })
+                                .collect();
+                            let ret = Box::from(norm_type(&qlam.t.ret, mapping, ctx));
+                            TObjElem::Constructor(TConstructor {
+                                t: TLam { params, ret },
+                                ..qlam.to_owned()
+                            })
+                        }
+                        TObjElem::Index(index) => TObjElem::Index(TIndex {
+                            key: index.key.clone(),
+                            mutable: index.mutable,
+                            scheme: Scheme {
+                                t: norm_type(&index.scheme.t, mapping, ctx),
+                                ..index.scheme.to_owned()
+                            },
+                        }),
                         TObjElem::Prop(prop) => TObjElem::Prop(TProp {
                             name: prop.name.clone(),
                             optional: prop.optional,
@@ -113,6 +137,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
             }
             Type::Array(t) => Type::Array(Box::from(norm_type(t, mapping, ctx))),
             Type::Rest(arg) => Type::Rest(Box::from(norm_type(arg, mapping, ctx))),
+            Type::This => Type::This,
         }
     }
 
@@ -162,8 +187,10 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     for elems in obj_types {
         for elem in elems {
             match elem {
-                // What do we do able Call signatures
+                // What do we do with Call and Index signatures
                 TObjElem::Call(_) => todo!(),
+                TObjElem::Constructor(_) => todo!(),
+                TObjElem::Index(_) => todo!(),
                 TObjElem::Prop(prop) => {
                     props_map[prop.name.clone()].insert(prop.scheme.clone());
                 }
@@ -199,9 +226,11 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
             })
         })
         .collect();
-    // How do we sort call signatures?
+    // How do we sort call and index signatures?
     elems.sort_by_key(|elem| match elem {
         TObjElem::Call(_) => todo!(),
+        TObjElem::Constructor(_) => todo!(),
+        TObjElem::Index(_) => todo!(),
         TObjElem::Prop(prop) => prop.name.clone(),
     }); // ensure a stable order
 

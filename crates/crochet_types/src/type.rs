@@ -49,6 +49,7 @@ pub enum Type {
     Tuple(Vec<Type>),
     Array(Box<Type>),
     Rest(Box<Type>), // TODO: rename this to Spread
+    This,
 }
 
 impl From<TLit> for Type {
@@ -87,6 +88,7 @@ impl fmt::Display for Type {
             Type::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
             Type::Array(t) => write!(f, "{t}[]"),
             Type::Rest(arg) => write!(f, "...{arg}"),
+            Type::This => write!(f, "this"),
         }
     }
 }
