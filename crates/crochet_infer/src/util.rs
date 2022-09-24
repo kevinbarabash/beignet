@@ -76,9 +76,8 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     .elems
                     .iter()
                     .map(|elem| match elem {
-                        TObjElem::Call(qlam) => {
-                            let params: Vec<_> = qlam
-                                .t
+                        TObjElem::Call(lam) => {
+                            let params: Vec<_> = lam
                                 .params
                                 .iter()
                                 .map(|param| TFnParam {
@@ -86,22 +85,15 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                                     ..param.to_owned()
                                 })
                                 .collect();
-                            let ret = Box::from(norm_type(&qlam.t.ret, mapping, ctx));
-                            TObjElem::Call(TCall {
-                                t: TLam {
-                                    params,
-                                    ret,
-                                    type_params: match qlam.qualifiers.is_empty() {
-                                        true => None,
-                                        false => Some(qlam.qualifiers.to_owned()),
-                                    },
-                                },
-                                ..qlam.to_owned()
+                            let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
+                            TObjElem::Call(TLam {
+                                params,
+                                ret,
+                                type_params: lam.type_params.to_owned(),
                             })
                         }
-                        TObjElem::Constructor(qlam) => {
-                            let params: Vec<_> = qlam
-                                .t
+                        TObjElem::Constructor(lam) => {
+                            let params: Vec<_> = lam
                                 .params
                                 .iter()
                                 .map(|param| TFnParam {
@@ -109,17 +101,11 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                                     ..param.to_owned()
                                 })
                                 .collect();
-                            let ret = Box::from(norm_type(&qlam.t.ret, mapping, ctx));
-                            TObjElem::Constructor(TConstructor {
-                                t: TLam {
-                                    params,
-                                    ret,
-                                    type_params: match qlam.qualifiers.is_empty() {
-                                        true => None,
-                                        false => Some(qlam.qualifiers.to_owned()),
-                                    },
-                                },
-                                ..qlam.to_owned()
+                            let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
+                            TObjElem::Constructor(TLam {
+                                params,
+                                ret,
+                                type_params: lam.type_params.to_owned(),
                             })
                         }
                         TObjElem::Index(index) => TObjElem::Index(TIndex {

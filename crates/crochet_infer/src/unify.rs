@@ -74,7 +74,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 .elems
                 .iter()
                 .filter_map(|elem| match elem {
-                    TObjElem::Call(call) => Some(Type::Lam(call.t.to_owned())),
+                    TObjElem::Call(lam) => Some(Type::Lam(lam.to_owned())),
                     TObjElem::Constructor(_) => None,
                     TObjElem::Index(_) => None,
                     TObjElem::Prop(_) => None,

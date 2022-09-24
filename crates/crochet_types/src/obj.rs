@@ -1,17 +1,13 @@
 use std::fmt;
 
 use crate::lam::TLam;
-use crate::qualified::Qualified;
 use crate::r#type::Type;
 use crate::TFnParam;
 
-pub type TCall = Qualified<TLam>;
-pub type TConstructor = Qualified<TLam>;
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TObjElem {
-    Call(TCall),
-    Constructor(TConstructor),
+    Call(TLam),
+    Constructor(TLam),
     Index(TIndex),
     Prop(TProp),
     // Getter

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use types::{Scheme, TCall, TConstructor, TIndex, TLam, TObjElem, TObject};
+use types::{Scheme, TIndex, TLam, TObjElem, TObject};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
@@ -221,16 +221,13 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 let mut qualifiers: HashSet<_> = params.ftv();
                 qualifiers.extend(ret.ftv());
 
-                Ok(TObjElem::Call(TCall {
-                    t: TLam {
-                        params,
-                        ret: Box::from(ret),
-                        type_params: match qualifiers.is_empty() {
-                            true => None,
-                            false => Some(qualifiers.clone().into_iter().collect()),
-                        },
+                Ok(TObjElem::Call(TLam {
+                    params,
+                    ret: Box::from(ret),
+                    type_params: match qualifiers.is_empty() {
+                        true => None,
+                        false => Some(qualifiers.clone().into_iter().collect()),
                     },
-                    qualifiers: qualifiers.into_iter().collect(),
                 }))
             }
             None => Err(String::from("Property is missing type annotation")),
@@ -242,16 +239,13 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 let mut qualifiers: HashSet<_> = params.ftv();
                 qualifiers.extend(ret.ftv());
 
-                Ok(TObjElem::Constructor(TConstructor {
-                    t: TLam {
-                        params,
-                        ret: Box::from(ret),
-                        type_params: match qualifiers.is_empty() {
-                            true => None,
-                            false => Some(qualifiers.clone().into_iter().collect()),
-                        },
+                Ok(TObjElem::Constructor(TLam {
+                    params,
+                    ret: Box::from(ret),
+                    type_params: match qualifiers.is_empty() {
+                        true => None,
+                        false => Some(qualifiers.clone().into_iter().collect()),
                     },
-                    qualifiers: qualifiers.into_iter().collect(),
                 }))
             }
             None => Err(String::from("Property is missing type annotation")),
@@ -390,13 +384,8 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                 .iter()
                 .map(|elem| {
                     match elem {
-                        TObjElem::Call(TCall {
-                            t,
-                            // params,
-                            // ret,
-                            qualifiers,
-                        }) => {
-                            let params: Vec<TFnParam> = t
+                        TObjElem::Call(lam) => {
+                            let params: Vec<TFnParam> = lam
                                 .params
                                 .iter()
                                 .map(|t| TFnParam {
@@ -404,27 +393,16 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                                     ..t.to_owned()
                                 })
                                 .collect();
-                            let ret = replace_aliases(t.ret.as_ref(), map);
+                            let ret = replace_aliases(lam.ret.as_ref(), map);
 
-                            TObjElem::Call(types::TCall {
-                                t: TLam {
-                                    params,
-                                    ret: Box::from(ret),
-                                    type_params: match qualifiers.is_empty() {
-                                        true => None,
-                                        false => Some(qualifiers.to_owned()),
-                                    },
-                                },
-                                qualifiers: qualifiers.to_owned(),
+                            TObjElem::Call(TLam {
+                                params,
+                                ret: Box::from(ret),
+                                type_params: lam.type_params.to_owned(),
                             })
                         }
-                        TObjElem::Constructor(TConstructor {
-                            t,
-                            // params,
-                            // ret,
-                            qualifiers,
-                        }) => {
-                            let params: Vec<TFnParam> = t
+                        TObjElem::Constructor(lam) => {
+                            let params: Vec<TFnParam> = lam
                                 .params
                                 .iter()
                                 .map(|t| TFnParam {
@@ -432,18 +410,12 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                                     ..t.to_owned()
                                 })
                                 .collect();
-                            let ret = replace_aliases(t.ret.as_ref(), map);
+                            let ret = replace_aliases(lam.ret.as_ref(), map);
 
-                            TObjElem::Constructor(types::TConstructor {
-                                t: TLam {
-                                    params,
-                                    ret: Box::from(ret),
-                                    type_params: match qualifiers.is_empty() {
-                                        true => None,
-                                        false => Some(qualifiers.to_owned()),
-                                    },
-                                },
-                                qualifiers: qualifiers.to_owned(),
+                            TObjElem::Constructor(TLam {
+                                params,
+                                ret: Box::from(ret),
+                                type_params: lam.type_params.to_owned(),
                             })
                         }
                         TObjElem::Index(index) => {
