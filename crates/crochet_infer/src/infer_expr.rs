@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use crochet_ast::*;
 use crochet_types::{self as types, Scheme, TFnParam, TKeyword, TPat, TPrim, Type};
-use itertools::Itertools;
 use types::TObjElem;
 
 use super::context::Context;
