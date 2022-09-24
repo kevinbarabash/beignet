@@ -44,54 +44,9 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
         TsType::TsThisType(_) => Ok(Type::This),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
-                let params: Vec<TFnParam> = fn_type
-                    .params
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, param)| match param {
-                        TsFnParam::Ident(ident) => {
-                            let type_ann = ident.type_ann.clone().unwrap();
-                            let param = TFnParam {
-                                pat: TPat::Ident(types::BindingIdent {
-                                    name: ident.id.sym.to_string(),
-                                    mutable: false,
-                                }),
-                                t: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
-                                optional: ident.optional,
-                            };
-                            Some(param)
-                        }
-                        TsFnParam::Array(_) => {
-                            // TODO: create a tuple pattern
-                            println!("skipping TsFnParam::Array(_)");
-                            None
-                        }
-                        TsFnParam::Rest(rest) => {
-                            let type_ann = rest.type_ann.clone().unwrap();
-                            let name = match rest.arg.as_ref() {
-                                Pat::Ident(BindingIdent { id, .. }) => id.sym.to_string(),
-                                _ => format!("arg{index}"),
-                            };
-                            let param = TFnParam {
-                                pat: TPat::Rest(RestPat {
-                                    arg: Box::from(TPat::Ident(types::BindingIdent {
-                                        name,
-                                        mutable: false,
-                                    })),
-                                }),
-                                t: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
-                                optional: false,
-                            };
-                            Some(param)
-                        }
-                        TsFnParam::Object(_) => {
-                            // TODO: create an object pattern
-                            println!("skipping TsFnParam::Object(_)");
-                            None
-                        }
-                    })
-                    .collect();
+                let params: Vec<TFnParam> = infer_fn_params(&fn_type.params, ctx)?;
                 let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?;
+
                 Ok(Type::Lam(types::TLam {
                     params,
                     ret: Box::from(ret),
@@ -191,6 +146,7 @@ fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>,
                 Some(param)
             }
             TsFnParam::Array(_) => {
+                // TODO: create a tuple pattern
                 println!("skipping TsFnParam::Array(_)");
                 None
             }
@@ -213,6 +169,7 @@ fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>,
                 Some(param)
             }
             TsFnParam::Object(_) => {
+                // TODO: create an object pattern
                 println!("skipping TsFnParam::Object(_)");
                 None
             }
