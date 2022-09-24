@@ -1,10 +1,9 @@
 use std::fmt;
 
-use crate::keyword::TKeyword;
 use crate::lam::TLam;
 use crate::qualified::Qualified;
 use crate::r#type::Type;
-use crate::{Scheme, TFnParam};
+use crate::TFnParam;
 
 pub type TCall = Qualified<TLam>;
 pub type TConstructor = Qualified<TLam>;
@@ -35,7 +34,8 @@ impl fmt::Display for TObjElem {
 pub struct TIndex {
     pub key: TFnParam, // identifier + type
     pub mutable: bool,
-    pub scheme: Scheme,
+    pub t: Type,
+    pub type_params: Option<Vec<i32>>,
 }
 
 impl fmt::Display for TIndex {
@@ -43,11 +43,13 @@ impl fmt::Display for TIndex {
         let Self {
             key,
             mutable,
-            scheme,
+            t,
+            // TODO: handle generic indexers
+            type_params: _,
         } = self;
         match mutable {
-            false => write!(f, "[{key}]: {scheme}"),
-            true => write!(f, "mut [{key}]: {scheme}"),
+            false => write!(f, "[{key}]: {t}"),
+            true => write!(f, "mut [{key}]: {t}"),
         }
     }
 }
@@ -57,19 +59,7 @@ pub struct TProp {
     pub name: String,
     pub optional: bool,
     pub mutable: bool,
-    pub scheme: Scheme,
-}
-
-impl TProp {
-    pub fn get_scheme(&self) -> Scheme {
-        match self.optional {
-            true => Scheme::from(Type::Union(vec![
-                self.scheme.t.to_owned(),
-                Type::Keyword(TKeyword::Undefined),
-            ])),
-            false => self.scheme.to_owned(),
-        }
-    }
+    pub t: Type,
 }
 
 impl fmt::Display for TProp {
@@ -78,13 +68,13 @@ impl fmt::Display for TProp {
             name,
             optional,
             mutable,
-            scheme,
+            t,
         } = self;
         match (optional, mutable) {
-            (false, false) => write!(f, "{name}: {scheme}"),
-            (true, false) => write!(f, "{name}?: {scheme}"),
-            (false, true) => write!(f, "mut {name}: {scheme}"),
-            (true, true) => write!(f, "mut {name}?: {scheme}"),
+            (false, false) => write!(f, "{name}: {t}"),
+            (true, false) => write!(f, "{name}?: {t}"),
+            (false, true) => write!(f, "mut {name}: {t}"),
+            (true, true) => write!(f, "mut {name}?: {t}"),
         }
     }
 }

@@ -221,9 +221,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             }
                             (TObjElem::Prop(prop1), TObjElem::Prop(prop2)) => {
                                 if prop1.name == prop2.name {
-                                    let prop1 = ctx.instantiate(&prop1.get_scheme());
-                                    let prop2 = ctx.instantiate(&prop2.get_scheme());
-                                    if let Ok(s) = unify(&prop1, &prop2, ctx) {
+                                    let t1 = get_property_type(prop1);
+                                    let t2 = get_property_type(prop2);
+
+                                    if let Ok(s) = unify(&t1, &t2, ctx) {
                                         b = true;
                                         ss.push(s);
                                     }
@@ -601,20 +602,20 @@ mod tests {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
-                scheme: types::Scheme::from(Type::from(num("5"))),
+                t: Type::from(num("5")),
             }),
             types::TObjElem::Prop(types::TProp {
                 name: String::from("bar"),
                 optional: false,
                 mutable: false,
-                scheme: types::Scheme::from(Type::from(bool(&true))),
+                t: Type::from(bool(&true)),
             }),
             // Having extra properties is okay
             types::TObjElem::Prop(types::TProp {
                 name: String::from("baz"),
                 optional: false,
                 mutable: false,
-                scheme: types::Scheme::from(Type::Prim(TPrim::Str)),
+                t: Type::Prim(TPrim::Str),
             }),
         ];
         let t1 = Type::Object(TObject {
@@ -627,13 +628,13 @@ mod tests {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
-                scheme: types::Scheme::from(Type::Prim(TPrim::Num)),
+                t: Type::Prim(TPrim::Num),
             }),
             types::TObjElem::Prop(types::TProp {
                 name: String::from("bar"),
                 optional: true,
                 mutable: false,
-                scheme: types::Scheme::from(Type::Prim(TPrim::Bool)),
+                t: Type::Prim(TPrim::Bool),
             }),
             // It's okay for qux to not appear in the subtype since
             // it's an optional property.
@@ -641,7 +642,7 @@ mod tests {
                 name: String::from("qux"),
                 optional: true,
                 mutable: false,
-                scheme: types::Scheme::from(Type::Prim(TPrim::Str)),
+                t: Type::Prim(TPrim::Str),
             }),
         ];
         let t2 = Type::Object(TObject {

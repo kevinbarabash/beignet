@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, Scheme, TFnParam, TKeyword, TObject, TPat, TPrim, Type};
+use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, TPrim, Type};
 use types::TObjElem;
 
 use super::context::Context;
@@ -67,6 +67,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 &Type::Lam(types::TLam {
                     params: vec![param],
                     ret: Box::from(tv),
+                    type_params: None,
                 }),
                 &t,
                 ctx,
@@ -177,7 +178,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                 name: attr.ident.name.to_owned(),
                                 optional: false,
                                 mutable: false,
-                                scheme: Scheme::from(t),
+                                t,
                             };
                             elems.push(types::TObjElem::Prop(prop));
                         }
@@ -274,6 +275,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let t = Type::Lam(types::TLam {
                 params: t_params,
                 ret: Box::from(rt),
+                type_params: None,
             });
             let s = compose_subs(&s, &compose_subs(&rs, &compose_many_subs(&ss)));
             let t = t.apply(&s);
@@ -350,7 +352,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                     name: name.to_owned(),
                                     optional: false,
                                     mutable: false,
-                                    scheme: Scheme::from(t),
+                                    t,
                                 }));
                             }
                             Prop::KeyValue(KeyValueProp { name, value, .. }) => {
@@ -362,7 +364,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                     name: name.to_owned(),
                                     optional: false,
                                     mutable: false,
-                                    scheme: Scheme::from(t),
+                                    t,
                                 }));
                             }
                         }
@@ -666,8 +668,8 @@ fn get_prop_value(
 
             match prop {
                 Some(prop) => {
-                    let prop = ctx.instantiate(&prop.get_scheme());
-                    Ok((Subst::default(), prop))
+                    let t = get_property_type(prop);
+                    Ok((Subst::default(), t))
                 }
                 None => Err(format!("Object type doesn't contain key {name}.")),
             }
@@ -690,7 +692,10 @@ fn get_prop_value(
                                 types::TObjElem::Call(_) => None,
                                 types::TObjElem::Constructor(_) => None,
                                 types::TObjElem::Index(_) => None,
-                                types::TObjElem::Prop(prop) => Some(ctx.instantiate(&prop.scheme)),
+                                types::TObjElem::Prop(prop) => {
+                                    // TODO: handle generic object properties
+                                    Some(prop.t.to_owned())
+                                }
                             })
                             .collect();
 
@@ -720,8 +725,8 @@ fn get_prop_value(
 
                         match prop {
                             Some(prop) => {
-                                let prop = ctx.instantiate(&prop.get_scheme());
-                                Ok((Subst::default(), prop))
+                                // TODO: handle generic object properties
+                                Ok((Subst::default(), prop.t.to_owned()))
                             }
                             None => Err(format!("Object type doesn't contain key {key}.")),
                         }
@@ -752,9 +757,8 @@ fn get_prop_value(
                             if result.is_ok() {
                                 let key_s = result?;
                                 let s = compose_subs(&key_s, &prop_s_clone);
-                                println!("indexer.scheme = {:#?}", indexer.scheme);
-                                let t = ctx.instantiate(&indexer.scheme);
-                                return Ok((s, t));
+                                // TODO: handle generic indexers
+                                return Ok((s, indexer.t.to_owned()));
                             }
                         }
                         Err(format!("{prop_t_clone} is an invalid key for object types"))

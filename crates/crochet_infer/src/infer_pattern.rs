@@ -126,7 +126,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                                 name: key.name.to_owned(),
                                 optional: false,
                                 mutable: false,
-                                scheme: Scheme::from(value_type),
+                                t: value_type,
                             }))
                         }
                         ObjectPatProp::Assign(AssignPatProp { key, value: _, .. }) => {
@@ -144,7 +144,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                                 name: key.name.to_owned(),
                                 optional: false,
                                 mutable: false,
-                                scheme: Scheme::from(tv),
+                                t: tv,
                             }))
                         }
                         ObjectPatProp::Rest(rest) => {

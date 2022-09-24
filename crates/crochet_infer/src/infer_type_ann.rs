@@ -79,7 +79,11 @@ fn infer_type_ann_rec(
                 })
                 .collect();
             let ret = Box::from(infer_type_ann_rec(ret.as_ref(), ctx, type_param_map));
-            Type::Lam(types::TLam { params, ret })
+            Type::Lam(types::TLam {
+                params,
+                ret,
+                type_params: None,
+            })
         }
         TypeAnn::Lit(lit) => Type::from(lit.to_owned()),
         TypeAnn::Prim(PrimType { prim, .. }) => Type::from(prim.to_owned()),
@@ -92,11 +96,7 @@ fn infer_type_ann_rec(
                         name: prop.name.to_owned(),
                         optional: prop.optional,
                         mutable: prop.mutable,
-                        scheme: Scheme::from(infer_type_ann_rec(
-                            prop.type_ann.as_ref(),
-                            ctx,
-                            type_param_map,
-                        )),
+                        t: infer_type_ann_rec(prop.type_ann.as_ref(), ctx, type_param_map),
                     })
                 })
                 .collect();

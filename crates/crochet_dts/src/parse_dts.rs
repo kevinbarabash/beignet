@@ -10,7 +10,8 @@ use swc_ecma_visit::*;
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
 use crochet_infer::{
-    close_over, generalize, generalize_type_map, Context, Env, Subst, Substitutable,
+    close_over, generalize, generalize_type, generalize_type_map, Context, Env, Subst,
+    Substitutable,
 };
 use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TPrim, TProp, Type};
 
@@ -44,7 +45,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
         TsType::TsThisType(_) => Ok(Type::This),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
-                println!("fn_type = {fn_type:#?}");
+                // println!("fn_type = {fn_type:#?}");
                 // TODO: parse the type params and return a Scheme
                 let params: Vec<TFnParam> = infer_fn_params(&fn_type.params, ctx)?;
                 let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?;
@@ -52,6 +53,8 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
                 Ok(Type::Lam(types::TLam {
                     params,
                     ret: Box::from(ret),
+                    // TODO: handle generic functions/constructors
+                    type_params: None,
                 }))
             }
             TsFnOrConstructorType::TsConstructorType(_) => {
@@ -196,6 +199,8 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
     Ok(Type::Lam(types::TLam {
         params,
         ret: Box::from(ret?),
+        // TODO: handle generic method signatures
+        type_params: None,
     }))
 }
 
@@ -220,6 +225,10 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                     t: TLam {
                         params,
                         ret: Box::from(ret),
+                        type_params: match qualifiers.is_empty() {
+                            true => None,
+                            false => Some(qualifiers.clone().into_iter().collect()),
+                        },
                     },
                     qualifiers: qualifiers.into_iter().collect(),
                 }))
@@ -237,6 +246,10 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                     t: TLam {
                         params,
                         ret: Box::from(ret),
+                        type_params: match qualifiers.is_empty() {
+                            true => None,
+                            false => Some(qualifiers.clone().into_iter().collect()),
+                        },
                     },
                     qualifiers: qualifiers.into_iter().collect(),
                 }))
@@ -248,12 +261,13 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 Some(type_ann) => {
                     // TODO: do a better job of handling this
                     let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
+                    let gen_t = generalize_type(&HashMap::default(), &t);
                     let name = get_key_name(sig.key.as_ref())?;
                     Ok(TObjElem::Prop(TProp {
                         name,
                         optional: sig.optional,
                         mutable: !sig.readonly,
-                        scheme: Scheme::from(t),
+                        t: gen_t,
                     }))
                 }
                 None => Err(String::from("Property is missing type annotation")),
@@ -269,13 +283,13 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
         }
         TsTypeElement::TsMethodSignature(sig) => {
             let t = infer_method_sig(sig, ctx)?;
+            let gen_t = generalize_type(&HashMap::default(), &t);
             let name = get_key_name(sig.key.as_ref())?;
-            let scheme = generalize(&Env::new(), &t);
             Ok(TObjElem::Prop(TProp {
                 name,
                 optional: sig.optional,
                 mutable: false, // All methods on interfaces are readonly
-                scheme,
+                t: gen_t,
             }))
         }
         TsTypeElement::TsIndexSignature(sig) => match &sig.type_ann {
@@ -283,13 +297,12 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
                 let params = infer_fn_params(&sig.params, ctx)?;
                 let key = params.get(0).unwrap();
-                let scheme = generalize(&Env::new(), &t);
-                println!("t = {t:#?}");
-                println!("scheme = {scheme:#?}");
                 Ok(TObjElem::Index(TIndex {
                     key: key.to_owned(),
                     mutable: !sig.readonly,
-                    scheme,
+                    t,
+                    // TODO: handle generic indexers
+                    type_params: None,
                 }))
             }
             None => Err(String::from("Index is missing type annotation")),
@@ -349,7 +362,11 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
             args: args.iter().map(|t| replace_aliases(t, map)).collect(),
             ret: Box::from(replace_aliases(ret, map)),
         }),
-        Type::Lam(types::TLam { params, ret }) => Type::Lam(types::TLam {
+        Type::Lam(types::TLam {
+            params,
+            ret,
+            type_params,
+        }) => Type::Lam(types::TLam {
             params: params
                 .iter()
                 .map(|param| TFnParam {
@@ -358,6 +375,7 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                 })
                 .collect(),
             ret: Box::from(replace_aliases(ret, map)),
+            type_params: type_params.to_owned(),
         }),
         Type::Prim(_) => t.to_owned(),
         Type::Lit(_) => t.to_owned(),
@@ -392,6 +410,10 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                                 t: TLam {
                                     params,
                                     ret: Box::from(ret),
+                                    type_params: match qualifiers.is_empty() {
+                                        true => None,
+                                        false => Some(qualifiers.to_owned()),
+                                    },
                                 },
                                 qualifiers: qualifiers.to_owned(),
                             })
@@ -416,29 +438,27 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                                 t: TLam {
                                     params,
                                     ret: Box::from(ret),
+                                    type_params: match qualifiers.is_empty() {
+                                        true => None,
+                                        false => Some(qualifiers.to_owned()),
+                                    },
                                 },
                                 qualifiers: qualifiers.to_owned(),
                             })
                         }
                         TObjElem::Index(index) => {
-                            // TODO: handle qualifiers in each prop's .scheme field
-                            let t = replace_aliases(&index.scheme.t, map);
+                            // TODO: handle generic indexers
+                            let t = replace_aliases(&index.t, map);
                             TObjElem::Index(types::TIndex {
-                                scheme: Scheme {
-                                    t,
-                                    ..index.scheme.to_owned()
-                                },
+                                t,
                                 ..index.to_owned()
                             })
                         }
                         TObjElem::Prop(prop) => {
-                            // TODO: handle qualifiers in each prop's .scheme field
-                            let t = replace_aliases(&prop.scheme.t, map);
+                            // TODO: handle generic properties
+                            let t = replace_aliases(&prop.t, map);
                             TObjElem::Prop(types::TProp {
-                                scheme: Scheme {
-                                    t,
-                                    ..prop.scheme.to_owned()
-                                },
+                                t,
                                 ..prop.to_owned()
                             })
                         }

@@ -50,7 +50,11 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     })
                     .collect();
                 let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
-                Type::Lam(TLam { params, ret })
+                Type::Lam(TLam {
+                    params,
+                    ret,
+                    type_params: None,
+                })
             }
             Type::Prim(_) => t.to_owned(),
             Type::Lit(_) => t.to_owned(),
@@ -84,7 +88,14 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                                 .collect();
                             let ret = Box::from(norm_type(&qlam.t.ret, mapping, ctx));
                             TObjElem::Call(TCall {
-                                t: TLam { params, ret },
+                                t: TLam {
+                                    params,
+                                    ret,
+                                    type_params: match qlam.qualifiers.is_empty() {
+                                        true => None,
+                                        false => Some(qlam.qualifiers.to_owned()),
+                                    },
+                                },
                                 ..qlam.to_owned()
                             })
                         }
@@ -100,26 +111,28 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                                 .collect();
                             let ret = Box::from(norm_type(&qlam.t.ret, mapping, ctx));
                             TObjElem::Constructor(TConstructor {
-                                t: TLam { params, ret },
+                                t: TLam {
+                                    params,
+                                    ret,
+                                    type_params: match qlam.qualifiers.is_empty() {
+                                        true => None,
+                                        false => Some(qlam.qualifiers.to_owned()),
+                                    },
+                                },
                                 ..qlam.to_owned()
                             })
                         }
                         TObjElem::Index(index) => TObjElem::Index(TIndex {
-                            key: index.key.clone(),
+                            key: index.key.to_owned(),
                             mutable: index.mutable,
-                            scheme: Scheme {
-                                t: norm_type(&index.scheme.t, mapping, ctx),
-                                ..index.scheme.to_owned()
-                            },
+                            t: norm_type(&index.t, mapping, ctx),
+                            type_params: index.type_params.to_owned(),
                         }),
                         TObjElem::Prop(prop) => TObjElem::Prop(TProp {
-                            name: prop.name.clone(),
+                            name: prop.name.to_owned(),
                             optional: prop.optional,
                             mutable: prop.mutable,
-                            scheme: Scheme {
-                                t: norm_type(&prop.scheme.t, mapping, ctx),
-                                ..prop.scheme.to_owned()
-                            },
+                            t: norm_type(&prop.t, mapping, ctx),
                         }),
                     })
                     .collect();
@@ -165,6 +178,32 @@ pub fn generalize(env: &Env, t: &Type) -> Scheme {
     }
 }
 
+pub fn generalize_type(env: &Env, t: &Type) -> Type {
+    // ftv() returns a Set which is not ordered
+    // TODO: switch to an ordered set
+    let mut type_params: Vec<_> = t.ftv().difference(&env.ftv()).cloned().collect();
+    type_params.sort_unstable();
+    match t {
+        Type::Var(_) => t.to_owned(),
+        Type::App(_) => t.to_owned(),
+        Type::Lam(lam) => Type::Lam(TLam {
+            type_params: Some(type_params),
+            ..lam.to_owned()
+        }),
+        Type::Prim(_) => t.to_owned(),
+        Type::Lit(_) => t.to_owned(),
+        Type::Keyword(_) => t.to_owned(),
+        Type::Union(_) => t.to_owned(),
+        Type::Intersection(_) => t.to_owned(),
+        Type::Object(_) => t.to_owned(),
+        Type::Alias(_) => t.to_owned(),
+        Type::Tuple(_) => t.to_owned(),
+        Type::Array(_) => t.to_owned(),
+        Type::Rest(_) => t.to_owned(),
+        Type::This => t.to_owned(),
+    }
+}
+
 pub fn generalize_type_map(env: &HashMap<String, Type>, t: &Type) -> Scheme {
     // ftv() returns a Set which is not ordered
     // TODO: switch to an ordered set
@@ -190,7 +229,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
         .collect();
 
     // The use of HashSet<Type> here is to avoid duplicate types
-    let mut props_map: DefaultHashMap<String, HashSet<Scheme>> = defaulthashmap!();
+    let mut props_map: DefaultHashMap<String, HashSet<Type>> = defaulthashmap!();
     for obj in obj_types {
         for elem in &obj.elems {
             match elem {
@@ -199,7 +238,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
                 TObjElem::Constructor(_) => todo!(),
                 TObjElem::Index(_) => todo!(),
                 TObjElem::Prop(prop) => {
-                    props_map[prop.name.clone()].insert(prop.scheme.clone());
+                    props_map[prop.name.clone()].insert(prop.t.clone());
                 }
             }
         }
@@ -208,19 +247,11 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let mut elems: Vec<TObjElem> = props_map
         .iter()
         .map(|(name, types)| {
-            let schemes: Vec<_> = types.iter().cloned().collect();
-            let scheme: Scheme = if types.len() == 1 {
-                schemes[0].clone()
+            let types: Vec<_> = types.iter().cloned().collect();
+            let t: Type = if types.len() == 1 {
+                types[0].clone()
             } else {
-                let qualifiers: Vec<_> = schemes
-                    .iter()
-                    .flat_map(|scheme| scheme.qualifiers.clone())
-                    .collect();
-                let types: Vec<Type> = schemes.iter().map(|scheme| scheme.t.clone()).collect();
-                Scheme {
-                    qualifiers,
-                    t: Type::Intersection(types),
-                }
+                Type::Intersection(types)
             };
             TObjElem::Prop(TProp {
                 name: name.to_owned(),
@@ -229,7 +260,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
                 // the TProps with the current name are optional.
                 optional: false,
                 mutable: false,
-                scheme,
+                t,
             })
         })
         .collect();
@@ -361,4 +392,12 @@ pub fn compose_many_subs_with_context(subs: &[Subst]) -> Subst {
     subs.iter().fold(Subst::new(), |accum, next| {
         compose_subs_with_context(&accum, next)
     })
+}
+
+pub fn get_property_type(prop: &TProp) -> Type {
+    let t = generalize_type(&HashMap::new(), &prop.t);
+    match prop.optional {
+        true => Type::Union(vec![t, Type::Keyword(TKeyword::Undefined)]),
+        false => t,
+    }
 }

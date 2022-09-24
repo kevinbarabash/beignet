@@ -17,7 +17,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
         name: String::from("_name"),
         optional: false,
         mutable: false,
-        scheme: Scheme::from(Type::from(Lit::str(String::from("Promise"), 0..0))),
+        t: Type::from(Lit::str(String::from("Promise"), 0..0)),
     })];
     let promise_scheme = Scheme::from(Type::Object(TObject {
         elems,
@@ -31,7 +31,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
         name: String::from("_name"),
         optional: false,
         mutable: false,
-        scheme: Scheme::from(Type::from(Lit::str(String::from("JSXElement"), 0..0))),
+        t: Type::from(Lit::str(String::from("JSXElement"), 0..0)),
     })];
     let jsx_element_scheme = Scheme::from(Type::Object(TObject {
         elems,

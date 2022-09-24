@@ -89,7 +89,7 @@ impl Substitutable for TObjElem {
             TObjElem::Call(qlam) => qlam.ftv(),
             TObjElem::Constructor(qlam) => qlam.ftv(),
             TObjElem::Index(index) => index.ftv(),
-            TObjElem::Prop(prop) => prop.scheme.ftv(),
+            TObjElem::Prop(prop) => prop.t.ftv(),
         }
     }
 }
@@ -99,36 +99,51 @@ impl Substitutable for TLam {
         TLam {
             params: self.params.iter().map(|param| param.apply(sub)).collect(),
             ret: Box::from(self.ret.apply(sub)),
+            type_params: self.type_params.to_owned(),
         }
     }
     fn ftv(&self) -> HashSet<i32> {
+        let type_params = match &self.type_params {
+            Some(type_params) => HashSet::from_iter(type_params.iter().cloned()),
+            None => HashSet::new(),
+        };
+
         let mut result: HashSet<_> = self.params.ftv();
         result.extend(self.ret.ftv());
-        result
+        result.difference(&type_params).cloned().collect()
     }
 }
 
 impl Substitutable for TIndex {
     fn apply(&self, sub: &Subst) -> Self {
         TIndex {
-            scheme: self.scheme.apply(sub),
+            // How do we ensure that we aren't apply `sub` to any of the type variables that
+            // are in self.type_params?
+            t: self.t.apply(sub),
             ..self.to_owned()
         }
     }
     fn ftv(&self) -> HashSet<i32> {
-        self.scheme.ftv()
+        let type_params = match &self.type_params {
+            Some(type_params) => HashSet::from_iter(type_params.iter().cloned()),
+            None => HashSet::new(),
+        };
+
+        self.t.ftv().difference(&type_params).cloned().collect()
     }
 }
 
 impl Substitutable for TProp {
     fn apply(&self, sub: &Subst) -> TProp {
         TProp {
-            scheme: self.scheme.apply(sub),
+            // How do we ensure that we aren't apply `sub` to any of the type variables that
+            // are in self.type_params?
+            t: self.t.apply(sub),
             ..self.to_owned()
         }
     }
     fn ftv(&self) -> HashSet<i32> {
-        self.scheme.ftv()
+        self.t.ftv()
     }
 }
 
