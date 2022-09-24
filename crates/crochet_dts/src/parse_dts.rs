@@ -41,7 +41,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
                 Err(String::from("can't parse Intrinsics yet"))
             }
         },
-        TsType::TsThisType(_) => Err(String::from("can't parse 'TsThisType' yet")),
+        TsType::TsThisType(_) => Ok(Type::This),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
                 let params: Vec<TFnParam> = fn_type
@@ -250,48 +250,40 @@ fn get_key_name(key: &Expr) -> Result<String, String> {
 
 fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem, String> {
     match elem {
-        TsTypeElement::TsCallSignatureDecl(decl) => {
-            match &decl.type_ann {
-                // TODO: we need a way for TObjElem::Call to be generalized in the same
-                // way that TObjElem::Prop is below.
-                Some(type_ann) => {
-                    let params = infer_fn_params(&decl.params, ctx)?;
-                    let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
-                    let mut qualifiers: HashSet<_> = params.ftv();
-                    qualifiers.extend(ret.ftv());
+        TsTypeElement::TsCallSignatureDecl(decl) => match &decl.type_ann {
+            Some(type_ann) => {
+                let params = infer_fn_params(&decl.params, ctx)?;
+                let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
+                let mut qualifiers: HashSet<_> = params.ftv();
+                qualifiers.extend(ret.ftv());
 
-                    Ok(TObjElem::Call(TCall {
-                        t: TLam {
-                            params,
-                            ret: Box::from(ret),
-                        },
-                        qualifiers: qualifiers.into_iter().collect(),
-                    }))
-                }
-                None => Err(String::from("Property is missing type annotation")),
+                Ok(TObjElem::Call(TCall {
+                    t: TLam {
+                        params,
+                        ret: Box::from(ret),
+                    },
+                    qualifiers: qualifiers.into_iter().collect(),
+                }))
             }
-        }
-        TsTypeElement::TsConstructSignatureDecl(decl) => {
-            match &decl.type_ann {
-                // TODO: we need a way for TObjElem::Call to be generalized in the same
-                // way that TObjElem::Prop is below.
-                Some(type_ann) => {
-                    let params = infer_fn_params(&decl.params, ctx)?;
-                    let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
-                    let mut qualifiers: HashSet<_> = params.ftv();
-                    qualifiers.extend(ret.ftv());
+            None => Err(String::from("Property is missing type annotation")),
+        },
+        TsTypeElement::TsConstructSignatureDecl(decl) => match &decl.type_ann {
+            Some(type_ann) => {
+                let params = infer_fn_params(&decl.params, ctx)?;
+                let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
+                let mut qualifiers: HashSet<_> = params.ftv();
+                qualifiers.extend(ret.ftv());
 
-                    Ok(TObjElem::Constructor(TConstructor {
-                        t: TLam {
-                            params,
-                            ret: Box::from(ret),
-                        },
-                        qualifiers: qualifiers.into_iter().collect(),
-                    }))
-                }
-                None => Err(String::from("Property is missing type annotation")),
+                Ok(TObjElem::Constructor(TConstructor {
+                    t: TLam {
+                        params,
+                        ret: Box::from(ret),
+                    },
+                    qualifiers: qualifiers.into_iter().collect(),
+                }))
             }
-        }
+            None => Err(String::from("Property is missing type annotation")),
+        },
         TsTypeElement::TsPropertySignature(sig) => {
             match &sig.type_ann {
                 Some(type_ann) => {
@@ -498,6 +490,7 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
         Type::Tuple(types) => Type::Tuple(types.iter().map(|t| replace_aliases(t, map)).collect()),
         Type::Array(t) => Type::Array(Box::from(replace_aliases(t, map))),
         Type::Rest(t) => Type::Rest(Box::from(replace_aliases(t, map))),
+        Type::This => Type::This,
     }
 }
 

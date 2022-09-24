@@ -557,6 +557,7 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
             elem_type: Box::from(build_type(t, None)),
         }),
         Type::Rest(_) => todo!(),
+        Type::This => TsType::TsThisType(TsThisType { span: DUMMY_SP }),
     }
 }
 

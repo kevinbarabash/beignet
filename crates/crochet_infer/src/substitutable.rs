@@ -38,6 +38,7 @@ impl Substitutable for Type {
             Type::Tuple(types) => Type::Tuple(types.apply(sub)),
             Type::Array(t) => Type::Array(Box::from(t.apply(sub))),
             Type::Rest(arg) => Type::Rest(Box::from(arg.apply(sub))),
+            Type::This => Type::This,
         };
         norm_type(result)
     }
@@ -60,6 +61,7 @@ impl Substitutable for Type {
             Type::Tuple(types) => types.ftv(),
             Type::Array(t) => t.ftv(),
             Type::Rest(arg) => arg.ftv(),
+            Type::This => HashSet::new(),
         }
     }
 }

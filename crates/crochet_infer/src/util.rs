@@ -137,6 +137,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
             }
             Type::Array(t) => Type::Array(Box::from(norm_type(t, mapping, ctx))),
             Type::Rest(arg) => Type::Rest(Box::from(norm_type(arg, mapping, ctx))),
+            Type::This => Type::This,
         }
     }
 
