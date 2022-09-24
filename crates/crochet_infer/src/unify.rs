@@ -69,6 +69,29 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         }
         // NOTE: this arm is only hit by the `infer_skk` test case
         (Type::Lam(_), Type::App(_)) => unify(t2, t1, ctx),
+        (Type::App(_), Type::Object(obj)) => {
+            let callables: Vec<_> = obj
+                .iter()
+                .filter_map(|elem| match elem {
+                    TObjElem::Call(call) => Some(Type::Lam(call.t.to_owned())),
+                    TObjElem::Constructor(_) => None,
+                    TObjElem::Index(_) => None,
+                    TObjElem::Prop(_) => None,
+                })
+                .collect();
+
+            if callables.is_empty() {
+                Err(String::from("Couldn't application with object"))
+            } else {
+                for callable in callables {
+                    let result = unify(t1, &callable, ctx);
+                    if result.is_ok() {
+                        return result;
+                    }
+                }
+                Err(String::from("Couldn't application with object"))
+            }
+        }
         (Type::App(app), Type::Lam(lam)) => {
             let mut s = Subst::new();
 
@@ -454,7 +477,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         }
     };
     if result.is_err() {
-        println!("Can't unify t1 = {t1} with t2 = {t2}");
+        println!("Can't unify {t1} with {t2}");
     }
     result
 }

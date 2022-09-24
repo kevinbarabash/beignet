@@ -44,6 +44,8 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
         TsType::TsThisType(_) => Ok(Type::This),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
+                println!("fn_type = {fn_type:#?}");
+                // TODO: parse the type params and return a Scheme
                 let params: Vec<TFnParam> = infer_fn_params(&fn_type.params, ctx)?;
                 let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?;
 
@@ -276,22 +278,22 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 scheme,
             }))
         }
-        TsTypeElement::TsIndexSignature(sig) => {
-            match &sig.type_ann {
-                Some(type_ann) => {
-                    // TODO: do a better job of handling this
-                    let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
-                    let params = infer_fn_params(&sig.params, ctx)?;
-                    let key = params.get(0).unwrap();
-                    Ok(TObjElem::Index(TIndex {
-                        key: key.to_owned(),
-                        mutable: !sig.readonly,
-                        scheme: Scheme::from(t),
-                    }))
-                }
-                None => Err(String::from("Index is missing type annotation")),
+        TsTypeElement::TsIndexSignature(sig) => match &sig.type_ann {
+            Some(type_ann) => {
+                let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
+                let params = infer_fn_params(&sig.params, ctx)?;
+                let key = params.get(0).unwrap();
+                let scheme = generalize(&Env::new(), &t);
+                println!("t = {t:#?}");
+                println!("scheme = {scheme:#?}");
+                Ok(TObjElem::Index(TIndex {
+                    key: key.to_owned(),
+                    mutable: !sig.readonly,
+                    scheme,
+                }))
             }
-        }
+            None => Err(String::from("Index is missing type annotation")),
+        },
     }
 }
 

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crochet_ast::*;
 use crochet_types::{self as types, Scheme, TFnParam, TKeyword, TPat, TPrim, Type};
+use types::TObjElem;
 
 use super::context::Context;
 use super::infer_fn_param::infer_fn_param;
@@ -534,88 +535,7 @@ fn infer_property_type(
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t {
-        Type::Object(elems) => match prop {
-            MemberProp::Ident(Ident { name, .. }) => {
-                let prop = elems.iter().find_map(|elem| match elem {
-                    types::TObjElem::Call(_) => None,
-                    types::TObjElem::Constructor(_) => None,
-                    types::TObjElem::Index(_) => None,
-                    types::TObjElem::Prop(prop) => {
-                        if prop.name == *name {
-                            Some(prop)
-                        } else {
-                            None
-                        }
-                    }
-                });
-
-                match prop {
-                    Some(prop) => {
-                        let prop = ctx.instantiate(&prop.get_scheme());
-                        Ok((Subst::default(), prop))
-                    }
-                    None => Err(format!("Object type doesn't contain key {name}.")),
-                }
-            }
-            MemberProp::Computed(ComputedPropName { expr, .. }) => {
-                let (prop_s, prop_t) = infer_expr(ctx, expr)?;
-
-                match prop_t {
-                    Type::Prim(prim) => match prim {
-                        TPrim::Str => {
-                            let mut value_types: Vec<Type> = elems
-                                .iter()
-                                .filter_map(|elem| match elem {
-                                    // TODO: include index types in the future
-                                    // Call signatures aren't included because they can't be accessed
-                                    // as members.  What about .constructor?
-                                    types::TObjElem::Call(_) => None,
-                                    types::TObjElem::Constructor(_) => None,
-                                    types::TObjElem::Index(_) => None,
-                                    types::TObjElem::Prop(prop) => {
-                                        Some(ctx.instantiate(&prop.scheme))
-                                    }
-                                })
-                                .collect();
-
-                            // We can't tell if the property is in the object or not because the
-                            // key is a string whose exact value is unknown at compile time.
-                            value_types.push(Type::Keyword(TKeyword::Undefined));
-                            let t = Type::Union(value_types);
-
-                            Ok((prop_s, t))
-                        }
-                        _ => Err(format!("{prim} is an invalid key for object types")),
-                    },
-                    Type::Lit(lit) => match lit {
-                        types::TLit::Str(key) => {
-                            let prop = elems.iter().find_map(|elem| match elem {
-                                types::TObjElem::Call(_) => None,
-                                types::TObjElem::Constructor(_) => None,
-                                types::TObjElem::Index(_) => None,
-                                types::TObjElem::Prop(prop) => {
-                                    if prop.name == key {
-                                        Some(prop)
-                                    } else {
-                                        None
-                                    }
-                                }
-                            });
-
-                            match prop {
-                                Some(prop) => {
-                                    let prop = ctx.instantiate(&prop.get_scheme());
-                                    Ok((Subst::default(), prop))
-                                }
-                                None => Err(format!("Object type doesn't contain key {key}.")),
-                            }
-                        }
-                        _ => Err(format!("{lit} is an invalid key for object types")),
-                    },
-                    _ => Err(format!("{prop_t} is an invalid key for object types")),
-                }
-            }
-        },
+        Type::Object(elems) => get_prop_value(elems, prop, ctx),
         Type::Alias(alias) => {
             let t = ctx.lookup_alias(alias)?;
             infer_property_type(&t, prop, ctx)
@@ -710,6 +630,127 @@ fn infer_property_type(
         }
         _ => {
             todo!("Unhandled {obj_t:#?} in infer_property_type")
+        }
+    }
+}
+
+fn get_prop_value(
+    elems: &[TObjElem],
+    prop: &MemberProp,
+    ctx: &mut Context,
+) -> Result<(Subst, Type), String> {
+    match prop {
+        MemberProp::Ident(Ident { name, .. }) => {
+            let prop = elems.iter().find_map(|elem| match elem {
+                types::TObjElem::Call(_) => None,
+                types::TObjElem::Constructor(_) => None,
+                types::TObjElem::Index(_) => None,
+                types::TObjElem::Prop(prop) => {
+                    if prop.name == *name {
+                        Some(prop)
+                    } else {
+                        None
+                    }
+                }
+            });
+
+            match prop {
+                Some(prop) => {
+                    let prop = ctx.instantiate(&prop.get_scheme());
+                    Ok((Subst::default(), prop))
+                }
+                None => Err(format!("Object type doesn't contain key {name}.")),
+            }
+        }
+        MemberProp::Computed(ComputedPropName { expr, .. }) => {
+            let (prop_s, prop_t) = infer_expr(ctx, expr)?;
+
+            let prop_t_clone = prop_t.clone();
+            let prop_s_clone = prop_s.clone();
+
+            let result = match prop_t {
+                Type::Prim(prim) => match prim {
+                    TPrim::Str => {
+                        let mut value_types: Vec<Type> = elems
+                            .iter()
+                            .filter_map(|elem| match elem {
+                                // TODO: include index types in the future
+                                // Call signatures aren't included because they can't be accessed
+                                // as members.  What about .constructor?
+                                types::TObjElem::Call(_) => None,
+                                types::TObjElem::Constructor(_) => None,
+                                types::TObjElem::Index(_) => None,
+                                types::TObjElem::Prop(prop) => Some(ctx.instantiate(&prop.scheme)),
+                            })
+                            .collect();
+
+                        // We can't tell if the property is in the object or not because the
+                        // key is a string whose exact value is unknown at compile time.
+                        value_types.push(Type::Keyword(TKeyword::Undefined));
+                        let t = Type::Union(value_types);
+
+                        Ok((prop_s, t))
+                    }
+                    _ => Err(format!("{prim} is an invalid key for object types")),
+                },
+                Type::Lit(lit) => match lit {
+                    types::TLit::Str(key) => {
+                        let prop = elems.iter().find_map(|elem| match elem {
+                            types::TObjElem::Call(_) => None,
+                            types::TObjElem::Constructor(_) => None,
+                            types::TObjElem::Index(_) => None,
+                            types::TObjElem::Prop(prop) => {
+                                if prop.name == key {
+                                    Some(prop)
+                                } else {
+                                    None
+                                }
+                            }
+                        });
+
+                        match prop {
+                            Some(prop) => {
+                                let prop = ctx.instantiate(&prop.get_scheme());
+                                Ok((Subst::default(), prop))
+                            }
+                            None => Err(format!("Object type doesn't contain key {key}.")),
+                        }
+                    }
+                    _ => Err(format!("{lit} is an invalid key for object types")),
+                },
+                _ => Err(format!("{prop_t} is an invalid key for object types")),
+            };
+
+            match result {
+                Ok((s, t)) => Ok((s, t)),
+                Err(err) => {
+                    // TODO:
+                    // - look for indexers
+                    let indexers: Vec<_> = elems
+                        .iter()
+                        .filter_map(|elem| match elem {
+                            TObjElem::Index(indexer) => Some(indexer),
+                            _ => None,
+                        })
+                        .collect();
+
+                    if indexers.is_empty() {
+                        Err(err)
+                    } else {
+                        for indexer in indexers {
+                            let result = unify(&prop_t_clone, &indexer.key.t, ctx);
+                            if result.is_ok() {
+                                let key_s = result?;
+                                let s = compose_subs(&key_s, &prop_s_clone);
+                                println!("indexer.scheme = {:#?}", indexer.scheme);
+                                let t = ctx.instantiate(&indexer.scheme);
+                                return Ok((s, t));
+                            }
+                        }
+                        Err(format!("{prop_t_clone} is an invalid key for object types"))
+                    }
+                }
+            }
         }
     }
 }
