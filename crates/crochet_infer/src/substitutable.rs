@@ -30,7 +30,10 @@ impl Substitutable for Type {
             Type::Keyword(_) => self.to_owned(),
             Type::Union(types) => Type::Union(types.apply(sub)),
             Type::Intersection(types) => Type::Intersection(types.apply(sub)),
-            Type::Object(props) => Type::Object(props.apply(sub)),
+            Type::Object(obj) => Type::Object(TObject {
+                elems: obj.elems.apply(sub),
+                ..obj.to_owned()
+            }),
             Type::Alias(alias) => Type::Alias(TAlias {
                 type_params: alias.type_params.apply(sub),
                 ..alias.to_owned()
@@ -56,7 +59,13 @@ impl Substitutable for Type {
             Type::Keyword(_) => HashSet::new(),
             Type::Union(types) => types.ftv(),
             Type::Intersection(types) => types.ftv(),
-            Type::Object(props) => props.ftv(),
+            Type::Object(obj) => {
+                let qualifiers: HashSet<_> = match &obj.type_params {
+                    Some(type_params) => type_params.iter().map(|id| id.to_owned()).collect(),
+                    None => HashSet::new(),
+                };
+                obj.elems.ftv().difference(&qualifiers).cloned().collect()
+            }
             Type::Alias(TAlias { type_params, .. }) => type_params.ftv(),
             Type::Tuple(types) => types.ftv(),
             Type::Array(t) => t.ftv(),

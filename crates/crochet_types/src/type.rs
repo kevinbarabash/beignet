@@ -12,12 +12,13 @@ use crate::prim::TPrim;
 pub struct TApp {
     pub args: Vec<Type>,
     pub ret: Box<Type>,
+    // TODO: use type_args instead of type_params
 }
 
 #[derive(Clone, Debug, Eq)]
 pub struct TAlias {
     pub name: String,
-    pub type_params: Option<Vec<Type>>,
+    pub type_params: Option<Vec<Type>>, // TODO: rename to type_args
 }
 
 impl PartialEq for TAlias {
@@ -33,6 +34,12 @@ impl Hash for TAlias {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct TObject {
+    pub elems: Vec<TObjElem>,
+    pub type_params: Option<Vec<i32>>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Var(i32), // i32 is the if of the type variable
@@ -44,7 +51,7 @@ pub enum Type {
     Keyword(TKeyword),
     Union(Vec<Type>),
     Intersection(Vec<Type>),
-    Object(Vec<TObjElem>),
+    Object(TObject),
     Alias(TAlias),
     Tuple(Vec<Type>),
     Array(Box<Type>),
@@ -78,7 +85,15 @@ impl fmt::Display for Type {
                 let strings: Vec<_> = types.iter().map(|t| format!("{t}")).sorted().collect();
                 write!(f, "{}", join(strings, " & "))
             }
-            Type::Object(props) => write!(f, "{{{}}}", join(props, ", ")),
+            Type::Object(TObject {
+                elems, type_params, ..
+            }) => match type_params {
+                Some(params) => {
+                    let params = params.iter().map(|p| format!("t{p}"));
+                    write!(f, "<{}>{{{}}}", join(params, ", "), join(elems, ", "))
+                }
+                None => write!(f, "{{{}}}", join(elems, ", ")),
+            },
             Type::Alias(TAlias {
                 name, type_params, ..
             }) => match type_params {

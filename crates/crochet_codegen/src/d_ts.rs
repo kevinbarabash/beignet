@@ -486,8 +486,9 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                     .collect(),
             }),
         ),
-        Type::Object(props) => {
-            let members: Vec<TsTypeElement> = props
+        Type::Object(obj) => {
+            let members: Vec<TsTypeElement> = obj
+                .elems
                 .iter()
                 .map(|elem| {
                     match elem {

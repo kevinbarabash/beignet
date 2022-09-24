@@ -1,5 +1,5 @@
 use crochet_ast::*;
-use crochet_types::{Scheme, TObjElem, TProp, Type};
+use crochet_types::{Scheme, TObjElem, TObject, TProp, Type};
 
 use super::context::{Context, Env};
 use super::infer_expr::infer_expr as infer_expr_rec;
@@ -13,22 +13,30 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
     // TODO: replace with Class type once it exists
     // We use {_name: "Promise"} to differentiate it from other
     // object types.
-    let promise_scheme = Scheme::from(Type::Object(vec![TObjElem::Prop(TProp {
+    let elems = vec![TObjElem::Prop(TProp {
         name: String::from("_name"),
         optional: false,
         mutable: false,
         scheme: Scheme::from(Type::from(Lit::str(String::from("Promise"), 0..0))),
-    })]));
+    })];
+    let promise_scheme = Scheme::from(Type::Object(TObject {
+        elems,
+        type_params: None,
+    }));
     ctx.insert_type(String::from("Promise"), promise_scheme);
     // TODO: replace with Class type once it exists
     // We use {_name: "JSXElement"} to differentiate it from other
     // object types.
-    let jsx_element_scheme = Scheme::from(Type::Object(vec![TObjElem::Prop(TProp {
+    let elems = vec![TObjElem::Prop(TProp {
         name: String::from("_name"),
         optional: false,
         mutable: false,
         scheme: Scheme::from(Type::from(Lit::str(String::from("JSXElement"), 0..0))),
-    })]));
+    })];
+    let jsx_element_scheme = Scheme::from(Type::Object(TObject {
+        elems,
+        type_params: None,
+    }));
     ctx.insert_type(String::from("JSXElement"), jsx_element_scheme);
 
     // We push a scope here so that it's easy to differentiate globals from

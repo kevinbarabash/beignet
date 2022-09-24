@@ -18,6 +18,8 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
         .map(|(index, key)| (key.to_owned(), Type::Var(index as i32)))
         .collect();
 
+    // let qualifiers = (0..keys.len()).map(|x| x as i32).collect();
+
     // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
     // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
     // type variables that are bound to the object element as opposed to the encompassing object type.
@@ -65,8 +67,9 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 let types: Vec<_> = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
                 simplify_intersection(&types)
             }
-            Type::Object(elems) => {
-                let elems = elems
+            Type::Object(obj) => {
+                let elems = obj
+                    .elems
                     .iter()
                     .map(|elem| match elem {
                         TObjElem::Call(qlam) => {
@@ -120,7 +123,11 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                         }),
                     })
                     .collect();
-                Type::Object(elems)
+                Type::Object(TObject {
+                    elems,
+                    // TODO: normalize type_params
+                    ..obj.to_owned()
+                })
             }
             Type::Alias(TAlias { name, type_params }) => {
                 let type_params = type_params
@@ -184,8 +191,8 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
 
     // The use of HashSet<Type> here is to avoid duplicate types
     let mut props_map: DefaultHashMap<String, HashSet<Scheme>> = defaulthashmap!();
-    for elems in obj_types {
-        for elem in elems {
+    for obj in obj_types {
+        for elem in &obj.elems {
             match elem {
                 // What do we do with Call and Index signatures
                 TObjElem::Call(_) => todo!(),
@@ -243,7 +250,10 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let mut out_types = vec![];
     out_types.append(&mut not_obj_types);
     if !elems.is_empty() {
-        out_types.push(Type::Object(elems));
+        out_types.push(Type::Object(TObject {
+            elems,
+            type_params: None,
+        }));
     }
     // TODO: figure out a consistent way to sort types
     // out_types.sort_by_key(|t| t.id); // ensure a stable order

@@ -1,7 +1,7 @@
 use std::cmp;
 use std::collections::HashSet;
 
-use crochet_types::{self as types, TPrim, Type};
+use crochet_types::{self as types, TObject, TPrim, Type};
 use types::TObjElem;
 
 use super::context::Context;
@@ -71,6 +71,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         (Type::Lam(_), Type::App(_)) => unify(t2, t1, ctx),
         (Type::App(_), Type::Object(obj)) => {
             let callables: Vec<_> = obj
+                .elems
                 .iter()
                 .filter_map(|elem| match elem {
                     TObjElem::Call(call) => Some(Type::Lam(call.t.to_owned())),
@@ -204,14 +205,15 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
             Err(String::from("Couldn't unify lambda with intersection"))
         }
-        (Type::Object(elems1), Type::Object(elems2)) => {
+        (Type::Object(obj1), Type::Object(obj2)) => {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
-            let result: Result<Vec<_>, String> = elems2
+            let result: Result<Vec<_>, String> = obj2
+                .elems
                 .iter()
                 .map(|e2| {
                     let mut b = false;
                     let mut ss = vec![];
-                    for e1 in elems1.iter() {
+                    for e1 in obj1.elems.iter() {
                         match (e1, e2) {
                             (TObjElem::Call(_), TObjElem::Call(_)) => {
                                 // What to do about Call signatures?
@@ -348,7 +350,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 false => Err(String::from("Unification failure")),
             }
         }
-        (Type::Object(elems), Type::Intersection(types)) => {
+        (Type::Object(obj), Type::Intersection(types)) => {
             let obj_types: Vec<_> = types
                 .iter()
                 .filter(|t| matches!(t, Type::Object(_)))
@@ -368,12 +370,12 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 0 => unify(t1, &obj_type, ctx),
                 1 => {
                     let all_obj_elems = match &obj_type {
-                        Type::Object(elems) => elems.to_owned(),
+                        Type::Object(obj) => obj.elems.to_owned(),
                         _ => vec![],
                     };
 
-                    let (obj_props, rest_props): (Vec<_>, Vec<_>) =
-                        elems.iter().cloned().partition(|e| {
+                    let (obj_elems, rest_elems): (Vec<_>, Vec<_>) =
+                        obj.elems.iter().cloned().partition(|e| {
                             all_obj_elems.iter().any(|oe| match (oe, e) {
                                 // What to do about Call signatures?
                                 (TObjElem::Call(_), TObjElem::Call(_)) => todo!(),
@@ -382,10 +384,24 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             })
                         });
 
-                    let s1 = unify(&Type::Object(obj_props), &obj_type, ctx)?;
+                    let s1 = unify(
+                        &Type::Object(TObject {
+                            elems: obj_elems,
+                            type_params: None,
+                        }),
+                        &obj_type,
+                        ctx,
+                    )?;
 
                     let rest_type = rest_types.get(0).unwrap();
-                    let s2 = unify(&Type::Object(rest_props), rest_type, ctx)?;
+                    let s2 = unify(
+                        &Type::Object(TObject {
+                            elems: rest_elems,
+                            type_params: None,
+                        }),
+                        rest_type,
+                        ctx,
+                    )?;
 
                     let s = compose_subs(&s2, &s1);
                     Ok(s)
@@ -393,7 +409,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 _ => Err(String::from("Unification is undecidable")),
             }
         }
-        (Type::Intersection(types), Type::Object(elems)) => {
+        (Type::Intersection(types), Type::Object(obj)) => {
             let obj_types: Vec<_> = types
                 .iter()
                 .filter(|t| matches!(t, Type::Object(_)))
@@ -413,12 +429,12 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 0 => unify(&obj_type, t2, ctx),
                 1 => {
                     let all_obj_elems = match &obj_type {
-                        Type::Object(elems) => elems.to_owned(),
+                        Type::Object(obj) => obj.elems.to_owned(),
                         _ => vec![],
                     };
 
-                    let (obj_props, rest_props): (Vec<_>, Vec<_>) =
-                        elems.iter().cloned().partition(|e| {
+                    let (obj_elems, rest_elems): (Vec<_>, Vec<_>) =
+                        obj.elems.iter().cloned().partition(|e| {
                             all_obj_elems.iter().any(|oe| match (oe, e) {
                                 // What to do about Call signatures?
                                 (TObjElem::Call(_), TObjElem::Call(_)) => todo!(),
@@ -427,10 +443,24 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             })
                         });
 
-                    let s_obj = unify(&obj_type, &Type::Object(obj_props), ctx)?;
+                    let s_obj = unify(
+                        &obj_type,
+                        &Type::Object(TObject {
+                            elems: obj_elems,
+                            type_params: None,
+                        }),
+                        ctx,
+                    )?;
 
                     let rest_type = rest_types.get(0).unwrap();
-                    let s_rest = unify(rest_type, &Type::Object(rest_props), ctx)?;
+                    let s_rest = unify(
+                        rest_type,
+                        &Type::Object(TObject {
+                            elems: rest_elems,
+                            type_params: None,
+                        }),
+                        ctx,
+                    )?;
 
                     let s = compose_subs(&s_rest, &s_obj);
                     Ok(s)
@@ -566,7 +596,7 @@ mod tests {
     fn object_subtypes() {
         let ctx = Context::default();
 
-        let t1 = Type::Object(vec![
+        let elems = vec![
             types::TObjElem::Prop(types::TProp {
                 name: String::from("foo"),
                 optional: false,
@@ -586,9 +616,13 @@ mod tests {
                 mutable: false,
                 scheme: types::Scheme::from(Type::Prim(TPrim::Str)),
             }),
-        ]);
+        ];
+        let t1 = Type::Object(TObject {
+            elems,
+            type_params: None,
+        });
 
-        let t2 = Type::Object(vec![
+        let elems = vec![
             types::TObjElem::Prop(types::TProp {
                 name: String::from("foo"),
                 optional: false,
@@ -609,7 +643,11 @@ mod tests {
                 mutable: false,
                 scheme: types::Scheme::from(Type::Prim(TPrim::Str)),
             }),
-        ]);
+        ];
+        let t2 = Type::Object(TObject {
+            elems,
+            type_params: None,
+        });
 
         let result = unify(&t1, &t2, &ctx);
         assert_eq!(result, Ok(Subst::default()));

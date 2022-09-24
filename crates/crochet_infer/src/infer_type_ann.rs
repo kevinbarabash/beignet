@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::*;
-use crochet_types::{self as types, Scheme, TFnParam, TProp, Type};
+use crochet_types::{self as types, Scheme, TFnParam, TObject, TProp, Type};
 use types::TObjElem;
 
 use super::context::Context;
@@ -100,7 +100,10 @@ fn infer_type_ann_rec(
                     })
                 })
                 .collect();
-            Type::Object(elems)
+            Type::Object(TObject {
+                elems,
+                type_params: None,
+            })
         }
         TypeAnn::TypeRef(TypeRef {
             name, type_params, ..

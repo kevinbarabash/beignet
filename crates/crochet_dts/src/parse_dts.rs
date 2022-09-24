@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use types::{Scheme, TCall, TConstructor, TIndex, TLam, TObjElem};
+use types::{Scheme, TCall, TConstructor, TIndex, TLam, TObjElem, TObject};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
@@ -316,7 +316,11 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Scheme,
         })
         .collect();
 
-    let t = Type::Object(elems);
+    let t = Type::Object(TObject {
+        elems,
+        // TODO: parse type params on interfaces
+        type_params: None,
+    });
 
     let scheme = match &decl.type_params {
         Some(type_params) => {
@@ -362,8 +366,9 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
         Type::Intersection(types) => {
             Type::Intersection(types.iter().map(|t| replace_aliases(t, map)).collect())
         }
-        Type::Object(elems) => {
-            let elems = elems
+        Type::Object(obj) => {
+            let elems: Vec<TObjElem> = obj
+                .elems
                 .iter()
                 .map(|elem| {
                     match elem {
@@ -440,7 +445,10 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
                     }
                 })
                 .collect();
-            Type::Object(elems)
+            Type::Object(TObject {
+                elems,
+                ..obj.to_owned()
+            })
         }
         Type::Alias(alias) => match map.get(&alias.name) {
             Some(replacement) => replacement.to_owned(),
@@ -455,13 +463,18 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
 
 fn merge_schemes(s1: &Scheme, s2: &Scheme) -> Scheme {
     match (&s1.t, &s2.t) {
-        (Type::Object(props1), Type::Object(props2)) => {
-            let props: Vec<_> = props1
+        (Type::Object(obj1), Type::Object(obj2)) => {
+            let elems: Vec<_> = obj1
+                .elems
                 .iter()
                 .cloned()
-                .chain(props2.iter().cloned())
+                .chain(obj2.elems.iter().cloned())
                 .collect();
-            let merged_t = Type::Object(props);
+            let merged_t = Type::Object(TObject {
+                elems,
+                // TODO: merge type params as well
+                type_params: None,
+            });
             // TODO: merge qualifiers
             Scheme::from(merged_t)
         }

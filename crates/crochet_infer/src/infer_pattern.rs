@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, Scheme, Type};
+use crochet_types::{self as types, Scheme, TObject, Type};
 
 use super::context::Context;
 use super::infer_expr::infer_expr;
@@ -163,7 +163,11 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                 })
                 .collect();
 
-            let obj_type = Type::Object(elems);
+            let obj_type = Type::Object(TObject {
+                elems,
+                // TODO: infer type_params
+                type_params: None,
+            });
 
             match rest_opt_ty {
                 // TODO: Replace this with a proper Rest/Spread type

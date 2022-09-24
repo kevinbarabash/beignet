@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, Scheme, TFnParam, TKeyword, TPat, Type};
+use crochet_types::{self as types, Scheme, TFnParam, TKeyword, TObject, TPat, Type};
 
 use super::context::Context;
 use super::infer_type_ann::*;
@@ -236,7 +236,11 @@ fn infer_param_pattern_rec(
                 })
                 .collect();
 
-            let obj_type = Type::Object(elems);
+            let obj_type = Type::Object(TObject {
+                elems,
+                // TODO: infer type_params
+                type_params: None,
+            });
 
             match rest_opt_ty {
                 Some(rest_ty) => Ok(Type::Intersection(vec![obj_type, rest_ty])),
