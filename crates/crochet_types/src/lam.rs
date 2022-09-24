@@ -10,7 +10,7 @@ use crate::r#type::Type;
 pub struct TLam {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
-    pub type_params: Option<Vec<i32>>,
+    pub type_params: Vec<i32>,
 }
 
 impl PartialEq for TLam {
@@ -33,18 +33,17 @@ impl fmt::Display for TLam {
             ret,
             type_params,
         } = self;
-        match type_params {
-            Some(type_params) => {
-                let type_params = type_params.iter().map(|tp| format!("t{tp}"));
-                write!(
-                    f,
-                    "<{}>({}) => {}",
-                    join(type_params, ", "),
-                    join(params, ", "),
-                    ret
-                )
-            }
-            None => write!(f, "({}) => {}", join(params, ", "), ret),
+        if type_params.is_empty() {
+            write!(f, "({}) => {}", join(params, ", "), ret)
+        } else {
+            let type_params = type_params.iter().map(|tp| format!("t{tp}"));
+            write!(
+                f,
+                "<{}>({}) => {}",
+                join(type_params, ", "),
+                join(params, ", "),
+                ret
+            )
         }
     }
 }

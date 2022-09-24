@@ -82,7 +82,7 @@ fn infer_type_ann_rec(
             Type::Lam(types::TLam {
                 params,
                 ret,
-                type_params: None,
+                type_params: vec![],
             })
         }
         TypeAnn::Lit(lit) => Type::from(lit.to_owned()),
@@ -102,7 +102,7 @@ fn infer_type_ann_rec(
                 .collect();
             Type::Object(TObject {
                 elems,
-                type_params: None,
+                type_params: vec![],
             })
         }
         TypeAnn::TypeRef(TypeRef {

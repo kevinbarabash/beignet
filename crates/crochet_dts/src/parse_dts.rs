@@ -54,7 +54,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
                     params,
                     ret: Box::from(ret),
                     // TODO: handle generic functions/constructors
-                    type_params: None,
+                    type_params: vec![],
                 }))
             }
             TsFnOrConstructorType::TsConstructorType(_) => {
@@ -200,7 +200,7 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
         params,
         ret: Box::from(ret?),
         // TODO: handle generic method signatures
-        type_params: None,
+        type_params: vec![],
     }))
 }
 
@@ -224,10 +224,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 Ok(TObjElem::Call(TLam {
                     params,
                     ret: Box::from(ret),
-                    type_params: match qualifiers.is_empty() {
-                        true => None,
-                        false => Some(qualifiers.clone().into_iter().collect()),
-                    },
+                    type_params: qualifiers.clone().into_iter().collect(),
                 }))
             }
             None => Err(String::from("Property is missing type annotation")),
@@ -242,10 +239,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 Ok(TObjElem::Constructor(TLam {
                     params,
                     ret: Box::from(ret),
-                    type_params: match qualifiers.is_empty() {
-                        true => None,
-                        false => Some(qualifiers.clone().into_iter().collect()),
-                    },
+                    type_params: qualifiers.clone().into_iter().collect(),
                 }))
             }
             None => Err(String::from("Property is missing type annotation")),
@@ -296,7 +290,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                     mutable: !sig.readonly,
                     t,
                     // TODO: handle generic indexers
-                    type_params: None,
+                    type_params: vec![],
                 }))
             }
             None => Err(String::from("Index is missing type annotation")),
@@ -326,7 +320,7 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Scheme,
     let t = Type::Object(TObject {
         elems,
         // TODO: parse type params on interfaces
-        type_params: None,
+        type_params: vec![],
     });
 
     let scheme = match &decl.type_params {
@@ -465,7 +459,7 @@ fn merge_schemes(s1: &Scheme, s2: &Scheme) -> Scheme {
             let merged_t = Type::Object(TObject {
                 elems,
                 // TODO: merge type params as well
-                type_params: None,
+                type_params: vec![],
             });
             // TODO: merge qualifiers
             Scheme::from(merged_t)

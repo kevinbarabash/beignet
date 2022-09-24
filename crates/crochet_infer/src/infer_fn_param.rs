@@ -239,7 +239,7 @@ fn infer_param_pattern_rec(
             let obj_type = Type::Object(TObject {
                 elems,
                 // TODO: infer type_params
-                type_params: None,
+                type_params: vec![],
             });
 
             match rest_opt_ty {

@@ -53,7 +53,7 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 Type::Lam(TLam {
                     params,
                     ret,
-                    type_params: None,
+                    type_params: vec![],
                 })
             }
             Type::Prim(_) => t.to_owned(),
@@ -173,7 +173,7 @@ pub fn generalize_type(env: &Env, t: &Type) -> Type {
         Type::Var(_) => t.to_owned(),
         Type::App(_) => t.to_owned(),
         Type::Lam(lam) => Type::Lam(TLam {
-            type_params: Some(type_params),
+            type_params,
             ..lam.to_owned()
         }),
         Type::Prim(_) => t.to_owned(),
@@ -269,7 +269,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     if !elems.is_empty() {
         out_types.push(Type::Object(TObject {
             elems,
-            type_params: None,
+            type_params: vec![],
         }));
     }
     // TODO: figure out a consistent way to sort types

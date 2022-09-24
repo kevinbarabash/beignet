@@ -166,7 +166,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
             let obj_type = Type::Object(TObject {
                 elems,
                 // TODO: infer type_params
-                type_params: None,
+                type_params: vec![],
             });
 
             match rest_opt_ty {

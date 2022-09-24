@@ -388,7 +388,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let s1 = unify(
                         &Type::Object(TObject {
                             elems: obj_elems,
-                            type_params: None,
+                            type_params: vec![],
                         }),
                         &obj_type,
                         ctx,
@@ -398,7 +398,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let s2 = unify(
                         &Type::Object(TObject {
                             elems: rest_elems,
-                            type_params: None,
+                            type_params: vec![],
                         }),
                         rest_type,
                         ctx,
@@ -448,7 +448,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         &obj_type,
                         &Type::Object(TObject {
                             elems: obj_elems,
-                            type_params: None,
+                            type_params: vec![],
                         }),
                         ctx,
                     )?;
@@ -458,7 +458,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         rest_type,
                         &Type::Object(TObject {
                             elems: rest_elems,
-                            type_params: None,
+                            type_params: vec![],
                         }),
                         ctx,
                     )?;
@@ -620,7 +620,7 @@ mod tests {
         ];
         let t1 = Type::Object(TObject {
             elems,
-            type_params: None,
+            type_params: vec![],
         });
 
         let elems = vec![
@@ -647,7 +647,7 @@ mod tests {
         ];
         let t2 = Type::Object(TObject {
             elems,
-            type_params: None,
+            type_params: vec![],
         });
 
         let result = unify(&t1, &t2, &ctx);

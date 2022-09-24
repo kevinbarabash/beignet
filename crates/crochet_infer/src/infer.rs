@@ -21,7 +21,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
     })];
     let promise_scheme = Scheme::from(Type::Object(TObject {
         elems,
-        type_params: None,
+        type_params: vec![],
     }));
     ctx.insert_type(String::from("Promise"), promise_scheme);
     // TODO: replace with Class type once it exists
@@ -35,7 +35,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
     })];
     let jsx_element_scheme = Scheme::from(Type::Object(TObject {
         elems,
-        type_params: None,
+        type_params: vec![],
     }));
     ctx.insert_type(String::from("JSXElement"), jsx_element_scheme);
 

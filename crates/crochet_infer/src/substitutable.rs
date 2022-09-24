@@ -60,10 +60,8 @@ impl Substitutable for Type {
             Type::Union(types) => types.ftv(),
             Type::Intersection(types) => types.ftv(),
             Type::Object(obj) => {
-                let qualifiers: HashSet<_> = match &obj.type_params {
-                    Some(type_params) => type_params.iter().map(|id| id.to_owned()).collect(),
-                    None => HashSet::new(),
-                };
+                let qualifiers: HashSet<_> =
+                    obj.type_params.iter().map(|id| id.to_owned()).collect();
                 obj.elems.ftv().difference(&qualifiers).cloned().collect()
             }
             Type::Alias(TAlias { type_params, .. }) => type_params.ftv(),
@@ -103,10 +101,7 @@ impl Substitutable for TLam {
         }
     }
     fn ftv(&self) -> HashSet<i32> {
-        let type_params = match &self.type_params {
-            Some(type_params) => HashSet::from_iter(type_params.iter().cloned()),
-            None => HashSet::new(),
-        };
+        let type_params = HashSet::from_iter(self.type_params.iter().cloned());
 
         let mut result: HashSet<_> = self.params.ftv();
         result.extend(self.ret.ftv());
@@ -124,10 +119,7 @@ impl Substitutable for TIndex {
         }
     }
     fn ftv(&self) -> HashSet<i32> {
-        let type_params = match &self.type_params {
-            Some(type_params) => HashSet::from_iter(type_params.iter().cloned()),
-            None => HashSet::new(),
-        };
+        let type_params = HashSet::from_iter(self.type_params.iter().cloned());
 
         self.t.ftv().difference(&type_params).cloned().collect()
     }

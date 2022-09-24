@@ -67,7 +67,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 &Type::Lam(types::TLam {
                     params: vec![param],
                     ret: Box::from(tv),
-                    type_params: None,
+                    type_params: vec![],
                 }),
                 &t,
                 ctx,
@@ -191,7 +191,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         let call_type = Type::App(types::TApp {
                             args: vec![Type::Object(TObject {
                                 elems,
-                                type_params: None,
+                                type_params: vec![],
                             })],
                             ret: Box::from(ret_type.clone()),
                         });
@@ -275,7 +275,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let t = Type::Lam(types::TLam {
                 params: t_params,
                 ret: Box::from(rt),
-                type_params: None,
+                type_params: vec![],
             });
             let s = compose_subs(&s, &compose_subs(&rs, &compose_many_subs(&ss)));
             let t = t.apply(&s);
@@ -381,14 +381,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             if spread_types.is_empty() {
                 let t = Type::Object(TObject {
                     elems,
-                    type_params: None,
+                    type_params: vec![],
                 });
                 Ok((s, t))
             } else {
                 let mut all_types = spread_types;
                 all_types.push(Type::Object(TObject {
                     elems,
-                    type_params: None,
+                    type_params: vec![],
                 }));
                 let t = simplify_intersection(&all_types);
                 Ok((s, t))

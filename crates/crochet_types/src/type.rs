@@ -37,7 +37,7 @@ impl Hash for TAlias {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct TObject {
     pub elems: Vec<TObjElem>,
-    pub type_params: Option<Vec<i32>>,
+    pub type_params: Vec<i32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -87,13 +87,14 @@ impl fmt::Display for Type {
             }
             Type::Object(TObject {
                 elems, type_params, ..
-            }) => match type_params {
-                Some(params) => {
-                    let params = params.iter().map(|p| format!("t{p}"));
+            }) => {
+                if type_params.is_empty() {
+                    write!(f, "{{{}}}", join(elems, ", "))
+                } else {
+                    let params = type_params.iter().map(|p| format!("t{p}"));
                     write!(f, "<{}>{{{}}}", join(params, ", "), join(elems, ", "))
                 }
-                None => write!(f, "{{{}}}", join(elems, ", ")),
-            },
+            }
             Type::Alias(TAlias {
                 name, type_params, ..
             }) => match type_params {

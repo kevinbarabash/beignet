@@ -31,7 +31,7 @@ pub struct TIndex {
     pub key: TFnParam, // identifier + type
     pub mutable: bool,
     pub t: Type,
-    pub type_params: Option<Vec<i32>>,
+    pub type_params: Vec<i32>,
 }
 
 impl fmt::Display for TIndex {
