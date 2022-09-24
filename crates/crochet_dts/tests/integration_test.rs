@@ -109,3 +109,132 @@ fn infer_static_properties() {
     let result = format!("{}", ctx.lookup_value_scheme("parse").unwrap());
     assert_eq!(result, "(s: string) => number");
 }
+
+#[test]
+fn infer_callable_results_on_interface() {
+    let lib = r#"
+    interface Foo {
+        (x: number): number;
+        (x: string): string;
+        bar: boolean;
+    }
+    "#;
+    let mut ctx = parse_dts(lib).unwrap();
+
+    let src = r#"
+    declare let foo: Foo;
+    let num = foo(5);
+    let str = foo("hello");
+    let bool = foo.bar;
+    "#;
+    let result = parse(src);
+    let prog = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+
+    let result = format!("{}", ctx.lookup_value_scheme("num").unwrap());
+    assert_eq!(result, "number");
+    let result = format!("{}", ctx.lookup_value_scheme("str").unwrap());
+    assert_eq!(result, "string");
+    let result = format!("{}", ctx.lookup_value_scheme("bool").unwrap());
+    assert_eq!(result, "boolean");
+}
+
+// TODO: Write a test for parametric callables
+
+#[test]
+fn infer_index_value_on_interface() {
+    let lib = r#"
+    interface Foo {
+        [x: number]: number;
+        bar: boolean;
+    }
+    "#;
+    let mut ctx = parse_dts(lib).unwrap();
+
+    let src = r#"
+    declare let foo: Foo;
+    let num = foo[5];
+    let bool = foo.bar;
+    "#;
+    let result = parse(src);
+    let prog = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+
+    let result = format!("{}", ctx.lookup_value_scheme("num").unwrap());
+    assert_eq!(result, "number");
+    let result = format!("{}", ctx.lookup_value_scheme("bool").unwrap());
+    assert_eq!(result, "boolean");
+}
+
+#[test]
+fn infer_generic_index_value_on_interface() {
+    let lib = r#"
+    interface Foo {
+        [x: number]: <T>(arg: T) => T;
+        bar: boolean;
+    }
+    "#;
+    let mut ctx = parse_dts(lib).unwrap();
+
+    let src = r#"
+    declare let foo: Foo;
+    let id = foo[5];
+    // let str = id("hello");
+    "#;
+    let result = parse(src);
+    let prog = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+
+    // TODO: This should be generic but it isn't.
+    // https://github.com/crochet-lang/crochet/issues/273 should solve this issue.
+    let result = format!("{}", ctx.lookup_value_scheme("id").unwrap());
+    assert_eq!(result, "(arg: T) => T");
+    // let result = format!("{}", ctx.lookup_value_scheme("str").unwrap());
+    // assert_eq!(result, r#""hello""#);
+}
+
+#[test]
+#[should_panic = "\\\"hello\\\" is an invalid key for object types"]
+fn infer_index_with_incorrect_key_type_on_interface() {
+    let lib = r#"
+    interface Foo {
+        [x: number]: number;
+        bar: boolean;
+    }
+    "#;
+    let mut ctx = parse_dts(lib).unwrap();
+
+    let src = r#"
+    declare let foo: Foo;
+    let num = foo["hello"];
+    let bool = foo.bar;
+    "#;
+    let result = parse(src);
+    let prog = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+
+    crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+}
