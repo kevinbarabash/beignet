@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, Scheme, TFnParam, TKeyword, TObject, TPat, Type};
+use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, Type};
 
 use super::context::Context;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
 use super::unify::unify;
 
-pub type Assump = HashMap<String, Scheme>;
+pub type Assump = HashMap<String, Type>;
 
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
@@ -18,7 +18,7 @@ pub fn infer_fn_param(
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Assump, TFnParam), String> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
-    let mut new_vars: HashMap<String, Scheme> = HashMap::new();
+    let mut new_vars: HashMap<String, Type> = HashMap::new();
 
     let pat_type = infer_param_pattern_rec(&param.pat, ctx, &mut new_vars)?;
     let pat = e_pat_to_t_pat(&param.pat);
@@ -41,11 +41,10 @@ pub fn infer_fn_param(
 
             // TODO: handle schemes with type params
             if param.optional {
-                match a.iter().find(|(_, value)| type_ann_ty == value.t) {
-                    Some((name, scheme)) => {
-                        let mut scheme = scheme.to_owned();
-                        scheme.t = Type::Union(vec![scheme.t, Type::Keyword(TKeyword::Undefined)]);
-                        a.insert(name.to_owned(), scheme);
+                match a.iter().find(|(_, value)| type_ann_ty == **value) {
+                    Some((name, t)) => {
+                        let t = Type::Union(vec![t.to_owned(), Type::Keyword(TKeyword::Undefined)]);
+                        a.insert(name.to_owned(), t);
                     }
                     None => (),
                 };
@@ -64,11 +63,10 @@ pub fn infer_fn_param(
         None => {
             // TODO: handle schemes with type params
             if param.optional {
-                match new_vars.iter().find(|(_, value)| pat_type == value.t) {
-                    Some((name, scheme)) => {
-                        let mut scheme = scheme.to_owned();
-                        scheme.t = Type::Union(vec![scheme.t, Type::Keyword(TKeyword::Undefined)]);
-                        new_vars.insert(name.to_owned(), scheme);
+                match new_vars.iter().find(|(_, value)| pat_type == **value) {
+                    Some((name, t)) => {
+                        let t = Type::Union(vec![t.to_owned(), Type::Keyword(TKeyword::Undefined)]);
+                        new_vars.insert(name.to_owned(), t);
                     }
                     None => (),
                 };
@@ -146,8 +144,7 @@ fn infer_param_pattern_rec(
     match pat {
         EFnParamPat::Ident(EFnParamBindingIdent { id, .. }) => {
             let tv = ctx.fresh_var();
-            let scheme = Scheme::from(&tv);
-            if assump.insert(id.name.to_owned(), scheme).is_some() {
+            if assump.insert(id.name.to_owned(), tv.clone()).is_some() {
                 return Err(String::from("Duplicate identifier in pattern"));
             }
             Ok(tv)
@@ -207,8 +204,7 @@ fn infer_param_pattern_rec(
                             // TODO: handle default values
 
                             let tv = ctx.fresh_var();
-                            let scheme = Scheme::from(&tv);
-                            if assump.insert(key.name.to_owned(), scheme).is_some() {
+                            if assump.insert(key.name.to_owned(), tv.clone()).is_some() {
                                 todo!("return an error");
                             }
 

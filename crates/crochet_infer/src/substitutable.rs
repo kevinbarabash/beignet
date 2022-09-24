@@ -1,6 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::fmt;
-use std::hash;
 
 use crochet_types::*;
 
@@ -148,22 +146,6 @@ impl Substitutable for TFnParam {
     }
     fn ftv(&self) -> HashSet<i32> {
         self.t.ftv()
-    }
-}
-
-impl<T> Substitutable for Qualified<T>
-where
-    T: Clone + fmt::Debug + fmt::Display + PartialEq + Eq + hash::Hash + Substitutable,
-{
-    fn apply(&self, sub: &Subst) -> Self {
-        Self {
-            qualifiers: self.qualifiers.clone(),
-            t: self.t.apply(sub),
-        }
-    }
-    fn ftv(&self) -> HashSet<i32> {
-        let qualifiers: HashSet<_> = self.qualifiers.iter().map(|id| id.to_owned()).collect();
-        self.t.ftv().difference(&qualifiers).cloned().collect()
     }
 }
 

@@ -2,18 +2,18 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::*;
-use crochet_types::{self as types, Scheme, TFnParam, TObject, TProp, Type};
+use crochet_types::{self as types, TFnParam, TLam, TObject, TProp, Type};
 use types::TObjElem;
 
 use super::context::Context;
 use super::infer_fn_param::e_pat_to_t_pat;
 
-pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Scheme {
+pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Type {
     match type_ann {
         TypeAnn::Lam(LamType { type_params, .. }) => {
             infer_scheme_with_type_params(type_ann, type_params, ctx)
         }
-        _ => Scheme::from(infer_type_ann(type_ann, ctx)),
+        _ => infer_type_ann(type_ann, ctx),
     }
 }
 
@@ -21,7 +21,7 @@ pub fn infer_scheme_with_type_params(
     type_ann: &TypeAnn,
     type_params: &Option<Vec<TypeParam>>,
     ctx: &Context,
-) -> Scheme {
+) -> Type {
     // NOTE: There's a scoping issue when using this mapping hash map.
     // <T>(arg: T, cb: <T>(T) => T) => T
     // The <T> type param list for `cb` shadows the outer `T`
@@ -36,18 +36,30 @@ pub fn infer_scheme_with_type_params(
     // Infers the type from type annotation and replaces all type references whose names
     // appear in `mapping` with a type variable whose `id` is the value in the mapping.
     let type_ann_ty = infer_type_ann_with_params(type_ann, ctx, &type_param_map);
+    let type_params: Vec<_> = type_param_map
+        .values()
+        .map(|t| match t {
+            Type::Var(id) => id.to_owned(),
+            _ => panic!("{t} is not a type variable"),
+        })
+        .collect();
 
-    // Creates a Scheme with the correct qualifiers for the type references that were
-    // replaced with type variables.
-    Scheme {
-        qualifiers: type_param_map
-            .values()
-            .map(|t| match t {
-                Type::Var(id) => id.to_owned(),
-                _ => panic!("{t} is not a type variable"),
-            })
-            .collect(),
-        t: type_ann_ty,
+    // set type_params
+    match type_ann_ty {
+        Type::Var(_) => type_ann_ty,
+        Type::App(_) => type_ann_ty,
+        Type::Lam(lam) => Type::Lam(TLam { type_params, ..lam }),
+        Type::Prim(_) => type_ann_ty,
+        Type::Lit(_) => type_ann_ty,
+        Type::Keyword(_) => type_ann_ty,
+        Type::Union(_) => type_ann_ty,
+        Type::Intersection(_) => type_ann_ty,
+        Type::Object(obj) => Type::Object(TObject { type_params, ..obj }),
+        Type::Alias(_) => type_ann_ty,
+        Type::Tuple(_) => type_ann_ty,
+        Type::Array(_) => type_ann_ty,
+        Type::Rest(_) => type_ann_ty,
+        Type::This => type_ann_ty,
     }
 }
 

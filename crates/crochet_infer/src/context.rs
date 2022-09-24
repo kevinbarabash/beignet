@@ -3,10 +3,11 @@ use std::cell::Cell;
 use std::collections::HashMap;
 
 use super::substitutable::*;
+use super::util::get_type_params;
 
 // This maps to the Assump data type in THIH which was a tuple
 // of (Id, Scheme) where Id was a String.
-pub type Env = HashMap<String, Scheme>;
+pub type Env = HashMap<String, Type>;
 
 #[derive(Clone, Debug)]
 pub struct State {
@@ -71,14 +72,14 @@ impl Context {
         current_scope.types.to_owned()
     }
 
-    pub fn insert_value(&mut self, name: String, scheme: Scheme) {
+    pub fn insert_value(&mut self, name: String, t: Type) {
         let current_scope = self.scopes.last_mut().unwrap();
-        current_scope.values.insert(name, scheme);
+        current_scope.values.insert(name, t);
     }
 
-    pub fn insert_type(&mut self, name: String, scheme: Scheme) {
+    pub fn insert_type(&mut self, name: String, t: Type) {
         let current_scope = self.scopes.last_mut().unwrap();
-        current_scope.types.insert(name, scheme);
+        current_scope.types.insert(name, t);
     }
 
     pub fn insert_namespace(&mut self, name: String, namespace: Scope) {
@@ -96,10 +97,10 @@ impl Context {
         Err(format!("Can't find value type: {name}"))
     }
 
-    pub fn lookup_value_scheme(&self, name: &str) -> Result<Scheme, String> {
+    pub fn lookup_value_scheme(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
             match scope.values.get(name) {
-                Some(scheme) => return Ok(scheme.to_owned()),
+                Some(t) => return Ok(t.to_owned()),
                 None => (),
             }
         }
@@ -117,10 +118,10 @@ impl Context {
         Err(format!("Can't find type: {name}"))
     }
 
-    pub fn lookup_type_scheme(&self, name: &str) -> Result<Scheme, String> {
+    pub fn lookup_type_scheme(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
             match scope.types.get(name) {
-                Some(scheme) => return Ok(scheme.to_owned()),
+                Some(t) => return Ok(t.to_owned()),
                 None => (),
             }
         }
@@ -141,31 +142,33 @@ impl Context {
         let name = &alias.name;
         for scope in self.scopes.iter().rev() {
             match scope.types.get(name) {
-                Some(scheme) => {
+                Some(t) => {
+                    let type_params = get_type_params(t);
+
                     // Replaces qualifiers in the scheme with the corresponding type params
                     // from the alias type.
-                    let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
+                    let ids = type_params.iter().map(|id| id.to_owned());
                     let subs: Subst = match &alias.type_params {
                         Some(type_params) => {
-                            if scheme.qualifiers.len() != type_params.len() {
-                                println!("scheme = {scheme}");
+                            if type_params.len() != type_params.len() {
+                                println!("type = {t}");
                                 println!("type_params = {type_params:#?}");
                                 return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
                             }
                             ids.zip(type_params.iter().cloned()).collect()
                         }
                         None => {
-                            if !scheme.qualifiers.is_empty() {
-                                println!("scheme = {scheme}");
+                            if !type_params.is_empty() {
+                                println!("type = {t}");
                                 println!("no type params");
                                 return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
                             }
-                            ids.zip(scheme.qualifiers.iter().map(|_| self.fresh_var()))
+                            ids.zip(type_params.iter().map(|_| self.fresh_var()))
                                 .collect()
                         }
                     };
 
-                    return Ok(scheme.t.apply(&subs));
+                    return Ok(t.apply(&subs));
                 }
                 None => (),
             }
@@ -173,12 +176,14 @@ impl Context {
         Err(format!("Can't find type: {name}"))
     }
 
-    pub fn instantiate(&self, scheme: &Scheme) -> Type {
-        let ids = scheme.qualifiers.iter().map(|id| id.to_owned());
-        let fresh_quals = scheme.qualifiers.iter().map(|_| self.fresh_var());
+    pub fn instantiate(&self, t: &Type) -> Type {
+        let type_params = get_type_params(t);
+
+        let ids = type_params.iter().map(|id| id.to_owned());
+        let fresh_quals = type_params.iter().map(|_| self.fresh_var());
         let subs: Subst = ids.zip(fresh_quals).collect();
 
-        scheme.t.apply(&subs)
+        t.apply(&subs)
     }
 
     pub fn fresh_id(&self) -> i32 {

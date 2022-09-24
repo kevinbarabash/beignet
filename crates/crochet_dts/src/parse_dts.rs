@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use types::{Scheme, TIndex, TLam, TObjElem, TObject};
+use types::{TIndex, TLam, TObjElem, TObject};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
@@ -9,10 +9,7 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
-use crochet_infer::{
-    close_over, generalize, generalize_type, generalize_type_map, Context, Env, Subst,
-    Substitutable,
-};
+use crochet_infer::{close_over, generalize_type, Context, Env, Subst, Substitutable};
 use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TPrim, TProp, Type};
 
 #[derive(Debug, Clone)]
@@ -298,7 +295,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
     }
 }
 
-fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Scheme, String> {
+fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, String> {
     // TODO: skip properties we don't know how to deal with instead of return an error for the whole map
     let elems: Vec<TObjElem> = decl
         .body
@@ -332,7 +329,7 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Scheme,
                 .collect();
 
             let t = replace_aliases(&t, &type_param_map);
-            generalize_type_map(&HashMap::default(), &t)
+            generalize_type(&HashMap::default(), &t)
         }
         None => {
             let empty_s = Subst::default();
@@ -447,8 +444,8 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
     }
 }
 
-fn merge_schemes(s1: &Scheme, s2: &Scheme) -> Scheme {
-    match (&s1.t, &s2.t) {
+fn merge_types(t1: &Type, t2: &Type) -> Type {
+    match (t1, t2) {
         (Type::Object(obj1), Type::Object(obj2)) => {
             let elems: Vec<_> = obj1
                 .elems
@@ -456,13 +453,13 @@ fn merge_schemes(s1: &Scheme, s2: &Scheme) -> Scheme {
                 .cloned()
                 .chain(obj2.elems.iter().cloned())
                 .collect();
-            let merged_t = Type::Object(TObject {
+
+            // TODO: merge qualifiers
+            Type::Object(TObject {
                 elems,
                 // TODO: merge type params as well
                 type_params: vec![],
-            });
-            // TODO: merge qualifiers
-            Scheme::from(merged_t)
+            })
         }
         (_, _) => todo!(),
     }
@@ -477,7 +474,7 @@ impl Visit for InterfaceCollector {
                 match self.ctx.lookup_type_scheme(&name).ok() {
                     Some(existing_scheme) => self
                         .ctx
-                        .insert_type(name, merge_schemes(&existing_scheme, &scheme)),
+                        .insert_type(name, merge_types(&existing_scheme, &scheme)),
                     None => self.ctx.insert_type(name, scheme),
                 };
             }
@@ -511,9 +508,9 @@ impl Visit for InterfaceCollector {
                         Some(type_ann) => {
                             // TODO: capture errors and store them in self.errors
                             let t = infer_ts_type_ann(&type_ann.type_ann, &self.ctx).unwrap();
-                            let scheme = generalize(&Env::new(), &t);
+                            let t = generalize_type(&Env::new(), &t);
                             let name = bi.id.sym.to_string();
-                            self.ctx.insert_value(name, scheme)
+                            self.ctx.insert_value(name, t)
                         }
                         None => todo!(),
                     }

@@ -7,8 +7,8 @@ use crochet_types::*;
 use super::context::{Context, Env};
 use super::substitutable::{Subst, Substitutable};
 
-pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
-    let body = &sc.t;
+pub fn normalize(t: &Type, ctx: &Context) -> Type {
+    let body = t;
     let keys = body.ftv();
     let mut keys: Vec<_> = keys.iter().cloned().collect();
     keys.sort_unstable();
@@ -147,20 +147,25 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
         }
     }
 
-    Scheme {
-        qualifiers: (0..keys.len()).map(|x| x as i32).collect(),
-        t: norm_type(body, &mapping, ctx),
-    }
-}
+    let t = norm_type(body, &mapping, ctx);
+    let type_params = (0..keys.len()).map(|x| x as i32).collect();
 
-pub fn generalize(env: &Env, t: &Type) -> Scheme {
-    // ftv() returns a Set which is not ordered
-    // TODO: switch to an ordered set
-    let mut qualifiers: Vec<_> = t.ftv().difference(&env.ftv()).cloned().collect();
-    qualifiers.sort_unstable();
-    Scheme {
-        qualifiers,
-        t: t.clone(),
+    // set type_params
+    match t {
+        Type::Var(_) => t,
+        Type::App(_) => t,
+        Type::Lam(lam) => Type::Lam(TLam { type_params, ..lam }),
+        Type::Prim(_) => t,
+        Type::Lit(_) => t,
+        Type::Keyword(_) => t,
+        Type::Union(_) => t,
+        Type::Intersection(_) => t,
+        Type::Object(obj) => Type::Object(TObject { type_params, ..obj }),
+        Type::Alias(_) => t,
+        Type::Tuple(_) => t,
+        Type::Array(_) => t,
+        Type::Rest(_) => t,
+        Type::This => t,
     }
 }
 
@@ -181,23 +186,15 @@ pub fn generalize_type(env: &Env, t: &Type) -> Type {
         Type::Keyword(_) => t.to_owned(),
         Type::Union(_) => t.to_owned(),
         Type::Intersection(_) => t.to_owned(),
-        Type::Object(_) => t.to_owned(),
+        Type::Object(obj) => Type::Object(TObject {
+            type_params,
+            ..obj.to_owned()
+        }),
         Type::Alias(_) => t.to_owned(),
         Type::Tuple(_) => t.to_owned(),
         Type::Array(_) => t.to_owned(),
         Type::Rest(_) => t.to_owned(),
         Type::This => t.to_owned(),
-    }
-}
-
-pub fn generalize_type_map(env: &HashMap<String, Type>, t: &Type) -> Scheme {
-    // ftv() returns a Set which is not ordered
-    // TODO: switch to an ordered set
-    let mut qualifiers: Vec<_> = t.ftv().difference(&env.ftv()).cloned().collect();
-    qualifiers.sort_unstable();
-    Scheme {
-        qualifiers,
-        t: t.clone(),
     }
 }
 
@@ -385,5 +382,24 @@ pub fn get_property_type(prop: &TProp) -> Type {
     match prop.optional {
         true => Type::Union(vec![t, Type::Keyword(TKeyword::Undefined)]),
         false => t,
+    }
+}
+
+pub fn get_type_params(t: &Type) -> Vec<i32> {
+    match t {
+        Type::Var(_) => vec![],
+        Type::App(_) => vec![],
+        Type::Lam(lam) => lam.type_params.to_owned(),
+        Type::Prim(_) => vec![],
+        Type::Lit(_) => vec![],
+        Type::Keyword(_) => vec![],
+        Type::Union(_) => vec![],
+        Type::Intersection(_) => vec![],
+        Type::Object(obj) => obj.type_params.to_owned(),
+        Type::Alias(_) => vec![],
+        Type::Tuple(_) => vec![],
+        Type::Array(_) => vec![],
+        Type::Rest(_) => vec![],
+        Type::This => vec![],
     }
 }

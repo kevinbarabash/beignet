@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, Scheme, TObject, Type};
+use crochet_types::{self as types, TObject, Type};
 
 use super::context::Context;
 use super::infer_expr::infer_expr;
@@ -10,7 +10,7 @@ use super::substitutable::{Subst, Substitutable};
 use super::unify::unify;
 use super::util::*;
 
-pub type Assump = HashMap<String, Scheme>;
+pub type Assump = HashMap<String, Type>;
 
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
@@ -21,7 +21,7 @@ fn infer_pattern(
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Assump, Type), String> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
-    let mut new_vars: HashMap<String, Scheme> = HashMap::new();
+    let mut new_vars: HashMap<String, Type> = HashMap::new();
 
     let pat_type = infer_pattern_rec(pat, ctx, &mut new_vars)?;
 
@@ -50,8 +50,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
     match pat {
         Pattern::Ident(BindingIdent { id, .. }) => {
             let tv = ctx.fresh_var();
-            let scheme = Scheme::from(&tv);
-            if assump.insert(id.name.to_owned(), scheme).is_some() {
+            if assump.insert(id.name.to_owned(), tv.clone()).is_some() {
                 return Err(String::from("Duplicate identifier in pattern"));
             }
             Ok(tv)
@@ -79,8 +78,8 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
             // TODO: we need a method on Context to get all types that currently in
             // scope so that we can pass them to generalize()
             let all_types = ctx.get_all_types();
-            let scheme = generalize(&all_types, &t);
-            if assump.insert(id.name.to_owned(), scheme).is_some() {
+            let t = generalize_type(&all_types, &t);
+            if assump.insert(id.name.to_owned(), t.clone()).is_some() {
                 return Err(String::from("Duplicate identifier in pattern"));
             }
             Ok(t)
@@ -135,8 +134,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                             // TODO: handle default values
 
                             let tv = ctx.fresh_var();
-                            let scheme = Scheme::from(&tv);
-                            if assump.insert(key.name.to_owned(), scheme).is_some() {
+                            if assump.insert(key.name.to_owned(), tv.clone()).is_some() {
                                 todo!("return an error");
                             }
 
