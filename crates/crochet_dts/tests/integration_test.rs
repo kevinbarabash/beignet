@@ -45,7 +45,7 @@ fn infer_method_on_readonly_array() {
     let result = format!("{}", ctx.lookup_value("map").unwrap());
     assert_eq!(
         result,
-        "<t0>(callbackfn: (value: string, index: number) => U, thisArg?: t0) => U[]"
+        "<t0, t1>(callbackfn: (value: string, index: number) => t1, thisArg?: t0) => t1[]"
     );
 }
 
@@ -73,12 +73,12 @@ fn infer_method_on_readonly_arrays_of_different_things() {
     let result = format!("{}", ctx.lookup_value("map1").unwrap());
     assert_eq!(
         result,
-        "<t0>(callbackfn: (value: string, index: number) => U, thisArg?: t0) => U[]"
+        "<t0, t1>(callbackfn: (value: string, index: number) => t1, thisArg?: t0) => t1[]"
     );
     let result = format!("{}", ctx.lookup_value("map2").unwrap());
     assert_eq!(
         result,
-        "<t0>(callbackfn: (value: number, index: number) => U, thisArg?: t0) => U[]"
+        "<t0, t1>(callbackfn: (value: number, index: number) => t1, thisArg?: t0) => t1[]"
     );
 }
 
@@ -92,7 +92,7 @@ fn infer_array_method_on_tuple() {
     let result = format!("{}", ctx.lookup_value("map").unwrap());
     assert_eq!(
         result,
-        "<t0>(callbackfn: (value: \"hello\" | 5 | true, index: number) => U, thisArg?: t0) => U[]"
+        "<t0, t1>(callbackfn: (value: \"hello\" | 5 | true, index: number) => t1, thisArg?: t0) => t1[]"
     );
 }
 
@@ -260,6 +260,34 @@ fn instantiating_generic_interfaces() {
 
     let result = format!("{}", ctx.lookup_value("bar").unwrap());
     assert_eq!(result, "<t0>(x: number) => t0");
+}
+
+#[test]
+fn interface_with_generic_method() {
+    let lib = r#"
+    interface Foo<T> {
+        bar<U>(x: U): U;
+        baz: T;
+    }
+    "#;
+    let mut ctx = parse_dts(lib).unwrap();
+
+    let src = r#"
+    declare let foo: Foo<number>;
+    let bar = foo.bar;
+    "#;
+    let result = parse(src);
+    let prog = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+
+    let result = format!("{}", ctx.lookup_value("bar").unwrap());
+    assert_eq!(result, "<t0>(x: t0) => t0");
 }
 
 #[test]

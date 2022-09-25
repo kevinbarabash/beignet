@@ -155,55 +155,27 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     }
 
     let t = norm_type(body, &mapping, ctx);
-    let type_params = (0..mapping.len()).map(|x| x as i32).collect();
+    let type_params: Vec<_> = (0..mapping.len()).map(|x| x as i32).collect();
 
-    // set type_params
-    match t {
-        Type::Var(_) => t,
-        Type::App(_) => t,
-        Type::Lam(lam) => Type::Lam(TLam { type_params, ..lam }),
-        Type::Prim(_) => t,
-        Type::Lit(_) => t,
-        Type::Keyword(_) => t,
-        Type::Union(_) => t,
-        Type::Intersection(_) => t,
-        Type::Object(obj) => Type::Object(TObject { type_params, ..obj }),
-        Type::Alias(_) => t,
-        Type::Tuple(_) => t,
-        Type::Array(_) => t,
-        Type::Rest(_) => t,
-        Type::This => t,
-    }
+    set_type_params(&t, &type_params)
 }
 
 pub fn generalize_type(env: &Env, t: &Type) -> Type {
     // ftv() returns a Set which is not ordered
     // TODO: switch to an ordered set
     let mut type_params = get_type_params(t);
+
+    // We do this to account for type params from the environment.
+    // QUESTION: Why is it okay to ignore the keys of env?
     type_params.extend(t.ftv().difference(&env.ftv()).cloned());
-    type_params.sort_unstable();
-    match t {
-        Type::Var(_) => t.to_owned(),
-        Type::App(_) => t.to_owned(),
-        Type::Lam(lam) => Type::Lam(TLam {
-            type_params,
-            ..lam.to_owned()
-        }),
-        Type::Prim(_) => t.to_owned(),
-        Type::Lit(_) => t.to_owned(),
-        Type::Keyword(_) => t.to_owned(),
-        Type::Union(_) => t.to_owned(),
-        Type::Intersection(_) => t.to_owned(),
-        Type::Object(obj) => Type::Object(TObject {
-            type_params,
-            ..obj.to_owned()
-        }),
-        Type::Alias(_) => t.to_owned(),
-        Type::Tuple(_) => t.to_owned(),
-        Type::Array(_) => t.to_owned(),
-        Type::Rest(_) => t.to_owned(),
-        Type::This => t.to_owned(),
+
+    if type_params.is_empty() {
+        return t.to_owned();
     }
+
+    type_params.sort_unstable();
+
+    set_type_params(t, &type_params)
 }
 
 // TODO: make this recursive
@@ -409,5 +381,30 @@ pub fn get_type_params(t: &Type) -> Vec<i32> {
         Type::Array(_) => vec![],
         Type::Rest(_) => vec![],
         Type::This => vec![],
+    }
+}
+
+pub fn set_type_params(t: &Type, type_params: &[i32]) -> Type {
+    match t {
+        Type::Var(_) => t.to_owned(),
+        Type::App(_) => t.to_owned(),
+        Type::Lam(lam) => Type::Lam(TLam {
+            type_params: type_params.to_owned(),
+            ..lam.to_owned()
+        }),
+        Type::Prim(_) => t.to_owned(),
+        Type::Lit(_) => t.to_owned(),
+        Type::Keyword(_) => t.to_owned(),
+        Type::Union(_) => t.to_owned(),
+        Type::Intersection(_) => t.to_owned(),
+        Type::Object(obj) => Type::Object(TObject {
+            type_params: type_params.to_owned(),
+            ..obj.to_owned()
+        }),
+        Type::Alias(_) => t.to_owned(),
+        Type::Tuple(_) => t.to_owned(),
+        Type::Array(_) => t.to_owned(),
+        Type::Rest(_) => t.to_owned(),
+        Type::This => t.to_owned(),
     }
 }
