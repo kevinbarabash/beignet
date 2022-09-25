@@ -7,8 +7,8 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
-use crochet_infer::Context;
-use crochet_types::{self as types, Scheme, TFnParam, TPat, Type};
+use crochet_infer::{get_type_params, Context};
+use crochet_types::{self as types, TFnParam, TPat, Type};
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -37,7 +37,7 @@ fn build_d_ts(_program: &ast::Program, ctx: &Context) -> Program {
 
     let mut body: Vec<ModuleItem> = vec![];
 
-    for (name, scheme) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+    for (name, t) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
         let id = Ident {
             span: DUMMY_SP,
             sym: JsWord::from(name.to_owned()),
@@ -47,15 +47,15 @@ fn build_d_ts(_program: &ast::Program, ctx: &Context) -> Program {
             span: DUMMY_SP,
             declare: true,
             id,
-            type_params: build_type_params(scheme),
-            type_ann: Box::from(build_type(&scheme.t, None)),
+            type_params: build_type_params(t),
+            type_ann: Box::from(build_type(t, None)),
         })));
 
         body.push(decl);
     }
 
-    for (name, scheme) in current_scope.values.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
-        let type_params = build_type_params(scheme);
+    for (name, t) in current_scope.values.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+        let type_params = build_type_params(t);
         let id = Ident {
             span: DUMMY_SP,
             sym: JsWord::from(name.to_owned()),
@@ -65,7 +65,7 @@ fn build_d_ts(_program: &ast::Program, ctx: &Context) -> Program {
             id,
             type_ann: Some(TsTypeAnn {
                 span: DUMMY_SP,
-                type_ann: Box::from(build_type(&scheme.t, type_params)),
+                type_ann: Box::from(build_type(t, type_params)),
             }),
         });
 
@@ -358,16 +358,17 @@ pub fn build_ts_fn_type_with_args(
     }))
 }
 
-pub fn build_type_params(scheme: &Scheme) -> Option<TsTypeParamDecl> {
+pub fn build_type_params(t: &Type) -> Option<TsTypeParamDecl> {
     let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
         .chars()
         .collect();
 
-    if !scheme.qualifiers.is_empty() {
+    let type_params = get_type_params(t);
+
+    if !type_params.is_empty() {
         Some(TsTypeParamDecl {
             span: DUMMY_SP,
-            params: scheme
-                .qualifiers
+            params: type_params
                 .iter()
                 .map(|id| {
                     let id = chars.get(id.to_owned() as usize).unwrap();
@@ -486,8 +487,9 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                     .collect(),
             }),
         ),
-        Type::Object(props) => {
-            let members: Vec<TsTypeElement> = props
+        Type::Object(obj) => {
+            let members: Vec<TsTypeElement> = obj
+                .elems
                 .iter()
                 .map(|elem| {
                     match elem {
@@ -510,7 +512,7 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                                 type_ann: Some(TsTypeAnn {
                                     span: DUMMY_SP,
                                     // TODO: add build_type_from_scheme() helper that handles type params
-                                    type_ann: Box::from(build_type(&prop.scheme.t, None)),
+                                    type_ann: Box::from(build_type(&prop.t, None)),
                                 }),
                                 type_params: None,
                             })

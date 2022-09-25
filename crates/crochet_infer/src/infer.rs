@@ -1,5 +1,5 @@
 use crochet_ast::*;
-use crochet_types::{Scheme, TObjElem, TProp, Type};
+use crochet_types::{TObjElem, TObject, TProp, Type};
 
 use super::context::{Context, Env};
 use super::infer_expr::infer_expr as infer_expr_rec;
@@ -13,23 +13,31 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
     // TODO: replace with Class type once it exists
     // We use {_name: "Promise"} to differentiate it from other
     // object types.
-    let promise_scheme = Scheme::from(Type::Object(vec![TObjElem::Prop(TProp {
+    let elems = vec![TObjElem::Prop(TProp {
         name: String::from("_name"),
         optional: false,
         mutable: false,
-        scheme: Scheme::from(Type::from(Lit::str(String::from("Promise"), 0..0))),
-    })]));
-    ctx.insert_type(String::from("Promise"), promise_scheme);
+        t: Type::from(Lit::str(String::from("Promise"), 0..0)),
+    })];
+    let promise_type = Type::Object(TObject {
+        elems,
+        type_params: vec![],
+    });
+    ctx.insert_type(String::from("Promise"), promise_type);
     // TODO: replace with Class type once it exists
     // We use {_name: "JSXElement"} to differentiate it from other
     // object types.
-    let jsx_element_scheme = Scheme::from(Type::Object(vec![TObjElem::Prop(TProp {
+    let elems = vec![TObjElem::Prop(TProp {
         name: String::from("_name"),
         optional: false,
         mutable: false,
-        scheme: Scheme::from(Type::from(Lit::str(String::from("JSXElement"), 0..0))),
-    })]));
-    ctx.insert_type(String::from("JSXElement"), jsx_element_scheme);
+        t: Type::from(Lit::str(String::from("JSXElement"), 0..0)),
+    })];
+    let jsx_element_type = Type::Object(TObject {
+        elems,
+        type_params: vec![],
+    });
+    ctx.insert_type(String::from("JSXElement"), jsx_element_type);
 
     // We push a scope here so that it's easy to differentiate globals from
     // module definitions.
@@ -80,8 +88,8 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
-                        for (name, scheme) in pa {
-                            let scheme = normalize(&scheme.apply(&s), ctx);
+                        for (name, t) in pa {
+                            let scheme = normalize(&t.apply(&s), ctx);
                             ctx.insert_value(name, scheme);
                         }
                     }
@@ -107,7 +115,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
     Ok(ctx.to_owned())
 }
 
-pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<Scheme, String> {
+pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<Type, String> {
     let (s, t) = infer_expr_rec(ctx, expr)?;
     Ok(close_over(&s, &t, ctx))
 }
@@ -115,7 +123,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<Scheme, String> {
 // closeOver :: (Map.Map TVar Type, Type) -> Scheme
 // closeOver (sub, ty) = normalize sc
 //   where sc = generalize emptyTyenv (apply sub ty)
-pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Scheme {
+pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
     let empty_env = Env::default();
-    normalize(&generalize(&empty_env, &t.to_owned().apply(s)), ctx)
+    normalize(&generalize_type(&empty_env, &t.to_owned().apply(s)), ctx)
 }

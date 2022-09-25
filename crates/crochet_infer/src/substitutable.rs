@@ -1,6 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::fmt;
-use std::hash;
 
 use crochet_types::*;
 
@@ -30,7 +28,21 @@ impl Substitutable for Type {
             Type::Keyword(_) => self.to_owned(),
             Type::Union(types) => Type::Union(types.apply(sub)),
             Type::Intersection(types) => Type::Intersection(types.apply(sub)),
-            Type::Object(props) => Type::Object(props.apply(sub)),
+            Type::Object(obj) => {
+                // QUESTION: Do we really need to be filtering out type_params from
+                // substitutions?
+                let type_params = obj
+                    .type_params
+                    .iter()
+                    .filter(|tp| !sub.contains_key(tp))
+                    .cloned()
+                    .collect();
+
+                Type::Object(TObject {
+                    elems: obj.elems.apply(sub),
+                    type_params,
+                })
+            }
             Type::Alias(alias) => Type::Alias(TAlias {
                 type_params: alias.type_params.apply(sub),
                 ..alias.to_owned()
@@ -56,7 +68,11 @@ impl Substitutable for Type {
             Type::Keyword(_) => HashSet::new(),
             Type::Union(types) => types.ftv(),
             Type::Intersection(types) => types.ftv(),
-            Type::Object(props) => props.ftv(),
+            Type::Object(obj) => {
+                let qualifiers: HashSet<_> =
+                    obj.type_params.iter().map(|id| id.to_owned()).collect();
+                obj.elems.ftv().difference(&qualifiers).cloned().collect()
+            }
             Type::Alias(TAlias { type_params, .. }) => type_params.ftv(),
             Type::Tuple(types) => types.ftv(),
             Type::Array(t) => t.ftv(),
@@ -80,46 +96,64 @@ impl Substitutable for TObjElem {
             TObjElem::Call(qlam) => qlam.ftv(),
             TObjElem::Constructor(qlam) => qlam.ftv(),
             TObjElem::Index(index) => index.ftv(),
-            TObjElem::Prop(prop) => prop.scheme.ftv(),
+            TObjElem::Prop(prop) => prop.t.ftv(),
         }
     }
 }
 
 impl Substitutable for TLam {
     fn apply(&self, sub: &Subst) -> Self {
+        // QUESTION: Do we really need to be filtering out type_params from
+        // substitutions?
+        let type_params = self
+            .type_params
+            .iter()
+            .filter(|tp| !sub.contains_key(tp))
+            .cloned()
+            .collect();
+
         TLam {
             params: self.params.iter().map(|param| param.apply(sub)).collect(),
             ret: Box::from(self.ret.apply(sub)),
+            type_params,
         }
     }
     fn ftv(&self) -> HashSet<i32> {
+        let type_params = HashSet::from_iter(self.type_params.iter().cloned());
+
         let mut result: HashSet<_> = self.params.ftv();
         result.extend(self.ret.ftv());
-        result
+        result.difference(&type_params).cloned().collect()
     }
 }
 
 impl Substitutable for TIndex {
     fn apply(&self, sub: &Subst) -> Self {
         TIndex {
-            scheme: self.scheme.apply(sub),
+            // How do we ensure that we aren't apply `sub` to any of the type variables that
+            // are in self.type_params?
+            t: self.t.apply(sub),
             ..self.to_owned()
         }
     }
     fn ftv(&self) -> HashSet<i32> {
-        self.scheme.ftv()
+        let type_params = HashSet::from_iter(self.type_params.iter().cloned());
+
+        self.t.ftv().difference(&type_params).cloned().collect()
     }
 }
 
 impl Substitutable for TProp {
     fn apply(&self, sub: &Subst) -> TProp {
         TProp {
-            scheme: self.scheme.apply(sub),
+            // How do we ensure that we aren't apply `sub` to any of the type variables that
+            // are in self.type_params?
+            t: self.t.apply(sub),
             ..self.to_owned()
         }
     }
     fn ftv(&self) -> HashSet<i32> {
-        self.scheme.ftv()
+        self.t.ftv()
     }
 }
 
@@ -132,22 +166,6 @@ impl Substitutable for TFnParam {
     }
     fn ftv(&self) -> HashSet<i32> {
         self.t.ftv()
-    }
-}
-
-impl<T> Substitutable for Qualified<T>
-where
-    T: Clone + fmt::Debug + fmt::Display + PartialEq + Eq + hash::Hash + Substitutable,
-{
-    fn apply(&self, sub: &Subst) -> Self {
-        Self {
-            qualifiers: self.qualifiers.clone(),
-            t: self.t.apply(sub),
-        }
-    }
-    fn ftv(&self) -> HashSet<i32> {
-        let qualifiers: HashSet<_> = self.qualifiers.iter().map(|id| id.to_owned()).collect();
-        self.t.ftv().difference(&qualifiers).cloned().collect()
     }
 }
 

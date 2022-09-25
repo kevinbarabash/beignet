@@ -7,16 +7,23 @@ use crochet_types::*;
 use super::context::{Context, Env};
 use super::substitutable::{Subst, Substitutable};
 
-pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
-    let body = &sc.t;
+pub fn normalize(t: &Type, ctx: &Context) -> Type {
+    let body = t;
     let keys = body.ftv();
     let mut keys: Vec<_> = keys.iter().cloned().collect();
     keys.sort_unstable();
-    let mapping: HashMap<i32, Type> = keys
+
+    let mut mapping: HashMap<i32, Type> = keys
         .iter()
         .enumerate()
         .map(|(index, key)| (key.to_owned(), Type::Var(index as i32)))
         .collect();
+
+    let type_params = get_type_params(t);
+    let offset = mapping.len();
+    for (index, tp) in type_params.iter().enumerate() {
+        mapping.insert(tp.to_owned(), Type::Var((offset + index) as i32));
+    }
 
     // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
     // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
@@ -48,7 +55,11 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                     })
                     .collect();
                 let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
-                Type::Lam(TLam { params, ret })
+                Type::Lam(TLam {
+                    params,
+                    ret,
+                    type_params: vec![],
+                })
             }
             Type::Prim(_) => t.to_owned(),
             Type::Lit(_) => t.to_owned(),
@@ -65,13 +76,13 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                 let types: Vec<_> = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
                 simplify_intersection(&types)
             }
-            Type::Object(elems) => {
-                let elems = elems
+            Type::Object(obj) => {
+                let elems = obj
+                    .elems
                     .iter()
                     .map(|elem| match elem {
-                        TObjElem::Call(qlam) => {
-                            let params: Vec<_> = qlam
-                                .t
+                        TObjElem::Call(lam) => {
+                            let params: Vec<_> = lam
                                 .params
                                 .iter()
                                 .map(|param| TFnParam {
@@ -79,15 +90,15 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                                     ..param.to_owned()
                                 })
                                 .collect();
-                            let ret = Box::from(norm_type(&qlam.t.ret, mapping, ctx));
-                            TObjElem::Call(TCall {
-                                t: TLam { params, ret },
-                                ..qlam.to_owned()
+                            let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
+                            TObjElem::Call(TLam {
+                                params,
+                                ret,
+                                type_params: lam.type_params.to_owned(),
                             })
                         }
-                        TObjElem::Constructor(qlam) => {
-                            let params: Vec<_> = qlam
-                                .t
+                        TObjElem::Constructor(lam) => {
+                            let params: Vec<_> = lam
                                 .params
                                 .iter()
                                 .map(|param| TFnParam {
@@ -95,32 +106,32 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
                                     ..param.to_owned()
                                 })
                                 .collect();
-                            let ret = Box::from(norm_type(&qlam.t.ret, mapping, ctx));
-                            TObjElem::Constructor(TConstructor {
-                                t: TLam { params, ret },
-                                ..qlam.to_owned()
+                            let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
+                            TObjElem::Constructor(TLam {
+                                params,
+                                ret,
+                                type_params: lam.type_params.to_owned(),
                             })
                         }
                         TObjElem::Index(index) => TObjElem::Index(TIndex {
-                            key: index.key.clone(),
+                            key: index.key.to_owned(),
                             mutable: index.mutable,
-                            scheme: Scheme {
-                                t: norm_type(&index.scheme.t, mapping, ctx),
-                                ..index.scheme.to_owned()
-                            },
+                            t: norm_type(&index.t, mapping, ctx),
+                            type_params: index.type_params.to_owned(),
                         }),
                         TObjElem::Prop(prop) => TObjElem::Prop(TProp {
-                            name: prop.name.clone(),
+                            name: prop.name.to_owned(),
                             optional: prop.optional,
                             mutable: prop.mutable,
-                            scheme: Scheme {
-                                t: norm_type(&prop.scheme.t, mapping, ctx),
-                                ..prop.scheme.to_owned()
-                            },
+                            t: norm_type(&prop.t, mapping, ctx),
                         }),
                     })
                     .collect();
-                Type::Object(elems)
+                Type::Object(TObject {
+                    elems,
+                    // TODO: normalize type_params
+                    ..obj.to_owned()
+                })
             }
             Type::Alias(TAlias { name, type_params }) => {
                 let type_params = type_params
@@ -141,31 +152,55 @@ pub fn normalize(sc: &Scheme, ctx: &Context) -> Scheme {
         }
     }
 
-    Scheme {
-        qualifiers: (0..keys.len()).map(|x| x as i32).collect(),
-        t: norm_type(body, &mapping, ctx),
+    let t = norm_type(body, &mapping, ctx);
+    let type_params = (0..mapping.len()).map(|x| x as i32).collect();
+
+    // set type_params
+    match t {
+        Type::Var(_) => t,
+        Type::App(_) => t,
+        Type::Lam(lam) => Type::Lam(TLam { type_params, ..lam }),
+        Type::Prim(_) => t,
+        Type::Lit(_) => t,
+        Type::Keyword(_) => t,
+        Type::Union(_) => t,
+        Type::Intersection(_) => t,
+        Type::Object(obj) => Type::Object(TObject { type_params, ..obj }),
+        Type::Alias(_) => t,
+        Type::Tuple(_) => t,
+        Type::Array(_) => t,
+        Type::Rest(_) => t,
+        Type::This => t,
     }
 }
 
-pub fn generalize(env: &Env, t: &Type) -> Scheme {
+pub fn generalize_type(env: &Env, t: &Type) -> Type {
     // ftv() returns a Set which is not ordered
     // TODO: switch to an ordered set
-    let mut qualifiers: Vec<_> = t.ftv().difference(&env.ftv()).cloned().collect();
-    qualifiers.sort_unstable();
-    Scheme {
-        qualifiers,
-        t: t.clone(),
-    }
-}
-
-pub fn generalize_type_map(env: &HashMap<String, Type>, t: &Type) -> Scheme {
-    // ftv() returns a Set which is not ordered
-    // TODO: switch to an ordered set
-    let mut qualifiers: Vec<_> = t.ftv().difference(&env.ftv()).cloned().collect();
-    qualifiers.sort_unstable();
-    Scheme {
-        qualifiers,
-        t: t.clone(),
+    let mut type_params = get_type_params(t);
+    type_params.extend(t.ftv().difference(&env.ftv()).cloned());
+    type_params.sort_unstable();
+    match t {
+        Type::Var(_) => t.to_owned(),
+        Type::App(_) => t.to_owned(),
+        Type::Lam(lam) => Type::Lam(TLam {
+            type_params,
+            ..lam.to_owned()
+        }),
+        Type::Prim(_) => t.to_owned(),
+        Type::Lit(_) => t.to_owned(),
+        Type::Keyword(_) => t.to_owned(),
+        Type::Union(_) => t.to_owned(),
+        Type::Intersection(_) => t.to_owned(),
+        Type::Object(obj) => Type::Object(TObject {
+            type_params,
+            ..obj.to_owned()
+        }),
+        Type::Alias(_) => t.to_owned(),
+        Type::Tuple(_) => t.to_owned(),
+        Type::Array(_) => t.to_owned(),
+        Type::Rest(_) => t.to_owned(),
+        Type::This => t.to_owned(),
     }
 }
 
@@ -183,16 +218,16 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
         .collect();
 
     // The use of HashSet<Type> here is to avoid duplicate types
-    let mut props_map: DefaultHashMap<String, HashSet<Scheme>> = defaulthashmap!();
-    for elems in obj_types {
-        for elem in elems {
+    let mut props_map: DefaultHashMap<String, HashSet<Type>> = defaulthashmap!();
+    for obj in obj_types {
+        for elem in &obj.elems {
             match elem {
                 // What do we do with Call and Index signatures
                 TObjElem::Call(_) => todo!(),
                 TObjElem::Constructor(_) => todo!(),
                 TObjElem::Index(_) => todo!(),
                 TObjElem::Prop(prop) => {
-                    props_map[prop.name.clone()].insert(prop.scheme.clone());
+                    props_map[prop.name.clone()].insert(prop.t.clone());
                 }
             }
         }
@@ -201,19 +236,11 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let mut elems: Vec<TObjElem> = props_map
         .iter()
         .map(|(name, types)| {
-            let schemes: Vec<_> = types.iter().cloned().collect();
-            let scheme: Scheme = if types.len() == 1 {
-                schemes[0].clone()
+            let types: Vec<_> = types.iter().cloned().collect();
+            let t: Type = if types.len() == 1 {
+                types[0].clone()
             } else {
-                let qualifiers: Vec<_> = schemes
-                    .iter()
-                    .flat_map(|scheme| scheme.qualifiers.clone())
-                    .collect();
-                let types: Vec<Type> = schemes.iter().map(|scheme| scheme.t.clone()).collect();
-                Scheme {
-                    qualifiers,
-                    t: Type::Intersection(types),
-                }
+                Type::Intersection(types)
             };
             TObjElem::Prop(TProp {
                 name: name.to_owned(),
@@ -222,7 +249,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
                 // the TProps with the current name are optional.
                 optional: false,
                 mutable: false,
-                scheme,
+                t,
             })
         })
         .collect();
@@ -243,7 +270,10 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let mut out_types = vec![];
     out_types.append(&mut not_obj_types);
     if !elems.is_empty() {
-        out_types.push(Type::Object(elems));
+        out_types.push(Type::Object(TObject {
+            elems,
+            type_params: vec![],
+        }));
     }
     // TODO: figure out a consistent way to sort types
     // out_types.sort_by_key(|t| t.id); // ensure a stable order
@@ -351,4 +381,31 @@ pub fn compose_many_subs_with_context(subs: &[Subst]) -> Subst {
     subs.iter().fold(Subst::new(), |accum, next| {
         compose_subs_with_context(&accum, next)
     })
+}
+
+pub fn get_property_type(prop: &TProp) -> Type {
+    let t = generalize_type(&HashMap::new(), &prop.t);
+    match prop.optional {
+        true => Type::Union(vec![t, Type::Keyword(TKeyword::Undefined)]),
+        false => t,
+    }
+}
+
+pub fn get_type_params(t: &Type) -> Vec<i32> {
+    match t {
+        Type::Var(_) => vec![],
+        Type::App(_) => vec![],
+        Type::Lam(lam) => lam.type_params.to_owned(),
+        Type::Prim(_) => vec![],
+        Type::Lit(_) => vec![],
+        Type::Keyword(_) => vec![],
+        Type::Union(_) => vec![],
+        Type::Intersection(_) => vec![],
+        Type::Object(obj) => obj.type_params.to_owned(),
+        Type::Alias(_) => vec![],
+        Type::Tuple(_) => vec![],
+        Type::Array(_) => vec![],
+        Type::Rest(_) => vec![],
+        Type::This => vec![],
+    }
 }

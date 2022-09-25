@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, Scheme, TFnParam, TKeyword, TPat, TPrim, Type};
+use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, TPrim, Type};
 use types::TObjElem;
 
 use super::context::Context;
@@ -67,6 +67,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 &Type::Lam(types::TLam {
                     params: vec![param],
                     ret: Box::from(tv),
+                    type_params: vec![],
                 }),
                 &t,
                 ctx,
@@ -161,7 +162,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 match t {
                     Type::Lam(_) => {
                         let mut ss: Vec<_> = vec![];
-                        let mut props: Vec<_> = vec![];
+                        let mut elems: Vec<_> = vec![];
                         for attr in attrs {
                             let (s, t) = match &attr.value {
                                 JSXAttrValue::Lit(lit) => {
@@ -177,9 +178,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                 name: attr.ident.name.to_owned(),
                                 optional: false,
                                 mutable: false,
-                                scheme: Scheme::from(t),
+                                t,
                             };
-                            props.push(types::TObjElem::Prop(prop));
+                            elems.push(types::TObjElem::Prop(prop));
                         }
 
                         let ret_type = Type::Alias(types::TAlias {
@@ -188,7 +189,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         });
 
                         let call_type = Type::App(types::TApp {
-                            args: vec![Type::Object(props)],
+                            args: vec![Type::Object(TObject {
+                                elems,
+                                type_params: vec![],
+                            })],
                             ret: Box::from(ret_type.clone()),
                         });
 
@@ -271,6 +275,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let t = Type::Lam(types::TLam {
                 params: t_params,
                 ret: Box::from(rt),
+                type_params: vec![],
             });
             let s = compose_subs(&s, &compose_subs(&rs, &compose_many_subs(&ss)));
             let t = t.apply(&s);
@@ -335,7 +340,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
         }
         Expr::Obj(Obj { props, .. }) => {
             let mut ss: Vec<Subst> = vec![];
-            let mut ps: Vec<types::TObjElem> = vec![];
+            let mut elems: Vec<types::TObjElem> = vec![];
             let mut spread_types: Vec<_> = vec![];
             for p in props {
                 match p {
@@ -343,11 +348,11 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         match p.as_ref() {
                             Prop::Shorthand(Ident { name, .. }) => {
                                 let t = ctx.lookup_value_and_instantiate(name)?;
-                                ps.push(types::TObjElem::Prop(types::TProp {
+                                elems.push(types::TObjElem::Prop(types::TProp {
                                     name: name.to_owned(),
                                     optional: false,
                                     mutable: false,
-                                    scheme: Scheme::from(t),
+                                    t,
                                 }));
                             }
                             Prop::KeyValue(KeyValueProp { name, value, .. }) => {
@@ -355,11 +360,11 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                 ss.push(s);
                                 // TODO: check if the inferred type is T | undefined and use that
                                 // determine the value of optional
-                                ps.push(types::TObjElem::Prop(types::TProp {
+                                elems.push(types::TObjElem::Prop(types::TProp {
                                     name: name.to_owned(),
                                     optional: false,
                                     mutable: false,
-                                    scheme: Scheme::from(t),
+                                    t,
                                 }));
                             }
                         }
@@ -374,11 +379,17 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             let s = compose_many_subs(&ss);
             if spread_types.is_empty() {
-                let t = Type::Object(ps);
+                let t = Type::Object(TObject {
+                    elems,
+                    type_params: vec![],
+                });
                 Ok((s, t))
             } else {
                 let mut all_types = spread_types;
-                all_types.push(Type::Object(ps));
+                all_types.push(Type::Object(TObject {
+                    elems,
+                    type_params: vec![],
+                }));
                 let t = simplify_intersection(&all_types);
                 Ok((s, t))
             }
@@ -535,7 +546,7 @@ fn infer_property_type(
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t {
-        Type::Object(elems) => get_prop_value(elems, prop, ctx),
+        Type::Object(obj) => get_prop_value(obj, prop, ctx),
         Type::Alias(alias) => {
             let t = ctx.lookup_alias(alias)?;
             infer_property_type(&t, prop, ctx)
@@ -578,11 +589,12 @@ fn infer_property_type(
         },
         Type::Array(type_param) => {
             // TODO: Do this for all interfaces that we lookup
-            let scheme = ctx.lookup_type_scheme("ReadonlyArray")?;
+            let t = ctx.lookup_type_scheme("ReadonlyArray")?;
+            let type_params = get_type_params(&t);
             // TODO: Instead of instantiating the whole interface for one method, do
             // the lookup call first and then instantiate the method.
-            let s: Subst = Subst::from([(scheme.qualifiers[0], type_param.as_ref().to_owned())]);
-            let t = scheme.t.apply(&s);
+            let s: Subst = Subst::from([(type_params[0], type_param.as_ref().to_owned())]);
+            let t = t.apply(&s);
             infer_property_type(&t, prop, ctx)
         }
         Type::Tuple(elem_types) => {
@@ -590,13 +602,16 @@ fn infer_property_type(
                 // TODO: lookup methods on Array.prototype
                 MemberProp::Ident(_) => {
                     // TODO: Do this for all interfaces that we lookup
-                    let scheme = ctx.lookup_type_scheme("ReadonlyArray")?;
+                    let t = ctx.lookup_type_scheme("ReadonlyArray")?;
+                    println!("ReadonlyArray = {t}");
                     // TODO: Instead of instantiating the whole interface for one method, do
                     // the lookup call first and then instantiate the method.
                     // TODO: remove duplicate types
                     let type_param = Type::Union(elem_types.to_owned());
-                    let s: Subst = Subst::from([(scheme.qualifiers[0], type_param)]);
-                    let t = scheme.t.apply(&s);
+                    let type_params = get_type_params(&t); // ReadonlyArray type params
+
+                    let s: Subst = Subst::from([(type_params[0], type_param)]);
+                    let t = t.apply(&s);
                     infer_property_type(&t, prop, ctx)
                 }
                 MemberProp::Computed(ComputedPropName { expr, .. }) => {
@@ -635,10 +650,11 @@ fn infer_property_type(
 }
 
 fn get_prop_value(
-    elems: &[TObjElem],
+    obj: &TObject,
     prop: &MemberProp,
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
+    let elems = &obj.elems;
     match prop {
         MemberProp::Ident(Ident { name, .. }) => {
             let prop = elems.iter().find_map(|elem| match elem {
@@ -656,8 +672,8 @@ fn get_prop_value(
 
             match prop {
                 Some(prop) => {
-                    let prop = ctx.instantiate(&prop.get_scheme());
-                    Ok((Subst::default(), prop))
+                    let t = get_property_type(prop);
+                    Ok((Subst::default(), t))
                 }
                 None => Err(format!("Object type doesn't contain key {name}.")),
             }
@@ -680,7 +696,10 @@ fn get_prop_value(
                                 types::TObjElem::Call(_) => None,
                                 types::TObjElem::Constructor(_) => None,
                                 types::TObjElem::Index(_) => None,
-                                types::TObjElem::Prop(prop) => Some(ctx.instantiate(&prop.scheme)),
+                                types::TObjElem::Prop(prop) => {
+                                    // TODO: handle generic object properties
+                                    Some(prop.t.to_owned())
+                                }
                             })
                             .collect();
 
@@ -710,8 +729,8 @@ fn get_prop_value(
 
                         match prop {
                             Some(prop) => {
-                                let prop = ctx.instantiate(&prop.get_scheme());
-                                Ok((Subst::default(), prop))
+                                // TODO: handle generic object properties
+                                Ok((Subst::default(), prop.t.to_owned()))
                             }
                             None => Err(format!("Object type doesn't contain key {key}.")),
                         }
@@ -742,9 +761,8 @@ fn get_prop_value(
                             if result.is_ok() {
                                 let key_s = result?;
                                 let s = compose_subs(&key_s, &prop_s_clone);
-                                println!("indexer.scheme = {:#?}", indexer.scheme);
-                                let t = ctx.instantiate(&indexer.scheme);
-                                return Ok((s, t));
+                                // TODO: handle generic indexers
+                                return Ok((s, indexer.t.to_owned()));
                             }
                         }
                         Err(format!("{prop_t_clone} is an invalid key for object types"))
