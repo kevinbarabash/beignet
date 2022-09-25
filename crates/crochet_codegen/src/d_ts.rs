@@ -526,7 +526,7 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                 members,
             })
         }
-        Type::Alias(types::TAlias {
+        Type::Ref(types::TRef {
             name,
             type_args: type_params,
             ..

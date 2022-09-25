@@ -78,12 +78,12 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
                         .iter()
                         .map(|t| infer_ts_type_ann(t, ctx))
                         .collect();
-                    Ok(Type::Alias(types::TAlias {
+                    Ok(Type::Ref(types::TRef {
                         name,
                         type_args: result.ok(),
                     }))
                 }
-                None => Ok(Type::Alias(types::TAlias {
+                None => Ok(Type::Ref(types::TRef {
                     name,
                     type_args: None,
                 })),

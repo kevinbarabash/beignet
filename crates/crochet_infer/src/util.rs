@@ -132,14 +132,14 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     ..obj.to_owned()
                 })
             }
-            Type::Alias(TAlias {
+            Type::Ref(TRef {
                 name,
                 type_args: type_params,
             }) => {
                 let type_params = type_params
                     .clone()
                     .map(|params| params.iter().map(|t| norm_type(t, mapping, ctx)).collect());
-                Type::Alias(TAlias {
+                Type::Ref(TRef {
                     name: name.to_owned(),
                     type_args: type_params,
                 })
@@ -376,7 +376,7 @@ pub fn get_type_params(t: &Type) -> Vec<i32> {
         Type::Union(_) => vec![],
         Type::Intersection(_) => vec![],
         Type::Object(obj) => obj.type_params.to_owned(),
-        Type::Alias(_) => vec![],
+        Type::Ref(_) => vec![],
         Type::Tuple(_) => vec![],
         Type::Array(_) => vec![],
         Type::Rest(_) => vec![],
@@ -401,7 +401,7 @@ pub fn set_type_params(t: &Type, type_params: &[i32]) -> Type {
             type_params: type_params.to_owned(),
             ..obj.to_owned()
         }),
-        Type::Alias(_) => t.to_owned(),
+        Type::Ref(_) => t.to_owned(),
         Type::Tuple(_) => t.to_owned(),
         Type::Array(_) => t.to_owned(),
         Type::Rest(_) => t.to_owned(),

@@ -55,7 +55,7 @@ pub fn infer_scheme_with_type_params(
         Type::Union(_) => type_ann_ty,
         Type::Intersection(_) => type_ann_ty,
         Type::Object(obj) => Type::Object(TObject { type_params, ..obj }),
-        Type::Alias(_) => type_ann_ty,
+        Type::Ref(_) => type_ann_ty,
         Type::Tuple(_) => type_ann_ty,
         Type::Array(_) => type_ann_ty,
         Type::Rest(_) => type_ann_ty,
@@ -128,7 +128,7 @@ fn infer_type_ann_rec(
                         .map(|param| infer_type_ann_rec(param, ctx, type_param_map))
                         .collect()
                 });
-                Type::Alias(types::TAlias {
+                Type::Ref(types::TRef {
                     name: name.to_owned(),
                     type_args: type_params,
                 })

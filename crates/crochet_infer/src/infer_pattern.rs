@@ -70,7 +70,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                 // The alias type will be used for `instanceof` of checks, but
                 // only if the definition of the alias is an object type with a
                 // `constructor` method.
-                name => Type::Alias(types::TAlias {
+                name => Type::Ref(types::TRef {
                     name: name.to_owned(),
                     type_args: None,
                 }),

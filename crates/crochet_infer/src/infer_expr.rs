@@ -183,7 +183,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                             elems.push(types::TObjElem::Prop(prop));
                         }
 
-                        let ret_type = Type::Alias(types::TAlias {
+                        let ret_type = Type::Ref(types::TRef {
                             name: String::from("JSXElement"),
                             type_args: None,
                         });
@@ -209,7 +209,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             let s = Subst::default();
             // TODO: check props on JSXInstrinsics
-            let t = Type::Alias(types::TAlias {
+            let t = Type::Ref(types::TRef {
                 name: String::from("JSXElement"),
                 type_args: None,
             });
@@ -256,7 +256,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             ctx.pop_scope();
 
             let rt = if *is_async && !is_promise(&rt) {
-                Type::Alias(types::TAlias {
+                Type::Ref(types::TRef {
                     name: String::from("Promise"),
                     type_args: Some(vec![rt]),
                 })
@@ -401,7 +401,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             let (s1, t1) = infer_expr(ctx, expr)?;
             let wrapped_type = ctx.fresh_var();
-            let promise_type = Type::Alias(types::TAlias {
+            let promise_type = Type::Ref(types::TRef {
                 name: String::from("Promise"),
                 type_args: Some(vec![wrapped_type.clone()]),
             });
@@ -537,7 +537,7 @@ fn infer_let(
 }
 
 fn is_promise(t: &Type) -> bool {
-    matches!(&t, Type::Alias(types::TAlias { name, .. }) if name == "Promise")
+    matches!(&t, Type::Ref(types::TRef { name, .. }) if name == "Promise")
 }
 
 fn infer_property_type(
@@ -547,7 +547,7 @@ fn infer_property_type(
 ) -> Result<(Subst, Type), String> {
     match &obj_t {
         Type::Object(obj) => get_prop_value(obj, prop, ctx),
-        Type::Alias(alias) => {
+        Type::Ref(alias) => {
             let t = ctx.lookup_alias(alias)?;
             infer_property_type(&t, prop, ctx)
         }

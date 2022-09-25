@@ -112,7 +112,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
                 ..obj.to_owned()
             })
         }
-        Type::Alias(alias) => match map.get(&alias.name) {
+        Type::Ref(alias) => match map.get(&alias.name) {
             Some(id) => Type::Var(*id),
             None => t.to_owned(),
         },

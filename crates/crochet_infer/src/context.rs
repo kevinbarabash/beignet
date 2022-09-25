@@ -138,7 +138,7 @@ impl Context {
         Err(format!("Can't find namespace: {name}"))
     }
 
-    pub fn lookup_alias(&self, alias: &TAlias) -> Result<Type, String> {
+    pub fn lookup_alias(&self, alias: &TRef) -> Result<Type, String> {
         let name = &alias.name;
         for scope in self.scopes.iter().rev() {
             match scope.types.get(name) {

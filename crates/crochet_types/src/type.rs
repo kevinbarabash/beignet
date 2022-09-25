@@ -16,18 +16,18 @@ pub struct TApp {
 }
 
 #[derive(Clone, Debug, Eq)]
-pub struct TAlias {
+pub struct TRef {
     pub name: String,
     pub type_args: Option<Vec<Type>>,
 }
 
-impl PartialEq for TAlias {
+impl PartialEq for TRef {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name && self.type_args == other.type_args
     }
 }
 
-impl Hash for TAlias {
+impl Hash for TRef {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.name.hash(state);
         self.type_args.hash(state);
@@ -52,7 +52,7 @@ pub enum Type {
     Union(Vec<Type>),
     Intersection(Vec<Type>),
     Object(TObject),
-    Alias(TAlias),
+    Ref(TRef),
     Tuple(Vec<Type>),
     Array(Box<Type>),
     Rest(Box<Type>), // TODO: rename this to Spread
@@ -95,7 +95,7 @@ impl fmt::Display for Type {
                     write!(f, "<{}>{{{}}}", join(params, ", "), join(elems, ", "))
                 }
             }
-            Type::Alias(TAlias {
+            Type::Ref(TRef {
                 name,
                 type_args: type_params,
                 ..

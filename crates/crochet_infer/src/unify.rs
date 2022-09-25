@@ -469,7 +469,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 _ => Err(String::from("Unification is undecidable")),
             }
         }
-        (Type::Alias(alias1), Type::Alias(alias2)) => {
+        (Type::Ref(alias1), Type::Ref(alias2)) => {
             if alias1.name == alias2.name {
                 match (&alias1.type_args, &alias2.type_args) {
                     (Some(tp1), Some(tp2)) => {
@@ -488,11 +488,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 todo!("unify(): handle aliases that point to another alias")
             }
         }
-        (_, Type::Alias(alias)) => {
+        (_, Type::Ref(alias)) => {
             let alias_t = ctx.lookup_alias(alias)?;
             unify(t1, &alias_t, ctx)
         }
-        (Type::Alias(alias), _) => {
+        (Type::Ref(alias), _) => {
             let alias_t = ctx.lookup_alias(alias)?;
             unify(&alias_t, t2, ctx)
         }
