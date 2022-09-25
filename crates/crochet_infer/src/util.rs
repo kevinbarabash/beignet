@@ -12,13 +12,18 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     let keys = body.ftv();
     let mut keys: Vec<_> = keys.iter().cloned().collect();
     keys.sort_unstable();
-    let mapping: HashMap<i32, Type> = keys
+
+    let mut mapping: HashMap<i32, Type> = keys
         .iter()
         .enumerate()
         .map(|(index, key)| (key.to_owned(), Type::Var(index as i32)))
         .collect();
 
-    // let qualifiers = (0..keys.len()).map(|x| x as i32).collect();
+    let type_params = get_type_params(t);
+    let offset = mapping.len();
+    for (index, tp) in type_params.iter().enumerate() {
+        mapping.insert(tp.to_owned(), Type::Var((offset + index) as i32));
+    }
 
     // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
     // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
@@ -148,7 +153,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     }
 
     let t = norm_type(body, &mapping, ctx);
-    let type_params = (0..keys.len()).map(|x| x as i32).collect();
+    let type_params = (0..mapping.len()).map(|x| x as i32).collect();
 
     // set type_params
     match t {
@@ -172,7 +177,8 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
 pub fn generalize_type(env: &Env, t: &Type) -> Type {
     // ftv() returns a Set which is not ordered
     // TODO: switch to an ordered set
-    let mut type_params: Vec<_> = t.ftv().difference(&env.ftv()).cloned().collect();
+    let mut type_params = get_type_params(t);
+    type_params.extend(t.ftv().difference(&env.ftv()).cloned());
     type_params.sort_unstable();
     match t {
         Type::Var(_) => t.to_owned(),

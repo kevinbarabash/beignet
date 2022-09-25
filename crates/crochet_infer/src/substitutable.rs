@@ -28,10 +28,21 @@ impl Substitutable for Type {
             Type::Keyword(_) => self.to_owned(),
             Type::Union(types) => Type::Union(types.apply(sub)),
             Type::Intersection(types) => Type::Intersection(types.apply(sub)),
-            Type::Object(obj) => Type::Object(TObject {
-                elems: obj.elems.apply(sub),
-                ..obj.to_owned()
-            }),
+            Type::Object(obj) => {
+                // QUESTION: Do we really need to be filtering out type_params from
+                // substitutions?
+                let type_params = obj
+                    .type_params
+                    .iter()
+                    .filter(|tp| !sub.contains_key(tp))
+                    .cloned()
+                    .collect();
+
+                Type::Object(TObject {
+                    elems: obj.elems.apply(sub),
+                    type_params,
+                })
+            }
             Type::Alias(alias) => Type::Alias(TAlias {
                 type_params: alias.type_params.apply(sub),
                 ..alias.to_owned()
@@ -92,10 +103,19 @@ impl Substitutable for TObjElem {
 
 impl Substitutable for TLam {
     fn apply(&self, sub: &Subst) -> Self {
+        // QUESTION: Do we really need to be filtering out type_params from
+        // substitutions?
+        let type_params = self
+            .type_params
+            .iter()
+            .filter(|tp| !sub.contains_key(tp))
+            .cloned()
+            .collect();
+
         TLam {
             params: self.params.iter().map(|param| param.apply(sub)).collect(),
             ret: Box::from(self.ret.apply(sub)),
-            type_params: self.type_params.to_owned(),
+            type_params,
         }
     }
     fn ftv(&self) -> HashSet<i32> {

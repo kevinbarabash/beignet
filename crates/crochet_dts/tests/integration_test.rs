@@ -238,3 +238,31 @@ fn infer_index_with_incorrect_key_type_on_interface() {
 
     crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
 }
+
+#[test]
+fn instantiating_generic_interfaces() {
+    let lib = r#"
+    interface Foo<T> {
+        bar(x: T): any;
+        baz(x: T): any;
+    }
+    "#;
+    let mut ctx = parse_dts(lib).unwrap();
+
+    let src = r#"
+    declare let foo: Foo<number>;
+    let bar = foo.bar;
+    "#;
+    let result = parse(src);
+    let prog = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+
+    let result = format!("{}", ctx.lookup_value_scheme("bar").unwrap());
+    assert_eq!(result, "<t0>(x: number) => t0");
+}
