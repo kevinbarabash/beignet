@@ -98,12 +98,12 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
                         .collect();
                     Ok(Type::Alias(types::TAlias {
                         name,
-                        type_params: result.ok(),
+                        type_args: result.ok(),
                     }))
                 }
                 None => Ok(Type::Alias(types::TAlias {
                     name,
-                    type_params: None,
+                    type_args: None,
                 })),
             }
         }
@@ -477,6 +477,8 @@ fn merge_types(t1: &Type, t2: &Type) -> Type {
                 .collect();
 
             // TODO: merge qualifiers
+            // We need this to support Promise<T> which was extended in es2018 to
+            // include a .finally() method.
             Type::Object(TObject {
                 elems,
                 // TODO: merge type params as well

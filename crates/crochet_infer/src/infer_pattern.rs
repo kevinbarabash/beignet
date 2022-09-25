@@ -72,7 +72,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                 // `constructor` method.
                 name => Type::Alias(types::TAlias {
                     name: name.to_owned(),
-                    type_params: None,
+                    type_args: None,
                 }),
             };
             // TODO: we need a method on Context to get all types that currently in

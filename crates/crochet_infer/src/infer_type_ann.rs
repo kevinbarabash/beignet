@@ -130,7 +130,7 @@ fn infer_type_ann_rec(
                 });
                 Type::Alias(types::TAlias {
                     name: name.to_owned(),
-                    type_params,
+                    type_args: type_params,
                 })
             }
         },

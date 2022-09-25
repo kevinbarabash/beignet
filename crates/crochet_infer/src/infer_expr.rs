@@ -185,7 +185,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
                         let ret_type = Type::Alias(types::TAlias {
                             name: String::from("JSXElement"),
-                            type_params: None,
+                            type_args: None,
                         });
 
                         let call_type = Type::App(types::TApp {
@@ -211,7 +211,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             // TODO: check props on JSXInstrinsics
             let t = Type::Alias(types::TAlias {
                 name: String::from("JSXElement"),
-                type_params: None,
+                type_args: None,
             });
 
             Ok((s, t))
@@ -258,7 +258,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let rt = if *is_async && !is_promise(&rt) {
                 Type::Alias(types::TAlias {
                     name: String::from("Promise"),
-                    type_params: Some(vec![rt]),
+                    type_args: Some(vec![rt]),
                 })
             } else {
                 rt
@@ -403,7 +403,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let wrapped_type = ctx.fresh_var();
             let promise_type = Type::Alias(types::TAlias {
                 name: String::from("Promise"),
-                type_params: Some(vec![wrapped_type.clone()]),
+                type_args: Some(vec![wrapped_type.clone()]),
             });
 
             let s2 = unify(&t1, &promise_type, ctx)?;

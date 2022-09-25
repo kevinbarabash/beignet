@@ -471,7 +471,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         }
         (Type::Alias(alias1), Type::Alias(alias2)) => {
             if alias1.name == alias2.name {
-                match (&alias1.type_params, &alias2.type_params) {
+                match (&alias1.type_args, &alias2.type_args) {
                     (Some(tp1), Some(tp2)) => {
                         let result: Result<Vec<_>, _> = tp1
                             .iter()

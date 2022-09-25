@@ -133,13 +133,16 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     ..obj.to_owned()
                 })
             }
-            Type::Alias(TAlias { name, type_params }) => {
+            Type::Alias(TAlias {
+                name,
+                type_args: type_params,
+            }) => {
                 let type_params = type_params
                     .clone()
                     .map(|params| params.iter().map(|t| norm_type(t, mapping, ctx)).collect());
                 Type::Alias(TAlias {
                     name: name.to_owned(),
-                    type_params,
+                    type_args: type_params,
                 })
             }
             Type::Tuple(types) => {
