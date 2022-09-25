@@ -589,7 +589,7 @@ fn infer_property_type(
         },
         Type::Array(type_param) => {
             // TODO: Do this for all interfaces that we lookup
-            let t = ctx.lookup_type_scheme("ReadonlyArray")?;
+            let t = ctx.lookup_type("ReadonlyArray")?;
             let type_params = get_type_params(&t);
             // TODO: Instead of instantiating the whole interface for one method, do
             // the lookup call first and then instantiate the method.
@@ -602,7 +602,7 @@ fn infer_property_type(
                 // TODO: lookup methods on Array.prototype
                 MemberProp::Ident(_) => {
                     // TODO: Do this for all interfaces that we lookup
-                    let t = ctx.lookup_type_scheme("ReadonlyArray")?;
+                    let t = ctx.lookup_type("ReadonlyArray")?;
                     println!("ReadonlyArray = {t}");
                     // TODO: Instead of instantiating the whole interface for one method, do
                     // the lookup call first and then instantiate the method.

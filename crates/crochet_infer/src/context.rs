@@ -97,7 +97,7 @@ impl Context {
         Err(format!("Can't find value type: {name}"))
     }
 
-    pub fn lookup_value_scheme(&self, name: &str) -> Result<Type, String> {
+    pub fn lookup_value(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
             match scope.values.get(name) {
                 Some(t) => return Ok(t.to_owned()),
@@ -118,7 +118,7 @@ impl Context {
         Err(format!("Can't find type: {name}"))
     }
 
-    pub fn lookup_type_scheme(&self, name: &str) -> Result<Type, String> {
+    pub fn lookup_type(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
             match scope.types.get(name) {
                 Some(t) => return Ok(t.to_owned()),
