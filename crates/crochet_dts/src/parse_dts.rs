@@ -9,10 +9,10 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
-use crochet_infer::{
-    close_over, generalize_type, get_type_params, normalize, Context, Env, Subst, Substitutable,
-};
+use crochet_infer::{close_over, generalize_type, normalize, Context, Env, Subst, Substitutable};
 use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TPrim, TProp, Type};
+
+use crate::util;
 
 #[derive(Debug, Clone)]
 pub struct InterfaceCollector {
@@ -47,35 +47,15 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
                 let params: Vec<TFnParam> = infer_fn_params(&fn_type.params, ctx)?;
                 let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?;
 
+                let t = Type::Lam(types::TLam {
+                    params,
+                    ret: Box::from(ret),
+                    type_params: vec![],
+                });
+
                 match &fn_type.type_params {
-                    Some(type_param_decl) => {
-                        let mut type_params: Vec<i32> = vec![];
-                        let type_param_map: HashMap<String, Type> = type_param_decl
-                            .params
-                            .iter()
-                            .map(|tp| {
-                                let id = ctx.fresh_id();
-                                type_params.push(id);
-                                (tp.name.sym.to_string(), Type::Var(id))
-                            })
-                            .collect();
-
-                        let t = Type::Lam(types::TLam {
-                            params,
-                            ret: Box::from(ret),
-                            type_params,
-                        });
-
-                        Ok(replace_aliases(&t, &type_param_map))
-                    }
-                    None => {
-                        let t = Type::Lam(types::TLam {
-                            params,
-                            ret: Box::from(ret),
-                            type_params: vec![],
-                        });
-                        Ok(t)
-                    }
+                    Some(type_param_decl) => Ok(util::replace_aliases(&t, type_param_decl, ctx)),
+                    None => Ok(t),
                 }
             }
             TsFnOrConstructorType::TsConstructorType(_) => {
@@ -216,13 +196,19 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
         None => Err(String::from("method has no return type")),
     };
 
-    // TODO: maintain param names
-    Ok(Type::Lam(types::TLam {
+    let t = Type::Lam(types::TLam {
         params,
         ret: Box::from(ret?),
-        // TODO: handle generic method signatures
         type_params: vec![],
-    }))
+    });
+
+    let t = match &sig.type_params {
+        Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx),
+        None => t,
+    };
+
+    // TODO: maintain param names
+    Ok(generalize_type(&HashMap::default(), &t))
 }
 
 fn get_key_name(key: &Expr) -> Result<String, String> {
@@ -338,167 +324,16 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, S
 
     let t = Type::Object(TObject {
         elems,
-        // TODO: parse type params on interfaces
         type_params: vec![],
     });
 
-    let scheme = match &decl.type_params {
-        Some(type_params) => {
-            let type_param_map: HashMap<String, Type> = type_params
-                .params
-                .iter()
-                .map(|tp| (tp.name.sym.to_string(), ctx.fresh_var()))
-                .collect();
-
-            let t = replace_aliases(&t, &type_param_map);
-            generalize_type(&HashMap::default(), &t)
-        }
-        None => {
-            let empty_s = Subst::default();
-            close_over(&empty_s, &t, ctx)
-        }
+    let t = match &decl.type_params {
+        Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx),
+        None => t,
     };
 
-    Ok(scheme)
-}
-
-fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
-    match t {
-        Type::Var(_) => t.to_owned(),
-        Type::App(types::TApp { args, ret }) => Type::App(types::TApp {
-            args: args.iter().map(|t| replace_aliases(t, map)).collect(),
-            ret: Box::from(replace_aliases(ret, map)),
-        }),
-        Type::Lam(types::TLam {
-            params,
-            ret,
-            type_params,
-        }) => Type::Lam(types::TLam {
-            params: params
-                .iter()
-                .map(|param| TFnParam {
-                    t: replace_aliases(&param.t, map),
-                    ..param.to_owned()
-                })
-                .collect(),
-            ret: Box::from(replace_aliases(ret, map)),
-            type_params: type_params.to_owned(),
-        }),
-        Type::Prim(_) => t.to_owned(),
-        Type::Lit(_) => t.to_owned(),
-        Type::Keyword(_) => t.to_owned(),
-        Type::Union(types) => Type::Union(types.iter().map(|t| replace_aliases(t, map)).collect()),
-        Type::Intersection(types) => {
-            Type::Intersection(types.iter().map(|t| replace_aliases(t, map)).collect())
-        }
-        Type::Object(obj) => {
-            let elems: Vec<TObjElem> = obj
-                .elems
-                .iter()
-                .map(|elem| {
-                    match elem {
-                        TObjElem::Call(lam) => {
-                            let params: Vec<TFnParam> = lam
-                                .params
-                                .iter()
-                                .map(|t| TFnParam {
-                                    t: replace_aliases(&t.t, map),
-                                    ..t.to_owned()
-                                })
-                                .collect();
-                            let ret = replace_aliases(lam.ret.as_ref(), map);
-
-                            TObjElem::Call(TLam {
-                                params,
-                                ret: Box::from(ret),
-                                type_params: lam.type_params.to_owned(),
-                            })
-                        }
-                        TObjElem::Constructor(lam) => {
-                            let params: Vec<TFnParam> = lam
-                                .params
-                                .iter()
-                                .map(|t| TFnParam {
-                                    t: replace_aliases(&t.t, map),
-                                    ..t.to_owned()
-                                })
-                                .collect();
-                            let ret = replace_aliases(lam.ret.as_ref(), map);
-
-                            TObjElem::Constructor(TLam {
-                                params,
-                                ret: Box::from(ret),
-                                type_params: lam.type_params.to_owned(),
-                            })
-                        }
-                        TObjElem::Index(index) => {
-                            // TODO: handle generic indexers
-                            let t = replace_aliases(&index.t, map);
-                            TObjElem::Index(types::TIndex {
-                                t,
-                                ..index.to_owned()
-                            })
-                        }
-                        TObjElem::Prop(prop) => {
-                            // TODO: handle generic properties
-                            let t = replace_aliases(&prop.t, map);
-                            TObjElem::Prop(types::TProp {
-                                t,
-                                ..prop.to_owned()
-                            })
-                        }
-                    }
-                })
-                .collect();
-            Type::Object(TObject {
-                elems,
-                ..obj.to_owned()
-            })
-        }
-        Type::Alias(alias) => match map.get(&alias.name) {
-            Some(replacement) => replacement.to_owned(),
-            None => t.to_owned(),
-        },
-        Type::Tuple(types) => Type::Tuple(types.iter().map(|t| replace_aliases(t, map)).collect()),
-        Type::Array(t) => Type::Array(Box::from(replace_aliases(t, map))),
-        Type::Rest(t) => Type::Rest(Box::from(replace_aliases(t, map))),
-        Type::This => Type::This,
-    }
-}
-
-fn merge_types(t1: &Type, t2: &Type) -> Type {
-    let tp1 = get_type_params(t1);
-    let tp2 = get_type_params(t2);
-
-    if tp1.len() != tp2.len() {
-        panic!("Mismatch in type param count when attempting to merge type");
-    }
-
-    // Creates a mapping from type params in t2 to those in t1
-    let subs: Subst = tp2
-        .into_iter()
-        .zip(tp1.iter().map(|id| Type::Var(*id)))
-        .collect();
-
-    // Updates type variables for type params to match t1
-    let t2 = t2.apply(&subs);
-
-    match (t1, t2) {
-        (Type::Object(obj1), Type::Object(obj2)) => {
-            let elems: Vec<_> = obj1
-                .elems
-                .iter()
-                .cloned()
-                .chain(obj2.elems.iter().cloned())
-                .collect();
-
-            Type::Object(TObject {
-                elems,
-                type_params: obj1.type_params.to_owned(),
-            })
-        }
-        (_, _) => todo!(),
-    }
+    let empty_s = Subst::default();
+    Ok(close_over(&empty_s, &t, ctx))
 }
 
 impl Visit for InterfaceCollector {
@@ -509,7 +344,7 @@ impl Visit for InterfaceCollector {
             Ok(t) => {
                 match self.ctx.lookup_type(&name).ok() {
                     Some(existing_t) => {
-                        let merged_t = merge_types(&existing_t, &t);
+                        let merged_t = util::merge_types(&existing_t, &t);
                         let merged_t = normalize(&merged_t, &self.ctx);
                         self.ctx.insert_type(name, merged_t)
                     }
