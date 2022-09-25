@@ -44,7 +44,7 @@ impl Substitutable for Type {
                 })
             }
             Type::Alias(alias) => Type::Alias(TAlias {
-                type_params: alias.type_params.apply(sub),
+                type_args: alias.type_args.apply(sub),
                 ..alias.to_owned()
             }),
             Type::Tuple(types) => Type::Tuple(types.apply(sub)),
@@ -73,7 +73,10 @@ impl Substitutable for Type {
                     obj.type_params.iter().map(|id| id.to_owned()).collect();
                 obj.elems.ftv().difference(&qualifiers).cloned().collect()
             }
-            Type::Alias(TAlias { type_params, .. }) => type_params.ftv(),
+            Type::Alias(TAlias {
+                type_args: type_params,
+                ..
+            }) => type_params.ftv(),
             Type::Tuple(types) => types.ftv(),
             Type::Array(t) => t.ftv(),
             Type::Rest(arg) => arg.ftv(),

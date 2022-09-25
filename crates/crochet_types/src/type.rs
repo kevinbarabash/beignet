@@ -12,25 +12,25 @@ use crate::prim::TPrim;
 pub struct TApp {
     pub args: Vec<Type>,
     pub ret: Box<Type>,
-    // TODO: use type_args instead of type_params
+    // TODO: add type_args property to support explicit specification of type args
 }
 
 #[derive(Clone, Debug, Eq)]
 pub struct TAlias {
     pub name: String,
-    pub type_params: Option<Vec<Type>>, // TODO: rename to type_args
+    pub type_args: Option<Vec<Type>>,
 }
 
 impl PartialEq for TAlias {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.type_params == other.type_params
+        self.name == other.name && self.type_args == other.type_args
     }
 }
 
 impl Hash for TAlias {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.name.hash(state);
-        self.type_params.hash(state);
+        self.type_args.hash(state);
     }
 }
 
@@ -96,7 +96,9 @@ impl fmt::Display for Type {
                 }
             }
             Type::Alias(TAlias {
-                name, type_params, ..
+                name,
+                type_args: type_params,
+                ..
             }) => match type_params {
                 Some(params) => write!(f, "{name}<{}>", join(params, ", ")),
                 None => write!(f, "{name}"),

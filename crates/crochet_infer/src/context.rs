@@ -148,7 +148,7 @@ impl Context {
                     // Replaces qualifiers in the scheme with the corresponding type params
                     // from the alias type.
                     let ids = type_params.iter().map(|id| id.to_owned());
-                    let subs: Subst = match &alias.type_params {
+                    let subs: Subst = match &alias.type_args {
                         Some(type_params) => {
                             if type_params.len() != type_params.len() {
                                 println!("type = {t}");

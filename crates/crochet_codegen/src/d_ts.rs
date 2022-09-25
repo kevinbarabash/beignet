@@ -527,7 +527,9 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
             })
         }
         Type::Alias(types::TAlias {
-            name, type_params, ..
+            name,
+            type_args: type_params,
+            ..
         }) => TsType::TsTypeRef(TsTypeRef {
             span: DUMMY_SP,
             type_name: TsEntityName::from(Ident {
