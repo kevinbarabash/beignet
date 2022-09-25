@@ -191,7 +191,6 @@ fn infer_generic_index_value_on_interface() {
     let src = r#"
     declare let foo: Foo;
     let id = foo[5];
-    // let str = id("hello");
     "#;
     let result = parse(src);
     let prog = match result {
@@ -203,12 +202,8 @@ fn infer_generic_index_value_on_interface() {
     };
     let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
 
-    // TODO: This should be generic but it isn't.
-    // https://github.com/crochet-lang/crochet/issues/273 should solve this issue.
     let result = format!("{}", ctx.lookup_value_scheme("id").unwrap());
-    assert_eq!(result, "(arg: T) => T");
-    // let result = format!("{}", ctx.lookup_value_scheme("str").unwrap());
-    // assert_eq!(result, r#""hello""#);
+    assert_eq!(result, "<t0>(arg: t0) => t0");
 }
 
 #[test]

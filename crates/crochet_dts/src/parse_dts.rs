@@ -42,17 +42,39 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
         TsType::TsThisType(_) => Ok(Type::This),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
-                // println!("fn_type = {fn_type:#?}");
-                // TODO: parse the type params and return a Scheme
                 let params: Vec<TFnParam> = infer_fn_params(&fn_type.params, ctx)?;
                 let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?;
 
-                Ok(Type::Lam(types::TLam {
-                    params,
-                    ret: Box::from(ret),
-                    // TODO: handle generic functions/constructors
-                    type_params: vec![],
-                }))
+                match &fn_type.type_params {
+                    Some(type_param_decl) => {
+                        let mut type_params: Vec<i32> = vec![];
+                        let type_param_map: HashMap<String, Type> = type_param_decl
+                            .params
+                            .iter()
+                            .map(|tp| {
+                                let id = ctx.fresh_id();
+                                type_params.push(id);
+                                (tp.name.sym.to_string(), Type::Var(id))
+                            })
+                            .collect();
+
+                        let t = Type::Lam(types::TLam {
+                            params,
+                            ret: Box::from(ret),
+                            type_params,
+                        });
+
+                        Ok(replace_aliases(&t, &type_param_map))
+                    }
+                    None => {
+                        let t = Type::Lam(types::TLam {
+                            params,
+                            ret: Box::from(ret),
+                            type_params: vec![],
+                        });
+                        Ok(t)
+                    }
+                }
             }
             TsFnOrConstructorType::TsConstructorType(_) => {
                 Err(String::from("can't parse constructor yet"))
