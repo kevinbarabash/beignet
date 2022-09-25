@@ -31,7 +31,7 @@ fn infer_adding_variables() {
     let len = msg.length.toString(); // radix is optional
     "#;
     let (_, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.lookup_value_scheme("len").unwrap());
+    let result = format!("{}", ctx.lookup_value("len").unwrap());
     assert_eq!(result, "string");
 }
 
@@ -42,7 +42,7 @@ fn infer_method_on_readonly_array() {
     let map = arr.map
     "#;
     let (_, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.lookup_value_scheme("map").unwrap());
+    let result = format!("{}", ctx.lookup_value("map").unwrap());
     assert_eq!(
         result,
         "<t0>(callbackfn: (value: string, index: number) => U, thisArg?: t0) => U[]"
@@ -70,12 +70,12 @@ fn infer_method_on_readonly_arrays_of_different_things() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.lookup_value_scheme("map1").unwrap());
+    let result = format!("{}", ctx.lookup_value("map1").unwrap());
     assert_eq!(
         result,
         "<t0>(callbackfn: (value: string, index: number) => U, thisArg?: t0) => U[]"
     );
-    let result = format!("{}", ctx.lookup_value_scheme("map2").unwrap());
+    let result = format!("{}", ctx.lookup_value("map2").unwrap());
     assert_eq!(
         result,
         "<t0>(callbackfn: (value: number, index: number) => U, thisArg?: t0) => U[]"
@@ -89,7 +89,7 @@ fn infer_array_method_on_tuple() {
     let map = tuple.map;
     "#;
     let (_, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.lookup_value_scheme("map").unwrap());
+    let result = format!("{}", ctx.lookup_value("map").unwrap());
     assert_eq!(
         result,
         "<t0>(callbackfn: (value: \"hello\" | 5 | true, index: number) => U, thisArg?: t0) => U[]"
@@ -104,9 +104,9 @@ fn infer_static_properties() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.lookup_value_scheme("max").unwrap());
+    let result = format!("{}", ctx.lookup_value("max").unwrap());
     assert_eq!(result, "number");
-    let result = format!("{}", ctx.lookup_value_scheme("parse").unwrap());
+    let result = format!("{}", ctx.lookup_value("parse").unwrap());
     assert_eq!(result, "(s: string) => number");
 }
 
@@ -137,11 +137,11 @@ fn infer_callable_results_on_interface() {
     };
     let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
 
-    let result = format!("{}", ctx.lookup_value_scheme("num").unwrap());
+    let result = format!("{}", ctx.lookup_value("num").unwrap());
     assert_eq!(result, "number");
-    let result = format!("{}", ctx.lookup_value_scheme("str").unwrap());
+    let result = format!("{}", ctx.lookup_value("str").unwrap());
     assert_eq!(result, "string");
-    let result = format!("{}", ctx.lookup_value_scheme("bool").unwrap());
+    let result = format!("{}", ctx.lookup_value("bool").unwrap());
     assert_eq!(result, "boolean");
 }
 
@@ -172,9 +172,9 @@ fn infer_index_value_on_interface() {
     };
     let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
 
-    let result = format!("{}", ctx.lookup_value_scheme("num").unwrap());
+    let result = format!("{}", ctx.lookup_value("num").unwrap());
     assert_eq!(result, "number");
-    let result = format!("{}", ctx.lookup_value_scheme("bool").unwrap());
+    let result = format!("{}", ctx.lookup_value("bool").unwrap());
     assert_eq!(result, "boolean");
 }
 
@@ -202,7 +202,7 @@ fn infer_generic_index_value_on_interface() {
     };
     let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
 
-    let result = format!("{}", ctx.lookup_value_scheme("id").unwrap());
+    let result = format!("{}", ctx.lookup_value("id").unwrap());
     assert_eq!(result, "<t0>(arg: t0) => t0");
 }
 
@@ -258,6 +258,39 @@ fn instantiating_generic_interfaces() {
     };
     let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
 
-    let result = format!("{}", ctx.lookup_value_scheme("bar").unwrap());
+    let result = format!("{}", ctx.lookup_value("bar").unwrap());
     assert_eq!(result, "<t0>(x: number) => t0");
+}
+
+#[test]
+fn merging_generic_interfaces() {
+    let lib = r#"
+    interface Foo<T> {
+        bar(x: T): number;
+    }
+
+    interface Foo<T> {
+        baz(x: T): string;
+    }
+    "#;
+    let mut ctx = parse_dts(lib).unwrap();
+
+    let src = r#"
+    declare let foo: Foo<number>;
+    "#;
+    let result = parse(src);
+    let prog = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+
+    let result = format!("{}", ctx.lookup_type("Foo").unwrap());
+    assert_eq!(
+        result,
+        "<t0>{bar: (x: t0) => number, baz: (x: t0) => string}"
+    );
 }

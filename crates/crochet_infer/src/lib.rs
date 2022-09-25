@@ -34,7 +34,7 @@ mod tests {
     }
 
     fn get_type(name: &str, ctx: &Context) -> String {
-        match ctx.lookup_value_scheme(name) {
+        match ctx.lookup_value(name) {
             Ok(t) => format!("{t}"),
             Err(_) => panic!("Couldn't find type with name '{name}'"),
         }
@@ -351,8 +351,8 @@ mod tests {
 
         assert_eq!(get_type("a", &ctx), "5");
         assert_eq!(get_type("b", &ctx), "10");
-        assert!(ctx.lookup_value_scheme("x").is_err());
-        assert!(ctx.lookup_value_scheme("y").is_err());
+        assert!(ctx.lookup_value("x").is_err());
+        assert!(ctx.lookup_value("y").is_err());
     }
 
     #[test]
@@ -366,8 +366,8 @@ mod tests {
     fn nested_destructure_obj() {
         let ctx = infer_prog("let {a: {b: {c}}} = {a: {b: {c: \"hello\"}}};");
 
-        assert!(ctx.lookup_value_scheme("a").is_err());
-        assert!(ctx.lookup_value_scheme("b").is_err());
+        assert!(ctx.lookup_value("a").is_err());
+        assert!(ctx.lookup_value("b").is_err());
         assert_eq!(get_type("c", &ctx), "\"hello\"");
     }
 
@@ -487,7 +487,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        let x = format!("{}", ctx.lookup_value_scheme("x").unwrap());
+        let x = format!("{}", ctx.lookup_value("x").unwrap());
         assert_eq!(x, "number | undefined");
     }
 
@@ -553,8 +553,8 @@ mod tests {
         assert_eq!(get_type("sum", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.lookup_value_scheme("x").is_err());
-        assert!(ctx.lookup_value_scheme("y").is_err());
+        assert!(ctx.lookup_value("x").is_err());
+        assert!(ctx.lookup_value("y").is_err());
     }
 
     #[test]
@@ -601,8 +601,8 @@ mod tests {
         assert_eq!(get_type("sum", &ctx), "0 | 1 | 5");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.lookup_value_scheme("x").is_err());
-        assert!(ctx.lookup_value_scheme("y").is_err());
+        assert!(ctx.lookup_value("x").is_err());
+        assert!(ctx.lookup_value("y").is_err());
     }
 
     #[test]
@@ -641,7 +641,7 @@ mod tests {
         assert_eq!(get_type("sum", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.lookup_value_scheme("x").is_err());
+        assert!(ctx.lookup_value("x").is_err());
     }
 
     #[test]
@@ -662,8 +662,8 @@ mod tests {
         assert_eq!(get_type("result", &ctx), "number | string | true");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.lookup_value_scheme("x").is_err());
-        assert!(ctx.lookup_value_scheme("y").is_err());
+        assert!(ctx.lookup_value("x").is_err());
+        assert!(ctx.lookup_value("y").is_err());
     }
 
     #[test]
@@ -695,7 +695,7 @@ mod tests {
         assert_eq!(get_type("sum", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.lookup_value_scheme("x").is_err());
+        assert!(ctx.lookup_value("x").is_err());
     }
 
     #[test]
@@ -750,7 +750,7 @@ mod tests {
         assert_eq!(get_type("result", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.lookup_value_scheme("x").is_err());
+        assert!(ctx.lookup_value("x").is_err());
     }
 
     #[test]
@@ -771,7 +771,7 @@ mod tests {
         assert_eq!(get_type("result", &ctx), "number | string | true");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.lookup_value_scheme("x").is_err());
+        assert!(ctx.lookup_value("x").is_err());
     }
 
     #[test]
@@ -820,8 +820,8 @@ mod tests {
         assert_eq!(get_type("result", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
-        assert!(ctx.lookup_value_scheme("x").is_err());
-        assert!(ctx.lookup_value_scheme("y").is_err());
+        assert!(ctx.lookup_value("x").is_err());
+        assert!(ctx.lookup_value("y").is_err());
     }
 
     // TODO: handle refutable patterns in if-else
@@ -852,7 +852,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert!(ctx.lookup_value_scheme("_").is_err());
+        assert!(ctx.lookup_value("_").is_err());
     }
 
     #[test]

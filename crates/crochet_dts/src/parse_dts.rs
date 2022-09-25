@@ -9,7 +9,9 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
-use crochet_infer::{close_over, generalize_type, Context, Env, Subst, Substitutable};
+use crochet_infer::{
+    close_over, generalize_type, get_type_params, normalize, Context, Env, Subst, Substitutable,
+};
 use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TPrim, TProp, Type};
 
 #[derive(Debug, Clone)]
@@ -467,6 +469,22 @@ fn replace_aliases(t: &Type, map: &HashMap<String, Type>) -> Type {
 }
 
 fn merge_types(t1: &Type, t2: &Type) -> Type {
+    let tp1 = get_type_params(t1);
+    let tp2 = get_type_params(t2);
+
+    if tp1.len() != tp2.len() {
+        panic!("Mismatch in type param count when attempting to merge type");
+    }
+
+    // Creates a mapping from type params in t2 to those in t1
+    let subs: Subst = tp2
+        .into_iter()
+        .zip(tp1.iter().map(|id| Type::Var(*id)))
+        .collect();
+
+    // Updates type variables for type params to match t1
+    let t2 = t2.apply(&subs);
+
     match (t1, t2) {
         (Type::Object(obj1), Type::Object(obj2)) => {
             let elems: Vec<_> = obj1
@@ -476,13 +494,9 @@ fn merge_types(t1: &Type, t2: &Type) -> Type {
                 .chain(obj2.elems.iter().cloned())
                 .collect();
 
-            // TODO: merge qualifiers
-            // We need this to support Promise<T> which was extended in es2018 to
-            // include a .finally() method.
             Type::Object(TObject {
                 elems,
-                // TODO: merge type params as well
-                type_params: vec![],
+                type_params: obj1.type_params.to_owned(),
             })
         }
         (_, _) => todo!(),
@@ -494,12 +508,14 @@ impl Visit for InterfaceCollector {
         let name = decl.id.sym.to_string();
         println!("inferring: {name}");
         match infer_interface_decl(decl, &self.ctx) {
-            Ok(scheme) => {
-                match self.ctx.lookup_type_scheme(&name).ok() {
-                    Some(existing_scheme) => self
-                        .ctx
-                        .insert_type(name, merge_types(&existing_scheme, &scheme)),
-                    None => self.ctx.insert_type(name, scheme),
+            Ok(t) => {
+                match self.ctx.lookup_type(&name).ok() {
+                    Some(existing_t) => {
+                        let merged_t = merge_types(&existing_t, &t);
+                        let merged_t = normalize(&merged_t, &self.ctx);
+                        self.ctx.insert_type(name, merged_t)
+                    }
+                    None => self.ctx.insert_type(name, t),
                 };
             }
             Err(_) => {
