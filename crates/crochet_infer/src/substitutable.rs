@@ -133,24 +133,18 @@ impl Substitutable for TLam {
 impl Substitutable for TIndex {
     fn apply(&self, sub: &Subst) -> Self {
         TIndex {
-            // How do we ensure that we aren't apply `sub` to any of the type variables that
-            // are in self.type_params?
             t: self.t.apply(sub),
             ..self.to_owned()
         }
     }
     fn ftv(&self) -> HashSet<i32> {
-        let type_params = HashSet::from_iter(self.type_params.iter().cloned());
-
-        self.t.ftv().difference(&type_params).cloned().collect()
+        self.t.ftv()
     }
 }
 
 impl Substitutable for TProp {
     fn apply(&self, sub: &Subst) -> TProp {
         TProp {
-            // How do we ensure that we aren't apply `sub` to any of the type variables that
-            // are in self.type_params?
             t: self.t.apply(sub),
             ..self.to_owned()
         }

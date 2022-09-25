@@ -31,18 +31,11 @@ pub struct TIndex {
     pub key: TFnParam, // identifier + type
     pub mutable: bool,
     pub t: Type,
-    pub type_params: Vec<i32>,
 }
 
 impl fmt::Display for TIndex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self {
-            key,
-            mutable,
-            t,
-            // TODO: handle generic indexers
-            type_params: _,
-        } = self;
+        let Self { key, mutable, t } = self;
         match mutable {
             false => write!(f, "[{key}]: {t}"),
             true => write!(f, "mut [{key}]: {t}"),

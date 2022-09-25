@@ -117,7 +117,6 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                             key: index.key.to_owned(),
                             mutable: index.mutable,
                             t: norm_type(&index.t, mapping, ctx),
-                            type_params: index.type_params.to_owned(),
                         }),
                         TObjElem::Prop(prop) => TObjElem::Prop(TProp {
                             name: prop.name.to_owned(),

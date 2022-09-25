@@ -310,8 +310,6 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                     key: key.to_owned(),
                     mutable: !sig.readonly,
                     t,
-                    // TODO: handle generic indexers
-                    type_params: vec![],
                 }))
             }
             None => Err(String::from("Index is missing type annotation")),
