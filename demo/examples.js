@@ -1,7 +1,7 @@
 export const basics = `
-let add = (a, b) => a + b
-let sub = (a, b) => a - b
-let foo = (f, x) => f(x) + x
+let add = (a, b) => a + b;
+let sub = (a, b) => a - b;
+let foo = (f, x) => f(x) + x;
 
 // if-else are expressions and the last statement
 // in a block is its value
@@ -11,40 +11,40 @@ let baz = if (true) {
   x + y
 } else {
   10
-}
+};
 
-type Point = {x: number, y: number}
-let point: Point = {x: 5, y: 10}
+type Point = {x: number, y: number};
+let point: Point = {x: 5, y: 10};
 `;
 
 export const asyncAwait = `
-let add = async (a, b) => await a() + await b()
+let add = async (a, b) => await a() + await b();
 `;
 
 export const jsxReact = `
 // This is a placeholder until we can infer types from react.d.ts
-type JSXElement = {}
+type JSXElement = {};
 
 type Props = {
     count: number,
-}
+};
 
 // Adapted from https://rescript-lang.org/try
 let Button = (props: Props) => {
     let {count} = props;
-    let times = match count {
-        1 => "once",
-        2 => "twice",
-        n => \`\${n} times\`,
+    let times = match (count) {
+        1 -> "once",
+        2 -> "twice",
+        n -> \`\${n} times\`
     };
     let msg = \`Click me \${times}\`;
 
     <button>{msg}</button>
-}
+};
 
 // Props are type checked with extra props being allowed for now.
 // In the future they won't be.
-let button = <Button count={5} foo="bar" />
+let button = <Button count={5} foo="bar" />;
 `;
 
 export const fibonacci = `
@@ -56,51 +56,52 @@ let rec fib = (n) => if (n == 0) {
   1
 } else {
   fib(n - 1) + fib(n - 2)
-}
+};
 `;
 
 export const functionOverloading = `
-declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string)
+declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string);
 
-let num = add(5, 10)
-let str = add("hello, ", "world")
+let num = add(5, 10);
+let str = add("hello, ", "world");
 `;
 
 export const ifLetElse = `
-declare let a: string | number
+declare let a: string | number;
 
 // if-let is similar to TypeScript's type narrowing, but it
 // introduces a new binding for the narrowed type.
-let result = if let x is number = a {
+let result = if (let x is number = a) {
     x + 5
-} else if let y is string = a {
+} else if (let y is string = a) {
     y
 } else {
     true
-}
+};
 `;
 
 export const basicPatternMatching = `
-declare let count: number
+declare let count: number;
 
-let result = match count {
-    0 => "none",
-    1 => "one",
-    2 => "a couple",
-    n if n < 5 => "a few",
-    _ => "many",
-}
+let result = match (count) {
+    0 -> "none",
+    1 -> "one",
+    2 -> "a couple",
+    n if (n < 5) -> "a few",
+    _ -> "many"
+};
 `;
 
 export const disjointUnionPatternMatching = `
 type Event = 
   | {type: "mousedown", x: number, y: number} 
   | {type: "keydown", key: string}
+  ;
 
-declare let event: Event
+declare let event: Event;
 
-let result = match event {
-    {type: "mousedown", x, y} => \`mousedown: (\${x}, \${y})\`,
-    {type: "keydown", key} => \`keydown: \${key}\`,
-}
+let result = match (event) {
+    {type: "mousedown", x, y} -> \`mousedown: (\${x}, \${y})\`,
+    {type: "keydown", key} -> \`keydown: \${key}\`
+};
 `;

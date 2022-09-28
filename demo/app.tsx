@@ -9,9 +9,9 @@ import { loadWasm, Compiler, CompilerResult } from "./wasm";
 
 const DEFAULT_CODE = `
 // Welcome to the Crochet Playground!
-let add = (a, b) => a + b
-let add5 = (b) => add(5, b)
-let sum = add5(10)
+let add = (a, b) => a + b;
+let add5 = (b) => add(5, b);
+let sum = add5(10);
 `;
 
 export const App = () => {
