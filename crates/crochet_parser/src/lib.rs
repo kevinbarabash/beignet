@@ -1210,7 +1210,15 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
             })
         }
         "flow_maybe_type" => todo!(),
-        "type_query" => todo!(),
+        "type_query" => {
+            let expr = node.named_child(0).unwrap();
+            let expr = parse_expression(&expr, src);
+
+            TypeAnn::Query(QueryType {
+                span: node.byte_range(),
+                expr: Box::from(expr),
+            })
+        }
         "index_type_query" => {
             let type_ann = node.named_child(0).unwrap();
             let type_ann = parse_type_ann(&type_ann, src);
@@ -1727,6 +1735,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse(r#"type Foo<T = "foo"> = {bar: T};"#));
         insta::assert_debug_snapshot!(parse(r#"type Foo<T extends string = "foo"> = {bar: T};"#));
         insta::assert_debug_snapshot!(parse("type CoordNames = keyof Point;"));
+        insta::assert_debug_snapshot!(parse("type Foo = typeof foo;"));
+        insta::assert_debug_snapshot!(parse("type FooBar = typeof foo.bar;"));
     }
 
     #[test]

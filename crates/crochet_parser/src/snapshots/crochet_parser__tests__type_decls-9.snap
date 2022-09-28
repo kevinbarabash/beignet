@@ -1,0 +1,41 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"type FooBar = typeof foo.bar;\")"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                span: 0..29,
+                declare: false,
+                id: Ident {
+                    span: 5..11,
+                    name: "FooBar",
+                },
+                type_ann: Query(
+                    QueryType {
+                        span: 14..28,
+                        expr: Member(
+                            Member {
+                                span: 21..28,
+                                obj: Ident(
+                                    Ident {
+                                        span: 21..24,
+                                        name: "foo",
+                                    },
+                                ),
+                                prop: Ident(
+                                    Ident {
+                                        span: 25..28,
+                                        name: "bar",
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+                type_params: None,
+            },
+        ],
+    },
+)
