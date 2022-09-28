@@ -101,7 +101,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
                 type_params,
                 ..
             } => {
-                let scheme = infer_scheme_with_type_params(type_ann, type_params, ctx);
+                let scheme = infer_qualified_type_ann(type_ann, type_params, ctx);
                 ctx.insert_type(id.name.to_owned(), scheme);
             }
             Statement::Expr { expr, .. } => {

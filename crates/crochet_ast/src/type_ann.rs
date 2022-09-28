@@ -1,4 +1,5 @@
 use crate::expr::EFnParamPat;
+use crate::expr::Expr;
 use crate::ident::Ident;
 use crate::keyword::Keyword;
 use crate::lit::Lit;
@@ -93,6 +94,15 @@ pub struct KeyOfType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QueryType {
+    pub span: Span,
+    // TypeScript only supports typeof on (qualified) identifiers.
+    // We could modify the parser if we wanted to support taking
+    // the type of arbitrary expressions.
+    pub expr: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnn {
     Lam(LamType),
     Lit(Lit),
@@ -103,8 +113,9 @@ pub enum TypeAnn {
     Union(UnionType),
     Intersection(IntersectionType),
     Tuple(TupleType),
-    Array(ArrayType),
-    KeyOf(KeyOfType),
+    Array(ArrayType), // T[]
+    KeyOf(KeyOfType), // keyof
+    Query(QueryType), // typeof
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

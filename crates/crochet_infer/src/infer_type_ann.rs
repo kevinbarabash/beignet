@@ -5,22 +5,24 @@ use crochet_ast::*;
 use crochet_types::{self as types, TFnParam, TLam, TObject, TProp, Type};
 use types::TObjElem;
 
+use crate::infer_expr;
+
 use super::context::Context;
 use super::infer_fn_param::e_pat_to_t_pat;
 
-pub fn infer_scheme(type_ann: &TypeAnn, ctx: &Context) -> Type {
+pub fn infer_scheme(type_ann: &TypeAnn, ctx: &mut Context) -> Type {
     match type_ann {
         TypeAnn::Lam(LamType { type_params, .. }) => {
-            infer_scheme_with_type_params(type_ann, type_params, ctx)
+            infer_qualified_type_ann(type_ann, type_params, ctx)
         }
-        _ => infer_type_ann(type_ann, ctx),
+        _ => infer_type_ann_rec(type_ann, ctx, &HashMap::default()),
     }
 }
 
-pub fn infer_scheme_with_type_params(
+pub fn infer_qualified_type_ann(
     type_ann: &TypeAnn,
     type_params: &Option<Vec<TypeParam>>,
-    ctx: &Context,
+    ctx: &mut Context,
 ) -> Type {
     // NOTE: There's a scoping issue when using this mapping hash map.
     // <T>(arg: T, cb: <T>(T) => T) => T
@@ -52,13 +54,9 @@ pub fn infer_scheme_with_type_params(
     }
 }
 
-pub fn infer_type_ann(type_ann: &TypeAnn, ctx: &Context) -> Type {
-    infer_type_ann_rec(type_ann, ctx, &HashMap::default())
-}
-
 pub fn infer_type_ann_with_params(
     type_ann: &TypeAnn,
-    ctx: &Context,
+    ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Type {
     infer_type_ann_rec(type_ann, ctx, type_param_map)
@@ -66,7 +64,7 @@ pub fn infer_type_ann_with_params(
 
 fn infer_type_ann_rec(
     type_ann: &TypeAnn,
-    ctx: &Context,
+    ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Type {
     match type_ann {
@@ -148,6 +146,10 @@ fn infer_type_ann_rec(
         ))),
         TypeAnn::KeyOf(KeyOfType { type_ann, .. }) => {
             Type::KeyOf(Box::from(infer_type_ann_rec(type_ann, ctx, type_param_map)))
+        }
+        TypeAnn::Query(QueryType { expr, .. }) => {
+            // TODO: update infer_type_* to return Result<Type, String> as well
+            infer_expr(ctx, expr).unwrap()
         }
     }
 }

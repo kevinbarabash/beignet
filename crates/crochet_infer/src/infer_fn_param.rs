@@ -14,7 +14,7 @@ pub type Assump = HashMap<String, Type>;
 // into the appropriate context.
 pub fn infer_fn_param(
     param: &EFnParam,
-    ctx: &Context,
+    ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Assump, TFnParam), String> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
