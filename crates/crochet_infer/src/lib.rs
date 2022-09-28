@@ -25,7 +25,7 @@ mod tests {
         let mut ctx = Context::default();
         let prog = parse(&format!("let x = {input};")).unwrap();
         let ctx = infer::infer_prog(&prog, &mut ctx).unwrap();
-        get_type("x", &ctx)
+        get_value_type("x", &ctx)
     }
 
     fn infer_prog(input: &str) -> Context {
@@ -34,8 +34,15 @@ mod tests {
         infer::infer_prog(&prog, &mut ctx).unwrap()
     }
 
-    fn get_type(name: &str, ctx: &Context) -> String {
+    fn get_value_type(name: &str, ctx: &Context) -> String {
         match ctx.lookup_value(name) {
+            Ok(t) => format!("{t}"),
+            Err(_) => panic!("Couldn't find type with name '{name}'"),
+        }
+    }
+
+    fn get_type_type(name: &str, ctx: &Context) -> String {
+        match ctx.lookup_type(name) {
             Ok(t) => format!("{t}"),
             Err(_) => panic!("Couldn't find type with name '{name}'"),
         }
@@ -44,20 +51,23 @@ mod tests {
     #[test]
     fn infer_i_combinator() {
         let ctx = infer_prog("let I = (x) => x;");
-        assert_eq!(get_type("I", &ctx), "<t0>(x: t0) => t0");
+        assert_eq!(get_value_type("I", &ctx), "<t0>(x: t0) => t0");
     }
 
     #[test]
     fn infer_k_combinator() {
         let ctx = infer_prog("let K = (x) => (y) => x;");
-        assert_eq!(get_type("K", &ctx), "<t0, t1>(x: t0) => (y: t1) => t0");
+        assert_eq!(
+            get_value_type("K", &ctx),
+            "<t0, t1>(x: t0) => (y: t1) => t0"
+        );
     }
 
     #[test]
     fn infer_s_combinator() {
         let ctx = infer_prog("let S = (f) => (g) => (x) => f(x)(g(x));");
         assert_eq!(
-            get_type("S", &ctx),
+            get_value_type("S", &ctx),
             "<t0, t1, t2>(f: (t0) => (t1) => t2) => (g: (t0) => t1) => (x: t0) => t2"
         );
     }
@@ -70,12 +80,15 @@ mod tests {
         let I = S(K)(K);
         "#;
         let ctx = infer_prog(src);
-        assert_eq!(get_type("K", &ctx), "<t0, t1>(x: t0) => (y: t1) => t0");
         assert_eq!(
-            get_type("S", &ctx),
+            get_value_type("K", &ctx),
+            "<t0, t1>(x: t0) => (y: t1) => t0"
+        );
+        assert_eq!(
+            get_value_type("S", &ctx),
             "<t0, t1, t2>(f: (t0) => (t1) => t2) => (g: (t0) => t1) => (x: t0) => t2"
         );
-        assert_eq!(get_type("I", &ctx), "<t0>(x: t0) => t0");
+        assert_eq!(get_value_type("I", &ctx), "<t0>(x: t0) => t0");
     }
 
     #[test]
@@ -87,7 +100,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("z", &ctx), "number");
+        assert_eq!(get_value_type("z", &ctx), "number");
     }
 
     #[test]
@@ -97,7 +110,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("negate", &ctx), "(x: number) => number");
+        assert_eq!(get_value_type("negate", &ctx), "(x: number) => number");
     }
 
     #[test]
@@ -108,7 +121,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "10 | 5");
+        assert_eq!(get_value_type("result", &ctx), "10 | 5");
     }
 
     #[test]
@@ -119,7 +132,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "undefined");
+        assert_eq!(get_value_type("result", &ctx), "undefined");
     }
 
     #[test]
@@ -145,7 +158,7 @@ mod tests {
         "###;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fib", &ctx), "(n: number) => number");
+        assert_eq!(get_value_type("fib", &ctx), "(n: number) => number");
     }
 
     #[test]
@@ -172,7 +185,7 @@ mod tests {
     fn basic_subtyping_assignment() {
         let ctx = infer_prog("let a: number = 5;");
 
-        assert_eq!(get_type("a", &ctx), "number");
+        assert_eq!(get_value_type("a", &ctx), "number");
     }
 
     #[test]
@@ -182,9 +195,9 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "5");
-        assert_eq!(get_type("b", &ctx), "true");
-        assert_eq!(get_type("c", &ctx), "\"hello\"");
+        assert_eq!(get_value_type("a", &ctx), "5");
+        assert_eq!(get_value_type("b", &ctx), "true");
+        assert_eq!(get_value_type("c", &ctx), "\"hello\"");
     }
 
     #[test]
@@ -194,8 +207,8 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "5");
-        assert_eq!(get_type("b", &ctx), "true");
+        assert_eq!(get_value_type("a", &ctx), "5");
+        assert_eq!(get_value_type("b", &ctx), "true");
     }
 
     #[test]
@@ -206,7 +219,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "true");
+        assert_eq!(get_value_type("a", &ctx), "true");
     }
 
     #[test]
@@ -225,9 +238,9 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "5");
-        assert_eq!(get_type("b", &ctx), "true");
-        assert_eq!(get_type("c", &ctx), "\"hello\"");
+        assert_eq!(get_value_type("a", &ctx), "5");
+        assert_eq!(get_value_type("b", &ctx), "true");
+        assert_eq!(get_value_type("c", &ctx), "\"hello\"");
     }
 
     // #[test]
@@ -274,9 +287,9 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "number");
-        assert_eq!(get_type("b", &ctx), "boolean");
-        assert_eq!(get_type("c", &ctx), "string");
+        assert_eq!(get_value_type("a", &ctx), "number");
+        assert_eq!(get_value_type("b", &ctx), "boolean");
+        assert_eq!(get_value_type("c", &ctx), "string");
     }
 
     #[test]
@@ -287,9 +300,9 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "number");
-        assert_eq!(get_type("b", &ctx), "boolean");
-        assert_eq!(get_type("c", &ctx), "string");
+        assert_eq!(get_value_type("a", &ctx), "number");
+        assert_eq!(get_value_type("b", &ctx), "boolean");
+        assert_eq!(get_value_type("c", &ctx), "string");
     }
 
     #[test]
@@ -299,8 +312,8 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "number");
-        assert_eq!(get_type("b", &ctx), "boolean");
+        assert_eq!(get_value_type("a", &ctx), "number");
+        assert_eq!(get_value_type("b", &ctx), "boolean");
     }
 
     #[test]
@@ -330,8 +343,8 @@ mod tests {
     fn destructure_obj() {
         let ctx = infer_prog("let {x, y} = {x: 5, y: 10};");
 
-        assert_eq!(get_type("x", &ctx), "5");
-        assert_eq!(get_type("y", &ctx), "10");
+        assert_eq!(get_value_type("x", &ctx), "5");
+        assert_eq!(get_value_type("y", &ctx), "10");
     }
 
     #[test]
@@ -342,7 +355,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("z", &ctx), "number | undefined");
+        assert_eq!(get_value_type("z", &ctx), "number | undefined");
     }
 
     #[test]
@@ -350,8 +363,8 @@ mod tests {
         let src = "let {x: a, y: b} = {x: 5, y: 10};";
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "5");
-        assert_eq!(get_type("b", &ctx), "10");
+        assert_eq!(get_value_type("a", &ctx), "5");
+        assert_eq!(get_value_type("b", &ctx), "10");
         assert!(ctx.lookup_value("x").is_err());
         assert!(ctx.lookup_value("y").is_err());
     }
@@ -369,14 +382,14 @@ mod tests {
 
         assert!(ctx.lookup_value("a").is_err());
         assert!(ctx.lookup_value("b").is_err());
-        assert_eq!(get_type("c", &ctx), "\"hello\"");
+        assert_eq!(get_value_type("c", &ctx), "\"hello\"");
     }
 
     #[test]
     fn partial_destructure_obj() {
         let ctx = infer_prog("let {x} = {x: 5, y: 10}");
 
-        assert_eq!(get_type("x", &ctx), "5");
+        assert_eq!(get_value_type("x", &ctx), "5");
     }
 
     #[test]
@@ -395,8 +408,8 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("same", &ctx), "string");
-        assert_eq!(get_type("diff", &ctx), "boolean | number");
+        assert_eq!(get_value_type("same", &ctx), "string");
+        assert_eq!(get_value_type("diff", &ctx), "boolean | number");
     }
 
     #[test]
@@ -407,7 +420,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("value", &ctx), "number | string | undefined");
+        assert_eq!(get_value_type("value", &ctx), "number | string | undefined");
     }
 
     // TODO: In order for this to work, we need custom handling for unifying
@@ -421,7 +434,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("value", &ctx), "string | undefined");
+        assert_eq!(get_value_type("value", &ctx), "string | undefined");
     }
 
     #[test]
@@ -434,7 +447,7 @@ mod tests {
     fn obj_assignment() {
         let ctx = infer_prog("let p = {x: 5, y: 10};");
 
-        assert_eq!(get_type("p", &ctx), "{x: 5, y: 10}");
+        assert_eq!(get_value_type("p", &ctx), "{x: 5, y: 10}");
     }
 
     #[test]
@@ -446,7 +459,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("p", &ctx), "{x: 5, y: 10}");
+        assert_eq!(get_value_type("p", &ctx), "{x: 5, y: 10}");
     }
 
     #[test]
@@ -464,14 +477,14 @@ mod tests {
     fn obj_assignment_with_type_annotation() {
         let ctx = infer_prog("let p: {x: number, y: number} = {x: 5, y: 10};");
 
-        assert_eq!(get_type("p", &ctx), "{x: number, y: number}");
+        assert_eq!(get_value_type("p", &ctx), "{x: number, y: number}");
     }
 
     #[test]
     fn obj_assignment_with_type_annotation_extra_properties() {
         let ctx = infer_prog("let p: {x: number, y: number} = {x: 5, y: 10, z: 15};");
 
-        assert_eq!(get_type("p", &ctx), "{x: number, y: number}");
+        assert_eq!(get_value_type("p", &ctx), "{x: number, y: number}");
     }
 
     #[test]
@@ -551,7 +564,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "number");
+        assert_eq!(get_value_type("sum", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.lookup_value("x").is_err());
@@ -599,7 +612,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "0 | 1 | 5");
+        assert_eq!(get_value_type("sum", &ctx), "0 | 1 | 5");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.lookup_value("x").is_err());
@@ -621,7 +634,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("add", &ctx),
+            get_value_type("add", &ctx),
             "(p: {x: number, y: number}) => number"
         );
     }
@@ -639,7 +652,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "number");
+        assert_eq!(get_value_type("sum", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.lookup_value("x").is_err());
@@ -660,7 +673,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number | string | true");
+        assert_eq!(get_value_type("result", &ctx), "number | string | true");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.lookup_value("x").is_err());
@@ -693,7 +706,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "number");
+        assert_eq!(get_value_type("sum", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.lookup_value("x").is_err());
@@ -748,7 +761,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.lookup_value("x").is_err());
@@ -769,7 +782,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number | string | true");
+        assert_eq!(get_value_type("result", &ctx), "number | string | true");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.lookup_value("x").is_err());
@@ -818,7 +831,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
 
         // Ensures we aren't polluting the outside context
         assert!(ctx.lookup_value("x").is_err());
@@ -870,7 +883,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("p", &ctx), "Point");
+        assert_eq!(get_value_type("p", &ctx), "Point");
     }
 
     #[test]
@@ -882,7 +895,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("p", &ctx), "Point");
+        assert_eq!(get_value_type("p", &ctx), "Point");
     }
 
     #[test]
@@ -894,7 +907,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fst", &ctx), "<t0>(a: t0, b: t0) => t0");
+        assert_eq!(get_value_type("fst", &ctx), "<t0>(a: t0, b: t0) => t0");
     }
 
     #[test]
@@ -906,7 +919,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fst", &ctx), "<t0, t1>(a: t0, b: t1) => t0");
+        assert_eq!(get_value_type("fst", &ctx), "<t0, t1>(a: t0, b: t1) => t0");
     }
 
     #[test]
@@ -919,7 +932,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "5");
+        assert_eq!(get_value_type("result", &ctx), "5");
     }
 
     #[test]
@@ -932,9 +945,9 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fst", &ctx), "<t0, t1>(a: t0, b: t1) => t0");
-        assert_eq!(get_type("x", &ctx), "5");
-        assert_eq!(get_type("y", &ctx), "true");
+        assert_eq!(get_value_type("fst", &ctx), "<t0, t1>(a: t0, b: t1) => t0");
+        assert_eq!(get_value_type("x", &ctx), "5");
+        assert_eq!(get_value_type("y", &ctx), "true");
     }
 
     #[test]
@@ -949,7 +962,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "[5, true]");
+        assert_eq!(get_value_type("result", &ctx), "[5, true]");
     }
 
     #[test]
@@ -960,9 +973,9 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
         assert_eq!(
-            get_type("plus_one", &ctx),
+            get_value_type("plus_one", &ctx),
             "<t0>(a: number, b?: t0) => number"
         );
     }
@@ -976,9 +989,12 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("foo", &ctx), "(a?: string) => string | undefined");
-        assert_eq!(get_type("result1", &ctx), "string | undefined");
-        assert_eq!(get_type("result2", &ctx), "string | undefined");
+        assert_eq!(
+            get_value_type("foo", &ctx),
+            "(a?: string) => string | undefined"
+        );
+        assert_eq!(get_value_type("result1", &ctx), "string | undefined");
+        assert_eq!(get_value_type("result2", &ctx), "string | undefined");
     }
 
     #[test]
@@ -996,11 +1012,11 @@ mod tests {
         // This suggests that we should introduce a `Optional` type into the type
         // system that can be differentiated from `T | undefined`.
         assert_eq!(
-            get_type("bar", &ctx),
+            get_value_type("bar", &ctx),
             "(a?: number | undefined) => number | undefined"
         );
-        assert_eq!(get_type("result1", &ctx), "number | undefined");
-        assert_eq!(get_type("result2", &ctx), "number | undefined");
+        assert_eq!(get_value_type("result1", &ctx), "number | undefined");
+        assert_eq!(get_value_type("result2", &ctx), "number | undefined");
     }
 
     #[test]
@@ -1011,9 +1027,9 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
         assert_eq!(
-            get_type("plus_one", &ctx),
+            get_value_type("plus_one", &ctx),
             "<t0, t1>(a: number, b?: t0, ...c: t1[]) => number"
         );
     }
@@ -1026,9 +1042,9 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
         assert_eq!(
-            get_type("plus_one", &ctx),
+            get_value_type("plus_one", &ctx),
             "(a: number, b?: string, ...c: boolean[]) => number"
         );
     }
@@ -1057,7 +1073,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("plus_one", &ctx),
+            get_value_type("plus_one", &ctx),
             "(a: number, b?: string) => number | string"
         );
     }
@@ -1075,7 +1091,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("foo", &ctx),
+            get_value_type("foo", &ctx),
             "(arg: {x: number, y: number}) => number | string"
         );
     }
@@ -1090,7 +1106,10 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("add", &ctx), "(a: number, b: number) => number");
+        assert_eq!(
+            get_value_type("add", &ctx),
+            "(a: number, b: number) => number"
+        );
     }
 
     #[test]
@@ -1127,7 +1146,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "number");
+        assert_eq!(get_value_type("sum", &ctx), "number");
     }
 
     #[test]
@@ -1150,7 +1169,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "number");
+        assert_eq!(get_value_type("sum", &ctx), "number");
     }
 
     #[test]
@@ -1173,7 +1192,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
     }
 
     #[test]
@@ -1185,7 +1204,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
     }
 
     #[test]
@@ -1216,7 +1235,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "5 | 10");
+        assert_eq!(get_value_type("sum", &ctx), "5 | 10");
     }
 
     #[test]
@@ -1231,8 +1250,11 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("add", &ctx), "(x: number, y: number) => number");
-        assert_eq!(get_type("sum", &ctx), "number");
+        assert_eq!(
+            get_value_type("add", &ctx),
+            "(x: number, y: number) => number"
+        );
+        assert_eq!(get_value_type("sum", &ctx), "number");
     }
 
     #[test]
@@ -1245,7 +1267,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
     }
 
     #[test]
@@ -1258,7 +1280,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
     }
 
     #[test]
@@ -1272,7 +1294,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
     }
 
     #[test]
@@ -1297,10 +1319,10 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("fst", &ctx),
+            get_value_type("fst", &ctx),
             "(a: number, ...b: number[]) => number"
         );
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
     }
 
     #[test]
@@ -1314,7 +1336,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
     }
 
     #[test]
@@ -1339,7 +1361,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
     }
 
     #[test]
@@ -1362,7 +1384,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "number");
+        assert_eq!(get_value_type("result", &ctx), "number");
     }
 
     #[test]
@@ -1375,8 +1397,8 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("x", &ctx), "5");
-        assert_eq!(get_type("y", &ctx), "10");
+        assert_eq!(get_value_type("x", &ctx), "5");
+        assert_eq!(get_value_type("y", &ctx), "10");
     }
 
     #[test]
@@ -1389,8 +1411,8 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "string");
-        assert_eq!(get_type("b", &ctx), "number | undefined");
+        assert_eq!(get_value_type("a", &ctx), "string");
+        assert_eq!(get_value_type("b", &ctx), "number | undefined");
     }
 
     #[test]
@@ -1402,7 +1424,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("z", &ctx), "5");
+        assert_eq!(get_value_type("z", &ctx), "5");
     }
 
     #[test]
@@ -1415,7 +1437,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("z", &ctx), "10 | 5 | undefined");
+        assert_eq!(get_value_type("z", &ctx), "10 | 5 | undefined");
     }
 
     #[test]
@@ -1427,7 +1449,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("c", &ctx), "\"hello\"");
+        assert_eq!(get_value_type("c", &ctx), "\"hello\"");
     }
 
     #[test]
@@ -1439,7 +1461,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum", &ctx), "number");
+        assert_eq!(get_value_type("sum", &ctx), "number");
     }
 
     #[test]
@@ -1457,7 +1479,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("sum_x", &ctx), "number");
+        assert_eq!(get_value_type("sum_x", &ctx), "number");
     }
 
     #[test]
@@ -1526,8 +1548,8 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("fst", &ctx), "5");
-        assert_eq!(get_type("snd", &ctx), "\"hello\"");
+        assert_eq!(get_value_type("fst", &ctx), "5");
+        assert_eq!(get_value_type("snd", &ctx), "\"hello\"");
     }
 
     #[test]
@@ -1540,7 +1562,10 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("elem", &ctx), "\"hello\" | 5 | true | undefined");
+        assert_eq!(
+            get_value_type("elem", &ctx),
+            "\"hello\" | 5 | true | undefined"
+        );
     }
 
     #[test]
@@ -1596,7 +1621,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("rest", &ctx), "{x: number, y: number}");
+        assert_eq!(get_value_type("rest", &ctx), "{x: number, y: number}");
     }
 
     #[test]
@@ -1608,7 +1633,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("q", &ctx), "{x: number, y: number}");
+        assert_eq!(get_value_type("q", &ctx), "{x: number, y: number}");
     }
 
     #[test]
@@ -1619,7 +1644,10 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("point_3d", &ctx), "{x: number, y: number, z: 15}");
+        assert_eq!(
+            get_value_type("point_3d", &ctx),
+            "{x: number, y: number, z: 15}"
+        );
     }
 
     #[test]
@@ -1632,7 +1660,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("obj", &ctx),
+            get_value_type("obj", &ctx),
             "{a: true, b: \"hello\", x: 5, y: 10}"
         );
     }
@@ -1647,7 +1675,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("obj", &ctx),
+            get_value_type("obj", &ctx),
             "{a: true, b: \"hello\" & 5, c: false}"
         );
     }
@@ -1664,7 +1692,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("mag_2d", &ctx),
+            get_value_type("mag_2d", &ctx),
             "(p: {x: number, y: number}) => number"
         );
     }
@@ -1690,8 +1718,8 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "5");
-        assert_eq!(get_type("b", &ctx), "[\"hello\", true]");
+        assert_eq!(get_value_type("a", &ctx), "5");
+        assert_eq!(get_value_type("b", &ctx), "[\"hello\", true]");
     }
 
     #[test]
@@ -1702,8 +1730,8 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "[5, \"hello\"]");
-        assert_eq!(get_type("b", &ctx), "true");
+        assert_eq!(get_value_type("a", &ctx), "[5, \"hello\"]");
+        assert_eq!(get_value_type("b", &ctx), "true");
     }
 
     #[test]
@@ -1714,9 +1742,9 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "5");
-        assert_eq!(get_type("b", &ctx), "[\"hello\"]");
-        assert_eq!(get_type("c", &ctx), "true");
+        assert_eq!(get_value_type("a", &ctx), "5");
+        assert_eq!(get_value_type("b", &ctx), "[\"hello\"]");
+        assert_eq!(get_value_type("c", &ctx), "true");
     }
 
     #[test]
@@ -1727,9 +1755,9 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("a", &ctx), "5");
-        assert_eq!(get_type("b", &ctx), "[]");
-        assert_eq!(get_type("c", &ctx), "true");
+        assert_eq!(get_value_type("a", &ctx), "5");
+        assert_eq!(get_value_type("b", &ctx), "[]");
+        assert_eq!(get_value_type("c", &ctx), "true");
     }
 
     #[test]
@@ -1763,7 +1791,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("tuple", &ctx), "[5, \"hello\", true]");
+        assert_eq!(get_value_type("tuple", &ctx), "[5, \"hello\", true]");
     }
 
     #[test]
@@ -1774,7 +1802,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("tuple", &ctx), "[5, \"hello\", true]");
+        assert_eq!(get_value_type("tuple", &ctx), "[5, \"hello\", true]");
     }
 
     #[test]
@@ -1785,7 +1813,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("tuple", &ctx), "[5, \"hello\", true]");
+        assert_eq!(get_value_type("tuple", &ctx), "[5, \"hello\", true]");
     }
 
     #[test]
@@ -1797,7 +1825,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("tuple", &ctx), "[\"hello\", true, 5]");
+        assert_eq!(get_value_type("tuple", &ctx), "[\"hello\", true, 5]");
     }
 
     #[test]
@@ -1809,8 +1837,8 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("x", &ctx), "\"hello\"");
-        assert_eq!(get_type("y", &ctx), "[true, 5]");
+        assert_eq!(get_value_type("x", &ctx), "\"hello\"");
+        assert_eq!(get_value_type("y", &ctx), "[true, 5]");
     }
 
     #[test]
@@ -1823,7 +1851,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("tuple", &ctx), "[5, \"hello\", true]");
+        assert_eq!(get_value_type("tuple", &ctx), "[5, \"hello\", true]");
     }
 
     #[test]
@@ -1835,7 +1863,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("tuple", &ctx), "[5, 10, \"hello\", true]");
+        assert_eq!(get_value_type("tuple", &ctx), "[5, 10, \"hello\", true]");
     }
 
     #[test]
@@ -1858,8 +1886,8 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("str", &ctx), "string");
-        assert_eq!(get_type("num", &ctx), "number");
+        assert_eq!(get_value_type("str", &ctx), "string");
+        assert_eq!(get_value_type("num", &ctx), "number");
     }
 
     #[test]
@@ -1883,7 +1911,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("add_async", &ctx),
+            get_value_type("add_async", &ctx),
             "(a: Promise<number>, b: Promise<number>) => Promise<number>"
         );
     }
@@ -1896,7 +1924,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("passthrough", &ctx),
+            get_value_type("passthrough", &ctx),
             "(x: Promise<string>) => Promise<string>"
         );
     }
@@ -1941,7 +1969,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("add_async", &ctx),
+            get_value_type("add_async", &ctx),
             "(a: Promise<number>, b: Promise<number>) => Promise<number>"
         );
     }
@@ -1953,7 +1981,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("elem", &ctx), "JSXElement");
+        assert_eq!(get_value_type("elem", &ctx), "JSXElement");
     }
 
     #[test]
@@ -1964,7 +1992,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("elem", &ctx), "JSXElement");
+        assert_eq!(get_value_type("elem", &ctx), "JSXElement");
     }
 
     #[test]
@@ -1976,7 +2004,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("elem", &ctx), "JSXElement");
+        assert_eq!(get_value_type("elem", &ctx), "JSXElement");
     }
 
     // TODO: disallow extra props
@@ -1989,7 +2017,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("elem", &ctx), "JSXElement");
+        assert_eq!(get_value_type("elem", &ctx), "JSXElement");
     }
 
     #[test]
@@ -2055,7 +2083,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("h", &ctx),
+            get_value_type("h", &ctx),
             "<t0>(f: (t0) => number, x: t0, y: t0) => number"
         );
     }
@@ -2065,7 +2093,7 @@ mod tests {
         let src = r#"let str = `hello, "world"!`;"#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("str", &ctx), "string");
+        assert_eq!(get_value_type("str", &ctx), "string");
     }
 
     #[test]
@@ -2073,7 +2101,7 @@ mod tests {
         let src = r#"let str = `hello, ${true}!`;"#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("str", &ctx), "string");
+        assert_eq!(get_value_type("str", &ctx), "string");
     }
 
     #[test]
@@ -2089,7 +2117,7 @@ mod tests {
         let src = r#"let arr: string[] = [];"#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("arr", &ctx), "string[]");
+        assert_eq!(get_value_type("arr", &ctx), "string[]");
     }
 
     #[test]
@@ -2097,7 +2125,7 @@ mod tests {
         let src = r#"let arr: string[] = ["hello", "world"];"#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("arr", &ctx), "string[]");
+        assert_eq!(get_value_type("arr", &ctx), "string[]");
     }
 
     #[test]
@@ -2108,7 +2136,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "string");
+        assert_eq!(get_value_type("result", &ctx), "string");
     }
 
     #[test]
@@ -2134,7 +2162,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(
-            get_type("result", &ctx),
+            get_value_type("result", &ctx),
             r#""a couple" | "a few" | "many" | "none" | "one""#
         );
     }
@@ -2151,7 +2179,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "string");
+        assert_eq!(get_value_type("result", &ctx), "string");
     }
 
     #[test]
@@ -2209,7 +2237,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("result", &ctx), "string");
+        assert_eq!(get_value_type("result", &ctx), "string");
     }
 
     #[test]
@@ -2220,7 +2248,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_type("tree", &ctx), "Tree");
+        assert_eq!(get_value_type("tree", &ctx), "Tree");
     }
 
     #[test]
@@ -2238,12 +2266,21 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        let name = "CoordName";
-        let t = match ctx.lookup_type(name) {
-            Ok(t) => format!("{t}"),
-            Err(_) => panic!("Couldn't find type with name '{name}'"),
-        };
+        assert_eq!(get_type_type("CoordName", &ctx), "keyof Point");
+    }
 
-        assert_eq!(t, "keyof Point");
+    #[test]
+    fn test_typeof() {
+        let src = r#"
+        let foo = {bar: "baz"};
+        
+        type Foo = typeof foo;
+        type FooBar = typeof foo.bar;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type_type("Foo", &ctx), r#"{bar: "baz"}"#);
+        assert_eq!(get_type_type("FooBar", &ctx), r#""baz""#);
     }
 }

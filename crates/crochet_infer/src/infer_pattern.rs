@@ -17,7 +17,7 @@ pub type Assump = HashMap<String, Type>;
 fn infer_pattern(
     pat: &Pattern,
     type_ann: &Option<TypeAnn>,
-    ctx: &Context,
+    ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Assump, Type), String> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
