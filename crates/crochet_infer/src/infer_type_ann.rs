@@ -46,20 +46,9 @@ pub fn infer_scheme_with_type_params(
 
     // set type_params
     match type_ann_ty {
-        Type::Var(_) => type_ann_ty,
-        Type::App(_) => type_ann_ty,
         Type::Lam(lam) => Type::Lam(TLam { type_params, ..lam }),
-        Type::Prim(_) => type_ann_ty,
-        Type::Lit(_) => type_ann_ty,
-        Type::Keyword(_) => type_ann_ty,
-        Type::Union(_) => type_ann_ty,
-        Type::Intersection(_) => type_ann_ty,
         Type::Object(obj) => Type::Object(TObject { type_params, ..obj }),
-        Type::Ref(_) => type_ann_ty,
-        Type::Tuple(_) => type_ann_ty,
-        Type::Array(_) => type_ann_ty,
-        Type::Rest(_) => type_ann_ty,
-        Type::This => type_ann_ty,
+        _ => type_ann_ty,
     }
 }
 
@@ -157,5 +146,8 @@ fn infer_type_ann_rec(
             ctx,
             type_param_map,
         ))),
+        TypeAnn::KeyOf(KeyOfType { type_ann, .. }) => {
+            Type::KeyOf(Box::from(infer_type_ann_rec(type_ann, ctx, type_param_map)))
+        }
     }
 }

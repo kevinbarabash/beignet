@@ -398,7 +398,7 @@ pub fn build_type_params(t: &Type) -> Option<TsTypeParamDecl> {
 /// `expr` should be the original expression that `t` was inferred
 /// from if it exists.
 pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
-    match &t {
+    match t {
         Type::Var(id) => {
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                 .chars()
@@ -432,6 +432,7 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                 types::TKeyword::Null => TsKeywordTypeKind::TsNullKeyword,
                 types::TKeyword::Symbol => TsKeywordTypeKind::TsSymbolKeyword,
                 types::TKeyword::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
+                types::TKeyword::Never => TsKeywordTypeKind::TsNeverKeyword,
             };
 
             TsType::TsKeywordType(TsKeywordType {
@@ -562,6 +563,7 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
         }),
         Type::Rest(_) => todo!(),
         Type::This => TsType::TsThisType(TsThisType { span: DUMMY_SP }),
+        Type::KeyOf(_) => todo!(),
     }
 }
 

@@ -86,6 +86,12 @@ pub struct ArrayType {
     pub elem_type: Box<TypeAnn>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KeyOfType {
+    pub span: Span,
+    pub type_ann: Box<TypeAnn>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnn {
     Lam(LamType),
@@ -98,6 +104,7 @@ pub enum TypeAnn {
     Intersection(IntersectionType),
     Tuple(TupleType),
     Array(ArrayType),
+    KeyOf(KeyOfType),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

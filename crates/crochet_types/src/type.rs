@@ -57,6 +57,7 @@ pub enum Type {
     Array(Box<Type>),
     Rest(Box<Type>), // TODO: rename this to Spread
     This,
+    KeyOf(Box<Type>),
 }
 
 impl From<TLit> for Type {
@@ -107,6 +108,9 @@ impl fmt::Display for Type {
             Type::Array(t) => write!(f, "{t}[]"),
             Type::Rest(arg) => write!(f, "...{arg}"),
             Type::This => write!(f, "this"),
+            Type::KeyOf(t) => write!(f, "keyof {t}"),
         }
     }
 }
+
+// TODO: add unit tests to verify the fmt::Display output

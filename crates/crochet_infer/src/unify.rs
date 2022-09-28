@@ -1,10 +1,11 @@
 use std::cmp;
 use std::collections::HashSet;
 
-use crochet_types::{self as types, TObject, TPrim, Type};
-use types::TObjElem;
+use crochet_types::{self as types, TObjElem, TObject, TPrim, Type};
+use types::TKeyword;
 
 use super::context::Context;
+use super::key_of::key_of;
 use super::substitutable::{Subst, Substitutable};
 use super::util::*;
 
@@ -206,6 +207,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             Err(String::from("Couldn't unify lambda with intersection"))
         }
         (Type::Object(obj1), Type::Object(obj2)) => {
+            // Should we be doing something about type_params here?
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
             let result: Result<Vec<_>, String> = obj2
                 .elems
@@ -499,6 +501,14 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         (Type::Array(array_arg), Type::Rest(rest_arg)) => {
             unify(array_arg.as_ref(), rest_arg.as_ref(), ctx)
         }
+        (_, Type::KeyOf(t)) => unify(t1, &key_of(t, ctx)?, ctx),
+        (Type::Keyword(keyword1), Type::Keyword(keyword2)) => match (keyword1, keyword2) {
+            (TKeyword::Null, TKeyword::Null) => Ok(Subst::new()),
+            (TKeyword::Symbol, TKeyword::Symbol) => Ok(Subst::new()),
+            (TKeyword::Undefined, TKeyword::Undefined) => Ok(Subst::new()),
+            (TKeyword::Never, TKeyword::Null) => Ok(Subst::new()),
+            _ => Err(format!("Can't unify {t1} with {t2}")),
+        },
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())

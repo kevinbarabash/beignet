@@ -51,6 +51,7 @@ impl Substitutable for Type {
             Type::Array(t) => Type::Array(Box::from(t.apply(sub))),
             Type::Rest(arg) => Type::Rest(Box::from(arg.apply(sub))),
             Type::This => Type::This,
+            Type::KeyOf(t) => Type::KeyOf(Box::from(t.apply(sub))),
         };
         norm_type(result)
     }
@@ -81,6 +82,7 @@ impl Substitutable for Type {
             Type::Array(t) => t.ftv(),
             Type::Rest(arg) => arg.ftv(),
             Type::This => HashSet::new(),
+            Type::KeyOf(t) => t.ftv(),
         }
     }
 }

@@ -6,6 +6,7 @@ pub enum TKeyword {
     Null,
     Symbol,
     Undefined,
+    Never,
 }
 
 impl fmt::Display for TKeyword {
@@ -14,6 +15,7 @@ impl fmt::Display for TKeyword {
             TKeyword::Null => write!(f, "null"),
             TKeyword::Symbol => write!(f, "symbol"),
             TKeyword::Undefined => write!(f, "undefined"),
+            TKeyword::Never => write!(f, "never"),
         }
     }
 }
