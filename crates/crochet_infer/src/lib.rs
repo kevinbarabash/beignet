@@ -3,6 +3,7 @@ mod infer_expr;
 mod infer_fn_param;
 mod infer_pattern;
 mod infer_type_ann;
+mod key_of;
 mod substitutable;
 mod unify;
 mod util;
@@ -2220,5 +2221,29 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(get_type("tree", &ctx), "Tree");
+    }
+
+    #[test]
+    fn keyof() {
+        let src = r#"
+        type Point = {
+            x: number,
+            y: number,
+        };
+        type CoordName = keyof Point;
+
+        let x: CoordName = "x";
+        let y: CoordName = "y";
+        "#;
+
+        let ctx = infer_prog(src);
+
+        let name = "CoordName";
+        let t = match ctx.lookup_type(name) {
+            Ok(t) => format!("{t}"),
+            Err(_) => panic!("Couldn't find type with name '{name}'"),
+        };
+
+        assert_eq!(t, "keyof Point");
     }
 }

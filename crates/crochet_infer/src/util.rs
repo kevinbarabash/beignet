@@ -151,6 +151,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
             Type::Array(t) => Type::Array(Box::from(norm_type(t, mapping, ctx))),
             Type::Rest(arg) => Type::Rest(Box::from(norm_type(arg, mapping, ctx))),
             Type::This => Type::This,
+            Type::KeyOf(t) => Type::KeyOf(Box::from(norm_type(t, mapping, ctx))),
         }
     }
 
@@ -301,7 +302,7 @@ pub fn union_many_types(ts: &[Type]) -> Type {
         .filter(|t| matches!(t, Type::Keyword(_)))
         .collect();
 
-    let rest_types: HashSet<_> = types_set
+    let other_types: HashSet<_> = types_set
         .iter()
         .cloned()
         .filter(|t| !matches!(t, Type::Prim(_) | Type::Lit(_) | Type::Keyword(_)))
@@ -311,7 +312,7 @@ pub fn union_many_types(ts: &[Type]) -> Type {
         .iter()
         .chain(lit_types.iter())
         .chain(keyword_types.iter())
-        .chain(rest_types.iter())
+        .chain(other_types.iter())
         .cloned()
         .collect();
 
@@ -367,44 +368,22 @@ pub fn get_property_type(prop: &TProp) -> Type {
 
 pub fn get_type_params(t: &Type) -> Vec<i32> {
     match t {
-        Type::Var(_) => vec![],
-        Type::App(_) => vec![],
         Type::Lam(lam) => lam.type_params.to_owned(),
-        Type::Prim(_) => vec![],
-        Type::Lit(_) => vec![],
-        Type::Keyword(_) => vec![],
-        Type::Union(_) => vec![],
-        Type::Intersection(_) => vec![],
         Type::Object(obj) => obj.type_params.to_owned(),
-        Type::Ref(_) => vec![],
-        Type::Tuple(_) => vec![],
-        Type::Array(_) => vec![],
-        Type::Rest(_) => vec![],
-        Type::This => vec![],
+        _ => vec![],
     }
 }
 
 pub fn set_type_params(t: &Type, type_params: &[i32]) -> Type {
     match t {
-        Type::Var(_) => t.to_owned(),
-        Type::App(_) => t.to_owned(),
         Type::Lam(lam) => Type::Lam(TLam {
             type_params: type_params.to_owned(),
             ..lam.to_owned()
         }),
-        Type::Prim(_) => t.to_owned(),
-        Type::Lit(_) => t.to_owned(),
-        Type::Keyword(_) => t.to_owned(),
-        Type::Union(_) => t.to_owned(),
-        Type::Intersection(_) => t.to_owned(),
         Type::Object(obj) => Type::Object(TObject {
             type_params: type_params.to_owned(),
             ..obj.to_owned()
         }),
-        Type::Ref(_) => t.to_owned(),
-        Type::Tuple(_) => t.to_owned(),
-        Type::Array(_) => t.to_owned(),
-        Type::Rest(_) => t.to_owned(),
-        Type::This => t.to_owned(),
+        _ => t.to_owned(),
     }
 }

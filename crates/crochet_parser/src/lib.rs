@@ -1211,7 +1211,15 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         }
         "flow_maybe_type" => todo!(),
         "type_query" => todo!(),
-        "index_type_query" => todo!(),
+        "index_type_query" => {
+            let type_ann = node.named_child(0).unwrap();
+            let type_ann = parse_type_ann(&type_ann, src);
+
+            TypeAnn::KeyOf(KeyOfType {
+                span: node.byte_range(),
+                type_ann: Box::from(type_ann),
+            })
+        }
         // alias($.this, $.this_type),
         "existential_type" => todo!(),
         "literal_type" => {
@@ -1718,6 +1726,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("type Foo<T extends string> = {bar: T};"));
         insta::assert_debug_snapshot!(parse(r#"type Foo<T = "foo"> = {bar: T};"#));
         insta::assert_debug_snapshot!(parse(r#"type Foo<T extends string = "foo"> = {bar: T};"#));
+        insta::assert_debug_snapshot!(parse("type CoordNames = keyof Point;"));
     }
 
     #[test]

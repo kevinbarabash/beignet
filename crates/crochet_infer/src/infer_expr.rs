@@ -540,6 +540,7 @@ fn is_promise(t: &Type) -> bool {
     matches!(&t, Type::Ref(types::TRef { name, .. }) if name == "Promise")
 }
 
+// TODO: try to dedupe with key_of()
 fn infer_property_type(
     obj_t: &Type,
     prop: &MemberProp,
@@ -585,7 +586,8 @@ fn infer_property_type(
                 infer_property_type(&t, prop, ctx)
             }
             TKeyword::Null => Err("Cannot read property on 'null'".to_owned()),
-            TKeyword::Undefined => Err("Cannot read property on 'null'".to_owned()),
+            TKeyword::Undefined => Err("Cannot read property on 'undefined'".to_owned()),
+            TKeyword::Never => Err("Cannot read property on 'never'".to_owned()),
         },
         Type::Array(type_param) => {
             // TODO: Do this for all interfaces that we lookup

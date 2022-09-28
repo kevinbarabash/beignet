@@ -1,0 +1,31 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"type CoordNames = keyof Point;\")"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                span: 0..30,
+                declare: false,
+                id: Ident {
+                    span: 5..15,
+                    name: "CoordNames",
+                },
+                type_ann: KeyOf(
+                    KeyOfType {
+                        span: 18..29,
+                        type_ann: TypeRef(
+                            TypeRef {
+                                span: 24..29,
+                                name: "Point",
+                                type_params: None,
+                            },
+                        ),
+                    },
+                ),
+                type_params: None,
+            },
+        ],
+    },
+)

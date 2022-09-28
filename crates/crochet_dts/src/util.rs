@@ -122,6 +122,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
         Type::Array(t) => Type::Array(Box::from(replace_aliases_rec(t, map))),
         Type::Rest(t) => Type::Rest(Box::from(replace_aliases_rec(t, map))),
         Type::This => Type::This,
+        Type::KeyOf(t) => Type::KeyOf(Box::from(replace_aliases_rec(t, map))),
     }
 }
 
