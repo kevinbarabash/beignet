@@ -2283,4 +2283,33 @@ mod tests {
         assert_eq!(get_type_type("Foo", &ctx), r#"{bar: "baz"}"#);
         assert_eq!(get_type_type("FooBar", &ctx), r#""baz""#);
     }
+
+    #[test]
+    fn test_indexed_access() {
+        let src = r#"        
+        type FooBar = {foo: number, bar: string};
+        type Foo = FooBar["foo"];
+        type BarKey = "bar";
+        type Bar = FooBar[BarKey];
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type_type("Foo", &ctx), "number");
+        assert_eq!(get_type_type("Bar", &ctx), "string");
+    }
+
+    #[test]
+    fn test_nested_indexed_access() {
+        let src = r#"        
+        type Nested = {a: {b: {c: string}}};
+        type B = Nested["a"]["b"];
+        type C = Nested["a"]["b"]["c"];
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type_type("B", &ctx), "{c: string}");
+        assert_eq!(get_type_type("C", &ctx), "string");
+    }
 }

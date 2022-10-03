@@ -1,0 +1,51 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(r#\"type C = A[\"b\"][C_Key]\"#)"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                span: 0..22,
+                declare: false,
+                id: Ident {
+                    span: 5..6,
+                    name: "C",
+                },
+                type_ann: IndexedAccess(
+                    IndexedAccessType {
+                        span: 9..22,
+                        obj_type: IndexedAccess(
+                            IndexedAccessType {
+                                span: 9..15,
+                                obj_type: TypeRef(
+                                    TypeRef {
+                                        span: 9..10,
+                                        name: "A",
+                                        type_params: None,
+                                    },
+                                ),
+                                index_type: Lit(
+                                    Str(
+                                        Str {
+                                            span: 11..14,
+                                            value: "b",
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        index_type: TypeRef(
+                            TypeRef {
+                                span: 16..21,
+                                name: "C_Key",
+                                type_params: None,
+                            },
+                        ),
+                    },
+                ),
+                type_params: None,
+            },
+        ],
+    },
+)

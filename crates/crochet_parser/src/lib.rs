@@ -1247,7 +1247,17 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 }
             }
         }
-        "lookup_type" => todo!(),
+        "lookup_type" => {
+            let obj_type = node.named_child(0).unwrap();
+            let obj_type = parse_type_ann(&obj_type, src);
+            let index_type = node.named_child(1).unwrap();
+            let index_type = parse_type_ann(&index_type, src);
+            TypeAnn::IndexedAccess(IndexedAccessType {
+                span: node.byte_range(),
+                obj_type: Box::from(obj_type),
+                index_type: Box::from(index_type),
+            })
+        }
         "conditional_type" => todo!(),
         "template_literal_type" => todo!(),
         "intersection_type" => {
@@ -1737,6 +1747,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("type CoordNames = keyof Point;"));
         insta::assert_debug_snapshot!(parse("type Foo = typeof foo;"));
         insta::assert_debug_snapshot!(parse("type FooBar = typeof foo.bar;"));
+        insta::assert_debug_snapshot!(parse(r#"type C = A["b"][C_Key]"#));
     }
 
     #[test]

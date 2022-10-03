@@ -29,7 +29,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
     // type variables that are bound to the object element as opposed to the encompassing object type.
     fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
-        match &t {
+        match t {
             Type::Var(id) => match mapping.get(id) {
                 Some(t) => t.to_owned(),
                 // If `id` doesn't exist in `mapping` we return the original type variable.
@@ -152,6 +152,10 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
             Type::Rest(arg) => Type::Rest(Box::from(norm_type(arg, mapping, ctx))),
             Type::This => Type::This,
             Type::KeyOf(t) => Type::KeyOf(Box::from(norm_type(t, mapping, ctx))),
+            Type::IndexAccess(TIndexAccess { object, index }) => Type::IndexAccess(TIndexAccess {
+                object: Box::from(norm_type(object, mapping, ctx)),
+                index: Box::from(norm_type(index, mapping, ctx)),
+            }),
         }
     }
 

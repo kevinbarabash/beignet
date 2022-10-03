@@ -45,6 +45,7 @@ pub struct KeywordType {
 pub struct TypeRef {
     pub span: Span,
     pub name: String,
+    // TODO: rename this to type_args and drop the Option
     pub type_params: Option<Vec<TypeAnn>>,
 }
 
@@ -103,6 +104,13 @@ pub struct QueryType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IndexedAccessType {
+    pub span: Span,
+    pub obj_type: Box<TypeAnn>,
+    pub index_type: Box<TypeAnn>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnn {
     Lam(LamType),
     Lit(Lit),
@@ -116,6 +124,7 @@ pub enum TypeAnn {
     Array(ArrayType), // T[]
     KeyOf(KeyOfType), // keyof
     Query(QueryType), // typeof
+    IndexedAccess(IndexedAccessType),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
