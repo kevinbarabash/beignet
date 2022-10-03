@@ -2312,4 +2312,22 @@ mod tests {
         assert_eq!(get_type_type("B", &ctx), "{c: string}");
         assert_eq!(get_type_type("C", &ctx), "string");
     }
+
+    #[test]
+    fn test_indexed_access_with_indexer_elements() {
+        let src = r#"
+        type ReadonlyArray<T> = {
+            [key: string]: T
+        }
+        type MyRecord = {[key: string]: number};
+        type MyArray = boolean[];
+        type RecVal = MyRecord["foo"];
+        type ArrVal = MyArray["bar"];
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_type_type("RecVal", &ctx), "number");
+        assert_eq!(get_type_type("ArrVal", &ctx), "boolean");
+    }
 }

@@ -1130,7 +1130,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         }
         "object_type" => {
             let mut cursor = node.walk();
-            let props = node
+            let elems: Vec<TObjElem> = node
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|prop| match prop.kind() {
@@ -1151,6 +1151,9 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                         let name_node = prop.child_by_field_name("name").unwrap();
                         let name = text_for_node(&name_node, src);
 
+                        let type_ann = prop.child_by_field_name("type").unwrap();
+                        let type_ann = parse_type_ann(&type_ann, src);
+
                         let mut optional = false;
                         let mut cursor = prop.walk();
                         for child in prop.children(&mut cursor) {
@@ -1159,20 +1162,51 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                             }
                         }
 
-                        let type_ann = prop.child_by_field_name("type").unwrap();
-                        let type_ann = parse_type_ann(&type_ann, src);
-
-                        TProp {
+                        TObjElem::Prop(TProp {
                             span: prop.byte_range(),
                             name,
                             optional,
                             mutable: false, // TODO,
                             type_ann: Box::from(type_ann),
-                        }
+                        })
                     }
                     "call_signature" => todo!("call_signature"),
                     "construct_signature" => todo!("construct_signature"),
-                    "index_signature" => todo!("index_signature"),
+                    "index_signature" => {
+                        let name_node = prop.child_by_field_name("name").unwrap();
+                        let name = text_for_node(&name_node, src);
+
+                        let index_type_ann = prop.child_by_field_name("index_type").unwrap();
+                        let index_type_ann = parse_type_ann(&index_type_ann, src);
+
+                        let type_ann = prop.child_by_field_name("type").unwrap();
+                        let type_ann = parse_type_ann(&type_ann, src);
+
+                        let mut optional = false;
+                        let mut cursor = prop.walk();
+                        for child in prop.children(&mut cursor) {
+                            if text_for_node(&child, src) == "?" {
+                                optional = true;
+                            }
+                        }
+
+                        TObjElem::Index(TIndex {
+                            span: prop.byte_range(),
+                            key: TypeAnnFnParam {
+                                pat: EFnParamPat::Ident(EFnParamBindingIdent {
+                                    span: name_node.byte_range(),
+                                    id: Ident {
+                                        span: name_node.byte_range(),
+                                        name,
+                                    },
+                                }),
+                                type_ann: index_type_ann,
+                                optional,
+                            },
+                            mutable: false, // TODO,
+                            type_ann: Box::from(type_ann),
+                        })
+                    }
                     // TODO: remove method_signature, methods should look the same as properties
                     "method_signature" => todo!("remove method_signature from object_type"),
                     kind => panic!("Unsupport prop kind in object_type: '{kind}'"),
@@ -1181,7 +1215,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
 
             TypeAnn::Object(ObjectType {
                 span: node.byte_range(),
-                props,
+                elems,
             })
         }
         "array_type" => {
@@ -1748,6 +1782,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("type Foo = typeof foo;"));
         insta::assert_debug_snapshot!(parse("type FooBar = typeof foo.bar;"));
         insta::assert_debug_snapshot!(parse(r#"type C = A["b"][C_Key]"#));
+        insta::assert_debug_snapshot!(parse("type Array<T> = {[key: number]: T}"));
     }
 
     #[test]

@@ -15,20 +15,22 @@ Ok(
                 type_ann: Object(
                     ObjectType {
                         span: 29..37,
-                        props: [
-                            TProp {
-                                span: 30..36,
-                                name: "bar",
-                                optional: false,
-                                mutable: false,
-                                type_ann: TypeRef(
-                                    TypeRef {
-                                        span: 35..36,
-                                        name: "T",
-                                        type_params: None,
-                                    },
-                                ),
-                            },
+                        elems: [
+                            Prop(
+                                TProp {
+                                    span: 30..36,
+                                    name: "bar",
+                                    optional: false,
+                                    mutable: false,
+                                    type_ann: TypeRef(
+                                        TypeRef {
+                                            span: 35..36,
+                                            name: "T",
+                                            type_params: None,
+                                        },
+                                    ),
+                                },
+                            ),
                         ],
                     },
                 ),

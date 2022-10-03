@@ -52,31 +52,35 @@ Ok(
                                         Object(
                                             ObjectType {
                                                 span: 19..41,
-                                                props: [
-                                                    TProp {
-                                                        span: 20..29,
-                                                        name: "a",
-                                                        optional: false,
-                                                        mutable: false,
-                                                        type_ann: Prim(
-                                                            PrimType {
-                                                                span: 23..29,
-                                                                prim: Str,
-                                                            },
-                                                        ),
-                                                    },
-                                                    TProp {
-                                                        span: 31..40,
-                                                        name: "b",
-                                                        optional: false,
-                                                        mutable: false,
-                                                        type_ann: Prim(
-                                                            PrimType {
-                                                                span: 34..40,
-                                                                prim: Num,
-                                                            },
-                                                        ),
-                                                    },
+                                                elems: [
+                                                    Prop(
+                                                        TProp {
+                                                            span: 20..29,
+                                                            name: "a",
+                                                            optional: false,
+                                                            mutable: false,
+                                                            type_ann: Prim(
+                                                                PrimType {
+                                                                    span: 23..29,
+                                                                    prim: Str,
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
+                                                    Prop(
+                                                        TProp {
+                                                            span: 31..40,
+                                                            name: "b",
+                                                            optional: false,
+                                                            mutable: false,
+                                                            type_ann: Prim(
+                                                                PrimType {
+                                                                    span: 34..40,
+                                                                    prim: Num,
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
                                                 ],
                                             },
                                         ),

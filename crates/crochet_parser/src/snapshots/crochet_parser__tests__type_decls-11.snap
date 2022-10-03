@@ -1,0 +1,69 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"type Array<T> = {[key: number]: T}\")"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                span: 0..34,
+                declare: false,
+                id: Ident {
+                    span: 5..10,
+                    name: "Array",
+                },
+                type_ann: Object(
+                    ObjectType {
+                        span: 16..34,
+                        elems: [
+                            Index(
+                                TIndex {
+                                    span: 17..33,
+                                    key: TypeAnnFnParam {
+                                        pat: Ident(
+                                            EFnParamBindingIdent {
+                                                span: 18..21,
+                                                id: Ident {
+                                                    span: 18..21,
+                                                    name: "key",
+                                                },
+                                            },
+                                        ),
+                                        type_ann: Prim(
+                                            PrimType {
+                                                span: 23..29,
+                                                prim: Num,
+                                            },
+                                        ),
+                                        optional: false,
+                                    },
+                                    mutable: false,
+                                    type_ann: TypeRef(
+                                        TypeRef {
+                                            span: 32..33,
+                                            name: "T",
+                                            type_params: None,
+                                        },
+                                    ),
+                                },
+                            ),
+                        ],
+                    },
+                ),
+                type_params: Some(
+                    [
+                        TypeParam {
+                            span: 11..12,
+                            name: Ident {
+                                span: 11..12,
+                                name: "T",
+                            },
+                            constraint: None,
+                            default: None,
+                        },
+                    ],
+                ),
+            },
+        ],
+    },
+)
