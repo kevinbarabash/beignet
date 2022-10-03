@@ -30,17 +30,19 @@ fn infer_pattern(
     // type annotation.
     match type_ann {
         Some(type_ann) => {
-            let type_ann_ty = infer_type_ann_with_params(type_ann, ctx, type_param_map);
+            let (type_ann_s, type_ann_t) =
+                infer_type_ann_with_params(type_ann, ctx, type_param_map)?;
 
             // Allowing type_ann_ty to be a subtype of pat_type because
             // only non-refutable patterns can have type annotations.
-            let s = unify(&type_ann_ty, &pat_type, ctx)?;
+            let s = unify(&type_ann_t, &pat_type, ctx)?;
+            let s = compose_subs(&s, &type_ann_s);
 
             // Substs are applied to any new variables introduced.  This handles
             // the situation where explicit types have be provided for function
             // parameters.
             let a = new_vars.apply(&s);
-            Ok((s, a, type_ann_ty))
+            Ok((s, a, type_ann_t))
         }
         None => Ok((Subst::new(), new_vars, pat_type)),
     }

@@ -249,35 +249,40 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 })
                 .collect();
 
-            let (ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
+            let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-            let (rs, rt) = infer_expr(ctx, body)?;
+            let (rs_1, rt_1) = infer_expr(ctx, body)?;
+            ss.push(rs_1);
 
             ctx.pop_scope();
 
-            let rt = if *is_async && !is_promise(&rt) {
+            let rt_1 = if *is_async && !is_promise(&rt_1) {
                 Type::Ref(types::TRef {
                     name: String::from("Promise"),
-                    type_args: Some(vec![rt]),
+                    type_args: Some(vec![rt_1]),
                 })
             } else {
-                rt
+                rt_1
             };
 
             let s = match rt_type_ann {
-                Some(rt_type_ann) => unify(
-                    &rt,
-                    &infer_type_ann_with_params(rt_type_ann, ctx, &type_params_map),
-                    ctx,
-                )?,
+                Some(rt_type_ann) => {
+                    let (rs_2, rt_2) =
+                        infer_type_ann_with_params(rt_type_ann, ctx, &type_params_map)?;
+                    ss.push(rs_2);
+
+                    unify(&rt_1, &rt_2, ctx)?
+                }
                 None => Subst::default(),
             };
+            ss.push(s);
             let t = Type::Lam(types::TLam {
                 params: t_params,
-                ret: Box::from(rt),
+                ret: Box::from(rt_1),
                 type_params: vec![],
             });
-            let s = compose_subs(&s, &compose_subs(&rs, &compose_many_subs(&ss)));
+
+            let s = compose_many_subs(&ss);
             let t = t.apply(&s);
 
             Ok((s, t))

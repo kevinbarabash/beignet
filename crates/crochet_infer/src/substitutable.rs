@@ -52,11 +52,15 @@ impl Substitutable for Type {
             Type::Rest(arg) => Type::Rest(Box::from(arg.apply(sub))),
             Type::This => Type::This,
             Type::KeyOf(t) => Type::KeyOf(Box::from(t.apply(sub))),
+            Type::IndexAccess(TIndexAccess { object, index }) => Type::IndexAccess(TIndexAccess {
+                object: Box::from(object.apply(sub)),
+                index: Box::from(index.apply(sub)),
+            }),
         };
         norm_type(result)
     }
     fn ftv(&self) -> HashSet<i32> {
-        match &self {
+        match self {
             Type::Var(id) => HashSet::from([id.to_owned()]),
             Type::App(TApp { args, ret }) => {
                 let mut result: HashSet<_> = args.ftv();
@@ -83,6 +87,11 @@ impl Substitutable for Type {
             Type::Rest(arg) => arg.ftv(),
             Type::This => HashSet::new(),
             Type::KeyOf(t) => t.ftv(),
+            Type::IndexAccess(TIndexAccess { object, index }) => {
+                let mut result: HashSet<_> = object.ftv();
+                result.extend(index.ftv());
+                result
+            }
         }
     }
 }

@@ -564,6 +564,7 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
         Type::Rest(_) => todo!(),
         Type::This => TsType::TsThisType(TsThisType { span: DUMMY_SP }),
         Type::KeyOf(_) => todo!(),
+        Type::IndexAccess(_) => todo!(),
     }
 }
 

@@ -59,8 +59,8 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
                             Pattern::Ident(BindingIdent { id, .. }) => {
                                 match type_ann {
                                     Some(type_ann) => {
-                                        let scheme = infer_scheme(type_ann, ctx);
-                                        ctx.insert_value(id.name.to_owned(), scheme);
+                                        let (s, t) = infer_scheme(type_ann, ctx)?;
+                                        ctx.insert_value(id.name.to_owned(), t.apply(&s));
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
@@ -89,8 +89,8 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
                         for (name, t) in pa {
-                            let scheme = normalize(&t.apply(&s), ctx);
-                            ctx.insert_value(name, scheme);
+                            let t = normalize(&t.apply(&s), ctx);
+                            ctx.insert_value(name, t);
                         }
                     }
                 };
@@ -101,8 +101,8 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
                 type_params,
                 ..
             } => {
-                let scheme = infer_qualified_type_ann(type_ann, type_params, ctx);
-                ctx.insert_type(id.name.to_owned(), scheme);
+                let (s, t) = infer_qualified_type_ann(type_ann, type_params, ctx)?;
+                ctx.insert_type(id.name.to_owned(), t.apply(&s));
             }
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that

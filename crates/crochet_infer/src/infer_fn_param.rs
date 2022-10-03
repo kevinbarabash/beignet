@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use crochet_ast::*;
 use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, Type};
 
+use crate::util::compose_subs;
+
 use super::context::Context;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
@@ -28,11 +30,13 @@ pub fn infer_fn_param(
     // type annotation.
     match &param.type_ann {
         Some(type_ann) => {
-            let type_ann_ty = infer_type_ann_with_params(type_ann, ctx, type_param_map);
+            let (type_ann_s, type_ann_t) =
+                infer_type_ann_with_params(type_ann, ctx, type_param_map)?;
 
             // Allowing type_ann_ty to be a subtype of pat_type because
             // only non-refutable patterns can have type annotations.
-            let s = unify(&type_ann_ty, &pat_type, ctx)?;
+            let s = unify(&type_ann_t, &pat_type, ctx)?;
+            let s = compose_subs(&s, &type_ann_s);
 
             // Substs are applied to any new variables introduced.  This handles
             // the situation where explicit types have be provided for function
@@ -41,7 +45,7 @@ pub fn infer_fn_param(
 
             // TODO: handle schemes with type params
             if param.optional {
-                match a.iter().find(|(_, value)| type_ann_ty == **value) {
+                match a.iter().find(|(_, value)| type_ann_t == **value) {
                     Some((name, t)) => {
                         let t = Type::Union(vec![t.to_owned(), Type::Keyword(TKeyword::Undefined)]);
                         a.insert(name.to_owned(), t);
@@ -54,7 +58,7 @@ pub fn infer_fn_param(
                 pat,
                 // We don't modify the type annotation for the param since the optionality
                 // is already tracked by the `optional` field.
-                t: type_ann_ty,
+                t: type_ann_t,
                 optional: param.optional,
             };
 

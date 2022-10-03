@@ -18,6 +18,7 @@ pub struct TApp {
 #[derive(Clone, Debug, Eq)]
 pub struct TRef {
     pub name: String,
+    // TODO: make this non-optional
     pub type_args: Option<Vec<Type>>,
 }
 
@@ -41,6 +42,12 @@ pub struct TObject {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TIndexAccess {
+    pub object: Box<Type>,
+    pub index: Box<Type>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Var(i32), // i32 is the if of the type variable
     App(TApp),
@@ -58,6 +65,7 @@ pub enum Type {
     Rest(Box<Type>), // TODO: rename this to Spread
     This,
     KeyOf(Box<Type>),
+    IndexAccess(TIndexAccess),
 }
 
 impl From<TLit> for Type {
@@ -109,6 +117,7 @@ impl fmt::Display for Type {
             Type::Rest(arg) => write!(f, "...{arg}"),
             Type::This => write!(f, "this"),
             Type::KeyOf(t) => write!(f, "keyof {t}"),
+            Type::IndexAccess(TIndexAccess { object, index }) => write!(f, "{object}[{index}]"),
         }
     }
 }

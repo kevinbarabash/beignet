@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use swc_ecma_ast::*;
 
 use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substitutable};
-use crochet_types::{self as types, TFnParam, TLam, TObjElem, TObject, Type};
+use crochet_types::{self as types, TFnParam, TIndexAccess, TLam, TObjElem, TObject, Type};
 
 pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Context) -> Type {
     let mut type_params: Vec<i32> = vec![];
@@ -123,6 +123,10 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
         Type::Rest(t) => Type::Rest(Box::from(replace_aliases_rec(t, map))),
         Type::This => Type::This,
         Type::KeyOf(t) => Type::KeyOf(Box::from(replace_aliases_rec(t, map))),
+        Type::IndexAccess(TIndexAccess { object, index }) => Type::IndexAccess(TIndexAccess {
+            object: Box::from(replace_aliases_rec(object, map)),
+            index: Box::from(replace_aliases_rec(index, map)),
+        }),
     }
 }
 
