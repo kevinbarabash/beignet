@@ -3,7 +3,6 @@ use crate::expr::Expr;
 use crate::ident::Ident;
 use crate::keyword::Keyword;
 use crate::lit::Lit;
-use crate::pattern::{BindingIdent, RestPat};
 use crate::prim::Primitive;
 use crate::span::Span;
 
@@ -20,13 +19,6 @@ pub struct LamType {
     pub params: Vec<TypeAnnFnParam>,
     pub ret: Box<TypeAnn>,
     pub type_params: Option<Vec<TypeParam>>,
-}
-
-// TODO: replace this with FnParam from expr
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum FnParam {
-    Ident(BindingIdent),
-    Rest(RestPat),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -52,7 +44,19 @@ pub struct TypeRef {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ObjectType {
     pub span: Span,
-    pub props: Vec<TProp>,
+    // TODO: update this to support indexers and callables as well.
+    pub elems: Vec<TObjElem>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TObjElem {
+    // Call(TLam),
+    // Constructor(TLam),
+    Index(TIndex),
+    Prop(TProp),
+    // Getter
+    // Setter
+    // RestSpread - we can use this instead of converting {a, ...x} to {a} & tvar
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -60,6 +64,15 @@ pub struct TProp {
     pub span: Span,
     pub name: String,
     pub optional: bool,
+    pub mutable: bool,
+    pub type_ann: Box<TypeAnn>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TIndex {
+    pub span: Span,
+    // TODO: update this to only allow `<ident>: string` or `<ident>: number`
+    pub key: TypeAnnFnParam,
     pub mutable: bool,
     pub type_ann: Box<TypeAnn>,
 }

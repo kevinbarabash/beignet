@@ -15,31 +15,35 @@ Ok(
                 type_ann: Object(
                     ObjectType {
                         span: 13..35,
-                        props: [
-                            TProp {
-                                span: 14..23,
-                                name: "x",
-                                optional: false,
-                                mutable: false,
-                                type_ann: Prim(
-                                    PrimType {
-                                        span: 17..23,
-                                        prim: Num,
-                                    },
-                                ),
-                            },
-                            TProp {
-                                span: 25..34,
-                                name: "y",
-                                optional: false,
-                                mutable: false,
-                                type_ann: Prim(
-                                    PrimType {
-                                        span: 28..34,
-                                        prim: Num,
-                                    },
-                                ),
-                            },
+                        elems: [
+                            Prop(
+                                TProp {
+                                    span: 14..23,
+                                    name: "x",
+                                    optional: false,
+                                    mutable: false,
+                                    type_ann: Prim(
+                                        PrimType {
+                                            span: 17..23,
+                                            prim: Num,
+                                        },
+                                    ),
+                                },
+                            ),
+                            Prop(
+                                TProp {
+                                    span: 25..34,
+                                    name: "y",
+                                    optional: false,
+                                    mutable: false,
+                                    type_ann: Prim(
+                                        PrimType {
+                                            span: 28..34,
+                                            prim: Num,
+                                        },
+                                    ),
+                                },
+                            ),
                         ],
                     },
                 ),

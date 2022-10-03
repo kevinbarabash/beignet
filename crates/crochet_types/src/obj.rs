@@ -28,7 +28,8 @@ impl fmt::Display for TObjElem {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TIndex {
-    pub key: TFnParam, // identifier + type
+    // TODO: update this to only allow `<ident>: string` or `<ident>: number`
+    pub key: TFnParam,
     pub mutable: bool,
     pub t: Type,
 }

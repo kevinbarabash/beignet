@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TKeyword, TLam, TObject, TPrim, TProp, Type};
+use crochet_types::{self as types, TFnParam, TIndex, TKeyword, TLam, TObject, TPrim, TProp, Type};
 use types::TObjElem;
 
 use crate::util::compose_many_subs;
@@ -104,21 +104,44 @@ fn infer_type_ann_rec(
         TypeAnn::Keyword(KeywordType { keyword, .. }) => {
             Ok((Subst::new(), Type::from(keyword.to_owned())))
         }
-        TypeAnn::Object(ObjectType { props, .. }) => {
+        TypeAnn::Object(obj) => {
             let mut ss: Vec<Subst> = vec![];
             let mut elems: Vec<types::TObjElem> = vec![];
 
-            for prop in props {
-                let (prop_s, prop_t) =
-                    infer_type_ann_rec(prop.type_ann.as_ref(), ctx, type_param_map)?;
+            for elem in &obj.elems {
+                match elem {
+                    crochet_ast::TObjElem::Index(index) => {
+                        let (index_s, index_t) =
+                            infer_type_ann_rec(index.type_ann.as_ref(), ctx, type_param_map)?;
 
-                ss.push(prop_s);
-                elems.push(TObjElem::Prop(TProp {
-                    name: prop.name.to_owned(),
-                    optional: prop.optional,
-                    mutable: prop.mutable,
-                    t: prop_t,
-                }))
+                        let (key_s, key_t) =
+                            infer_type_ann_rec(&index.key.type_ann, ctx, type_param_map)?;
+
+                        ss.push(index_s);
+                        ss.push(key_s);
+                        elems.push(TObjElem::Index(TIndex {
+                            key: TFnParam {
+                                pat: e_pat_to_t_pat(&index.key.pat),
+                                t: key_t,
+                                optional: index.key.optional,
+                            },
+                            mutable: index.mutable,
+                            t: index_t,
+                        }))
+                    }
+                    crochet_ast::TObjElem::Prop(prop) => {
+                        let (prop_s, prop_t) =
+                            infer_type_ann_rec(prop.type_ann.as_ref(), ctx, type_param_map)?;
+
+                        ss.push(prop_s);
+                        elems.push(TObjElem::Prop(TProp {
+                            name: prop.name.to_owned(),
+                            optional: prop.optional,
+                            mutable: prop.mutable,
+                            t: prop_t,
+                        }))
+                    }
+                }
             }
 
             let s = compose_many_subs(&ss);
@@ -248,30 +271,41 @@ fn infer_property_type(
                 infer_property_type(obj_t, &t, ctx)
             }
             Type::Lit(lit) => match lit {
-                types::TLit::Num(_) => Err(String::from(
-                    "a number literal can't be used as an indexed type's index",
-                )),
+                types::TLit::Num(_) => {
+                    // TODO: support number literals if the ojbect has an indexer
+                    // that supports them
+                    Err(String::from(
+                        "a number literal can't be used as an indexed type's index",
+                    ))
+                }
                 types::TLit::Bool(_) => Err(String::from(
                     "a boolean literal can't be used as an indexed type's index",
                 )),
                 types::TLit::Str(name) => {
-                    let prop = elems.iter().find_map(|elem| match elem {
-                        types::TObjElem::Call(_) => None,
-                        types::TObjElem::Constructor(_) => None,
-                        types::TObjElem::Index(_) => None,
+                    let mut t = elems.iter().find_map(|elem| match elem {
                         types::TObjElem::Prop(prop) => {
                             if prop.name == *name {
-                                Some(prop)
+                                Some(prop.t.to_owned())
                             } else {
                                 None
                             }
                         }
+                        _ => None,
                     });
 
-                    match prop {
-                        Some(prop) => {
+                    if t.is_none() {
+                        t = elems.iter().find_map(|elem| match elem {
+                            types::TObjElem::Index(index) => match index.key.t {
+                                Type::Prim(TPrim::Str) => Some(index.t.to_owned()),
+                                _ => None,
+                            },
+                            _ => None,
+                        });
+                    }
+
+                    match t {
+                        Some(t) => {
                             let s = Subst::new();
-                            let t = prop.t.to_owned();
                             Ok((s, t))
                         }
                         None => Err(format!("'{name}' not found in {obj_t}")),
