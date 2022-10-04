@@ -35,7 +35,7 @@ Ok(
                                         TypeRef {
                                             span: 27..30,
                                             name: "Foo",
-                                            type_params: None,
+                                            type_args: None,
                                         },
                                     ),
                                     optional: false,
@@ -45,7 +45,7 @@ Ok(
                                 TypeRef {
                                     span: 35..36,
                                     name: "T",
-                                    type_params: None,
+                                    type_args: None,
                                 },
                             ),
                             type_params: None,

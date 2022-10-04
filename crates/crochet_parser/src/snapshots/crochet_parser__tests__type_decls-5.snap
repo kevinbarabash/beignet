@@ -26,7 +26,7 @@ Ok(
                                         TypeRef {
                                             span: 28..29,
                                             name: "T",
-                                            type_params: None,
+                                            type_args: None,
                                         },
                                     ),
                                 },

@@ -9,7 +9,7 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
             "There isn't a way to infer a type from its keys",
         )),
         Type::Ref(alias) => {
-            let t = ctx.lookup_alias(alias)?;
+            let t = ctx.lookup_ref_and_instantiate(alias)?;
             key_of(&t, ctx)
         }
         Type::Object(TObject {

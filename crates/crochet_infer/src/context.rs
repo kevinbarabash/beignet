@@ -138,8 +138,7 @@ impl Context {
         Err(format!("Can't find namespace: {name}"))
     }
 
-    // TODO: rename to lookup_and_instantiate_alias
-    pub fn lookup_alias(&self, alias: &TRef) -> Result<Type, String> {
+    pub fn lookup_ref_and_instantiate(&self, alias: &TRef) -> Result<Type, String> {
         let name = &alias.name;
         for scope in self.scopes.iter().rev() {
             match scope.types.get(name) {

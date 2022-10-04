@@ -37,8 +37,8 @@ pub struct KeywordType {
 pub struct TypeRef {
     pub span: Span,
     pub name: String,
-    // TODO: rename this to type_args and drop the Option
-    pub type_params: Option<Vec<TypeAnn>>,
+    // TODO: drop the Option
+    pub type_args: Option<Vec<TypeAnn>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

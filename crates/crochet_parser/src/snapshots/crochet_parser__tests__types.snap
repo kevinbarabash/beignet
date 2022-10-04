@@ -37,13 +37,13 @@ Ok(
                                             TypeRef {
                                                 span: 23..29,
                                                 name: "Foo",
-                                                type_params: Some(
+                                                type_args: Some(
                                                     [
                                                         TypeRef(
                                                             TypeRef {
                                                                 span: 27..28,
                                                                 name: "T",
-                                                                type_params: None,
+                                                                type_args: None,
                                                             },
                                                         ),
                                                     ],

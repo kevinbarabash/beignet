@@ -42,7 +42,7 @@ Ok(
                                         TypeRef {
                                             span: 32..33,
                                             name: "T",
-                                            type_params: None,
+                                            type_args: None,
                                         },
                                     ),
                                 },

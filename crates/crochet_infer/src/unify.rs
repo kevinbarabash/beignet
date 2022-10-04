@@ -491,11 +491,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
         }
         (_, Type::Ref(alias)) => {
-            let alias_t = ctx.lookup_alias(alias)?;
+            let alias_t = ctx.lookup_ref_and_instantiate(alias)?;
             unify(t1, &alias_t, ctx)
         }
         (Type::Ref(alias), _) => {
-            let alias_t = ctx.lookup_alias(alias)?;
+            let alias_t = ctx.lookup_ref_and_instantiate(alias)?;
             unify(&alias_t, t2, ctx)
         }
         (Type::Array(array_arg), Type::Rest(rest_arg)) => {

@@ -1109,7 +1109,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         "type_identifier" => TypeAnn::TypeRef(TypeRef {
             span: node.byte_range(),
             name: text_for_node(&node, src),
-            type_params: None,
+            type_args: None,
         }),
         "nested_type_identifier" => todo!(),
         "generic_type" => {
@@ -1125,7 +1125,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
             TypeAnn::TypeRef(TypeRef {
                 span: node.byte_range(),
                 name: text_for_node(&name, src),
-                type_params: Some(type_params),
+                type_args: Some(type_params),
             })
         }
         "object_type" => {

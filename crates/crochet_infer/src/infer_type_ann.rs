@@ -152,7 +152,9 @@ fn infer_type_ann_rec(
             Ok((s, t))
         }
         TypeAnn::TypeRef(TypeRef {
-            name, type_params, ..
+            name,
+            type_args: type_params,
+            ..
         }) => match type_param_map.get(name) {
             Some(tv) => {
                 let s = Subst::new();
@@ -265,9 +267,12 @@ fn infer_property_type(
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t {
-        Type::Object(TObject { elems, type_params }) => match index_t {
+        Type::Object(TObject {
+            elems,
+            type_params: _,
+        }) => match index_t {
             Type::Ref(alias) => {
-                let t = ctx.lookup_alias(alias)?;
+                let t = ctx.lookup_ref_and_instantiate(alias)?;
                 infer_property_type(obj_t, &t, ctx)
             }
             Type::Lit(lit) => match lit {
@@ -315,37 +320,25 @@ fn infer_property_type(
             t => Err(format!("{t} can't be used as an indexed type's index",)),
         },
         Type::Ref(alias) => {
-            let t = ctx.lookup_alias(alias)?;
+            let t = ctx.lookup_ref_and_instantiate(alias)?;
             infer_property_type(&t, index_t, ctx)
         }
-        Type::Lit(lit) => match lit {
-            types::TLit::Num(_) => {
-                let t = ctx.lookup_type_and_instantiate("Number")?;
-                infer_property_type(&t, index_t, ctx)
-            }
-            types::TLit::Bool(_) => {
-                let t = ctx.lookup_type_and_instantiate("Boolean")?;
-                infer_property_type(&t, index_t, ctx)
-            }
-            types::TLit::Str(_) => {
-                let t = ctx.lookup_type_and_instantiate("String")?;
-                infer_property_type(&t, index_t, ctx)
-            }
-        },
-        Type::Prim(prim) => match prim {
-            TPrim::Num => {
-                let t = ctx.lookup_type_and_instantiate("Number")?;
-                infer_property_type(&t, index_t, ctx)
-            }
-            TPrim::Bool => {
-                let t = ctx.lookup_type_and_instantiate("Boolean")?;
-                infer_property_type(&t, index_t, ctx)
-            }
-            TPrim::Str => {
-                let t = ctx.lookup_type_and_instantiate("String")?;
-                infer_property_type(&t, index_t, ctx)
-            }
-        },
+        Type::Lit(lit) => {
+            let t = match lit {
+                types::TLit::Num(_) => ctx.lookup_type_and_instantiate("Number")?,
+                types::TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean")?,
+                types::TLit::Str(_) => ctx.lookup_type_and_instantiate("String")?,
+            };
+            infer_property_type(&t, index_t, ctx)
+        }
+        Type::Prim(prim) => {
+            let t = match prim {
+                TPrim::Num => ctx.lookup_type_and_instantiate("Number")?,
+                TPrim::Bool => ctx.lookup_type_and_instantiate("Boolean")?,
+                TPrim::Str => ctx.lookup_type_and_instantiate("String")?,
+            };
+            infer_property_type(&t, index_t, ctx)
+        }
         Type::Keyword(keyword) => match keyword {
             TKeyword::Symbol => {
                 let t = ctx.lookup_type_and_instantiate("Symbol")?;

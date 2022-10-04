@@ -554,7 +554,7 @@ fn infer_property_type(
     match &obj_t {
         Type::Object(obj) => get_prop_value(obj, prop, ctx),
         Type::Ref(alias) => {
-            let t = ctx.lookup_alias(alias)?;
+            let t = ctx.lookup_ref_and_instantiate(alias)?;
             infer_property_type(&t, prop, ctx)
         }
         Type::Lit(lit) => match lit {

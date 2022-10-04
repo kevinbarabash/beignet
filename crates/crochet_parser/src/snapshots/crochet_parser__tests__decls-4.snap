@@ -21,7 +21,7 @@ Ok(
                         TypeRef {
                             span: 17..28,
                             name: "Foo",
-                            type_params: Some(
+                            type_args: Some(
                                 [
                                     Prim(
                                         PrimType {

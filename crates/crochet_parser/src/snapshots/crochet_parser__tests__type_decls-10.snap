@@ -22,7 +22,7 @@ Ok(
                                     TypeRef {
                                         span: 9..10,
                                         name: "A",
-                                        type_params: None,
+                                        type_args: None,
                                     },
                                 ),
                                 index_type: Lit(
@@ -39,7 +39,7 @@ Ok(
                             TypeRef {
                                 span: 16..21,
                                 name: "C_Key",
-                                type_params: None,
+                                type_args: None,
                             },
                         ),
                     },

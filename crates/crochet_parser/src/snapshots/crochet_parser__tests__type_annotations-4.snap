@@ -21,7 +21,7 @@ Ok(
                         TypeRef {
                             span: 7..12,
                             name: "Point",
-                            type_params: None,
+                            type_args: None,
                         },
                     ),
                 ),
