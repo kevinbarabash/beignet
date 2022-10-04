@@ -8,7 +8,7 @@ use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
 use super::util::*;
 
-pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> {
+pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, String> {
     // let mut ctx: Context = Context::default();
     // TODO: replace with Class type once it exists
     // We use {_name: "Promise"} to differentiate it from other
@@ -44,7 +44,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
     ctx.push_scope(false);
 
     // TODO: figure out how report multiple errors
-    for stmt in &prog.body {
+    for stmt in &mut prog.body {
         match stmt {
             Statement::VarDecl {
                 declare,
@@ -76,7 +76,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
                     false => {
                         // An initial value should always be used when using a normal
                         // `let` statement
-                        let init = init.as_ref().unwrap();
+                        let init = init.as_mut().unwrap();
 
                         let (pa, s) = infer_pattern_and_init(
                             pattern,
@@ -115,7 +115,7 @@ pub fn infer_prog(prog: &Program, ctx: &mut Context) -> Result<Context, String> 
     Ok(ctx.to_owned())
 }
 
-pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<Type, String> {
+pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<Type, String> {
     let (s, t) = infer_expr_rec(ctx, expr)?;
     Ok(close_over(&s, &t, ctx))
 }

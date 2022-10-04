@@ -41,13 +41,13 @@ pub unsafe extern "C" fn deallocate(ptr: *mut c_void, length: usize) {
 }
 
 fn _compile(input: &str, lib: &str) -> Result<(String, String), String> {
-    let program = crochet_parser::parse(input).unwrap();
+    let mut program = crochet_parser::parse(input).unwrap();
 
     let js = crochet_codegen::js::codegen_js(&program);
 
     // TODO: return errors as part of CompileResult
     let mut ctx = parse_dts(lib).unwrap();
-    let ctx = infer_prog(&program, &mut ctx)?;
+    let ctx = infer_prog(&mut program, &mut ctx)?;
     let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
 
     Ok((js, dts))

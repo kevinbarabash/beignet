@@ -14,8 +14,9 @@ use super::infer_expr::infer_expr;
 use super::infer_fn_param::e_pat_to_t_pat;
 use super::util::get_type_params;
 
-pub fn infer_scheme(type_ann: &TypeAnn, ctx: &mut Context) -> Result<(Subst, Type), String> {
-    match type_ann {
+pub fn infer_scheme(type_ann: &mut TypeAnn, ctx: &mut Context) -> Result<(Subst, Type), String> {
+    // TODO: see if we can get rid of this clone but making infer_qualified_type_ann() smarter
+    match &mut type_ann.clone() {
         TypeAnn::Lam(LamType { type_params, .. }) => {
             infer_qualified_type_ann(type_ann, type_params, ctx)
         }
@@ -24,7 +25,7 @@ pub fn infer_scheme(type_ann: &TypeAnn, ctx: &mut Context) -> Result<(Subst, Typ
 }
 
 pub fn infer_qualified_type_ann(
-    type_ann: &TypeAnn,
+    type_ann: &mut TypeAnn,
     type_params: &Option<Vec<TypeParam>>,
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
@@ -60,7 +61,7 @@ pub fn infer_qualified_type_ann(
 }
 
 pub fn infer_type_ann_with_params(
-    type_ann: &TypeAnn,
+    type_ann: &mut TypeAnn,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Type), String> {
@@ -68,7 +69,7 @@ pub fn infer_type_ann_with_params(
 }
 
 fn infer_type_ann_rec(
-    type_ann: &TypeAnn,
+    type_ann: &mut TypeAnn,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Type), String> {
@@ -77,8 +78,9 @@ fn infer_type_ann_rec(
             let mut ss: Vec<Subst> = vec![];
             let mut params: Vec<types::TFnParam> = vec![];
 
-            for param in &lam.params {
-                let (param_s, param_t) = infer_type_ann_rec(&param.type_ann, ctx, type_param_map)?;
+            for param in &mut lam.params {
+                let (param_s, param_t) =
+                    infer_type_ann_rec(&mut param.type_ann, ctx, type_param_map)?;
                 ss.push(param_s);
                 params.push(TFnParam {
                     pat: e_pat_to_t_pat(&param.pat),
@@ -87,7 +89,7 @@ fn infer_type_ann_rec(
                 });
             }
 
-            let (ret_s, ret_t) = infer_type_ann_rec(lam.ret.as_ref(), ctx, type_param_map)?;
+            let (ret_s, ret_t) = infer_type_ann_rec(&mut lam.ret, ctx, type_param_map)?;
             let ret = Box::from(ret_t);
             ss.push(ret_s);
 
@@ -108,14 +110,14 @@ fn infer_type_ann_rec(
             let mut ss: Vec<Subst> = vec![];
             let mut elems: Vec<types::TObjElem> = vec![];
 
-            for elem in &obj.elems {
+            for elem in &mut obj.elems {
                 match elem {
                     crochet_ast::TObjElem::Index(index) => {
                         let (index_s, index_t) =
-                            infer_type_ann_rec(index.type_ann.as_ref(), ctx, type_param_map)?;
+                            infer_type_ann_rec(&mut index.type_ann, ctx, type_param_map)?;
 
                         let (key_s, key_t) =
-                            infer_type_ann_rec(&index.key.type_ann, ctx, type_param_map)?;
+                            infer_type_ann_rec(&mut index.key.type_ann, ctx, type_param_map)?;
 
                         ss.push(index_s);
                         ss.push(key_s);
@@ -131,7 +133,7 @@ fn infer_type_ann_rec(
                     }
                     crochet_ast::TObjElem::Prop(prop) => {
                         let (prop_s, prop_t) =
-                            infer_type_ann_rec(prop.type_ann.as_ref(), ctx, type_param_map)?;
+                            infer_type_ann_rec(&mut prop.type_ann, ctx, type_param_map)?;
 
                         ss.push(prop_s);
                         elems.push(TObjElem::Prop(TProp {
@@ -190,7 +192,7 @@ fn infer_type_ann_rec(
             let mut ts: Vec<Type> = vec![];
             let mut ss: Vec<Subst> = vec![];
 
-            for t in &union.types {
+            for t in &mut union.types {
                 let (s, t) = infer_type_ann_rec(t, ctx, type_param_map)?;
 
                 ss.push(s);
@@ -205,7 +207,7 @@ fn infer_type_ann_rec(
             let mut ts: Vec<Type> = vec![];
             let mut ss: Vec<Subst> = vec![];
 
-            for t in &intersection.types {
+            for t in &mut intersection.types {
                 let (s, t) = infer_type_ann_rec(t, ctx, type_param_map)?;
 
                 ss.push(s);
@@ -220,7 +222,7 @@ fn infer_type_ann_rec(
             let mut ts: Vec<Type> = vec![];
             let mut ss: Vec<Subst> = vec![];
 
-            for t in &tuple.types {
+            for t in &mut tuple.types {
                 let (s, t) = infer_type_ann_rec(t, ctx, type_param_map)?;
 
                 ss.push(s);

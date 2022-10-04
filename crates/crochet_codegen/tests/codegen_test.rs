@@ -395,9 +395,9 @@ fn destructuring_function_object_params() {
     insta::assert_snapshot!(compile(src), @"export const foo = ({ x , y: b  })=>x + b;
 ");
 
-    let program = parse(src).unwrap();
+    let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&program, &mut ctx).unwrap();
+    infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
@@ -417,9 +417,9 @@ fn destructuring_function_array_params() {
     insta::assert_snapshot!(compile(src), @"export const foo = ([a, b])=>a + b;
 ");
 
-    let program = parse(src).unwrap();
+    let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&program, &mut ctx).unwrap();
+    infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
@@ -436,9 +436,9 @@ fn function_with_rest_param() {
     insta::assert_snapshot!(compile(src), @"export const foo = (x, ...y)=>x;
 ");
 
-    let program = parse(src).unwrap();
+    let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&program, &mut ctx).unwrap();
+    infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const foo: (x: number, ...y: number[]) => number;
@@ -454,9 +454,9 @@ fn function_with_optional_param() {
     insta::assert_snapshot!(compile(src), @"export const foo = (x, y)=>x;
 ");
 
-    let program = parse(src).unwrap();
+    let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&program, &mut ctx).unwrap();
+    infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const foo: (x: number, y?: number) => number;
@@ -472,9 +472,9 @@ fn function_with_optional_param_and_rest_param() {
     insta::assert_snapshot!(compile(src), @"export const foo = (x, ...y)=>x;
 ");
 
-    let program = parse(src).unwrap();
+    let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&program, &mut ctx).unwrap();
+    infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const foo: (x?: number, ...y: number[]) => number | undefined;
@@ -495,9 +495,9 @@ fn variable_declaration_with_destructuring() {
     "###);
 
     // TODO: Support destructuring in top-level decls
-    let program = parse(src).unwrap();
+    let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&program, &mut ctx).unwrap();
+    infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"

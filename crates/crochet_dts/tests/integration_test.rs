@@ -12,14 +12,14 @@ fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
     let mut ctx = parse_dts(&lib).unwrap();
 
     let result = parse(src);
-    let prog = match result {
+    let mut prog = match result {
         Ok(prog) => prog,
         Err(err) => {
             println!("err = {:?}", err);
             panic!("Error parsing expression");
         }
     };
-    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     (prog, ctx)
 }
@@ -128,14 +128,14 @@ fn infer_callable_results_on_interface() {
     let bool = foo.bar;
     "#;
     let result = parse(src);
-    let prog = match result {
+    let mut prog = match result {
         Ok(prog) => prog,
         Err(err) => {
             println!("err = {:?}", err);
             panic!("Error parsing expression");
         }
     };
-    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("num").unwrap());
     assert_eq!(result, "number");
@@ -163,14 +163,14 @@ fn infer_index_value_on_interface() {
     let bool = foo.bar;
     "#;
     let result = parse(src);
-    let prog = match result {
+    let mut prog = match result {
         Ok(prog) => prog,
         Err(err) => {
             println!("err = {:?}", err);
             panic!("Error parsing expression");
         }
     };
-    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("num").unwrap());
     assert_eq!(result, "number");
@@ -193,14 +193,14 @@ fn infer_generic_index_value_on_interface() {
     let id = foo[5];
     "#;
     let result = parse(src);
-    let prog = match result {
+    let mut prog = match result {
         Ok(prog) => prog,
         Err(err) => {
             println!("err = {:?}", err);
             panic!("Error parsing expression");
         }
     };
-    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("id").unwrap());
     assert_eq!(result, "<t0>(arg: t0) => t0");
@@ -223,7 +223,7 @@ fn infer_index_with_incorrect_key_type_on_interface() {
     let bool = foo.bar;
     "#;
     let result = parse(src);
-    let prog = match result {
+    let mut prog = match result {
         Ok(prog) => prog,
         Err(err) => {
             println!("err = {:?}", err);
@@ -231,7 +231,7 @@ fn infer_index_with_incorrect_key_type_on_interface() {
         }
     };
 
-    crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+    crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 }
 
 #[test]
@@ -249,14 +249,14 @@ fn instantiating_generic_interfaces() {
     let bar = foo.bar;
     "#;
     let result = parse(src);
-    let prog = match result {
+    let mut prog = match result {
         Ok(prog) => prog,
         Err(err) => {
             println!("err = {:?}", err);
             panic!("Error parsing expression");
         }
     };
-    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("bar").unwrap());
     assert_eq!(result, "<t0>(x: number) => t0");
@@ -277,14 +277,14 @@ fn interface_with_generic_method() {
     let bar = foo.bar;
     "#;
     let result = parse(src);
-    let prog = match result {
+    let mut prog = match result {
         Ok(prog) => prog,
         Err(err) => {
             println!("err = {:?}", err);
             panic!("Error parsing expression");
         }
     };
-    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("bar").unwrap());
     assert_eq!(result, "<t0>(x: t0) => t0");
@@ -307,14 +307,14 @@ fn merging_generic_interfaces() {
     declare let foo: Foo<number>;
     "#;
     let result = parse(src);
-    let prog = match result {
+    let mut prog = match result {
         Ok(prog) => prog,
         Err(err) => {
             println!("err = {:?}", err);
             panic!("Error parsing expression");
         }
     };
-    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_type("Foo").unwrap());
     assert_eq!(
