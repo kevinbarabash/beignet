@@ -22,8 +22,8 @@ Ok(
                         Lambda {
                             span: 10..39,
                             params: [],
-                            body: Op(
-                                Op {
+                            body: BinaryExpr(
+                                BinaryExpr {
                                     span: 22..39,
                                     op: Add,
                                     left: Await(

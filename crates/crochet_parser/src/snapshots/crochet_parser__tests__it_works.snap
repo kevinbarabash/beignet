@@ -51,8 +51,8 @@ Ok(
                                     mutable: false,
                                 },
                             ],
-                            body: Op(
-                                Op {
+                            body: BinaryExpr(
+                                BinaryExpr {
                                     span: 29..34,
                                     op: Add,
                                     left: Ident(
@@ -123,8 +123,8 @@ Ok(
                                     mutable: false,
                                 },
                             ],
-                            body: Op(
-                                Op {
+                            body: BinaryExpr(
+                                BinaryExpr {
                                     span: 64..69,
                                     op: Sub,
                                     left: Ident(

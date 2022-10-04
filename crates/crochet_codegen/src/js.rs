@@ -458,7 +458,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
             Expr::Ident(temp_id)
         }
         ast::Expr::Lit(lit) => Expr::from(lit),
-        ast::Expr::Op(ast::Op {
+        ast::Expr::BinaryExpr(ast::BinaryExpr {
             op, left, right, ..
         }) => {
             let op = match op {

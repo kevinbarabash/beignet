@@ -86,8 +86,8 @@ Ok(
                                         },
                                     ),
                                     guard: Some(
-                                        Op(
-                                            Op {
+                                        BinaryExpr(
+                                            BinaryExpr {
                                                 span: 115..120,
                                                 op: Lt,
                                                 left: Ident(

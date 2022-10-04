@@ -64,8 +64,8 @@ Ok(
                                             },
                                         ),
                                     ),
-                                    body: Op(
-                                        Op {
+                                    body: BinaryExpr(
+                                        BinaryExpr {
                                             span: 37..42,
                                             op: Add,
                                             left: Ident(

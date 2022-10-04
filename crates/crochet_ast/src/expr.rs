@@ -165,7 +165,7 @@ pub struct Let {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Op {
+pub struct BinaryExpr {
     pub span: Span,
     pub op: BinOp,
     pub left: Box<Expr>,
@@ -308,7 +308,7 @@ pub enum Expr {
     Let(Let),
     LetExpr(LetExpr), // should only be used in `if let` expressions
     Lit(Lit),
-    Op(Op),
+    BinaryExpr(BinaryExpr),
     UnaryExpr(UnaryExpr),
     Obj(Obj),
     Await(Await),
@@ -331,7 +331,7 @@ impl Expr {
             Expr::Lambda(lam) => lam.span.to_owned(),
             Expr::Let(r#let) => r#let.span.to_owned(),
             Expr::Lit(lit) => lit.span(),
-            Expr::Op(op) => op.span.to_owned(),
+            Expr::BinaryExpr(op) => op.span.to_owned(),
             Expr::UnaryExpr(ue) => ue.span.to_owned(),
             Expr::Obj(obj) => obj.span.to_owned(),
             Expr::Await(r#await) => r#await.span.to_owned(),

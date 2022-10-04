@@ -11,8 +11,8 @@ Ok(
                     UnaryExpr {
                         span: 0..8,
                         op: Minus,
-                        arg: Op(
-                            Op {
+                        arg: BinaryExpr(
+                            BinaryExpr {
                                 span: 2..7,
                                 op: Add,
                                 left: Ident(

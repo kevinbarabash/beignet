@@ -584,7 +584,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                 _ => todo!("Unhandle operator: {operator}"),
             };
 
-            Expr::Op(Op {
+            Expr::BinaryExpr(BinaryExpr {
                 span: node.byte_range(),
                 left,
                 op,

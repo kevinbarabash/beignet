@@ -18,8 +18,8 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Op(
-                        Op {
+                    BinaryExpr(
+                        BinaryExpr {
                             span: 11..17,
                             op: NotEq,
                             left: Ident(

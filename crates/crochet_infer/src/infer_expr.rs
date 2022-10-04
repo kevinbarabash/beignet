@@ -310,7 +310,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let t = Type::from(lit.to_owned());
             Ok((s, t))
         }
-        Expr::Op(Op {
+        Expr::BinaryExpr(BinaryExpr {
             op, left, right, ..
         }) => {
             // TODO: check what `op` is and handle comparison operators

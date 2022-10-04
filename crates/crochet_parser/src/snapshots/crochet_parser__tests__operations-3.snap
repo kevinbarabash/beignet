@@ -7,12 +7,12 @@ Ok(
         body: [
             Expr {
                 span: 0..12,
-                expr: Op(
-                    Op {
+                expr: BinaryExpr(
+                    BinaryExpr {
                         span: 0..11,
                         op: Mul,
-                        left: Op(
-                            Op {
+                        left: BinaryExpr(
+                            BinaryExpr {
                                 span: 1..6,
                                 op: Add,
                                 left: Ident(

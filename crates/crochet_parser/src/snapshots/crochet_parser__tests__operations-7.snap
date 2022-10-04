@@ -7,8 +7,8 @@ Ok(
         body: [
             Expr {
                 span: 0..7,
-                expr: Op(
-                    Op {
+                expr: BinaryExpr(
+                    BinaryExpr {
                         span: 0..6,
                         op: GtEq,
                         left: Ident(
