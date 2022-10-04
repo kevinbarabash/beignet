@@ -35,6 +35,7 @@ Ok(
                                 },
                             ),
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,

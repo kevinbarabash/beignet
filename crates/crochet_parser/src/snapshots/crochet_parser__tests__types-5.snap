@@ -55,6 +55,7 @@ Ok(
                                 elems: [],
                             },
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,

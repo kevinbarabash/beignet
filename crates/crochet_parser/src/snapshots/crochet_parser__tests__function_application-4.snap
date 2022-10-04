@@ -23,6 +23,7 @@ Ok(
                                                     name: "f",
                                                 },
                                             ),
+                                            inferred_type: None,
                                         },
                                         args: [
                                             ExprOrSpread {
@@ -35,11 +36,13 @@ Ok(
                                                             name: "x",
                                                         },
                                                     ),
+                                                    inferred_type: None,
                                                 },
                                             },
                                         ],
                                     },
                                 ),
+                                inferred_type: None,
                             },
                             args: [
                                 ExprOrSpread {
@@ -56,6 +59,7 @@ Ok(
                                                             name: "g",
                                                         },
                                                     ),
+                                                    inferred_type: None,
                                                 },
                                                 args: [
                                                     ExprOrSpread {
@@ -68,16 +72,19 @@ Ok(
                                                                     name: "x",
                                                                 },
                                                             ),
+                                                            inferred_type: None,
                                                         },
                                                     },
                                                 ],
                                             },
                                         ),
+                                        inferred_type: None,
                                     },
                                 },
                             ],
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

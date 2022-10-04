@@ -170,6 +170,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                                     let expr = Expr {
                                         span: lit.span(),
                                         kind,
+                                        inferred_type: None,
                                     };
                                     infer_expr(ctx, &expr)?
                                 }

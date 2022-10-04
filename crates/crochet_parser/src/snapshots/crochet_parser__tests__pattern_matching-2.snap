@@ -30,6 +30,7 @@ Ok(
                                             name: "foo",
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                                 arms: [
                                     Arm {
@@ -95,6 +96,7 @@ Ok(
                                                     },
                                                 ),
                                             ),
+                                            inferred_type: None,
                                         },
                                     },
                                     Arm {
@@ -115,11 +117,13 @@ Ok(
                                                     },
                                                 ),
                                             ),
+                                            inferred_type: None,
                                         },
                                     },
                                 ],
                             },
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,

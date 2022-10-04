@@ -20,6 +20,7 @@ Ok(
                                             name: "name",
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                             ],
                             quasis: [
@@ -56,6 +57,7 @@ Ok(
                             ],
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

@@ -137,6 +137,7 @@ fn parse_declaration(node: &tree_sitter::Node, declare: bool, src: &str) -> Vec<
                 return_type: None,
                 type_params: None, // TODO: support type params on VarDecls
             }),
+            inferred_type: None,
         };
 
         let fix = Expr {
@@ -144,6 +145,7 @@ fn parse_declaration(node: &tree_sitter::Node, declare: bool, src: &str) -> Vec<
             kind: ExprKind::Fix(Fix {
                 expr: Box::from(lambda_expr),
             }),
+            inferred_type: None,
         };
 
         Statement::VarDecl {
@@ -414,6 +416,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
                     let expr = Expr {
                         span: 0..0,
                         kind: ExprKind::Empty,
+                        inferred_type: None,
                     };
                     result.push(Statement::Expr { span: 0..0, expr });
                     result
@@ -437,6 +440,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
         None => Expr {
             span: 0..0,
             kind: ExprKind::Empty,
+            inferred_type: None,
         },
     };
 
@@ -459,6 +463,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
                 Expr {
                     span: span.to_owned(),
                     kind,
+                    inferred_type: None,
                 }
             }
             Statement::TypeDecl { .. } => {
@@ -474,6 +479,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
                 Expr {
                     span: span.to_owned(),
                     kind,
+                    inferred_type: None,
                 }
             }
         }
@@ -645,6 +651,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                     return Expr {
                         span: node.byte_range(),
                         kind,
+                        inferred_type: None,
                     };
                 }
             }
@@ -848,6 +855,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
     Expr {
         span: node.byte_range(),
         kind,
+        inferred_type: None,
     }
 
     // Expression
@@ -1074,6 +1082,7 @@ fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Expr {
     Expr {
         span: node.byte_range(),
         kind,
+        inferred_type: None,
     }
 }
 

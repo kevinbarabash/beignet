@@ -17,6 +17,7 @@ Ok(
                             children: [],
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

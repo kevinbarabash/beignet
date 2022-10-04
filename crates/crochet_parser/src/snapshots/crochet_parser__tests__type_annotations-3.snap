@@ -79,6 +79,7 @@ Ok(
                                                         name: "a",
                                                     },
                                                 ),
+                                                inferred_type: None,
                                             },
                                             right: Expr {
                                                 span: 48..49,
@@ -88,9 +89,11 @@ Ok(
                                                         name: "b",
                                                     },
                                                 ),
+                                                inferred_type: None,
                                             },
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                                 is_async: false,
                                 return_type: Some(
@@ -104,6 +107,7 @@ Ok(
                                 type_params: None,
                             },
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,

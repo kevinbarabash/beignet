@@ -78,6 +78,7 @@ Ok(
                                 name: "baz",
                             },
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,

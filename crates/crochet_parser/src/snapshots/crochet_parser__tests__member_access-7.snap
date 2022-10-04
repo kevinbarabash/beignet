@@ -19,6 +19,7 @@ Ok(
                                         name: "arr",
                                     },
                                 ),
+                                inferred_type: None,
                             },
                             prop: Computed(
                                 ComputedPropName {
@@ -40,6 +41,7 @@ Ok(
                                                                         name: "arr",
                                                                     },
                                                                 ),
+                                                                inferred_type: None,
                                                             },
                                                             prop: Ident(
                                                                 Ident {
@@ -49,6 +51,7 @@ Ok(
                                                             ),
                                                         },
                                                     ),
+                                                    inferred_type: None,
                                                 },
                                                 right: Expr {
                                                     span: 17..18,
@@ -60,14 +63,17 @@ Ok(
                                                             },
                                                         ),
                                                     ),
+                                                    inferred_type: None,
                                                 },
                                             },
                                         ),
+                                        inferred_type: None,
                                     },
                                 },
                             ),
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

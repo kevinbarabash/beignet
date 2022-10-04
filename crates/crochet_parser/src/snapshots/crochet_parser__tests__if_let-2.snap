@@ -63,9 +63,11 @@ Ok(
                                                         name: "foo",
                                                     },
                                                 ),
+                                                inferred_type: None,
                                             },
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                                 consequent: Expr {
                                     span: 73..81,
@@ -77,6 +79,7 @@ Ok(
                                             },
                                         ),
                                     ),
+                                    inferred_type: None,
                                 },
                                 alternate: Some(
                                     Expr {
@@ -141,9 +144,11 @@ Ok(
                                                                         name: "foo",
                                                                     },
                                                                 ),
+                                                                inferred_type: None,
                                                             },
                                                         },
                                                     ),
+                                                    inferred_type: None,
                                                 },
                                                 consequent: Expr {
                                                     span: 159..166,
@@ -155,6 +160,7 @@ Ok(
                                                             },
                                                         ),
                                                     ),
+                                                    inferred_type: None,
                                                 },
                                                 alternate: Some(
                                                     Expr {
@@ -167,14 +173,17 @@ Ok(
                                                                 },
                                                             ),
                                                         ),
+                                                        inferred_type: None,
                                                     },
                                                 ),
                                             },
                                         ),
+                                        inferred_type: None,
                                     },
                                 ),
                             },
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,

@@ -12,5 +12,4 @@ defaultmap = "0.5.0"
 itertools = "0.10.3"
 
 [dev-dependencies]
-chumsky = "0.8.0"
 crochet_parser = { version = "0.1.0", path = "../crochet_parser" }

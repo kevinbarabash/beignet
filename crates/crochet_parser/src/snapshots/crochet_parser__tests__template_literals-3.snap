@@ -20,6 +20,7 @@ Ok(
                                             name: "x",
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                                 Expr {
                                     span: 10..11,
@@ -29,6 +30,7 @@ Ok(
                                             name: "y",
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                             ],
                             quasis: [
@@ -80,6 +82,7 @@ Ok(
                             ],
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

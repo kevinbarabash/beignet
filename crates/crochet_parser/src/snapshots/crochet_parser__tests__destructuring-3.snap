@@ -97,6 +97,7 @@ Ok(
                                 name: "line",
                             },
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,
