@@ -18,29 +18,31 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Obj(
-                        Obj {
-                            span: 10..16,
-                            props: [
-                                Prop(
-                                    Shorthand(
-                                        Ident {
-                                            span: 10..16,
-                                            name: "x",
-                                        },
+                    Expr {
+                        span: 10..16,
+                        kind: Obj(
+                            Obj {
+                                props: [
+                                    Prop(
+                                        Shorthand(
+                                            Ident {
+                                                span: 10..16,
+                                                name: "x",
+                                            },
+                                        ),
                                     ),
-                                ),
-                                Prop(
-                                    Shorthand(
-                                        Ident {
-                                            span: 10..16,
-                                            name: "y",
-                                        },
+                                    Prop(
+                                        Shorthand(
+                                            Ident {
+                                                span: 10..16,
+                                                name: "y",
+                                            },
+                                        ),
                                     ),
-                                ),
-                            ],
-                        },
-                    ),
+                                ],
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

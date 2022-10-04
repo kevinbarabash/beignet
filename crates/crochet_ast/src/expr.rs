@@ -40,20 +40,17 @@ pub enum Statement {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct App {
-    pub span: Span,
     pub lam: Box<Expr>,
     pub args: Vec<ExprOrSpread>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Fix {
-    pub span: Span,
     pub expr: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IfElse {
-    pub span: Span,
     pub cond: Box<Expr>,
     pub consequent: Box<Expr>,
     pub alternate: Option<Box<Expr>>,
@@ -61,14 +58,12 @@ pub struct IfElse {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LetExpr {
-    pub span: Span,
     pub pat: Pattern,
     pub expr: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lambda {
-    pub span: Span,
     pub params: Vec<EFnParam>,
     pub body: Box<Expr>,
     pub is_async: bool,
@@ -157,7 +152,6 @@ pub struct EFnParamAssignPatProp {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Let {
-    pub span: Span,
     pub pattern: Option<Pattern>,
     pub type_ann: Option<TypeAnn>,
     pub init: Box<Expr>,
@@ -166,7 +160,6 @@ pub struct Let {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BinaryExpr {
-    pub span: Span,
     pub op: BinOp,
     pub left: Box<Expr>,
     pub right: Box<Expr>,
@@ -174,14 +167,12 @@ pub struct BinaryExpr {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnaryExpr {
-    pub span: Span,
     pub op: UnaryOp,
     pub arg: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Obj {
-    pub span: Span,
     pub props: Vec<PropOrSpread>,
 }
 
@@ -193,7 +184,6 @@ pub enum PropOrSpread {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpreadElement {
-    pub span: Span,
     pub expr: Box<Expr>,
 }
 
@@ -205,20 +195,17 @@ pub enum Prop {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyValueProp {
-    pub span: Span,
     pub name: String,
     pub value: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Await {
-    pub span: Span,
     pub expr: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tuple {
-    pub span: Span,
     pub elems: Vec<ExprOrSpread>,
 }
 
@@ -230,7 +217,6 @@ pub struct ExprOrSpread {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Member {
-    pub span: Span,
     pub obj: Box<Expr>,
     pub prop: MemberProp,
 }
@@ -257,11 +243,6 @@ pub struct ComputedPropName {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Empty {
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TemplateElem {
     pub span: Span,
     pub raw: Lit,
@@ -270,21 +251,19 @@ pub struct TemplateElem {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TemplateLiteral {
-    pub span: Span,
     pub exprs: Vec<Expr>,
     pub quasis: Vec<TemplateElem>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaggedTemplateLiteral {
-    pub span: Span,
     pub tag: Ident,
+    // TODO: figure out how to track the span of the `template` part
     pub template: TemplateLiteral,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Match {
-    pub span: Span,
     pub expr: Box<Expr>,
     pub arms: Vec<Arm>,
 }
@@ -298,7 +277,7 @@ pub struct Arm {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Expr {
+pub enum ExprKind {
     App(App),
     Fix(Fix),
     Ident(Ident),
@@ -314,36 +293,16 @@ pub enum Expr {
     Await(Await),
     Tuple(Tuple),
     Member(Member),
-    Empty(Empty),
+    Empty,
     TemplateLiteral(TemplateLiteral),
     TaggedTemplateLiteral(TaggedTemplateLiteral),
     Match(Match),
 }
 
-impl Expr {
-    pub fn span(&self) -> Span {
-        match &self {
-            Expr::App(app) => app.span.to_owned(),
-            Expr::Fix(fix) => fix.span.to_owned(),
-            Expr::Ident(ident) => ident.span.to_owned(),
-            Expr::IfElse(if_else) => if_else.span.to_owned(),
-            Expr::JSXElement(elem) => elem.span.to_owned(),
-            Expr::Lambda(lam) => lam.span.to_owned(),
-            Expr::Let(r#let) => r#let.span.to_owned(),
-            Expr::Lit(lit) => lit.span(),
-            Expr::BinaryExpr(op) => op.span.to_owned(),
-            Expr::UnaryExpr(ue) => ue.span.to_owned(),
-            Expr::Obj(obj) => obj.span.to_owned(),
-            Expr::Await(r#await) => r#await.span.to_owned(),
-            Expr::Tuple(tuple) => tuple.span.to_owned(),
-            Expr::Member(member) => member.span.to_owned(),
-            Expr::Empty(empty) => empty.span.to_owned(),
-            Expr::LetExpr(let_expr) => let_expr.span.to_owned(),
-            Expr::TemplateLiteral(tl) => tl.span.to_owned(),
-            Expr::TaggedTemplateLiteral(ttl) => ttl.span.to_owned(),
-            Expr::Match(m) => m.span.to_owned(),
-        }
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Expr {
+    pub span: Span,
+    pub kind: ExprKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -7,36 +7,49 @@ Ok(
         body: [
             Expr {
                 span: 0..10,
-                expr: BinaryExpr(
-                    BinaryExpr {
-                        span: 0..9,
-                        op: Div,
-                        left: BinaryExpr(
-                            BinaryExpr {
+                expr: Expr {
+                    span: 0..9,
+                    kind: BinaryExpr(
+                        BinaryExpr {
+                            op: Div,
+                            left: Expr {
                                 span: 0..5,
-                                op: Mul,
-                                left: Ident(
-                                    Ident {
-                                        span: 0..1,
-                                        name: "x",
-                                    },
-                                ),
-                                right: Ident(
-                                    Ident {
-                                        span: 4..5,
-                                        name: "y",
+                                kind: BinaryExpr(
+                                    BinaryExpr {
+                                        op: Mul,
+                                        left: Expr {
+                                            span: 0..1,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 0..1,
+                                                    name: "x",
+                                                },
+                                            ),
+                                        },
+                                        right: Expr {
+                                            span: 4..5,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 4..5,
+                                                    name: "y",
+                                                },
+                                            ),
+                                        },
                                     },
                                 ),
                             },
-                        ),
-                        right: Ident(
-                            Ident {
+                            right: Expr {
                                 span: 8..9,
-                                name: "z",
+                                kind: Ident(
+                                    Ident {
+                                        span: 8..9,
+                                        name: "z",
+                                    },
+                                ),
                             },
-                        ),
-                    },
-                ),
+                        },
+                    ),
+                },
             },
         ],
     },

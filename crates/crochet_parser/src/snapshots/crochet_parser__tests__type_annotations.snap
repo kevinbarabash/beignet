@@ -25,14 +25,17 @@ Ok(
                     ),
                 ),
                 init: Some(
-                    Lit(
-                        Num(
-                            Num {
-                                span: 16..17,
-                                value: "5",
-                            },
+                    Expr {
+                        span: 16..17,
+                        kind: Lit(
+                            Num(
+                                Num {
+                                    span: 16..17,
+                                    value: "5",
+                                },
+                            ),
                         ),
-                    ),
+                    },
                 ),
                 declare: false,
             },

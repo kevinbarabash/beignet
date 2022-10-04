@@ -7,24 +7,32 @@ Ok(
         body: [
             Expr {
                 span: 0..7,
-                expr: BinaryExpr(
-                    BinaryExpr {
-                        span: 0..6,
-                        op: GtEq,
-                        left: Ident(
-                            Ident {
+                expr: Expr {
+                    span: 0..6,
+                    kind: BinaryExpr(
+                        BinaryExpr {
+                            op: GtEq,
+                            left: Expr {
                                 span: 0..1,
-                                name: "a",
+                                kind: Ident(
+                                    Ident {
+                                        span: 0..1,
+                                        name: "a",
+                                    },
+                                ),
                             },
-                        ),
-                        right: Ident(
-                            Ident {
+                            right: Expr {
                                 span: 5..6,
-                                name: "b",
+                                kind: Ident(
+                                    Ident {
+                                        span: 5..6,
+                                        name: "b",
+                                    },
+                                ),
                             },
-                        ),
-                    },
-                ),
+                        },
+                    ),
+                },
             },
         ],
     },

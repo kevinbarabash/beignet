@@ -7,14 +7,17 @@ Ok(
         body: [
             Expr {
                 span: 0..25,
-                expr: Lit(
-                    Str(
-                        Str {
-                            span: 0..24,
-                            value: "line 1\nline 2\nline 3",
-                        },
+                expr: Expr {
+                    span: 0..24,
+                    kind: Lit(
+                        Str(
+                            Str {
+                                span: 0..24,
+                                value: "line 1\nline 2\nline 3",
+                            },
+                        ),
                     ),
-                ),
+                },
             },
         ],
     },

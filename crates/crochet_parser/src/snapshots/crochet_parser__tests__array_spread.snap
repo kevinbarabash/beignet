@@ -18,33 +18,41 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Tuple(
-                        Tuple {
-                            span: 12..21,
-                            elems: [
-                                ExprOrSpread {
-                                    spread: Some(
-                                        13..17,
-                                    ),
-                                    expr: Ident(
-                                        Ident {
+                    Expr {
+                        span: 12..21,
+                        kind: Tuple(
+                            Tuple {
+                                elems: [
+                                    ExprOrSpread {
+                                        spread: Some(
+                                            13..17,
+                                        ),
+                                        expr: Expr {
                                             span: 16..17,
-                                            name: "a",
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 16..17,
+                                                    name: "a",
+                                                },
+                                            ),
                                         },
-                                    ),
-                                },
-                                ExprOrSpread {
-                                    spread: None,
-                                    expr: Ident(
-                                        Ident {
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Expr {
                                             span: 19..20,
-                                            name: "b",
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 19..20,
+                                                    name: "b",
+                                                },
+                                            ),
                                         },
-                                    ),
-                                },
-                            ],
-                        },
-                    ),
+                                    },
+                                ],
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

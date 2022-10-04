@@ -7,79 +7,86 @@ Ok(
         body: [
             Expr {
                 span: 0..44,
-                expr: TaggedTemplateLiteral(
-                    TaggedTemplateLiteral {
-                        span: 0..44,
-                        tag: Ident {
-                            span: 0..3,
-                            name: "sql",
-                        },
-                        template: TemplateLiteral {
-                            span: 3..44,
-                            exprs: [
-                                Ident(
-                                    Ident {
+                expr: Expr {
+                    span: 0..44,
+                    kind: TaggedTemplateLiteral(
+                        TaggedTemplateLiteral {
+                            tag: Ident {
+                                span: 0..3,
+                                name: "sql",
+                            },
+                            template: TemplateLiteral {
+                                exprs: [
+                                    Expr {
                                         span: 20..25,
-                                        name: "table",
+                                        kind: Ident(
+                                            Ident {
+                                                span: 20..25,
+                                                name: "table",
+                                            },
+                                        ),
                                     },
-                                ),
-                                Ident(
-                                    Ident {
+                                    Expr {
                                         span: 40..42,
-                                        name: "id",
+                                        kind: Ident(
+                                            Ident {
+                                                span: 40..42,
+                                                name: "id",
+                                            },
+                                        ),
                                     },
-                                ),
-                            ],
-                            quasis: [
-                                TemplateElem {
-                                    span: 4..18,
-                                    raw: Str(
-                                        Str {
-                                            span: 4..18,
-                                            value: "SELECT * FROM ",
-                                        },
-                                    ),
-                                    cooked: Str(
-                                        Str {
-                                            span: 4..18,
-                                            value: "SELECT * FROM ",
-                                        },
-                                    ),
-                                },
-                                TemplateElem {
-                                    span: 26..38,
-                                    raw: Str(
-                                        Str {
-                                            span: 26..38,
-                                            value: " WHERE id = ",
-                                        },
-                                    ),
-                                    cooked: Str(
-                                        Str {
-                                            span: 26..38,
-                                            value: " WHERE id = ",
-                                        },
-                                    ),
-                                },
-                                TemplateElem {
-                                    span: 43..43,
-                                    raw: Str(
-                                        Str {
-                                            span: 43..43,
-                                            value: "",
-                                        },
-                                    ),
-                                    cooked: Str(
-                                        Str {
-                                            span: 43..43,
-                                            value: "",
-                                        },
-                                    ),
-                                },
-                            ],
+                                ],
+                                quasis: [
+                                    TemplateElem {
+                                        span: 4..18,
+                                        raw: Str(
+                                            Str {
+                                                span: 4..18,
+                                                value: "SELECT * FROM ",
+                                            },
+                                        ),
+                                        cooked: Str(
+                                            Str {
+                                                span: 4..18,
+                                                value: "SELECT * FROM ",
+                                            },
+                                        ),
+                                    },
+                                    TemplateElem {
+                                        span: 26..38,
+                                        raw: Str(
+                                            Str {
+                                                span: 26..38,
+                                                value: " WHERE id = ",
+                                            },
+                                        ),
+                                        cooked: Str(
+                                            Str {
+                                                span: 26..38,
+                                                value: " WHERE id = ",
+                                            },
+                                        ),
+                                    },
+                                    TemplateElem {
+                                        span: 43..43,
+                                        raw: Str(
+                                            Str {
+                                                span: 43..43,
+                                                value: "",
+                                            },
+                                        ),
+                                        cooked: Str(
+                                            Str {
+                                                span: 43..43,
+                                                value: "",
+                                            },
+                                        ),
+                                    },
+                                ],
+                            },
                         },
-                    },
-                ),
+                    ),
+                },
             },
         ],
     },

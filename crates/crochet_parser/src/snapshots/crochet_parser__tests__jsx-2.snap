@@ -7,26 +7,32 @@ Ok(
         body: [
             Expr {
                 span: 0..16,
-                expr: JSXElement(
-                    JSXElement {
-                        span: 0..16,
-                        name: "Foo",
-                        attrs: [],
-                        children: [
-                            JSXExprContainer(
-                                JSXExprContainer {
-                                    span: 5..10,
-                                    expr: Ident(
-                                        Ident {
+                expr: Expr {
+                    span: 0..16,
+                    kind: JSXElement(
+                        JSXElement {
+                            span: 0..16,
+                            name: "Foo",
+                            attrs: [],
+                            children: [
+                                JSXExprContainer(
+                                    JSXExprContainer {
+                                        span: 5..10,
+                                        expr: Expr {
                                             span: 6..9,
-                                            name: "bar",
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 6..9,
+                                                    name: "bar",
+                                                },
+                                            ),
                                         },
-                                    ),
-                                },
-                            ),
-                        ],
-                    },
-                ),
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                },
             },
         ],
     },

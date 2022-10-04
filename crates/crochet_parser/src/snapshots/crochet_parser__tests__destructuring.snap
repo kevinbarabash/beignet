@@ -37,12 +37,15 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Ident(
-                        Ident {
-                            span: 13..18,
-                            name: "point",
-                        },
-                    ),
+                    Expr {
+                        span: 13..18,
+                        kind: Ident(
+                            Ident {
+                                span: 13..18,
+                                name: "point",
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

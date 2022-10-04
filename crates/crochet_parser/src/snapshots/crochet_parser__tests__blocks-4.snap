@@ -7,97 +7,120 @@ Ok(
         body: [
             Expr {
                 span: 0..54,
-                expr: Let(
-                    Let {
-                        span: 4..48,
-                        pattern: Some(
-                            Ident(
-                                BindingIdent {
-                                    span: 8..11,
-                                    id: Ident {
+                expr: Expr {
+                    span: 4..48,
+                    kind: Let(
+                        Let {
+                            pattern: Some(
+                                Ident(
+                                    BindingIdent {
                                         span: 8..11,
-                                        name: "sum",
+                                        id: Ident {
+                                            span: 8..11,
+                                            name: "sum",
+                                        },
                                     },
-                                },
+                                ),
                             ),
-                        ),
-                        type_ann: None,
-                        init: Let(
-                            Let {
+                            type_ann: None,
+                            init: Expr {
                                 span: 18..28,
-                                pattern: Some(
-                                    Ident(
-                                        BindingIdent {
-                                            span: 22..23,
-                                            id: Ident {
-                                                span: 22..23,
-                                                name: "x",
-                                            },
-                                        },
-                                    ),
-                                ),
-                                type_ann: None,
-                                init: Lit(
-                                    Num(
-                                        Num {
-                                            span: 26..27,
-                                            value: "5",
-                                        },
-                                    ),
-                                ),
-                                body: Let(
+                                kind: Let(
                                     Let {
-                                        span: 29..40,
                                         pattern: Some(
                                             Ident(
                                                 BindingIdent {
-                                                    span: 33..34,
+                                                    span: 22..23,
                                                     id: Ident {
-                                                        span: 33..34,
-                                                        name: "y",
+                                                        span: 22..23,
+                                                        name: "x",
                                                     },
                                                 },
                                             ),
                                         ),
                                         type_ann: None,
-                                        init: Lit(
-                                            Num(
-                                                Num {
-                                                    span: 37..39,
-                                                    value: "10",
+                                        init: Expr {
+                                            span: 26..27,
+                                            kind: Lit(
+                                                Num(
+                                                    Num {
+                                                        span: 26..27,
+                                                        value: "5",
+                                                    },
+                                                ),
+                                            ),
+                                        },
+                                        body: Expr {
+                                            span: 29..40,
+                                            kind: Let(
+                                                Let {
+                                                    pattern: Some(
+                                                        Ident(
+                                                            BindingIdent {
+                                                                span: 33..34,
+                                                                id: Ident {
+                                                                    span: 33..34,
+                                                                    name: "y",
+                                                                },
+                                                            },
+                                                        ),
+                                                    ),
+                                                    type_ann: None,
+                                                    init: Expr {
+                                                        span: 37..39,
+                                                        kind: Lit(
+                                                            Num(
+                                                                Num {
+                                                                    span: 37..39,
+                                                                    value: "10",
+                                                                },
+                                                            ),
+                                                        ),
+                                                    },
+                                                    body: Expr {
+                                                        span: 41..46,
+                                                        kind: BinaryExpr(
+                                                            BinaryExpr {
+                                                                op: Add,
+                                                                left: Expr {
+                                                                    span: 41..42,
+                                                                    kind: Ident(
+                                                                        Ident {
+                                                                            span: 41..42,
+                                                                            name: "x",
+                                                                        },
+                                                                    ),
+                                                                },
+                                                                right: Expr {
+                                                                    span: 45..46,
+                                                                    kind: Ident(
+                                                                        Ident {
+                                                                            span: 45..46,
+                                                                            name: "y",
+                                                                        },
+                                                                    ),
+                                                                },
+                                                            },
+                                                        ),
+                                                    },
                                                 },
                                             ),
-                                        ),
-                                        body: BinaryExpr(
-                                            BinaryExpr {
-                                                span: 41..46,
-                                                op: Add,
-                                                left: Ident(
-                                                    Ident {
-                                                        span: 41..42,
-                                                        name: "x",
-                                                    },
-                                                ),
-                                                right: Ident(
-                                                    Ident {
-                                                        span: 45..46,
-                                                        name: "y",
-                                                    },
-                                                ),
-                                            },
-                                        ),
+                                        },
                                     },
                                 ),
                             },
-                        ),
-                        body: Ident(
-                            Ident {
+                            body: Expr {
                                 span: 49..52,
-                                name: "sum",
+                                kind: Ident(
+                                    Ident {
+                                        span: 49..52,
+                                        name: "sum",
+                                    },
+                                ),
                             },
-                        ),
-                    },
-                ),
+                        },
+                    ),
+                },
             },
         ],
     },

@@ -7,42 +7,55 @@ Ok(
         body: [
             Expr {
                 span: 0..10,
-                expr: BinaryExpr(
-                    BinaryExpr {
-                        span: 0..9,
-                        op: Sub,
-                        left: BinaryExpr(
-                            BinaryExpr {
+                expr: Expr {
+                    span: 0..9,
+                    kind: BinaryExpr(
+                        BinaryExpr {
+                            op: Sub,
+                            left: Expr {
                                 span: 0..5,
-                                op: Add,
-                                left: Lit(
-                                    Num(
-                                        Num {
+                                kind: BinaryExpr(
+                                    BinaryExpr {
+                                        op: Add,
+                                        left: Expr {
                                             span: 0..1,
-                                            value: "1",
+                                            kind: Lit(
+                                                Num(
+                                                    Num {
+                                                        span: 0..1,
+                                                        value: "1",
+                                                    },
+                                                ),
+                                            ),
                                         },
-                                    ),
+                                        right: Expr {
+                                            span: 4..5,
+                                            kind: Lit(
+                                                Num(
+                                                    Num {
+                                                        span: 4..5,
+                                                        value: "2",
+                                                    },
+                                                ),
+                                            ),
+                                        },
+                                    },
                                 ),
-                                right: Lit(
+                            },
+                            right: Expr {
+                                span: 8..9,
+                                kind: Lit(
                                     Num(
                                         Num {
-                                            span: 4..5,
-                                            value: "2",
+                                            span: 8..9,
+                                            value: "3",
                                         },
                                     ),
                                 ),
                             },
-                        ),
-                        right: Lit(
-                            Num(
-                                Num {
-                                    span: 8..9,
-                                    value: "3",
-                                },
-                            ),
-                        ),
-                    },
-                ),
+                        },
+                    ),
+                },
             },
         ],
     },

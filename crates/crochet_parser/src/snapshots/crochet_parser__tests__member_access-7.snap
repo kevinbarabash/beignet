@@ -7,53 +7,68 @@ Ok(
         body: [
             Expr {
                 span: 0..20,
-                expr: Member(
-                    Member {
-                        span: 0..19,
-                        obj: Ident(
-                            Ident {
+                expr: Expr {
+                    span: 0..19,
+                    kind: Member(
+                        Member {
+                            obj: Expr {
                                 span: 0..3,
-                                name: "arr",
-                            },
-                        ),
-                        prop: Computed(
-                            ComputedPropName {
-                                span: 4..18,
-                                expr: BinaryExpr(
-                                    BinaryExpr {
-                                        span: 4..18,
-                                        op: Sub,
-                                        left: Member(
-                                            Member {
-                                                span: 4..14,
-                                                obj: Ident(
-                                                    Ident {
-                                                        span: 4..7,
-                                                        name: "arr",
-                                                    },
-                                                ),
-                                                prop: Ident(
-                                                    Ident {
-                                                        span: 8..14,
-                                                        name: "length",
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                        right: Lit(
-                                            Num(
-                                                Num {
-                                                    span: 17..18,
-                                                    value: "1",
-                                                },
-                                            ),
-                                        ),
+                                kind: Ident(
+                                    Ident {
+                                        span: 0..3,
+                                        name: "arr",
                                     },
                                 ),
                             },
-                        ),
-                    },
-                ),
+                            prop: Computed(
+                                ComputedPropName {
+                                    span: 4..18,
+                                    expr: Expr {
+                                        span: 4..18,
+                                        kind: BinaryExpr(
+                                            BinaryExpr {
+                                                op: Sub,
+                                                left: Expr {
+                                                    span: 4..14,
+                                                    kind: Member(
+                                                        Member {
+                                                            obj: Expr {
+                                                                span: 4..7,
+                                                                kind: Ident(
+                                                                    Ident {
+                                                                        span: 4..7,
+                                                                        name: "arr",
+                                                                    },
+                                                                ),
+                                                            },
+                                                            prop: Ident(
+                                                                Ident {
+                                                                    span: 8..14,
+                                                                    name: "length",
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
+                                                },
+                                                right: Expr {
+                                                    span: 17..18,
+                                                    kind: Lit(
+                                                        Num(
+                                                            Num {
+                                                                span: 17..18,
+                                                                value: "1",
+                                                            },
+                                                        ),
+                                                    ),
+                                                },
+                                            },
+                                        ),
+                                    },
+                                },
+                            ),
+                        },
+                    ),
+                },
             },
         ],
     },

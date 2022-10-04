@@ -7,18 +7,23 @@ Ok(
         body: [
             Expr {
                 span: 0..3,
-                expr: UnaryExpr(
-                    UnaryExpr {
-                        span: 0..2,
-                        op: Minus,
-                        arg: Ident(
-                            Ident {
+                expr: Expr {
+                    span: 0..2,
+                    kind: UnaryExpr(
+                        UnaryExpr {
+                            op: Minus,
+                            arg: Expr {
                                 span: 1..2,
-                                name: "a",
+                                kind: Ident(
+                                    Ident {
+                                        span: 1..2,
+                                        name: "a",
+                                    },
+                                ),
                             },
-                        ),
-                    },
-                ),
+                        },
+                    ),
+                },
             },
         ],
     },

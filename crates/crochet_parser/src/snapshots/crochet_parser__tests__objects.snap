@@ -7,45 +7,51 @@ Ok(
         body: [
             Expr {
                 span: 0..14,
-                expr: Obj(
-                    Obj {
-                        span: 0..13,
-                        props: [
-                            Prop(
-                                KeyValue(
-                                    KeyValueProp {
-                                        span: 1..5,
-                                        name: "x",
-                                        value: Lit(
-                                            Num(
-                                                Num {
-                                                    span: 4..5,
-                                                    value: "5",
-                                                },
-                                            ),
-                                        ),
-                                    },
+                expr: Expr {
+                    span: 0..13,
+                    kind: Obj(
+                        Obj {
+                            props: [
+                                Prop(
+                                    KeyValue(
+                                        KeyValueProp {
+                                            name: "x",
+                                            value: Expr {
+                                                span: 4..5,
+                                                kind: Lit(
+                                                    Num(
+                                                        Num {
+                                                            span: 4..5,
+                                                            value: "5",
+                                                        },
+                                                    ),
+                                                ),
+                                            },
+                                        },
+                                    ),
                                 ),
-                            ),
-                            Prop(
-                                KeyValue(
-                                    KeyValueProp {
-                                        span: 7..12,
-                                        name: "y",
-                                        value: Lit(
-                                            Num(
-                                                Num {
-                                                    span: 10..12,
-                                                    value: "10",
-                                                },
-                                            ),
-                                        ),
-                                    },
+                                Prop(
+                                    KeyValue(
+                                        KeyValueProp {
+                                            name: "y",
+                                            value: Expr {
+                                                span: 10..12,
+                                                kind: Lit(
+                                                    Num(
+                                                        Num {
+                                                            span: 10..12,
+                                                            value: "10",
+                                                        },
+                                                    ),
+                                                ),
+                                            },
+                                        },
+                                    ),
                                 ),
-                            ),
-                        ],
-                    },
-                ),
+                            ],
+                        },
+                    ),
+                },
             },
         ],
     },

@@ -13,8 +13,8 @@ use super::unify::unify;
 use super::util::*;
 
 pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), String> {
-    let result = match expr {
-        Expr::App(App { lam, args, .. }) => {
+    let result = match &expr.kind {
+        ExprKind::App(App { lam, args, .. }) => {
             let mut ss: Vec<Subst> = vec![];
             let mut arg_types: Vec<Type> = vec![];
 
@@ -22,7 +22,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             ss.push(s1);
 
             for arg in args {
-                let (arg_s, arg_t) = infer_expr(ctx, arg.expr.as_ref())?;
+                let (arg_s, arg_t) = infer_expr(ctx, &arg.expr)?;
                 ss.push(arg_s);
                 if arg.spread.is_some() {
                     match arg_t {
@@ -52,8 +52,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
             Ok((s, t))
         }
-        Expr::Fix(Fix { expr, .. }) => {
-            let (s1, t) = infer_expr(ctx, expr)?;
+        ExprKind::Fix(Fix { expr, .. }) => {
+            let (s1, t) = infer_expr(ctx, expr.as_ref())?;
             let tv = ctx.fresh_var();
             let param = TFnParam {
                 pat: TPat::Ident(types::BindingIdent {
@@ -82,20 +82,20 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             Ok((compose_subs(&s2, &s1), t))
         }
-        Expr::Ident(Ident { name, .. }) => {
+        ExprKind::Ident(Ident { name, .. }) => {
             let s = Subst::default();
             let t = ctx.lookup_value_and_instantiate(name)?;
             Ok((s, t))
         }
-        Expr::IfElse(IfElse {
+        ExprKind::IfElse(IfElse {
             cond,
             consequent,
             alternate,
             ..
         }) => match alternate {
             Some(alternate) => {
-                match cond.as_ref() {
-                    Expr::LetExpr(LetExpr { pat, expr, .. }) => {
+                match &cond.kind {
+                    ExprKind::LetExpr(LetExpr { pat, expr, .. }) => {
                         // TODO: warn if the pattern isn't refutable
                         let (s1, t1) =
                             infer_let(pat, &None, expr, consequent, ctx, &PatternUsage::Match)?;
@@ -117,8 +117,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                     }
                 }
             }
-            None => match cond.as_ref() {
-                Expr::LetExpr(LetExpr { pat, expr, .. }) => {
+            None => match &cond.kind {
+                ExprKind::LetExpr(LetExpr { pat, expr, .. }) => {
                     let (s1, t1) =
                         infer_let(pat, &None, expr, consequent, ctx, &PatternUsage::Match)?;
                     let s2 = match unify(&t1, &Type::Keyword(TKeyword::Undefined), ctx) {
@@ -149,7 +149,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 }
             },
         },
-        Expr::JSXElement(JSXElement {
+        ExprKind::JSXElement(JSXElement {
             name,
             attrs,
             children: _,
@@ -166,7 +166,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         for attr in attrs {
                             let (s, t) = match &attr.value {
                                 JSXAttrValue::Lit(lit) => {
-                                    infer_expr(ctx, &Expr::Lit(lit.to_owned()))?
+                                    let kind = ExprKind::Lit(lit.to_owned());
+                                    let expr = Expr {
+                                        span: lit.span(),
+                                        kind,
+                                    };
+                                    infer_expr(ctx, &expr)?
                                 }
                                 JSXAttrValue::JSXExprContainer(JSXExprContainer {
                                     expr, ..
@@ -216,7 +221,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             Ok((s, t))
         }
-        Expr::Lambda(Lambda {
+        ExprKind::Lambda(Lambda {
             params,
             body,
             is_async,
@@ -287,7 +292,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             Ok((s, t))
         }
-        Expr::Let(Let {
+        ExprKind::Let(Let {
             pattern,
             type_ann,
             init,
@@ -298,19 +303,19 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 Some(pat) => infer_let(pat, type_ann, init, body, ctx, &PatternUsage::Assign),
                 None => {
                     // TODO: warn about unused values
-                    infer_expr(ctx, body)
+                    infer_expr(ctx, body.as_ref())
                 }
             }
         }
-        Expr::LetExpr(_) => {
+        ExprKind::LetExpr(_) => {
             panic!("Unexpected LetExpr.  All LetExprs should be handled by IfElse arm.")
         }
-        Expr::Lit(lit) => {
+        ExprKind::Lit(lit) => {
             let s = Subst::new();
             let t = Type::from(lit.to_owned());
             Ok((s, t))
         }
-        Expr::BinaryExpr(BinaryExpr {
+        ExprKind::BinaryExpr(BinaryExpr {
             op, left, right, ..
         }) => {
             // TODO: check what `op` is and handle comparison operators
@@ -335,15 +340,15 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             };
             Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
         }
-        Expr::UnaryExpr(UnaryExpr { op, arg, .. }) => {
-            let (s1, t1) = infer_expr(ctx, arg)?;
+        ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
+            let (s1, t1) = infer_expr(ctx, arg.as_ref())?;
             let s2 = unify(&t1, &Type::Prim(TPrim::Num), ctx)?;
             let t = match op {
                 UnaryOp::Minus => Type::Prim(TPrim::Num),
             };
             Ok((compose_many_subs(&[s1, s2]), t))
         }
-        Expr::Obj(Obj { props, .. }) => {
+        ExprKind::Obj(Obj { props, .. }) => {
             let mut ss: Vec<Subst> = vec![];
             let mut elems: Vec<types::TObjElem> = vec![];
             let mut spread_types: Vec<_> = vec![];
@@ -375,7 +380,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                         }
                     }
                     PropOrSpread::Spread(SpreadElement { expr, .. }) => {
-                        let (s, t) = infer_expr(ctx, expr)?;
+                        let (s, t) = infer_expr(ctx, expr.as_ref())?;
                         ss.push(s);
                         spread_types.push(t);
                     }
@@ -399,12 +404,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
                 Ok((s, t))
             }
         }
-        Expr::Await(Await { expr, .. }) => {
+        ExprKind::Await(Await { expr, .. }) => {
             if !ctx.is_async() {
                 return Err(String::from("Can't use `await` inside non-async lambda"));
             }
 
-            let (s1, t1) = infer_expr(ctx, expr)?;
+            let (s1, t1) = infer_expr(ctx, expr.as_ref())?;
             let wrapped_type = ctx.fresh_var();
             let promise_type = Type::Ref(types::TRef {
                 name: String::from("Promise"),
@@ -417,7 +422,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             Ok((s, wrapped_type))
         }
-        Expr::Tuple(Tuple { elems, .. }) => {
+        ExprKind::Tuple(Tuple { elems, .. }) => {
             let mut ss: Vec<Subst> = vec![];
             let mut ts: Vec<Type> = vec![];
 
@@ -450,7 +455,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let t = Type::Tuple(ts);
             Ok((s, t))
         }
-        Expr::Member(Member { obj, prop, .. }) => {
+        ExprKind::Member(Member { obj, prop, .. }) => {
             let (obj_s, obj_t) = infer_expr(ctx, obj)?;
             let (prop_s, prop_t) = infer_property_type(&obj_t, prop, ctx)?;
 
@@ -459,12 +464,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
 
             Ok((s, t))
         }
-        Expr::Empty(_) => {
+        ExprKind::Empty => {
             let t = Type::Keyword(TKeyword::Undefined);
             let s = Subst::default();
             Ok((s, t))
         }
-        Expr::TemplateLiteral(TemplateLiteral {
+        ExprKind::TemplateLiteral(TemplateLiteral {
             exprs, quasis: _, ..
         }) => {
             let t = Type::Prim(TPrim::Str);
@@ -476,14 +481,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &Expr) -> Result<(Subst, Type), Strin
             let s = compose_many_subs(&ss);
             Ok((s, t))
         }
-        Expr::TaggedTemplateLiteral(_) => {
+        ExprKind::TaggedTemplateLiteral(_) => {
             // TODO: treat this like a call/application
             // NOTE: requires:
             // - arrays
             // - rest params
             todo!()
         }
-        Expr::Match(Match { expr, arms, .. }) => {
+        ExprKind::Match(Match { expr, arms, .. }) => {
             // TODO: warn if the pattern isn't refutable
             let mut ss: Vec<Subst> = vec![];
             let mut ts: Vec<Type> = vec![];

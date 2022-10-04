@@ -37,12 +37,14 @@ Ok(
                     ),
                 ),
                 init: Some(
-                    Tuple(
-                        Tuple {
-                            span: 37..39,
-                            elems: [],
-                        },
-                    ),
+                    Expr {
+                        span: 37..39,
+                        kind: Tuple(
+                            Tuple {
+                                elems: [],
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

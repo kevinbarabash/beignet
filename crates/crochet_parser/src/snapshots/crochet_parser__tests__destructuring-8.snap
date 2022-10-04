@@ -18,52 +18,57 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Lambda(
-                        Lambda {
-                            span: 10..23,
-                            params: [
-                                EFnParam {
-                                    pat: Object(
-                                        EFnParamObjectPat {
-                                            span: 11..17,
-                                            props: [
-                                                Assign(
-                                                    EFnParamAssignPatProp {
-                                                        key: Ident {
-                                                            span: 12..13,
-                                                            name: "a",
+                    Expr {
+                        span: 10..23,
+                        kind: Lambda(
+                            Lambda {
+                                params: [
+                                    EFnParam {
+                                        pat: Object(
+                                            EFnParamObjectPat {
+                                                span: 11..17,
+                                                props: [
+                                                    Assign(
+                                                        EFnParamAssignPatProp {
+                                                            key: Ident {
+                                                                span: 12..13,
+                                                                name: "a",
+                                                            },
+                                                            value: None,
                                                         },
-                                                        value: None,
-                                                    },
-                                                ),
-                                                Assign(
-                                                    EFnParamAssignPatProp {
-                                                        key: Ident {
-                                                            span: 15..16,
-                                                            name: "b",
+                                                    ),
+                                                    Assign(
+                                                        EFnParamAssignPatProp {
+                                                            key: Ident {
+                                                                span: 15..16,
+                                                                name: "b",
+                                                            },
+                                                            value: None,
                                                         },
-                                                        value: None,
-                                                    },
-                                                ),
-                                            ],
+                                                    ),
+                                                ],
+                                            },
+                                        ),
+                                        type_ann: None,
+                                        optional: false,
+                                        mutable: false,
+                                    },
+                                ],
+                                body: Expr {
+                                    span: 22..23,
+                                    kind: Ident(
+                                        Ident {
+                                            span: 22..23,
+                                            name: "b",
                                         },
                                     ),
-                                    type_ann: None,
-                                    optional: false,
-                                    mutable: false,
                                 },
-                            ],
-                            body: Ident(
-                                Ident {
-                                    span: 22..23,
-                                    name: "b",
-                                },
-                            ),
-                            is_async: false,
-                            return_type: None,
-                            type_params: None,
-                        },
-                    ),
+                                is_async: false,
+                                return_type: None,
+                                type_params: None,
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

@@ -7,21 +7,24 @@ Ok(
         body: [
             Expr {
                 span: 0..16,
-                expr: JSXElement(
-                    JSXElement {
-                        span: 0..16,
-                        name: "Foo",
-                        attrs: [],
-                        children: [
-                            JSXText(
-                                JSXText {
-                                    span: 5..10,
-                                    value: "Hello",
-                                },
-                            ),
-                        ],
-                    },
-                ),
+                expr: Expr {
+                    span: 0..16,
+                    kind: JSXElement(
+                        JSXElement {
+                            span: 0..16,
+                            name: "Foo",
+                            attrs: [],
+                            children: [
+                                JSXText(
+                                    JSXText {
+                                        span: 5..10,
+                                        value: "Hello",
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                },
             },
         ],
     },

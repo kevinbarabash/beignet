@@ -7,72 +7,80 @@ Ok(
         body: [
             Expr {
                 span: 0..14,
-                expr: TemplateLiteral(
-                    TemplateLiteral {
-                        span: 0..14,
-                        exprs: [
-                            Ident(
-                                Ident {
+                expr: Expr {
+                    span: 0..14,
+                    kind: TemplateLiteral(
+                        TemplateLiteral {
+                            exprs: [
+                                Expr {
                                     span: 4..5,
-                                    name: "x",
+                                    kind: Ident(
+                                        Ident {
+                                            span: 4..5,
+                                            name: "x",
+                                        },
+                                    ),
                                 },
-                            ),
-                            Ident(
-                                Ident {
+                                Expr {
                                     span: 10..11,
-                                    name: "y",
+                                    kind: Ident(
+                                        Ident {
+                                            span: 10..11,
+                                            name: "y",
+                                        },
+                                    ),
                                 },
-                            ),
-                        ],
-                        quasis: [
-                            TemplateElem {
-                                span: 1..2,
-                                raw: Str(
-                                    Str {
-                                        span: 1..2,
-                                        value: "(",
-                                    },
-                                ),
-                                cooked: Str(
-                                    Str {
-                                        span: 1..2,
-                                        value: "(",
-                                    },
-                                ),
-                            },
-                            TemplateElem {
-                                span: 6..8,
-                                raw: Str(
-                                    Str {
-                                        span: 6..8,
-                                        value: ", ",
-                                    },
-                                ),
-                                cooked: Str(
-                                    Str {
-                                        span: 6..8,
-                                        value: ", ",
-                                    },
-                                ),
-                            },
-                            TemplateElem {
-                                span: 12..13,
-                                raw: Str(
-                                    Str {
-                                        span: 12..13,
-                                        value: ")",
-                                    },
-                                ),
-                                cooked: Str(
-                                    Str {
-                                        span: 12..13,
-                                        value: ")",
-                                    },
-                                ),
-                            },
-                        ],
-                    },
-                ),
+                            ],
+                            quasis: [
+                                TemplateElem {
+                                    span: 1..2,
+                                    raw: Str(
+                                        Str {
+                                            span: 1..2,
+                                            value: "(",
+                                        },
+                                    ),
+                                    cooked: Str(
+                                        Str {
+                                            span: 1..2,
+                                            value: "(",
+                                        },
+                                    ),
+                                },
+                                TemplateElem {
+                                    span: 6..8,
+                                    raw: Str(
+                                        Str {
+                                            span: 6..8,
+                                            value: ", ",
+                                        },
+                                    ),
+                                    cooked: Str(
+                                        Str {
+                                            span: 6..8,
+                                            value: ", ",
+                                        },
+                                    ),
+                                },
+                                TemplateElem {
+                                    span: 12..13,
+                                    raw: Str(
+                                        Str {
+                                            span: 12..13,
+                                            value: ")",
+                                        },
+                                    ),
+                                    cooked: Str(
+                                        Str {
+                                            span: 12..13,
+                                            value: ")",
+                                        },
+                                    ),
+                                },
+                            ],
+                        },
+                    ),
+                },
             },
         ],
     },

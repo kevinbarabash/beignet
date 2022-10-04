@@ -7,25 +7,31 @@ Ok(
         body: [
             Expr {
                 span: 0..4,
-                expr: Lit(
-                    Num(
-                        Num {
-                            span: 0..3,
-                            value: "123",
-                        },
+                expr: Expr {
+                    span: 0..3,
+                    kind: Lit(
+                        Num(
+                            Num {
+                                span: 0..3,
+                                value: "123",
+                            },
+                        ),
                     ),
-                ),
+                },
             },
             Expr {
                 span: 5..13,
-                expr: Lit(
-                    Str(
-                        Str {
-                            span: 5..12,
-                            value: "hello",
-                        },
+                expr: Expr {
+                    span: 5..12,
+                    kind: Lit(
+                        Str(
+                            Str {
+                                span: 5..12,
+                                value: "hello",
+                            },
+                        ),
                     ),
-                ),
+                },
             },
         ],
     },

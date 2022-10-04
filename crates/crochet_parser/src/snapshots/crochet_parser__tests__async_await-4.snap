@@ -18,32 +18,41 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Lambda(
-                        Lambda {
-                            span: 10..33,
-                            params: [],
-                            body: Await(
-                                Await {
+                    Expr {
+                        span: 10..33,
+                        kind: Lambda(
+                            Lambda {
+                                params: [],
+                                body: Expr {
                                     span: 22..33,
-                                    expr: App(
-                                        App {
-                                            span: 28..33,
-                                            lam: Ident(
-                                                Ident {
-                                                    span: 28..31,
-                                                    name: "bar",
-                                                },
-                                            ),
-                                            args: [],
+                                    kind: Await(
+                                        Await {
+                                            expr: Expr {
+                                                span: 28..33,
+                                                kind: App(
+                                                    App {
+                                                        lam: Expr {
+                                                            span: 28..31,
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    span: 28..31,
+                                                                    name: "bar",
+                                                                },
+                                                            ),
+                                                        },
+                                                        args: [],
+                                                    },
+                                                ),
+                                            },
                                         },
                                     ),
                                 },
-                            ),
-                            is_async: true,
-                            return_type: None,
-                            type_params: None,
-                        },
-                    ),
+                                is_async: true,
+                                return_type: None,
+                                type_params: None,
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

@@ -18,124 +18,149 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Match(
-                        Match {
-                            span: 23..173,
-                            expr: Ident(
-                                Ident {
+                    Expr {
+                        span: 23..173,
+                        kind: Match(
+                            Match {
+                                expr: Expr {
                                     span: 30..33,
-                                    name: "foo",
-                                },
-                            ),
-                            arms: [
-                                Arm {
-                                    span: 53..63,
-                                    pattern: Lit(
-                                        LitPat {
-                                            span: 53..54,
-                                            lit: Num(
-                                                Num {
-                                                    span: 53..54,
-                                                    value: "1",
-                                                },
-                                            ),
+                                    kind: Ident(
+                                        Ident {
+                                            span: 30..33,
+                                            name: "foo",
                                         },
                                     ),
-                                    guard: None,
-                                    body: Lit(
-                                        Str(
-                                            Str {
-                                                span: 58..63,
-                                                value: "one",
-                                            },
-                                        ),
-                                    ),
                                 },
-                                Arm {
-                                    span: 81..91,
-                                    pattern: Lit(
-                                        LitPat {
-                                            span: 81..82,
-                                            lit: Num(
-                                                Num {
-                                                    span: 81..82,
-                                                    value: "2",
-                                                },
-                                            ),
-                                        },
-                                    ),
-                                    guard: None,
-                                    body: Lit(
-                                        Str(
-                                            Str {
-                                                span: 86..91,
-                                                value: "two",
-                                            },
-                                        ),
-                                    ),
-                                },
-                                Arm {
-                                    span: 109..130,
-                                    pattern: Ident(
-                                        BindingIdent {
-                                            span: 109..110,
-                                            id: Ident {
-                                                span: 109..110,
-                                                name: "n",
-                                            },
-                                        },
-                                    ),
-                                    guard: Some(
-                                        BinaryExpr(
-                                            BinaryExpr {
-                                                span: 115..120,
-                                                op: Lt,
-                                                left: Ident(
-                                                    Ident {
-                                                        span: 115..116,
-                                                        name: "n",
+                                arms: [
+                                    Arm {
+                                        span: 53..63,
+                                        pattern: Lit(
+                                            LitPat {
+                                                span: 53..54,
+                                                lit: Num(
+                                                    Num {
+                                                        span: 53..54,
+                                                        value: "1",
                                                     },
                                                 ),
-                                                right: Lit(
-                                                    Num(
-                                                        Num {
-                                                            span: 119..120,
-                                                            value: "5",
-                                                        },
-                                                    ),
+                                            },
+                                        ),
+                                        guard: None,
+                                        body: Expr {
+                                            span: 58..63,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 58..63,
+                                                        value: "one",
+                                                    },
+                                                ),
+                                            ),
+                                        },
+                                    },
+                                    Arm {
+                                        span: 81..91,
+                                        pattern: Lit(
+                                            LitPat {
+                                                span: 81..82,
+                                                lit: Num(
+                                                    Num {
+                                                        span: 81..82,
+                                                        value: "2",
+                                                    },
                                                 ),
                                             },
                                         ),
-                                    ),
-                                    body: Lit(
-                                        Str(
-                                            Str {
-                                                span: 125..130,
-                                                value: "few",
-                                            },
-                                        ),
-                                    ),
-                                },
-                                Arm {
-                                    span: 148..159,
-                                    pattern: Wildcard(
-                                        WildcardPat {
-                                            span: 148..149,
+                                        guard: None,
+                                        body: Expr {
+                                            span: 86..91,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 86..91,
+                                                        value: "two",
+                                                    },
+                                                ),
+                                            ),
                                         },
-                                    ),
-                                    guard: None,
-                                    body: Lit(
-                                        Str(
-                                            Str {
-                                                span: 153..159,
-                                                value: "many",
+                                    },
+                                    Arm {
+                                        span: 109..130,
+                                        pattern: Ident(
+                                            BindingIdent {
+                                                span: 109..110,
+                                                id: Ident {
+                                                    span: 109..110,
+                                                    name: "n",
+                                                },
                                             },
                                         ),
-                                    ),
-                                },
-                            ],
-                        },
-                    ),
+                                        guard: Some(
+                                            Expr {
+                                                span: 115..120,
+                                                kind: BinaryExpr(
+                                                    BinaryExpr {
+                                                        op: Lt,
+                                                        left: Expr {
+                                                            span: 115..116,
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    span: 115..116,
+                                                                    name: "n",
+                                                                },
+                                                            ),
+                                                        },
+                                                        right: Expr {
+                                                            span: 119..120,
+                                                            kind: Lit(
+                                                                Num(
+                                                                    Num {
+                                                                        span: 119..120,
+                                                                        value: "5",
+                                                                    },
+                                                                ),
+                                                            ),
+                                                        },
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                        body: Expr {
+                                            span: 125..130,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 125..130,
+                                                        value: "few",
+                                                    },
+                                                ),
+                                            ),
+                                        },
+                                    },
+                                    Arm {
+                                        span: 148..159,
+                                        pattern: Wildcard(
+                                            WildcardPat {
+                                                span: 148..149,
+                                            },
+                                        ),
+                                        guard: None,
+                                        body: Expr {
+                                            span: 153..159,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 153..159,
+                                                        value: "many",
+                                                    },
+                                                ),
+                                            ),
+                                        },
+                                    },
+                                ],
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

@@ -7,29 +7,36 @@ Ok(
         body: [
             Expr {
                 span: 0..10,
-                expr: App(
-                    App {
-                        span: 0..9,
-                        lam: Member(
-                            Member {
+                expr: Expr {
+                    span: 0..9,
+                    kind: App(
+                        App {
+                            lam: Expr {
                                 span: 0..7,
-                                obj: Ident(
-                                    Ident {
-                                        span: 0..3,
-                                        name: "foo",
-                                    },
-                                ),
-                                prop: Ident(
-                                    Ident {
-                                        span: 4..7,
-                                        name: "bar",
+                                kind: Member(
+                                    Member {
+                                        obj: Expr {
+                                            span: 0..3,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 0..3,
+                                                    name: "foo",
+                                                },
+                                            ),
+                                        },
+                                        prop: Ident(
+                                            Ident {
+                                                span: 4..7,
+                                                name: "bar",
+                                            },
+                                        ),
                                     },
                                 ),
                             },
-                        ),
-                        args: [],
-                    },
-                ),
+                            args: [],
+                        },
+                    ),
+                },
             },
         ],
     },

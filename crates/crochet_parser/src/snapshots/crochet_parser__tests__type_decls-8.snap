@@ -15,12 +15,15 @@ Ok(
                 type_ann: Query(
                     QueryType {
                         span: 11..21,
-                        expr: Ident(
-                            Ident {
-                                span: 18..21,
-                                name: "foo",
-                            },
-                        ),
+                        expr: Expr {
+                            span: 18..21,
+                            kind: Ident(
+                                Ident {
+                                    span: 18..21,
+                                    name: "foo",
+                                },
+                            ),
+                        },
                     },
                 ),
                 type_params: None,

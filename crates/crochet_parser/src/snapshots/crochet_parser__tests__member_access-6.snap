@@ -7,44 +7,57 @@ Ok(
         body: [
             Expr {
                 span: 0..10,
-                expr: App(
-                    App {
-                        span: 0..9,
-                        lam: Member(
-                            Member {
+                expr: Expr {
+                    span: 0..9,
+                    kind: App(
+                        App {
+                            lam: Expr {
                                 span: 0..6,
-                                obj: Ident(
-                                    Ident {
-                                        span: 0..3,
-                                        name: "arr",
-                                    },
-                                ),
-                                prop: Computed(
-                                    ComputedPropName {
-                                        span: 4..5,
-                                        expr: Ident(
-                                            Ident {
+                                kind: Member(
+                                    Member {
+                                        obj: Expr {
+                                            span: 0..3,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 0..3,
+                                                    name: "arr",
+                                                },
+                                            ),
+                                        },
+                                        prop: Computed(
+                                            ComputedPropName {
                                                 span: 4..5,
-                                                name: "x",
+                                                expr: Expr {
+                                                    span: 4..5,
+                                                    kind: Ident(
+                                                        Ident {
+                                                            span: 4..5,
+                                                            name: "x",
+                                                        },
+                                                    ),
+                                                },
                                             },
                                         ),
                                     },
                                 ),
                             },
-                        ),
-                        args: [
-                            ExprOrSpread {
-                                spread: None,
-                                expr: Ident(
-                                    Ident {
+                            args: [
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Expr {
                                         span: 7..8,
-                                        name: "y",
+                                        kind: Ident(
+                                            Ident {
+                                                span: 7..8,
+                                                name: "y",
+                                            },
+                                        ),
                                     },
-                                ),
-                            },
-                        ],
-                    },
-                ),
+                                },
+                            ],
+                        },
+                    ),
+                },
             },
         ],
     },

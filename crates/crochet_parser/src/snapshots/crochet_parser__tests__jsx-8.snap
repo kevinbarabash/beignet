@@ -7,35 +7,41 @@ Ok(
         body: [
             Expr {
                 span: 0..27,
-                expr: JSXElement(
-                    JSXElement {
-                        span: 0..27,
-                        name: "Foo",
-                        attrs: [],
-                        children: [
-                            JSXElement(
-                                JSXElement {
-                                    span: 5..21,
-                                    name: "Bar",
-                                    attrs: [],
-                                    children: [
-                                        JSXExprContainer(
-                                            JSXExprContainer {
-                                                span: 10..15,
-                                                expr: Ident(
-                                                    Ident {
+                expr: Expr {
+                    span: 0..27,
+                    kind: JSXElement(
+                        JSXElement {
+                            span: 0..27,
+                            name: "Foo",
+                            attrs: [],
+                            children: [
+                                JSXElement(
+                                    JSXElement {
+                                        span: 5..21,
+                                        name: "Bar",
+                                        attrs: [],
+                                        children: [
+                                            JSXExprContainer(
+                                                JSXExprContainer {
+                                                    span: 10..15,
+                                                    expr: Expr {
                                                         span: 11..14,
-                                                        name: "baz",
+                                                        kind: Ident(
+                                                            Ident {
+                                                                span: 11..14,
+                                                                name: "baz",
+                                                            },
+                                                        ),
                                                     },
-                                                ),
-                                            },
-                                        ),
-                                    ],
-                                },
-                            ),
-                        ],
-                    },
-                ),
+                                                },
+                                            ),
+                                        ],
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                },
             },
         ],
     },

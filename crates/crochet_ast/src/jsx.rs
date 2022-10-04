@@ -12,7 +12,7 @@ pub struct JSXText {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JSXExprContainer {
     pub span: Span,
-    pub expr: Expr,
+    pub expr: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

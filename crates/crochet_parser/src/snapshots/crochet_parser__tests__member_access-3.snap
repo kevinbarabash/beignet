@@ -7,92 +7,118 @@ Ok(
         body: [
             Expr {
                 span: 0..22,
-                expr: BinaryExpr(
-                    BinaryExpr {
-                        span: 0..21,
-                        op: Add,
-                        left: BinaryExpr(
-                            BinaryExpr {
+                expr: Expr {
+                    span: 0..21,
+                    kind: BinaryExpr(
+                        BinaryExpr {
+                            op: Add,
+                            left: Expr {
                                 span: 0..9,
-                                op: Mul,
-                                left: Member(
-                                    Member {
-                                        span: 0..3,
-                                        obj: Ident(
-                                            Ident {
-                                                span: 0..1,
-                                                name: "p",
-                                            },
-                                        ),
-                                        prop: Ident(
-                                            Ident {
-                                                span: 2..3,
-                                                name: "x",
-                                            },
-                                        ),
-                                    },
-                                ),
-                                right: Member(
-                                    Member {
-                                        span: 6..9,
-                                        obj: Ident(
-                                            Ident {
-                                                span: 6..7,
-                                                name: "p",
-                                            },
-                                        ),
-                                        prop: Ident(
-                                            Ident {
-                                                span: 8..9,
-                                                name: "x",
-                                            },
-                                        ),
+                                kind: BinaryExpr(
+                                    BinaryExpr {
+                                        op: Mul,
+                                        left: Expr {
+                                            span: 0..3,
+                                            kind: Member(
+                                                Member {
+                                                    obj: Expr {
+                                                        span: 0..1,
+                                                        kind: Ident(
+                                                            Ident {
+                                                                span: 0..1,
+                                                                name: "p",
+                                                            },
+                                                        ),
+                                                    },
+                                                    prop: Ident(
+                                                        Ident {
+                                                            span: 2..3,
+                                                            name: "x",
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                        },
+                                        right: Expr {
+                                            span: 6..9,
+                                            kind: Member(
+                                                Member {
+                                                    obj: Expr {
+                                                        span: 6..7,
+                                                        kind: Ident(
+                                                            Ident {
+                                                                span: 6..7,
+                                                                name: "p",
+                                                            },
+                                                        ),
+                                                    },
+                                                    prop: Ident(
+                                                        Ident {
+                                                            span: 8..9,
+                                                            name: "x",
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                        },
                                     },
                                 ),
                             },
-                        ),
-                        right: BinaryExpr(
-                            BinaryExpr {
+                            right: Expr {
                                 span: 12..21,
-                                op: Mul,
-                                left: Member(
-                                    Member {
-                                        span: 12..15,
-                                        obj: Ident(
-                                            Ident {
-                                                span: 12..13,
-                                                name: "p",
-                                            },
-                                        ),
-                                        prop: Ident(
-                                            Ident {
-                                                span: 14..15,
-                                                name: "y",
-                                            },
-                                        ),
-                                    },
-                                ),
-                                right: Member(
-                                    Member {
-                                        span: 18..21,
-                                        obj: Ident(
-                                            Ident {
-                                                span: 18..19,
-                                                name: "p",
-                                            },
-                                        ),
-                                        prop: Ident(
-                                            Ident {
-                                                span: 20..21,
-                                                name: "y",
-                                            },
-                                        ),
+                                kind: BinaryExpr(
+                                    BinaryExpr {
+                                        op: Mul,
+                                        left: Expr {
+                                            span: 12..15,
+                                            kind: Member(
+                                                Member {
+                                                    obj: Expr {
+                                                        span: 12..13,
+                                                        kind: Ident(
+                                                            Ident {
+                                                                span: 12..13,
+                                                                name: "p",
+                                                            },
+                                                        ),
+                                                    },
+                                                    prop: Ident(
+                                                        Ident {
+                                                            span: 14..15,
+                                                            name: "y",
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                        },
+                                        right: Expr {
+                                            span: 18..21,
+                                            kind: Member(
+                                                Member {
+                                                    obj: Expr {
+                                                        span: 18..19,
+                                                        kind: Ident(
+                                                            Ident {
+                                                                span: 18..19,
+                                                                name: "p",
+                                                            },
+                                                        ),
+                                                    },
+                                                    prop: Ident(
+                                                        Ident {
+                                                            span: 20..21,
+                                                            name: "y",
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                        },
                                     },
                                 ),
                             },
-                        ),
-                    },
-                ),
+                        },
+                    ),
+                },
             },
         ],
     },
