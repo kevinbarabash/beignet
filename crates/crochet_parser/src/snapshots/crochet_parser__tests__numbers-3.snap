@@ -7,20 +7,25 @@ Ok(
         body: [
             Expr {
                 span: 0..4,
-                expr: UnaryExpr(
-                    UnaryExpr {
-                        span: 0..3,
-                        op: Minus,
-                        arg: Lit(
-                            Num(
-                                Num {
-                                    span: 1..3,
-                                    value: "10",
-                                },
-                            ),
-                        ),
-                    },
-                ),
+                expr: Expr {
+                    span: 0..3,
+                    kind: UnaryExpr(
+                        UnaryExpr {
+                            op: Minus,
+                            arg: Expr {
+                                span: 1..3,
+                                kind: Lit(
+                                    Num(
+                                        Num {
+                                            span: 1..3,
+                                            value: "10",
+                                        },
+                                    ),
+                                ),
+                            },
+                        },
+                    ),
+                },
             },
         ],
     },

@@ -15,23 +15,28 @@ Ok(
                 type_ann: Query(
                     QueryType {
                         span: 14..28,
-                        expr: Member(
-                            Member {
-                                span: 21..28,
-                                obj: Ident(
-                                    Ident {
+                        expr: Expr {
+                            span: 21..28,
+                            kind: Member(
+                                Member {
+                                    obj: Expr {
                                         span: 21..24,
-                                        name: "foo",
+                                        kind: Ident(
+                                            Ident {
+                                                span: 21..24,
+                                                name: "foo",
+                                            },
+                                        ),
                                     },
-                                ),
-                                prop: Ident(
-                                    Ident {
-                                        span: 25..28,
-                                        name: "bar",
-                                    },
-                                ),
-                            },
-                        ),
+                                    prop: Ident(
+                                        Ident {
+                                            span: 25..28,
+                                            name: "bar",
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
                     },
                 ),
                 type_params: None,

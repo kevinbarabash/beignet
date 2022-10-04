@@ -7,34 +7,41 @@ Ok(
         body: [
             Expr {
                 span: 0..6,
-                expr: Member(
-                    Member {
-                        span: 0..5,
-                        obj: Member(
-                            Member {
+                expr: Expr {
+                    span: 0..5,
+                    kind: Member(
+                        Member {
+                            obj: Expr {
                                 span: 0..3,
-                                obj: Ident(
-                                    Ident {
-                                        span: 0..1,
-                                        name: "a",
-                                    },
-                                ),
-                                prop: Ident(
-                                    Ident {
-                                        span: 2..3,
-                                        name: "b",
+                                kind: Member(
+                                    Member {
+                                        obj: Expr {
+                                            span: 0..1,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 0..1,
+                                                    name: "a",
+                                                },
+                                            ),
+                                        },
+                                        prop: Ident(
+                                            Ident {
+                                                span: 2..3,
+                                                name: "b",
+                                            },
+                                        ),
                                     },
                                 ),
                             },
-                        ),
-                        prop: Ident(
-                            Ident {
-                                span: 4..5,
-                                name: "c",
-                            },
-                        ),
-                    },
-                ),
+                            prop: Ident(
+                                Ident {
+                                    span: 4..5,
+                                    name: "c",
+                                },
+                            ),
+                        },
+                    ),
+                },
             },
         ],
     },

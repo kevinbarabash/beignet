@@ -25,14 +25,17 @@ Ok(
                     ),
                 ),
                 init: Some(
-                    Lit(
-                        Str(
-                            Str {
-                                span: 18..25,
-                                value: "hello",
-                            },
+                    Expr {
+                        span: 18..25,
+                        kind: Lit(
+                            Str(
+                                Str {
+                                    span: 18..25,
+                                    value: "hello",
+                                },
+                            ),
                         ),
-                    ),
+                    },
                 ),
                 declare: false,
             },

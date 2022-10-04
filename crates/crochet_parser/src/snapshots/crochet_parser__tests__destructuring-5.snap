@@ -70,12 +70,15 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Ident(
-                        Ident {
-                            span: 31..34,
-                            name: "baz",
-                        },
-                    ),
+                    Expr {
+                        span: 31..34,
+                        kind: Ident(
+                            Ident {
+                                span: 31..34,
+                                name: "baz",
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

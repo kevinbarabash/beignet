@@ -18,28 +18,35 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Lambda(
-                        Lambda {
-                            span: 10..34,
-                            params: [],
-                            body: Await(
-                                Await {
+                    Expr {
+                        span: 10..34,
+                        kind: Lambda(
+                            Lambda {
+                                params: [],
+                                body: Expr {
                                     span: 24..32,
-                                    expr: Lit(
-                                        Num(
-                                            Num {
+                                    kind: Await(
+                                        Await {
+                                            expr: Expr {
                                                 span: 30..32,
-                                                value: "10",
+                                                kind: Lit(
+                                                    Num(
+                                                        Num {
+                                                            span: 30..32,
+                                                            value: "10",
+                                                        },
+                                                    ),
+                                                ),
                                             },
-                                        ),
+                                        },
                                     ),
                                 },
-                            ),
-                            is_async: true,
-                            return_type: None,
-                            type_params: None,
-                        },
-                    ),
+                                is_async: true,
+                                return_type: None,
+                                type_params: None,
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

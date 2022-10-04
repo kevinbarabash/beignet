@@ -7,35 +7,44 @@ Ok(
         body: [
             Expr {
                 span: 0..12,
-                expr: App(
-                    App {
-                        span: 0..11,
-                        lam: Member(
-                            Member {
+                expr: Expr {
+                    span: 0..11,
+                    kind: App(
+                        App {
+                            lam: Expr {
                                 span: 0..9,
-                                obj: App(
-                                    App {
-                                        span: 0..5,
-                                        lam: Ident(
+                                kind: Member(
+                                    Member {
+                                        obj: Expr {
+                                            span: 0..5,
+                                            kind: App(
+                                                App {
+                                                    lam: Expr {
+                                                        span: 0..3,
+                                                        kind: Ident(
+                                                            Ident {
+                                                                span: 0..3,
+                                                                name: "foo",
+                                                            },
+                                                        ),
+                                                    },
+                                                    args: [],
+                                                },
+                                            ),
+                                        },
+                                        prop: Ident(
                                             Ident {
-                                                span: 0..3,
-                                                name: "foo",
+                                                span: 6..9,
+                                                name: "bar",
                                             },
                                         ),
-                                        args: [],
-                                    },
-                                ),
-                                prop: Ident(
-                                    Ident {
-                                        span: 6..9,
-                                        name: "bar",
                                     },
                                 ),
                             },
-                        ),
-                        args: [],
-                    },
-                ),
+                            args: [],
+                        },
+                    ),
+                },
             },
         ],
     },

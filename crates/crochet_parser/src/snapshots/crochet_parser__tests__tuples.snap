@@ -18,12 +18,14 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Tuple(
-                        Tuple {
-                            span: 8..10,
-                            elems: [],
-                        },
-                    ),
+                    Expr {
+                        span: 8..10,
+                        kind: Tuple(
+                            Tuple {
+                                elems: [],
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

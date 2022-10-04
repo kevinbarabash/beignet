@@ -7,37 +7,48 @@ Ok(
         body: [
             Expr {
                 span: 0..28,
-                expr: IfElse(
-                    IfElse {
-                        span: 0..27,
-                        cond: Lit(
-                            Bool(
-                                Bool {
-                                    span: 4..8,
-                                    value: true,
-                                },
-                            ),
-                        ),
-                        consequent: Lit(
-                            Num(
-                                Num {
-                                    span: 12..13,
-                                    value: "5",
-                                },
-                            ),
-                        ),
-                        alternate: Some(
-                            Lit(
-                                Num(
-                                    Num {
-                                        span: 23..25,
-                                        value: "10",
-                                    },
+                expr: Expr {
+                    span: 0..27,
+                    kind: IfElse(
+                        IfElse {
+                            cond: Expr {
+                                span: 4..8,
+                                kind: Lit(
+                                    Bool(
+                                        Bool {
+                                            span: 4..8,
+                                            value: true,
+                                        },
+                                    ),
                                 ),
+                            },
+                            consequent: Expr {
+                                span: 12..13,
+                                kind: Lit(
+                                    Num(
+                                        Num {
+                                            span: 12..13,
+                                            value: "5",
+                                        },
+                                    ),
+                                ),
+                            },
+                            alternate: Some(
+                                Expr {
+                                    span: 23..25,
+                                    kind: Lit(
+                                        Num(
+                                            Num {
+                                                span: 23..25,
+                                                value: "10",
+                                            },
+                                        ),
+                                    ),
+                                },
                             ),
-                        ),
-                    },
-                ),
+                        },
+                    ),
+                },
             },
         ],
     },

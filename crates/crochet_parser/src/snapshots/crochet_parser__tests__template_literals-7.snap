@@ -7,29 +7,31 @@ Ok(
         body: [
             Expr {
                 span: 0..12,
-                expr: TemplateLiteral(
-                    TemplateLiteral {
-                        span: 0..12,
-                        exprs: [],
-                        quasis: [
-                            TemplateElem {
-                                span: 1..11,
-                                raw: Str(
-                                    Str {
-                                        span: 1..11,
-                                        value: "a \\u2212 b",
-                                    },
-                                ),
-                                cooked: Str(
-                                    Str {
-                                        span: 1..11,
-                                        value: "a − b",
-                                    },
-                                ),
-                            },
-                        ],
-                    },
-                ),
+                expr: Expr {
+                    span: 0..12,
+                    kind: TemplateLiteral(
+                        TemplateLiteral {
+                            exprs: [],
+                            quasis: [
+                                TemplateElem {
+                                    span: 1..11,
+                                    raw: Str(
+                                        Str {
+                                            span: 1..11,
+                                            value: "a \\u2212 b",
+                                        },
+                                    ),
+                                    cooked: Str(
+                                        Str {
+                                            span: 1..11,
+                                            value: "a − b",
+                                        },
+                                    ),
+                                },
+                            ],
+                        },
+                    ),
+                },
             },
         ],
     },

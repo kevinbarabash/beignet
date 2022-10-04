@@ -18,260 +18,286 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Match(
-                        Match {
-                            span: 23..317,
-                            expr: Ident(
-                                Ident {
+                    Expr {
+                        span: 23..317,
+                        kind: Match(
+                            Match {
+                                expr: Expr {
                                     span: 30..33,
-                                    name: "foo",
-                                },
-                            ),
-                            arms: [
-                                Arm {
-                                    span: 53..89,
-                                    pattern: Object(
-                                        ObjectPat {
-                                            span: 53..77,
-                                            props: [
-                                                Assign(
-                                                    AssignPatProp {
-                                                        span: 54..55,
-                                                        key: Ident {
-                                                            span: 54..55,
-                                                            name: "x",
-                                                        },
-                                                        value: None,
-                                                    },
-                                                ),
-                                                KeyValue(
-                                                    KeyValuePatProp {
-                                                        key: Ident {
-                                                            span: 57..58,
-                                                            name: "y",
-                                                        },
-                                                        value: Ident(
-                                                            BindingIdent {
-                                                                span: 60..61,
-                                                                id: Ident {
-                                                                    span: 60..61,
-                                                                    name: "b",
-                                                                },
-                                                            },
-                                                        ),
-                                                    },
-                                                ),
-                                                KeyValue(
-                                                    KeyValuePatProp {
-                                                        key: Ident {
-                                                            span: 63..64,
-                                                            name: "z",
-                                                        },
-                                                        value: Lit(
-                                                            LitPat {
-                                                                span: 66..67,
-                                                                lit: Num(
-                                                                    Num {
-                                                                        span: 66..67,
-                                                                        value: "5",
-                                                                    },
-                                                                ),
-                                                            },
-                                                        ),
-                                                    },
-                                                ),
-                                                Rest(
-                                                    RestPat {
-                                                        span: 69..76,
-                                                        arg: Ident(
-                                                            BindingIdent {
-                                                                span: 72..76,
-                                                                id: Ident {
-                                                                    span: 72..76,
-                                                                    name: "rest",
-                                                                },
-                                                            },
-                                                        ),
-                                                    },
-                                                ),
-                                            ],
-                                            optional: false,
+                                    kind: Ident(
+                                        Ident {
+                                            span: 30..33,
+                                            name: "foo",
                                         },
                                     ),
-                                    guard: None,
-                                    body: Lit(
-                                        Str(
-                                            Str {
-                                                span: 81..89,
-                                                value: "object",
-                                            },
-                                        ),
-                                    ),
                                 },
-                                Arm {
-                                    span: 107..133,
-                                    pattern: Array(
-                                        ArrayPat {
-                                            span: 107..122,
-                                            elems: [
-                                                Some(
-                                                    Ident(
-                                                        BindingIdent {
-                                                            span: 108..109,
-                                                            id: Ident {
-                                                                span: 108..109,
-                                                                name: "a",
+                                arms: [
+                                    Arm {
+                                        span: 53..89,
+                                        pattern: Object(
+                                            ObjectPat {
+                                                span: 53..77,
+                                                props: [
+                                                    Assign(
+                                                        AssignPatProp {
+                                                            span: 54..55,
+                                                            key: Ident {
+                                                                span: 54..55,
+                                                                name: "x",
                                                             },
+                                                            value: None,
                                                         },
                                                     ),
-                                                ),
-                                                Some(
-                                                    Wildcard(
-                                                        WildcardPat {
-                                                            span: 111..112,
+                                                    KeyValue(
+                                                        KeyValuePatProp {
+                                                            key: Ident {
+                                                                span: 57..58,
+                                                                name: "y",
+                                                            },
+                                                            value: Ident(
+                                                                BindingIdent {
+                                                                    span: 60..61,
+                                                                    id: Ident {
+                                                                        span: 60..61,
+                                                                        name: "b",
+                                                                    },
+                                                                },
+                                                            ),
                                                         },
                                                     ),
-                                                ),
-                                                Some(
+                                                    KeyValue(
+                                                        KeyValuePatProp {
+                                                            key: Ident {
+                                                                span: 63..64,
+                                                                name: "z",
+                                                            },
+                                                            value: Lit(
+                                                                LitPat {
+                                                                    span: 66..67,
+                                                                    lit: Num(
+                                                                        Num {
+                                                                            span: 66..67,
+                                                                            value: "5",
+                                                                        },
+                                                                    ),
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
                                                     Rest(
                                                         RestPat {
-                                                            span: 114..121,
+                                                            span: 69..76,
                                                             arg: Ident(
                                                                 BindingIdent {
-                                                                    span: 117..121,
+                                                                    span: 72..76,
                                                                     id: Ident {
-                                                                        span: 117..121,
+                                                                        span: 72..76,
                                                                         name: "rest",
                                                                     },
                                                                 },
                                                             ),
                                                         },
                                                     ),
+                                                ],
+                                                optional: false,
+                                            },
+                                        ),
+                                        guard: None,
+                                        body: Expr {
+                                            span: 81..89,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 81..89,
+                                                        value: "object",
+                                                    },
                                                 ),
-                                            ],
-                                            optional: false,
-                                        },
-                                    ),
-                                    guard: None,
-                                    body: Lit(
-                                        Str(
-                                            Str {
-                                                span: 126..133,
-                                                value: "array",
-                                            },
-                                        ),
-                                    ),
-                                },
-                                Arm {
-                                    span: 151..171,
-                                    pattern: Lit(
-                                        LitPat {
-                                            span: 151..159,
-                                            lit: Str(
-                                                Str {
-                                                    span: 151..159,
-                                                    value: "string",
-                                                },
                                             ),
                                         },
-                                    ),
-                                    guard: None,
-                                    body: Lit(
-                                        Str(
-                                            Str {
-                                                span: 163..171,
-                                                value: "string",
+                                    },
+                                    Arm {
+                                        span: 107..133,
+                                        pattern: Array(
+                                            ArrayPat {
+                                                span: 107..122,
+                                                elems: [
+                                                    Some(
+                                                        Ident(
+                                                            BindingIdent {
+                                                                span: 108..109,
+                                                                id: Ident {
+                                                                    span: 108..109,
+                                                                    name: "a",
+                                                                },
+                                                            },
+                                                        ),
+                                                    ),
+                                                    Some(
+                                                        Wildcard(
+                                                            WildcardPat {
+                                                                span: 111..112,
+                                                            },
+                                                        ),
+                                                    ),
+                                                    Some(
+                                                        Rest(
+                                                            RestPat {
+                                                                span: 114..121,
+                                                                arg: Ident(
+                                                                    BindingIdent {
+                                                                        span: 117..121,
+                                                                        id: Ident {
+                                                                            span: 117..121,
+                                                                            name: "rest",
+                                                                        },
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                    ),
+                                                ],
+                                                optional: false,
                                             },
                                         ),
-                                    ),
-                                },
-                                Arm {
-                                    span: 189..203,
-                                    pattern: Lit(
-                                        LitPat {
-                                            span: 189..193,
-                                            lit: Bool(
-                                                Bool {
-                                                    span: 189..193,
-                                                    value: true,
-                                                },
+                                        guard: None,
+                                        body: Expr {
+                                            span: 126..133,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 126..133,
+                                                        value: "array",
+                                                    },
+                                                ),
                                             ),
                                         },
-                                    ),
-                                    guard: None,
-                                    body: Lit(
-                                        Str(
-                                            Str {
-                                                span: 197..203,
-                                                value: "true",
+                                    },
+                                    Arm {
+                                        span: 151..171,
+                                        pattern: Lit(
+                                            LitPat {
+                                                span: 151..159,
+                                                lit: Str(
+                                                    Str {
+                                                        span: 151..159,
+                                                        value: "string",
+                                                    },
+                                                ),
                                             },
                                         ),
-                                    ),
-                                },
-                                Arm {
-                                    span: 221..237,
-                                    pattern: Lit(
-                                        LitPat {
-                                            span: 221..226,
-                                            lit: Bool(
-                                                Bool {
-                                                    span: 221..226,
-                                                    value: false,
-                                                },
+                                        guard: None,
+                                        body: Expr {
+                                            span: 163..171,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 163..171,
+                                                        value: "string",
+                                                    },
+                                                ),
                                             ),
                                         },
-                                    ),
-                                    guard: None,
-                                    body: Lit(
-                                        Str(
-                                            Str {
-                                                span: 230..237,
-                                                value: "false",
+                                    },
+                                    Arm {
+                                        span: 189..203,
+                                        pattern: Lit(
+                                            LitPat {
+                                                span: 189..193,
+                                                lit: Bool(
+                                                    Bool {
+                                                        span: 189..193,
+                                                        value: true,
+                                                    },
+                                                ),
                                             },
                                         ),
-                                    ),
-                                },
-                                Arm {
-                                    span: 255..270,
-                                    pattern: Ident(
-                                        BindingIdent {
-                                            span: 255..256,
-                                            id: Ident {
+                                        guard: None,
+                                        body: Expr {
+                                            span: 197..203,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 197..203,
+                                                        value: "true",
+                                                    },
+                                                ),
+                                            ),
+                                        },
+                                    },
+                                    Arm {
+                                        span: 221..237,
+                                        pattern: Lit(
+                                            LitPat {
+                                                span: 221..226,
+                                                lit: Bool(
+                                                    Bool {
+                                                        span: 221..226,
+                                                        value: false,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                        guard: None,
+                                        body: Expr {
+                                            span: 230..237,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 230..237,
+                                                        value: "false",
+                                                    },
+                                                ),
+                                            ),
+                                        },
+                                    },
+                                    Arm {
+                                        span: 255..270,
+                                        pattern: Ident(
+                                            BindingIdent {
                                                 span: 255..256,
-                                                name: "n",
-                                            },
-                                        },
-                                    ),
-                                    guard: None,
-                                    body: Lit(
-                                        Str(
-                                            Str {
-                                                span: 260..270,
-                                                value: "variable",
+                                                id: Ident {
+                                                    span: 255..256,
+                                                    name: "n",
+                                                },
                                             },
                                         ),
-                                    ),
-                                },
-                                Arm {
-                                    span: 288..303,
-                                    pattern: Wildcard(
-                                        WildcardPat {
-                                            span: 288..289,
+                                        guard: None,
+                                        body: Expr {
+                                            span: 260..270,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 260..270,
+                                                        value: "variable",
+                                                    },
+                                                ),
+                                            ),
                                         },
-                                    ),
-                                    guard: None,
-                                    body: Lit(
-                                        Str(
-                                            Str {
-                                                span: 293..303,
-                                                value: "wildcard",
+                                    },
+                                    Arm {
+                                        span: 288..303,
+                                        pattern: Wildcard(
+                                            WildcardPat {
+                                                span: 288..289,
                                             },
                                         ),
-                                    ),
-                                },
-                            ],
-                        },
-                    ),
+                                        guard: None,
+                                        body: Expr {
+                                            span: 293..303,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 293..303,
+                                                        value: "wildcard",
+                                                    },
+                                                ),
+                                            ),
+                                        },
+                                    },
+                                ],
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

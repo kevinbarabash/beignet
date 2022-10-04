@@ -7,23 +7,28 @@ Ok(
         body: [
             Expr {
                 span: 0..15,
-                expr: Lambda(
-                    Lambda {
-                        span: 0..14,
-                        params: [],
-                        body: Lit(
-                            Num(
-                                Num {
-                                    span: 12..14,
-                                    value: "10",
-                                },
-                            ),
-                        ),
-                        is_async: true,
-                        return_type: None,
-                        type_params: None,
-                    },
-                ),
+                expr: Expr {
+                    span: 0..14,
+                    kind: Lambda(
+                        Lambda {
+                            params: [],
+                            body: Expr {
+                                span: 12..14,
+                                kind: Lit(
+                                    Num(
+                                        Num {
+                                            span: 12..14,
+                                            value: "10",
+                                        },
+                                    ),
+                                ),
+                            },
+                            is_async: true,
+                            return_type: None,
+                            type_params: None,
+                        },
+                    ),
+                },
             },
         ],
     },

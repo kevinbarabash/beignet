@@ -18,43 +18,57 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Lambda(
-                        Lambda {
-                            span: 10..39,
-                            params: [],
-                            body: BinaryExpr(
-                                BinaryExpr {
+                    Expr {
+                        span: 10..39,
+                        kind: Lambda(
+                            Lambda {
+                                params: [],
+                                body: Expr {
                                     span: 22..39,
-                                    op: Add,
-                                    left: Await(
-                                        Await {
-                                            span: 22..29,
-                                            expr: Ident(
-                                                Ident {
-                                                    span: 28..29,
-                                                    name: "a",
-                                                },
-                                            ),
-                                        },
-                                    ),
-                                    right: Await(
-                                        Await {
-                                            span: 32..39,
-                                            expr: Ident(
-                                                Ident {
-                                                    span: 38..39,
-                                                    name: "b",
-                                                },
-                                            ),
+                                    kind: BinaryExpr(
+                                        BinaryExpr {
+                                            op: Add,
+                                            left: Expr {
+                                                span: 22..29,
+                                                kind: Await(
+                                                    Await {
+                                                        expr: Expr {
+                                                            span: 28..29,
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    span: 28..29,
+                                                                    name: "a",
+                                                                },
+                                                            ),
+                                                        },
+                                                    },
+                                                ),
+                                            },
+                                            right: Expr {
+                                                span: 32..39,
+                                                kind: Await(
+                                                    Await {
+                                                        expr: Expr {
+                                                            span: 38..39,
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    span: 38..39,
+                                                                    name: "b",
+                                                                },
+                                                            ),
+                                                        },
+                                                    },
+                                                ),
+                                            },
                                         },
                                     ),
                                 },
-                            ),
-                            is_async: true,
-                            return_type: None,
-                            type_params: None,
-                        },
-                    ),
+                                is_async: true,
+                                return_type: None,
+                                type_params: None,
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

@@ -18,14 +18,17 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Lit(
-                        Num(
-                            Num {
-                                span: 11..12,
-                                value: "5",
-                            },
+                    Expr {
+                        span: 11..12,
+                        kind: Lit(
+                            Num(
+                                Num {
+                                    span: 11..12,
+                                    value: "5",
+                                },
+                            ),
                         ),
-                    ),
+                    },
                 ),
                 declare: false,
             },

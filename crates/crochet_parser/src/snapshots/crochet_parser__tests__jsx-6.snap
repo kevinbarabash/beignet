@@ -7,33 +7,39 @@ Ok(
         body: [
             Expr {
                 span: 0..17,
-                expr: JSXElement(
-                    JSXElement {
-                        span: 0..17,
-                        name: "Foo",
-                        attrs: [
-                            JSXAttr {
-                                span: 5..14,
-                                ident: Ident {
-                                    span: 5..8,
-                                    name: "bar",
-                                },
-                                value: JSXExprContainer(
-                                    JSXExprContainer {
-                                        span: 9..14,
-                                        expr: Ident(
-                                            Ident {
-                                                span: 10..13,
-                                                name: "baz",
-                                            },
-                                        ),
+                expr: Expr {
+                    span: 0..17,
+                    kind: JSXElement(
+                        JSXElement {
+                            span: 0..17,
+                            name: "Foo",
+                            attrs: [
+                                JSXAttr {
+                                    span: 5..14,
+                                    ident: Ident {
+                                        span: 5..8,
+                                        name: "bar",
                                     },
-                                ),
-                            },
-                        ],
-                        children: [],
-                    },
-                ),
+                                    value: JSXExprContainer(
+                                        JSXExprContainer {
+                                            span: 9..14,
+                                            expr: Expr {
+                                                span: 10..13,
+                                                kind: Ident(
+                                                    Ident {
+                                                        span: 10..13,
+                                                        name: "baz",
+                                                    },
+                                                ),
+                                            },
+                                        },
+                                    ),
+                                },
+                            ],
+                            children: [],
+                        },
+                    ),
+                },
             },
         ],
     },

@@ -7,48 +7,61 @@ Ok(
         body: [
             Expr {
                 span: 0..10,
-                expr: Member(
-                    Member {
-                        span: 0..9,
-                        obj: Member(
-                            Member {
+                expr: Expr {
+                    span: 0..9,
+                    kind: Member(
+                        Member {
+                            obj: Expr {
                                 span: 0..6,
-                                obj: Ident(
-                                    Ident {
-                                        span: 0..3,
-                                        name: "arr",
-                                    },
-                                ),
-                                prop: Computed(
-                                    ComputedPropName {
-                                        span: 4..5,
-                                        expr: Lit(
-                                            Num(
-                                                Num {
-                                                    span: 4..5,
-                                                    value: "0",
+                                kind: Member(
+                                    Member {
+                                        obj: Expr {
+                                            span: 0..3,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 0..3,
+                                                    name: "arr",
                                                 },
                                             ),
+                                        },
+                                        prop: Computed(
+                                            ComputedPropName {
+                                                span: 4..5,
+                                                expr: Expr {
+                                                    span: 4..5,
+                                                    kind: Lit(
+                                                        Num(
+                                                            Num {
+                                                                span: 4..5,
+                                                                value: "0",
+                                                            },
+                                                        ),
+                                                    ),
+                                                },
+                                            },
                                         ),
                                     },
                                 ),
                             },
-                        ),
-                        prop: Computed(
-                            ComputedPropName {
-                                span: 7..8,
-                                expr: Lit(
-                                    Num(
-                                        Num {
-                                            span: 7..8,
-                                            value: "1",
-                                        },
-                                    ),
-                                ),
-                            },
-                        ),
-                    },
-                ),
+                            prop: Computed(
+                                ComputedPropName {
+                                    span: 7..8,
+                                    expr: Expr {
+                                        span: 7..8,
+                                        kind: Lit(
+                                            Num(
+                                                Num {
+                                                    span: 7..8,
+                                                    value: "1",
+                                                },
+                                            ),
+                                        ),
+                                    },
+                                },
+                            ),
+                        },
+                    ),
+                },
             },
         ],
     },

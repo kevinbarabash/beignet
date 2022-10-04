@@ -209,12 +209,12 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
 
 // This should only be called by `build_expr_in_new_scope` or `build_fn_body`.
 fn _build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
-    if let ast::Expr::Let(r#let) = expr {
+    if let ast::ExprKind::Let(r#let) = &expr.kind {
         let child = let_to_child(r#let, stmts, ctx);
         stmts.push(child);
 
         let mut body = r#let.body.to_owned();
-        while let ast::Expr::Let(r#let) = body.as_ref() {
+        while let ast::ExprKind::Let(r#let) = &body.kind {
             let child = let_to_child(r#let, stmts, ctx);
             stmts.push(child);
             body = r#let.body.to_owned();
@@ -322,20 +322,20 @@ fn e_fn_param_pat_to_js_pat(
 }
 
 fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
-    match expr {
-        ast::Expr::App(ast::App { lam, args, .. }) => {
+    match &expr.kind {
+        ast::ExprKind::App(ast::App { lam, args, .. }) => {
             let callee = Callee::Expr(Box::from(build_expr(lam.as_ref(), stmts, ctx)));
 
-            let is_partial = args.iter().any(|arg| match arg.expr.as_ref() {
-                ast::Expr::Ident(bi) => bi.name == "_",
+            let is_partial = args.iter().any(|arg| match &arg.expr.kind {
+                ast::ExprKind::Ident(bi) => bi.name == "_",
                 _ => false,
             });
 
             if is_partial {
                 let params: Vec<Pat> = args
                     .iter()
-                    .filter(|arg| match arg.expr.as_ref() {
-                        ast::Expr::Ident(bi) => bi.name == "_",
+                    .filter(|arg| match &arg.expr.kind {
+                        ast::ExprKind::Ident(bi) => bi.name == "_",
                         _ => false,
                     })
                     .enumerate()
@@ -355,8 +355,8 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
 
                 let args: Vec<ExprOrSpread> = args
                     .iter()
-                    .map(|arg| match arg.expr.as_ref() {
-                        ast::Expr::Ident(bi) if bi.name == "_" => {
+                    .map(|arg| match &arg.expr.kind {
+                        ast::ExprKind::Ident(bi) if bi.name == "_" => {
                             let expr = Expr::Ident(Ident {
                                 span: DUMMY_SP,
                                 sym: JsWord::from(format!("$arg{i}")),
@@ -420,8 +420,8 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 type_args: None,
             })
         }
-        ast::Expr::Ident(ident) => Expr::from(build_ident(ident)),
-        ast::Expr::Lambda(ast::Lambda {
+        ast::ExprKind::Ident(ident) => Expr::from(build_ident(ident)),
+        ast::ExprKind::Lambda(ast::Lambda {
             params: args,
             body,
             is_async,
@@ -444,7 +444,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 return_type: None,
             })
         }
-        ast::Expr::Let(_) => {
+        ast::ExprKind::Let(_) => {
             // let $temp_n;
             let temp_id = ctx.new_ident();
             let temp_decl = build_let_decl_stmt(&temp_id);
@@ -457,8 +457,8 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
             // $temp_n
             Expr::Ident(temp_id)
         }
-        ast::Expr::Lit(lit) => Expr::from(lit),
-        ast::Expr::BinaryExpr(ast::BinaryExpr {
+        ast::ExprKind::Lit(lit) => Expr::from(lit),
+        ast::ExprKind::BinaryExpr(ast::BinaryExpr {
             op, left, right, ..
         }) => {
             let op = match op {
@@ -513,7 +513,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 },
             })
         }
-        ast::Expr::UnaryExpr(ast::UnaryExpr { arg, op, .. }) => {
+        ast::ExprKind::UnaryExpr(ast::UnaryExpr { arg, op, .. }) => {
             let op = match op {
                 ast::UnaryOp::Minus => UnaryOp::Minus,
             };
@@ -524,17 +524,17 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 arg: Box::from(build_expr(arg, stmts, ctx)),
             })
         }
-        ast::Expr::Fix(ast::Fix { expr, .. }) => match expr.as_ref() {
-            ast::Expr::Lambda(ast::Lambda { body, .. }) => build_expr(body, stmts, ctx),
+        ast::ExprKind::Fix(ast::Fix { expr, .. }) => match &expr.kind {
+            ast::ExprKind::Lambda(ast::Lambda { body, .. }) => build_expr(body, stmts, ctx),
             _ => panic!("Fix should only wrap a lambda"),
         },
-        ast::Expr::IfElse(ast::IfElse {
+        ast::ExprKind::IfElse(ast::IfElse {
             cond,
             consequent,
             alternate,
             ..
-        }) => match cond.as_ref() {
-            ast::Expr::LetExpr(let_expr) => {
+        }) => match &cond.kind {
+            ast::ExprKind::LetExpr(let_expr) => {
                 build_let_expr(let_expr, consequent, alternate, stmts, ctx)
             }
             _ => {
@@ -568,7 +568,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 Expr::Ident(temp_id)
             }
         },
-        ast::Expr::Obj(ast::Obj { props, .. }) => {
+        ast::ExprKind::Obj(ast::Obj { props, .. }) => {
             let props: Vec<PropOrSpread> = props
                 .iter()
                 .map(|prop| match prop {
@@ -600,14 +600,14 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 props,
             })
         }
-        ast::Expr::Await(ast::Await { expr, .. }) => Expr::Await(AwaitExpr {
+        ast::ExprKind::Await(ast::Await { expr, .. }) => Expr::Await(AwaitExpr {
             span: DUMMY_SP,
             arg: Box::from(build_expr(expr.as_ref(), stmts, ctx)),
         }),
-        ast::Expr::JSXElement(elem) => {
+        ast::ExprKind::JSXElement(elem) => {
             Expr::JSXElement(Box::from(build_jsx_element(elem, stmts, ctx)))
         }
-        ast::Expr::Tuple(ast::Tuple { elems, .. }) => Expr::Array(ArrayLit {
+        ast::ExprKind::Tuple(ast::Tuple { elems, .. }) => Expr::Array(ArrayLit {
             span: DUMMY_SP,
             elems: elems
                 .iter()
@@ -619,7 +619,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 })
                 .collect(),
         }),
-        ast::Expr::Member(ast::Member { obj, prop, .. }) => {
+        ast::ExprKind::Member(ast::Member { obj, prop, .. }) => {
             let prop = match prop {
                 ast::MemberProp::Ident(ident) => MemberProp::Ident(build_ident(ident)),
                 ast::MemberProp::Computed(ast::ComputedPropName { expr, .. }) => {
@@ -635,22 +635,18 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 prop,
             })
         }
-        ast::Expr::Empty(_) => Expr::from(Ident {
+        ast::ExprKind::Empty => Expr::from(Ident {
             span: DUMMY_SP,
             sym: JsWord::from("undefined"),
             optional: false,
         }),
-        ast::Expr::LetExpr(_) => {
+        ast::ExprKind::LetExpr(_) => {
             panic!("LetExpr should always be handled by the IfElse branch")
         }
-        ast::Expr::TemplateLiteral(template) => {
+        ast::ExprKind::TemplateLiteral(template) => {
             Expr::Tpl(build_template_literal(template, stmts, ctx))
         }
-        ast::Expr::TaggedTemplateLiteral(ast::TaggedTemplateLiteral {
-            span: _,
-            tag,
-            template,
-        }) => {
+        ast::ExprKind::TaggedTemplateLiteral(ast::TaggedTemplateLiteral { tag, template }) => {
             Expr::TaggedTpl(TaggedTpl {
                 span: DUMMY_SP,
                 tag: Box::from(Expr::Ident(build_ident(tag))),
@@ -659,7 +655,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 tpl: build_template_literal(template, stmts, ctx),
             })
         }
-        ast::Expr::Match(ast::Match { expr, arms, .. }) => {
+        ast::ExprKind::Match(ast::Match { expr, arms, .. }) => {
             // let $temp_n;
             let ret_temp_id = ctx.new_ident();
             let ret_decl = build_let_decl_stmt(&ret_temp_id);

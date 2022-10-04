@@ -18,52 +18,65 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Tuple(
-                        Tuple {
-                            span: 8..19,
-                            elems: [
-                                ExprOrSpread {
-                                    spread: None,
-                                    expr: Lit(
-                                        Num(
-                                            Num {
-                                                span: 9..10,
-                                                value: "1",
-                                            },
-                                        ),
-                                    ),
-                                },
-                                ExprOrSpread {
-                                    spread: None,
-                                    expr: Tuple(
-                                        Tuple {
-                                            span: 12..18,
-                                            elems: [
-                                                ExprOrSpread {
-                                                    spread: None,
-                                                    expr: Ident(
-                                                        Ident {
-                                                            span: 13..14,
-                                                            name: "a",
-                                                        },
-                                                    ),
-                                                },
-                                                ExprOrSpread {
-                                                    spread: None,
-                                                    expr: Ident(
-                                                        Ident {
-                                                            span: 16..17,
-                                                            name: "b",
-                                                        },
-                                                    ),
-                                                },
-                                            ],
+                    Expr {
+                        span: 8..19,
+                        kind: Tuple(
+                            Tuple {
+                                elems: [
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Expr {
+                                            span: 9..10,
+                                            kind: Lit(
+                                                Num(
+                                                    Num {
+                                                        span: 9..10,
+                                                        value: "1",
+                                                    },
+                                                ),
+                                            ),
                                         },
-                                    ),
-                                },
-                            ],
-                        },
-                    ),
+                                    },
+                                    ExprOrSpread {
+                                        spread: None,
+                                        expr: Expr {
+                                            span: 12..18,
+                                            kind: Tuple(
+                                                Tuple {
+                                                    elems: [
+                                                        ExprOrSpread {
+                                                            spread: None,
+                                                            expr: Expr {
+                                                                span: 13..14,
+                                                                kind: Ident(
+                                                                    Ident {
+                                                                        span: 13..14,
+                                                                        name: "a",
+                                                                    },
+                                                                ),
+                                                            },
+                                                        },
+                                                        ExprOrSpread {
+                                                            spread: None,
+                                                            expr: Expr {
+                                                                span: 16..17,
+                                                                kind: Ident(
+                                                                    Ident {
+                                                                        span: 16..17,
+                                                                        name: "b",
+                                                                    },
+                                                                ),
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            ),
+                                        },
+                                    },
+                                ],
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

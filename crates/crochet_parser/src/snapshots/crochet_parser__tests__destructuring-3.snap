@@ -89,12 +89,15 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Ident(
-                        Ident {
-                            span: 31..35,
-                            name: "line",
-                        },
-                    ),
+                    Expr {
+                        span: 31..35,
+                        kind: Ident(
+                            Ident {
+                                span: 31..35,
+                                name: "line",
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

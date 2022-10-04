@@ -7,64 +7,74 @@ Ok(
         body: [
             Expr {
                 span: 0..18,
-                expr: Lambda(
-                    Lambda {
-                        span: 0..17,
-                        params: [
-                            EFnParam {
-                                pat: Object(
-                                    EFnParamObjectPat {
-                                        span: 1..7,
-                                        props: [
-                                            Assign(
-                                                EFnParamAssignPatProp {
-                                                    key: Ident {
-                                                        span: 2..3,
-                                                        name: "x",
+                expr: Expr {
+                    span: 0..17,
+                    kind: Lambda(
+                        Lambda {
+                            params: [
+                                EFnParam {
+                                    pat: Object(
+                                        EFnParamObjectPat {
+                                            span: 1..7,
+                                            props: [
+                                                Assign(
+                                                    EFnParamAssignPatProp {
+                                                        key: Ident {
+                                                            span: 2..3,
+                                                            name: "x",
+                                                        },
+                                                        value: None,
                                                     },
-                                                    value: None,
-                                                },
-                                            ),
-                                            Assign(
-                                                EFnParamAssignPatProp {
-                                                    key: Ident {
-                                                        span: 5..6,
-                                                        name: "y",
+                                                ),
+                                                Assign(
+                                                    EFnParamAssignPatProp {
+                                                        key: Ident {
+                                                            span: 5..6,
+                                                            name: "y",
+                                                        },
+                                                        value: None,
                                                     },
-                                                    value: None,
-                                                },
-                                            ),
-                                        ],
-                                    },
-                                ),
-                                type_ann: None,
-                                optional: false,
-                                mutable: false,
-                            },
-                        ],
-                        body: BinaryExpr(
-                            BinaryExpr {
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                    type_ann: None,
+                                    optional: false,
+                                    mutable: false,
+                                },
+                            ],
+                            body: Expr {
                                 span: 12..17,
-                                op: Add,
-                                left: Ident(
-                                    Ident {
-                                        span: 12..13,
-                                        name: "x",
-                                    },
-                                ),
-                                right: Ident(
-                                    Ident {
-                                        span: 16..17,
-                                        name: "y",
+                                kind: BinaryExpr(
+                                    BinaryExpr {
+                                        op: Add,
+                                        left: Expr {
+                                            span: 12..13,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 12..13,
+                                                    name: "x",
+                                                },
+                                            ),
+                                        },
+                                        right: Expr {
+                                            span: 16..17,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 16..17,
+                                                    name: "y",
+                                                },
+                                            ),
+                                        },
                                     },
                                 ),
                             },
-                        ),
-                        is_async: false,
-                        return_type: None,
-                        type_params: None,
-                    },
-                ),
+                            is_async: false,
+                            return_type: None,
+                            type_params: None,
+                        },
+                    ),
+                },
             },
         ],
     },

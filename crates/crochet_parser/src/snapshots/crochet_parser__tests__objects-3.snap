@@ -18,40 +18,44 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Obj(
-                        Obj {
-                            span: 10..27,
-                            props: [
-                                Prop(
-                                    Shorthand(
-                                        Ident {
-                                            span: 10..27,
-                                            name: "a",
-                                        },
-                                    ),
-                                ),
-                                Prop(
-                                    Shorthand(
-                                        Ident {
-                                            span: 10..27,
-                                            name: "b",
-                                        },
-                                    ),
-                                ),
-                                Spread(
-                                    SpreadElement {
-                                        span: 10..27,
-                                        expr: Ident(
+                    Expr {
+                        span: 10..27,
+                        kind: Obj(
+                            Obj {
+                                props: [
+                                    Prop(
+                                        Shorthand(
                                             Ident {
-                                                span: 20..26,
-                                                name: "others",
+                                                span: 10..27,
+                                                name: "a",
                                             },
                                         ),
-                                    },
-                                ),
-                            ],
-                        },
-                    ),
+                                    ),
+                                    Prop(
+                                        Shorthand(
+                                            Ident {
+                                                span: 10..27,
+                                                name: "b",
+                                            },
+                                        ),
+                                    ),
+                                    Spread(
+                                        SpreadElement {
+                                            expr: Expr {
+                                                span: 20..26,
+                                                kind: Ident(
+                                                    Ident {
+                                                        span: 20..26,
+                                                        name: "others",
+                                                    },
+                                                ),
+                                            },
+                                        },
+                                    ),
+                                ],
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

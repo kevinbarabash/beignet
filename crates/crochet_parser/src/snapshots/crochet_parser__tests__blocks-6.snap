@@ -18,52 +18,67 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Let(
-                        Let {
-                            span: 14..29,
-                            pattern: None,
-                            type_ann: None,
-                            init: App(
-                                App {
+                    Expr {
+                        span: 14..29,
+                        kind: Let(
+                            Let {
+                                pattern: None,
+                                type_ann: None,
+                                init: Expr {
                                     span: 14..28,
-                                    lam: Member(
-                                        Member {
-                                            span: 14..25,
-                                            obj: Ident(
-                                                Ident {
-                                                    span: 14..21,
-                                                    name: "console",
+                                    kind: App(
+                                        App {
+                                            lam: Expr {
+                                                span: 14..25,
+                                                kind: Member(
+                                                    Member {
+                                                        obj: Expr {
+                                                            span: 14..21,
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    span: 14..21,
+                                                                    name: "console",
+                                                                },
+                                                            ),
+                                                        },
+                                                        prop: Ident(
+                                                            Ident {
+                                                                span: 22..25,
+                                                                name: "log",
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                            args: [
+                                                ExprOrSpread {
+                                                    spread: None,
+                                                    expr: Expr {
+                                                        span: 26..27,
+                                                        kind: Ident(
+                                                            Ident {
+                                                                span: 26..27,
+                                                                name: "x",
+                                                            },
+                                                        ),
+                                                    },
                                                 },
-                                            ),
-                                            prop: Ident(
-                                                Ident {
-                                                    span: 22..25,
-                                                    name: "log",
-                                                },
-                                            ),
+                                            ],
                                         },
                                     ),
-                                    args: [
-                                        ExprOrSpread {
-                                            spread: None,
-                                            expr: Ident(
-                                                Ident {
-                                                    span: 26..27,
-                                                    name: "x",
-                                                },
-                                            ),
-                                        },
-                                    ],
                                 },
-                            ),
-                            body: Ident(
-                                Ident {
+                                body: Expr {
                                     span: 30..31,
-                                    name: "x",
+                                    kind: Ident(
+                                        Ident {
+                                            span: 30..31,
+                                            name: "x",
+                                        },
+                                    ),
                                 },
-                            ),
-                        },
-                    ),
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

@@ -7,37 +7,48 @@ Ok(
         body: [
             Expr {
                 span: 0..10,
-                expr: App(
-                    App {
-                        span: 0..9,
-                        lam: Ident(
-                            Ident {
+                expr: Expr {
+                    span: 0..9,
+                    kind: App(
+                        App {
+                            lam: Expr {
                                 span: 0..3,
-                                name: "foo",
-                            },
-                        ),
-                        args: [
-                            ExprOrSpread {
-                                spread: None,
-                                expr: Ident(
+                                kind: Ident(
                                     Ident {
+                                        span: 0..3,
+                                        name: "foo",
+                                    },
+                                ),
+                            },
+                            args: [
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Expr {
                                         span: 4..5,
-                                        name: "a",
+                                        kind: Ident(
+                                            Ident {
+                                                span: 4..5,
+                                                name: "a",
+                                            },
+                                        ),
                                     },
-                                ),
-                            },
-                            ExprOrSpread {
-                                spread: None,
-                                expr: Ident(
-                                    Ident {
+                                },
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Expr {
                                         span: 7..8,
-                                        name: "b",
+                                        kind: Ident(
+                                            Ident {
+                                                span: 7..8,
+                                                name: "b",
+                                            },
+                                        ),
                                     },
-                                ),
-                            },
-                        ],
-                    },
-                ),
+                                },
+                            ],
+                        },
+                    ),
+                },
             },
         ],
     },

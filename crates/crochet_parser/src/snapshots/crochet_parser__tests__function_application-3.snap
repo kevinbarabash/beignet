@@ -7,41 +7,52 @@ Ok(
         body: [
             Expr {
                 span: 0..17,
-                expr: App(
-                    App {
-                        span: 0..16,
-                        lam: Ident(
-                            Ident {
+                expr: Expr {
+                    span: 0..16,
+                    kind: App(
+                        App {
+                            lam: Expr {
                                 span: 0..3,
-                                name: "foo",
-                            },
-                        ),
-                        args: [
-                            ExprOrSpread {
-                                spread: None,
-                                expr: Lit(
-                                    Num(
-                                        Num {
-                                            span: 4..6,
-                                            value: "10",
-                                        },
-                                    ),
+                                kind: Ident(
+                                    Ident {
+                                        span: 0..3,
+                                        name: "foo",
+                                    },
                                 ),
                             },
-                            ExprOrSpread {
-                                spread: None,
-                                expr: Lit(
-                                    Str(
-                                        Str {
-                                            span: 8..15,
-                                            value: "hello",
-                                        },
-                                    ),
-                                ),
-                            },
-                        ],
-                    },
-                ),
+                            args: [
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Expr {
+                                        span: 4..6,
+                                        kind: Lit(
+                                            Num(
+                                                Num {
+                                                    span: 4..6,
+                                                    value: "10",
+                                                },
+                                            ),
+                                        ),
+                                    },
+                                },
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Expr {
+                                        span: 8..15,
+                                        kind: Lit(
+                                            Str(
+                                                Str {
+                                                    span: 8..15,
+                                                    value: "hello",
+                                                },
+                                            ),
+                                        ),
+                                    },
+                                },
+                            ],
+                        },
+                    ),
+                },
             },
         ],
     },

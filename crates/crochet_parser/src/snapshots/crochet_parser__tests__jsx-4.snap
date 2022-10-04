@@ -7,40 +7,49 @@ Ok(
         body: [
             Expr {
                 span: 0..29,
-                expr: JSXElement(
-                    JSXElement {
-                        span: 0..29,
-                        name: "Foo",
-                        attrs: [],
-                        children: [
-                            JSXExprContainer(
-                                JSXExprContainer {
-                                    span: 5..23,
-                                    expr: JSXElement(
-                                        JSXElement {
+                expr: Expr {
+                    span: 0..29,
+                    kind: JSXElement(
+                        JSXElement {
+                            span: 0..29,
+                            name: "Foo",
+                            attrs: [],
+                            children: [
+                                JSXExprContainer(
+                                    JSXExprContainer {
+                                        span: 5..23,
+                                        expr: Expr {
                                             span: 6..22,
-                                            name: "Bar",
-                                            attrs: [],
-                                            children: [
-                                                JSXExprContainer(
-                                                    JSXExprContainer {
-                                                        span: 11..16,
-                                                        expr: Ident(
-                                                            Ident {
-                                                                span: 12..15,
-                                                                name: "baz",
+                                            kind: JSXElement(
+                                                JSXElement {
+                                                    span: 6..22,
+                                                    name: "Bar",
+                                                    attrs: [],
+                                                    children: [
+                                                        JSXExprContainer(
+                                                            JSXExprContainer {
+                                                                span: 11..16,
+                                                                expr: Expr {
+                                                                    span: 12..15,
+                                                                    kind: Ident(
+                                                                        Ident {
+                                                                            span: 12..15,
+                                                                            name: "baz",
+                                                                        },
+                                                                    ),
+                                                                },
                                                             },
                                                         ),
-                                                    },
-                                                ),
-                                            ],
+                                                    ],
+                                                },
+                                            ),
                                         },
-                                    ),
-                                },
-                            ),
-                        ],
-                    },
-                ),
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                },
             },
         ],
     },

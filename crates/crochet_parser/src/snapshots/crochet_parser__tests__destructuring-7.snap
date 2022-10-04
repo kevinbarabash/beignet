@@ -18,76 +18,81 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    Lambda(
-                        Lambda {
-                            span: 10..41,
-                            params: [
-                                EFnParam {
-                                    pat: Array(
-                                        EFnParamArrayPat {
-                                            span: 11..17,
-                                            elems: [
-                                                Some(
-                                                    Ident(
-                                                        EFnParamBindingIdent {
-                                                            span: 12..13,
-                                                            id: Ident {
+                    Expr {
+                        span: 10..41,
+                        kind: Lambda(
+                            Lambda {
+                                params: [
+                                    EFnParam {
+                                        pat: Array(
+                                            EFnParamArrayPat {
+                                                span: 11..17,
+                                                elems: [
+                                                    Some(
+                                                        Ident(
+                                                            EFnParamBindingIdent {
                                                                 span: 12..13,
-                                                                name: "a",
+                                                                id: Ident {
+                                                                    span: 12..13,
+                                                                    name: "a",
+                                                                },
                                                             },
-                                                        },
+                                                        ),
                                                     ),
-                                                ),
-                                                Some(
-                                                    Ident(
-                                                        EFnParamBindingIdent {
-                                                            span: 15..16,
-                                                            id: Ident {
+                                                    Some(
+                                                        Ident(
+                                                            EFnParamBindingIdent {
                                                                 span: 15..16,
-                                                                name: "b",
+                                                                id: Ident {
+                                                                    span: 15..16,
+                                                                    name: "b",
+                                                                },
                                                             },
-                                                        },
-                                                    ),
-                                                ),
-                                            ],
-                                        },
-                                    ),
-                                    type_ann: Some(
-                                        Tuple(
-                                            TupleType {
-                                                span: 19..35,
-                                                types: [
-                                                    Prim(
-                                                        PrimType {
-                                                            span: 20..26,
-                                                            prim: Str,
-                                                        },
-                                                    ),
-                                                    Prim(
-                                                        PrimType {
-                                                            span: 28..34,
-                                                            prim: Num,
-                                                        },
+                                                        ),
                                                     ),
                                                 ],
                                             },
                                         ),
-                                    ),
-                                    optional: false,
-                                    mutable: false,
-                                },
-                            ],
-                            body: Ident(
-                                Ident {
+                                        type_ann: Some(
+                                            Tuple(
+                                                TupleType {
+                                                    span: 19..35,
+                                                    types: [
+                                                        Prim(
+                                                            PrimType {
+                                                                span: 20..26,
+                                                                prim: Str,
+                                                            },
+                                                        ),
+                                                        Prim(
+                                                            PrimType {
+                                                                span: 28..34,
+                                                                prim: Num,
+                                                            },
+                                                        ),
+                                                    ],
+                                                },
+                                            ),
+                                        ),
+                                        optional: false,
+                                        mutable: false,
+                                    },
+                                ],
+                                body: Expr {
                                     span: 40..41,
-                                    name: "a",
+                                    kind: Ident(
+                                        Ident {
+                                            span: 40..41,
+                                            name: "a",
+                                        },
+                                    ),
                                 },
-                            ),
-                            is_async: false,
-                            return_type: None,
-                            type_params: None,
-                        },
-                    ),
+                                is_async: false,
+                                return_type: None,
+                                type_params: None,
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },

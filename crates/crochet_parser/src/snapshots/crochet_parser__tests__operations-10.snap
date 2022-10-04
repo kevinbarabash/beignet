@@ -18,24 +18,32 @@ Ok(
                 ),
                 type_ann: None,
                 init: Some(
-                    BinaryExpr(
-                        BinaryExpr {
-                            span: 11..17,
-                            op: NotEq,
-                            left: Ident(
-                                Ident {
+                    Expr {
+                        span: 11..17,
+                        kind: BinaryExpr(
+                            BinaryExpr {
+                                op: NotEq,
+                                left: Expr {
                                     span: 11..12,
-                                    name: "a",
+                                    kind: Ident(
+                                        Ident {
+                                            span: 11..12,
+                                            name: "a",
+                                        },
+                                    ),
                                 },
-                            ),
-                            right: Ident(
-                                Ident {
+                                right: Expr {
                                     span: 16..17,
-                                    name: "b",
+                                    kind: Ident(
+                                        Ident {
+                                            span: 16..17,
+                                            name: "b",
+                                        },
+                                    ),
                                 },
-                            ),
-                        },
-                    ),
+                            },
+                        ),
+                    },
                 ),
                 declare: false,
             },
