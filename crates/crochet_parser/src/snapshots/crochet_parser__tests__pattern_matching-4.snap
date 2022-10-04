@@ -30,6 +30,7 @@ Ok(
                                             name: "foo",
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                                 arms: [
                                     Arm {
@@ -56,6 +57,7 @@ Ok(
                                                     },
                                                 ),
                                             ),
+                                            inferred_type: None,
                                         },
                                     },
                                     Arm {
@@ -82,6 +84,7 @@ Ok(
                                                     },
                                                 ),
                                             ),
+                                            inferred_type: None,
                                         },
                                     },
                                     Arm {
@@ -109,6 +112,7 @@ Ok(
                                                                     name: "n",
                                                                 },
                                                             ),
+                                                            inferred_type: None,
                                                         },
                                                         right: Expr {
                                                             span: 119..120,
@@ -120,9 +124,11 @@ Ok(
                                                                     },
                                                                 ),
                                                             ),
+                                                            inferred_type: None,
                                                         },
                                                     },
                                                 ),
+                                                inferred_type: None,
                                             },
                                         ),
                                         body: Expr {
@@ -135,6 +141,7 @@ Ok(
                                                     },
                                                 ),
                                             ),
+                                            inferred_type: None,
                                         },
                                     },
                                     Arm {
@@ -155,11 +162,13 @@ Ok(
                                                     },
                                                 ),
                                             ),
+                                            inferred_type: None,
                                         },
                                     },
                                 ],
                             },
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,

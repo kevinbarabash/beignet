@@ -25,6 +25,7 @@ Ok(
                                                             name: "baz",
                                                         },
                                                     ),
+                                                    inferred_type: None,
                                                 },
                                             ],
                                             quasis: [
@@ -61,6 +62,7 @@ Ok(
                                             ],
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                             ],
                             quasis: [
@@ -97,6 +99,7 @@ Ok(
                             ],
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

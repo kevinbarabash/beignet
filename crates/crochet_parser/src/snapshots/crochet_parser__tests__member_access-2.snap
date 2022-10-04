@@ -23,6 +23,7 @@ Ok(
                                                     name: "foo",
                                                 },
                                             ),
+                                            inferred_type: None,
                                         },
                                         prop: Ident(
                                             Ident {
@@ -32,10 +33,12 @@ Ok(
                                         ),
                                     },
                                 ),
+                                inferred_type: None,
                             },
                             args: [],
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

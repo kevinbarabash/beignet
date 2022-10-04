@@ -63,6 +63,7 @@ Ok(
                                 name: "letters",
                             },
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,

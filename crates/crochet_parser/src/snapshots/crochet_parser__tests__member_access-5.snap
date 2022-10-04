@@ -23,6 +23,7 @@ Ok(
                                                     name: "arr",
                                                 },
                                             ),
+                                            inferred_type: None,
                                         },
                                         prop: Computed(
                                             ComputedPropName {
@@ -37,11 +38,13 @@ Ok(
                                                             },
                                                         ),
                                                     ),
+                                                    inferred_type: None,
                                                 },
                                             },
                                         ),
                                     },
                                 ),
+                                inferred_type: None,
                             },
                             prop: Computed(
                                 ComputedPropName {
@@ -56,11 +59,13 @@ Ok(
                                                 },
                                             ),
                                         ),
+                                        inferred_type: None,
                                     },
                                 },
                             ),
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

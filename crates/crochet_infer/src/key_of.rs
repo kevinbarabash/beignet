@@ -91,9 +91,9 @@ mod tests {
     use crochet_parser::*;
 
     fn infer_prog(input: &str) -> Context {
-        let prog = parse(input).unwrap();
+        let mut prog = parse(input).unwrap();
         let mut ctx: Context = Context::default();
-        infer::infer_prog(&prog, &mut ctx).unwrap()
+        infer::infer_prog(&mut prog, &mut ctx).unwrap()
     }
 
     fn get_key_of(name: &str, ctx: &Context) -> String {

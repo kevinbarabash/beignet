@@ -17,6 +17,7 @@ Ok(
                             },
                         ),
                     ),
+                    inferred_type: None,
                 },
             },
         ],

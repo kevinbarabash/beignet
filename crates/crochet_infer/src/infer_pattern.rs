@@ -16,7 +16,7 @@ pub type Assump = HashMap<String, Type>;
 // into the appropriate context.
 fn infer_pattern(
     pat: &Pattern,
-    type_ann: &Option<TypeAnn>,
+    type_ann: &mut Option<TypeAnn>,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Assump, Type), String> {
@@ -186,8 +186,8 @@ pub enum PatternUsage {
 
 pub fn infer_pattern_and_init(
     pat: &Pattern,
-    type_ann: &Option<TypeAnn>,
-    init: &Expr,
+    type_ann: &mut Option<TypeAnn>,
+    init: &mut Expr,
     ctx: &mut Context,
     pu: &PatternUsage,
 ) -> Result<(Assump, Subst), String> {

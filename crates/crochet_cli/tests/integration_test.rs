@@ -8,7 +8,10 @@ fn infer(input: &str) -> String {
     let prog = parse(input).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = match stmt {
-        Statement::Expr { expr, .. } => infer_expr(&mut ctx, expr),
+        Statement::Expr { expr, .. } => {
+            let mut expr = expr.to_owned();
+            infer_expr(&mut ctx, &mut expr)
+        }
         _ => Err(String::from("We can't infer decls yet")),
     };
     format!("{}", result.unwrap())
@@ -16,7 +19,7 @@ fn infer(input: &str) -> String {
 
 fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
     let result = parse(src);
-    let prog = match result {
+    let mut prog = match result {
         Ok(prog) => prog,
         Err(err) => {
             println!("err = {:?}", err);
@@ -25,7 +28,7 @@ fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
     };
     // println!("prog = {:#?}", &prog);
     let mut ctx = crochet_infer::Context::default();
-    let ctx = crochet_infer::infer_prog(&prog, &mut ctx).unwrap();
+    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     (prog, ctx)
 }

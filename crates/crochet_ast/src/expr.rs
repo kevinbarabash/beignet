@@ -1,3 +1,5 @@
+use crochet_types::Type;
+
 use crate::ident::Ident;
 use crate::jsx::JSXElement;
 use crate::lit::Lit;
@@ -303,6 +305,7 @@ pub enum ExprKind {
 pub struct Expr {
     pub span: Span,
     pub kind: ExprKind,
+    pub inferred_type: Option<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

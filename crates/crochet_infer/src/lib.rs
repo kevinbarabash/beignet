@@ -23,15 +23,15 @@ mod tests {
 
     fn infer(input: &str) -> String {
         let mut ctx = Context::default();
-        let prog = parse(&format!("let x = {input};")).unwrap();
-        let ctx = infer::infer_prog(&prog, &mut ctx).unwrap();
+        let mut prog = parse(&format!("let x = {input};")).unwrap();
+        let ctx = infer::infer_prog(&mut prog, &mut ctx).unwrap();
         get_value_type("x", &ctx)
     }
 
     fn infer_prog(input: &str) -> Context {
-        let prog = parse(input).unwrap();
+        let mut prog = parse(input).unwrap();
         let mut ctx: Context = Context::default();
-        infer::infer_prog(&prog, &mut ctx).unwrap()
+        infer::infer_prog(&mut prog, &mut ctx).unwrap()
     }
 
     fn get_value_type(name: &str, ctx: &Context) -> String {

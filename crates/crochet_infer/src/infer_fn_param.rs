@@ -15,7 +15,7 @@ pub type Assump = HashMap<String, Type>;
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
 pub fn infer_fn_param(
-    param: &EFnParam,
+    param: &mut EFnParam,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Assump, TFnParam), String> {
@@ -28,7 +28,7 @@ pub fn infer_fn_param(
     // If the pattern had a type annotation associated with it, we infer type of the
     // type annotation and add a constraint between the types of the pattern and its
     // type annotation.
-    match &param.type_ann {
+    match &mut param.type_ann {
         Some(type_ann) => {
             let (type_ann_s, type_ann_t) =
                 infer_type_ann_with_params(type_ann, ctx, type_param_map)?;

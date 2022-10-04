@@ -40,6 +40,7 @@ Ok(
                                                                     name: "console",
                                                                 },
                                                             ),
+                                                            inferred_type: None,
                                                         },
                                                         prop: Ident(
                                                             Ident {
@@ -49,6 +50,7 @@ Ok(
                                                         ),
                                                     },
                                                 ),
+                                                inferred_type: None,
                                             },
                                             args: [
                                                 ExprOrSpread {
@@ -61,11 +63,13 @@ Ok(
                                                                 name: "x",
                                                             },
                                                         ),
+                                                        inferred_type: None,
                                                     },
                                                 },
                                             ],
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                                 body: Expr {
                                     span: 30..31,
@@ -75,9 +79,11 @@ Ok(
                                             name: "x",
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                             },
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,

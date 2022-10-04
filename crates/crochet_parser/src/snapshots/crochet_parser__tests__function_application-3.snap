@@ -19,6 +19,7 @@ Ok(
                                         name: "foo",
                                     },
                                 ),
+                                inferred_type: None,
                             },
                             args: [
                                 ExprOrSpread {
@@ -33,6 +34,7 @@ Ok(
                                                 },
                                             ),
                                         ),
+                                        inferred_type: None,
                                     },
                                 },
                                 ExprOrSpread {
@@ -47,11 +49,13 @@ Ok(
                                                 },
                                             ),
                                         ),
+                                        inferred_type: None,
                                     },
                                 },
                             ],
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

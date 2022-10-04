@@ -44,7 +44,8 @@ fn pass(in_path: PathBuf) {
     }
 
     let mut ctx = crochet_infer::Context::default();
-    let ctx = infer_prog(&program, &mut ctx).unwrap();
+    let mut program = program;
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let d_ts_output = codegen_d_ts(&program, &ctx);
     match mode {
         Mode::Check => {

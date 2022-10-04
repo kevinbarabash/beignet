@@ -29,6 +29,7 @@ Ok(
                                                                 name: "p",
                                                             },
                                                         ),
+                                                        inferred_type: None,
                                                     },
                                                     prop: Ident(
                                                         Ident {
@@ -38,6 +39,7 @@ Ok(
                                                     ),
                                                 },
                                             ),
+                                            inferred_type: None,
                                         },
                                         right: Expr {
                                             span: 6..9,
@@ -51,6 +53,7 @@ Ok(
                                                                 name: "p",
                                                             },
                                                         ),
+                                                        inferred_type: None,
                                                     },
                                                     prop: Ident(
                                                         Ident {
@@ -60,9 +63,11 @@ Ok(
                                                     ),
                                                 },
                                             ),
+                                            inferred_type: None,
                                         },
                                     },
                                 ),
+                                inferred_type: None,
                             },
                             right: Expr {
                                 span: 12..21,
@@ -81,6 +86,7 @@ Ok(
                                                                 name: "p",
                                                             },
                                                         ),
+                                                        inferred_type: None,
                                                     },
                                                     prop: Ident(
                                                         Ident {
@@ -90,6 +96,7 @@ Ok(
                                                     ),
                                                 },
                                             ),
+                                            inferred_type: None,
                                         },
                                         right: Expr {
                                             span: 18..21,
@@ -103,6 +110,7 @@ Ok(
                                                                 name: "p",
                                                             },
                                                         ),
+                                                        inferred_type: None,
                                                     },
                                                     prop: Ident(
                                                         Ident {
@@ -112,12 +120,15 @@ Ok(
                                                     ),
                                                 },
                                             ),
+                                            inferred_type: None,
                                         },
                                     },
                                 ),
+                                inferred_type: None,
                             },
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

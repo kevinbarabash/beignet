@@ -21,6 +21,7 @@ Ok(
                                         },
                                     ),
                                 ),
+                                inferred_type: None,
                             },
                             consequent: Expr {
                                 span: 12..13,
@@ -32,6 +33,7 @@ Ok(
                                         },
                                     ),
                                 ),
+                                inferred_type: None,
                             },
                             alternate: Some(
                                 Expr {
@@ -44,10 +46,12 @@ Ok(
                                             },
                                         ),
                                     ),
+                                    inferred_type: None,
                                 },
                             ),
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

@@ -45,6 +45,7 @@ Ok(
                                 name: "point",
                             },
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,

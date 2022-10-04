@@ -23,6 +23,7 @@ Ok(
                                                     name: "arr",
                                                 },
                                             ),
+                                            inferred_type: None,
                                         },
                                         prop: Computed(
                                             ComputedPropName {
@@ -35,11 +36,13 @@ Ok(
                                                             name: "x",
                                                         },
                                                     ),
+                                                    inferred_type: None,
                                                 },
                                             },
                                         ),
                                     },
                                 ),
+                                inferred_type: None,
                             },
                             args: [
                                 ExprOrSpread {
@@ -52,11 +55,13 @@ Ok(
                                                 name: "y",
                                             },
                                         ),
+                                        inferred_type: None,
                                     },
                                 },
                             ],
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

@@ -19,6 +19,7 @@ Ok(
                                         name: "a",
                                     },
                                 ),
+                                inferred_type: None,
                             },
                             consequent: Expr {
                                 span: 9..10,
@@ -30,6 +31,7 @@ Ok(
                                         },
                                     ),
                                 ),
+                                inferred_type: None,
                             },
                             alternate: Some(
                                 Expr {
@@ -44,6 +46,7 @@ Ok(
                                                         name: "b",
                                                     },
                                                 ),
+                                                inferred_type: None,
                                             },
                                             consequent: Expr {
                                                 span: 27..29,
@@ -55,6 +58,7 @@ Ok(
                                                         },
                                                     ),
                                                 ),
+                                                inferred_type: None,
                                             },
                                             alternate: Some(
                                                 Expr {
@@ -67,14 +71,17 @@ Ok(
                                                             },
                                                         ),
                                                     ),
+                                                    inferred_type: None,
                                                 },
                                             ),
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                             ),
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],

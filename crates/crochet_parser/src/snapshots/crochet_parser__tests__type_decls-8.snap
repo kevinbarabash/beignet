@@ -23,6 +23,7 @@ Ok(
                                     name: "foo",
                                 },
                             ),
+                            inferred_type: None,
                         },
                     },
                 ),

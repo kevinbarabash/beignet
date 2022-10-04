@@ -44,6 +44,7 @@ Ok(
                                             },
                                         ),
                                     ),
+                                    inferred_type: None,
                                 },
                                 body: Expr {
                                     span: 25..40,
@@ -67,6 +68,7 @@ Ok(
                                                                                 name: "console",
                                                                             },
                                                                         ),
+                                                                        inferred_type: None,
                                                                     },
                                                                     prop: Ident(
                                                                         Ident {
@@ -76,6 +78,7 @@ Ok(
                                                                     ),
                                                                 },
                                                             ),
+                                                            inferred_type: None,
                                                         },
                                                         args: [
                                                             ExprOrSpread {
@@ -88,11 +91,13 @@ Ok(
                                                                             name: "x",
                                                                         },
                                                                     ),
+                                                                    inferred_type: None,
                                                                 },
                                                             },
                                                         ],
                                                     },
                                                 ),
+                                                inferred_type: None,
                                             },
                                             body: Expr {
                                                 span: 41..42,
@@ -102,12 +107,15 @@ Ok(
                                                         name: "x",
                                                     },
                                                 ),
+                                                inferred_type: None,
                                             },
                                         },
                                     ),
+                                    inferred_type: None,
                                 },
                             },
                         ),
+                        inferred_type: None,
                     },
                 ),
                 declare: false,

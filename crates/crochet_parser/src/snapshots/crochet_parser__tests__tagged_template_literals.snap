@@ -25,6 +25,7 @@ Ok(
                                                 name: "table",
                                             },
                                         ),
+                                        inferred_type: None,
                                     },
                                     Expr {
                                         span: 40..42,
@@ -34,6 +35,7 @@ Ok(
                                                 name: "id",
                                             },
                                         ),
+                                        inferred_type: None,
                                     },
                                 ],
                                 quasis: [
@@ -86,6 +88,7 @@ Ok(
                             },
                         },
                     ),
+                    inferred_type: None,
                 },
             },
         ],
