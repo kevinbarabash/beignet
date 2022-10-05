@@ -225,6 +225,7 @@ dependencies = [
  "crochet_parser",
  "crochet_types",
  "defaultmap",
+ "insta",
  "itertools",
 ]
 

@@ -3,6 +3,7 @@ use crate::ident::Ident;
 use crate::span::Span;
 use crate::Lit;
 
+// TODO: split this into Pattern and PatternKind to mirror Expr and ExprKind
 // TODO: split this into separate patterns:
 // - one for assignment (obj, ident, array, rest)
 // - one for pattern matching/if let

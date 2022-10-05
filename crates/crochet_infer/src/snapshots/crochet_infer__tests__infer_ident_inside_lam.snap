@@ -1,0 +1,141 @@
+---
+source: crates/crochet_infer/src/lib.rs
+expression: prog
+---
+Program {
+    body: [
+        VarDecl {
+            span: 0..26,
+            pattern: Ident(
+                BindingIdent {
+                    span: 4..7,
+                    id: Ident {
+                        span: 4..7,
+                        name: "add",
+                    },
+                },
+            ),
+            type_ann: None,
+            init: Some(
+                Expr {
+                    span: 10..25,
+                    kind: Lambda(
+                        Lambda {
+                            params: [
+                                EFnParam {
+                                    pat: Ident(
+                                        EFnParamBindingIdent {
+                                            span: 11..12,
+                                            id: Ident {
+                                                span: 11..12,
+                                                name: "a",
+                                            },
+                                        },
+                                    ),
+                                    type_ann: None,
+                                    optional: false,
+                                    mutable: false,
+                                },
+                                EFnParam {
+                                    pat: Ident(
+                                        EFnParamBindingIdent {
+                                            span: 14..15,
+                                            id: Ident {
+                                                span: 14..15,
+                                                name: "b",
+                                            },
+                                        },
+                                    ),
+                                    type_ann: None,
+                                    optional: false,
+                                    mutable: false,
+                                },
+                            ],
+                            body: Expr {
+                                span: 20..25,
+                                kind: BinaryExpr(
+                                    BinaryExpr {
+                                        op: Add,
+                                        left: Expr {
+                                            span: 20..21,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 20..21,
+                                                    name: "a",
+                                                },
+                                            ),
+                                            inferred_type: Some(
+                                                Prim(
+                                                    Num,
+                                                ),
+                                            ),
+                                        },
+                                        right: Expr {
+                                            span: 24..25,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 24..25,
+                                                    name: "b",
+                                                },
+                                            ),
+                                            inferred_type: Some(
+                                                Prim(
+                                                    Num,
+                                                ),
+                                            ),
+                                        },
+                                    },
+                                ),
+                                inferred_type: Some(
+                                    Prim(
+                                        Num,
+                                    ),
+                                ),
+                            },
+                            is_async: false,
+                            return_type: None,
+                            type_params: None,
+                        },
+                    ),
+                    inferred_type: Some(
+                        Lam(
+                            TLam {
+                                params: [
+                                    TFnParam {
+                                        pat: Ident(
+                                            BindingIdent {
+                                                name: "a",
+                                                mutable: false,
+                                            },
+                                        ),
+                                        t: Prim(
+                                            Num,
+                                        ),
+                                        optional: false,
+                                    },
+                                    TFnParam {
+                                        pat: Ident(
+                                            BindingIdent {
+                                                name: "b",
+                                                mutable: false,
+                                            },
+                                        ),
+                                        t: Prim(
+                                            Num,
+                                        ),
+                                        optional: false,
+                                    },
+                                ],
+                                ret: Prim(
+                                    Num,
+                                ),
+                                type_params: [],
+                            },
+                        ),
+                    ),
+                },
+            ),
+            declare: false,
+        },
+    ],
+}
