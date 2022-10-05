@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 0..26,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 4..7,
-                        id: Ident {
-                            span: 4..7,
-                            name: "msg",
+                pattern: Pattern {
+                    span: 4..7,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 4..7,
+                                name: "msg",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: Some(
                     Prim(
                         PrimType {

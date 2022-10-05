@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 13..318,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 17..20,
-                        id: Ident {
-                            span: 17..20,
-                            name: "bar",
+                pattern: Pattern {
+                    span: 17..20,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 17..20,
+                                name: "bar",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {
@@ -35,74 +38,85 @@ Ok(
                                 arms: [
                                     Arm {
                                         span: 53..89,
-                                        pattern: Object(
-                                            ObjectPat {
-                                                span: 53..77,
-                                                props: [
-                                                    Assign(
-                                                        AssignPatProp {
-                                                            span: 54..55,
-                                                            key: Ident {
+                                        pattern: Pattern {
+                                            span: 53..77,
+                                            kind: Object(
+                                                ObjectPat {
+                                                    props: [
+                                                        Assign(
+                                                            AssignPatProp {
                                                                 span: 54..55,
-                                                                name: "x",
-                                                            },
-                                                            value: None,
-                                                        },
-                                                    ),
-                                                    KeyValue(
-                                                        KeyValuePatProp {
-                                                            key: Ident {
-                                                                span: 57..58,
-                                                                name: "y",
-                                                            },
-                                                            value: Ident(
-                                                                BindingIdent {
-                                                                    span: 60..61,
-                                                                    id: Ident {
-                                                                        span: 60..61,
-                                                                        name: "b",
-                                                                    },
+                                                                key: Ident {
+                                                                    span: 54..55,
+                                                                    name: "x",
                                                                 },
-                                                            ),
-                                                        },
-                                                    ),
-                                                    KeyValue(
-                                                        KeyValuePatProp {
-                                                            key: Ident {
-                                                                span: 63..64,
-                                                                name: "z",
+                                                                value: None,
                                                             },
-                                                            value: Lit(
-                                                                LitPat {
-                                                                    span: 66..67,
-                                                                    lit: Num(
-                                                                        Num {
-                                                                            span: 66..67,
-                                                                            value: "5",
+                                                        ),
+                                                        KeyValue(
+                                                            KeyValuePatProp {
+                                                                key: Ident {
+                                                                    span: 57..58,
+                                                                    name: "y",
+                                                                },
+                                                                value: Pattern {
+                                                                    span: 60..61,
+                                                                    kind: Ident(
+                                                                        BindingIdent {
+                                                                            id: Ident {
+                                                                                span: 60..61,
+                                                                                name: "b",
+                                                                            },
                                                                         },
                                                                     ),
+                                                                    inferred_type: None,
                                                                 },
-                                                            ),
-                                                        },
-                                                    ),
-                                                    Rest(
-                                                        RestPat {
-                                                            span: 69..76,
-                                                            arg: Ident(
-                                                                BindingIdent {
+                                                            },
+                                                        ),
+                                                        KeyValue(
+                                                            KeyValuePatProp {
+                                                                key: Ident {
+                                                                    span: 63..64,
+                                                                    name: "z",
+                                                                },
+                                                                value: Pattern {
+                                                                    span: 66..67,
+                                                                    kind: Lit(
+                                                                        LitPat {
+                                                                            lit: Num(
+                                                                                Num {
+                                                                                    span: 66..67,
+                                                                                    value: "5",
+                                                                                },
+                                                                            ),
+                                                                        },
+                                                                    ),
+                                                                    inferred_type: None,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Rest(
+                                                            RestPat {
+                                                                arg: Pattern {
                                                                     span: 72..76,
-                                                                    id: Ident {
-                                                                        span: 72..76,
-                                                                        name: "rest",
-                                                                    },
+                                                                    kind: Ident(
+                                                                        BindingIdent {
+                                                                            id: Ident {
+                                                                                span: 72..76,
+                                                                                name: "rest",
+                                                                            },
+                                                                        },
+                                                                    ),
+                                                                    inferred_type: None,
                                                                 },
-                                                            ),
-                                                        },
-                                                    ),
-                                                ],
-                                                optional: false,
-                                            },
-                                        ),
+                                                            },
+                                                        ),
+                                                    ],
+                                                    optional: false,
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 81..89,
@@ -119,48 +133,62 @@ Ok(
                                     },
                                     Arm {
                                         span: 107..133,
-                                        pattern: Array(
-                                            ArrayPat {
-                                                span: 107..122,
-                                                elems: [
-                                                    Some(
-                                                        Ident(
-                                                            BindingIdent {
+                                        pattern: Pattern {
+                                            span: 107..122,
+                                            kind: Array(
+                                                ArrayPat {
+                                                    elems: [
+                                                        Some(
+                                                            Pattern {
                                                                 span: 108..109,
-                                                                id: Ident {
-                                                                    span: 108..109,
-                                                                    name: "a",
-                                                                },
-                                                            },
-                                                        ),
-                                                    ),
-                                                    Some(
-                                                        Wildcard(
-                                                            WildcardPat {
-                                                                span: 111..112,
-                                                            },
-                                                        ),
-                                                    ),
-                                                    Some(
-                                                        Rest(
-                                                            RestPat {
-                                                                span: 114..121,
-                                                                arg: Ident(
+                                                                kind: Ident(
                                                                     BindingIdent {
-                                                                        span: 117..121,
                                                                         id: Ident {
-                                                                            span: 117..121,
-                                                                            name: "rest",
+                                                                            span: 108..109,
+                                                                            name: "a",
                                                                         },
                                                                     },
                                                                 ),
+                                                                inferred_type: None,
                                                             },
                                                         ),
-                                                    ),
-                                                ],
-                                                optional: false,
-                                            },
-                                        ),
+                                                        Some(
+                                                            Pattern {
+                                                                span: 111..112,
+                                                                kind: Wildcard(
+                                                                    WildcardPat,
+                                                                ),
+                                                                inferred_type: None,
+                                                            },
+                                                        ),
+                                                        Some(
+                                                            Pattern {
+                                                                span: 114..121,
+                                                                kind: Rest(
+                                                                    RestPat {
+                                                                        arg: Pattern {
+                                                                            span: 117..121,
+                                                                            kind: Ident(
+                                                                                BindingIdent {
+                                                                                    id: Ident {
+                                                                                        span: 117..121,
+                                                                                        name: "rest",
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            inferred_type: None,
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                inferred_type: None,
+                                                            },
+                                                        ),
+                                                    ],
+                                                    optional: false,
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 126..133,
@@ -177,17 +205,20 @@ Ok(
                                     },
                                     Arm {
                                         span: 151..171,
-                                        pattern: Lit(
-                                            LitPat {
-                                                span: 151..159,
-                                                lit: Str(
-                                                    Str {
-                                                        span: 151..159,
-                                                        value: "string",
-                                                    },
-                                                ),
-                                            },
-                                        ),
+                                        pattern: Pattern {
+                                            span: 151..159,
+                                            kind: Lit(
+                                                LitPat {
+                                                    lit: Str(
+                                                        Str {
+                                                            span: 151..159,
+                                                            value: "string",
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 163..171,
@@ -204,17 +235,20 @@ Ok(
                                     },
                                     Arm {
                                         span: 189..203,
-                                        pattern: Lit(
-                                            LitPat {
-                                                span: 189..193,
-                                                lit: Bool(
-                                                    Bool {
-                                                        span: 189..193,
-                                                        value: true,
-                                                    },
-                                                ),
-                                            },
-                                        ),
+                                        pattern: Pattern {
+                                            span: 189..193,
+                                            kind: Lit(
+                                                LitPat {
+                                                    lit: Bool(
+                                                        Bool {
+                                                            span: 189..193,
+                                                            value: true,
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 197..203,
@@ -231,17 +265,20 @@ Ok(
                                     },
                                     Arm {
                                         span: 221..237,
-                                        pattern: Lit(
-                                            LitPat {
-                                                span: 221..226,
-                                                lit: Bool(
-                                                    Bool {
-                                                        span: 221..226,
-                                                        value: false,
-                                                    },
-                                                ),
-                                            },
-                                        ),
+                                        pattern: Pattern {
+                                            span: 221..226,
+                                            kind: Lit(
+                                                LitPat {
+                                                    lit: Bool(
+                                                        Bool {
+                                                            span: 221..226,
+                                                            value: false,
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 230..237,
@@ -258,15 +295,18 @@ Ok(
                                     },
                                     Arm {
                                         span: 255..270,
-                                        pattern: Ident(
-                                            BindingIdent {
-                                                span: 255..256,
-                                                id: Ident {
-                                                    span: 255..256,
-                                                    name: "n",
+                                        pattern: Pattern {
+                                            span: 255..256,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    id: Ident {
+                                                        span: 255..256,
+                                                        name: "n",
+                                                    },
                                                 },
-                                            },
-                                        ),
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 260..270,
@@ -283,11 +323,13 @@ Ok(
                                     },
                                     Arm {
                                         span: 288..303,
-                                        pattern: Wildcard(
-                                            WildcardPat {
-                                                span: 288..289,
-                                            },
-                                        ),
+                                        pattern: Pattern {
+                                            span: 288..289,
+                                            kind: Wildcard(
+                                                WildcardPat,
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 293..303,

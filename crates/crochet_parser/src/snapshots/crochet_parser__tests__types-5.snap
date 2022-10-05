@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 0..34,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 4..7,
-                        id: Ident {
-                            span: 4..7,
-                            name: "arr",
+                pattern: Pattern {
+                    span: 4..7,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 4..7,
+                                name: "arr",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: Some(
                     Union(
                         UnionType {

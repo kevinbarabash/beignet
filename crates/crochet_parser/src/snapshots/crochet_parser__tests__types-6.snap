@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 8..87,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 12..15,
-                        id: Ident {
-                            span: 12..15,
-                            name: "add",
+                pattern: Pattern {
+                    span: 12..15,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 12..15,
+                                name: "add",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: Some(
                     Intersection(
                         IntersectionType {

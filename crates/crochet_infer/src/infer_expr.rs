@@ -504,7 +504,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let mut ts: Vec<Type> = vec![];
             for arm in arms {
                 let (s, t) = infer_let(
-                    &arm.pattern,
+                    &mut arm.pattern,
                     &mut None,
                     expr,
                     &mut arm.body,
@@ -530,7 +530,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 }
 
 fn infer_let(
-    pat: &Pattern,
+    pat: &mut Pattern,
     type_ann: &mut Option<TypeAnn>,
     init: &mut Expr,
     body: &mut Expr,

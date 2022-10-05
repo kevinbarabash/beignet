@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 13..129,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 17..20,
-                        id: Ident {
-                            span: 17..20,
-                            name: "bar",
+                pattern: Pattern {
+                    span: 17..20,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 17..20,
+                                name: "bar",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {
@@ -35,56 +38,65 @@ Ok(
                                 arms: [
                                     Arm {
                                         span: 53..78,
-                                        pattern: Object(
-                                            ObjectPat {
-                                                span: 53..66,
-                                                props: [
-                                                    KeyValue(
-                                                        KeyValuePatProp {
-                                                            key: Ident {
-                                                                span: 54..55,
-                                                                name: "a",
-                                                            },
-                                                            value: Object(
-                                                                ObjectPat {
+                                        pattern: Pattern {
+                                            span: 53..66,
+                                            kind: Object(
+                                                ObjectPat {
+                                                    props: [
+                                                        KeyValue(
+                                                            KeyValuePatProp {
+                                                                key: Ident {
+                                                                    span: 54..55,
+                                                                    name: "a",
+                                                                },
+                                                                value: Pattern {
                                                                     span: 57..65,
-                                                                    props: [
-                                                                        KeyValue(
-                                                                            KeyValuePatProp {
-                                                                                key: Ident {
-                                                                                    span: 58..59,
-                                                                                    name: "b",
-                                                                                },
-                                                                                value: Object(
-                                                                                    ObjectPat {
-                                                                                        span: 61..64,
-                                                                                        props: [
-                                                                                            Assign(
-                                                                                                AssignPatProp {
-                                                                                                    span: 62..63,
-                                                                                                    key: Ident {
-                                                                                                        span: 62..63,
-                                                                                                        name: "c",
-                                                                                                    },
-                                                                                                    value: None,
+                                                                    kind: Object(
+                                                                        ObjectPat {
+                                                                            props: [
+                                                                                KeyValue(
+                                                                                    KeyValuePatProp {
+                                                                                        key: Ident {
+                                                                                            span: 58..59,
+                                                                                            name: "b",
+                                                                                        },
+                                                                                        value: Pattern {
+                                                                                            span: 61..64,
+                                                                                            kind: Object(
+                                                                                                ObjectPat {
+                                                                                                    props: [
+                                                                                                        Assign(
+                                                                                                            AssignPatProp {
+                                                                                                                span: 62..63,
+                                                                                                                key: Ident {
+                                                                                                                    span: 62..63,
+                                                                                                                    name: "c",
+                                                                                                                },
+                                                                                                                value: None,
+                                                                                                            },
+                                                                                                        ),
+                                                                                                    ],
+                                                                                                    optional: false,
                                                                                                 },
                                                                                             ),
-                                                                                        ],
-                                                                                        optional: false,
+                                                                                            inferred_type: None,
+                                                                                        },
                                                                                     },
                                                                                 ),
-                                                                            },
-                                                                        ),
-                                                                    ],
-                                                                    optional: false,
+                                                                            ],
+                                                                            optional: false,
+                                                                        },
+                                                                    ),
+                                                                    inferred_type: None,
                                                                 },
-                                                            ),
-                                                        },
-                                                    ),
-                                                ],
-                                                optional: false,
-                                            },
-                                        ),
+                                                            },
+                                                        ),
+                                                    ],
+                                                    optional: false,
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 70..78,
@@ -101,11 +113,13 @@ Ok(
                                     },
                                     Arm {
                                         span: 96..114,
-                                        pattern: Wildcard(
-                                            WildcardPat {
-                                                span: 96..97,
-                                            },
-                                        ),
+                                        pattern: Pattern {
+                                            span: 96..97,
+                                            kind: Wildcard(
+                                                WildcardPat,
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 101..114,

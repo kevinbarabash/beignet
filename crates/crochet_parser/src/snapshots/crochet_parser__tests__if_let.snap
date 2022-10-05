@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 13..219,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 17..20,
-                        id: Ident {
-                            span: 17..20,
-                            name: "bar",
+                pattern: Pattern {
+                    span: 17..20,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 17..20,
+                                name: "bar",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {
@@ -26,55 +29,63 @@ Ok(
                                     span: 27..55,
                                     kind: LetExpr(
                                         LetExpr {
-                                            pat: Object(
-                                                ObjectPat {
-                                                    span: 31..49,
-                                                    props: [
-                                                        Assign(
-                                                            AssignPatProp {
-                                                                span: 32..33,
-                                                                key: Ident {
+                                            pat: Pattern {
+                                                span: 31..49,
+                                                kind: Object(
+                                                    ObjectPat {
+                                                        props: [
+                                                            Assign(
+                                                                AssignPatProp {
                                                                     span: 32..33,
-                                                                    name: "x",
+                                                                    key: Ident {
+                                                                        span: 32..33,
+                                                                        name: "x",
+                                                                    },
+                                                                    value: None,
                                                                 },
-                                                                value: None,
-                                                            },
-                                                        ),
-                                                        KeyValue(
-                                                            KeyValuePatProp {
-                                                                key: Ident {
-                                                                    span: 35..36,
-                                                                    name: "y",
-                                                                },
-                                                                value: Ident(
-                                                                    BindingIdent {
+                                                            ),
+                                                            KeyValue(
+                                                                KeyValuePatProp {
+                                                                    key: Ident {
+                                                                        span: 35..36,
+                                                                        name: "y",
+                                                                    },
+                                                                    value: Pattern {
                                                                         span: 38..39,
-                                                                        id: Ident {
-                                                                            span: 38..39,
-                                                                            name: "b",
-                                                                        },
+                                                                        kind: Ident(
+                                                                            BindingIdent {
+                                                                                id: Ident {
+                                                                                    span: 38..39,
+                                                                                    name: "b",
+                                                                                },
+                                                                            },
+                                                                        ),
+                                                                        inferred_type: None,
                                                                     },
-                                                                ),
-                                                            },
-                                                        ),
-                                                        Rest(
-                                                            RestPat {
-                                                                span: 41..48,
-                                                                arg: Ident(
-                                                                    BindingIdent {
+                                                                },
+                                                            ),
+                                                            Rest(
+                                                                RestPat {
+                                                                    arg: Pattern {
                                                                         span: 44..48,
-                                                                        id: Ident {
-                                                                            span: 44..48,
-                                                                            name: "rest",
-                                                                        },
+                                                                        kind: Ident(
+                                                                            BindingIdent {
+                                                                                id: Ident {
+                                                                                    span: 44..48,
+                                                                                    name: "rest",
+                                                                                },
+                                                                            },
+                                                                        ),
+                                                                        inferred_type: None,
                                                                     },
-                                                                ),
-                                                            },
-                                                        ),
-                                                    ],
-                                                    optional: false,
-                                                },
-                                            ),
+                                                                },
+                                                            ),
+                                                        ],
+                                                        optional: false,
+                                                    },
+                                                ),
+                                                inferred_type: None,
+                                            },
                                             expr: Expr {
                                                 span: 52..55,
                                                 kind: Ident(
@@ -110,48 +121,62 @@ Ok(
                                                     span: 107..132,
                                                     kind: LetExpr(
                                                         LetExpr {
-                                                            pat: Array(
-                                                                ArrayPat {
-                                                                    span: 111..126,
-                                                                    elems: [
-                                                                        Some(
-                                                                            Ident(
-                                                                                BindingIdent {
+                                                            pat: Pattern {
+                                                                span: 111..126,
+                                                                kind: Array(
+                                                                    ArrayPat {
+                                                                        elems: [
+                                                                            Some(
+                                                                                Pattern {
                                                                                     span: 112..113,
-                                                                                    id: Ident {
-                                                                                        span: 112..113,
-                                                                                        name: "a",
-                                                                                    },
-                                                                                },
-                                                                            ),
-                                                                        ),
-                                                                        Some(
-                                                                            Wildcard(
-                                                                                WildcardPat {
-                                                                                    span: 115..116,
-                                                                                },
-                                                                            ),
-                                                                        ),
-                                                                        Some(
-                                                                            Rest(
-                                                                                RestPat {
-                                                                                    span: 118..125,
-                                                                                    arg: Ident(
+                                                                                    kind: Ident(
                                                                                         BindingIdent {
-                                                                                            span: 121..125,
                                                                                             id: Ident {
-                                                                                                span: 121..125,
-                                                                                                name: "rest",
+                                                                                                span: 112..113,
+                                                                                                name: "a",
                                                                                             },
                                                                                         },
                                                                                     ),
+                                                                                    inferred_type: None,
                                                                                 },
                                                                             ),
-                                                                        ),
-                                                                    ],
-                                                                    optional: false,
-                                                                },
-                                                            ),
+                                                                            Some(
+                                                                                Pattern {
+                                                                                    span: 115..116,
+                                                                                    kind: Wildcard(
+                                                                                        WildcardPat,
+                                                                                    ),
+                                                                                    inferred_type: None,
+                                                                                },
+                                                                            ),
+                                                                            Some(
+                                                                                Pattern {
+                                                                                    span: 118..125,
+                                                                                    kind: Rest(
+                                                                                        RestPat {
+                                                                                            arg: Pattern {
+                                                                                                span: 121..125,
+                                                                                                kind: Ident(
+                                                                                                    BindingIdent {
+                                                                                                        id: Ident {
+                                                                                                            span: 121..125,
+                                                                                                            name: "rest",
+                                                                                                        },
+                                                                                                    },
+                                                                                                ),
+                                                                                                inferred_type: None,
+                                                                                            },
+                                                                                        },
+                                                                                    ),
+                                                                                    inferred_type: None,
+                                                                                },
+                                                                            ),
+                                                                        ],
+                                                                        optional: false,
+                                                                    },
+                                                                ),
+                                                                inferred_type: None,
+                                                            },
                                                             expr: Expr {
                                                                 span: 129..132,
                                                                 kind: Ident(

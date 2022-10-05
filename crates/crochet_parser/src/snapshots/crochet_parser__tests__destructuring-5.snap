@@ -7,67 +7,88 @@ Ok(
         body: [
             VarDecl {
                 span: 0..35,
-                pattern: Array(
-                    ArrayPat {
-                        span: 4..28,
-                        elems: [
-                            Some(
-                                Ident(
-                                    BindingIdent {
+                pattern: Pattern {
+                    span: 4..28,
+                    kind: Array(
+                        ArrayPat {
+                            elems: [
+                                Some(
+                                    Pattern {
                                         span: 5..8,
-                                        id: Ident {
-                                            span: 5..8,
-                                            name: "foo",
-                                        },
-                                    },
-                                ),
-                            ),
-                            Some(
-                                Rest(
-                                    RestPat {
-                                        span: 10..27,
-                                        arg: Array(
-                                            ArrayPat {
-                                                span: 13..27,
-                                                elems: [
-                                                    Some(
-                                                        Ident(
-                                                            BindingIdent {
-                                                                span: 14..17,
-                                                                id: Ident {
-                                                                    span: 14..17,
-                                                                    name: "bar",
-                                                                },
-                                                            },
-                                                        ),
-                                                    ),
-                                                    Some(
-                                                        Rest(
-                                                            RestPat {
-                                                                span: 19..26,
-                                                                arg: Ident(
-                                                                    BindingIdent {
-                                                                        span: 22..26,
-                                                                        id: Ident {
-                                                                            span: 22..26,
-                                                                            name: "rest",
-                                                                        },
-                                                                    },
-                                                                ),
-                                                            },
-                                                        ),
-                                                    ),
-                                                ],
-                                                optional: false,
+                                        kind: Ident(
+                                            BindingIdent {
+                                                id: Ident {
+                                                    span: 5..8,
+                                                    name: "foo",
+                                                },
                                             },
                                         ),
+                                        inferred_type: None,
                                     },
                                 ),
-                            ),
-                        ],
-                        optional: false,
-                    },
-                ),
+                                Some(
+                                    Pattern {
+                                        span: 10..27,
+                                        kind: Rest(
+                                            RestPat {
+                                                arg: Pattern {
+                                                    span: 13..27,
+                                                    kind: Array(
+                                                        ArrayPat {
+                                                            elems: [
+                                                                Some(
+                                                                    Pattern {
+                                                                        span: 14..17,
+                                                                        kind: Ident(
+                                                                            BindingIdent {
+                                                                                id: Ident {
+                                                                                    span: 14..17,
+                                                                                    name: "bar",
+                                                                                },
+                                                                            },
+                                                                        ),
+                                                                        inferred_type: None,
+                                                                    },
+                                                                ),
+                                                                Some(
+                                                                    Pattern {
+                                                                        span: 19..26,
+                                                                        kind: Rest(
+                                                                            RestPat {
+                                                                                arg: Pattern {
+                                                                                    span: 22..26,
+                                                                                    kind: Ident(
+                                                                                        BindingIdent {
+                                                                                            id: Ident {
+                                                                                                span: 22..26,
+                                                                                                name: "rest",
+                                                                                            },
+                                                                                        },
+                                                                                    ),
+                                                                                    inferred_type: None,
+                                                                                },
+                                                                            },
+                                                                        ),
+                                                                        inferred_type: None,
+                                                                    },
+                                                                ),
+                                                            ],
+                                                            optional: false,
+                                                        },
+                                                    ),
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                ),
+                            ],
+                            optional: false,
+                        },
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {

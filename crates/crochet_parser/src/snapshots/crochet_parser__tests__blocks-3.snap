@@ -12,15 +12,18 @@ Ok(
                     kind: Let(
                         Let {
                             pattern: Some(
-                                Ident(
-                                    BindingIdent {
-                                        span: 8..9,
-                                        id: Ident {
-                                            span: 8..9,
-                                            name: "x",
+                                Pattern {
+                                    span: 8..9,
+                                    kind: Ident(
+                                        BindingIdent {
+                                            id: Ident {
+                                                span: 8..9,
+                                                name: "x",
+                                            },
                                         },
-                                    },
-                                ),
+                                    ),
+                                    inferred_type: None,
+                                },
                             ),
                             type_ann: None,
                             init: Expr {
@@ -40,15 +43,18 @@ Ok(
                                 kind: Let(
                                     Let {
                                         pattern: Some(
-                                            Ident(
-                                                BindingIdent {
-                                                    span: 19..20,
-                                                    id: Ident {
-                                                        span: 19..20,
-                                                        name: "y",
+                                            Pattern {
+                                                span: 19..20,
+                                                kind: Ident(
+                                                    BindingIdent {
+                                                        id: Ident {
+                                                            span: 19..20,
+                                                            name: "y",
+                                                        },
                                                     },
-                                                },
-                                            ),
+                                                ),
+                                                inferred_type: None,
+                                            },
                                         ),
                                         type_ann: None,
                                         init: Expr {

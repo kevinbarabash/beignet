@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 0..29,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 4..5,
-                        id: Ident {
-                            span: 4..5,
-                            name: "p",
+                pattern: Pattern {
+                    span: 4..5,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 4..5,
+                                name: "p",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: Some(
                     TypeRef(
                         TypeRef {

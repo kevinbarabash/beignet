@@ -57,8 +57,8 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
             } => {
                 match declare {
                     true => {
-                        match pattern {
-                            Pattern::Ident(BindingIdent { id, .. }) => {
+                        match &mut pattern.kind {
+                            PatternKind::Ident(BindingIdent { id, .. }) => {
                                 match type_ann {
                                     Some(type_ann) => {
                                         let (s, t) = infer_scheme(type_ann, ctx)?;
@@ -176,14 +176,14 @@ fn update_program(prog: &mut Program, s: &Subst) {
 }
 
 fn update_pattern(pattern: &mut Pattern, _s: &Subst) {
-    match pattern {
-        Pattern::Ident(_) => (),
-        Pattern::Rest(_) => (),
-        Pattern::Object(_) => (),
-        Pattern::Array(_) => (),
-        Pattern::Lit(_) => (),
-        Pattern::Is(_) => (),
-        Pattern::Wildcard(_) => (),
+    match pattern.kind {
+        PatternKind::Ident(_) => (),
+        PatternKind::Rest(_) => (),
+        PatternKind::Object(_) => (),
+        PatternKind::Array(_) => (),
+        PatternKind::Lit(_) => (),
+        PatternKind::Is(_) => (),
+        PatternKind::Wildcard(_) => (),
     }
 }
 

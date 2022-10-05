@@ -39,7 +39,7 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Vec<Statement> {
             let expr = parse_expression(&expr, src);
             vec![Statement::Expr {
                 span: node.byte_range(),
-                expr,
+                expr: Box::from(expr),
             }]
         }
         "ambient_declaration" => {
@@ -109,7 +109,7 @@ fn parse_declaration(node: &tree_sitter::Node, declare: bool, src: &str) -> Vec<
 
     let init = decl
         .child_by_field_name("value")
-        .map(|init| parse_expression(&init, src));
+        .map(|init| Box::from(parse_expression(&init, src)));
 
     let type_ann = decl
         .child_by_field_name("type")
@@ -118,8 +118,8 @@ fn parse_declaration(node: &tree_sitter::Node, declare: bool, src: &str) -> Vec<
     let stmt = if rec {
         // `let fib = fix((fib) => (n) => ...)`
         // TODO: Fix always wraps a lambda
-        let id = match &pattern {
-            Pattern::Ident(bi) => bi.id.to_owned(),
+        let id = match &pattern.kind {
+            PatternKind::Ident(bi) => bi.id.to_owned(),
             _ => panic!("rec can only be used with identifier patterns"),
         };
 
@@ -132,7 +132,7 @@ fn parse_declaration(node: &tree_sitter::Node, declare: bool, src: &str) -> Vec<
                     optional: false,
                     mutable: false,
                 }],
-                body: Box::from(init.unwrap()),
+                body: init.unwrap(),
                 is_async: false,
                 return_type: None,
                 type_params: None, // TODO: support type params on VarDecls
@@ -152,7 +152,7 @@ fn parse_declaration(node: &tree_sitter::Node, declare: bool, src: &str) -> Vec<
             span: node.byte_range(),
             pattern,
             type_ann,
-            init: Some(fix),
+            init: Some(Box::from(fix)),
             declare,
         }
     } else {
@@ -173,10 +173,14 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
         "identifier" => {
             let span = node.byte_range();
             let name = src.get(span.clone()).unwrap().to_owned();
-            Pattern::Ident(BindingIdent {
-                span: span.clone(),
+            let kind = PatternKind::Ident(BindingIdent {
                 id: Ident { span, name },
-            })
+            });
+            Pattern {
+                span: node.byte_range(),
+                kind,
+                inferred_type: None,
+            }
         }
         "object_pattern" => {
             let mut cursor = node.walk();
@@ -204,7 +208,6 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                         let pattern = parse_pattern(&pattern, src);
 
                         ObjectPatProp::Rest(RestPat {
-                            span: child.byte_range(),
                             arg: Box::from(pattern),
                         })
                     }
@@ -225,11 +228,15 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 })
                 .collect();
 
-            Pattern::Object(ObjectPat {
-                span: node.byte_range(),
+            let kind = PatternKind::Object(ObjectPat {
                 props,
                 optional: false,
-            })
+            });
+            Pattern {
+                span: node.byte_range(),
+                kind,
+                inferred_type: None,
+            }
         }
         "array_pattern" => {
             let mut cursor = node.walk();
@@ -244,20 +251,28 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 })
                 .collect();
 
-            Pattern::Array(ArrayPat {
-                span: node.byte_range(),
+            let kind = PatternKind::Array(ArrayPat {
                 elems,
                 optional: false,
-            })
+            });
+            Pattern {
+                span: node.byte_range(),
+                kind,
+                inferred_type: None,
+            }
         }
         "rest_pattern" => {
             let arg = node.named_child(0).unwrap();
             let arg = parse_pattern(&arg, src);
 
-            Pattern::Rest(RestPat {
-                span: node.byte_range(),
+            let kind = PatternKind::Rest(RestPat {
                 arg: Box::from(arg),
-            })
+            });
+            Pattern {
+                span: node.byte_range(),
+                kind,
+                inferred_type: None,
+            }
         }
         _ => panic!("unrecognized pattern {node:#?}"),
     }
@@ -408,7 +423,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
                     let expr = parse_expression(&expr, src);
                     vec![Statement::Expr {
                         span: child.byte_range(),
-                        expr,
+                        expr: Box::from(expr),
                     }]
                 } else {
                     let mut result = parse_statement(&child, src);
@@ -418,7 +433,10 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
                         kind: ExprKind::Empty,
                         inferred_type: None,
                     };
-                    result.push(Statement::Expr { span: 0..0, expr });
+                    result.push(Statement::Expr {
+                        span: 0..0,
+                        expr: Box::from(expr),
+                    });
                     result
                 }
             } else {
@@ -429,13 +447,13 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
 
     let mut iter = stmts.iter().rev();
 
-    let last = match iter.next() {
+    let last: Expr = match iter.next() {
         Some(term) => match term {
             Statement::VarDecl { .. } => panic!("Didn't expect `let` here"),
             Statement::TypeDecl { .. } => {
                 todo!("decide how to handle type decls within BlockStatements")
             }
-            Statement::Expr { expr, .. } => expr.to_owned(),
+            Statement::Expr { expr, .. } => *expr.to_owned(),
         },
         None => Expr {
             span: 0..0,
@@ -457,7 +475,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
                     pattern: Some(pattern.to_owned()),
                     type_ann: type_ann.to_owned(),
                     // TODO: decide if we need to keep uninitialized variable declarations
-                    init: Box::new(init.to_owned().unwrap()),
+                    init: init.to_owned().unwrap(),
                     body: Box::new(body),
                 });
                 Expr {
@@ -473,7 +491,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
                 let kind = ExprKind::Let(Let {
                     pattern: None,
                     type_ann: None,
-                    init: Box::new(expr.to_owned()),
+                    init: expr.to_owned(),
                     body: Box::new(body),
                 });
                 Expr {
@@ -931,31 +949,32 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
     match child.kind() {
         "number" | "string" | "true" | "false" | "null" | "undefined" => {
             let lit = parse_literal(&child, src);
-            Pattern::Lit(LitPat {
+            let kind = PatternKind::Lit(LitPat { lit });
+            Pattern {
                 span: child.byte_range(),
-                lit,
-            })
+                kind,
+                inferred_type: None,
+            }
         }
         "identifier" => {
             let name = text_for_node(&child, src);
-            match name.as_str() {
+            let kind = match name.as_str() {
                 "undefined" => {
                     let lit = parse_literal(&child, src);
-                    Pattern::Lit(LitPat {
-                        span: child.byte_range(),
-                        lit,
-                    })
+                    PatternKind::Lit(LitPat { lit })
                 }
-                "_" => Pattern::Wildcard(WildcardPat {
-                    span: child.byte_range(),
-                }),
-                _ => Pattern::Ident(BindingIdent {
-                    span: child.byte_range(),
+                "_" => PatternKind::Wildcard(WildcardPat {}),
+                _ => PatternKind::Ident(BindingIdent {
                     id: Ident {
                         span: child.byte_range(),
                         name,
                     },
                 }),
+            };
+            Pattern {
+                span: child.byte_range(),
+                kind,
+                inferred_type: None,
             }
         }
         "refutable_array_pattern" => {
@@ -966,11 +985,15 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 // TODO: make elems in ArrayPat non-optional
                 .map(|elem| Some(parse_refutable_pattern(&elem, src)))
                 .collect();
-            Pattern::Array(ArrayPat {
-                span: child.byte_range(),
+            let kind = PatternKind::Array(ArrayPat {
                 elems,
                 optional: false,
-            })
+            });
+            Pattern {
+                span: child.byte_range(),
+                kind,
+                inferred_type: None,
+            }
         }
         "refutable_object_pattern" => {
             let mut cursor = child.walk();
@@ -997,7 +1020,6 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                         let arg = parse_refutable_pattern(&arg, src);
 
                         ObjectPatProp::Rest(RestPat {
-                            span: prop.byte_range(),
                             arg: Box::from(arg),
                         })
                     }
@@ -1015,27 +1037,34 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 })
                 .collect();
 
-            Pattern::Object(ObjectPat {
-                span: child.byte_range(),
+            let kind = PatternKind::Object(ObjectPat {
                 props,
                 optional: false,
-            })
+            });
+            Pattern {
+                span: child.byte_range(),
+                kind,
+                inferred_type: None,
+            }
         }
         "refutable_rest_pattern" => {
             let arg = child.named_child(0).unwrap();
             let arg = parse_refutable_pattern(&arg, src);
 
-            Pattern::Rest(RestPat {
-                span: child.byte_range(),
+            let kind = PatternKind::Rest(RestPat {
                 arg: Box::from(arg),
-            })
+            });
+            Pattern {
+                span: child.byte_range(),
+                kind,
+                inferred_type: None,
+            }
         }
         "refutable_is_pattern" => {
             let left = child.named_child(0).unwrap();
             let right = child.named_child(1).unwrap();
 
-            Pattern::Is(IsPat {
-                span: child.byte_range(),
+            let kind = PatternKind::Is(IsPat {
                 id: Ident {
                     span: left.byte_range(),
                     name: text_for_node(&left, src),
@@ -1044,7 +1073,12 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                     span: right.byte_range(),
                     name: text_for_node(&right, src),
                 },
-            })
+            });
+            Pattern {
+                span: child.byte_range(),
+                kind,
+                inferred_type: None,
+            }
         }
         kind => todo!("Unhandled refutable pattern of kind '{kind}'"),
     }
