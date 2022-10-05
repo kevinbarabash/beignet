@@ -169,18 +169,13 @@ fn parse_declaration(node: &tree_sitter::Node, declare: bool, src: &str) -> Vec<
 }
 
 fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
-    match node.kind() {
+    let kind = match node.kind() {
         "identifier" => {
             let span = node.byte_range();
             let name = src.get(span.clone()).unwrap().to_owned();
-            let kind = PatternKind::Ident(BindingIdent {
+            PatternKind::Ident(BindingIdent {
                 id: Ident { span, name },
-            });
-            Pattern {
-                span: node.byte_range(),
-                kind,
-                inferred_type: None,
-            }
+            })
         }
         "object_pattern" => {
             let mut cursor = node.walk();
@@ -228,15 +223,10 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 })
                 .collect();
 
-            let kind = PatternKind::Object(ObjectPat {
+            PatternKind::Object(ObjectPat {
                 props,
                 optional: false,
-            });
-            Pattern {
-                span: node.byte_range(),
-                kind,
-                inferred_type: None,
-            }
+            })
         }
         "array_pattern" => {
             let mut cursor = node.walk();
@@ -251,30 +241,26 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 })
                 .collect();
 
-            let kind = PatternKind::Array(ArrayPat {
+            PatternKind::Array(ArrayPat {
                 elems,
                 optional: false,
-            });
-            Pattern {
-                span: node.byte_range(),
-                kind,
-                inferred_type: None,
-            }
+            })
         }
         "rest_pattern" => {
             let arg = node.named_child(0).unwrap();
             let arg = parse_pattern(&arg, src);
 
-            let kind = PatternKind::Rest(RestPat {
+            PatternKind::Rest(RestPat {
                 arg: Box::from(arg),
-            });
-            Pattern {
-                span: node.byte_range(),
-                kind,
-                inferred_type: None,
-            }
+            })
         }
         _ => panic!("unrecognized pattern {node:#?}"),
+    };
+
+    Pattern {
+        span: node.byte_range(),
+        kind,
+        inferred_type: None,
     }
 }
 
@@ -946,19 +932,14 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
         node.to_owned()
     };
 
-    match child.kind() {
+    let kind = match child.kind() {
         "number" | "string" | "true" | "false" | "null" | "undefined" => {
             let lit = parse_literal(&child, src);
-            let kind = PatternKind::Lit(LitPat { lit });
-            Pattern {
-                span: child.byte_range(),
-                kind,
-                inferred_type: None,
-            }
+            PatternKind::Lit(LitPat { lit })
         }
         "identifier" => {
             let name = text_for_node(&child, src);
-            let kind = match name.as_str() {
+            match name.as_str() {
                 "undefined" => {
                     let lit = parse_literal(&child, src);
                     PatternKind::Lit(LitPat { lit })
@@ -970,11 +951,6 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                         name,
                     },
                 }),
-            };
-            Pattern {
-                span: child.byte_range(),
-                kind,
-                inferred_type: None,
             }
         }
         "refutable_array_pattern" => {
@@ -985,15 +961,10 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 // TODO: make elems in ArrayPat non-optional
                 .map(|elem| Some(parse_refutable_pattern(&elem, src)))
                 .collect();
-            let kind = PatternKind::Array(ArrayPat {
+            PatternKind::Array(ArrayPat {
                 elems,
                 optional: false,
-            });
-            Pattern {
-                span: child.byte_range(),
-                kind,
-                inferred_type: None,
-            }
+            })
         }
         "refutable_object_pattern" => {
             let mut cursor = child.walk();
@@ -1037,34 +1008,24 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 })
                 .collect();
 
-            let kind = PatternKind::Object(ObjectPat {
+            PatternKind::Object(ObjectPat {
                 props,
                 optional: false,
-            });
-            Pattern {
-                span: child.byte_range(),
-                kind,
-                inferred_type: None,
-            }
+            })
         }
         "refutable_rest_pattern" => {
             let arg = child.named_child(0).unwrap();
             let arg = parse_refutable_pattern(&arg, src);
 
-            let kind = PatternKind::Rest(RestPat {
+            PatternKind::Rest(RestPat {
                 arg: Box::from(arg),
-            });
-            Pattern {
-                span: child.byte_range(),
-                kind,
-                inferred_type: None,
-            }
+            })
         }
         "refutable_is_pattern" => {
             let left = child.named_child(0).unwrap();
             let right = child.named_child(1).unwrap();
 
-            let kind = PatternKind::Is(IsPat {
+            PatternKind::Is(IsPat {
                 id: Ident {
                     span: left.byte_range(),
                     name: text_for_node(&left, src),
@@ -1073,14 +1034,15 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                     span: right.byte_range(),
                     name: text_for_node(&right, src),
                 },
-            });
-            Pattern {
-                span: child.byte_range(),
-                kind,
-                inferred_type: None,
-            }
+            })
         }
         kind => todo!("Unhandled refutable pattern of kind '{kind}'"),
+    };
+
+    Pattern {
+        span: child.byte_range(),
+        kind,
+        inferred_type: None,
     }
 }
 
