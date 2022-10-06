@@ -175,20 +175,61 @@ fn update_program(prog: &mut Program, s: &Subst) {
     }
 }
 
-fn update_pattern(pattern: &mut Pattern, _s: &Subst) {
-    match pattern.kind {
-        PatternKind::Ident(_) => (),
-        PatternKind::Rest(_) => (),
-        PatternKind::Object(_) => (),
-        PatternKind::Array(_) => (),
-        PatternKind::Lit(_) => (),
-        PatternKind::Is(_) => (),
-        PatternKind::Wildcard(_) => (),
+fn update_pattern(pattern: &mut Pattern, s: &Subst) {
+    // Since we process the node first, if `expr` is a leaf node we
+    // ignore it in the match statement below.
+    match &pattern.inferred_type {
+        Some(t) => {
+            if let Type::Var(_) = t {
+                pattern.inferred_type = Some(t.apply(s));
+            }
+        }
+        None => (),
+    };
+
+    match &mut pattern.kind {
+        PatternKind::Ident(_) => (), // leaf node
+        PatternKind::Rest(RestPat { arg }) => {
+            update_pattern(arg, s);
+        }
+        PatternKind::Object(ObjectPat { props, optional: _ }) => {
+            props.iter_mut().for_each(|prop| match prop {
+                ObjectPatProp::KeyValue(KeyValuePatProp {
+                    key: _, // TODO: figure out how to attach inferred_types to idents
+                    value,
+                }) => {
+                    update_pattern(value, s);
+                }
+                ObjectPatProp::Rest(RestPat { arg }) => {
+                    update_pattern(arg, s);
+                }
+                ObjectPatProp::Assign(AssignPatProp {
+                    span: _,
+                    key: _, // TODO: figure out how to attach inferred_types to idents
+                    value,
+                }) => {
+                    if let Some(value) = value {
+                        update_expr(value, s)
+                    }
+                }
+            })
+            // TODO: process `props`
+        }
+        PatternKind::Array(ArrayPat { elems, optional: _ }) => {
+            elems.iter_mut().for_each(|elem| match elem {
+                Some(pat) => update_pattern(pat, s),
+                None => (),
+            })
+        }
+        PatternKind::Lit(_) => (), // leaf node
+        // TODO: figure out how to attach inferred_types to idents
+        PatternKind::Is(IsPat { id: _, is_id: _ }) => (),
+        PatternKind::Wildcard(_) => (), // leaf node (also has no binding)
     }
 }
 
 fn update_expr(expr: &mut Expr, s: &Subst) {
-    // Since we process the node first, if `expr` is a leaf-node we
+    // Since we process the node first, if `expr` is a leaf node we
     // ignore it in the match statement below.
     match &expr.inferred_type {
         Some(t) => {
@@ -230,7 +271,7 @@ fn update_expr(expr: &mut Expr, s: &Subst) {
         }) => {
             attrs.iter_mut().for_each(|attr| {
                 match &mut attr.value {
-                    JSXAttrValue::Lit(_) => (), // leaf-node
+                    JSXAttrValue::Lit(_) => (), // leaf node
                     JSXAttrValue::JSXExprContainer(JSXExprContainer { expr, span: _ }) => {
                         update_expr(expr, s);
                     }
@@ -248,7 +289,7 @@ fn update_expr(expr: &mut Expr, s: &Subst) {
             type_params: _,
         }) => {
             params.iter_mut().for_each(|param| {
-                update_fn_param(param, s);
+                update_fn_param_pat(&mut param.pat, s);
             });
             update_expr(body, s);
         }
@@ -332,7 +373,39 @@ fn update_expr(expr: &mut Expr, s: &Subst) {
     }
 }
 
-fn update_fn_param(_param: &mut EFnParam, _s: &Subst) {}
+// TODO: Unify EFnParamPat with Pattern
+// If we're worried about generated blocks of AST being invalid, we can have a validate
+// function to detect the issue.  Trying to enforce all restrictions at the type level
+// can result in near duplicate code which is a worse problem to deal with.
+fn update_fn_param_pat(pat: &mut EFnParamPat, s: &Subst) {
+    match pat {
+        EFnParamPat::Ident(_) => (), // leaf node
+        EFnParamPat::Rest(EFnParamRestPat { span: _, arg }) => update_fn_param_pat(arg, s),
+        EFnParamPat::Object(EFnParamObjectPat { span: _, props }) => {
+            props.iter_mut().for_each(|prop| match prop {
+                // TODO: figure out how to attach inferred_types to idents
+                EFnParamObjectPatProp::KeyValue(EFnParamKeyValuePatProp { key: _, value }) => {
+                    update_fn_param_pat(value, s);
+                }
+                EFnParamObjectPatProp::Assign(EFnParamAssignPatProp { key: _, value }) => {
+                    if let Some(value) = value {
+                        update_expr(value, s);
+                    }
+                }
+                EFnParamObjectPatProp::Rest(EFnParamRestPat { span: _, arg }) => {
+                    update_fn_param_pat(arg, s);
+                }
+            });
+        }
+        EFnParamPat::Array(EFnParamArrayPat { span: _, elems }) => {
+            elems.iter_mut().for_each(|elem| {
+                if let Some(elem) = elem {
+                    update_fn_param_pat(elem, s);
+                }
+            })
+        }
+    }
+}
 
 fn update_type_ann(_type_ann: &mut TypeAnn, _s: &Subst) {}
 
