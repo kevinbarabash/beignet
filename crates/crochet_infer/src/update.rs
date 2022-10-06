@@ -272,22 +272,69 @@ fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
         }
     }
 
-    // TODO: implement all arms
     match &mut type_ann.kind {
-        TypeAnnKind::Lam(_) => (),
+        TypeAnnKind::Lam(LamType {
+            span: _,
+            params,
+            ret,
+            type_params,
+        }) => {
+            params
+                .iter_mut()
+                .for_each(|param| update_fn_param_pat(&mut param.pat, s));
+            update_type_ann(ret, s);
+            if let Some(type_params) = type_params {
+                type_params.iter_mut().for_each(|type_param| {
+                    if let Some(constraint) = &mut type_param.constraint {
+                        update_type_ann(constraint, s);
+                    }
+                    if let Some(default) = &mut type_param.default {
+                        update_type_ann(default, s);
+                    }
+                });
+            }
+        }
         TypeAnnKind::Lit(_) => (), // leaf node
         // We should be able to fill some of these correctly as part of infer_type_ann()
-        TypeAnnKind::Keyword(_) => (),
-        TypeAnnKind::Prim(_) => (),
-        TypeAnnKind::Object(_) => (),
+        TypeAnnKind::Keyword(_) => (), // leaf node
+        TypeAnnKind::Prim(_) => (),    // leaf node
+        TypeAnnKind::Object(ObjectType { span: _, elems }) => {
+            elems.iter_mut().for_each(|elem| match elem {
+                TObjElem::Index(TIndex { type_ann, .. }) => {
+                    update_type_ann(type_ann, s);
+                }
+                TObjElem::Prop(TProp { type_ann, .. }) => {
+                    update_type_ann(type_ann, s);
+                }
+            })
+        }
         TypeAnnKind::TypeRef(_) => (),
-        TypeAnnKind::Union(_) => (),
-        TypeAnnKind::Intersection(_) => (),
-        TypeAnnKind::Tuple(_) => (),
-        TypeAnnKind::Array(_) => (),
-        TypeAnnKind::KeyOf(_) => (),
-        TypeAnnKind::Query(_) => (),
-        TypeAnnKind::IndexedAccess(_) => (),
+        TypeAnnKind::Union(UnionType { span: _, types }) => {
+            types.iter_mut().for_each(|t| update_type_ann(t, s));
+        }
+        TypeAnnKind::Intersection(IntersectionType { span: _, types }) => {
+            types.iter_mut().for_each(|t| update_type_ann(t, s));
+        }
+        TypeAnnKind::Tuple(TupleType { span: _, types }) => {
+            types.iter_mut().for_each(|t| update_type_ann(t, s));
+        }
+        TypeAnnKind::Array(ArrayType { span: _, elem_type }) => {
+            update_type_ann(elem_type, s);
+        }
+        TypeAnnKind::KeyOf(KeyOfType { span: _, type_ann }) => {
+            update_type_ann(type_ann, s);
+        }
+        TypeAnnKind::Query(QueryType { span: _, expr }) => {
+            update_expr(expr, s);
+        }
+        TypeAnnKind::IndexedAccess(IndexedAccessType {
+            span: _,
+            obj_type,
+            index_type,
+        }) => {
+            update_type_ann(obj_type, s);
+            update_type_ann(index_type, s);
+        }
     }
 }
 

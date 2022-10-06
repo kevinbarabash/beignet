@@ -125,11 +125,6 @@ pub struct IndexedAccessType {
     pub index_type: Box<TypeAnn>,
 }
 
-// TODO: split into TypeAnnKind and TypeAnn so that we can attach
-// inferred_type to TypeAnn.  This may seem a little silly on the
-// surface, but we want all types to be described as Crochet Types
-// within the system.  This will help with more complex LSP queries
-// down the road such as jump to definition of a particular type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnnKind {
     Lam(LamType),
