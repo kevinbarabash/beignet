@@ -106,12 +106,26 @@ fn infer_type_ann_rec(
                 ret,
                 type_params: vec![],
             });
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
-        TypeAnnKind::Lit(lit) => Ok((Subst::new(), Type::from(lit.to_owned()))),
-        TypeAnnKind::Prim(PrimType { prim, .. }) => Ok((Subst::new(), Type::from(prim.to_owned()))),
+        TypeAnnKind::Lit(lit) => {
+            let s = Subst::new();
+            let t = Type::from(lit.to_owned());
+            type_ann.inferred_type = Some(t.clone());
+            Ok((s, t))
+        }
+        TypeAnnKind::Prim(PrimType { prim, .. }) => {
+            let s = Subst::new();
+            let t = Type::from(prim.to_owned());
+            type_ann.inferred_type = Some(t.clone());
+            Ok((s, t))
+        }
         TypeAnnKind::Keyword(KeywordType { keyword, .. }) => {
-            Ok((Subst::new(), Type::from(keyword.to_owned())))
+            let s = Subst::new();
+            let t = Type::from(keyword.to_owned());
+            type_ann.inferred_type = Some(t.clone());
+            Ok((s, t))
         }
         TypeAnnKind::Object(obj) => {
             let mut ss: Vec<Subst> = vec![];
@@ -158,6 +172,7 @@ fn infer_type_ann_rec(
                 elems,
                 type_params: vec![],
             });
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::TypeRef(TypeRef {
@@ -168,6 +183,7 @@ fn infer_type_ann_rec(
             Some(tv) => {
                 let s = Subst::new();
                 let t = tv.to_owned();
+                type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
             None => {
@@ -192,6 +208,7 @@ fn infer_type_ann_rec(
                         Some(type_args)
                     },
                 });
+                type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
         },
@@ -208,6 +225,7 @@ fn infer_type_ann_rec(
 
             let s = compose_many_subs(&ss);
             let t = Type::Union(ts);
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::Intersection(intersection) => {
@@ -223,6 +241,7 @@ fn infer_type_ann_rec(
 
             let s = compose_many_subs(&ss);
             let t = Type::Intersection(ts);
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::Tuple(tuple) => {
@@ -238,18 +257,21 @@ fn infer_type_ann_rec(
 
             let s = compose_many_subs(&ss);
             let t = Type::Tuple(ts);
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::Array(ArrayType { elem_type, .. }) => {
             let (elem_s, elem_t) = infer_type_ann_rec(elem_type, ctx, type_param_map)?;
             let s = elem_s;
             let t = Type::Array(Box::from(elem_t));
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::KeyOf(KeyOfType { type_ann, .. }) => {
             let (arg_s, arg_t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
             let s = arg_s;
             let t = Type::KeyOf(Box::from(arg_t));
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::Query(QueryType { expr, .. }) => infer_expr(ctx, expr),
@@ -265,6 +287,7 @@ fn infer_type_ann_rec(
             let (s, t) = infer_property_type(&obj_t, &index_t, ctx)?;
             ss.push(s);
             let s = compose_many_subs(&ss);
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
     }

@@ -6,6 +6,7 @@ mod infer_type_ann;
 mod key_of;
 mod substitutable;
 mod unify;
+mod update;
 mod util;
 
 pub mod infer;
