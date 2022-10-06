@@ -12,28 +12,36 @@ Ok(
                     span: 5..8,
                     name: "Foo",
                 },
-                type_ann: Object(
-                    ObjectType {
-                        span: 22..30,
-                        elems: [
-                            Prop(
-                                TProp {
-                                    span: 23..29,
-                                    name: "bar",
-                                    optional: false,
-                                    mutable: false,
-                                    type_ann: TypeRef(
-                                        TypeRef {
+                type_ann: TypeAnn {
+                    kind: Object(
+                        ObjectType {
+                            span: 22..30,
+                            elems: [
+                                Prop(
+                                    TProp {
+                                        span: 23..29,
+                                        name: "bar",
+                                        optional: false,
+                                        mutable: false,
+                                        type_ann: TypeAnn {
+                                            kind: TypeRef(
+                                                TypeRef {
+                                                    span: 28..29,
+                                                    name: "T",
+                                                    type_args: None,
+                                                },
+                                            ),
                                             span: 28..29,
-                                            name: "T",
-                                            type_args: None,
+                                            inferred_type: None,
                                         },
-                                    ),
-                                },
-                            ),
-                        ],
-                    },
-                ),
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                    span: 22..30,
+                    inferred_type: None,
+                },
                 type_params: Some(
                     [
                         TypeParam {
@@ -44,14 +52,18 @@ Ok(
                             },
                             constraint: None,
                             default: Some(
-                                Lit(
-                                    Str(
-                                        Str {
-                                            span: 13..18,
-                                            value: "foo",
-                                        },
+                                TypeAnn {
+                                    kind: Lit(
+                                        Str(
+                                            Str {
+                                                span: 13..18,
+                                                value: "foo",
+                                            },
+                                        ),
                                     ),
-                                ),
+                                    span: 13..18,
+                                    inferred_type: None,
+                                },
                             ),
                         },
                     ],

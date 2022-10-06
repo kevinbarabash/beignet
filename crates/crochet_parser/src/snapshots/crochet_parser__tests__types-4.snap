@@ -20,24 +20,36 @@ Ok(
                     inferred_type: None,
                 },
                 type_ann: Some(
-                    Array(
-                        ArrayType {
-                            span: 15..34,
-                            elem_type: Lam(
-                                LamType {
-                                    span: 16..31,
-                                    params: [],
-                                    ret: Keyword(
-                                        KeywordType {
-                                            span: 22..31,
-                                            keyword: Undefined,
+                    TypeAnn {
+                        kind: Array(
+                            ArrayType {
+                                span: 15..34,
+                                elem_type: TypeAnn {
+                                    kind: Lam(
+                                        LamType {
+                                            span: 16..31,
+                                            params: [],
+                                            ret: TypeAnn {
+                                                kind: Keyword(
+                                                    KeywordType {
+                                                        span: 22..31,
+                                                        keyword: Undefined,
+                                                    },
+                                                ),
+                                                span: 22..31,
+                                                inferred_type: None,
+                                            },
+                                            type_params: None,
                                         },
                                     ),
-                                    type_params: None,
+                                    span: 16..31,
+                                    inferred_type: None,
                                 },
-                            ),
-                        },
-                    ),
+                            },
+                        ),
+                        span: 15..34,
+                        inferred_type: None,
+                    },
                 ),
                 init: Some(
                     Expr {

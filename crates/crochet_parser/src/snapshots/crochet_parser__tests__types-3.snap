@@ -20,17 +20,25 @@ Ok(
                     inferred_type: None,
                 },
                 type_ann: Some(
-                    Array(
-                        ArrayType {
-                            span: 13..21,
-                            elem_type: Prim(
-                                PrimType {
+                    TypeAnn {
+                        kind: Array(
+                            ArrayType {
+                                span: 13..21,
+                                elem_type: TypeAnn {
+                                    kind: Prim(
+                                        PrimType {
+                                            span: 13..19,
+                                            prim: Str,
+                                        },
+                                    ),
                                     span: 13..19,
-                                    prim: Str,
+                                    inferred_type: None,
                                 },
-                            ),
-                        },
-                    ),
+                            },
+                        ),
+                        span: 13..21,
+                        inferred_type: None,
+                    },
                 ),
                 init: Some(
                     Expr {

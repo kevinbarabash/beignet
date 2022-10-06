@@ -12,38 +12,58 @@ Ok(
                     span: 5..6,
                     name: "C",
                 },
-                type_ann: IndexedAccess(
-                    IndexedAccessType {
-                        span: 9..22,
-                        obj_type: IndexedAccess(
-                            IndexedAccessType {
+                type_ann: TypeAnn {
+                    kind: IndexedAccess(
+                        IndexedAccessType {
+                            span: 9..22,
+                            obj_type: TypeAnn {
+                                kind: IndexedAccess(
+                                    IndexedAccessType {
+                                        span: 9..15,
+                                        obj_type: TypeAnn {
+                                            kind: TypeRef(
+                                                TypeRef {
+                                                    span: 9..10,
+                                                    name: "A",
+                                                    type_args: None,
+                                                },
+                                            ),
+                                            span: 9..10,
+                                            inferred_type: None,
+                                        },
+                                        index_type: TypeAnn {
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        span: 11..14,
+                                                        value: "b",
+                                                    },
+                                                ),
+                                            ),
+                                            span: 11..14,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
                                 span: 9..15,
-                                obj_type: TypeRef(
+                                inferred_type: None,
+                            },
+                            index_type: TypeAnn {
+                                kind: TypeRef(
                                     TypeRef {
-                                        span: 9..10,
-                                        name: "A",
+                                        span: 16..21,
+                                        name: "C_Key",
                                         type_args: None,
                                     },
                                 ),
-                                index_type: Lit(
-                                    Str(
-                                        Str {
-                                            span: 11..14,
-                                            value: "b",
-                                        },
-                                    ),
-                                ),
-                            },
-                        ),
-                        index_type: TypeRef(
-                            TypeRef {
                                 span: 16..21,
-                                name: "C_Key",
-                                type_args: None,
+                                inferred_type: None,
                             },
-                        ),
-                    },
-                ),
+                        },
+                    ),
+                    span: 9..22,
+                    inferred_type: None,
+                },
                 type_params: None,
             },
         ],

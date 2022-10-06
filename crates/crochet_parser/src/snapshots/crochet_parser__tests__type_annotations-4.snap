@@ -20,13 +20,17 @@ Ok(
                     inferred_type: None,
                 },
                 type_ann: Some(
-                    TypeRef(
-                        TypeRef {
-                            span: 7..12,
-                            name: "Point",
-                            type_args: None,
-                        },
-                    ),
+                    TypeAnn {
+                        kind: TypeRef(
+                            TypeRef {
+                                span: 7..12,
+                                name: "Point",
+                                type_args: None,
+                            },
+                        ),
+                        span: 7..12,
+                        inferred_type: None,
+                    },
                 ),
                 init: Some(
                     Expr {

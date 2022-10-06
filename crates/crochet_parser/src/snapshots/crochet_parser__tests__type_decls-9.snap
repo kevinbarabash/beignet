@@ -12,35 +12,39 @@ Ok(
                     span: 5..11,
                     name: "FooBar",
                 },
-                type_ann: Query(
-                    QueryType {
-                        span: 14..28,
-                        expr: Expr {
-                            span: 21..28,
-                            kind: Member(
-                                Member {
-                                    obj: Expr {
-                                        span: 21..24,
-                                        kind: Ident(
+                type_ann: TypeAnn {
+                    kind: Query(
+                        QueryType {
+                            span: 14..28,
+                            expr: Expr {
+                                span: 21..28,
+                                kind: Member(
+                                    Member {
+                                        obj: Expr {
+                                            span: 21..24,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 21..24,
+                                                    name: "foo",
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
+                                        prop: Ident(
                                             Ident {
-                                                span: 21..24,
-                                                name: "foo",
+                                                span: 25..28,
+                                                name: "bar",
                                             },
                                         ),
-                                        inferred_type: None,
                                     },
-                                    prop: Ident(
-                                        Ident {
-                                            span: 25..28,
-                                            name: "bar",
-                                        },
-                                    ),
-                                },
-                            ),
-                            inferred_type: None,
+                                ),
+                                inferred_type: None,
+                            },
                         },
-                    },
-                ),
+                    ),
+                    span: 14..28,
+                    inferred_type: None,
+                },
                 type_params: None,
             },
         ],

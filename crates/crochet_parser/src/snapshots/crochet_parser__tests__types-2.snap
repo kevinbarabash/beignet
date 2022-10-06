@@ -20,40 +20,52 @@ Ok(
                     inferred_type: None,
                 },
                 type_ann: Some(
-                    Lam(
-                        LamType {
-                            span: 21..36,
-                            params: [
-                                TypeAnnFnParam {
-                                    pat: Ident(
-                                        EFnParamBindingIdent {
-                                            span: 22..25,
-                                            id: Ident {
+                    TypeAnn {
+                        kind: Lam(
+                            LamType {
+                                span: 21..36,
+                                params: [
+                                    TypeAnnFnParam {
+                                        pat: Ident(
+                                            EFnParamBindingIdent {
                                                 span: 22..25,
-                                                name: "foo",
+                                                id: Ident {
+                                                    span: 22..25,
+                                                    name: "foo",
+                                                },
                                             },
-                                        },
-                                    ),
-                                    type_ann: TypeRef(
-                                        TypeRef {
+                                        ),
+                                        type_ann: TypeAnn {
+                                            kind: TypeRef(
+                                                TypeRef {
+                                                    span: 27..30,
+                                                    name: "Foo",
+                                                    type_args: None,
+                                                },
+                                            ),
                                             span: 27..30,
-                                            name: "Foo",
+                                            inferred_type: None,
+                                        },
+                                        optional: false,
+                                    },
+                                ],
+                                ret: TypeAnn {
+                                    kind: TypeRef(
+                                        TypeRef {
+                                            span: 35..36,
+                                            name: "T",
                                             type_args: None,
                                         },
                                     ),
-                                    optional: false,
-                                },
-                            ],
-                            ret: TypeRef(
-                                TypeRef {
                                     span: 35..36,
-                                    name: "T",
-                                    type_args: None,
+                                    inferred_type: None,
                                 },
-                            ),
-                            type_params: None,
-                        },
-                    ),
+                                type_params: None,
+                            },
+                        ),
+                        span: 21..36,
+                        inferred_type: None,
+                    },
                 ),
                 init: None,
                 declare: true,

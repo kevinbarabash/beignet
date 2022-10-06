@@ -20,14 +20,18 @@ Ok(
                     inferred_type: None,
                 },
                 type_ann: Some(
-                    Lit(
-                        Str(
-                            Str {
-                                span: 9..14,
-                                value: "foo",
-                            },
+                    TypeAnn {
+                        kind: Lit(
+                            Str(
+                                Str {
+                                    span: 9..14,
+                                    value: "foo",
+                                },
+                            ),
                         ),
-                    ),
+                        span: 9..14,
+                        inferred_type: None,
+                    },
                 ),
                 init: Some(
                     Expr {

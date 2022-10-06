@@ -12,41 +12,53 @@ Ok(
                     span: 5..10,
                     name: "Point",
                 },
-                type_ann: Object(
-                    ObjectType {
-                        span: 13..35,
-                        elems: [
-                            Prop(
-                                TProp {
-                                    span: 14..23,
-                                    name: "x",
-                                    optional: false,
-                                    mutable: false,
-                                    type_ann: Prim(
-                                        PrimType {
+                type_ann: TypeAnn {
+                    kind: Object(
+                        ObjectType {
+                            span: 13..35,
+                            elems: [
+                                Prop(
+                                    TProp {
+                                        span: 14..23,
+                                        name: "x",
+                                        optional: false,
+                                        mutable: false,
+                                        type_ann: TypeAnn {
+                                            kind: Prim(
+                                                PrimType {
+                                                    span: 17..23,
+                                                    prim: Num,
+                                                },
+                                            ),
                                             span: 17..23,
-                                            prim: Num,
+                                            inferred_type: None,
                                         },
-                                    ),
-                                },
-                            ),
-                            Prop(
-                                TProp {
-                                    span: 25..34,
-                                    name: "y",
-                                    optional: false,
-                                    mutable: false,
-                                    type_ann: Prim(
-                                        PrimType {
+                                    },
+                                ),
+                                Prop(
+                                    TProp {
+                                        span: 25..34,
+                                        name: "y",
+                                        optional: false,
+                                        mutable: false,
+                                        type_ann: TypeAnn {
+                                            kind: Prim(
+                                                PrimType {
+                                                    span: 28..34,
+                                                    prim: Num,
+                                                },
+                                            ),
                                             span: 28..34,
-                                            prim: Num,
+                                            inferred_type: None,
                                         },
-                                    ),
-                                },
-                            ),
-                        ],
-                    },
-                ),
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                    span: 13..35,
+                    inferred_type: None,
+                },
                 type_params: None,
             },
         ],

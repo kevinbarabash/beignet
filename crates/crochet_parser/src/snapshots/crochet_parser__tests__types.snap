@@ -37,23 +37,31 @@ Ok(
                                             },
                                         ),
                                         type_ann: Some(
-                                            TypeRef(
-                                                TypeRef {
-                                                    span: 23..29,
-                                                    name: "Foo",
-                                                    type_args: Some(
-                                                        [
-                                                            TypeRef(
-                                                                TypeRef {
+                                            TypeAnn {
+                                                kind: TypeRef(
+                                                    TypeRef {
+                                                        span: 23..29,
+                                                        name: "Foo",
+                                                        type_args: Some(
+                                                            [
+                                                                TypeAnn {
+                                                                    kind: TypeRef(
+                                                                        TypeRef {
+                                                                            span: 27..28,
+                                                                            name: "T",
+                                                                            type_args: None,
+                                                                        },
+                                                                    ),
                                                                     span: 27..28,
-                                                                    name: "T",
-                                                                    type_args: None,
+                                                                    inferred_type: None,
                                                                 },
-                                                            ),
-                                                        ],
-                                                    ),
-                                                },
-                                            ),
+                                                            ],
+                                                        ),
+                                                    },
+                                                ),
+                                                span: 23..29,
+                                                inferred_type: None,
+                                            },
                                         ),
                                         optional: false,
                                         mutable: false,

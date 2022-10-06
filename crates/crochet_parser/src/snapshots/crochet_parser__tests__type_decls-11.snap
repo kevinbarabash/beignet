@@ -12,44 +12,56 @@ Ok(
                     span: 5..10,
                     name: "Array",
                 },
-                type_ann: Object(
-                    ObjectType {
-                        span: 16..34,
-                        elems: [
-                            Index(
-                                TIndex {
-                                    span: 17..33,
-                                    key: TypeAnnFnParam {
-                                        pat: Ident(
-                                            EFnParamBindingIdent {
-                                                span: 18..21,
-                                                id: Ident {
+                type_ann: TypeAnn {
+                    kind: Object(
+                        ObjectType {
+                            span: 16..34,
+                            elems: [
+                                Index(
+                                    TIndex {
+                                        span: 17..33,
+                                        key: TypeAnnFnParam {
+                                            pat: Ident(
+                                                EFnParamBindingIdent {
                                                     span: 18..21,
-                                                    name: "key",
+                                                    id: Ident {
+                                                        span: 18..21,
+                                                        name: "key",
+                                                    },
                                                 },
-                                            },
-                                        ),
-                                        type_ann: Prim(
-                                            PrimType {
+                                            ),
+                                            type_ann: TypeAnn {
+                                                kind: Prim(
+                                                    PrimType {
+                                                        span: 23..29,
+                                                        prim: Num,
+                                                    },
+                                                ),
                                                 span: 23..29,
-                                                prim: Num,
+                                                inferred_type: None,
                                             },
-                                        ),
-                                        optional: false,
-                                    },
-                                    mutable: false,
-                                    type_ann: TypeRef(
-                                        TypeRef {
-                                            span: 32..33,
-                                            name: "T",
-                                            type_args: None,
+                                            optional: false,
                                         },
-                                    ),
-                                },
-                            ),
-                        ],
-                    },
-                ),
+                                        mutable: false,
+                                        type_ann: TypeAnn {
+                                            kind: TypeRef(
+                                                TypeRef {
+                                                    span: 32..33,
+                                                    name: "T",
+                                                    type_args: None,
+                                                },
+                                            ),
+                                            span: 32..33,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                    span: 16..34,
+                    inferred_type: None,
+                },
                 type_params: Some(
                     [
                         TypeParam {

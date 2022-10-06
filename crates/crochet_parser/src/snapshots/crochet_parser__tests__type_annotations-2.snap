@@ -20,12 +20,16 @@ Ok(
                     inferred_type: None,
                 },
                 type_ann: Some(
-                    Prim(
-                        PrimType {
-                            span: 9..15,
-                            prim: Str,
-                        },
-                    ),
+                    TypeAnn {
+                        kind: Prim(
+                            PrimType {
+                                span: 9..15,
+                                prim: Str,
+                            },
+                        ),
+                        span: 9..15,
+                        inferred_type: None,
+                    },
                 ),
                 init: Some(
                     Expr {

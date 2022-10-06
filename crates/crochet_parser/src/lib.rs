@@ -1091,23 +1091,23 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
     } else {
         node.to_owned()
     };
-    match node.kind() {
+    let kind = match node.kind() {
         // Primary types
         "parenthesized_type" => {
             let wrapped_type = node.named_child(0).unwrap();
-            parse_type_ann(&wrapped_type, src)
+            return parse_type_ann(&wrapped_type, src);
         }
         "predefined_type" => match text_for_node(&node, src).as_str() {
             "any" => todo!("remove support for 'any'"),
-            "number" => TypeAnn::Prim(PrimType {
+            "number" => TypeAnnKind::Prim(PrimType {
                 span: node.byte_range(),
                 prim: Primitive::Num,
             }),
-            "boolean" => TypeAnn::Prim(PrimType {
+            "boolean" => TypeAnnKind::Prim(PrimType {
                 span: node.byte_range(),
                 prim: Primitive::Bool,
             }),
-            "string" => TypeAnn::Prim(PrimType {
+            "string" => TypeAnnKind::Prim(PrimType {
                 span: node.byte_range(),
                 prim: Primitive::Str,
             }),
@@ -1118,7 +1118,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
             "object" => todo!("remove support for 'object'"),
             name => panic!("Unkwnown predefined_type: '{name}'"),
         },
-        "type_identifier" => TypeAnn::TypeRef(TypeRef {
+        "type_identifier" => TypeAnnKind::TypeRef(TypeRef {
             span: node.byte_range(),
             name: text_for_node(&node, src),
             type_args: None,
@@ -1134,7 +1134,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 .map(|arg| parse_type_ann(&arg, src))
                 .collect();
 
-            TypeAnn::TypeRef(TypeRef {
+            TypeAnnKind::TypeRef(TypeRef {
                 span: node.byte_range(),
                 name: text_for_node(&name, src),
                 type_args: Some(type_params),
@@ -1204,7 +1204,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
 
                         TObjElem::Index(TIndex {
                             span: prop.byte_range(),
-                            key: TypeAnnFnParam {
+                            key: Box::from(TypeAnnFnParam {
                                 pat: EFnParamPat::Ident(EFnParamBindingIdent {
                                     span: name_node.byte_range(),
                                     id: Ident {
@@ -1214,7 +1214,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                                 }),
                                 type_ann: index_type_ann,
                                 optional,
-                            },
+                            }),
                             mutable: false, // TODO,
                             type_ann: Box::from(type_ann),
                         })
@@ -1225,7 +1225,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 })
                 .collect();
 
-            TypeAnn::Object(ObjectType {
+            TypeAnnKind::Object(ObjectType {
                 span: node.byte_range(),
                 elems,
             })
@@ -1234,7 +1234,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
             let elem_type = node.named_child(0).unwrap();
             let elem_type = parse_type_ann(&elem_type, src);
 
-            TypeAnn::Array(ArrayType {
+            TypeAnnKind::Array(ArrayType {
                 span: node.byte_range(),
                 elem_type: Box::from(elem_type),
             })
@@ -1250,7 +1250,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 })
                 .collect();
 
-            TypeAnn::Tuple(TupleType {
+            TypeAnnKind::Tuple(TupleType {
                 span: node.byte_range(),
                 types,
             })
@@ -1260,7 +1260,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
             let expr = node.named_child(0).unwrap();
             let expr = parse_expression(&expr, src);
 
-            TypeAnn::Query(QueryType {
+            TypeAnnKind::Query(QueryType {
                 span: node.byte_range(),
                 expr: Box::from(expr),
             })
@@ -1269,7 +1269,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
             let type_ann = node.named_child(0).unwrap();
             let type_ann = parse_type_ann(&type_ann, src);
 
-            TypeAnn::KeyOf(KeyOfType {
+            TypeAnnKind::KeyOf(KeyOfType {
                 span: node.byte_range(),
                 type_ann: Box::from(type_ann),
             })
@@ -1279,17 +1279,17 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         "literal_type" => {
             let child = node.named_child(0).unwrap();
             match child.kind() {
-                "undefined" => TypeAnn::Keyword(KeywordType {
+                "undefined" => TypeAnnKind::Keyword(KeywordType {
                     span: node.byte_range(),
                     keyword: Keyword::Undefined,
                 }),
-                "null" => TypeAnn::Keyword(KeywordType {
+                "null" => TypeAnnKind::Keyword(KeywordType {
                     span: node.byte_range(),
                     keyword: Keyword::Null,
                 }),
                 _ => {
                     let lit = parse_literal(&child, src);
-                    TypeAnn::Lit(lit)
+                    TypeAnnKind::Lit(lit)
                 }
             }
         }
@@ -1298,7 +1298,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
             let obj_type = parse_type_ann(&obj_type, src);
             let index_type = node.named_child(1).unwrap();
             let index_type = parse_type_ann(&index_type, src);
-            TypeAnn::IndexedAccess(IndexedAccessType {
+            TypeAnnKind::IndexedAccess(IndexedAccessType {
                 span: node.byte_range(),
                 obj_type: Box::from(obj_type),
                 index_type: Box::from(index_type),
@@ -1313,7 +1313,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 .into_iter()
                 .map(|t| parse_type_ann(&t, src))
                 .collect();
-            TypeAnn::Intersection(IntersectionType {
+            TypeAnnKind::Intersection(IntersectionType {
                 span: node.byte_range(),
                 types,
             })
@@ -1325,7 +1325,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 .into_iter()
                 .map(|t| parse_type_ann(&t, src))
                 .collect();
-            TypeAnn::Union(UnionType {
+            TypeAnnKind::Union(UnionType {
                 span: node.byte_range(),
                 types,
             })
@@ -1361,7 +1361,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
 
             let type_params = parse_type_params_for_node(&node, src);
 
-            TypeAnn::Lam(LamType {
+            TypeAnnKind::Lam(LamType {
                 span: node.byte_range(),
                 params,
                 ret: Box::from(return_type),
@@ -1373,6 +1373,12 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         "infer_type" => todo!(),
 
         kind => panic!("Unexpected type_annotation kind: '{kind}'"),
+    };
+
+    TypeAnn {
+        span: node.byte_range(),
+        kind,
+        inferred_type: None,
     }
 
     // _primary_type: ($) =>

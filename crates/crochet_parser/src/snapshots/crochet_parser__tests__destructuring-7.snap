@@ -57,25 +57,37 @@ Ok(
                                             },
                                         ),
                                         type_ann: Some(
-                                            Tuple(
-                                                TupleType {
-                                                    span: 19..35,
-                                                    types: [
-                                                        Prim(
-                                                            PrimType {
+                                            TypeAnn {
+                                                kind: Tuple(
+                                                    TupleType {
+                                                        span: 19..35,
+                                                        types: [
+                                                            TypeAnn {
+                                                                kind: Prim(
+                                                                    PrimType {
+                                                                        span: 20..26,
+                                                                        prim: Str,
+                                                                    },
+                                                                ),
                                                                 span: 20..26,
-                                                                prim: Str,
+                                                                inferred_type: None,
                                                             },
-                                                        ),
-                                                        Prim(
-                                                            PrimType {
+                                                            TypeAnn {
+                                                                kind: Prim(
+                                                                    PrimType {
+                                                                        span: 28..34,
+                                                                        prim: Num,
+                                                                    },
+                                                                ),
                                                                 span: 28..34,
-                                                                prim: Num,
+                                                                inferred_type: None,
                                                             },
-                                                        ),
-                                                    ],
-                                                },
-                                            ),
+                                                        ],
+                                                    },
+                                                ),
+                                                span: 19..35,
+                                                inferred_type: None,
+                                            },
                                         ),
                                         optional: false,
                                         mutable: false,

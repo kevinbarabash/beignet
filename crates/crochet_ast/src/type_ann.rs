@@ -1,3 +1,5 @@
+use crochet_types::Type;
+
 use crate::expr::EFnParamPat;
 use crate::expr::Expr;
 use crate::ident::Ident;
@@ -72,7 +74,7 @@ pub struct TProp {
 pub struct TIndex {
     pub span: Span,
     // TODO: update this to only allow `<ident>: string` or `<ident>: number`
-    pub key: TypeAnnFnParam,
+    pub key: Box<TypeAnnFnParam>,
     pub mutable: bool,
     pub type_ann: Box<TypeAnn>,
 }
@@ -129,7 +131,7 @@ pub struct IndexedAccessType {
 // within the system.  This will help with more complex LSP queries
 // down the road such as jump to definition of a particular type.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TypeAnn {
+pub enum TypeAnnKind {
     Lam(LamType),
     Lit(Lit),
     Keyword(KeywordType),
@@ -143,6 +145,13 @@ pub enum TypeAnn {
     KeyOf(KeyOfType), // keyof
     Query(QueryType), // typeof
     IndexedAccess(IndexedAccessType),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TypeAnn {
+    pub kind: TypeAnnKind,
+    pub span: Span,
+    pub inferred_type: Option<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

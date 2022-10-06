@@ -23,12 +23,16 @@ Ok(
                                         },
                                     ),
                                     type_ann: Some(
-                                        Prim(
-                                            PrimType {
-                                                span: 5..12,
-                                                prim: Bool,
-                                            },
-                                        ),
+                                        TypeAnn {
+                                            kind: Prim(
+                                                PrimType {
+                                                    span: 5..12,
+                                                    prim: Bool,
+                                                },
+                                            ),
+                                            span: 5..12,
+                                            inferred_type: None,
+                                        },
                                     ),
                                     optional: true,
                                     mutable: false,
