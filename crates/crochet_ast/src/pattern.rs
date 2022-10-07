@@ -1,3 +1,5 @@
+use crochet_types::Type;
+
 use crate::expr::Expr;
 use crate::ident::Ident;
 use crate::span::Span;
@@ -7,7 +9,7 @@ use crate::Lit;
 // - one for assignment (obj, ident, array, rest)
 // - one for pattern matching/if let
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Pattern {
+pub enum PatternKind {
     // TODO: use Ident instead of BindingIdent, there's no need to
     // have BindingIdent which simply wraps Ident
     Ident(BindingIdent),
@@ -21,22 +23,17 @@ pub enum Pattern {
     // Assign(AssignPat),
 }
 
-impl Pattern {
-    pub fn span(&self) -> Span {
-        match self {
-            Pattern::Ident(ident) => ident.span.to_owned(),
-            Pattern::Rest(rest) => rest.span.to_owned(),
-            Pattern::Object(obj) => obj.span.to_owned(),
-            Pattern::Array(array) => array.span.to_owned(),
-            Pattern::Lit(lit) => lit.span.to_owned(),
-            Pattern::Is(is) => is.span.to_owned(),
-            Pattern::Wildcard(wc) => wc.span.to_owned(),
-        }
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Pattern {
+    pub span: Span,
+    pub kind: PatternKind,
+    pub inferred_type: Option<Type>,
+}
 
+impl Pattern {
     pub fn get_name(&self, index: &usize) -> String {
-        match self {
-            Pattern::Ident(BindingIdent { id, .. }) => id.name.to_owned(),
+        match &self.kind {
+            PatternKind::Ident(BindingIdent { id, .. }) => id.name.to_owned(),
             _ => format!("arg{index}"),
         }
     }
@@ -44,44 +41,36 @@ impl Pattern {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BindingIdent {
-    pub span: Span,
     pub id: Ident,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LitPat {
-    pub span: Span,
     pub lit: Lit,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IsPat {
-    pub span: Span,
     pub id: Ident,
     pub is_id: Ident,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WildcardPat {
-    pub span: Span,
-}
+pub struct WildcardPat {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RestPat {
-    pub span: Span,
     pub arg: Box<Pattern>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ArrayPat {
-    pub span: Span,
     pub elems: Vec<Option<Pattern>>,
     pub optional: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ObjectPat {
-    pub span: Span,
     pub props: Vec<ObjectPatProp>,
     pub optional: bool,
 }
@@ -89,7 +78,7 @@ pub struct ObjectPat {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ObjectPatProp {
     KeyValue(KeyValuePatProp),
-    Rest(RestPat),
+    Rest(RestPat), // TODO: create a new RestPatProp that includes a span
     Assign(AssignPatProp),
 }
 
@@ -107,23 +96,23 @@ pub struct AssignPatProp {
 }
 
 pub fn is_refutable(pat: &Pattern) -> bool {
-    match pat {
+    match &pat.kind {
         // irrefutable
-        Pattern::Ident(_) => false,
-        Pattern::Rest(_) => false,
-        Pattern::Wildcard(_) => false,
+        PatternKind::Ident(_) => false,
+        PatternKind::Rest(_) => false,
+        PatternKind::Wildcard(_) => false,
 
         // refutable
-        Pattern::Lit(_) => true,
-        Pattern::Is(_) => true,
+        PatternKind::Lit(_) => true,
+        PatternKind::Is(_) => true,
 
         // refutable if at least one sub-pattern is refutable
-        Pattern::Object(ObjectPat { props, .. }) => props.iter().any(|prop| match prop {
+        PatternKind::Object(ObjectPat { props, .. }) => props.iter().any(|prop| match prop {
             ObjectPatProp::KeyValue(KeyValuePatProp { value, .. }) => is_refutable(value),
             ObjectPatProp::Rest(RestPat { arg, .. }) => is_refutable(arg),
             ObjectPatProp::Assign(_) => false, // corresponds to {x = 5}
         }),
-        Pattern::Array(ArrayPat { elems, .. }) => {
+        PatternKind::Array(ArrayPat { elems, .. }) => {
             elems.iter().any(|elem| {
                 match elem {
                     Some(elem) => is_refutable(elem),
@@ -152,17 +141,23 @@ mod tests {
     }
 
     fn ident_pattern(name: &str) -> Pattern {
-        Pattern::Ident(BindingIdent {
+        let kind = PatternKind::Ident(BindingIdent { id: ident(name) });
+        Pattern {
             span: 0..0,
-            id: ident(name),
-        })
+            kind,
+            inferred_type: None,
+        }
     }
 
     fn num_lit_pat(value: &str) -> Pattern {
-        Pattern::Lit(LitPat {
-            span: 0..0,
+        let kind = PatternKind::Lit(LitPat {
             lit: Lit::num(String::from(value), 0..0),
-        })
+        });
+        Pattern {
+            span: 0..0,
+            kind,
+            inferred_type: None,
+        }
     }
 
     #[test]
@@ -174,29 +169,37 @@ mod tests {
     #[test]
     fn rest_is_irrefutable() {
         let ident = ident_pattern("foo");
-        let rest = Pattern::Rest(RestPat {
-            span: 0..0,
+        let kind = PatternKind::Rest(RestPat {
             arg: Box::from(ident),
         });
+        let rest = Pattern {
+            span: 0..0,
+            kind,
+            inferred_type: None,
+        };
         assert!(is_irrefutable(&rest));
     }
 
     #[test]
     fn obj_with_all_irrefutable_props_is_irrefutable() {
-        let obj = Pattern::Object(ObjectPat {
+        let kind = PatternKind::Object(ObjectPat {
             props: vec![ObjectPatProp::KeyValue(KeyValuePatProp {
                 key: ident("foo"),
                 value: Box::from(ident_pattern("foo")),
             })],
             optional: false,
-            span: 0..0,
         });
+        let obj = Pattern {
+            span: 0..0,
+            kind,
+            inferred_type: None,
+        };
         assert!(is_irrefutable(&obj));
     }
 
     #[test]
     fn obj_with_one_refutable_prop_is_refutable() {
-        let obj = Pattern::Object(ObjectPat {
+        let kind = PatternKind::Object(ObjectPat {
             props: vec![
                 ObjectPatProp::KeyValue(KeyValuePatProp {
                     key: ident("foo"),
@@ -208,28 +211,40 @@ mod tests {
                 }),
             ],
             optional: false,
-            span: 0..0,
         });
+        let obj = Pattern {
+            span: 0..0,
+            kind,
+            inferred_type: None,
+        };
         assert!(is_refutable(&obj));
     }
 
     #[test]
     fn array_with_all_irrefutable_elements_is_irrefutable() {
-        let array = Pattern::Array(ArrayPat {
+        let kind = PatternKind::Array(ArrayPat {
             elems: vec![Some(ident_pattern("foo"))],
             optional: false,
-            span: 0..0,
         });
+        let array = Pattern {
+            span: 0..0,
+            kind,
+            inferred_type: None,
+        };
         assert!(is_irrefutable(&array));
     }
 
     #[test]
     fn array_with_one_refutable_prop_is_refutable() {
-        let array = Pattern::Array(ArrayPat {
+        let kind = PatternKind::Array(ArrayPat {
             elems: vec![Some(ident_pattern("foo")), Some(num_lit_pat("5"))],
             optional: false,
-            span: 0..0,
         });
+        let array = Pattern {
+            span: 0..0,
+            kind,
+            inferred_type: None,
+        };
         assert!(is_refutable(&array));
     }
 
@@ -240,11 +255,15 @@ mod tests {
 
     #[test]
     fn is_is_refutable() {
-        let is_pat = Pattern::Is(IsPat {
-            span: 0..0,
+        let kind = PatternKind::Is(IsPat {
             id: ident("foo"),
             is_id: ident("string"),
         });
+        let is_pat = Pattern {
+            span: 0..0,
+            kind,
+            inferred_type: None,
+        };
         assert!(is_refutable(&is_pat));
     }
 }

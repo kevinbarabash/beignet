@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 13..174,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 17..20,
-                        id: Ident {
-                            span: 17..20,
-                            name: "bar",
+                pattern: Pattern {
+                    span: 17..20,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 17..20,
+                                name: "bar",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {
@@ -35,17 +38,20 @@ Ok(
                                 arms: [
                                     Arm {
                                         span: 53..63,
-                                        pattern: Lit(
-                                            LitPat {
-                                                span: 53..54,
-                                                lit: Num(
-                                                    Num {
-                                                        span: 53..54,
-                                                        value: "1",
-                                                    },
-                                                ),
-                                            },
-                                        ),
+                                        pattern: Pattern {
+                                            span: 53..54,
+                                            kind: Lit(
+                                                LitPat {
+                                                    lit: Num(
+                                                        Num {
+                                                            span: 53..54,
+                                                            value: "1",
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 58..63,
@@ -62,17 +68,20 @@ Ok(
                                     },
                                     Arm {
                                         span: 81..91,
-                                        pattern: Lit(
-                                            LitPat {
-                                                span: 81..82,
-                                                lit: Num(
-                                                    Num {
-                                                        span: 81..82,
-                                                        value: "2",
-                                                    },
-                                                ),
-                                            },
-                                        ),
+                                        pattern: Pattern {
+                                            span: 81..82,
+                                            kind: Lit(
+                                                LitPat {
+                                                    lit: Num(
+                                                        Num {
+                                                            span: 81..82,
+                                                            value: "2",
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 86..91,
@@ -89,15 +98,18 @@ Ok(
                                     },
                                     Arm {
                                         span: 109..130,
-                                        pattern: Ident(
-                                            BindingIdent {
-                                                span: 109..110,
-                                                id: Ident {
-                                                    span: 109..110,
-                                                    name: "n",
+                                        pattern: Pattern {
+                                            span: 109..110,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    id: Ident {
+                                                        span: 109..110,
+                                                        name: "n",
+                                                    },
                                                 },
-                                            },
-                                        ),
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: Some(
                                             Expr {
                                                 span: 115..120,
@@ -146,11 +158,13 @@ Ok(
                                     },
                                     Arm {
                                         span: 148..159,
-                                        pattern: Wildcard(
-                                            WildcardPat {
-                                                span: 148..149,
-                                            },
-                                        ),
+                                        pattern: Pattern {
+                                            span: 148..149,
+                                            kind: Wildcard(
+                                                WildcardPat,
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         guard: None,
                                         body: Expr {
                                             span: 153..159,

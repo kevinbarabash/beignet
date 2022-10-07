@@ -7,34 +7,49 @@ Ok(
         body: [
             VarDecl {
                 span: 0..40,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 4..13,
-                        id: Ident {
-                            span: 4..13,
-                            name: "thunk_arr",
-                        },
-                    },
-                ),
-                type_ann: Some(
-                    Array(
-                        ArrayType {
-                            span: 15..34,
-                            elem_type: Lam(
-                                LamType {
-                                    span: 16..31,
-                                    params: [],
-                                    ret: Keyword(
-                                        KeywordType {
-                                            span: 22..31,
-                                            keyword: Undefined,
-                                        },
-                                    ),
-                                    type_params: None,
-                                },
-                            ),
+                pattern: Pattern {
+                    span: 4..13,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 4..13,
+                                name: "thunk_arr",
+                            },
                         },
                     ),
+                    inferred_type: None,
+                },
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Array(
+                            ArrayType {
+                                span: 15..34,
+                                elem_type: TypeAnn {
+                                    kind: Lam(
+                                        LamType {
+                                            span: 16..31,
+                                            params: [],
+                                            ret: TypeAnn {
+                                                kind: Keyword(
+                                                    KeywordType {
+                                                        span: 22..31,
+                                                        keyword: Undefined,
+                                                    },
+                                                ),
+                                                span: 22..31,
+                                                inferred_type: None,
+                                            },
+                                            type_params: None,
+                                        },
+                                    ),
+                                    span: 16..31,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                        span: 15..34,
+                        inferred_type: None,
+                    },
                 ),
                 init: Some(
                     Expr {

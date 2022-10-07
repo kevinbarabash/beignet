@@ -12,28 +12,36 @@ Ok(
                     span: 5..8,
                     name: "Foo",
                 },
-                type_ann: Object(
-                    ObjectType {
-                        span: 14..22,
-                        elems: [
-                            Prop(
-                                TProp {
-                                    span: 15..21,
-                                    name: "bar",
-                                    optional: false,
-                                    mutable: false,
-                                    type_ann: TypeRef(
-                                        TypeRef {
+                type_ann: TypeAnn {
+                    kind: Object(
+                        ObjectType {
+                            span: 14..22,
+                            elems: [
+                                Prop(
+                                    TProp {
+                                        span: 15..21,
+                                        name: "bar",
+                                        optional: false,
+                                        mutable: false,
+                                        type_ann: TypeAnn {
+                                            kind: TypeRef(
+                                                TypeRef {
+                                                    span: 20..21,
+                                                    name: "T",
+                                                    type_args: None,
+                                                },
+                                            ),
                                             span: 20..21,
-                                            name: "T",
-                                            type_args: None,
+                                            inferred_type: None,
                                         },
-                                    ),
-                                },
-                            ),
-                        ],
-                    },
-                ),
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                    span: 14..22,
+                    inferred_type: None,
+                },
                 type_params: Some(
                     [
                         TypeParam {

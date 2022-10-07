@@ -12,28 +12,36 @@ Ok(
                     span: 5..8,
                     name: "Foo",
                 },
-                type_ann: Object(
-                    ObjectType {
-                        span: 37..45,
-                        elems: [
-                            Prop(
-                                TProp {
-                                    span: 38..44,
-                                    name: "bar",
-                                    optional: false,
-                                    mutable: false,
-                                    type_ann: TypeRef(
-                                        TypeRef {
+                type_ann: TypeAnn {
+                    kind: Object(
+                        ObjectType {
+                            span: 37..45,
+                            elems: [
+                                Prop(
+                                    TProp {
+                                        span: 38..44,
+                                        name: "bar",
+                                        optional: false,
+                                        mutable: false,
+                                        type_ann: TypeAnn {
+                                            kind: TypeRef(
+                                                TypeRef {
+                                                    span: 43..44,
+                                                    name: "T",
+                                                    type_args: None,
+                                                },
+                                            ),
                                             span: 43..44,
-                                            name: "T",
-                                            type_args: None,
+                                            inferred_type: None,
                                         },
-                                    ),
-                                },
-                            ),
-                        ],
-                    },
-                ),
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                    span: 37..45,
+                    inferred_type: None,
+                },
                 type_params: Some(
                     [
                         TypeParam {
@@ -43,22 +51,30 @@ Ok(
                                 name: "T",
                             },
                             constraint: Some(
-                                Prim(
-                                    PrimType {
-                                        span: 19..25,
-                                        prim: Str,
-                                    },
-                                ),
-                            ),
-                            default: Some(
-                                Lit(
-                                    Str(
-                                        Str {
-                                            span: 28..33,
-                                            value: "foo",
+                                TypeAnn {
+                                    kind: Prim(
+                                        PrimType {
+                                            span: 19..25,
+                                            prim: Str,
                                         },
                                     ),
-                                ),
+                                    span: 19..25,
+                                    inferred_type: None,
+                                },
+                            ),
+                            default: Some(
+                                TypeAnn {
+                                    kind: Lit(
+                                        Str(
+                                            Str {
+                                                span: 28..33,
+                                                value: "foo",
+                                            },
+                                        ),
+                                    ),
+                                    span: 28..33,
+                                    inferred_type: None,
+                                },
                             ),
                         },
                     ],

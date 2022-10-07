@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 0..42,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 4..7,
-                        id: Ident {
-                            span: 4..7,
-                            name: "foo",
+                pattern: Pattern {
+                    span: 4..7,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 4..7,
+                                name: "foo",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {
@@ -54,25 +57,37 @@ Ok(
                                             },
                                         ),
                                         type_ann: Some(
-                                            Tuple(
-                                                TupleType {
-                                                    span: 19..35,
-                                                    types: [
-                                                        Prim(
-                                                            PrimType {
+                                            TypeAnn {
+                                                kind: Tuple(
+                                                    TupleType {
+                                                        span: 19..35,
+                                                        types: [
+                                                            TypeAnn {
+                                                                kind: Prim(
+                                                                    PrimType {
+                                                                        span: 20..26,
+                                                                        prim: Str,
+                                                                    },
+                                                                ),
                                                                 span: 20..26,
-                                                                prim: Str,
+                                                                inferred_type: None,
                                                             },
-                                                        ),
-                                                        Prim(
-                                                            PrimType {
+                                                            TypeAnn {
+                                                                kind: Prim(
+                                                                    PrimType {
+                                                                        span: 28..34,
+                                                                        prim: Num,
+                                                                    },
+                                                                ),
                                                                 span: 28..34,
-                                                                prim: Num,
+                                                                inferred_type: None,
                                                             },
-                                                        ),
-                                                    ],
-                                                },
-                                            ),
+                                                        ],
+                                                    },
+                                                ),
+                                                span: 19..35,
+                                                inferred_type: None,
+                                            },
                                         ),
                                         optional: false,
                                         mutable: false,

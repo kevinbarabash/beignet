@@ -7,123 +7,162 @@ Ok(
         body: [
             VarDecl {
                 span: 8..87,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 12..15,
-                        id: Ident {
-                            span: 12..15,
-                            name: "add",
-                        },
-                    },
-                ),
-                type_ann: Some(
-                    Intersection(
-                        IntersectionType {
-                            span: 17..86,
-                            types: [
-                                Lam(
-                                    LamType {
-                                        span: 18..50,
-                                        params: [
-                                            TypeAnnFnParam {
-                                                pat: Ident(
-                                                    EFnParamBindingIdent {
-                                                        span: 19..20,
-                                                        id: Ident {
-                                                            span: 19..20,
-                                                            name: "a",
-                                                        },
-                                                    },
-                                                ),
-                                                type_ann: Prim(
-                                                    PrimType {
-                                                        span: 22..28,
-                                                        prim: Num,
-                                                    },
-                                                ),
-                                                optional: false,
-                                            },
-                                            TypeAnnFnParam {
-                                                pat: Ident(
-                                                    EFnParamBindingIdent {
-                                                        span: 30..31,
-                                                        id: Ident {
-                                                            span: 30..31,
-                                                            name: "b",
-                                                        },
-                                                    },
-                                                ),
-                                                type_ann: Prim(
-                                                    PrimType {
-                                                        span: 33..39,
-                                                        prim: Num,
-                                                    },
-                                                ),
-                                                optional: false,
-                                            },
-                                        ],
-                                        ret: Prim(
-                                            PrimType {
-                                                span: 44..50,
-                                                prim: Num,
-                                            },
-                                        ),
-                                        type_params: None,
-                                    },
-                                ),
-                                Lam(
-                                    LamType {
-                                        span: 54..86,
-                                        params: [
-                                            TypeAnnFnParam {
-                                                pat: Ident(
-                                                    EFnParamBindingIdent {
-                                                        span: 55..56,
-                                                        id: Ident {
-                                                            span: 55..56,
-                                                            name: "a",
-                                                        },
-                                                    },
-                                                ),
-                                                type_ann: Prim(
-                                                    PrimType {
-                                                        span: 58..64,
-                                                        prim: Str,
-                                                    },
-                                                ),
-                                                optional: false,
-                                            },
-                                            TypeAnnFnParam {
-                                                pat: Ident(
-                                                    EFnParamBindingIdent {
-                                                        span: 66..67,
-                                                        id: Ident {
-                                                            span: 66..67,
-                                                            name: "b",
-                                                        },
-                                                    },
-                                                ),
-                                                type_ann: Prim(
-                                                    PrimType {
-                                                        span: 69..75,
-                                                        prim: Str,
-                                                    },
-                                                ),
-                                                optional: false,
-                                            },
-                                        ],
-                                        ret: Prim(
-                                            PrimType {
-                                                span: 80..86,
-                                                prim: Str,
-                                            },
-                                        ),
-                                        type_params: None,
-                                    },
-                                ),
-                            ],
+                pattern: Pattern {
+                    span: 12..15,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 12..15,
+                                name: "add",
+                            },
                         },
                     ),
+                    inferred_type: None,
+                },
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Intersection(
+                            IntersectionType {
+                                span: 17..86,
+                                types: [
+                                    TypeAnn {
+                                        kind: Lam(
+                                            LamType {
+                                                span: 18..50,
+                                                params: [
+                                                    TypeAnnFnParam {
+                                                        pat: Ident(
+                                                            EFnParamBindingIdent {
+                                                                span: 19..20,
+                                                                id: Ident {
+                                                                    span: 19..20,
+                                                                    name: "a",
+                                                                },
+                                                            },
+                                                        ),
+                                                        type_ann: TypeAnn {
+                                                            kind: Prim(
+                                                                PrimType {
+                                                                    span: 22..28,
+                                                                    prim: Num,
+                                                                },
+                                                            ),
+                                                            span: 22..28,
+                                                            inferred_type: None,
+                                                        },
+                                                        optional: false,
+                                                    },
+                                                    TypeAnnFnParam {
+                                                        pat: Ident(
+                                                            EFnParamBindingIdent {
+                                                                span: 30..31,
+                                                                id: Ident {
+                                                                    span: 30..31,
+                                                                    name: "b",
+                                                                },
+                                                            },
+                                                        ),
+                                                        type_ann: TypeAnn {
+                                                            kind: Prim(
+                                                                PrimType {
+                                                                    span: 33..39,
+                                                                    prim: Num,
+                                                                },
+                                                            ),
+                                                            span: 33..39,
+                                                            inferred_type: None,
+                                                        },
+                                                        optional: false,
+                                                    },
+                                                ],
+                                                ret: TypeAnn {
+                                                    kind: Prim(
+                                                        PrimType {
+                                                            span: 44..50,
+                                                            prim: Num,
+                                                        },
+                                                    ),
+                                                    span: 44..50,
+                                                    inferred_type: None,
+                                                },
+                                                type_params: None,
+                                            },
+                                        ),
+                                        span: 18..50,
+                                        inferred_type: None,
+                                    },
+                                    TypeAnn {
+                                        kind: Lam(
+                                            LamType {
+                                                span: 54..86,
+                                                params: [
+                                                    TypeAnnFnParam {
+                                                        pat: Ident(
+                                                            EFnParamBindingIdent {
+                                                                span: 55..56,
+                                                                id: Ident {
+                                                                    span: 55..56,
+                                                                    name: "a",
+                                                                },
+                                                            },
+                                                        ),
+                                                        type_ann: TypeAnn {
+                                                            kind: Prim(
+                                                                PrimType {
+                                                                    span: 58..64,
+                                                                    prim: Str,
+                                                                },
+                                                            ),
+                                                            span: 58..64,
+                                                            inferred_type: None,
+                                                        },
+                                                        optional: false,
+                                                    },
+                                                    TypeAnnFnParam {
+                                                        pat: Ident(
+                                                            EFnParamBindingIdent {
+                                                                span: 66..67,
+                                                                id: Ident {
+                                                                    span: 66..67,
+                                                                    name: "b",
+                                                                },
+                                                            },
+                                                        ),
+                                                        type_ann: TypeAnn {
+                                                            kind: Prim(
+                                                                PrimType {
+                                                                    span: 69..75,
+                                                                    prim: Str,
+                                                                },
+                                                            ),
+                                                            span: 69..75,
+                                                            inferred_type: None,
+                                                        },
+                                                        optional: false,
+                                                    },
+                                                ],
+                                                ret: TypeAnn {
+                                                    kind: Prim(
+                                                        PrimType {
+                                                            span: 80..86,
+                                                            prim: Str,
+                                                        },
+                                                    ),
+                                                    span: 80..86,
+                                                    inferred_type: None,
+                                                },
+                                                type_params: None,
+                                            },
+                                        ),
+                                        span: 54..86,
+                                        inferred_type: None,
+                                    },
+                                ],
+                            },
+                        ),
+                        span: 17..86,
+                        inferred_type: None,
+                    },
                 ),
                 init: None,
                 declare: true,

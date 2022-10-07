@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 13..226,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 17..20,
-                        id: Ident {
-                            span: 17..20,
-                            name: "bar",
+                pattern: Pattern {
+                    span: 17..20,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 17..20,
+                                name: "bar",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {
@@ -26,35 +29,41 @@ Ok(
                                     span: 27..53,
                                     kind: LetExpr(
                                         LetExpr {
-                                            pat: Object(
-                                                ObjectPat {
-                                                    span: 31..47,
-                                                    props: [
-                                                        KeyValue(
-                                                            KeyValuePatProp {
-                                                                key: Ident {
-                                                                    span: 32..33,
-                                                                    name: "x",
-                                                                },
-                                                                value: Is(
-                                                                    IsPat {
-                                                                        span: 35..46,
-                                                                        id: Ident {
-                                                                            span: 35..36,
-                                                                            name: "x",
-                                                                        },
-                                                                        is_id: Ident {
-                                                                            span: 40..46,
-                                                                            name: "string",
-                                                                        },
+                                            pat: Pattern {
+                                                span: 31..47,
+                                                kind: Object(
+                                                    ObjectPat {
+                                                        props: [
+                                                            KeyValue(
+                                                                KeyValuePatProp {
+                                                                    key: Ident {
+                                                                        span: 32..33,
+                                                                        name: "x",
                                                                     },
-                                                                ),
-                                                            },
-                                                        ),
-                                                    ],
-                                                    optional: false,
-                                                },
-                                            ),
+                                                                    value: Pattern {
+                                                                        span: 35..46,
+                                                                        kind: Is(
+                                                                            IsPat {
+                                                                                id: Ident {
+                                                                                    span: 35..36,
+                                                                                    name: "x",
+                                                                                },
+                                                                                is_id: Ident {
+                                                                                    span: 40..46,
+                                                                                    name: "string",
+                                                                                },
+                                                                            },
+                                                                        ),
+                                                                        inferred_type: None,
+                                                                    },
+                                                                },
+                                                            ),
+                                                        ],
+                                                        optional: false,
+                                                    },
+                                                ),
+                                                inferred_type: None,
+                                            },
                                             expr: Expr {
                                                 span: 50..53,
                                                 kind: Ident(
@@ -90,52 +99,66 @@ Ok(
                                                     span: 105..139,
                                                     kind: LetExpr(
                                                         LetExpr {
-                                                            pat: Array(
-                                                                ArrayPat {
-                                                                    span: 109..133,
-                                                                    elems: [
-                                                                        Some(
-                                                                            Is(
-                                                                                IsPat {
+                                                            pat: Pattern {
+                                                                span: 109..133,
+                                                                kind: Array(
+                                                                    ArrayPat {
+                                                                        elems: [
+                                                                            Some(
+                                                                                Pattern {
                                                                                     span: 110..120,
-                                                                                    id: Ident {
-                                                                                        span: 110..111,
-                                                                                        name: "a",
-                                                                                    },
-                                                                                    is_id: Ident {
-                                                                                        span: 115..120,
-                                                                                        name: "Array",
-                                                                                    },
-                                                                                },
-                                                                            ),
-                                                                        ),
-                                                                        Some(
-                                                                            Wildcard(
-                                                                                WildcardPat {
-                                                                                    span: 122..123,
-                                                                                },
-                                                                            ),
-                                                                        ),
-                                                                        Some(
-                                                                            Rest(
-                                                                                RestPat {
-                                                                                    span: 125..132,
-                                                                                    arg: Ident(
-                                                                                        BindingIdent {
-                                                                                            span: 128..132,
+                                                                                    kind: Is(
+                                                                                        IsPat {
                                                                                             id: Ident {
-                                                                                                span: 128..132,
-                                                                                                name: "rest",
+                                                                                                span: 110..111,
+                                                                                                name: "a",
+                                                                                            },
+                                                                                            is_id: Ident {
+                                                                                                span: 115..120,
+                                                                                                name: "Array",
                                                                                             },
                                                                                         },
                                                                                     ),
+                                                                                    inferred_type: None,
                                                                                 },
                                                                             ),
-                                                                        ),
-                                                                    ],
-                                                                    optional: false,
-                                                                },
-                                                            ),
+                                                                            Some(
+                                                                                Pattern {
+                                                                                    span: 122..123,
+                                                                                    kind: Wildcard(
+                                                                                        WildcardPat,
+                                                                                    ),
+                                                                                    inferred_type: None,
+                                                                                },
+                                                                            ),
+                                                                            Some(
+                                                                                Pattern {
+                                                                                    span: 125..132,
+                                                                                    kind: Rest(
+                                                                                        RestPat {
+                                                                                            arg: Pattern {
+                                                                                                span: 128..132,
+                                                                                                kind: Ident(
+                                                                                                    BindingIdent {
+                                                                                                        id: Ident {
+                                                                                                            span: 128..132,
+                                                                                                            name: "rest",
+                                                                                                        },
+                                                                                                    },
+                                                                                                ),
+                                                                                                inferred_type: None,
+                                                                                            },
+                                                                                        },
+                                                                                    ),
+                                                                                    inferred_type: None,
+                                                                                },
+                                                                            ),
+                                                                        ],
+                                                                        optional: false,
+                                                                    },
+                                                                ),
+                                                                inferred_type: None,
+                                                            },
                                                             expr: Expr {
                                                                 span: 136..139,
                                                                 kind: Ident(

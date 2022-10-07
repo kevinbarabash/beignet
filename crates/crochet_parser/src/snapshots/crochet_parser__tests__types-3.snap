@@ -7,27 +7,38 @@ Ok(
         body: [
             VarDecl {
                 span: 0..27,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 4..11,
-                        id: Ident {
-                            span: 4..11,
-                            name: "str_arr",
-                        },
-                    },
-                ),
-                type_ann: Some(
-                    Array(
-                        ArrayType {
-                            span: 13..21,
-                            elem_type: Prim(
-                                PrimType {
-                                    span: 13..19,
-                                    prim: Str,
-                                },
-                            ),
+                pattern: Pattern {
+                    span: 4..11,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 4..11,
+                                name: "str_arr",
+                            },
                         },
                     ),
+                    inferred_type: None,
+                },
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Array(
+                            ArrayType {
+                                span: 13..21,
+                                elem_type: TypeAnn {
+                                    kind: Prim(
+                                        PrimType {
+                                            span: 13..19,
+                                            prim: Str,
+                                        },
+                                    ),
+                                    span: 13..19,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                        span: 13..21,
+                        inferred_type: None,
+                    },
                 ),
                 init: Some(
                     Expr {

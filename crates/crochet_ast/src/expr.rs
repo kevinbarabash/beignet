@@ -18,7 +18,7 @@ pub enum Statement {
         span: Span,
         pattern: Pattern,
         type_ann: Option<TypeAnn>,
-        init: Option<Expr>,
+        init: Option<Box<Expr>>,
         declare: bool,
     },
     TypeDecl {
@@ -30,7 +30,7 @@ pub enum Statement {
     },
     Expr {
         span: Span,
-        expr: Expr,
+        expr: Box<Expr>,
     }, // NOTE: does not include Expr::Let
 }
 

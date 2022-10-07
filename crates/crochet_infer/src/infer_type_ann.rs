@@ -15,20 +15,27 @@ use super::infer_fn_param::e_pat_to_t_pat;
 use super::util::get_type_params;
 
 pub fn infer_scheme(type_ann: &mut TypeAnn, ctx: &mut Context) -> Result<(Subst, Type), String> {
-    // TODO: see if we can get rid of this clone but making infer_qualified_type_ann() smarter
-    match &mut type_ann.clone() {
-        TypeAnn::Lam(LamType { type_params, .. }) => {
-            infer_qualified_type_ann(type_ann, type_params, ctx)
-        }
-        _ => infer_type_ann_rec(type_ann, ctx, &HashMap::default()),
+    if let TypeAnnKind::Lam(_) = &type_ann.kind {
+        infer_qualified_type_ann(type_ann, &None, ctx)
+    } else {
+        infer_type_ann_rec(type_ann, ctx, &HashMap::default())
     }
 }
 
 pub fn infer_qualified_type_ann(
     type_ann: &mut TypeAnn,
-    type_params: &Option<Vec<TypeParam>>,
+    type_params: &Option<Vec<TypeParam>>, // used by infer_prog() in infer.rs
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
+    let type_params = if type_params.is_none() {
+        match &type_ann.kind {
+            TypeAnnKind::Lam(lam) => &lam.type_params,
+            _ => &None,
+        }
+    } else {
+        type_params
+    };
+
     // NOTE: There's a scoping issue when using this mapping hash map.
     // <T>(arg: T, cb: <T>(T) => T) => T
     // The <T> type param list for `cb` shadows the outer `T`
@@ -73,8 +80,8 @@ fn infer_type_ann_rec(
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Type), String> {
-    match type_ann {
-        TypeAnn::Lam(lam) => {
+    match &mut type_ann.kind {
+        TypeAnnKind::Lam(lam) => {
             let mut ss: Vec<Subst> = vec![];
             let mut params: Vec<types::TFnParam> = vec![];
 
@@ -99,14 +106,28 @@ fn infer_type_ann_rec(
                 ret,
                 type_params: vec![],
             });
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
-        TypeAnn::Lit(lit) => Ok((Subst::new(), Type::from(lit.to_owned()))),
-        TypeAnn::Prim(PrimType { prim, .. }) => Ok((Subst::new(), Type::from(prim.to_owned()))),
-        TypeAnn::Keyword(KeywordType { keyword, .. }) => {
-            Ok((Subst::new(), Type::from(keyword.to_owned())))
+        TypeAnnKind::Lit(lit) => {
+            let s = Subst::new();
+            let t = Type::from(lit.to_owned());
+            type_ann.inferred_type = Some(t.clone());
+            Ok((s, t))
         }
-        TypeAnn::Object(obj) => {
+        TypeAnnKind::Prim(PrimType { prim, .. }) => {
+            let s = Subst::new();
+            let t = Type::from(prim.to_owned());
+            type_ann.inferred_type = Some(t.clone());
+            Ok((s, t))
+        }
+        TypeAnnKind::Keyword(KeywordType { keyword, .. }) => {
+            let s = Subst::new();
+            let t = Type::from(keyword.to_owned());
+            type_ann.inferred_type = Some(t.clone());
+            Ok((s, t))
+        }
+        TypeAnnKind::Object(obj) => {
             let mut ss: Vec<Subst> = vec![];
             let mut elems: Vec<types::TObjElem> = vec![];
 
@@ -151,9 +172,10 @@ fn infer_type_ann_rec(
                 elems,
                 type_params: vec![],
             });
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
-        TypeAnn::TypeRef(TypeRef {
+        TypeAnnKind::TypeRef(TypeRef {
             name,
             type_args: type_params,
             ..
@@ -161,6 +183,7 @@ fn infer_type_ann_rec(
             Some(tv) => {
                 let s = Subst::new();
                 let t = tv.to_owned();
+                type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
             None => {
@@ -185,10 +208,11 @@ fn infer_type_ann_rec(
                         Some(type_args)
                     },
                 });
+                type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
         },
-        TypeAnn::Union(union) => {
+        TypeAnnKind::Union(union) => {
             let mut ts: Vec<Type> = vec![];
             let mut ss: Vec<Subst> = vec![];
 
@@ -201,9 +225,10 @@ fn infer_type_ann_rec(
 
             let s = compose_many_subs(&ss);
             let t = Type::Union(ts);
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
-        TypeAnn::Intersection(intersection) => {
+        TypeAnnKind::Intersection(intersection) => {
             let mut ts: Vec<Type> = vec![];
             let mut ss: Vec<Subst> = vec![];
 
@@ -216,9 +241,10 @@ fn infer_type_ann_rec(
 
             let s = compose_many_subs(&ss);
             let t = Type::Intersection(ts);
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
-        TypeAnn::Tuple(tuple) => {
+        TypeAnnKind::Tuple(tuple) => {
             let mut ts: Vec<Type> = vec![];
             let mut ss: Vec<Subst> = vec![];
 
@@ -231,22 +257,25 @@ fn infer_type_ann_rec(
 
             let s = compose_many_subs(&ss);
             let t = Type::Tuple(ts);
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
-        TypeAnn::Array(ArrayType { elem_type, .. }) => {
+        TypeAnnKind::Array(ArrayType { elem_type, .. }) => {
             let (elem_s, elem_t) = infer_type_ann_rec(elem_type, ctx, type_param_map)?;
             let s = elem_s;
             let t = Type::Array(Box::from(elem_t));
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
-        TypeAnn::KeyOf(KeyOfType { type_ann, .. }) => {
+        TypeAnnKind::KeyOf(KeyOfType { type_ann, .. }) => {
             let (arg_s, arg_t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
             let s = arg_s;
             let t = Type::KeyOf(Box::from(arg_t));
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
-        TypeAnn::Query(QueryType { expr, .. }) => infer_expr(ctx, expr),
-        TypeAnn::IndexedAccess(IndexedAccessType {
+        TypeAnnKind::Query(QueryType { expr, .. }) => infer_expr(ctx, expr),
+        TypeAnnKind::IndexedAccess(IndexedAccessType {
             obj_type,
             index_type,
             ..
@@ -258,6 +287,7 @@ fn infer_type_ann_rec(
             let (s, t) = infer_property_type(&obj_t, &index_t, ctx)?;
             ss.push(s);
             let s = compose_many_subs(&ss);
+            type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
     }

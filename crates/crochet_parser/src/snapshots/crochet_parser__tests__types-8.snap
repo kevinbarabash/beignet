@@ -12,108 +12,144 @@ Ok(
                     span: 14..19,
                     name: "Event",
                 },
-                type_ann: Union(
-                    UnionType {
-                        span: 33..119,
-                        types: [
-                            Union(
-                                UnionType {
+                type_ann: TypeAnn {
+                    kind: Union(
+                        UnionType {
+                            span: 33..119,
+                            types: [
+                                TypeAnn {
+                                    kind: Union(
+                                        UnionType {
+                                            span: 33..76,
+                                            types: [
+                                                TypeAnn {
+                                                    kind: Object(
+                                                        ObjectType {
+                                                            span: 35..76,
+                                                            elems: [
+                                                                Prop(
+                                                                    TProp {
+                                                                        span: 36..53,
+                                                                        name: "type",
+                                                                        optional: false,
+                                                                        mutable: false,
+                                                                        type_ann: TypeAnn {
+                                                                            kind: Lit(
+                                                                                Str(
+                                                                                    Str {
+                                                                                        span: 42..53,
+                                                                                        value: "mousedown",
+                                                                                    },
+                                                                                ),
+                                                                            ),
+                                                                            span: 42..53,
+                                                                            inferred_type: None,
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                Prop(
+                                                                    TProp {
+                                                                        span: 55..64,
+                                                                        name: "x",
+                                                                        optional: false,
+                                                                        mutable: false,
+                                                                        type_ann: TypeAnn {
+                                                                            kind: Prim(
+                                                                                PrimType {
+                                                                                    span: 58..64,
+                                                                                    prim: Num,
+                                                                                },
+                                                                            ),
+                                                                            span: 58..64,
+                                                                            inferred_type: None,
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                Prop(
+                                                                    TProp {
+                                                                        span: 66..75,
+                                                                        name: "y",
+                                                                        optional: false,
+                                                                        mutable: false,
+                                                                        type_ann: TypeAnn {
+                                                                            kind: Prim(
+                                                                                PrimType {
+                                                                                    span: 69..75,
+                                                                                    prim: Num,
+                                                                                },
+                                                                            ),
+                                                                            span: 69..75,
+                                                                            inferred_type: None,
+                                                                        },
+                                                                    },
+                                                                ),
+                                                            ],
+                                                        },
+                                                    ),
+                                                    span: 35..76,
+                                                    inferred_type: None,
+                                                },
+                                            ],
+                                        },
+                                    ),
                                     span: 33..76,
-                                    types: [
-                                        Object(
-                                            ObjectType {
-                                                span: 35..76,
-                                                elems: [
-                                                    Prop(
-                                                        TProp {
-                                                            span: 36..53,
-                                                            name: "type",
-                                                            optional: false,
-                                                            mutable: false,
-                                                            type_ann: Lit(
+                                    inferred_type: None,
+                                },
+                                TypeAnn {
+                                    kind: Object(
+                                        ObjectType {
+                                            span: 89..119,
+                                            elems: [
+                                                Prop(
+                                                    TProp {
+                                                        span: 90..105,
+                                                        name: "type",
+                                                        optional: false,
+                                                        mutable: false,
+                                                        type_ann: TypeAnn {
+                                                            kind: Lit(
                                                                 Str(
                                                                     Str {
-                                                                        span: 42..53,
-                                                                        value: "mousedown",
+                                                                        span: 96..105,
+                                                                        value: "keydown",
                                                                     },
                                                                 ),
                                                             ),
-                                                        },
-                                                    ),
-                                                    Prop(
-                                                        TProp {
-                                                            span: 55..64,
-                                                            name: "x",
-                                                            optional: false,
-                                                            mutable: false,
-                                                            type_ann: Prim(
-                                                                PrimType {
-                                                                    span: 58..64,
-                                                                    prim: Num,
-                                                                },
-                                                            ),
-                                                        },
-                                                    ),
-                                                    Prop(
-                                                        TProp {
-                                                            span: 66..75,
-                                                            name: "y",
-                                                            optional: false,
-                                                            mutable: false,
-                                                            type_ann: Prim(
-                                                                PrimType {
-                                                                    span: 69..75,
-                                                                    prim: Num,
-                                                                },
-                                                            ),
-                                                        },
-                                                    ),
-                                                ],
-                                            },
-                                        ),
-                                    ],
-                                },
-                            ),
-                            Object(
-                                ObjectType {
-                                    span: 89..119,
-                                    elems: [
-                                        Prop(
-                                            TProp {
-                                                span: 90..105,
-                                                name: "type",
-                                                optional: false,
-                                                mutable: false,
-                                                type_ann: Lit(
-                                                    Str(
-                                                        Str {
                                                             span: 96..105,
-                                                            value: "keydown",
+                                                            inferred_type: None,
                                                         },
-                                                    ),
-                                                ),
-                                            },
-                                        ),
-                                        Prop(
-                                            TProp {
-                                                span: 107..118,
-                                                name: "key",
-                                                optional: false,
-                                                mutable: false,
-                                                type_ann: Prim(
-                                                    PrimType {
-                                                        span: 112..118,
-                                                        prim: Str,
                                                     },
                                                 ),
-                                            },
-                                        ),
-                                    ],
+                                                Prop(
+                                                    TProp {
+                                                        span: 107..118,
+                                                        name: "key",
+                                                        optional: false,
+                                                        mutable: false,
+                                                        type_ann: TypeAnn {
+                                                            kind: Prim(
+                                                                PrimType {
+                                                                    span: 112..118,
+                                                                    prim: Str,
+                                                                },
+                                                            ),
+                                                            span: 112..118,
+                                                            inferred_type: None,
+                                                        },
+                                                    },
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                    span: 89..119,
+                                    inferred_type: None,
                                 },
-                            ),
-                        ],
-                    },
-                ),
+                            ],
+                        },
+                    ),
+                    span: 33..119,
+                    inferred_type: None,
+                },
                 type_params: None,
             },
         ],

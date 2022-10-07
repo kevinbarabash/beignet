@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 9..49,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 13..14,
-                        id: Ident {
-                            span: 13..14,
-                            name: "S",
+                pattern: Pattern {
+                    span: 13..14,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 13..14,
+                                name: "S",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {
@@ -183,15 +186,18 @@ Ok(
             },
             VarDecl {
                 span: 58..82,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 62..63,
-                        id: Ident {
-                            span: 62..63,
-                            name: "K",
+                pattern: Pattern {
+                    span: 62..63,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 62..63,
+                                name: "K",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {
@@ -263,15 +269,18 @@ Ok(
             },
             VarDecl {
                 span: 91..107,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 95..96,
-                        id: Ident {
-                            span: 95..96,
-                            name: "I",
+                pattern: Pattern {
+                    span: 95..96,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 95..96,
+                                name: "I",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {

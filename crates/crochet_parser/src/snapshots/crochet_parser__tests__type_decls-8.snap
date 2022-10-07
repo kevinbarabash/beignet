@@ -12,21 +12,25 @@ Ok(
                     span: 5..8,
                     name: "Foo",
                 },
-                type_ann: Query(
-                    QueryType {
-                        span: 11..21,
-                        expr: Expr {
-                            span: 18..21,
-                            kind: Ident(
-                                Ident {
-                                    span: 18..21,
-                                    name: "foo",
-                                },
-                            ),
-                            inferred_type: None,
+                type_ann: TypeAnn {
+                    kind: Query(
+                        QueryType {
+                            span: 11..21,
+                            expr: Expr {
+                                span: 18..21,
+                                kind: Ident(
+                                    Ident {
+                                        span: 18..21,
+                                        name: "foo",
+                                    },
+                                ),
+                                inferred_type: None,
+                            },
                         },
-                    },
-                ),
+                    ),
+                    span: 11..21,
+                    inferred_type: None,
+                },
                 type_params: None,
             },
         ],

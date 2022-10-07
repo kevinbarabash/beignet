@@ -7,48 +7,53 @@ Ok(
         body: [
             VarDecl {
                 span: 0..30,
-                pattern: Object(
-                    ObjectPat {
-                        span: 4..19,
-                        props: [
-                            Assign(
-                                AssignPatProp {
-                                    span: 5..6,
-                                    key: Ident {
+                pattern: Pattern {
+                    span: 4..19,
+                    kind: Object(
+                        ObjectPat {
+                            props: [
+                                Assign(
+                                    AssignPatProp {
                                         span: 5..6,
-                                        name: "a",
-                                    },
-                                    value: None,
-                                },
-                            ),
-                            Assign(
-                                AssignPatProp {
-                                    span: 8..9,
-                                    key: Ident {
-                                        span: 8..9,
-                                        name: "b",
-                                    },
-                                    value: None,
-                                },
-                            ),
-                            Rest(
-                                RestPat {
-                                    span: 11..18,
-                                    arg: Ident(
-                                        BindingIdent {
-                                            span: 14..18,
-                                            id: Ident {
-                                                span: 14..18,
-                                                name: "rest",
-                                            },
+                                        key: Ident {
+                                            span: 5..6,
+                                            name: "a",
                                         },
-                                    ),
-                                },
-                            ),
-                        ],
-                        optional: false,
-                    },
-                ),
+                                        value: None,
+                                    },
+                                ),
+                                Assign(
+                                    AssignPatProp {
+                                        span: 8..9,
+                                        key: Ident {
+                                            span: 8..9,
+                                            name: "b",
+                                        },
+                                        value: None,
+                                    },
+                                ),
+                                Rest(
+                                    RestPat {
+                                        arg: Pattern {
+                                            span: 14..18,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    id: Ident {
+                                                        span: 14..18,
+                                                        name: "rest",
+                                                    },
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                            ],
+                            optional: false,
+                        },
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {

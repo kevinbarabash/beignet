@@ -7,15 +7,18 @@ Ok(
         body: [
             VarDecl {
                 span: 0..50,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 4..7,
-                        id: Ident {
-                            span: 4..7,
-                            name: "add",
+                pattern: Pattern {
+                    span: 4..7,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 4..7,
+                                name: "add",
+                            },
                         },
-                    },
-                ),
+                    ),
+                    inferred_type: None,
+                },
                 type_ann: None,
                 init: Some(
                     Expr {
@@ -34,12 +37,16 @@ Ok(
                                             },
                                         ),
                                         type_ann: Some(
-                                            Prim(
-                                                PrimType {
-                                                    span: 14..20,
-                                                    prim: Num,
-                                                },
-                                            ),
+                                            TypeAnn {
+                                                kind: Prim(
+                                                    PrimType {
+                                                        span: 14..20,
+                                                        prim: Num,
+                                                    },
+                                                ),
+                                                span: 14..20,
+                                                inferred_type: None,
+                                            },
                                         ),
                                         optional: false,
                                         mutable: false,
@@ -55,12 +62,16 @@ Ok(
                                             },
                                         ),
                                         type_ann: Some(
-                                            Prim(
-                                                PrimType {
-                                                    span: 25..31,
-                                                    prim: Num,
-                                                },
-                                            ),
+                                            TypeAnn {
+                                                kind: Prim(
+                                                    PrimType {
+                                                        span: 25..31,
+                                                        prim: Num,
+                                                    },
+                                                ),
+                                                span: 25..31,
+                                                inferred_type: None,
+                                            },
                                         ),
                                         optional: false,
                                         mutable: false,
@@ -97,12 +108,16 @@ Ok(
                                 },
                                 is_async: false,
                                 return_type: Some(
-                                    Prim(
-                                        PrimType {
-                                            span: 34..40,
-                                            prim: Num,
-                                        },
-                                    ),
+                                    TypeAnn {
+                                        kind: Prim(
+                                            PrimType {
+                                                span: 34..40,
+                                                prim: Num,
+                                            },
+                                        ),
+                                        span: 34..40,
+                                        inferred_type: None,
+                                    },
                                 ),
                                 type_params: None,
                             },

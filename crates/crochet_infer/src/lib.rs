@@ -6,6 +6,7 @@ mod infer_type_ann;
 mod key_of;
 mod substitutable;
 mod unify;
+mod update;
 mod util;
 
 pub mod infer;
@@ -2329,5 +2330,16 @@ mod tests {
 
         assert_eq!(get_type_type("RecVal", &ctx), "number");
         assert_eq!(get_type_type("ArrVal", &ctx), "boolean");
+    }
+
+    #[test]
+    fn infer_ident_inside_lam() {
+        let src = "let add = (a, b) => a + b;";
+
+        let mut prog = parse(src).unwrap();
+        let mut ctx: Context = Context::default();
+        infer::infer_prog(&mut prog, &mut ctx).unwrap();
+
+        insta::assert_debug_snapshot!(prog);
     }
 }

@@ -6,6 +6,7 @@ use super::infer_expr::infer_expr as infer_expr_rec;
 use super::infer_pattern::*;
 use super::infer_type_ann::*;
 use super::substitutable::{Subst, Substitutable};
+use super::update::update_program;
 use super::util::*;
 
 pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, String> {
@@ -43,6 +44,8 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
     // module definitions.
     ctx.push_scope(false);
 
+    let mut ss: Vec<Subst> = vec![];
+
     // TODO: figure out how report multiple errors
     for stmt in &mut prog.body {
         match stmt {
@@ -55,12 +58,14 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
             } => {
                 match declare {
                     true => {
-                        match pattern {
-                            Pattern::Ident(BindingIdent { id, .. }) => {
+                        match &mut pattern.kind {
+                            PatternKind::Ident(BindingIdent { id, .. }) => {
                                 match type_ann {
                                     Some(type_ann) => {
                                         let (s, t) = infer_scheme(type_ann, ctx)?;
                                         ctx.insert_value(id.name.to_owned(), t.apply(&s));
+
+                                        ss.push(s);
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
@@ -92,6 +97,8 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
                             let t = normalize(&t.apply(&s), ctx);
                             ctx.insert_value(name, t);
                         }
+
+                        ss.push(s);
                     }
                 };
             }
@@ -103,14 +110,21 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
             } => {
                 let (s, t) = infer_qualified_type_ann(type_ann, type_params, ctx)?;
                 ctx.insert_type(id.name.to_owned(), t.apply(&s));
+
+                ss.push(s);
             }
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
-                infer_expr(ctx, expr)?;
+                let (s, _) = infer_expr_rec(ctx, expr)?;
+
+                ss.push(s);
             }
         };
     }
+
+    let s = compose_many_subs(&ss);
+    update_program(prog, &s);
 
     Ok(ctx.to_owned())
 }

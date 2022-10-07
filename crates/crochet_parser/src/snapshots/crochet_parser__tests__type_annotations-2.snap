@@ -7,22 +7,29 @@ Ok(
         body: [
             VarDecl {
                 span: 0..26,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 4..7,
-                        id: Ident {
-                            span: 4..7,
-                            name: "msg",
-                        },
-                    },
-                ),
-                type_ann: Some(
-                    Prim(
-                        PrimType {
-                            span: 9..15,
-                            prim: Str,
+                pattern: Pattern {
+                    span: 4..7,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 4..7,
+                                name: "msg",
+                            },
                         },
                     ),
+                    inferred_type: None,
+                },
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Prim(
+                            PrimType {
+                                span: 9..15,
+                                prim: Str,
+                            },
+                        ),
+                        span: 9..15,
+                        inferred_type: None,
+                    },
                 ),
                 init: Some(
                     Expr {

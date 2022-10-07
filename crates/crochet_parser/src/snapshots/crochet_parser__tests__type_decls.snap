@@ -12,12 +12,16 @@ Ok(
                     span: 5..8,
                     name: "Num",
                 },
-                type_ann: Prim(
-                    PrimType {
-                        span: 11..17,
-                        prim: Num,
-                    },
-                ),
+                type_ann: TypeAnn {
+                    kind: Prim(
+                        PrimType {
+                            span: 11..17,
+                            prim: Num,
+                        },
+                    ),
+                    span: 11..17,
+                    inferred_type: None,
+                },
                 type_params: None,
             },
         ],

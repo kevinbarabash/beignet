@@ -136,18 +136,18 @@ fn build_js(program: &ast::Program, ctx: &mut Context) -> Program {
 }
 
 fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Option<Pat> {
-    match pattern {
+    match &pattern.kind {
         // unassignable patterns
-        ast::Pattern::Lit(_) => None,
-        ast::Pattern::Wildcard(_) => None,
+        ast::PatternKind::Lit(_) => None,
+        ast::PatternKind::Wildcard(_) => None,
 
         // assignable patterns
-        ast::Pattern::Ident(ast::BindingIdent { id, .. }) => Some(Pat::Ident(BindingIdent {
+        ast::PatternKind::Ident(ast::BindingIdent { id, .. }) => Some(Pat::Ident(BindingIdent {
             id: build_ident(id),
             type_ann: None,
         })),
-        ast::Pattern::Rest(_) => todo!(),
-        ast::Pattern::Object(ast::ObjectPat {
+        ast::PatternKind::Rest(_) => todo!(),
+        ast::PatternKind::Object(ast::ObjectPat {
             props, optional, ..
         }) => {
             let props: Vec<ObjectPatProp> = props
@@ -180,7 +180,7 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
                 props,
             }))
         }
-        ast::Pattern::Array(ast::ArrayPat {
+        ast::PatternKind::Array(ast::ArrayPat {
             elems, optional, ..
         }) => {
             let elems: Vec<Option<Pat>> = elems
@@ -200,7 +200,7 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
                 type_ann: None, // because we're generating .js.
             }))
         }
-        ast::Pattern::Is(ast::IsPat { id, .. }) => Some(Pat::Ident(BindingIdent {
+        ast::PatternKind::Is(ast::IsPat { id, .. }) => Some(Pat::Ident(BindingIdent {
             id: build_ident(id),
             type_ann: None,
         })),
@@ -1052,14 +1052,14 @@ struct Condition {
 }
 
 fn get_conds_for_pat(pat: &ast::Pattern, conds: &mut Vec<Condition>, path: &mut Path) {
-    match pat {
+    match &pat.kind {
         // irrefutable
-        ast::Pattern::Ident(_) => (),
-        ast::Pattern::Rest(_) => (),
-        ast::Pattern::Wildcard(_) => (),
+        ast::PatternKind::Ident(_) => (),
+        ast::PatternKind::Rest(_) => (),
+        ast::PatternKind::Wildcard(_) => (),
 
         // refutable and possibly refutable
-        ast::Pattern::Object(ast::ObjectPat { props, .. }) => {
+        ast::PatternKind::Object(ast::ObjectPat { props, .. }) => {
             for prop in props {
                 match prop {
                     ast::ObjectPatProp::KeyValue(ast::KeyValuePatProp { value, key, .. }) => {
@@ -1072,7 +1072,7 @@ fn get_conds_for_pat(pat: &ast::Pattern, conds: &mut Vec<Condition>, path: &mut 
                 }
             }
         }
-        ast::Pattern::Array(ast::ArrayPat { elems, .. }) => {
+        ast::PatternKind::Array(ast::ArrayPat { elems, .. }) => {
             for (index, elem) in elems.iter().enumerate() {
                 path.push(PathElem::ArrayIndex(index as u32));
                 if let Some(elem) = elem {
@@ -1081,13 +1081,13 @@ fn get_conds_for_pat(pat: &ast::Pattern, conds: &mut Vec<Condition>, path: &mut 
                 path.pop();
             }
         }
-        ast::Pattern::Lit(ast::LitPat { lit, .. }) => {
+        ast::PatternKind::Lit(ast::LitPat { lit, .. }) => {
             conds.push(Condition {
                 path: path.to_owned(),
                 check: Check::EqualLit(lit.to_owned()),
             });
         }
-        ast::Pattern::Is(ast::IsPat { is_id, .. }) => match is_id.name.as_ref() {
+        ast::PatternKind::Is(ast::IsPat { is_id, .. }) => match is_id.name.as_ref() {
             "string" | "number" | "boolean" => {
                 conds.push(Condition {
                     path: path.to_owned(),

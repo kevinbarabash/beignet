@@ -12,18 +12,26 @@ Ok(
                     span: 5..15,
                     name: "CoordNames",
                 },
-                type_ann: KeyOf(
-                    KeyOfType {
-                        span: 18..29,
-                        type_ann: TypeRef(
-                            TypeRef {
+                type_ann: TypeAnn {
+                    kind: KeyOf(
+                        KeyOfType {
+                            span: 18..29,
+                            type_ann: TypeAnn {
+                                kind: TypeRef(
+                                    TypeRef {
+                                        span: 24..29,
+                                        name: "Point",
+                                        type_args: None,
+                                    },
+                                ),
                                 span: 24..29,
-                                name: "Point",
-                                type_args: None,
+                                inferred_type: None,
                             },
-                        ),
-                    },
-                ),
+                        },
+                    ),
+                    span: 18..29,
+                    inferred_type: None,
+                },
                 type_params: None,
             },
         ],

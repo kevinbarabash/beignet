@@ -7,32 +7,47 @@ Ok(
         body: [
             VarDecl {
                 span: 0..32,
-                pattern: Ident(
-                    BindingIdent {
-                        span: 4..14,
-                        id: Ident {
-                            span: 4..14,
-                            name: "nested_arr",
-                        },
-                    },
-                ),
-                type_ann: Some(
-                    Array(
-                        ArrayType {
-                            span: 16..26,
-                            elem_type: Array(
-                                ArrayType {
-                                    span: 16..24,
-                                    elem_type: Prim(
-                                        PrimType {
-                                            span: 16..22,
-                                            prim: Str,
-                                        },
-                                    ),
-                                },
-                            ),
+                pattern: Pattern {
+                    span: 4..14,
+                    kind: Ident(
+                        BindingIdent {
+                            id: Ident {
+                                span: 4..14,
+                                name: "nested_arr",
+                            },
                         },
                     ),
+                    inferred_type: None,
+                },
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Array(
+                            ArrayType {
+                                span: 16..26,
+                                elem_type: TypeAnn {
+                                    kind: Array(
+                                        ArrayType {
+                                            span: 16..24,
+                                            elem_type: TypeAnn {
+                                                kind: Prim(
+                                                    PrimType {
+                                                        span: 16..22,
+                                                        prim: Str,
+                                                    },
+                                                ),
+                                                span: 16..22,
+                                                inferred_type: None,
+                                            },
+                                        },
+                                    ),
+                                    span: 16..24,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                        span: 16..26,
+                        inferred_type: None,
+                    },
                 ),
                 init: Some(
                     Expr {

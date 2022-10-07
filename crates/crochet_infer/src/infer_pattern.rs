@@ -15,7 +15,7 @@ pub type Assump = HashMap<String, Type>;
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
 fn infer_pattern(
-    pat: &Pattern,
+    pat: &mut Pattern,
     type_ann: &mut Option<TypeAnn>,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
@@ -48,23 +48,27 @@ fn infer_pattern(
     }
 }
 
-fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Result<Type, String> {
-    match pat {
-        Pattern::Ident(BindingIdent { id, .. }) => {
+fn infer_pattern_rec(
+    pat: &mut Pattern,
+    ctx: &Context,
+    assump: &mut Assump,
+) -> Result<Type, String> {
+    match &mut pat.kind {
+        PatternKind::Ident(BindingIdent { id, .. }) => {
             let tv = ctx.fresh_var();
             if assump.insert(id.name.to_owned(), tv.clone()).is_some() {
                 return Err(String::from("Duplicate identifier in pattern"));
             }
             Ok(tv)
         }
-        Pattern::Wildcard(_) => {
+        PatternKind::Wildcard(_) => {
             // Same as Pattern::Ident but we don't insert an assumption since
             // we don't want to bind it to a variable.
             let tv = ctx.fresh_var();
             Ok(tv)
         }
-        Pattern::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
-        Pattern::Is(IsPat { id, is_id, .. }) => {
+        PatternKind::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
+        PatternKind::Is(IsPat { id, is_id, .. }) => {
             let t = match is_id.name.as_str() {
                 "string" => Type::Prim(types::TPrim::Str),
                 "number" => Type::Prim(types::TPrim::Num),
@@ -86,18 +90,18 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
             }
             Ok(t)
         }
-        Pattern::Rest(RestPat { arg, .. }) => {
-            let t = infer_pattern_rec(arg.as_ref(), ctx, assump)?;
+        PatternKind::Rest(RestPat { arg, .. }) => {
+            let t = infer_pattern_rec(arg, ctx, assump)?;
             Ok(Type::Rest(Box::from(t)))
         }
-        Pattern::Array(ArrayPat { elems, .. }) => {
+        PatternKind::Array(ArrayPat { elems, .. }) => {
             let elems: Result<Vec<Type>, String> = elems
-                .iter()
+                .iter_mut()
                 .map(|elem| {
                     match elem {
-                        Some(elem) => match elem {
-                            Pattern::Rest(rest) => {
-                                let rest_ty = infer_pattern_rec(rest.arg.as_ref(), ctx, assump)?;
+                        Some(elem) => match &mut elem.kind {
+                            PatternKind::Rest(rest) => {
+                                let rest_ty = infer_pattern_rec(&mut rest.arg, ctx, assump)?;
                                 Ok(Type::Rest(Box::from(rest_ty)))
                             }
                             _ => infer_pattern_rec(elem, ctx, assump),
@@ -112,10 +116,10 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
 
             Ok(Type::Tuple(elems?))
         }
-        Pattern::Object(ObjectPat { props, .. }) => {
+        PatternKind::Object(ObjectPat { props, .. }) => {
             let mut rest_opt_ty: Option<Type> = None;
             let elems: Vec<types::TObjElem> = props
-                .iter()
+                .iter_mut()
                 .filter_map(|prop| {
                     match prop {
                         // re-assignment, e.g. {x: new_x, y: new_y} = point
@@ -156,7 +160,7 @@ fn infer_pattern_rec(pat: &Pattern, ctx: &Context, assump: &mut Assump) -> Resul
                             // do the following conversion:
                             // {x, y, ...rest} -> {x: A, y: B} & C
                             // TODO: bubble the error up from infer_patter_rec() if there is one.
-                            rest_opt_ty = infer_pattern_rec(rest.arg.as_ref(), ctx, assump).ok();
+                            rest_opt_ty = infer_pattern_rec(&mut rest.arg, ctx, assump).ok();
                             None
                         }
                     }
@@ -185,7 +189,7 @@ pub enum PatternUsage {
 }
 
 pub fn infer_pattern_and_init(
-    pat: &Pattern,
+    pat: &mut Pattern,
     type_ann: &mut Option<TypeAnn>,
     init: &mut Expr,
     ctx: &mut Context,

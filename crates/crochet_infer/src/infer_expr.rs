@@ -48,7 +48,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = compose_many_subs(&ss);
             let t = ret_type.apply(&s);
-
+            expr.inferred_type = Some(t.clone());
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
             Ok((s, t))
         }
@@ -79,12 +79,13 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 Type::Lam(types::TLam { ret, .. }) => Ok(ret.as_ref().to_owned()),
                 _ => Err(String::from("Expr::Fix should always infer a lambda")),
             }?;
-
+            expr.inferred_type = Some(t.clone());
             Ok((compose_subs(&s2, &s1), t))
         }
         ExprKind::Ident(Ident { name, .. }) => {
             let s = Subst::default();
             let t = ctx.lookup_value_and_instantiate(name)?;
+            expr.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         ExprKind::IfElse(IfElse {
@@ -113,6 +114,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
                         let s = compose_many_subs(&[s1, s2, s3, s4]);
                         let t = union_types(&t2, &t3);
+                        expr.inferred_type = Some(t.clone());
                         Ok((s, t))
                     }
                 }
@@ -145,6 +147,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
                     let s = compose_many_subs(&[s1, s2, s3, s4]);
                     let t = t2;
+                    expr.inferred_type = Some(t.clone());
                     Ok((s, t))
                 }
             },
@@ -206,7 +209,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         let s2 = unify(&call_type, &t, ctx)?;
 
                         let s = compose_subs(&s2, &s1);
-
+                        expr.inferred_type = Some(ret_type.clone());
                         return Ok((s, ret_type));
                     }
                     _ => return Err(String::from("Component must be a function")),
@@ -219,7 +222,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 name: String::from("JSXElement"),
                 type_args: None,
             });
-
+            expr.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         ExprKind::Lambda(Lambda {
@@ -290,7 +293,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = compose_many_subs(&ss);
             let t = t.apply(&s);
-
+            expr.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         ExprKind::Let(Let {
@@ -314,6 +317,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
         ExprKind::Lit(lit) => {
             let s = Subst::new();
             let t = Type::from(lit.to_owned());
+            expr.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         ExprKind::BinaryExpr(BinaryExpr {
@@ -339,6 +343,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 BinOp::Lt => Type::Prim(TPrim::Bool),
                 BinOp::LtEq => Type::Prim(TPrim::Bool),
             };
+            expr.inferred_type = Some(t.clone());
             Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
         }
         ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
@@ -347,6 +352,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let t = match op {
                 UnaryOp::Minus => Type::Prim(TPrim::Num),
             };
+            expr.inferred_type = Some(t.clone());
             Ok((compose_many_subs(&[s1, s2]), t))
         }
         ExprKind::Obj(Obj { props, .. }) => {
@@ -389,21 +395,21 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             }
 
             let s = compose_many_subs(&ss);
-            if spread_types.is_empty() {
-                let t = Type::Object(TObject {
+            let t = if spread_types.is_empty() {
+                Type::Object(TObject {
                     elems,
                     type_params: vec![],
-                });
-                Ok((s, t))
+                })
             } else {
                 let mut all_types = spread_types;
                 all_types.push(Type::Object(TObject {
                     elems,
                     type_params: vec![],
                 }));
-                let t = simplify_intersection(&all_types);
-                Ok((s, t))
-            }
+                simplify_intersection(&all_types)
+            };
+            expr.inferred_type = Some(t.clone());
+            Ok((s, t))
         }
         ExprKind::Await(Await { expr, .. }) => {
             if !ctx.is_async() {
@@ -420,7 +426,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let s2 = unify(&t1, &promise_type, ctx)?;
 
             let s = compose_subs(&s2, &s1);
-
+            expr.inferred_type = Some(wrapped_type.clone());
             Ok((s, wrapped_type))
         }
         ExprKind::Tuple(Tuple { elems, .. }) => {
@@ -454,6 +460,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = compose_many_subs(&ss);
             let t = Type::Tuple(ts);
+            expr.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         ExprKind::Member(Member { obj, prop, .. }) => {
@@ -462,12 +469,13 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = compose_subs(&prop_s, &obj_s);
             let t = prop_t;
-
+            expr.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         ExprKind::Empty => {
             let t = Type::Keyword(TKeyword::Undefined);
             let s = Subst::default();
+            expr.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         ExprKind::TemplateLiteral(TemplateLiteral {
@@ -480,6 +488,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             // in JavaScript has a string representation.
             let (ss, _): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
             let s = compose_many_subs(&ss);
+            expr.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         ExprKind::TaggedTemplateLiteral(_) => {
@@ -495,7 +504,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let mut ts: Vec<Type> = vec![];
             for arm in arms {
                 let (s, t) = infer_let(
-                    &arm.pattern,
+                    &mut arm.pattern,
                     &mut None,
                     expr,
                     &mut arm.body,
@@ -508,7 +517,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = compose_many_subs(&ss);
             let t = union_many_types(&ts);
-
+            expr.inferred_type = Some(t.clone());
             Ok((s, t))
         }
     };
@@ -521,7 +530,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 }
 
 fn infer_let(
-    pat: &Pattern,
+    pat: &mut Pattern,
     type_ann: &mut Option<TypeAnn>,
     init: &mut Expr,
     body: &mut Expr,
