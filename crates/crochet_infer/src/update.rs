@@ -338,6 +338,34 @@ fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
     }
 }
 
-fn update_member_prop(_prop: &mut MemberProp, _s: &Subst) {}
+fn update_member_prop(prop: &mut MemberProp, s: &Subst) {
+    match prop {
+        // TODO: figure out how to attach inferred_types to idents
+        MemberProp::Ident(Ident { span: _, name: _ }) => (),
+        MemberProp::Computed(ComputedPropName { span: _, expr }) => update_expr(expr, s),
+    }
+}
 
-fn update_jsx_element_child(_prop: &mut JSXElementChild, _s: &Subst) {}
+fn update_jsx_element_child(jsx_elem: &mut JSXElementChild, s: &Subst) {
+    match jsx_elem {
+        JSXElementChild::JSXText(_) => (), // leaf node (type is always string)
+        JSXElementChild::JSXExprContainer(JSXExprContainer { span: _, expr }) => {
+            update_expr(expr, s);
+        }
+        JSXElementChild::JSXElement(jsx_elem) => {
+            let jsx_elem = jsx_elem.as_mut();
+            jsx_elem
+                .attrs
+                .iter_mut()
+                .for_each(|attr| match &mut attr.value {
+                    JSXAttrValue::Lit(_) => (), // leaf node (type is just the value itself)
+                    JSXAttrValue::JSXExprContainer(JSXExprContainer { span: _, expr }) => {
+                        update_expr(expr, s);
+                    }
+                });
+            jsx_elem.children.iter_mut().for_each(|child| {
+                update_jsx_element_child(child, s);
+            });
+        }
+    }
+}
