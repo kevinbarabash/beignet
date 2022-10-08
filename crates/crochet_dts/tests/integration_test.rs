@@ -173,7 +173,7 @@ fn infer_index_value_on_interface() {
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("num").unwrap());
-    assert_eq!(result, "number");
+    assert_eq!(result, "number | undefined");
     let result = format!("{}", ctx.lookup_value("bool").unwrap());
     assert_eq!(result, "boolean");
 }
@@ -203,7 +203,10 @@ fn infer_generic_index_value_on_interface() {
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("id").unwrap());
-    assert_eq!(result, "<t0>(arg: t0) => t0");
+    // This test currently fails.  The result it returns is `(arg: t0) => t0 | undefined`,
+    // but this is wrong b/c the qualifiers have been removed.  This is because union types
+    // don't support qualifiers.  Also, the type should be printed as `(<t0>(arg: t0) => t0) | undefined`
+    assert_eq!(result, "<t0>(arg: t0) => t0 | undefined");
 }
 
 #[test]

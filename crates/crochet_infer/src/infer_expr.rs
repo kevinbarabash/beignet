@@ -763,8 +763,6 @@ fn get_prop_value(
             match result {
                 Ok((s, t)) => Ok((s, t)),
                 Err(err) => {
-                    // TODO:
-                    // - look for indexers
                     let indexers: Vec<_> = elems
                         .iter()
                         .filter_map(|elem| match elem {
@@ -782,7 +780,11 @@ fn get_prop_value(
                                 let key_s = result?;
                                 let s = compose_subs(&key_s, &prop_s_clone);
                                 // TODO: handle generic indexers
-                                return Ok((s, indexer.t.to_owned()));
+                                // NOTE: Since access any indexer could result in an `undefined`
+                                // we include `| undefined` in the return type here.
+                                let undefined = Type::Keyword(TKeyword::Undefined);
+                                let t = union_types(&indexer.t, &undefined);
+                                return Ok((s, t));
                             }
                         }
                         Err(format!("{prop_t_clone} is an invalid key for object types"))
