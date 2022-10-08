@@ -1,4 +1,60 @@
+use std::fs;
+use std::process::{Command, Output};
+use std::str;
+
 fn main() {
+    println!("cargo:rerun-if-changed=package.json");
+    let yarn_install_output = Command::new("yarn")
+        .args(["install", "--frozen-lockfile"])
+        .output();
+    match yarn_install_output {
+        Ok(Output {
+            status,
+            stdout,
+            stderr,
+        }) => {
+            let stdout = str::from_utf8(&stdout).unwrap();
+            println!("stdout = {stdout}");
+
+            if !status.success() {
+                let stderr = str::from_utf8(&stderr).unwrap();
+                println!("stderr = {stderr}");
+                panic!("'yarn install' exited with non-zero status");
+            }
+        }
+        Err(_) => {
+            panic!("'yarn install' failed to run");
+        }
+    }
+
+    println!("cargo:rerun-if-changed=grammar.js");
+    let yarn_generate_output = Command::new("yarn").args(["generate"]).output();
+    match yarn_generate_output {
+        Ok(Output {
+            status,
+            stdout,
+            stderr,
+        }) => {
+            let stdout = str::from_utf8(&stdout).unwrap();
+            println!("stdout = {stdout}");
+
+            if !status.success() {
+                let stderr = str::from_utf8(&stderr).unwrap();
+                println!("stderr = {stderr}");
+                panic!("'yarn generate' exited with non-zero status");
+            } else {
+                let result = fs::copy("./real-binding.gyp", "./binding.gyp");
+                match result {
+                    Ok(count) => println!("{count} bytes copied"),
+                    Err(_) => println!("copy of real-binding.gyp to binding.gyp failed"),
+                }
+            }
+        }
+        Err(_) => {
+            panic!("'yarn generate' failed to run");
+        }
+    }
+
     let src_dir = std::path::Path::new("src");
 
     let mut c_config = cc::Build::new();
