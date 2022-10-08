@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TIndex, TKeyword, TLam, TObject, TProp, Type};
+use crochet_types::{self as types, TFnParam, TIndex, TKeyword, TObject, TProp, Type};
 use types::TObjElem;
 
+use crate::set_type_params;
 use crate::util::compose_many_subs;
 use crate::Subst;
 use crate::Substitutable;
@@ -59,11 +60,12 @@ pub fn infer_qualified_type_ann(
         .collect();
 
     // set type_params
-    let t = match type_ann_t {
-        Type::Lam(lam) => Type::Lam(TLam { type_params, ..lam }),
-        Type::Object(obj) => Type::Object(TObject { type_params, ..obj }),
-        _ => type_ann_t,
-    };
+    let t = set_type_params(&type_ann_t, &type_params);
+    // let t = match type_ann_t {
+    //     Type::Lam(lam) => Type::Lam(TLam { type_params, ..lam }),
+    //     Type::Object(obj) => Type::Object(TObject { type_params, ..obj }),
+    //     _ => type_ann_t,
+    // };
     Ok((type_ann_s, t))
 }
 
@@ -162,10 +164,7 @@ fn infer_type_ann_rec(
             }
 
             let s = compose_many_subs(&ss);
-            let t = Type::Object(TObject {
-                elems,
-                type_params: vec![],
-            });
+            let t = Type::Object(TObject { elems });
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -293,10 +292,7 @@ fn infer_property_type(
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t {
-        Type::Object(TObject {
-            elems,
-            type_params: _,
-        }) => match index_t {
+        Type::Object(TObject { elems }) => match index_t {
             Type::Ref(alias) => {
                 let t = ctx.lookup_ref_and_instantiate(alias)?;
                 infer_property_type(obj_t, &t, ctx)

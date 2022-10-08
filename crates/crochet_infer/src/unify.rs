@@ -11,6 +11,7 @@ use super::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
+    println!("attempting to unify {t1:#?} with {t2:#?}");
     let result = match (&t1, &t2) {
         // All binding must be done first
         (Type::Var(id), _) => bind(id, t2),
@@ -387,24 +388,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             })
                         });
 
-                    let s1 = unify(
-                        &Type::Object(TObject {
-                            elems: obj_elems,
-                            type_params: vec![],
-                        }),
-                        &obj_type,
-                        ctx,
-                    )?;
+                    let s1 = unify(&Type::Object(TObject { elems: obj_elems }), &obj_type, ctx)?;
 
                     let rest_type = rest_types.get(0).unwrap();
-                    let s2 = unify(
-                        &Type::Object(TObject {
-                            elems: rest_elems,
-                            type_params: vec![],
-                        }),
-                        rest_type,
-                        ctx,
-                    )?;
+                    let s2 = unify(&Type::Object(TObject { elems: rest_elems }), rest_type, ctx)?;
 
                     let s = compose_subs(&s2, &s1);
                     Ok(s)
@@ -446,24 +433,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             })
                         });
 
-                    let s_obj = unify(
-                        &obj_type,
-                        &Type::Object(TObject {
-                            elems: obj_elems,
-                            type_params: vec![],
-                        }),
-                        ctx,
-                    )?;
+                    let s_obj = unify(&obj_type, &Type::Object(TObject { elems: obj_elems }), ctx)?;
 
                     let rest_type = rest_types.get(0).unwrap();
-                    let s_rest = unify(
-                        rest_type,
-                        &Type::Object(TObject {
-                            elems: rest_elems,
-                            type_params: vec![],
-                        }),
-                        ctx,
-                    )?;
+                    let s_rest =
+                        unify(rest_type, &Type::Object(TObject { elems: rest_elems }), ctx)?;
 
                     let s = compose_subs(&s_rest, &s_obj);
                     Ok(s)
@@ -644,10 +618,7 @@ mod tests {
                 t: Type::Keyword(TKeyword::String),
             }),
         ];
-        let t1 = Type::Object(TObject {
-            elems,
-            type_params: vec![],
-        });
+        let t1 = Type::Object(TObject { elems });
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
@@ -671,10 +642,7 @@ mod tests {
                 t: Type::Keyword(TKeyword::String),
             }),
         ];
-        let t2 = Type::Object(TObject {
-            elems,
-            type_params: vec![],
-        });
+        let t2 = Type::Object(TObject { elems });
 
         let result = unify(&t1, &t2, &ctx);
         assert_eq!(result, Ok(Subst::default()));

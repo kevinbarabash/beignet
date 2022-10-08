@@ -177,13 +177,24 @@ impl Context {
     }
 
     pub fn instantiate(&self, t: &Type) -> Type {
-        let type_params = get_type_params(t);
+        match t {
+            Type::Qualified(TQualified { t, type_params }) => {
+                let ids = type_params.iter().map(|id| id.to_owned());
+                let fresh_quals = type_params.iter().map(|_| self.fresh_var());
+                let subs: Subst = ids.zip(fresh_quals).collect();
 
-        let ids = type_params.iter().map(|id| id.to_owned());
-        let fresh_quals = type_params.iter().map(|_| self.fresh_var());
-        let subs: Subst = ids.zip(fresh_quals).collect();
+                t.apply(&subs)
+            }
+            _ => {
+                let type_params = get_type_params(t);
 
-        t.apply(&subs)
+                let ids = type_params.iter().map(|id| id.to_owned());
+                let fresh_quals = type_params.iter().map(|_| self.fresh_var());
+                let subs: Subst = ids.zip(fresh_quals).collect();
+
+                t.apply(&subs)
+            }
+        }
     }
 
     pub fn fresh_id(&self) -> i32 {

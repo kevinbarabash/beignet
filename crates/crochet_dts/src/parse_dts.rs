@@ -322,10 +322,7 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, S
         })
         .collect();
 
-    let t = Type::Object(TObject {
-        elems,
-        type_params: vec![],
-    });
+    let t = Type::Object(TObject { elems });
 
     let t = match &decl.type_params {
         Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx),

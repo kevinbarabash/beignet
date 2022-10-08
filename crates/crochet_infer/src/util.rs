@@ -249,10 +249,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let mut out_types = vec![];
     out_types.append(&mut not_obj_types);
     if !elems.is_empty() {
-        out_types.push(Type::Object(TObject {
-            elems,
-            type_params: vec![],
-        }));
+        out_types.push(Type::Object(TObject { elems }));
     }
     // TODO: figure out a consistent way to sort types
     // out_types.sort_by_key(|t| t.id); // ensure a stable order
@@ -356,7 +353,7 @@ pub fn compose_many_subs_with_context(subs: &[Subst]) -> Subst {
 }
 
 pub fn get_property_type(prop: &TProp) -> Type {
-    let t = generalize_type(&HashMap::new(), &prop.t);
+    let t = prop.t.to_owned();
     match prop.optional {
         true => Type::Union(vec![t, Type::Keyword(TKeyword::Undefined)]),
         false => t,
@@ -367,21 +364,41 @@ pub fn get_type_params(t: &Type) -> Vec<i32> {
     match t {
         Type::Qualified(qual) => qual.type_params.to_owned(),
         Type::Lam(lam) => lam.type_params.to_owned(),
-        Type::Object(obj) => obj.type_params.to_owned(),
         _ => vec![],
     }
 }
 
 pub fn set_type_params(t: &Type, type_params: &[i32]) -> Type {
+    // If there are no type params then the returned type shouldn't be
+    // a qualified type.
+    if type_params.is_empty() {
+        return match t {
+            Type::Lam(lam) => Type::Lam(TLam {
+                type_params: type_params.to_owned(),
+                ..lam.to_owned()
+            }),
+            _ => t.to_owned(),
+        };
+    }
+
     match t {
+        Type::Var(_) => t.to_owned(),
         Type::Lam(lam) => Type::Lam(TLam {
             type_params: type_params.to_owned(),
             ..lam.to_owned()
         }),
-        Type::Object(obj) => Type::Object(TObject {
+        Type::Qualified(TQualified {
+            t,
+            // NOTE: `generalize_type` is responsible for merge type params so
+            // it's safe to ignore `type_params` here.
+            type_params: _,
+        }) => Type::Qualified(TQualified {
+            t: t.to_owned(),
             type_params: type_params.to_owned(),
-            ..obj.to_owned()
         }),
-        _ => t.to_owned(),
+        _ => Type::Qualified(TQualified {
+            t: Box::from(t.to_owned()),
+            type_params: type_params.to_owned(),
+        }),
     }
 }

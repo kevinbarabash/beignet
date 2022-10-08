@@ -149,10 +149,22 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
         .zip(tp1.iter().map(|id| Type::Var(*id)))
         .collect();
 
+    // Unwrap qualified types since we return a qualified
+    // type if there are any type qualifiers.
+    let t1 = match t1 {
+        Type::Qualified(TQualified { t, .. }) => t,
+        t => t,
+    };
+    let t2 = match t2 {
+        Type::Qualified(TQualified { t, .. }) => t,
+        t => t,
+    };
+
     // Updates type variables for type params to match t1
     let t2 = t2.apply(&subs);
 
-    match (t1, t2) {
+    let type_params = tp1;
+    let t = match (t1, t2) {
         (Type::Object(obj1), Type::Object(obj2)) => {
             let elems: Vec<_> = obj1
                 .elems
@@ -161,11 +173,17 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
                 .chain(obj2.elems.iter().cloned())
                 .collect();
 
-            Type::Object(TObject {
-                elems,
-                type_params: obj1.type_params.to_owned(),
-            })
+            Type::Object(TObject { elems })
         }
         (_, _) => todo!(),
+    };
+
+    if type_params.is_empty() {
+        t
+    } else {
+        Type::Qualified(TQualified {
+            t: Box::from(t),
+            type_params,
+        })
     }
 }
