@@ -30,6 +30,10 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     // type variables that are bound to the object element as opposed to the encompassing object type.
     fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
         match t {
+            Type::Qualified(TQualified { t, type_params }) => Type::Qualified(TQualified {
+                t: Box::from(norm_type(t, mapping, ctx)),
+                type_params: type_params.to_owned(),
+            }),
             Type::Var(id) => match mapping.get(id) {
                 Some(t) => t.to_owned(),
                 // If `id` doesn't exist in `mapping` we return the original type variable.
@@ -131,16 +135,13 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     ..obj.to_owned()
                 })
             }
-            Type::Ref(TRef {
-                name,
-                type_args: type_params,
-            }) => {
-                let type_params = type_params
+            Type::Ref(TRef { name, type_args }) => {
+                let type_args = type_args
                     .clone()
                     .map(|params| params.iter().map(|t| norm_type(t, mapping, ctx)).collect());
                 Type::Ref(TRef {
                     name: name.to_owned(),
-                    type_args: type_params,
+                    type_args,
                 })
             }
             Type::Tuple(types) => {
@@ -364,6 +365,7 @@ pub fn get_property_type(prop: &TProp) -> Type {
 
 pub fn get_type_params(t: &Type) -> Vec<i32> {
     match t {
+        Type::Qualified(qual) => qual.type_params.to_owned(),
         Type::Lam(lam) => lam.type_params.to_owned(),
         Type::Object(obj) => obj.type_params.to_owned(),
         _ => vec![],

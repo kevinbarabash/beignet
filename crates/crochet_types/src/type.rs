@@ -47,6 +47,12 @@ pub struct TIndexAccess {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TQualified {
+    pub t: Box<Type>,
+    pub type_params: Vec<i32>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Var(i32), // i32 is the if of the type variable
     App(TApp),
@@ -64,6 +70,7 @@ pub enum Type {
     This,
     KeyOf(Box<Type>),
     IndexAccess(TIndexAccess),
+    Qualified(TQualified),
 }
 
 impl From<TLit> for Type {
@@ -75,7 +82,10 @@ impl From<TLit> for Type {
 impl fmt::Display for Type {
     // TODO: add in parentheses where necessary to get the precedence right
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
+        match self {
+            Type::Qualified(TQualified { t, type_params }) => {
+                write!(f, "<{}>{{{}}}", join(type_params, ", "), t)
+            }
             Type::Var(id) => write!(f, "t{id}"),
             Type::App(TApp { args, ret }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
