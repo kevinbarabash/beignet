@@ -1,3 +1,5 @@
+use std::fs;
+use std::path::Path;
 use std::process::{Command, Output};
 use std::str;
 
@@ -39,6 +41,12 @@ fn main() {
                 let stderr = str::from_utf8(&stderr).unwrap();
                 println!("stderr = {stderr}");
                 panic!("'yarn generate' exited with non-zero status");
+            } else {
+                let result = fs::copy("./real-binding.gyp", "./binding.gyp");
+                match result {
+                    Ok(count) => println!("{count} bytes copied"),
+                    Err(_) => println!("copy of real-binding.gyp to binding.gyp failed"),
+                }
             }
         }
         Err(_) => {
