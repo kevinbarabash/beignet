@@ -41,10 +41,10 @@ Ok(
                                                             },
                                                         ),
                                                         type_ann: TypeAnn {
-                                                            kind: Prim(
-                                                                PrimType {
+                                                            kind: Keyword(
+                                                                KeywordType {
                                                                     span: 22..28,
-                                                                    prim: Num,
+                                                                    keyword: Number,
                                                                 },
                                                             ),
                                                             span: 22..28,
@@ -63,10 +63,10 @@ Ok(
                                                             },
                                                         ),
                                                         type_ann: TypeAnn {
-                                                            kind: Prim(
-                                                                PrimType {
+                                                            kind: Keyword(
+                                                                KeywordType {
                                                                     span: 33..39,
-                                                                    prim: Num,
+                                                                    keyword: Number,
                                                                 },
                                                             ),
                                                             span: 33..39,
@@ -76,10 +76,10 @@ Ok(
                                                     },
                                                 ],
                                                 ret: TypeAnn {
-                                                    kind: Prim(
-                                                        PrimType {
+                                                    kind: Keyword(
+                                                        KeywordType {
                                                             span: 44..50,
-                                                            prim: Num,
+                                                            keyword: Number,
                                                         },
                                                     ),
                                                     span: 44..50,
@@ -107,10 +107,10 @@ Ok(
                                                             },
                                                         ),
                                                         type_ann: TypeAnn {
-                                                            kind: Prim(
-                                                                PrimType {
+                                                            kind: Keyword(
+                                                                KeywordType {
                                                                     span: 58..64,
-                                                                    prim: Str,
+                                                                    keyword: String,
                                                                 },
                                                             ),
                                                             span: 58..64,
@@ -129,10 +129,10 @@ Ok(
                                                             },
                                                         ),
                                                         type_ann: TypeAnn {
-                                                            kind: Prim(
-                                                                PrimType {
+                                                            kind: Keyword(
+                                                                KeywordType {
                                                                     span: 69..75,
-                                                                    prim: Str,
+                                                                    keyword: String,
                                                                 },
                                                             ),
                                                             span: 69..75,
@@ -142,10 +142,10 @@ Ok(
                                                     },
                                                 ],
                                                 ret: TypeAnn {
-                                                    kind: Prim(
-                                                        PrimType {
+                                                    kind: Keyword(
+                                                        KeywordType {
                                                             span: 80..86,
-                                                            prim: Str,
+                                                            keyword: String,
                                                         },
                                                     ),
                                                     span: 80..86,

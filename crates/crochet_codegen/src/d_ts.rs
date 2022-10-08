@@ -415,20 +415,11 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                 type_params: None,
             })
         }
-        Type::Prim(prim) => {
-            let kind = match prim {
-                types::TPrim::Num => TsKeywordTypeKind::TsNumberKeyword,
-                types::TPrim::Bool => TsKeywordTypeKind::TsBooleanKeyword,
-                types::TPrim::Str => TsKeywordTypeKind::TsStringKeyword,
-            };
-
-            TsType::TsKeywordType(TsKeywordType {
-                span: DUMMY_SP,
-                kind,
-            })
-        }
         Type::Keyword(keyword) => {
             let kind = match keyword {
+                types::TKeyword::Number => TsKeywordTypeKind::TsNumberKeyword,
+                types::TKeyword::String => TsKeywordTypeKind::TsStringKeyword,
+                types::TKeyword::Boolean => TsKeywordTypeKind::TsBooleanKeyword,
                 types::TKeyword::Null => TsKeywordTypeKind::TsNullKeyword,
                 types::TKeyword::Symbol => TsKeywordTypeKind::TsSymbolKeyword,
                 types::TKeyword::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,

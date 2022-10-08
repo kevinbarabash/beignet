@@ -10,7 +10,7 @@ use swc_ecma_visit::*;
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
 use crochet_infer::{close_over, generalize_type, normalize, Context, Env, Subst, Substitutable};
-use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TPrim, TProp, Type};
+use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TProp, Type};
 
 use crate::util;
 
@@ -26,11 +26,11 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
         TsType::TsKeywordType(keyword) => match &keyword.kind {
             TsKeywordTypeKind::TsAnyKeyword => Ok(ctx.fresh_var()),
             TsKeywordTypeKind::TsUnknownKeyword => Ok(ctx.fresh_var()),
-            TsKeywordTypeKind::TsNumberKeyword => Ok(Type::Prim(TPrim::Num)),
+            TsKeywordTypeKind::TsNumberKeyword => Ok(Type::Keyword(TKeyword::Number)),
             TsKeywordTypeKind::TsObjectKeyword => Err(String::from("can't parse Objects yet")),
-            TsKeywordTypeKind::TsBooleanKeyword => Ok(Type::Prim(TPrim::Bool)),
+            TsKeywordTypeKind::TsBooleanKeyword => Ok(Type::Keyword(TKeyword::Boolean)),
             TsKeywordTypeKind::TsBigIntKeyword => Err(String::from("can't parse BigInt yet")),
-            TsKeywordTypeKind::TsStringKeyword => Ok(Type::Prim(TPrim::Str)),
+            TsKeywordTypeKind::TsStringKeyword => Ok(Type::Keyword(TKeyword::String)),
             TsKeywordTypeKind::TsSymbolKeyword => Ok(Type::Keyword(TKeyword::Symbol)),
             // NOTE: `void` is treated the same as `undefined` ...for now.
             TsKeywordTypeKind::TsVoidKeyword => Ok(Type::Keyword(TKeyword::Undefined)),

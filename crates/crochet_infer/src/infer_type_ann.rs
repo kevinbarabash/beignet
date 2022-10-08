@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TIndex, TKeyword, TLam, TObject, TPrim, TProp, Type};
+use crochet_types::{self as types, TFnParam, TIndex, TKeyword, TLam, TObject, TProp, Type};
 use types::TObjElem;
 
 use crate::util::compose_many_subs;
@@ -112,12 +112,6 @@ fn infer_type_ann_rec(
         TypeAnnKind::Lit(lit) => {
             let s = Subst::new();
             let t = Type::from(lit.to_owned());
-            type_ann.inferred_type = Some(t.clone());
-            Ok((s, t))
-        }
-        TypeAnnKind::Prim(PrimType { prim, .. }) => {
-            let s = Subst::new();
-            let t = Type::from(prim.to_owned());
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -333,7 +327,7 @@ fn infer_property_type(
                     if t.is_none() {
                         t = elems.iter().find_map(|elem| match elem {
                             types::TObjElem::Index(index) => match index.key.t {
-                                Type::Prim(TPrim::Str) => Some(index.t.to_owned()),
+                                Type::Keyword(TKeyword::String) => Some(index.t.to_owned()),
                                 _ => None,
                             },
                             _ => None,
@@ -363,15 +357,19 @@ fn infer_property_type(
             };
             infer_property_type(&t, index_t, ctx)
         }
-        Type::Prim(prim) => {
-            let t = match prim {
-                TPrim::Num => ctx.lookup_type_and_instantiate("Number")?,
-                TPrim::Bool => ctx.lookup_type_and_instantiate("Boolean")?,
-                TPrim::Str => ctx.lookup_type_and_instantiate("String")?,
-            };
-            infer_property_type(&t, index_t, ctx)
-        }
         Type::Keyword(keyword) => match keyword {
+            TKeyword::Number => {
+                let t = ctx.lookup_type_and_instantiate("Number")?;
+                infer_property_type(&t, index_t, ctx)
+            }
+            TKeyword::Boolean => {
+                let t = ctx.lookup_type_and_instantiate("Boolean")?;
+                infer_property_type(&t, index_t, ctx)
+            }
+            TKeyword::String => {
+                let t = ctx.lookup_type_and_instantiate("String")?;
+                infer_property_type(&t, index_t, ctx)
+            }
             TKeyword::Symbol => {
                 let t = ctx.lookup_type_and_instantiate("Symbol")?;
                 infer_property_type(&t, index_t, ctx)

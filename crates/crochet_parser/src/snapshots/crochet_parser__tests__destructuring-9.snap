@@ -65,10 +65,10 @@ Ok(
                                                                     optional: false,
                                                                     mutable: false,
                                                                     type_ann: TypeAnn {
-                                                                        kind: Prim(
-                                                                            PrimType {
+                                                                        kind: Keyword(
+                                                                            KeywordType {
                                                                                 span: 23..29,
-                                                                                prim: Str,
+                                                                                keyword: String,
                                                                             },
                                                                         ),
                                                                         span: 23..29,
@@ -83,10 +83,10 @@ Ok(
                                                                     optional: false,
                                                                     mutable: false,
                                                                     type_ann: TypeAnn {
-                                                                        kind: Prim(
-                                                                            PrimType {
+                                                                        kind: Keyword(
+                                                                            KeywordType {
                                                                                 span: 34..40,
-                                                                                prim: Num,
+                                                                                keyword: Number,
                                                                             },
                                                                         ),
                                                                         span: 34..40,

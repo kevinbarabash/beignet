@@ -38,10 +38,10 @@ Ok(
                                         ),
                                         type_ann: Some(
                                             TypeAnn {
-                                                kind: Prim(
-                                                    PrimType {
+                                                kind: Keyword(
+                                                    KeywordType {
                                                         span: 14..20,
-                                                        prim: Num,
+                                                        keyword: Number,
                                                     },
                                                 ),
                                                 span: 14..20,
@@ -63,10 +63,10 @@ Ok(
                                         ),
                                         type_ann: Some(
                                             TypeAnn {
-                                                kind: Prim(
-                                                    PrimType {
+                                                kind: Keyword(
+                                                    KeywordType {
                                                         span: 25..31,
-                                                        prim: Num,
+                                                        keyword: Number,
                                                     },
                                                 ),
                                                 span: 25..31,
@@ -109,10 +109,10 @@ Ok(
                                 is_async: false,
                                 return_type: Some(
                                     TypeAnn {
-                                        kind: Prim(
-                                            PrimType {
+                                        kind: Keyword(
+                                            KeywordType {
                                                 span: 34..40,
-                                                prim: Num,
+                                                keyword: Number,
                                             },
                                         ),
                                         span: 34..40,

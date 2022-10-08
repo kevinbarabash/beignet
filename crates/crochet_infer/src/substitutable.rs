@@ -23,7 +23,6 @@ impl Substitutable for Type {
             }),
             // TODO: handle widening of lambdas
             Type::Lam(lam) => Type::Lam(lam.apply(sub)),
-            Type::Prim(_) => self.to_owned(),
             Type::Lit(_) => self.to_owned(),
             Type::Keyword(_) => self.to_owned(),
             Type::Union(types) => Type::Union(types.apply(sub)),
@@ -68,7 +67,6 @@ impl Substitutable for Type {
                 result
             }
             Type::Lam(lam) => lam.ftv(),
-            Type::Prim(_) => HashSet::new(),
             Type::Lit(_) => HashSet::new(),
             Type::Keyword(_) => HashSet::new(),
             Type::Union(types) => types.ftv(),

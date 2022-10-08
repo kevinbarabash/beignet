@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, TPrim, Type};
+use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, Type};
 use types::TObjElem;
 
 use super::context::Context;
@@ -110,7 +110,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         let (s1, t1) = infer_expr(ctx, cond)?;
                         let (s2, t2) = infer_expr(ctx, consequent)?;
                         let (s3, t3) = infer_expr(ctx, alternate)?;
-                        let s4 = unify(&t1, &Type::Prim(TPrim::Bool), ctx)?;
+                        let s4 = unify(&t1, &Type::Keyword(TKeyword::Boolean), ctx)?;
 
                         let s = compose_many_subs(&[s1, s2, s3, s4]);
                         let t = union_types(&t2, &t3);
@@ -137,7 +137,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 _ => {
                     let (s1, t1) = infer_expr(ctx, cond)?;
                     let (s2, t2) = infer_expr(ctx, consequent)?;
-                    let s3 = unify(&t1, &Type::Prim(TPrim::Bool), ctx)?;
+                    let s3 = unify(&t1, &Type::Keyword(TKeyword::Boolean), ctx)?;
                     let s4 = match unify(&t2, &Type::Keyword(TKeyword::Undefined), ctx) {
                         Ok(s) => Ok(s),
                         Err(_) => Err(String::from(
@@ -329,28 +329,28 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             // time and set the result to be appropriate number literal.
             let (s1, t1) = infer_expr(ctx, left)?;
             let (s2, t2) = infer_expr(ctx, right)?;
-            let s3 = unify(&t1, &Type::Prim(TPrim::Num), ctx)?;
-            let s4 = unify(&t2, &Type::Prim(TPrim::Num), ctx)?;
+            let s3 = unify(&t1, &Type::Keyword(TKeyword::Number), ctx)?;
+            let s4 = unify(&t2, &Type::Keyword(TKeyword::Number), ctx)?;
             let t = match op {
-                BinOp::Add => Type::Prim(TPrim::Num),
-                BinOp::Sub => Type::Prim(TPrim::Num),
-                BinOp::Mul => Type::Prim(TPrim::Num),
-                BinOp::Div => Type::Prim(TPrim::Num),
-                BinOp::EqEq => Type::Prim(TPrim::Bool),
-                BinOp::NotEq => Type::Prim(TPrim::Bool),
-                BinOp::Gt => Type::Prim(TPrim::Bool),
-                BinOp::GtEq => Type::Prim(TPrim::Bool),
-                BinOp::Lt => Type::Prim(TPrim::Bool),
-                BinOp::LtEq => Type::Prim(TPrim::Bool),
+                BinOp::Add => Type::Keyword(TKeyword::Number),
+                BinOp::Sub => Type::Keyword(TKeyword::Number),
+                BinOp::Mul => Type::Keyword(TKeyword::Number),
+                BinOp::Div => Type::Keyword(TKeyword::Number),
+                BinOp::EqEq => Type::Keyword(TKeyword::Boolean),
+                BinOp::NotEq => Type::Keyword(TKeyword::Boolean),
+                BinOp::Gt => Type::Keyword(TKeyword::Boolean),
+                BinOp::GtEq => Type::Keyword(TKeyword::Boolean),
+                BinOp::Lt => Type::Keyword(TKeyword::Boolean),
+                BinOp::LtEq => Type::Keyword(TKeyword::Boolean),
             };
             expr.inferred_type = Some(t.clone());
             Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
         }
         ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
             let (s1, t1) = infer_expr(ctx, arg)?;
-            let s2 = unify(&t1, &Type::Prim(TPrim::Num), ctx)?;
+            let s2 = unify(&t1, &Type::Keyword(TKeyword::Number), ctx)?;
             let t = match op {
-                UnaryOp::Minus => Type::Prim(TPrim::Num),
+                UnaryOp::Minus => Type::Keyword(TKeyword::Number),
             };
             expr.inferred_type = Some(t.clone());
             Ok((compose_many_subs(&[s1, s2]), t))
@@ -481,7 +481,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
         ExprKind::TemplateLiteral(TemplateLiteral {
             exprs, quasis: _, ..
         }) => {
-            let t = Type::Prim(TPrim::Str);
+            let t = Type::Keyword(TKeyword::String);
             let result: Result<Vec<(Subst, Type)>, String> =
                 exprs.iter_mut().map(|expr| infer_expr(ctx, expr)).collect();
             // We ignore the types of expressions if there are any because any expression
@@ -586,21 +586,19 @@ fn infer_property_type(
                 infer_property_type(&t, prop, ctx)
             }
         },
-        Type::Prim(prim) => match prim {
-            TPrim::Num => {
+        Type::Keyword(keyword) => match keyword {
+            TKeyword::Number => {
                 let t = ctx.lookup_type_and_instantiate("Number")?;
                 infer_property_type(&t, prop, ctx)
             }
-            TPrim::Bool => {
+            TKeyword::Boolean => {
                 let t = ctx.lookup_type_and_instantiate("Boolean")?;
                 infer_property_type(&t, prop, ctx)
             }
-            TPrim::Str => {
+            TKeyword::String => {
                 let t = ctx.lookup_type_and_instantiate("String")?;
                 infer_property_type(&t, prop, ctx)
             }
-        },
-        Type::Keyword(keyword) => match keyword {
             TKeyword::Symbol => {
                 let t = ctx.lookup_type_and_instantiate("Symbol")?;
                 infer_property_type(&t, prop, ctx)
@@ -640,15 +638,15 @@ fn infer_property_type(
                     let (prop_s, prop_t) = infer_expr(ctx, expr)?;
 
                     match prop_t {
-                        Type::Prim(prim) => match prim {
-                            TPrim::Num => {
+                        Type::Keyword(keyword) => match keyword {
+                            TKeyword::Number => {
                                 // TODO: remove duplicate types
                                 let mut elem_types = elem_types.to_owned();
                                 elem_types.push(Type::Keyword(TKeyword::Undefined));
                                 let t = Type::Union(elem_types);
                                 Ok((prop_s, t))
                             }
-                            _ => Err(format!("{prim} is an invalid indexer for tuple types")),
+                            _ => Err(format!("{keyword} is an invalid indexer for tuple types")),
                         },
                         Type::Lit(lit) => match lit {
                             types::TLit::Num(index) => {
@@ -707,8 +705,8 @@ fn get_prop_value(
             let prop_s_clone = prop_s.clone();
 
             let result = match prop_t {
-                Type::Prim(prim) => match prim {
-                    TPrim::Str => {
+                Type::Keyword(keyword) => match keyword {
+                    TKeyword::String => {
                         let mut value_types: Vec<Type> = elems
                             .iter()
                             .filter_map(|elem| match elem {
@@ -732,7 +730,7 @@ fn get_prop_value(
 
                         Ok((prop_s, t))
                     }
-                    _ => Err(format!("{prim} is an invalid key for object types")),
+                    _ => Err(format!("{keyword} is an invalid key for object types")),
                 },
                 Type::Lit(lit) => match lit {
                     types::TLit::Str(key) => {

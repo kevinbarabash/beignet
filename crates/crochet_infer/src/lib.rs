@@ -682,7 +682,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "Can't unify string with number"]
     fn infer_if_let_refutable_is_unification_failure() {
         let src = r#"
         declare let a: string | number;
@@ -805,7 +805,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "Can't unify string with number"]
     fn infer_if_let_disjoint_union_incorrect_match() {
         let src = r#"
         declare let action: {type: "foo", num: number} | {type: "bar", str: string};
@@ -1114,7 +1114,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "Can't unify number with string"]
     fn lambda_with_incorrect_return_type() {
         let src = r#"
         let add = (a: number, b: number): string => {
@@ -1127,7 +1127,7 @@ mod tests {
 
     // TODO: make this test case return an error
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "Can't unify string with number"]
     fn lambda_with_incorrect_param_type() {
         let src = r#"
         let add = (a: number, b: string): number => {
@@ -2184,7 +2184,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "Can't unify number with string"]
     fn pattern_matching_with_disjoint_union_incorrect_result_type() {
         // The return type of a `match` expression is the union of all of the return types of
         // each of the arms.  If you want to ensure that all arms return a common type then you'll
@@ -2203,7 +2203,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "Can't unify number with string"]
     fn pattern_matching_with_disjoint_union_does_not_match_fn_return_type() {
         // The return type of a `match` expression is the union of all of the return types of
         // each of the arms.  If you want to ensure that all arms return a common type then you'll

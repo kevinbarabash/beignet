@@ -1,7 +1,7 @@
 use std::cmp;
 use std::collections::HashSet;
 
-use crochet_types::{self as types, TObjElem, TObject, TPrim, Type};
+use crochet_types::{self as types, TObjElem, TObject, Type};
 use types::TKeyword;
 
 use super::context::Context;
@@ -16,12 +16,12 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         (Type::Var(id), _) => bind(id, t2),
         (_, Type::Var(id)) => bind(id, t1),
 
-        (Type::Lit(lit), Type::Prim(prim)) => {
+        (Type::Lit(lit), Type::Keyword(keyword)) => {
             let b = matches!(
-                (lit, prim),
-                (types::TLit::Num(_), TPrim::Num)
-                    | (types::TLit::Str(_), TPrim::Str)
-                    | (types::TLit::Bool(_), TPrim::Bool)
+                (lit, keyword),
+                (types::TLit::Num(_), TKeyword::Number)
+                    | (types::TLit::Str(_), TKeyword::String)
+                    | (types::TLit::Bool(_), TKeyword::Boolean)
             );
             if b {
                 Ok(Subst::default())
@@ -503,9 +503,13 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         }
         (_, Type::KeyOf(t)) => unify(t1, &key_of(t, ctx)?, ctx),
         (Type::Keyword(keyword1), Type::Keyword(keyword2)) => match (keyword1, keyword2) {
+            (TKeyword::Number, TKeyword::Number) => Ok(Subst::new()),
+            (TKeyword::String, TKeyword::String) => Ok(Subst::new()),
+            (TKeyword::Boolean, TKeyword::Boolean) => Ok(Subst::new()),
             (TKeyword::Null, TKeyword::Null) => Ok(Subst::new()),
             (TKeyword::Symbol, TKeyword::Symbol) => Ok(Subst::new()),
             (TKeyword::Undefined, TKeyword::Undefined) => Ok(Subst::new()),
+            // Is 'never' a subtype of all types?
             (TKeyword::Never, TKeyword::Null) => Ok(Subst::new()),
             _ => Err(format!("Can't unify {t1} with {t2}")),
         },
@@ -590,16 +594,28 @@ mod tests {
     }
 
     #[test]
-    fn literals_are_subtypes_of_corresponding_primitives() {
+    fn literals_are_subtypes_of_corresponding_keywords() {
         let ctx = Context::default();
 
-        let result = unify(&Type::from(num("5")), &Type::Prim(TPrim::Num), &ctx);
+        let result = unify(
+            &Type::from(num("5")),
+            &Type::Keyword(TKeyword::Number),
+            &ctx,
+        );
         assert_eq!(result, Ok(Subst::default()));
 
-        let result = unify(&Type::from(str("hello")), &Type::Prim(TPrim::Str), &ctx);
+        let result = unify(
+            &Type::from(str("hello")),
+            &Type::Keyword(TKeyword::String),
+            &ctx,
+        );
         assert_eq!(result, Ok(Subst::default()));
 
-        let result = unify(&Type::from(bool(&true)), &Type::Prim(TPrim::Bool), &ctx);
+        let result = unify(
+            &Type::from(bool(&true)),
+            &Type::Keyword(TKeyword::Boolean),
+            &ctx,
+        );
         assert_eq!(result, Ok(Subst::default()));
     }
 
@@ -625,7 +641,7 @@ mod tests {
                 name: String::from("baz"),
                 optional: false,
                 mutable: false,
-                t: Type::Prim(TPrim::Str),
+                t: Type::Keyword(TKeyword::String),
             }),
         ];
         let t1 = Type::Object(TObject {
@@ -638,13 +654,13 @@ mod tests {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
-                t: Type::Prim(TPrim::Num),
+                t: Type::Keyword(TKeyword::Number),
             }),
             types::TObjElem::Prop(types::TProp {
                 name: String::from("bar"),
                 optional: true,
                 mutable: false,
-                t: Type::Prim(TPrim::Bool),
+                t: Type::Keyword(TKeyword::Boolean),
             }),
             // It's okay for qux to not appear in the subtype since
             // it's an optional property.
@@ -652,7 +668,7 @@ mod tests {
                 name: String::from("qux"),
                 optional: true,
                 mutable: false,
-                t: Type::Prim(TPrim::Str),
+                t: Type::Keyword(TKeyword::String),
             }),
         ];
         let t2 = Type::Object(TObject {
@@ -670,7 +686,11 @@ mod tests {
     fn failure_case() {
         let ctx = Context::default();
 
-        let result = unify(&Type::Prim(TPrim::Num), &Type::from(num("5")), &ctx);
+        let result = unify(
+            &Type::Keyword(TKeyword::Number),
+            &Type::from(num("5")),
+            &ctx,
+        );
 
         assert_eq!(result, Err(String::from("Unification failure")))
     }

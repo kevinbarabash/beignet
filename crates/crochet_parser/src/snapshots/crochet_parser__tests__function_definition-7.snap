@@ -24,10 +24,10 @@ Ok(
                                     ),
                                     type_ann: Some(
                                         TypeAnn {
-                                            kind: Prim(
-                                                PrimType {
+                                            kind: Keyword(
+                                                KeywordType {
                                                     span: 5..12,
-                                                    prim: Bool,
+                                                    keyword: Boolean,
                                                 },
                                             ),
                                             span: 5..12,

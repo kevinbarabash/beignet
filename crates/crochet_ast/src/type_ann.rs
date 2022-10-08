@@ -5,7 +5,6 @@ use crate::expr::Expr;
 use crate::ident::Ident;
 use crate::keyword::Keyword;
 use crate::lit::Lit;
-use crate::prim::Primitive;
 use crate::span::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,12 +20,6 @@ pub struct LamType {
     pub params: Vec<TypeAnnFnParam>,
     pub ret: Box<TypeAnn>,
     pub type_params: Option<Vec<TypeParam>>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PrimType {
-    pub span: Span,
-    pub prim: Primitive,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -130,7 +123,6 @@ pub enum TypeAnnKind {
     Lam(LamType),
     Lit(Lit),
     Keyword(KeywordType),
-    Prim(PrimType),
     Object(ObjectType),
     TypeRef(TypeRef),
     Union(UnionType),

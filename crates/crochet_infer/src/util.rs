@@ -61,7 +61,6 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     type_params: vec![],
                 })
             }
-            Type::Prim(_) => t.to_owned(),
             Type::Lit(_) => t.to_owned(),
             Type::Keyword(_) => t.to_owned(),
             Type::Union(types) => {
@@ -280,10 +279,10 @@ pub fn union_many_types(ts: &[Type]) -> Type {
 
     let types_set: HashSet<_> = types.iter().cloned().collect();
 
-    let prim_types: HashSet<_> = types_set
+    let keyword_types: HashSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|t| matches!(t, Type::Prim(_)))
+        .filter(|t| matches!(t, Type::Keyword(_)))
         .collect();
 
     let lit_types: HashSet<_> = types_set
@@ -292,30 +291,23 @@ pub fn union_many_types(ts: &[Type]) -> Type {
         .filter(|t| match &t {
             // Primitive types subsume corresponding literal types
             Type::Lit(lit) => match lit {
-                TLit::Num(_) => !prim_types.contains(&Type::Prim(TPrim::Num)),
-                TLit::Bool(_) => !prim_types.contains(&Type::Prim(TPrim::Bool)),
-                TLit::Str(_) => !prim_types.contains(&Type::Prim(TPrim::Str)),
+                TLit::Num(_) => !keyword_types.contains(&Type::Keyword(TKeyword::Number)),
+                TLit::Bool(_) => !keyword_types.contains(&Type::Keyword(TKeyword::Boolean)),
+                TLit::Str(_) => !keyword_types.contains(&Type::Keyword(TKeyword::String)),
             },
             _ => false,
         })
         .collect();
 
-    let keyword_types: HashSet<_> = types_set
-        .iter()
-        .cloned()
-        .filter(|t| matches!(t, Type::Keyword(_)))
-        .collect();
-
     let other_types: HashSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|t| !matches!(t, Type::Prim(_) | Type::Lit(_) | Type::Keyword(_)))
+        .filter(|t| !matches!(t, Type::Lit(_) | Type::Keyword(_)))
         .collect();
 
-    let types: Vec<_> = prim_types
+    let types: Vec<_> = keyword_types
         .iter()
         .chain(lit_types.iter())
-        .chain(keyword_types.iter())
         .chain(other_types.iter())
         .cloned()
         .collect();

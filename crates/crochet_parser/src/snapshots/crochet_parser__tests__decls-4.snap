@@ -28,10 +28,10 @@ Ok(
                                 type_args: Some(
                                     [
                                         TypeAnn {
-                                            kind: Prim(
-                                                PrimType {
+                                            kind: Keyword(
+                                                KeywordType {
                                                     span: 21..27,
-                                                    prim: Str,
+                                                    keyword: String,
                                                 },
                                             ),
                                             span: 21..27,

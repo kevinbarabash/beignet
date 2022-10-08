@@ -54,10 +54,10 @@ Ok(
                                                                         optional: false,
                                                                         mutable: false,
                                                                         type_ann: TypeAnn {
-                                                                            kind: Prim(
-                                                                                PrimType {
+                                                                            kind: Keyword(
+                                                                                KeywordType {
                                                                                     span: 58..64,
-                                                                                    prim: Num,
+                                                                                    keyword: Number,
                                                                                 },
                                                                             ),
                                                                             span: 58..64,
@@ -72,10 +72,10 @@ Ok(
                                                                         optional: false,
                                                                         mutable: false,
                                                                         type_ann: TypeAnn {
-                                                                            kind: Prim(
-                                                                                PrimType {
+                                                                            kind: Keyword(
+                                                                                KeywordType {
                                                                                     span: 69..75,
-                                                                                    prim: Num,
+                                                                                    keyword: Number,
                                                                                 },
                                                                             ),
                                                                             span: 69..75,
@@ -127,10 +127,10 @@ Ok(
                                                         optional: false,
                                                         mutable: false,
                                                         type_ann: TypeAnn {
-                                                            kind: Prim(
-                                                                PrimType {
+                                                            kind: Keyword(
+                                                                KeywordType {
                                                                     span: 112..118,
-                                                                    prim: Str,
+                                                                    keyword: String,
                                                                 },
                                                             ),
                                                             span: 112..118,

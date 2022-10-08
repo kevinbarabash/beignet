@@ -1,6 +1,6 @@
 use super::context::Context;
 use super::util::union_many_types;
-use crochet_types::{TKeyword, TLit, TObjElem, TObject, TPrim, Type};
+use crochet_types::{TKeyword, TLit, TObjElem, TObject, Type};
 
 // TODO: try to dedupe with infer_property_type()
 pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
@@ -28,11 +28,6 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
 
             Ok(union_many_types(&elems))
         }
-        Type::Prim(prim) => match prim {
-            TPrim::Num => key_of(&ctx.lookup_type_and_instantiate("Number")?, ctx),
-            TPrim::Bool => key_of(&ctx.lookup_type_and_instantiate("Boolean")?, ctx),
-            TPrim::Str => key_of(&ctx.lookup_type_and_instantiate("String")?, ctx),
-        },
         Type::Lit(lit) => match lit {
             TLit::Num(_) => key_of(&ctx.lookup_type_and_instantiate("Number")?, ctx),
             TLit::Bool(_) => key_of(&ctx.lookup_type_and_instantiate("Boolean")?, ctx),
@@ -50,7 +45,7 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
             Ok(union_many_types(&elems))
         }
         Type::Array(_) => Ok(union_many_types(&[
-            Type::Prim(TPrim::Num),
+            Type::Keyword(TKeyword::Number),
             key_of(&ctx.lookup_type_and_instantiate("ReadonlyArray")?, ctx)?,
         ])),
         Type::Lam(_) => key_of(&ctx.lookup_type_and_instantiate("Function")?, ctx),
@@ -58,12 +53,13 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
             todo!() // What does this even mean?
         }
         Type::Keyword(keyword) => match keyword {
-            crochet_types::TKeyword::Null => Ok(Type::Keyword(TKeyword::Never)),
-            crochet_types::TKeyword::Symbol => {
-                key_of(&ctx.lookup_type_and_instantiate("Symbol")?, ctx)
-            }
-            crochet_types::TKeyword::Undefined => Ok(Type::Keyword(TKeyword::Never)),
-            crochet_types::TKeyword::Never => Ok(Type::Keyword(TKeyword::Never)),
+            TKeyword::Number => key_of(&ctx.lookup_type_and_instantiate("Number")?, ctx),
+            TKeyword::Boolean => key_of(&ctx.lookup_type_and_instantiate("Boolean")?, ctx),
+            TKeyword::String => key_of(&ctx.lookup_type_and_instantiate("String")?, ctx),
+            TKeyword::Symbol => key_of(&ctx.lookup_type_and_instantiate("Symbol")?, ctx),
+            TKeyword::Null => Ok(Type::Keyword(TKeyword::Never)),
+            TKeyword::Undefined => Ok(Type::Keyword(TKeyword::Never)),
+            TKeyword::Never => Ok(Type::Keyword(TKeyword::Never)),
         },
         Type::Union(_) => todo!(),
         Type::Intersection(elems) => {
