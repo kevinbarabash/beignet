@@ -1,11 +1,12 @@
 use std::fs;
-use std::path::Path;
 use std::process::{Command, Output};
 use std::str;
 
 fn main() {
     println!("cargo:rerun-if-changed=package.json");
-    let yarn_install_output = Command::new("yarn").args(["install"]).output();
+    let yarn_install_output = Command::new("yarn")
+        .args(["install", "--frozen-lockfile"])
+        .output();
     match yarn_install_output {
         Ok(Output {
             status,

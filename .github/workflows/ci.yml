@@ -38,6 +38,10 @@ jobs:
         working-directory: ./crates/tree_sitter_crochet
         run: yarn install --frozen-lockfile
 
+      - name: Generate grammar
+        working-directory: ./crates/tree_sitter_crochet
+        run: yarn generate
+
       - name: Run tests
         working-directory: ./crates/tree_sitter_crochet
         run: yarn test
