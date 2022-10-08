@@ -68,8 +68,8 @@ Program {
                                                 },
                                             ),
                                             inferred_type: Some(
-                                                Prim(
-                                                    Num,
+                                                Keyword(
+                                                    Number,
                                                 ),
                                             ),
                                         },
@@ -82,16 +82,16 @@ Program {
                                                 },
                                             ),
                                             inferred_type: Some(
-                                                Prim(
-                                                    Num,
+                                                Keyword(
+                                                    Number,
                                                 ),
                                             ),
                                         },
                                     },
                                 ),
                                 inferred_type: Some(
-                                    Prim(
-                                        Num,
+                                    Keyword(
+                                        Number,
                                     ),
                                 ),
                             },
@@ -111,8 +111,8 @@ Program {
                                                 mutable: false,
                                             },
                                         ),
-                                        t: Prim(
-                                            Num,
+                                        t: Keyword(
+                                            Number,
                                         ),
                                         optional: false,
                                     },
@@ -123,14 +123,14 @@ Program {
                                                 mutable: false,
                                             },
                                         ),
-                                        t: Prim(
-                                            Num,
+                                        t: Keyword(
+                                            Number,
                                         ),
                                         optional: false,
                                     },
                                 ],
-                                ret: Prim(
-                                    Num,
+                                ret: Keyword(
+                                    Number,
                                 ),
                                 type_params: [],
                             },

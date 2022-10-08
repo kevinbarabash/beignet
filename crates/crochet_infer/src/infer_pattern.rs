@@ -70,9 +70,9 @@ fn infer_pattern_rec(
         PatternKind::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
         PatternKind::Is(IsPat { id, is_id, .. }) => {
             let t = match is_id.name.as_str() {
-                "string" => Type::Prim(types::TPrim::Str),
-                "number" => Type::Prim(types::TPrim::Num),
-                "boolean" => Type::Prim(types::TPrim::Bool),
+                "string" => Type::Keyword(types::TKeyword::String),
+                "number" => Type::Keyword(types::TKeyword::Number),
+                "boolean" => Type::Keyword(types::TKeyword::Boolean),
                 // The alias type will be used for `instanceof` of checks, but
                 // only if the definition of the alias is an object type with a
                 // `constructor` method.

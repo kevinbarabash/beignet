@@ -1099,17 +1099,17 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         }
         "predefined_type" => match text_for_node(&node, src).as_str() {
             "any" => todo!("remove support for 'any'"),
-            "number" => TypeAnnKind::Prim(PrimType {
+            "number" => TypeAnnKind::Keyword(KeywordType {
                 span: node.byte_range(),
-                prim: Primitive::Num,
+                keyword: Keyword::Number,
             }),
-            "boolean" => TypeAnnKind::Prim(PrimType {
+            "boolean" => TypeAnnKind::Keyword(KeywordType {
                 span: node.byte_range(),
-                prim: Primitive::Bool,
+                keyword: Keyword::Boolean,
             }),
-            "string" => TypeAnnKind::Prim(PrimType {
+            "string" => TypeAnnKind::Keyword(KeywordType {
                 span: node.byte_range(),
-                prim: Primitive::Str,
+                keyword: Keyword::String,
             }),
             "symbol" => todo!(),
             "void" => todo!(),

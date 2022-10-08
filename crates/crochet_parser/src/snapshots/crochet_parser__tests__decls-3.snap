@@ -21,10 +21,10 @@ Ok(
                 },
                 type_ann: Some(
                     TypeAnn {
-                        kind: Prim(
-                            PrimType {
+                        kind: Keyword(
+                            KeywordType {
                                 span: 15..21,
-                                prim: Num,
+                                keyword: Number,
                             },
                         ),
                         span: 15..21,

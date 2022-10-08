@@ -13,10 +13,10 @@ Ok(
                     name: "Num",
                 },
                 type_ann: TypeAnn {
-                    kind: Prim(
-                        PrimType {
+                    kind: Keyword(
+                        KeywordType {
                             span: 11..17,
-                            prim: Num,
+                            keyword: Number,
                         },
                     ),
                     span: 11..17,

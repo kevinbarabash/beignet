@@ -52,10 +52,10 @@ Ok(
                             },
                             constraint: Some(
                                 TypeAnn {
-                                    kind: Prim(
-                                        PrimType {
+                                    kind: Keyword(
+                                        KeywordType {
                                             span: 19..25,
-                                            prim: Str,
+                                            keyword: String,
                                         },
                                     ),
                                     span: 19..25,

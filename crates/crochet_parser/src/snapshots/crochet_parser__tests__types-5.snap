@@ -30,10 +30,10 @@ Ok(
                                             ArrayType {
                                                 span: 9..17,
                                                 elem_type: TypeAnn {
-                                                    kind: Prim(
-                                                        PrimType {
+                                                    kind: Keyword(
+                                                        KeywordType {
                                                             span: 9..15,
-                                                            prim: Str,
+                                                            keyword: String,
                                                         },
                                                     ),
                                                     span: 9..15,
@@ -49,10 +49,10 @@ Ok(
                                             ArrayType {
                                                 span: 20..28,
                                                 elem_type: TypeAnn {
-                                                    kind: Prim(
-                                                        PrimType {
+                                                    kind: Keyword(
+                                                        KeywordType {
                                                             span: 20..26,
-                                                            prim: Num,
+                                                            keyword: Number,
                                                         },
                                                     ),
                                                     span: 20..26,

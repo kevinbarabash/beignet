@@ -76,13 +76,13 @@ fn infer_let_fn_with_param_types() {
 }
 
 #[test]
-#[should_panic = "Unification failure"]
+#[should_panic = "Can't unify string with number"]
 fn infer_fn_with_incorrect_param_types() {
     infer("(a: string, b: boolean) => a + b;");
 }
 
 #[test]
-#[should_panic = "Unification failure"]
+#[should_panic = "Can't unify string with number"]
 fn infer_let_fn_with_incorrect_param_types() {
     let src = "let add = (a: string, b: boolean) => a + b;";
     infer_prog(src);

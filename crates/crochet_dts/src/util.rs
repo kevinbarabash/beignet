@@ -43,7 +43,6 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
             ret: Box::from(replace_aliases_rec(ret, map)),
             type_params: type_params.to_owned(),
         }),
-        Type::Prim(_) => t.to_owned(),
         Type::Lit(_) => t.to_owned(),
         Type::Keyword(_) => t.to_owned(),
         Type::Union(types) => {

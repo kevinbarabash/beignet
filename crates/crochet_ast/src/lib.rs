@@ -4,7 +4,6 @@ pub mod jsx;
 pub mod keyword;
 pub mod lit;
 pub mod pattern;
-pub mod prim;
 pub mod span;
 pub mod type_ann;
 
@@ -14,6 +13,5 @@ pub use jsx::*;
 pub use keyword::*;
 pub use lit::*;
 pub use pattern::*;
-pub use prim::*;
 pub use span::*;
 pub use type_ann::*;

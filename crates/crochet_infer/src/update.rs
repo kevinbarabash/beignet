@@ -297,7 +297,6 @@ fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
         TypeAnnKind::Lit(_) => (), // leaf node
         // We should be able to fill some of these correctly as part of infer_type_ann()
         TypeAnnKind::Keyword(_) => (), // leaf node
-        TypeAnnKind::Prim(_) => (),    // leaf node
         TypeAnnKind::Object(ObjectType { span: _, elems }) => {
             elems.iter_mut().for_each(|elem| match elem {
                 TObjElem::Index(TIndex { type_ann, .. }) => {

@@ -6,7 +6,6 @@ use crate::keyword::TKeyword;
 use crate::lam::TLam;
 use crate::lit::TLit;
 use crate::obj::TObjElem;
-use crate::prim::TPrim;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TApp {
@@ -53,7 +52,6 @@ pub enum Type {
     App(TApp),
     Lam(TLam),
     // Query, // use for typed holes
-    Prim(TPrim),
     Lit(TLit),
     Keyword(TKeyword),
     Union(Vec<Type>),
@@ -83,7 +81,6 @@ impl fmt::Display for Type {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }
             Type::Lam(lam) => write!(f, "{lam}"),
-            Type::Prim(prim) => write!(f, "{}", prim),
             Type::Lit(lit) => write!(f, "{}", lit),
             Type::Keyword(keyword) => write!(f, "{}", keyword),
             Type::Union(types) => {
