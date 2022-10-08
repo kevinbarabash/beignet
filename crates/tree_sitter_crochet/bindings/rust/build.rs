@@ -2,9 +2,31 @@ use std::process::{Command, Output};
 use std::str;
 
 fn main() {
+    println!("cargo:rerun-if-changed=package.json");
+    let yarn_install_output = Command::new("yarn").args(["install"]).output();
+    match yarn_install_output {
+        Ok(Output {
+            status,
+            stdout,
+            stderr,
+        }) => {
+            let stdout = str::from_utf8(&stdout).unwrap();
+            println!("stdout = {stdout}");
+
+            if !status.success() {
+                let stderr = str::from_utf8(&stderr).unwrap();
+                println!("stderr = {stderr}");
+                panic!("'yarn install' exited with non-zero status");
+            }
+        }
+        Err(_) => {
+            panic!("'yarn install' failed to run");
+        }
+    }
+
     println!("cargo:rerun-if-changed=grammar.js");
-    let yarn_output = Command::new("yarn").args(["generate"]).output();
-    match yarn_output {
+    let yarn_generate_output = Command::new("yarn").args(["generate"]).output();
+    match yarn_generate_output {
         Ok(Output {
             status,
             stdout,
