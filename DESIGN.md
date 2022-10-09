@@ -178,6 +178,25 @@ TODO
 
 ## Differences for JavaScript
 
+### Semicolons
+
+- semicolons are not automatically inserted
+- semicolons are required in between statements
+
+### `let`-binding
+
+The behavior of `let` has been modified so that it:
+
+- allows redeclarations (like `var`)
+- doesn't allow reassignment (like `const`) without redeclaration
+
+**Crochet**
+
+```typescript
+let x = "hello";
+let x = x.length; // x is now a number
+```
+
 ### Pattern Matching
 
 Pattern matching is like a `switch`-`case` but you can match against structured data and
@@ -235,6 +254,21 @@ let foo = (bar: string) {
 
 The Crochet implementation of this is very similar to the [TC39 Proposal](https://github.com/tc39/proposal-do-expressions).
 
+NOTE: If the last statement within the block ends with a semicolon then value of the `do`-expression
+is `undefined`, e.g.
+
+**Crochet**
+
+```typescript
+let foo = do {
+    let bar = getBar();
+    console.log(`bar = ${bar}`);
+    bar;
+}; // foo is `undefined`
+```
+
+This mimics Rust's behavior.
+
 ### More Expressions (fewer statements)
 
 JavaScript is a very statement-heavy language. As a result, things often end up needing to be
@@ -272,8 +306,7 @@ let if (condition) {
 
 #### `const` and `var`
 
-All variables are declared using `let`. A variable can be redeclared with the same scope. This
-shadows the previous declaration. This is possible because all block statements are lambdas.
+All variables are declared using `let`.
 
 #### Default imports/exports
 
