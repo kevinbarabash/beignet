@@ -1,13 +1,42 @@
+use itertools::join;
 use std::fmt;
 
-use crate::lam::TLam;
 use crate::r#type::Type;
 use crate::TFnParam;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TCallable {
+    pub params: Vec<TFnParam>,
+    pub ret: Box<Type>,
+    pub type_params: Vec<i32>,
+}
+
+impl fmt::Display for TCallable {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self {
+            params,
+            ret,
+            type_params,
+        } = self;
+        if type_params.is_empty() {
+            write!(f, "({}) => {}", join(params, ", "), ret)
+        } else {
+            let type_params = type_params.iter().map(|tp| format!("t{tp}"));
+            write!(
+                f,
+                "<{}>({}) => {}",
+                join(type_params, ", "),
+                join(params, ", "),
+                ret
+            )
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TObjElem {
-    Call(TLam),
-    Constructor(TLam),
+    Call(TCallable),
+    Constructor(TCallable),
     Index(TIndex),
     Prop(TProp),
     // Getter

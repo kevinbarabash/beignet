@@ -13,6 +13,26 @@ pub trait Substitutable {
 impl Substitutable for Type {
     fn apply(&self, sub: &Subst) -> Type {
         let result = match self {
+            Type::Qualified(TQualified { t, type_params }) => {
+                // QUESTION: Do we really need to be filtering out type_params from
+                // substitutions?
+                let type_params: Vec<_> = type_params
+                    .iter()
+                    .filter(|tp| !sub.contains_key(tp))
+                    .cloned()
+                    .collect();
+
+                // If there are no type params then the returned type shouldn't be
+                // a qualified type.
+                if type_params.is_empty() {
+                    t.apply(sub)
+                } else {
+                    Type::Qualified(TQualified {
+                        t: Box::from(t.as_ref().apply(sub)),
+                        type_params,
+                    })
+                }
+            }
             Type::Var(id) => match sub.get(id) {
                 Some(replacement) => replacement.to_owned(),
                 None => self.to_owned(),
@@ -27,21 +47,9 @@ impl Substitutable for Type {
             Type::Keyword(_) => self.to_owned(),
             Type::Union(types) => Type::Union(types.apply(sub)),
             Type::Intersection(types) => Type::Intersection(types.apply(sub)),
-            Type::Object(obj) => {
-                // QUESTION: Do we really need to be filtering out type_params from
-                // substitutions?
-                let type_params = obj
-                    .type_params
-                    .iter()
-                    .filter(|tp| !sub.contains_key(tp))
-                    .cloned()
-                    .collect();
-
-                Type::Object(TObject {
-                    elems: obj.elems.apply(sub),
-                    type_params,
-                })
-            }
+            Type::Object(obj) => Type::Object(TObject {
+                elems: obj.elems.apply(sub),
+            }),
             Type::Ref(alias) => Type::Ref(TRef {
                 type_args: alias.type_args.apply(sub),
                 ..alias.to_owned()
@@ -60,6 +68,10 @@ impl Substitutable for Type {
     }
     fn ftv(&self) -> HashSet<i32> {
         match self {
+            Type::Qualified(TQualified { t, type_params }) => {
+                let qualifiers: HashSet<_> = type_params.iter().map(|id| id.to_owned()).collect();
+                t.ftv().difference(&qualifiers).cloned().collect()
+            }
             Type::Var(id) => HashSet::from([id.to_owned()]),
             Type::App(TApp { args, ret }) => {
                 let mut result: HashSet<_> = args.ftv();
@@ -71,11 +83,7 @@ impl Substitutable for Type {
             Type::Keyword(_) => HashSet::new(),
             Type::Union(types) => types.ftv(),
             Type::Intersection(types) => types.ftv(),
-            Type::Object(obj) => {
-                let qualifiers: HashSet<_> =
-                    obj.type_params.iter().map(|id| id.to_owned()).collect();
-                obj.elems.ftv().difference(&qualifiers).cloned().collect()
-            }
+            Type::Object(obj) => obj.elems.ftv(),
             Type::Ref(TRef {
                 type_args: type_params,
                 ..
@@ -115,6 +123,20 @@ impl Substitutable for TObjElem {
 
 impl Substitutable for TLam {
     fn apply(&self, sub: &Subst) -> Self {
+        Self {
+            params: self.params.iter().map(|param| param.apply(sub)).collect(),
+            ret: Box::from(self.ret.apply(sub)),
+        }
+    }
+    fn ftv(&self) -> HashSet<i32> {
+        let mut result: HashSet<_> = self.params.ftv();
+        result.extend(self.ret.ftv());
+        result
+    }
+}
+
+impl Substitutable for TCallable {
+    fn apply(&self, sub: &Subst) -> Self {
         // QUESTION: Do we really need to be filtering out type_params from
         // substitutions?
         let type_params = self
@@ -124,7 +146,7 @@ impl Substitutable for TLam {
             .cloned()
             .collect();
 
-        TLam {
+        Self {
             params: self.params.iter().map(|param| param.apply(sub)).collect(),
             ret: Box::from(self.ret.apply(sub)),
             type_params,
@@ -152,7 +174,7 @@ impl Substitutable for TIndex {
 }
 
 impl Substitutable for TProp {
-    fn apply(&self, sub: &Subst) -> TProp {
+    fn apply(&self, sub: &Subst) -> Self {
         TProp {
             t: self.t.apply(sub),
             ..self.to_owned()
@@ -164,7 +186,7 @@ impl Substitutable for TProp {
 }
 
 impl Substitutable for TFnParam {
-    fn apply(&self, sub: &Subst) -> TFnParam {
+    fn apply(&self, sub: &Subst) -> Self {
         TFnParam {
             t: self.t.apply(sub),
             ..self.to_owned()

@@ -180,6 +180,7 @@ fn infer_param_pattern_rec(
 
             Ok(Type::Tuple(elems?))
         }
+        // TODO: infer type_params
         EFnParamPat::Object(EFnParamObjectPat { props, .. }) => {
             let mut rest_opt_ty: Option<Type> = None;
             let elems: Vec<types::TObjElem> = props
@@ -236,11 +237,7 @@ fn infer_param_pattern_rec(
                 })
                 .collect();
 
-            let obj_type = Type::Object(TObject {
-                elems,
-                // TODO: infer type_params
-                type_params: vec![],
-            });
+            let obj_type = Type::Object(TObject { elems });
 
             match rest_opt_ty {
                 Some(rest_ty) => Ok(Type::Intersection(vec![obj_type, rest_ty])),

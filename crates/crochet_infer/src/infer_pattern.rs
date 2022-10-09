@@ -116,6 +116,7 @@ fn infer_pattern_rec(
 
             Ok(Type::Tuple(elems?))
         }
+        // TODO: infer type_params
         PatternKind::Object(ObjectPat { props, .. }) => {
             let mut rest_opt_ty: Option<Type> = None;
             let elems: Vec<types::TObjElem> = props
@@ -167,11 +168,7 @@ fn infer_pattern_rec(
                 })
                 .collect();
 
-            let obj_type = Type::Object(TObject {
-                elems,
-                // TODO: infer type_params
-                type_params: vec![],
-            });
+            let obj_type = Type::Object(TObject { elems });
 
             match rest_opt_ty {
                 // TODO: Replace this with a proper Rest/Spread type

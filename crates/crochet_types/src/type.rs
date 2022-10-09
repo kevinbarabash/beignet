@@ -37,13 +37,18 @@ impl Hash for TRef {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct TObject {
     pub elems: Vec<TObjElem>,
-    pub type_params: Vec<i32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TIndexAccess {
     pub object: Box<Type>,
     pub index: Box<Type>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TQualified {
+    pub t: Box<Type>,
+    pub type_params: Vec<i32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -64,6 +69,7 @@ pub enum Type {
     This,
     KeyOf(Box<Type>),
     IndexAccess(TIndexAccess),
+    Qualified(TQualified),
 }
 
 impl From<TLit> for Type {
@@ -75,7 +81,18 @@ impl From<TLit> for Type {
 impl fmt::Display for Type {
     // TODO: add in parentheses where necessary to get the precedence right
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
+        match self {
+            Type::Qualified(TQualified { t, type_params }) => {
+                if type_params.is_empty() {
+                    write!(f, "{t}")
+                } else {
+                    let params: Vec<_> = type_params
+                        .iter()
+                        .map(|param| format!("t{param}"))
+                        .collect();
+                    write!(f, "<{}>{t}", join(params, ", "))
+                }
+            }
             Type::Var(id) => write!(f, "t{id}"),
             Type::App(TApp { args, ret }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
@@ -91,15 +108,8 @@ impl fmt::Display for Type {
                 let strings: Vec<_> = types.iter().map(|t| format!("{t}")).sorted().collect();
                 write!(f, "{}", join(strings, " & "))
             }
-            Type::Object(TObject {
-                elems, type_params, ..
-            }) => {
-                if type_params.is_empty() {
-                    write!(f, "{{{}}}", join(elems, ", "))
-                } else {
-                    let params = type_params.iter().map(|p| format!("t{p}"));
-                    write!(f, "<{}>{{{}}}", join(params, ", "), join(elems, ", "))
-                }
+            Type::Object(TObject { elems, .. }) => {
+                write!(f, "{{{}}}", join(elems, ", "))
             }
             Type::Ref(TRef {
                 name,

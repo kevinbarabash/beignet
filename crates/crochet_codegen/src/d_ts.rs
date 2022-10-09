@@ -8,7 +8,7 @@ use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
 use crochet_infer::{get_type_params, Context};
-use crochet_types::{self as types, TFnParam, TPat, Type};
+use crochet_types::{self as types, TFnParam, TPat, TQualified, Type};
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -399,6 +399,12 @@ pub fn build_type_params(t: &Type) -> Option<TsTypeParamDecl> {
 /// from if it exists.
 pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
     match t {
+        Type::Qualified(TQualified { t, .. }) => {
+            // TODO: combine the return value from the `build_type_params()` call
+            // with the `type_params` passed into this function.
+            let _ = build_type_params(t);
+            build_type(t, type_params)
+        }
         Type::Var(id) => {
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                 .chars()
@@ -519,9 +525,7 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
             })
         }
         Type::Ref(types::TRef {
-            name,
-            type_args: type_params,
-            ..
+            name, type_args, ..
         }) => TsType::TsTypeRef(TsTypeRef {
             span: DUMMY_SP,
             type_name: TsEntityName::from(Ident {
@@ -529,7 +533,8 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                 sym: JsWord::from(name.to_owned()),
                 optional: false,
             }),
-            type_params: type_params.clone().map(|params| TsTypeParamInstantiation {
+            // swc's AST calls these type params when really they're type args
+            type_params: type_args.clone().map(|params| TsTypeParamInstantiation {
                 span: DUMMY_SP,
                 params: params
                     .iter()
