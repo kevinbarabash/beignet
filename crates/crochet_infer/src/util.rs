@@ -134,22 +134,12 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                             mutable: index.mutable,
                             t: norm_type(&index.t, mapping, ctx),
                         }),
-                        TObjElem::Prop(prop) => {
-                            // println!("TObjElem::Prop(prop)");
-                            // println!("mapping = {mapping:#?}");
-                            // println!("prop.t = {:#?}", prop.t);
-
-                            // let t = norm_type(&prop.t, mapping, ctx);
-
-                            // println!("TObjElem::Prop(prop) - t = {t:#?}");
-
-                            TObjElem::Prop(TProp {
-                                name: prop.name.to_owned(),
-                                optional: prop.optional,
-                                mutable: prop.mutable,
-                                t: norm_type(&prop.t, mapping, ctx),
-                            })
-                        }
+                        TObjElem::Prop(prop) => TObjElem::Prop(TProp {
+                            name: prop.name.to_owned(),
+                            optional: prop.optional,
+                            mutable: prop.mutable,
+                            t: norm_type(&prop.t, mapping, ctx),
+                        }),
                     })
                     .collect();
                 Type::Object(TObject { elems })
