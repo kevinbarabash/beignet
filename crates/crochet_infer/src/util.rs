@@ -7,7 +7,7 @@ use crochet_types::*;
 use super::context::{Context, Env};
 use super::substitutable::{Subst, Substitutable};
 
-pub fn normalize(t: &Type, ctx: &Context) -> Type {
+fn get_mapping(t: &Type) -> HashMap<i32, Type> {
     let body = t;
     let keys = body.ftv();
     let mut keys: Vec<_> = keys.iter().cloned().collect();
@@ -25,19 +25,27 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
         mapping.insert(tp.to_owned(), Type::Var((offset + index) as i32));
     }
 
+    mapping
+}
+
+pub fn normalize(t: &Type, ctx: &Context) -> Type {
+    let mapping = get_mapping(t);
+
     // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
     // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
     // type variables that are bound to the object element as opposed to the encompassing object type.
     fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
         match t {
-            Type::Qualified(TQualified { t, type_params }) => {
-                // let mut mapping = mapping.clone();
-                // let offset = mapping.len();
-                // for (index, tp) in type_params.iter().enumerate() {
-                //     mapping.insert(tp.to_owned(), Type::Var((offset + index) as i32));
-                // }
+            Type::Qualified(TQualified {
+                t: inner_t,
+                type_params,
+            }) => {
+                // NOTE: For now we don't bother normalizing qualified types since
+                // mappings from higher up may cause type variables to be reassigned
+                // to the incorrect type.  In order to fix this, we'd have to run
+                // `normalize` itself on each qualified type in the tree.
                 Type::Qualified(TQualified {
-                    t: Box::from(norm_type(t, mapping, ctx)),
+                    t: Box::from(norm_type(inner_t, mapping, ctx)),
                     type_params: type_params.to_owned(),
                 })
             }
@@ -126,12 +134,22 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                             mutable: index.mutable,
                             t: norm_type(&index.t, mapping, ctx),
                         }),
-                        TObjElem::Prop(prop) => TObjElem::Prop(TProp {
-                            name: prop.name.to_owned(),
-                            optional: prop.optional,
-                            mutable: prop.mutable,
-                            t: norm_type(&prop.t, mapping, ctx),
-                        }),
+                        TObjElem::Prop(prop) => {
+                            // println!("TObjElem::Prop(prop)");
+                            // println!("mapping = {mapping:#?}");
+                            // println!("prop.t = {:#?}", prop.t);
+
+                            // let t = norm_type(&prop.t, mapping, ctx);
+
+                            // println!("TObjElem::Prop(prop) - t = {t:#?}");
+
+                            TObjElem::Prop(TProp {
+                                name: prop.name.to_owned(),
+                                optional: prop.optional,
+                                mutable: prop.mutable,
+                                t: norm_type(&prop.t, mapping, ctx),
+                            })
+                        }
                     })
                     .collect();
                 Type::Object(TObject { elems })
@@ -160,7 +178,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
         }
     }
 
-    let t = norm_type(body, &mapping, ctx);
+    let t = norm_type(t, &mapping, ctx);
     let type_params: Vec<_> = (0..mapping.len()).map(|x| x as i32).collect();
 
     set_type_params(&t, &type_params)

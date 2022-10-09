@@ -1615,6 +1615,21 @@ mod tests {
     }
 
     #[test]
+    fn infer_elem_access_on_array() {
+        let src = r#"
+        type ReadonlyArray<T> = {
+            [key: number]: T;
+        }
+        let array: number[] = [1, 2, 3];
+        let fst = array[0];
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("fst", &ctx), "number | undefined");
+    }
+
+    #[test]
     fn destructure_obj_with_rest() {
         let src = r#"
         declare let point: {x: number, y: number, z?: number};

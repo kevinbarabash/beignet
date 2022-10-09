@@ -173,7 +173,7 @@ fn infer_index_value_on_interface() {
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("num").unwrap());
-    assert_eq!(result, "number");
+    assert_eq!(result, "number | undefined");
     let result = format!("{}", ctx.lookup_value("bool").unwrap());
     assert_eq!(result, "boolean");
 }
@@ -203,7 +203,9 @@ fn infer_generic_index_value_on_interface() {
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("id").unwrap());
-    assert_eq!(result, "<t0>(arg: t0) => t0");
+    // NOTE: The type variables aren't normalized.  See comment inside
+    // norm_type() in crochet_infer/src/util.rs.
+    assert_eq!(result, "<t1>(arg: t1) => t1 | undefined");
 }
 
 #[test]
