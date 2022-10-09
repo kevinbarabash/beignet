@@ -123,6 +123,20 @@ impl Substitutable for TObjElem {
 
 impl Substitutable for TLam {
     fn apply(&self, sub: &Subst) -> Self {
+        Self {
+            params: self.params.iter().map(|param| param.apply(sub)).collect(),
+            ret: Box::from(self.ret.apply(sub)),
+        }
+    }
+    fn ftv(&self) -> HashSet<i32> {
+        let mut result: HashSet<_> = self.params.ftv();
+        result.extend(self.ret.ftv());
+        result
+    }
+}
+
+impl Substitutable for TCallable {
+    fn apply(&self, sub: &Subst) -> Self {
         // QUESTION: Do we really need to be filtering out type_params from
         // substitutions?
         let type_params = self
@@ -132,7 +146,7 @@ impl Substitutable for TLam {
             .cloned()
             .collect();
 
-        TLam {
+        Self {
             params: self.params.iter().map(|param| param.apply(sub)).collect(),
             ret: Box::from(self.ret.apply(sub)),
             type_params,
@@ -160,7 +174,7 @@ impl Substitutable for TIndex {
 }
 
 impl Substitutable for TProp {
-    fn apply(&self, sub: &Subst) -> TProp {
+    fn apply(&self, sub: &Subst) -> Self {
         TProp {
             t: self.t.apply(sub),
             ..self.to_owned()
@@ -172,7 +186,7 @@ impl Substitutable for TProp {
 }
 
 impl Substitutable for TFnParam {
-    fn apply(&self, sub: &Subst) -> TFnParam {
+    fn apply(&self, sub: &Subst) -> Self {
         TFnParam {
             t: self.t.apply(sub),
             ..self.to_owned()

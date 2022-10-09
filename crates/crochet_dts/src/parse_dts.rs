@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use types::{TIndex, TLam, TObjElem, TObject};
+use types::{TCallable, TIndex, TObjElem, TObject};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
@@ -50,7 +50,6 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
                 let t = Type::Lam(types::TLam {
                     params,
                     ret: Box::from(ret),
-                    type_params: vec![],
                 });
 
                 match &fn_type.type_params {
@@ -199,7 +198,6 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
     let t = Type::Lam(types::TLam {
         params,
         ret: Box::from(ret?),
-        type_params: vec![],
     });
 
     let t = match &sig.type_params {
@@ -228,7 +226,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 let mut qualifiers: HashSet<_> = params.ftv();
                 qualifiers.extend(ret.ftv());
 
-                Ok(TObjElem::Call(TLam {
+                Ok(TObjElem::Call(TCallable {
                     params,
                     ret: Box::from(ret),
                     type_params: qualifiers.clone().into_iter().collect(),
@@ -243,7 +241,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 let mut qualifiers: HashSet<_> = params.ftv();
                 qualifiers.extend(ret.ftv());
 
-                Ok(TObjElem::Constructor(TLam {
+                Ok(TObjElem::Constructor(TCallable {
                     params,
                     ret: Box::from(ret),
                     type_params: qualifiers.clone().into_iter().collect(),
@@ -279,6 +277,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
         TsTypeElement::TsMethodSignature(sig) => {
             let t = infer_method_sig(sig, ctx)?;
             let gen_t = generalize_type(&HashMap::default(), &t);
+            // println!("t = {t}, gen_t = {gen_t}");
             let name = get_key_name(sig.key.as_ref())?;
             Ok(TObjElem::Prop(TProp {
                 name,

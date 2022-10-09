@@ -67,7 +67,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 &Type::Lam(types::TLam {
                     params: vec![param],
                     ret: Box::from(tv),
-                    type_params: vec![],
                 }),
                 &t,
                 ctx,
@@ -285,7 +284,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let t = Type::Lam(types::TLam {
                 params: t_params,
                 ret: Box::from(rt_1),
-                type_params: vec![],
             });
 
             let s = compose_many_subs(&ss);

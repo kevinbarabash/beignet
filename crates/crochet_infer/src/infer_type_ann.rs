@@ -60,13 +60,9 @@ pub fn infer_qualified_type_ann(
         .collect();
 
     // set type_params
+    let s = type_ann_s;
     let t = set_type_params(&type_ann_t, &type_params);
-    // let t = match type_ann_t {
-    //     Type::Lam(lam) => Type::Lam(TLam { type_params, ..lam }),
-    //     Type::Object(obj) => Type::Object(TObject { type_params, ..obj }),
-    //     _ => type_ann_t,
-    // };
-    Ok((type_ann_s, t))
+    Ok((s, t))
 }
 
 pub fn infer_type_ann_with_params(
@@ -103,11 +99,7 @@ fn infer_type_ann_rec(
             ss.push(ret_s);
 
             let s = compose_many_subs(&ss);
-            let t = Type::Lam(types::TLam {
-                params,
-                ret,
-                type_params: vec![],
-            });
+            let t = Type::Lam(types::TLam { params, ret });
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }

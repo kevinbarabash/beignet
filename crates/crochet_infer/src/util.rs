@@ -30,10 +30,17 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     // type variables that are bound to the object element as opposed to the encompassing object type.
     fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
         match t {
-            Type::Qualified(TQualified { t, type_params }) => Type::Qualified(TQualified {
-                t: Box::from(norm_type(t, mapping, ctx)),
-                type_params: type_params.to_owned(),
-            }),
+            Type::Qualified(TQualified { t, type_params }) => {
+                // let mut mapping = mapping.clone();
+                // let offset = mapping.len();
+                // for (index, tp) in type_params.iter().enumerate() {
+                //     mapping.insert(tp.to_owned(), Type::Var((offset + index) as i32));
+                // }
+                Type::Qualified(TQualified {
+                    t: Box::from(norm_type(t, mapping, ctx)),
+                    type_params: type_params.to_owned(),
+                })
+            }
             Type::Var(id) => match mapping.get(id) {
                 Some(t) => t.to_owned(),
                 // If `id` doesn't exist in `mapping` we return the original type variable.
@@ -59,11 +66,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     })
                     .collect();
                 let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
-                Type::Lam(TLam {
-                    params,
-                    ret,
-                    type_params: vec![],
-                })
+                Type::Lam(TLam { params, ret })
             }
             Type::Lit(_) => t.to_owned(),
             Type::Keyword(_) => t.to_owned(),
@@ -84,8 +87,8 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     .elems
                     .iter()
                     .map(|elem| match elem {
-                        TObjElem::Call(lam) => {
-                            let params: Vec<_> = lam
+                        TObjElem::Call(call) => {
+                            let params: Vec<_> = call
                                 .params
                                 .iter()
                                 .map(|param| TFnParam {
@@ -93,15 +96,16 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                                     ..param.to_owned()
                                 })
                                 .collect();
-                            let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
-                            TObjElem::Call(TLam {
+                            let ret = Box::from(norm_type(&call.ret, mapping, ctx));
+                            TObjElem::Call(TCallable {
                                 params,
                                 ret,
-                                type_params: lam.type_params.to_owned(),
+                                // TODO: normalize type_params?
+                                type_params: call.type_params.to_owned(),
                             })
                         }
-                        TObjElem::Constructor(lam) => {
-                            let params: Vec<_> = lam
+                        TObjElem::Constructor(call) => {
+                            let params: Vec<_> = call
                                 .params
                                 .iter()
                                 .map(|param| TFnParam {
@@ -109,11 +113,12 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                                     ..param.to_owned()
                                 })
                                 .collect();
-                            let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
-                            TObjElem::Constructor(TLam {
+                            let ret = Box::from(norm_type(&call.ret, mapping, ctx));
+                            TObjElem::Constructor(TCallable {
                                 params,
                                 ret,
-                                type_params: lam.type_params.to_owned(),
+                                // TODO: normalize type_params?
+                                type_params: call.type_params.to_owned(),
                             })
                         }
                         TObjElem::Index(index) => TObjElem::Index(TIndex {
@@ -129,11 +134,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                         }),
                     })
                     .collect();
-                Type::Object(TObject {
-                    elems,
-                    // TODO: normalize type_params
-                    ..obj.to_owned()
-                })
+                Type::Object(TObject { elems })
             }
             Type::Ref(TRef { name, type_args }) => {
                 let type_args = type_args
@@ -363,7 +364,6 @@ pub fn get_property_type(prop: &TProp) -> Type {
 pub fn get_type_params(t: &Type) -> Vec<i32> {
     match t {
         Type::Qualified(qual) => qual.type_params.to_owned(),
-        Type::Lam(lam) => lam.type_params.to_owned(),
         _ => vec![],
     }
 }
@@ -372,21 +372,11 @@ pub fn set_type_params(t: &Type, type_params: &[i32]) -> Type {
     // If there are no type params then the returned type shouldn't be
     // a qualified type.
     if type_params.is_empty() {
-        return match t {
-            Type::Lam(lam) => Type::Lam(TLam {
-                type_params: type_params.to_owned(),
-                ..lam.to_owned()
-            }),
-            _ => t.to_owned(),
-        };
+        return t.to_owned();
     }
 
     match t {
         Type::Var(_) => t.to_owned(),
-        Type::Lam(lam) => Type::Lam(TLam {
-            type_params: type_params.to_owned(),
-            ..lam.to_owned()
-        }),
         Type::Qualified(TQualified {
             t,
             // NOTE: `generalize_type` is responsible for merge type params so

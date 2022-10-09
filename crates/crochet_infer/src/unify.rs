@@ -1,7 +1,7 @@
 use std::cmp;
 use std::collections::HashSet;
 
-use crochet_types::{self as types, TObjElem, TObject, Type};
+use crochet_types::{self as types, TLam, TObjElem, TObject, TQualified, Type};
 use types::TKeyword;
 
 use super::context::Context;
@@ -11,7 +11,6 @@ use super::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
-    println!("attempting to unify {t1:#?} with {t2:#?}");
     let result = match (&t1, &t2) {
         // All binding must be done first
         (Type::Var(id), _) => bind(id, t2),
@@ -76,7 +75,21 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 .elems
                 .iter()
                 .filter_map(|elem| match elem {
-                    TObjElem::Call(lam) => Some(Type::Lam(lam.to_owned())),
+                    TObjElem::Call(call) => {
+                        let lam = Type::Lam(TLam {
+                            params: call.params.to_owned(),
+                            ret: call.ret.to_owned(),
+                        });
+                        let t = if call.type_params.is_empty() {
+                            lam
+                        } else {
+                            Type::Qualified(TQualified {
+                                t: Box::from(lam),
+                                type_params: call.type_params.to_owned(),
+                            })
+                        };
+                        Some(t)
+                    }
                     TObjElem::Constructor(_) => None,
                     TObjElem::Index(_) => None,
                     TObjElem::Prop(_) => None,

@@ -400,8 +400,9 @@ pub fn build_type_params(t: &Type) -> Option<TsTypeParamDecl> {
 pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
     match t {
         Type::Qualified(TQualified { t, .. }) => {
-            // TODO: combine this `type_params` with the one passed in to `build_type`
-            let type_params = build_type_params(t);
+            // TODO: combine the return value from the `build_type_params()` call
+            // with the `type_params` passed into this function.
+            let _ = build_type_params(t);
             build_type(t, type_params)
         }
         Type::Var(id) => {

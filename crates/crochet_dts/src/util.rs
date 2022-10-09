@@ -4,7 +4,7 @@ use swc_ecma_ast::*;
 
 use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substitutable};
 use crochet_types::{
-    self as types, TFnParam, TIndexAccess, TLam, TObjElem, TObject, TQualified, Type,
+    self as types, TCallable, TFnParam, TIndexAccess, TObjElem, TObject, TQualified, Type,
 };
 
 pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Context) -> Type {
@@ -25,20 +25,19 @@ pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Contex
 
 fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
     match t {
-        Type::Qualified(TQualified { t, type_params: _ }) => {
+        Type::Qualified(TQualified { t, type_params }) => {
             // TODO: create a new `map` that adds in `type_params`
-            replace_aliases_rec(t, map)
+            Type::Qualified(TQualified {
+                t: Box::from(replace_aliases_rec(t, map)),
+                type_params: type_params.to_owned(),
+            })
         }
         Type::Var(_) => t.to_owned(),
         Type::App(types::TApp { args, ret }) => Type::App(types::TApp {
             args: args.iter().map(|t| replace_aliases_rec(t, map)).collect(),
             ret: Box::from(replace_aliases_rec(ret, map)),
         }),
-        Type::Lam(types::TLam {
-            params,
-            ret,
-            type_params,
-        }) => Type::Lam(types::TLam {
+        Type::Lam(types::TLam { params, ret }) => Type::Lam(types::TLam {
             params: params
                 .iter()
                 .map(|param| TFnParam {
@@ -47,7 +46,6 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
                 })
                 .collect(),
             ret: Box::from(replace_aliases_rec(ret, map)),
-            type_params: type_params.to_owned(),
         }),
         Type::Lit(_) => t.to_owned(),
         Type::Keyword(_) => t.to_owned(),
@@ -73,7 +71,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
                             .collect();
                         let ret = replace_aliases_rec(lam.ret.as_ref(), map);
 
-                        TObjElem::Call(TLam {
+                        TObjElem::Call(TCallable {
                             params,
                             ret: Box::from(ret),
                             type_params: lam.type_params.to_owned(),
@@ -90,7 +88,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
                             .collect();
                         let ret = replace_aliases_rec(lam.ret.as_ref(), map);
 
-                        TObjElem::Constructor(TLam {
+                        TObjElem::Constructor(TCallable {
                             params,
                             ret: Box::from(ret),
                             type_params: lam.type_params.to_owned(),
@@ -104,6 +102,8 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
                         })
                     }
                     TObjElem::Prop(prop) => {
+                        println!("replacing prop.t");
+                        println!("prop.t = {:#}", prop.t);
                         let t = replace_aliases_rec(&prop.t, map);
                         TObjElem::Prop(types::TProp {
                             t,
@@ -112,10 +112,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
                     }
                 })
                 .collect();
-            Type::Object(TObject {
-                elems,
-                ..obj.to_owned()
-            })
+            Type::Object(TObject { elems })
         }
         Type::Ref(alias) => match map.get(&alias.name) {
             Some(id) => Type::Var(*id),
