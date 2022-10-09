@@ -132,7 +132,6 @@ Program {
                                 ret: Keyword(
                                     Number,
                                 ),
-                                type_params: [],
                             },
                         ),
                     ),

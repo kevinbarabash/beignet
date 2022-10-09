@@ -1,7 +1,7 @@
 use std::cmp;
 use std::collections::HashSet;
 
-use crochet_types::{self as types, TObjElem, TObject, Type};
+use crochet_types::{self as types, TLam, TObjElem, TObject, TQualified, Type};
 use types::TKeyword;
 
 use super::context::Context;
@@ -75,7 +75,21 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 .elems
                 .iter()
                 .filter_map(|elem| match elem {
-                    TObjElem::Call(lam) => Some(Type::Lam(lam.to_owned())),
+                    TObjElem::Call(call) => {
+                        let lam = Type::Lam(TLam {
+                            params: call.params.to_owned(),
+                            ret: call.ret.to_owned(),
+                        });
+                        let t = if call.type_params.is_empty() {
+                            lam
+                        } else {
+                            Type::Qualified(TQualified {
+                                t: Box::from(lam),
+                                type_params: call.type_params.to_owned(),
+                            })
+                        };
+                        Some(t)
+                    }
                     TObjElem::Constructor(_) => None,
                     TObjElem::Index(_) => None,
                     TObjElem::Prop(_) => None,
@@ -387,24 +401,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             })
                         });
 
-                    let s1 = unify(
-                        &Type::Object(TObject {
-                            elems: obj_elems,
-                            type_params: vec![],
-                        }),
-                        &obj_type,
-                        ctx,
-                    )?;
+                    let s1 = unify(&Type::Object(TObject { elems: obj_elems }), &obj_type, ctx)?;
 
                     let rest_type = rest_types.get(0).unwrap();
-                    let s2 = unify(
-                        &Type::Object(TObject {
-                            elems: rest_elems,
-                            type_params: vec![],
-                        }),
-                        rest_type,
-                        ctx,
-                    )?;
+                    let s2 = unify(&Type::Object(TObject { elems: rest_elems }), rest_type, ctx)?;
 
                     let s = compose_subs(&s2, &s1);
                     Ok(s)
@@ -446,24 +446,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             })
                         });
 
-                    let s_obj = unify(
-                        &obj_type,
-                        &Type::Object(TObject {
-                            elems: obj_elems,
-                            type_params: vec![],
-                        }),
-                        ctx,
-                    )?;
+                    let s_obj = unify(&obj_type, &Type::Object(TObject { elems: obj_elems }), ctx)?;
 
                     let rest_type = rest_types.get(0).unwrap();
-                    let s_rest = unify(
-                        rest_type,
-                        &Type::Object(TObject {
-                            elems: rest_elems,
-                            type_params: vec![],
-                        }),
-                        ctx,
-                    )?;
+                    let s_rest =
+                        unify(rest_type, &Type::Object(TObject { elems: rest_elems }), ctx)?;
 
                     let s = compose_subs(&s_rest, &s_obj);
                     Ok(s)
@@ -644,10 +631,7 @@ mod tests {
                 t: Type::Keyword(TKeyword::String),
             }),
         ];
-        let t1 = Type::Object(TObject {
-            elems,
-            type_params: vec![],
-        });
+        let t1 = Type::Object(TObject { elems });
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
@@ -671,10 +655,7 @@ mod tests {
                 t: Type::Keyword(TKeyword::String),
             }),
         ];
-        let t2 = Type::Object(TObject {
-            elems,
-            type_params: vec![],
-        });
+        let t2 = Type::Object(TObject { elems });
 
         let result = unify(&t1, &t2, &ctx);
         assert_eq!(result, Ok(Subst::default()));

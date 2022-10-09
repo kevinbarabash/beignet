@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, Type};
+use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, TQualified, Type};
 use types::TObjElem;
 
 use super::context::Context;
@@ -67,7 +67,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 &Type::Lam(types::TLam {
                     params: vec![param],
                     ret: Box::from(tv),
-                    type_params: vec![],
                 }),
                 &t,
                 ctx,
@@ -198,10 +197,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         });
 
                         let call_type = Type::App(types::TApp {
-                            args: vec![Type::Object(TObject {
-                                elems,
-                                type_params: vec![],
-                            })],
+                            args: vec![Type::Object(TObject { elems })],
                             ret: Box::from(ret_type.clone()),
                         });
 
@@ -288,7 +284,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let t = Type::Lam(types::TLam {
                 params: t_params,
                 ret: Box::from(rt_1),
-                type_params: vec![],
             });
 
             let s = compose_many_subs(&ss);
@@ -396,16 +391,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = compose_many_subs(&ss);
             let t = if spread_types.is_empty() {
-                Type::Object(TObject {
-                    elems,
-                    type_params: vec![],
-                })
+                Type::Object(TObject { elems })
             } else {
                 let mut all_types = spread_types;
-                all_types.push(Type::Object(TObject {
-                    elems,
-                    type_params: vec![],
-                }));
+                all_types.push(Type::Object(TObject { elems }));
                 simplify_intersection(&all_types)
             };
             expr.inferred_type = Some(t.clone());
@@ -567,6 +556,7 @@ fn infer_property_type(
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t {
+        Type::Qualified(TQualified { t, type_params: _ }) => infer_property_type(t, prop, ctx),
         Type::Object(obj) => get_prop_value(obj, prop, ctx),
         Type::Ref(alias) => {
             let t = ctx.lookup_ref_and_instantiate(alias)?;

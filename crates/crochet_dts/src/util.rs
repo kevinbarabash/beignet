@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use swc_ecma_ast::*;
 
 use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substitutable};
-use crochet_types::{self as types, TFnParam, TIndexAccess, TLam, TObjElem, TObject, Type};
+use crochet_types::{
+    self as types, TCallable, TFnParam, TIndexAccess, TObjElem, TObject, TQualified, Type,
+};
 
 pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Context) -> Type {
     let mut type_params: Vec<i32> = vec![];
@@ -23,16 +25,19 @@ pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Contex
 
 fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
     match t {
+        Type::Qualified(TQualified { t, type_params }) => {
+            // TODO: create a new `map` that adds in `type_params`
+            Type::Qualified(TQualified {
+                t: Box::from(replace_aliases_rec(t, map)),
+                type_params: type_params.to_owned(),
+            })
+        }
         Type::Var(_) => t.to_owned(),
         Type::App(types::TApp { args, ret }) => Type::App(types::TApp {
             args: args.iter().map(|t| replace_aliases_rec(t, map)).collect(),
             ret: Box::from(replace_aliases_rec(ret, map)),
         }),
-        Type::Lam(types::TLam {
-            params,
-            ret,
-            type_params,
-        }) => Type::Lam(types::TLam {
+        Type::Lam(types::TLam { params, ret }) => Type::Lam(types::TLam {
             params: params
                 .iter()
                 .map(|param| TFnParam {
@@ -41,7 +46,6 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
                 })
                 .collect(),
             ret: Box::from(replace_aliases_rec(ret, map)),
-            type_params: type_params.to_owned(),
         }),
         Type::Lit(_) => t.to_owned(),
         Type::Keyword(_) => t.to_owned(),
@@ -67,7 +71,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
                             .collect();
                         let ret = replace_aliases_rec(lam.ret.as_ref(), map);
 
-                        TObjElem::Call(TLam {
+                        TObjElem::Call(TCallable {
                             params,
                             ret: Box::from(ret),
                             type_params: lam.type_params.to_owned(),
@@ -84,7 +88,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
                             .collect();
                         let ret = replace_aliases_rec(lam.ret.as_ref(), map);
 
-                        TObjElem::Constructor(TLam {
+                        TObjElem::Constructor(TCallable {
                             params,
                             ret: Box::from(ret),
                             type_params: lam.type_params.to_owned(),
@@ -98,6 +102,8 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
                         })
                     }
                     TObjElem::Prop(prop) => {
+                        println!("replacing prop.t");
+                        println!("prop.t = {:#}", prop.t);
                         let t = replace_aliases_rec(&prop.t, map);
                         TObjElem::Prop(types::TProp {
                             t,
@@ -106,10 +112,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
                     }
                 })
                 .collect();
-            Type::Object(TObject {
-                elems,
-                ..obj.to_owned()
-            })
+            Type::Object(TObject { elems })
         }
         Type::Ref(alias) => match map.get(&alias.name) {
             Some(id) => Type::Var(*id),
@@ -143,10 +146,22 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
         .zip(tp1.iter().map(|id| Type::Var(*id)))
         .collect();
 
+    // Unwrap qualified types since we return a qualified
+    // type if there are any type qualifiers.
+    let t1 = match t1 {
+        Type::Qualified(TQualified { t, .. }) => t,
+        t => t,
+    };
+    let t2 = match t2 {
+        Type::Qualified(TQualified { t, .. }) => t,
+        t => t,
+    };
+
     // Updates type variables for type params to match t1
     let t2 = t2.apply(&subs);
 
-    match (t1, t2) {
+    let type_params = tp1;
+    let t = match (t1, t2) {
         (Type::Object(obj1), Type::Object(obj2)) => {
             let elems: Vec<_> = obj1
                 .elems
@@ -155,11 +170,17 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
                 .chain(obj2.elems.iter().cloned())
                 .collect();
 
-            Type::Object(TObject {
-                elems,
-                type_params: obj1.type_params.to_owned(),
-            })
+            Type::Object(TObject { elems })
         }
         (_, _) => todo!(),
+    };
+
+    if type_params.is_empty() {
+        t
+    } else {
+        Type::Qualified(TQualified {
+            t: Box::from(t),
+            type_params,
+        })
     }
 }

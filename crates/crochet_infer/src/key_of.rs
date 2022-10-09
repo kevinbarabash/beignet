@@ -1,10 +1,11 @@
 use super::context::Context;
 use super::util::union_many_types;
-use crochet_types::{TKeyword, TLit, TObjElem, TObject, Type};
+use crochet_types::{TKeyword, TLit, TObjElem, TObject, TQualified, Type};
 
 // TODO: try to dedupe with infer_property_type()
 pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
     match t {
+        Type::Qualified(TQualified { t, type_params: _ }) => key_of(t, ctx),
         Type::Var(_) => Err(String::from(
             "There isn't a way to infer a type from its keys",
         )),
@@ -12,10 +13,7 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
             let t = ctx.lookup_ref_and_instantiate(alias)?;
             key_of(&t, ctx)
         }
-        Type::Object(TObject {
-            elems,
-            type_params: _,
-        }) => {
+        Type::Object(TObject { elems }) => {
             let elems: Vec<_> = elems
                 .iter()
                 .filter_map(|elem| match elem {
