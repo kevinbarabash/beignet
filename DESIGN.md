@@ -131,13 +131,16 @@ Crochet will prevent this by doing the following:
 Currently Crochet's type system only support immutable types. In order to support mutable types
 we'll need to implement a version of `unify()` that doesn't allow sub-types to be used.
 
-### Typed + Tracked Exceptions
+### Exception Tracking and Type Exceptions
 
 If a developer wants to be defensive and catch these, it can difficult to know which functions
 throw which errors. [hegel.js](https://hegel.js.org), another static type checker for JavaScript
 that include a `$Throws<>` type for tracking which exceptions a function can throw. If a function
 calls another function which throws an exception without catching it, we will infer it to also be
 throwing the same exception.
+
+Tracking exceptions means that we'd also be able to know what type (or types) a caught exception
+could be. This would allow us to increase the type safety of code in `catch` blocks.
 
 ## Extensibility
 
@@ -377,3 +380,13 @@ let slice5 = [:];   // tuple.slice();      === [1, 2, 3, 4, 5]
 ### Pipeline Operator?
 
 TODO, see [TC39 Proposal](https://github.com/tc39/proposal-pipeline-operator).
+
+### Const Expressions
+
+If an expression is composed of literals and operations that can be computed at compile time, e.g.
+math operators, `.length` on string literals, etc. then we can compute the result of the expression
+at compile time.
+
+### Pure/Side-Effect Tracking
+
+TODO
