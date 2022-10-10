@@ -1,4 +1,4 @@
-# Crochet Design
+# Crochet: Design
 
 This document describes the Crochet language as we would like it to be. The language is currently
 being implemented so many of these features do not exist yet or not work exactly as describe here.
@@ -354,6 +354,12 @@ let result = match (event) {
 };
 ```
 
+The reason for using `->` instead of `=>` was to differentiate the arms of the `match` expression
+from arrow functions. The latter introduces a new stack frame whereas the former does not.
+
+While there is a [TC39 Proposal](https://github.com/tc39/proposal-pattern-matching) for pattern
+matching, it feels overly complex. This is why an alternate syntax was adopted.
+
 NOTE: Pattern matching is syntactic sugar for `if`-`let`-`else`. The example above can be
 rewritten as the following:
 
@@ -373,18 +379,6 @@ let result = if (let {type: "mousedown", x, y} = e) {
     \`keydown: \${key}\
 };
 ```
-
-The syntax also supports:
-
-- `if` guards on patterns
-- `is` patterns to match primitives and class, e.g. `variable is string` or `variable is HTMLElement`
-- `variable` will match anything and bind it to the variable
-- `_` will match anything without binding
-
-The reason for using `->` instead of `=>` was to differentia
-
-While there is a [TC39 Proposal](https://github.com/tc39/proposal-pattern-matching) for pattern
-matching, it feels overly complex. This is why an alternate syntax was adopted.
 
 ### `do` Expressions
 
