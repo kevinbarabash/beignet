@@ -13,14 +13,14 @@ The main goals of Crochet are:
 
 ## TypeScript Interop
 
-There are a number of compile to JavaScript languages out there, but all of them struggle with
-writing bindings for existing libraries. Crochet aims to address this issue by:
+There are a number of compile to JavaScript languages out there, but all of them require the
+manual creating of bindings for existing JavaScript/TypeScript libraries. Crochet aims to address this issue by:
 
 - implementing a type system that is compatible with TypeScript's
 - parsing .d.ts files and interpreting them as types in Crochet's type system
 - outputting .d.ts files for each .crochet source file
 
-This allows for automatic, bidirectional, and typesafe interop with TypeScript. The intent
+This allows for automatic, bidirectional, and typesafe interop with TypeScript. The intent of this
 is to facilitate the following use cases:
 
 - new Crochet projects that want to use existing libraries with TypeScript type definitions
