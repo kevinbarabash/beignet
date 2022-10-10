@@ -6,7 +6,7 @@ being implemented so many of these features do not exist yet or not work exactly
 The main goals of Crochet are:
 
 - tight interop with TypeScript
-- improve the type safety of TypeScript
+- improved type safety and type inference
 - extensibility
 - address some JavaScript pain points
 - support developer expectations
@@ -31,7 +31,7 @@ is to facilitate the following use cases:
 One thing we'd like to eventually have is a script to convert .ts files to .crochet, but this
 will likely be quite difficult to implement for all JavaScript/TypeScript constructs.
 
-## Improved Type Safety
+## Improved Type Safety and Type Inference
 
 ### No `any` type
 
@@ -134,13 +134,102 @@ we'll need to implement a version of `unify()` that doesn't allow sub-types to b
 ### Exception Tracking and Type Exceptions
 
 If a developer wants to be defensive and catch these, it can difficult to know which functions
-throw which errors. [hegel.js](https://hegel.js.org), another static type checker for JavaScript
-that include a `$Throws<>` type for tracking which exceptions a function can throw. If a function
+throw which errors. [hegel.js](https://hegel.js.org), another static type checker for JavaScript,
+includes a `$Throws<>` type for tracking which exceptions a function can throw. If a function
 calls another function which throws an exception without catching it, we will infer it to also be
 throwing the same exception.
 
 Tracking exceptions means that we'd also be able to know what type (or types) a caught exception
 could be. This would allow us to increase the type safety of code in `catch` blocks.
+
+### Rethinking Type Refinements
+
+Type refinement is a concept that a lot of developers struggle with when using static type checkers
+with JavaScript. TypeScript has made some improvements in this area recently to allow developers
+to do refinements more naturally, e.g.
+
+**Current TypeScript**
+
+```typescript
+type MyEvent =
+  | { type: "mousedown"; x: number; y: number }
+  | { type: "keydown"; key: string };
+
+declare const e: MyEvent;
+const { type } = e;
+if (type === "mousedown") {
+  const { x, y } = e;
+  // do stuff with `x` and `y`
+}
+```
+
+Previously (and still in Flow), you'd have to make sure that if condition expression included
+the variable you wanted to refine.
+**Old TypeScript**
+
+```typescript
+type MyEvent =
+  | { type: "mousedown"; x: number; y: number }
+  | { type: "keydown"; key: string };
+
+declare const e: MyEvent;
+if (e.type === "mousedown") {
+  const { x, y } = e;
+  // `x` and `y` are `number`s in this scope
+} else if (e.type === "keydown") {
+  const { key } = e;
+  // `key` is a `string` in this scope
+}
+```
+
+Flow complicated things further by invalidating type refinements in after any function call. While
+it's possible for a function call to invalidate a refinement, the vast majority of time this never
+actually happens.
+
+Even though TypeScript supports writing JavaScript in a more idiomatic way than Flow, type
+refinements can still be confusing. This stems from the fact that the type of a variable changes
+in different scopes. This differs from almost all other statically type languages.
+
+Crochet takes a different approach. Instead of refining the type of an existing variable, a new
+variable binding is introduced when determining a variable's type, e.g.
+
+**Crochet**
+
+```typescript
+type MyEvent =
+  | {type: "mousedown", x: number, y: number}
+  | {type: "keydown", key: string}
+  ;
+
+declare const e: MyEvent;
+if (let {type: "mousedown", x, y} = e) {
+    // `x` and `y` are `number`s in this scope
+} else if (let {type: "keydown", key} = e) {
+    // `key` is a `string` in this scope
+}
+```
+
+See the "if-let" section below for more details on this syntax.
+
+### Improved Inference
+
+TypeScript infers parameters types as `any` if no explicit type is provided. Crochet is able to
+infer parameter types based on how they are used in the function, e.g.
+
+**TypeScript**
+
+```typescript
+let add = (a, b) => a + b; // inferred as (a: any, b: any) => any
+```
+
+**Crochet**
+
+```typescript
+let add = (a, b) => a + b; // inferred as (a: number, b: number) => any
+```
+
+NOTE: `+` in Crochet can only be used with numbers. For string concatenation use `.join()` on
+arrays/tuples or template literals.
 
 ## Extensibility
 
@@ -200,11 +289,54 @@ let x = "hello";
 let x = x.length; // x is now a number
 ```
 
+### `if`-`let`
+
+This syntax combines some sort of runtime type checking along with the introducing of a new
+binding for the narrowed type. This is used in place of type refinements you'd normally use in
+static type checkers for Javascript. An example of this was shown in the "No Type Refinements"
+sub-section earlier in the doc. Here's another example:
+
+**TypeScript**
+
+```typescript
+declare const foo: number | string;
+if (typeof foo === "number") {
+  // `foo` is just a `number` in this scope
+} else if (typeof foo === "string") {
+  // `foo` is just a `string` in this scope
+}
+// `foo` is still has type `number | string` in this scope
+```
+
+**Crochet**
+
+```typescript
+declare let foo: number | string;
+if (let n is number = foo) {
+    // `n` is a `number`, `foo` still has type `number | string`
+} else if (let s is string = foo) {
+    // `s` is a `string`, `foo` still has type `number | string`
+}
+```
+
+The syntax also supports the following pattern kinds:
+
+- tuple and object destructuring
+- literals, e.g. `"mousedown"`
+- `is` checks with either a primitive or a class
+- variables
+- `_` checks for the presence of a variable/property, but doesn't introduce a binding for it
+
+Patterns can either refutable or irrefutable. A pattern is said to be refutable if it contains
+at least one of the following pattern kinds: literals or `is`. While `if`-`let` can be used with
+both types of patterns, it's really only useful with refutable patterns. `let` declarations on
+the other hand can only use irrefutable patterns.
+
 ### Pattern Matching
 
 Pattern matching is like a `switch`-`case` but you can match against structured data and
-the case statements can also be structured. Here's one example of what this looks like
-in Crochet:
+the case statements can use the same patterns that are use with `if`-`let`. Here's one example of
+what this looks like in Crochet:
 
 **Crochet**
 
@@ -219,6 +351,26 @@ declare let event: Event;
 let result = match (event) {
     {type: "mousedown", x, y} -> \`mousedown: (\${x}, \${y})\`,
     {type: "keydown", key} -> \`keydown: \${key}\`
+};
+```
+
+NOTE: Pattern matching is syntactic sugar for `if`-`let`-`else`. The example above can be
+rewritten as the following:
+
+**Crochet**
+
+```
+type Event =
+  | {type: "mousedown", x: number, y: number}
+  | {type: "keydown", key: string}
+  ;
+
+declare let event: Event;
+
+let result = if (let {type: "mousedown", x, y} = e) {
+    \`mousedown: (\${x}, \${y})\`
+} else if (let {type: "keydown", key} = e) {
+    \`keydown: \${key}\
 };
 ```
 
@@ -343,6 +495,7 @@ Good support for sourcemaps will have the following benefits:
 - JSX support (already codegen'd, but type-checking is incorrect)
 - async/await (already supported)
 - iterators
+- classes
 - generators
 - decorators
 
