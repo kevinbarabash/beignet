@@ -388,17 +388,13 @@ This allows you to introduce a new scope to enacapsulate computation. It's simil
 **Crochet**
 
 ```typescript
-let foo = (bar: string) {
-    let baz = do {
-        let ucBar = bar.toUpperCase();
-        let ucBaz = ucBar.replace("R", "Z");
-        let baz = ucBaz.toLowerCase();
-        console.log(`baz = ${baz}`);
-        baz // this is the result of this do-expression
-    };
-
-    // ... do something with baz
-}
+let foo = do {
+    let bar = getBar();
+    console.log(`bar = ${bar}`);
+    bar
+};
+// `foo` is defined and has value of `bar` before it went out of scope
+// `bar` is no longer in scope
 ```
 
 The Crochet implementation of this is very similar to the [TC39 Proposal](https://github.com/tc39/proposal-do-expressions).
@@ -413,10 +409,11 @@ let foo = do {
     let bar = getBar();
     console.log(`bar = ${bar}`);
     bar;
-}; // foo is `undefined`
+};
+// `foo` is in scope, but its value is set to `undefined`
 ```
 
-This mimics Rust's behavior.
+This mimics Rust's behavior with `undefined` standing in for `()`.
 
 ### More Expressions (fewer statements)
 
