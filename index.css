@@ -1,0 +1,149 @@
+:root {
+  --text-color: black;
+  --text-background: white;
+  --header: #eee;
+  --menu: #ccc;
+  --active-color: rgb(0, 64, 224);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-color: #ddd;
+    --text-background: #222;
+    --header: #272727;
+    --menu: #333;
+    --active-color: rgb(0, 128, 255);
+  }
+}
+
+body,
+html {
+  height: 100%;
+  margin: 0;
+}
+
+#container {
+  height: 100%;
+}
+
+textarea {
+  resize: none;
+}
+
+.button-reset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  width: auto;
+  background: transparent;
+
+  /* inherit font & color from ancestor */
+  color: inherit;
+  font: inherit;
+
+  /* Normalize `line-height`. Cannot be changed from `normal` in Firefox 4+. */
+  line-height: normal;
+
+  /* Corrects font smoothing for webkit */
+  -webkit-font-smoothing: inherit;
+  -moz-osx-font-smoothing: inherit;
+
+  /* Corrects inability to style clickable `input` types in iOS */
+  -webkit-appearance: none;
+}
+
+.tab {
+  color: var(--text-color);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  padding-left: 16px;
+  padding-right: 16px;
+  min-width: 64px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.header-link:hover {
+  background-color: var(--menu);
+}
+
+.menu-link:hover {
+  background-color: var(--header);
+}
+
+.dropdown {
+  color: var(--text-color);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  padding-left: 16px;
+  padding-right: 16px;
+  min-width: 64px;
+  cursor: pointer;
+  position: relative;
+}
+
+.dropdown:hover {
+  background-color: var(--header);
+}
+
+.dropdown-contents {
+  background-color: var(--header);
+  position: absolute;
+  left: 0;
+  top: 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-contents a {
+  height: 32px;
+  line-height: 32px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+a {
+  display: flex;
+  white-space: nowrap;
+  color: var(--text-color);
+  text-decoration: none;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  padding-left: 16px;
+  padding-right: 16px;
+  cursor: pointer;
+  height: 32px;
+  line-height: 32px;
+}
+
+a:visited {
+  color: var(--text-color);
+}
+
+.menu-bar {
+  background-color: var(--menu);
+  height: 32px;
+  display: flex;
+}
+
+.caret {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid;
+  display: inline-block;
+  height: 0;
+  margin-left: 2px;
+  vertical-align: middle;
+  width: 0;
+  margin-left: 4px;
+}
+
+textarea {
+  color: var(--text-color);
+  background-color: var(--text-background);
+}
+
+textarea:focus {
+  outline: none;
+}

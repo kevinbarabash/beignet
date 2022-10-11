@@ -17,10 +17,8 @@ let sum = add5(10);
 export const App = () => {
   let [source, setSource] = React.useState(() => {
     const url = new URL(window.location.href);
-    const code = url.searchParams.get("code");
-    return code
-      ? window.atob(window.decodeURIComponent(code))
-      : DEFAULT_CODE.trim();
+    const hash = url.hash.slice(1);
+    return hash ? window.atob(hash) : DEFAULT_CODE.trim();
   });
   let [crochet, setCrochet] = React.useState<Compiler | null>(null);
   let [outputTab, setOutputTab] = React.useState<"js" | "dts">("js");
@@ -34,6 +32,21 @@ export const App = () => {
           setCrochet(compiler);
         });
       });
+  }, []);
+
+  React.useEffect(() => {
+    const listener = (e: HashChangeEvent) => {
+      const url = new URL(e.newURL);
+      const hash = url.hash.slice(1);
+      const source = window.atob(hash);
+      setSource(source);
+    };
+
+    window.addEventListener("hashchange", listener);
+
+    return () => {
+      window.removeEventListener("hashchange", listener);
+    };
   }, []);
 
   let output = React.useMemo<CompilerResult>(() => {
@@ -76,11 +89,12 @@ export const App = () => {
       lineHeight: "32px",
       fontWeight: "bold",
       marginRight: 24,
+      color: "var(--text-color)",
     },
   };
 
   const activeTabStyle = {
-    borderBottom: "solid 2px blue",
+    borderBottom: "solid 2px var(--active-color)",
     paddingTop: 2,
   };
 
@@ -91,7 +105,7 @@ export const App = () => {
           display: "flex",
           flexDirection: "row",
           height: 32,
-          backgroundColor: "#EEE",
+          backgroundColor: "var(--header)",
         }}
       >
         <div style={styles.header}>🧣Crochet</div>
@@ -134,7 +148,7 @@ export const App = () => {
           </button>
         </div>
         <textarea
-          style={{ ...styles.editor, borderRight: "solid 1px #CCC" }}
+          style={{ ...styles.editor, borderRight: "solid 1px var(--menu)" }}
           value={source}
           onChange={updateSource}
         />
