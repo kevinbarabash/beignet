@@ -9,9 +9,9 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --text-color: #ddd;
-    --text-background: #333;
+    --text-background: #222;
     --header: #272727;
-    --menu: #444;
+    --menu: #333;
     --active-color: rgb(0, 128, 255);
   }
 }
