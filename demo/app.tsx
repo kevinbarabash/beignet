@@ -17,10 +17,8 @@ let sum = add5(10);
 export const App = () => {
   let [source, setSource] = React.useState(() => {
     const url = new URL(window.location.href);
-    const code = url.searchParams.get("code");
-    return code
-      ? window.atob(window.decodeURIComponent(code))
-      : DEFAULT_CODE.trim();
+    const hash = url.hash.slice(1);
+    return hash ? window.atob(hash) : DEFAULT_CODE.trim();
   });
   let [crochet, setCrochet] = React.useState<Compiler | null>(null);
   let [outputTab, setOutputTab] = React.useState<"js" | "dts">("js");
@@ -34,6 +32,21 @@ export const App = () => {
           setCrochet(compiler);
         });
       });
+  }, []);
+
+  React.useEffect(() => {
+    const listener = (e: HashChangeEvent) => {
+      const url = new URL(e.newURL);
+      const hash = url.hash.slice(1);
+      const source = window.atob(hash);
+      setSource(source);
+    };
+
+    window.addEventListener("hashchange", listener);
+
+    return () => {
+      window.removeEventListener("hashchange", listener);
+    };
   }, []);
 
   let output = React.useMemo<CompilerResult>(() => {
