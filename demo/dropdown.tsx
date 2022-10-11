@@ -36,7 +36,7 @@ const Dropdown = () => {
 
   return (
     <button
-      style={open ? { backgroundColor: "#EEE" } : {}}
+      style={open ? { backgroundColor: "var(--header)" } : {}}
       className="button-reset dropdown"
       onClick={toggleOpen}
       ref={(node) => (buttonRef.current = node)}

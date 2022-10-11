@@ -89,11 +89,12 @@ export const App = () => {
       lineHeight: "32px",
       fontWeight: "bold",
       marginRight: 24,
+      color: "var(--text-color)",
     },
   };
 
   const activeTabStyle = {
-    borderBottom: "solid 2px blue",
+    borderBottom: "solid 2px var(--active-color)",
     paddingTop: 2,
   };
 
@@ -104,7 +105,7 @@ export const App = () => {
           display: "flex",
           flexDirection: "row",
           height: 32,
-          backgroundColor: "#EEE",
+          backgroundColor: "var(--header)",
         }}
       >
         <div style={styles.header}>🧣Crochet</div>
@@ -147,7 +148,7 @@ export const App = () => {
           </button>
         </div>
         <textarea
-          style={{ ...styles.editor, borderRight: "solid 1px #CCC" }}
+          style={{ ...styles.editor, borderRight: "solid 1px var(--menu)" }}
           value={source}
           onChange={updateSource}
         />
