@@ -1,13 +1,13 @@
 use crochet_ast::*;
 use crochet_types::{TObjElem, TObject, TProp, Type};
 
-use super::context::{Context, Env};
-use super::infer_expr::infer_expr as infer_expr_rec;
-use super::infer_pattern::*;
-use super::infer_type_ann::*;
-use super::substitutable::{Subst, Substitutable};
-use super::update::update_program;
-use super::util::*;
+use crate::context::Context;
+use crate::infer_expr::infer_expr as infer_expr_rec;
+use crate::infer_pattern::*;
+use crate::infer_type_ann::*;
+use crate::substitutable::Subst;
+use crate::update::update_program;
+use crate::util::*;
 
 pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, String> {
     // let mut ctx: Context = Context::default();
@@ -53,11 +53,15 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
                 match declare {
                     true => {
                         match &mut pattern.kind {
-                            PatternKind::Ident(BindingIdent { id, .. }) => {
+                            PatternKind::Ident(BindingIdent {
+                                id: Ident { name, .. },
+                                ..
+                            }) => {
                                 match type_ann {
                                     Some(type_ann) => {
-                                        let (s, t) = infer_scheme(type_ann, ctx)?;
-                                        ctx.insert_value(id.name.to_owned(), t.apply(&s));
+                                        let (s, t) = infer_type_ann(type_ann, ctx, &None)?;
+                                        let t = close_over(&s, &t, ctx);
+                                        ctx.insert_value(name.to_owned(), t);
 
                                         ss.push(s);
                                     }
@@ -88,7 +92,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
                         for (name, t) in pa {
-                            let t = normalize(&t.apply(&s), ctx);
+                            let t = close_over(&s, &t, ctx);
                             ctx.insert_value(name, t);
                         }
 
@@ -97,13 +101,14 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
                 };
             }
             Statement::TypeDecl {
-                id,
+                id: Ident { name, .. },
                 type_ann,
                 type_params,
                 ..
             } => {
-                let (s, t) = infer_qualified_type_ann(type_ann, type_params, ctx)?;
-                ctx.insert_type(id.name.to_owned(), t.apply(&s));
+                let (s, t) = infer_type_ann(type_ann, ctx, type_params)?;
+                let t = close_over(&s, &t, ctx);
+                ctx.insert_type(name.to_owned(), t);
 
                 ss.push(s);
             }
@@ -126,12 +131,4 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
 pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<Type, String> {
     let (s, t) = infer_expr_rec(ctx, expr)?;
     Ok(close_over(&s, &t, ctx))
-}
-
-// closeOver :: (Map.Map TVar Type, Type) -> Scheme
-// closeOver (sub, ty) = normalize sc
-//   where sc = generalize emptyTyenv (apply sub ty)
-pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
-    let empty_env = Env::default();
-    normalize(&generalize_type(&empty_env, &t.to_owned().apply(s)), ctx)
 }

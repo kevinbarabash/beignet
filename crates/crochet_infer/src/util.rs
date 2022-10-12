@@ -4,8 +4,8 @@ use std::iter::Iterator;
 
 use crochet_types::*;
 
-use super::context::{Context, Env};
-use super::substitutable::{Subst, Substitutable};
+use crate::context::{Context, Env};
+use crate::substitutable::{Subst, Substitutable};
 
 fn get_mapping(t: &Type) -> HashMap<i32, Type> {
     let body = t;
@@ -26,6 +26,11 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
     }
 
     mapping
+}
+
+pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
+    let empty_env = Env::default();
+    normalize(&generalize(&empty_env, &t.to_owned().apply(s)), ctx)
 }
 
 pub fn normalize(t: &Type, ctx: &Context) -> Type {
@@ -174,7 +179,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     set_type_params(&t, &type_params)
 }
 
-pub fn generalize_type(env: &Env, t: &Type) -> Type {
+pub fn generalize(env: &Env, t: &Type) -> Type {
     // ftv() returns a Set which is not ordered
     // TODO: switch to an ordered set
     let mut type_params = get_type_params(t);

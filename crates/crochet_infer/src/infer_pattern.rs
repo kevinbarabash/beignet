@@ -3,14 +3,13 @@ use std::collections::HashMap;
 use crochet_ast::*;
 use crochet_types::{self as types, TObject, Type};
 
-use super::context::Context;
-use super::infer_expr::infer_expr;
-use super::infer_type_ann::*;
-use super::substitutable::{Subst, Substitutable};
-use super::unify::unify;
-use super::util::*;
-
-pub type Assump = HashMap<String, Type>;
+use crate::assump::Assump;
+use crate::context::Context;
+use crate::infer_expr::infer_expr;
+use crate::infer_type_ann::*;
+use crate::substitutable::{Subst, Substitutable};
+use crate::unify::unify;
+use crate::util::*;
 
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
@@ -84,7 +83,7 @@ fn infer_pattern_rec(
             // TODO: we need a method on Context to get all types that currently in
             // scope so that we can pass them to generalize()
             let all_types = ctx.get_all_types();
-            let t = generalize_type(&all_types, &t);
+            let t = generalize(&all_types, &t);
             if assump.insert(id.name.to_owned(), t.clone()).is_some() {
                 return Err(String::from("Duplicate identifier in pattern"));
             }

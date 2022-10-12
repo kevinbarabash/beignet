@@ -1,7 +1,7 @@
 use crochet_ast::*;
 use crochet_types::Type;
 
-use super::substitutable::{Subst, Substitutable};
+use crate::substitutable::{Subst, Substitutable};
 
 pub fn update_program(prog: &mut Program, s: &Subst) {
     for stmt in prog.body.iter_mut() {

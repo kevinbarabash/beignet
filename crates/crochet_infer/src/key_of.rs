@@ -1,6 +1,7 @@
-use super::context::Context;
-use super::util::union_many_types;
 use crochet_types::{TKeyword, TLit, TObjElem, TObject, TQualified, Type};
+
+use crate::context::Context;
+use crate::util::union_many_types;
 
 // TODO: try to dedupe with infer_property_type()
 pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
