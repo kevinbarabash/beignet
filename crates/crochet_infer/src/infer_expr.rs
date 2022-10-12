@@ -4,13 +4,13 @@ use crochet_ast::*;
 use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, TQualified, Type};
 use types::TObjElem;
 
-use super::context::Context;
-use super::infer_fn_param::infer_fn_param;
-use super::infer_pattern::*;
-use super::infer_type_ann::*;
-use super::substitutable::{Subst, Substitutable};
-use super::unify::unify;
-use super::util::*;
+use crate::context::Context;
+use crate::infer_fn_param::infer_fn_param;
+use crate::infer_pattern::*;
+use crate::infer_type_ann::*;
+use crate::substitutable::{Subst, Substitutable};
+use crate::unify::unify;
+use crate::util::*;
 
 pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), String> {
     let result = match &mut expr.kind {
@@ -246,8 +246,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
                     // Inserts any new variables introduced by infer_fn_param() into
                     // the current context.
-                    for (name, scheme) in pa {
-                        ctx.insert_value(name, scheme);
+                    for (name, t) in pa {
+                        ctx.insert_value(name, t);
                     }
 
                     Ok((ps, t_param))
@@ -532,8 +532,8 @@ fn infer_let(
     // Inserts the new variables from infer_pattern_and_init() into the
     // current context.
     // TODO: have infer_pattern_and_init do this
-    for (name, scheme) in pa {
-        ctx.insert_value(name.to_owned(), scheme.to_owned());
+    for (name, t) in pa {
+        ctx.insert_value(name.to_owned(), t.to_owned());
     }
 
     let (s2, t2) = infer_expr(ctx, body)?;

@@ -2,11 +2,10 @@ use crochet_types::*;
 use std::cell::Cell;
 use std::collections::HashMap;
 
-use super::substitutable::*;
-use super::util::get_type_params;
+use crate::substitutable::*;
+use crate::util::get_type_params;
 
-// This maps to the Assump data type in THIH which was a tuple
-// of (Id, Scheme) where Id was a String.
+// NOTE: This is the same as the Assump type in assump.rs
 pub type Env = HashMap<String, Type>;
 
 #[derive(Clone, Debug)]
@@ -90,11 +89,11 @@ impl Context {
     pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
             match scope.values.get(name) {
-                Some(scheme) => return Ok(self.instantiate(scheme)),
+                Some(t) => return Ok(self.instantiate(t)),
                 None => (),
             }
         }
-        Err(format!("Can't find value type: {name}"))
+        Err(format!("Can't find value: {name}"))
     }
 
     pub fn lookup_value(&self, name: &str) -> Result<Type, String> {
@@ -104,14 +103,13 @@ impl Context {
                 None => (),
             }
         }
-        Err(format!("Can't find scheme: {name}"))
+        Err(format!("Can't find value: {name}"))
     }
 
-    // TODO: Make this return a Result<Type, String>
     pub fn lookup_type_and_instantiate(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
             match scope.types.get(name) {
-                Some(scheme) => return Ok(self.instantiate(scheme)),
+                Some(t) => return Ok(self.instantiate(t)),
                 None => (),
             }
         }
@@ -145,7 +143,7 @@ impl Context {
                 Some(t) => {
                     let type_params = get_type_params(t);
 
-                    // Replaces qualifiers in the scheme with the corresponding type params
+                    // Replaces qualifiers in the type with the corresponding type params
                     // from the alias type.
                     let ids = type_params.iter().map(|id| id.to_owned());
                     let subs: Subst = match &alias.type_args {
@@ -153,7 +151,9 @@ impl Context {
                             if type_params.len() != type_params.len() {
                                 println!("type = {t}");
                                 println!("type_params = {type_params:#?}");
-                                return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                                return Err(String::from(
+                                    "mismatch between the number of qualifiers and type params",
+                                ));
                             }
                             ids.zip(type_params.iter().cloned()).collect()
                         }
@@ -161,7 +161,9 @@ impl Context {
                             if !type_params.is_empty() {
                                 println!("type = {t}");
                                 println!("no type params");
-                                return Err(String::from("mismatch between number of qualifiers in scheme and number of type params"));
+                                return Err(String::from(
+                                    "mismatch between the number of qualifiers and type params",
+                                ));
                             }
                             ids.zip(type_params.iter().map(|_| self.fresh_var()))
                                 .collect()

@@ -5,28 +5,18 @@ use crochet_ast::*;
 use crochet_types::{self as types, TFnParam, TIndex, TKeyword, TObject, TProp, Type};
 use types::TObjElem;
 
-use crate::set_type_params;
+use crate::context::Context;
+use crate::infer_expr::infer_expr;
+use crate::infer_fn_param::e_pat_to_t_pat;
 use crate::util::compose_many_subs;
+use crate::util::get_type_params;
 use crate::Subst;
 use crate::Substitutable;
 
-use super::context::Context;
-use super::infer_expr::infer_expr;
-use super::infer_fn_param::e_pat_to_t_pat;
-use super::util::get_type_params;
-
-pub fn infer_scheme(type_ann: &mut TypeAnn, ctx: &mut Context) -> Result<(Subst, Type), String> {
-    if let TypeAnnKind::Lam(_) = &type_ann.kind {
-        infer_qualified_type_ann(type_ann, &None, ctx)
-    } else {
-        infer_type_ann_rec(type_ann, ctx, &HashMap::default())
-    }
-}
-
-pub fn infer_qualified_type_ann(
+pub fn infer_type_ann(
     type_ann: &mut TypeAnn,
-    type_params: &Option<Vec<TypeParam>>, // used by infer_prog() in infer.rs
     ctx: &mut Context,
+    type_params: &Option<Vec<TypeParam>>,
 ) -> Result<(Subst, Type), String> {
     let type_params = if type_params.is_none() {
         match &type_ann.kind {
@@ -48,21 +38,7 @@ pub fn infer_qualified_type_ann(
         None => HashMap::default(),
     };
 
-    // Infers the type from type annotation and replaces all type references whose names
-    // appear in `mapping` with a type variable whose `id` is the value in the mapping.
-    let (type_ann_s, type_ann_t) = infer_type_ann_with_params(type_ann, ctx, &type_param_map)?;
-    let type_params: Vec<_> = type_param_map
-        .values()
-        .map(|t| match t {
-            Type::Var(id) => id.to_owned(),
-            _ => panic!("{t} is not a type variable"),
-        })
-        .collect();
-
-    // set type_params
-    let s = type_ann_s;
-    let t = set_type_params(&type_ann_t, &type_params);
-    Ok((s, t))
+    infer_type_ann_with_params(type_ann, ctx, &type_param_map)
 }
 
 pub fn infer_type_ann_with_params(

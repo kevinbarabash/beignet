@@ -867,8 +867,8 @@ fn infer_fn_param_with_type_alias_with_param_2() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.lookup_value("get_bar").unwrap());
-    // TODO: normalize the scheme before inserting it into the context
-    insta::assert_snapshot!(result, @"<t2>(foo: Foo<t2>) => t2");
+    // TODO: normalize the type before inserting it into the context
+    insta::assert_snapshot!(result, @"<t0>(foo: Foo<t0>) => t0");
 }
 
 #[test]
@@ -898,6 +898,24 @@ fn infer_fn_param_with_type_alias_with_param_4() {
 
     let result = format!("{}", ctx.lookup_value("bar").unwrap());
     assert_eq!(result, "\"hello\"");
+}
+
+#[test]
+fn infer_generic_type_aliases() {
+    // What's the difference between these two?
+    let src = r#"
+    type Identity1<T> = <T>(foo: T) => T;
+    type Identity2 = <T>(foo: T) => T;
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.lookup_type("Identity1").unwrap());
+    // TODO: normalize the type before inserting it into the context
+    insta::assert_snapshot!(result, @"<t0>(foo: t0) => t0");
+
+    let result = format!("{}", ctx.lookup_type("Identity2").unwrap());
+    // TODO: normalize the type before inserting it into the context
+    insta::assert_snapshot!(result, @"<t0>(foo: t0) => t0");
 }
 
 #[test]

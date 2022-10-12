@@ -1,3 +1,4 @@
+mod assump;
 mod context;
 mod infer_expr;
 mod infer_fn_param;
@@ -14,7 +15,7 @@ pub mod infer;
 pub use context::*;
 pub use infer::*;
 pub use substitutable::{Subst, Substitutable};
-pub use util::{generalize_type, get_type_params, normalize, set_type_params};
+pub use util::{close_over, generalize, get_type_params, normalize, set_type_params};
 
 #[cfg(test)]
 mod tests {
@@ -2061,7 +2062,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't find value type: Bar"]
+    #[should_panic = "Can't find value: Bar"]
     fn jsx_custom_element_not_found() {
         let src = r#"
         let Foo = () => <div>Hello, world!</div>;

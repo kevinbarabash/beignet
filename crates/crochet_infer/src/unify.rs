@@ -4,10 +4,10 @@ use std::collections::HashSet;
 use crochet_types::{self as types, TLam, TObjElem, TObject, TQualified, Type};
 use types::TKeyword;
 
-use super::context::Context;
-use super::key_of::key_of;
-use super::substitutable::{Subst, Substitutable};
-use super::util::*;
+use crate::context::Context;
+use crate::key_of::key_of;
+use crate::substitutable::{Subst, Substitutable};
+use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {

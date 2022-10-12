@@ -3,14 +3,12 @@ use std::collections::HashMap;
 use crochet_ast::*;
 use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, Type};
 
+use crate::assump::Assump;
+use crate::context::Context;
+use crate::infer_type_ann::*;
+use crate::substitutable::{Subst, Substitutable};
+use crate::unify::unify;
 use crate::util::compose_subs;
-
-use super::context::Context;
-use super::infer_type_ann::*;
-use super::substitutable::{Subst, Substitutable};
-use super::unify::unify;
-
-pub type Assump = HashMap<String, Type>;
 
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
@@ -43,7 +41,6 @@ pub fn infer_fn_param(
             // parameters.
             let mut a = new_vars.apply(&s);
 
-            // TODO: handle schemes with type params
             if param.optional {
                 match a.iter().find(|(_, value)| type_ann_t == **value) {
                     Some((name, t)) => {
@@ -65,7 +62,6 @@ pub fn infer_fn_param(
             Ok((s, a, param))
         }
         None => {
-            // TODO: handle schemes with type params
             if param.optional {
                 match new_vars.iter().find(|(_, value)| pat_type == **value) {
                     Some((name, t)) => {

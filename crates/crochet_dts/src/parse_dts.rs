@@ -9,7 +9,7 @@ use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
 use crochet_ast::Lit;
-use crochet_infer::{close_over, generalize_type, normalize, Context, Env, Subst, Substitutable};
+use crochet_infer::{close_over, generalize, normalize, Context, Env, Subst, Substitutable};
 use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TProp, Type};
 
 use crate::util;
@@ -206,7 +206,7 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
     };
 
     // TODO: maintain param names
-    Ok(generalize_type(&HashMap::default(), &t))
+    Ok(generalize(&HashMap::default(), &t))
 }
 
 fn get_key_name(key: &Expr) -> Result<String, String> {
@@ -254,7 +254,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 Some(type_ann) => {
                     // TODO: do a better job of handling this
                     let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
-                    let gen_t = generalize_type(&HashMap::default(), &t);
+                    let gen_t = generalize(&HashMap::default(), &t);
                     let name = get_key_name(sig.key.as_ref())?;
                     Ok(TObjElem::Prop(TProp {
                         name,
@@ -276,7 +276,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
         }
         TsTypeElement::TsMethodSignature(sig) => {
             let t = infer_method_sig(sig, ctx)?;
-            let gen_t = generalize_type(&HashMap::default(), &t);
+            let gen_t = generalize(&HashMap::default(), &t);
             // println!("t = {t}, gen_t = {gen_t}");
             let name = get_key_name(sig.key.as_ref())?;
             Ok(TObjElem::Prop(TProp {
@@ -377,7 +377,7 @@ impl Visit for InterfaceCollector {
                         Some(type_ann) => {
                             // TODO: capture errors and store them in self.errors
                             let t = infer_ts_type_ann(&type_ann.type_ann, &self.ctx).unwrap();
-                            let t = generalize_type(&Env::new(), &t);
+                            let t = generalize(&Env::new(), &t);
                             let name = bi.id.sym.to_string();
                             self.ctx.insert_value(name, t)
                         }
