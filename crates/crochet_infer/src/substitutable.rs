@@ -2,12 +2,14 @@ use std::collections::{HashMap, HashSet};
 
 use crochet_types::*;
 
-pub type Subst = HashMap<i32, Type>;
+pub type Subst = HashMap<TVar, Type>;
 
 pub trait Substitutable {
     fn apply(&self, subs: &Subst) -> Self;
-    // TODO: use an ordered set
-    fn ftv(&self) -> HashSet<i32>;
+    // TODO: change this to Vec<TVar> and create helper functions that:
+    // - remove duplicates
+    // - merge vectors withou adding even more duplicates
+    fn ftv(&self) -> HashSet<TVar>;
 }
 
 impl Substitutable for Type {
@@ -34,15 +36,15 @@ impl Substitutable for Type {
                 }
             }
 
-            Type::Var(TVar { id, quals }) => match sub.get(id) {
+            Type::Var(tv) => match sub.get(tv) {
                 Some(replacement) => {
                     // TODO: apply all the quals and then check if the replacement
                     // is a subtype of each of them.
                     replacement.to_owned()
                 }
                 None => Type::Var(TVar {
-                    id: id.to_owned(),
-                    quals: quals.as_ref().map(|quals| quals.apply(sub)),
+                    id: tv.id.to_owned(),
+                    quals: tv.quals.as_ref().map(|quals| quals.apply(sub)),
                 }),
             },
             Type::App(app) => Type::App(TApp {
@@ -71,15 +73,15 @@ impl Substitutable for Type {
         };
         norm_type(result)
     }
-    fn ftv(&self) -> HashSet<i32> {
+    fn ftv(&self) -> HashSet<TVar> {
         match self {
             Type::Generic(TGeneric { t, type_params }) => {
                 let qualifiers: HashSet<_> = type_params.iter().map(|id| id.to_owned()).collect();
                 t.ftv().difference(&qualifiers).cloned().collect()
             }
-            Type::Var(TVar { id, quals }) => {
-                let mut result = HashSet::from([id.to_owned()]);
-                if let Some(quals) = quals {
+            Type::Var(tv) => {
+                let mut result = HashSet::from([tv.to_owned()]);
+                if let Some(quals) = &tv.quals {
                     result.extend(quals.ftv());
                 }
                 result
@@ -119,7 +121,7 @@ impl Substitutable for TObjElem {
             TObjElem::Prop(prop) => TObjElem::Prop(prop.apply(sub)),
         }
     }
-    fn ftv(&self) -> HashSet<i32> {
+    fn ftv(&self) -> HashSet<TVar> {
         match self {
             TObjElem::Call(qlam) => qlam.ftv(),
             TObjElem::Constructor(qlam) => qlam.ftv(),
@@ -136,7 +138,7 @@ impl Substitutable for TLam {
             ret: Box::from(self.ret.apply(sub)),
         }
     }
-    fn ftv(&self) -> HashSet<i32> {
+    fn ftv(&self) -> HashSet<TVar> {
         let mut result: HashSet<_> = self.params.ftv();
         result.extend(self.ret.ftv());
         result
@@ -150,7 +152,7 @@ impl Substitutable for TRef {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> HashSet<i32> {
+    fn ftv(&self) -> HashSet<TVar> {
         match &self.type_args {
             Some(type_args) => type_args.ftv(),
             None => HashSet::new(),
@@ -175,7 +177,7 @@ impl Substitutable for TCallable {
             type_params,
         }
     }
-    fn ftv(&self) -> HashSet<i32> {
+    fn ftv(&self) -> HashSet<TVar> {
         let type_params = HashSet::from_iter(self.type_params.iter().cloned());
 
         let mut result: HashSet<_> = self.params.ftv();
@@ -191,7 +193,7 @@ impl Substitutable for TIndex {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> HashSet<i32> {
+    fn ftv(&self) -> HashSet<TVar> {
         self.t.ftv()
     }
 }
@@ -203,7 +205,7 @@ impl Substitutable for TProp {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> HashSet<i32> {
+    fn ftv(&self) -> HashSet<TVar> {
         self.t.ftv()
     }
 }
@@ -215,7 +217,7 @@ impl Substitutable for TFnParam {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> HashSet<i32> {
+    fn ftv(&self) -> HashSet<TVar> {
         self.t.ftv()
     }
 }
@@ -229,7 +231,7 @@ where
             .map(|(a, b)| (a.clone(), b.apply(sub)))
             .collect()
     }
-    fn ftv(&self) -> HashSet<i32> {
+    fn ftv(&self) -> HashSet<TVar> {
         // we can't use iter_values() here because it's a consuming iterator
         self.iter().flat_map(|(_, b)| b.ftv()).collect()
     }
@@ -242,7 +244,7 @@ where
     fn apply(&self, sub: &Subst) -> Vec<I> {
         self.iter().map(|c| c.apply(sub)).collect()
     }
-    fn ftv(&self) -> HashSet<i32> {
+    fn ftv(&self) -> HashSet<TVar> {
         self.iter().flat_map(|c| c.ftv()).collect()
     }
 }
@@ -254,7 +256,7 @@ where
     fn apply(&self, sub: &Subst) -> Option<I> {
         self.as_ref().map(|val| val.to_owned().apply(sub))
     }
-    fn ftv(&self) -> HashSet<i32> {
+    fn ftv(&self) -> HashSet<TVar> {
         self.as_ref()
             .map(|val| val.to_owned().ftv())
             .unwrap_or_default()

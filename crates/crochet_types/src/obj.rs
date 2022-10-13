@@ -1,14 +1,14 @@
 use itertools::join;
 use std::fmt;
 
-use crate::r#type::Type;
+use crate::r#type::{TVar, Type};
 use crate::TFnParam;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TCallable {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
-    pub type_params: Vec<i32>,
+    pub type_params: Vec<TVar>,
 }
 
 impl fmt::Display for TCallable {

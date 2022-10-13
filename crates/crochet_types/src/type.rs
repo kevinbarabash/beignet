@@ -58,13 +58,23 @@ pub struct TIndexAccess {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TGeneric {
     pub t: Box<Type>,
-    pub type_params: Vec<i32>,
+    pub type_params: Vec<TVar>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TVar {
     pub id: i32,
     pub quals: Option<Vec<TRef>>,
+}
+
+impl fmt::Display for TVar {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let TVar { id, quals } = self;
+        match quals {
+            Some(params) => write!(f, "t{id}<{}>", join(params, ", ")),
+            None => write!(f, "t{id}"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -102,17 +112,10 @@ impl fmt::Display for Type {
                 if type_params.is_empty() {
                     write!(f, "{t}")
                 } else {
-                    let params: Vec<_> = type_params
-                        .iter()
-                        .map(|param| format!("t{param}"))
-                        .collect();
-                    write!(f, "<{}>{t}", join(params, ", "))
+                    write!(f, "<{}>{t}", join(type_params, ", "))
                 }
             }
-            Type::Var(TVar { id, quals }) => match quals {
-                Some(quals) => write!(f, "t{id} extends {}", join(quals, ", ")),
-                None => write!(f, "t{id}"),
-            },
+            Type::Var(tv) => write!(f, "{tv}"),
             Type::App(TApp { args, ret }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }

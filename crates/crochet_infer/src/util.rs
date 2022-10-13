@@ -7,13 +7,13 @@ use crochet_types::*;
 use crate::context::{Context, Env};
 use crate::substitutable::{Subst, Substitutable};
 
-fn get_mapping(t: &Type) -> HashMap<i32, Type> {
+fn get_mapping(t: &Type) -> HashMap<TVar, Type> {
     let body = t;
     let keys = body.ftv();
     let mut keys: Vec<_> = keys.iter().cloned().collect();
-    keys.sort_unstable();
+    // keys.sort_unstable();
 
-    let mut mapping: HashMap<i32, Type> = keys
+    let mut mapping: HashMap<TVar, Type> = keys
         .iter()
         .enumerate()
         .map(|(index, key)| {
@@ -53,7 +53,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
     // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
     // type variables that are bound to the object element as opposed to the encompassing object type.
-    fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
+    fn norm_type(t: &Type, mapping: &HashMap<TVar, Type>, ctx: &Context) -> Type {
         match t {
             Type::Generic(TGeneric {
                 t: inner_t,
@@ -68,7 +68,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     type_params: type_params.to_owned(),
                 })
             }
-            Type::Var(tv) => match mapping.get(&tv.id) {
+            Type::Var(tv) => match mapping.get(tv) {
                 Some(t) => t.to_owned(),
                 // If `id` doesn't exist in `mapping` we return the original type variable.
                 // In this situation, it should appear in some other list of qualifiers.
@@ -188,7 +188,12 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     }
 
     let t = norm_type(t, &mapping, ctx);
-    let type_params: Vec<_> = (0..mapping.len()).map(|x| x as i32).collect();
+    let type_params: Vec<_> = (0..mapping.len())
+        .map(|x| TVar {
+            id: x as i32,
+            quals: None,
+        })
+        .collect();
 
     set_type_params(&t, &type_params)
 }
@@ -206,7 +211,7 @@ pub fn generalize(env: &Env, t: &Type) -> Type {
         return t.to_owned();
     }
 
-    type_params.sort_unstable();
+    // type_params.sort_unstable();
 
     set_type_params(t, &type_params)
 }
@@ -346,7 +351,10 @@ pub fn union_many_types(ts: &[Type]) -> Type {
 }
 
 pub fn compose_subs(s2: &Subst, s1: &Subst) -> Subst {
-    let mut result: Subst = s1.iter().map(|(id, tv)| (*id, tv.apply(s2))).collect();
+    let mut result: Subst = s1
+        .iter()
+        .map(|(tv, t)| (tv.to_owned(), t.apply(s2)))
+        .collect();
     result.extend(s2.to_owned());
     result
 }
@@ -361,14 +369,17 @@ pub fn compose_many_subs(subs: &[Subst]) -> Subst {
 // If are multiple entries for the same type variable, this function merges
 // them into a union type (simplifying the type if possible).
 fn compose_subs_with_context(s1: &Subst, s2: &Subst) -> Subst {
-    let mut result: Subst = s2.iter().map(|(i, t)| (*i, t.apply(s1))).collect();
-    for (i, t) in s1 {
-        match result.get(i) {
+    let mut result: Subst = s2
+        .iter()
+        .map(|(tv, t)| (tv.to_owned(), t.apply(s1)))
+        .collect();
+    for (tv, t) in s1 {
+        match result.get(tv) {
             Some(t1) => {
                 let t = union_types(t, t1);
-                result.insert(*i, t)
+                result.insert(tv.to_owned(), t)
             }
-            None => result.insert(*i, t.to_owned()),
+            None => result.insert(tv.to_owned(), t.to_owned()),
         };
     }
     result
@@ -388,14 +399,14 @@ pub fn get_property_type(prop: &TProp) -> Type {
     }
 }
 
-pub fn get_type_params(t: &Type) -> Vec<i32> {
+pub fn get_type_params(t: &Type) -> Vec<TVar> {
     match t {
         Type::Generic(qual) => qual.type_params.to_owned(),
         _ => vec![],
     }
 }
 
-pub fn set_type_params(t: &Type, type_params: &[i32]) -> Type {
+pub fn set_type_params(t: &Type, type_params: &[TVar]) -> Type {
     // If there are no type params then the returned type shouldn't be
     // a qualified type.
     if type_params.is_empty() {

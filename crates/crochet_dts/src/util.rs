@@ -9,14 +9,17 @@ use crochet_types::{
 
 // TODO: rename this replace_refs
 pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Context) -> Type {
-    let mut type_params: Vec<i32> = vec![];
-    let type_param_map: HashMap<String, i32> = type_param_decl
+    let mut type_params: Vec<TVar> = vec![];
+    let type_param_map: HashMap<String, TVar> = type_param_decl
         .params
         .iter()
         .map(|tp| {
-            let id = ctx.fresh_id();
-            type_params.push(id);
-            (tp.name.sym.to_string(), id)
+            let tv = TVar {
+                id: ctx.fresh_id(),
+                quals: None,
+            };
+            type_params.push(tv.clone());
+            (tp.name.sym.to_string(), tv)
         })
         .collect();
 
@@ -25,7 +28,7 @@ pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Contex
 }
 
 // TODO: rename this replace_refs_rec
-fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
+fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
     match t {
         Type::Generic(TGeneric { t, type_params }) => {
             // TODO: create a new `map` that adds in `type_params`
@@ -117,10 +120,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
             Type::Object(TObject { elems })
         }
         Type::Ref(alias) => match map.get(&alias.name) {
-            Some(id) => Type::Var(TVar {
-                id: id.to_owned(),
-                quals: None,
-            }),
+            Some(tv) => Type::Var(tv.to_owned()),
             None => t.to_owned(),
         },
         Type::Tuple(types) => {
@@ -148,12 +148,7 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     // Creates a mapping from type params in t2 to those in t1
     let subs: Subst = tp2
         .into_iter()
-        .zip(tp1.iter().map(|id| {
-            Type::Var(TVar {
-                id: id.to_owned(),
-                quals: None,
-            })
-        }))
+        .zip(tp1.iter().map(|tv| Type::Var(tv.to_owned())))
         .collect();
 
     // Unwrap qualified types since we return a qualified

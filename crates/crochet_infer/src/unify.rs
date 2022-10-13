@@ -13,8 +13,8 @@ use crate::util::*;
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     let result = match (&t1, &t2) {
         // All binding must be done first
-        (Type::Var(TVar { id, quals: _ }), _) => bind(id, t2),
-        (_, Type::Var(TVar { id, quals: _ })) => bind(id, t1),
+        (Type::Var(tv), _) => bind(tv, t2),
+        (_, Type::Var(tv)) => bind(tv, t1),
 
         (Type::Lit(lit), Type::Keyword(keyword)) => {
             let b = matches!(
@@ -514,21 +514,20 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     result
 }
 
-// TODO: update bind to accept a TVar instead of an i32
-fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
+fn bind(tv: &TVar, t: &Type) -> Result<Subst, String> {
     // | t == TVar a     = return nullSubst
     // | occursCheck a t = throwError $ InfiniteType a t
     // | otherwise       = return $ Map.singleton a t
     match t {
-        Type::Var(tv) if &tv.id == id => Ok(Subst::default()),
+        Type::Var(other_tv) if other_tv == tv => Ok(Subst::default()),
         _ => {
-            if occurs_check(id, t) {
+            if occurs_check(tv, t) {
                 // Union types are a special case since `t1` unifies trivially with `t1 | t2 | ... tn`
                 if let Type::Union(elem_types) = &t {
                     let elem_types_without_id: Vec<Type> = elem_types
                         .iter()
                         .filter(|elem_type| match elem_type {
-                            Type::Var(tv) => &tv.id != id,
+                            Type::Var(other_tv) => other_tv != tv,
                             _ => true,
                         })
                         .cloned()
@@ -548,20 +547,20 @@ fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
                             Type::Union(types)
                         };
 
-                        return Ok(Subst::from([(id.to_owned(), t)]));
+                        return Ok(Subst::from([(tv.to_owned(), t)]));
                     }
                 }
 
                 Err(String::from("InfiniteType"))
             } else {
-                Ok(Subst::from([(id.to_owned(), t.to_owned())]))
+                Ok(Subst::from([(tv.to_owned(), t.to_owned())]))
             }
         }
     }
 }
 
-fn occurs_check(id: &i32, t: &Type) -> bool {
-    t.ftv().contains(id)
+fn occurs_check(tv: &TVar, t: &Type) -> bool {
+    t.ftv().contains(tv)
 }
 
 #[cfg(test)]

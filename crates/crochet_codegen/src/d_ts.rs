@@ -370,8 +370,8 @@ pub fn build_type_params(t: &Type) -> Option<TsTypeParamDecl> {
             span: DUMMY_SP,
             params: type_params
                 .iter()
-                .map(|id| {
-                    let id = chars.get(id.to_owned() as usize).unwrap();
+                .map(|tv| {
+                    let id = chars.get(tv.id.to_owned() as usize).unwrap();
 
                     TsTypeParam {
                         span: DUMMY_SP,
