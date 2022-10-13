@@ -1,3 +1,4 @@
+use array_tool::vec::*;
 use defaultmap::*;
 use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
@@ -8,12 +9,8 @@ use crate::context::{Context, Env};
 use crate::substitutable::{Subst, Substitutable};
 
 fn get_mapping(t: &Type) -> HashMap<TVar, Type> {
-    let body = t;
-    let keys = body.ftv();
-    let mut keys: Vec<_> = keys.iter().cloned().collect();
-    // keys.sort_unstable();
-
-    let mut mapping: HashMap<TVar, Type> = keys
+    let mut mapping: HashMap<TVar, Type> = t
+        .ftv()
         .iter()
         .enumerate()
         .map(|(index, key)| {
@@ -199,19 +196,15 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
 }
 
 pub fn generalize(env: &Env, t: &Type) -> Type {
-    // ftv() returns a Set which is not ordered
-    // TODO: switch to an ordered set
     let mut type_params = get_type_params(t);
 
     // We do this to account for type params from the environment.
     // QUESTION: Why is it okay to ignore the keys of env?
-    type_params.extend(t.ftv().difference(&env.ftv()).cloned());
+    type_params.extend(t.ftv().uniq(env.ftv()));
 
     if type_params.is_empty() {
         return t.to_owned();
     }
-
-    // type_params.sort_unstable();
 
     set_type_params(t, &type_params)
 }

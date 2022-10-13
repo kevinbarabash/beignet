@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use types::{TCallable, TIndex, TObjElem, TObject};
 
@@ -223,7 +223,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
             Some(type_ann) => {
                 let params = infer_fn_params(&decl.params, ctx)?;
                 let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
-                let mut qualifiers: HashSet<_> = params.ftv();
+                let mut qualifiers = params.ftv();
                 qualifiers.extend(ret.ftv());
 
                 Ok(TObjElem::Call(TCallable {
@@ -238,7 +238,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
             Some(type_ann) => {
                 let params = infer_fn_params(&decl.params, ctx)?;
                 let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
-                let mut qualifiers: HashSet<_> = params.ftv();
+                let mut qualifiers = params.ftv();
                 qualifiers.extend(ret.ftv());
 
                 Ok(TObjElem::Constructor(TCallable {
