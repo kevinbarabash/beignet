@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, TQualified, Type};
+use crochet_types::{self as types, TFnParam, TGeneric, TKeyword, TObject, TPat, Type};
 use types::TObjElem;
 
 use crate::context::Context;
@@ -556,7 +556,7 @@ fn infer_property_type(
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t {
-        Type::Qualified(TQualified { t, type_params: _ }) => infer_property_type(t, prop, ctx),
+        Type::Generic(TGeneric { t, type_params: _ }) => infer_property_type(t, prop, ctx),
         Type::Object(obj) => get_prop_value(obj, prop, ctx),
         Type::Ref(alias) => {
             let t = ctx.lookup_ref_and_instantiate(alias)?;

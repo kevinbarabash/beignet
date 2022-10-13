@@ -13,7 +13,7 @@ pub trait Substitutable {
 impl Substitutable for Type {
     fn apply(&self, sub: &Subst) -> Type {
         let result = match self {
-            Type::Qualified(TQualified { t, type_params }) => {
+            Type::Generic(TGeneric { t, type_params }) => {
                 // QUESTION: Do we really need to be filtering out type_params from
                 // substitutions?
                 let type_params: Vec<_> = type_params
@@ -27,13 +27,13 @@ impl Substitutable for Type {
                 if type_params.is_empty() {
                     t.apply(sub)
                 } else {
-                    Type::Qualified(TQualified {
+                    Type::Generic(TGeneric {
                         t: Box::from(t.as_ref().apply(sub)),
                         type_params,
                     })
                 }
             }
-            Type::Var(id) => match sub.get(id) {
+            Type::Var(TVar { id }) => match sub.get(id) {
                 Some(replacement) => replacement.to_owned(),
                 None => self.to_owned(),
             },
@@ -68,11 +68,11 @@ impl Substitutable for Type {
     }
     fn ftv(&self) -> HashSet<i32> {
         match self {
-            Type::Qualified(TQualified { t, type_params }) => {
+            Type::Generic(TGeneric { t, type_params }) => {
                 let qualifiers: HashSet<_> = type_params.iter().map(|id| id.to_owned()).collect();
                 t.ftv().difference(&qualifiers).cloned().collect()
             }
-            Type::Var(id) => HashSet::from([id.to_owned()]),
+            Type::Var(TVar { id }) => HashSet::from([id.to_owned()]),
             Type::App(TApp { args, ret }) => {
                 let mut result: HashSet<_> = args.ftv();
                 result.extend(ret.ftv());

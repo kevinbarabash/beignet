@@ -4,7 +4,7 @@ use swc_ecma_ast::*;
 
 use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substitutable};
 use crochet_types::{
-    self as types, TCallable, TFnParam, TIndexAccess, TObjElem, TObject, TQualified, Type,
+    self as types, TCallable, TFnParam, TGeneric, TIndexAccess, TObjElem, TObject, TVar, Type,
 };
 
 pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Context) -> Type {
@@ -25,9 +25,9 @@ pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Contex
 
 fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
     match t {
-        Type::Qualified(TQualified { t, type_params }) => {
+        Type::Generic(TGeneric { t, type_params }) => {
             // TODO: create a new `map` that adds in `type_params`
-            Type::Qualified(TQualified {
+            Type::Generic(TGeneric {
                 t: Box::from(replace_aliases_rec(t, map)),
                 type_params: type_params.to_owned(),
             })
@@ -115,7 +115,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
             Type::Object(TObject { elems })
         }
         Type::Ref(alias) => match map.get(&alias.name) {
-            Some(id) => Type::Var(*id),
+            Some(id) => Type::Var(TVar { id: id.to_owned() }),
             None => t.to_owned(),
         },
         Type::Tuple(types) => {
@@ -143,17 +143,17 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     // Creates a mapping from type params in t2 to those in t1
     let subs: Subst = tp2
         .into_iter()
-        .zip(tp1.iter().map(|id| Type::Var(*id)))
+        .zip(tp1.iter().map(|id| Type::Var(TVar { id: id.to_owned() })))
         .collect();
 
     // Unwrap qualified types since we return a qualified
     // type if there are any type qualifiers.
     let t1 = match t1 {
-        Type::Qualified(TQualified { t, .. }) => t,
+        Type::Generic(TGeneric { t, .. }) => t,
         t => t,
     };
     let t2 = match t2 {
-        Type::Qualified(TQualified { t, .. }) => t,
+        Type::Generic(TGeneric { t, .. }) => t,
         t => t,
     };
 
@@ -178,7 +178,7 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     if type_params.is_empty() {
         t
     } else {
-        Type::Qualified(TQualified {
+        Type::Generic(TGeneric {
             t: Box::from(t),
             type_params,
         })

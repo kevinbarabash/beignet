@@ -180,7 +180,7 @@ impl Context {
 
     pub fn instantiate(&self, t: &Type) -> Type {
         match t {
-            Type::Qualified(TQualified { t, type_params }) => {
+            Type::Generic(TGeneric { t, type_params }) => {
                 let ids = type_params.iter().map(|id| id.to_owned());
                 let fresh_quals = type_params.iter().map(|_| self.fresh_var());
                 let subs: Subst = ids.zip(fresh_quals).collect();
@@ -206,6 +206,8 @@ impl Context {
     }
 
     pub fn fresh_var(&self) -> Type {
-        Type::Var(self.fresh_id())
+        Type::Var(TVar {
+            id: self.fresh_id(),
+        })
     }
 }

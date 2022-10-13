@@ -1,4 +1,4 @@
-use crochet_types::{TKeyword, TLit, TObjElem, TObject, TQualified, Type};
+use crochet_types::{TGeneric, TKeyword, TLit, TObjElem, TObject, Type};
 
 use crate::context::Context;
 use crate::util::union_many_types;
@@ -6,7 +6,7 @@ use crate::util::union_many_types;
 // TODO: try to dedupe with infer_property_type()
 pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
     match t {
-        Type::Qualified(TQualified { t, type_params: _ }) => key_of(t, ctx),
+        Type::Generic(TGeneric { t, type_params: _ }) => key_of(t, ctx),
         Type::Var(_) => Err(String::from(
             "There isn't a way to infer a type from its keys",
         )),

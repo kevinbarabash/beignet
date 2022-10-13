@@ -1,7 +1,7 @@
 use std::cmp;
 use std::collections::HashSet;
 
-use crochet_types::{self as types, TLam, TObjElem, TObject, TQualified, Type};
+use crochet_types::{self as types, TGeneric, TLam, TObjElem, TObject, TVar, Type};
 use types::TKeyword;
 
 use crate::context::Context;
@@ -13,8 +13,8 @@ use crate::util::*;
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     let result = match (&t1, &t2) {
         // All binding must be done first
-        (Type::Var(id), _) => bind(id, t2),
-        (_, Type::Var(id)) => bind(id, t1),
+        (Type::Var(TVar { id }), _) => bind(id, t2),
+        (_, Type::Var(TVar { id })) => bind(id, t1),
 
         (Type::Lit(lit), Type::Keyword(keyword)) => {
             let b = matches!(
@@ -83,7 +83,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         let t = if call.type_params.is_empty() {
                             lam
                         } else {
-                            Type::Qualified(TQualified {
+                            Type::Generic(TGeneric {
                                 t: Box::from(lam),
                                 type_params: call.type_params.to_owned(),
                             })
@@ -519,7 +519,7 @@ fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
     // | occursCheck a t = throwError $ InfiniteType a t
     // | otherwise       = return $ Map.singleton a t
     match t {
-        Type::Var(other_id) if other_id == id => Ok(Subst::default()),
+        Type::Var(tv) if &tv.id == id => Ok(Subst::default()),
         _ => {
             if occurs_check(id, t) {
                 // Union types are a special case since `t1` unifies trivially with `t1 | t2 | ... tn`
@@ -527,7 +527,7 @@ fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
                     let elem_types_without_id: Vec<Type> = elem_types
                         .iter()
                         .filter(|elem_type| match elem_type {
-                            Type::Var(elem_id) => elem_id != id,
+                            Type::Var(tv) => &tv.id != id,
                             _ => true,
                         })
                         .cloned()
