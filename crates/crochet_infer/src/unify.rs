@@ -13,8 +13,8 @@ use crate::util::*;
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     let result = match (&t1, &t2) {
         // All binding must be done first
-        (Type::Var(TVar { id }), _) => bind(id, t2),
-        (_, Type::Var(TVar { id })) => bind(id, t1),
+        (Type::Var(TVar { id, quals: _ }), _) => bind(id, t2),
+        (_, Type::Var(TVar { id, quals: _ })) => bind(id, t1),
 
         (Type::Lit(lit), Type::Keyword(keyword)) => {
             let b = matches!(
@@ -514,6 +514,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     result
 }
 
+// TODO: update bind to accept a TVar instead of an i32
 fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
     // | t == TVar a     = return nullSubst
     // | occursCheck a t = throwError $ InfiniteType a t

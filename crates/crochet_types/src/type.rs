@@ -34,6 +34,16 @@ impl Hash for TRef {
     }
 }
 
+impl fmt::Display for TRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let TRef { name, type_args } = self;
+        match type_args {
+            Some(params) => write!(f, "{name}<{}>", join(params, ", ")),
+            None => write!(f, "{name}"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct TObject {
     pub elems: Vec<TObjElem>,
@@ -54,6 +64,7 @@ pub struct TGeneric {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TVar {
     pub id: i32,
+    pub quals: Option<Vec<TRef>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -98,7 +109,10 @@ impl fmt::Display for Type {
                     write!(f, "<{}>{t}", join(params, ", "))
                 }
             }
-            Type::Var(TVar { id }) => write!(f, "t{id}"),
+            Type::Var(TVar { id, quals }) => match quals {
+                Some(quals) => write!(f, "t{id} extends {}", join(quals, ", ")),
+                None => write!(f, "t{id}"),
+            },
             Type::App(TApp { args, ret }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }
@@ -116,14 +130,7 @@ impl fmt::Display for Type {
             Type::Object(TObject { elems, .. }) => {
                 write!(f, "{{{}}}", join(elems, ", "))
             }
-            Type::Ref(TRef {
-                name,
-                type_args: type_params,
-                ..
-            }) => match type_params {
-                Some(params) => write!(f, "{name}<{}>", join(params, ", ")),
-                None => write!(f, "{name}"),
-            },
+            Type::Ref(tr) => write!(f, "{tr}"),
             Type::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
             Type::Array(t) => write!(f, "{t}[]"),
             Type::Rest(arg) => write!(f, "...{arg}"),

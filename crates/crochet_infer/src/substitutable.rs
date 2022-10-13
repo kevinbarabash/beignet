@@ -33,9 +33,17 @@ impl Substitutable for Type {
                     })
                 }
             }
-            Type::Var(TVar { id }) => match sub.get(id) {
-                Some(replacement) => replacement.to_owned(),
-                None => self.to_owned(),
+
+            Type::Var(TVar { id, quals }) => match sub.get(id) {
+                Some(replacement) => {
+                    // TODO: apply all the quals and then check if the replacement
+                    // is a subtype of each of them.
+                    replacement.to_owned()
+                }
+                None => Type::Var(TVar {
+                    id: id.to_owned(),
+                    quals: quals.as_ref().map(|quals| quals.apply(sub)),
+                }),
             },
             Type::App(app) => Type::App(TApp {
                 args: app.args.iter().map(|param| param.apply(sub)).collect(),
@@ -50,10 +58,7 @@ impl Substitutable for Type {
             Type::Object(obj) => Type::Object(TObject {
                 elems: obj.elems.apply(sub),
             }),
-            Type::Ref(alias) => Type::Ref(TRef {
-                type_args: alias.type_args.apply(sub),
-                ..alias.to_owned()
-            }),
+            Type::Ref(tr) => Type::Ref(tr.apply(sub)),
             Type::Tuple(types) => Type::Tuple(types.apply(sub)),
             Type::Array(t) => Type::Array(Box::from(t.apply(sub))),
             Type::Rest(arg) => Type::Rest(Box::from(arg.apply(sub))),
@@ -72,7 +77,13 @@ impl Substitutable for Type {
                 let qualifiers: HashSet<_> = type_params.iter().map(|id| id.to_owned()).collect();
                 t.ftv().difference(&qualifiers).cloned().collect()
             }
-            Type::Var(TVar { id }) => HashSet::from([id.to_owned()]),
+            Type::Var(TVar { id, quals }) => {
+                let mut result = HashSet::from([id.to_owned()]);
+                if let Some(quals) = quals {
+                    result.extend(quals.ftv());
+                }
+                result
+            }
             Type::App(TApp { args, ret }) => {
                 let mut result: HashSet<_> = args.ftv();
                 result.extend(ret.ftv());
@@ -84,10 +95,7 @@ impl Substitutable for Type {
             Type::Union(types) => types.ftv(),
             Type::Intersection(types) => types.ftv(),
             Type::Object(obj) => obj.elems.ftv(),
-            Type::Ref(TRef {
-                type_args: type_params,
-                ..
-            }) => type_params.ftv(),
+            Type::Ref(tref) => tref.ftv(),
             Type::Tuple(types) => types.ftv(),
             Type::Array(t) => t.ftv(),
             Type::Rest(arg) => arg.ftv(),
@@ -132,6 +140,21 @@ impl Substitutable for TLam {
         let mut result: HashSet<_> = self.params.ftv();
         result.extend(self.ret.ftv());
         result
+    }
+}
+
+impl Substitutable for TRef {
+    fn apply(&self, sub: &Subst) -> Self {
+        TRef {
+            type_args: self.type_args.apply(sub),
+            ..self.to_owned()
+        }
+    }
+    fn ftv(&self) -> HashSet<i32> {
+        match &self.type_args {
+            Some(type_args) => type_args.ftv(),
+            None => HashSet::new(),
+        }
     }
 }
 

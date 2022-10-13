@@ -16,7 +16,15 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
     let mut mapping: HashMap<i32, Type> = keys
         .iter()
         .enumerate()
-        .map(|(index, key)| (key.to_owned(), Type::Var(TVar { id: index as i32 })))
+        .map(|(index, key)| {
+            (
+                key.to_owned(),
+                Type::Var(TVar {
+                    id: index as i32,
+                    quals: None,
+                }),
+            )
+        })
         .collect();
 
     let type_params = get_type_params(t);
@@ -26,6 +34,7 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
             tp.to_owned(),
             Type::Var(TVar {
                 id: (offset + index) as i32,
+                quals: None,
             }),
         );
     }

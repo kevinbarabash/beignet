@@ -7,6 +7,7 @@ use crochet_types::{
     self as types, TCallable, TFnParam, TGeneric, TIndexAccess, TObjElem, TObject, TVar, Type,
 };
 
+// TODO: rename this replace_refs
 pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Context) -> Type {
     let mut type_params: Vec<i32> = vec![];
     let type_param_map: HashMap<String, i32> = type_param_decl
@@ -23,6 +24,7 @@ pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Contex
     replace_aliases_rec(&t, &type_param_map)
 }
 
+// TODO: rename this replace_refs_rec
 fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
     match t {
         Type::Generic(TGeneric { t, type_params }) => {
@@ -115,7 +117,10 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
             Type::Object(TObject { elems })
         }
         Type::Ref(alias) => match map.get(&alias.name) {
-            Some(id) => Type::Var(TVar { id: id.to_owned() }),
+            Some(id) => Type::Var(TVar {
+                id: id.to_owned(),
+                quals: None,
+            }),
             None => t.to_owned(),
         },
         Type::Tuple(types) => {
@@ -143,7 +148,12 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     // Creates a mapping from type params in t2 to those in t1
     let subs: Subst = tp2
         .into_iter()
-        .zip(tp1.iter().map(|id| Type::Var(TVar { id: id.to_owned() })))
+        .zip(tp1.iter().map(|id| {
+            Type::Var(TVar {
+                id: id.to_owned(),
+                quals: None,
+            })
+        }))
         .collect();
 
     // Unwrap qualified types since we return a qualified
