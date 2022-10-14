@@ -245,6 +245,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                             }
                             None => ctx.fresh_var(),
                         };
+                        ctx.insert_type(param.name.name.clone(), tv.clone());
                         Ok((param.name.name.to_owned(), tv))
                     })
                     .collect::<Result<Assump, String>>()?,
