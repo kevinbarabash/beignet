@@ -21,7 +21,13 @@ impl fmt::Display for TCallable {
         if type_params.is_empty() {
             write!(f, "({}) => {}", join(params, ", "), ret)
         } else {
-            let type_params = type_params.iter().map(|tp| format!("t{tp}"));
+            let type_params = type_params.iter().map(|tp| {
+                let TVar { id, constraint } = tp;
+                match constraint {
+                    Some(constraint) => format!("t{id} extends {constraint}"),
+                    None => format!("t{id}"),
+                }
+            });
             write!(
                 f,
                 "<{}>({}) => {}",

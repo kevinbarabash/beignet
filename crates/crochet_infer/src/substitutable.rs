@@ -37,13 +37,16 @@ impl Substitutable for Type {
 
             Type::Var(tv) => match sub.get(tv) {
                 Some(replacement) => {
-                    // TODO: apply all the quals and then check if the replacement
-                    // is a subtype of each of them.
+                    // TODO: apply the constraint and then check if the replacement
+                    // is a subtype of it.
                     replacement.to_owned()
                 }
                 None => Type::Var(TVar {
                     id: tv.id.to_owned(),
-                    quals: tv.quals.as_ref().map(|quals| quals.apply(sub)),
+                    constraint: tv
+                        .constraint
+                        .as_ref()
+                        .map(|constraint| Box::from(constraint.apply(sub))),
                 }),
             },
             Type::App(app) => Type::App(TApp {
@@ -74,18 +77,20 @@ impl Substitutable for Type {
     }
     fn ftv(&self) -> Vec<TVar> {
         match self {
-            Type::Generic(TGeneric { t, type_params }) => t.ftv().uniq(type_params.to_owned()),
+            Type::Generic(TGeneric { t, type_params }) => t
+                .ftv()
+                .uniq_via(type_params.to_owned(), |a, b| a.id == b.id),
             Type::Var(tv) => {
                 let mut result = vec![tv.to_owned()];
-                if let Some(quals) = &tv.quals {
+                if let Some(quals) = &tv.constraint {
                     result.extend(quals.ftv());
                 }
-                result.unique()
+                result.unique_via(|a, b| a.id == b.id)
             }
             Type::App(TApp { args, ret }) => {
                 let mut result = args.ftv();
                 result.extend(ret.ftv());
-                result.unique()
+                result.unique_via(|a, b| a.id == b.id)
             }
             Type::Lam(lam) => lam.ftv(),
             Type::Lit(_) => vec![],
@@ -137,7 +142,7 @@ impl Substitutable for TLam {
     fn ftv(&self) -> Vec<TVar> {
         let mut result = self.params.ftv();
         result.extend(self.ret.ftv());
-        result.unique()
+        result.unique_via(|a, b| a.id == b.id)
     }
 }
 

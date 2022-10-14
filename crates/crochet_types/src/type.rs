@@ -64,18 +64,20 @@ pub struct TGeneric {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TVar {
     pub id: i32,
-    pub quals: Option<Vec<Type>>,
+    pub constraint: Option<Box<Type>>,
 }
 
-impl fmt::Display for TVar {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let TVar { id, quals } = self;
-        match quals {
-            Some(params) => write!(f, "t{id}<{}>", join(params, ", ")),
-            None => write!(f, "t{id}"),
-        }
-    }
-}
+// impl fmt::Display for TVar {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         let TVar { id, constraint } = self;
+//         match constraint {
+//             // TODO: The only time we should include `extends constraint` is if
+//             // the TVar is being printed as a type param (not a type arg).
+//             Some(_constraint) => write!(f, "t{id}"), // extends {constraint}"),
+//             None => write!(f, "t{id}"),
+//         }
+//     }
+// }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -112,10 +114,18 @@ impl fmt::Display for Type {
                 if type_params.is_empty() {
                     write!(f, "{t}")
                 } else {
+                    let type_params = type_params.iter().map(|tp| {
+                        let TVar { id, constraint } = tp;
+                        match constraint {
+                            Some(constraint) => format!("t{id} extends {constraint}"),
+                            None => format!("t{id}"),
+                        }
+                    });
+                    // e.g. <T extends number | string>(a: T, b: T) => T
                     write!(f, "<{}>{t}", join(type_params, ", "))
                 }
             }
-            Type::Var(tv) => write!(f, "{tv}"),
+            Type::Var(tv) => write!(f, "t{}", tv.id),
             Type::App(TApp { args, ret }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }

@@ -1,10 +1,10 @@
-use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TIndex, TKeyword, TObject, TProp, Type};
+use crochet_types::{self as types, TFnParam, TIndex, TKeyword, TObject, TProp, TVar, Type};
 use types::TObjElem;
 
+use crate::assump::Assump;
 use crate::context::Context;
 use crate::infer_expr::infer_expr;
 use crate::infer_fn_param::e_pat_to_t_pat;
@@ -16,26 +16,40 @@ use crate::Substitutable;
 pub fn infer_type_ann(
     type_ann: &mut TypeAnn,
     ctx: &mut Context,
-    type_params: &Option<Vec<TypeParam>>,
+    type_params: &mut Option<Vec<TypeParam>>,
 ) -> Result<(Subst, Type), String> {
-    let type_params = if type_params.is_none() {
-        match &type_ann.kind {
-            TypeAnnKind::Lam(lam) => &lam.type_params,
-            _ => &None,
+    let mut type_params = if type_params.is_none() {
+        match &mut type_ann.kind {
+            TypeAnnKind::Lam(lam) => lam.type_params.to_owned(),
+            _ => None,
         }
     } else {
-        type_params
+        type_params.to_owned()
     };
 
     // NOTE: There's a scoping issue when using this mapping hash map.
     // <T>(arg: T, cb: <T>(T) => T) => T
     // The <T> type param list for `cb` shadows the outer `T`
-    let type_param_map: HashMap<String, Type> = match type_params {
+    let type_param_map: Assump = match &mut type_params {
         Some(params) => params
-            .iter()
-            .map(|param| (param.name.name.to_owned(), ctx.fresh_var()))
-            .collect(),
-        None => HashMap::default(),
+            .iter_mut()
+            .map(|param| {
+                let tv = match &mut param.constraint {
+                    Some(type_ann) => {
+                        // TODO: push `s` on to `ss`
+                        let (_s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
+                        Type::Var(TVar {
+                            id: ctx.fresh_id(),
+                            constraint: Some(Box::from(t)),
+                        })
+                    }
+                    None => ctx.fresh_var(),
+                };
+
+                Ok((param.name.name.to_owned(), tv))
+            })
+            .collect::<Result<Assump, String>>()?,
+        None => Assump::default(),
     };
 
     infer_type_ann_with_params(type_ann, ctx, &type_param_map)
@@ -44,7 +58,7 @@ pub fn infer_type_ann(
 pub fn infer_type_ann_with_params(
     type_ann: &mut TypeAnn,
     ctx: &mut Context,
-    type_param_map: &HashMap<String, Type>,
+    type_param_map: &Assump,
 ) -> Result<(Subst, Type), String> {
     infer_type_ann_rec(type_ann, ctx, type_param_map)
 }
@@ -52,7 +66,7 @@ pub fn infer_type_ann_with_params(
 fn infer_type_ann_rec(
     type_ann: &mut TypeAnn,
     ctx: &mut Context,
-    type_param_map: &HashMap<String, Type>,
+    type_param_map: &Assump,
 ) -> Result<(Subst, Type), String> {
     match &mut type_ann.kind {
         TypeAnnKind::Lam(lam) => {

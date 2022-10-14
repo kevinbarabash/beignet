@@ -208,7 +208,7 @@ impl Context {
     pub fn fresh_var(&self) -> Type {
         Type::Var(TVar {
             id: self.fresh_id(),
-            quals: None,
+            constraint: None,
         })
     }
 }

@@ -8,17 +8,17 @@ use crochet_types::*;
 use crate::context::{Context, Env};
 use crate::substitutable::{Subst, Substitutable};
 
-fn get_mapping(t: &Type) -> HashMap<TVar, Type> {
-    let mut mapping: HashMap<TVar, Type> = t
+fn get_mapping(t: &Type) -> HashMap<i32, Type> {
+    let mut mapping: HashMap<i32, Type> = t
         .ftv()
         .iter()
         .enumerate()
         .map(|(index, key)| {
             (
-                key.to_owned(),
+                key.id,
                 Type::Var(TVar {
                     id: index as i32,
-                    quals: None,
+                    constraint: key.constraint.clone(),
                 }),
             )
         })
@@ -28,10 +28,10 @@ fn get_mapping(t: &Type) -> HashMap<TVar, Type> {
     let offset = mapping.len();
     for (index, tp) in type_params.iter().enumerate() {
         mapping.insert(
-            tp.to_owned(),
+            tp.id,
             Type::Var(TVar {
                 id: (offset + index) as i32,
-                quals: None,
+                constraint: tp.constraint.clone(),
             }),
         );
     }
@@ -50,7 +50,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
     // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
     // type variables that are bound to the object element as opposed to the encompassing object type.
-    fn norm_type(t: &Type, mapping: &HashMap<TVar, Type>, ctx: &Context) -> Type {
+    fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
         match t {
             Type::Generic(TGeneric {
                 t: inner_t,
@@ -65,7 +65,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     type_params: type_params.to_owned(),
                 })
             }
-            Type::Var(tv) => match mapping.get(tv) {
+            Type::Var(tv) => match mapping.get(&tv.id) {
                 Some(t) => t.to_owned(),
                 // If `id` doesn't exist in `mapping` we return the original type variable.
                 // In this situation, it should appear in some other list of qualifiers.
@@ -188,7 +188,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     let type_params: Vec<_> = (0..mapping.len())
         .map(|x| TVar {
             id: x as i32,
-            quals: None,
+            constraint: None,
         })
         .collect();
 
@@ -200,7 +200,7 @@ pub fn generalize(env: &Env, t: &Type) -> Type {
 
     // We do this to account for type params from the environment.
     // QUESTION: Why is it okay to ignore the keys of env?
-    type_params.extend(t.ftv().uniq(env.ftv()));
+    type_params.extend(t.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id));
 
     if type_params.is_empty() {
         return t.to_owned();
@@ -394,7 +394,7 @@ pub fn get_property_type(prop: &TProp) -> Type {
 
 pub fn get_type_params(t: &Type) -> Vec<TVar> {
     match t {
-        Type::Generic(qual) => qual.type_params.to_owned(),
+        Type::Generic(gen) => gen.type_params.to_owned(),
         _ => vec![],
     }
 }

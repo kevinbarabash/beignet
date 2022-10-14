@@ -237,10 +237,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         let tv = match &mut param.constraint {
                             Some(type_ann) => {
                                 // TODO: push `s` on to `ss`
-                                let (_s, t) = infer_type_ann(type_ann, ctx, &None)?;
+                                let (_s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
                                 Type::Var(TVar {
                                     id: ctx.fresh_id(),
-                                    quals: Some(vec![t]),
+                                    constraint: Some(Box::from(t)),
                                 })
                             }
                             None => ctx.fresh_var(),

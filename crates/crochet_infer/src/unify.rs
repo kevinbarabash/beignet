@@ -13,8 +13,8 @@ use crate::util::*;
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     let result = match (&t1, &t2) {
         // All binding must be done first
-        (Type::Var(tv), _) => bind(tv, t2),
-        (_, Type::Var(tv)) => bind(tv, t1),
+        (Type::Var(tv), _) => bind(tv, t2, Relation::SubType, ctx),
+        (_, Type::Var(tv)) => bind(tv, t1, Relation::SuperType, ctx),
 
         (Type::Lit(lit), Type::Keyword(keyword)) => {
             let b = matches!(
@@ -514,7 +514,13 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     result
 }
 
-fn bind(tv: &TVar, t: &Type) -> Result<Subst, String> {
+#[derive(PartialEq)]
+enum Relation {
+    SubType,
+    SuperType,
+}
+
+fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, String> {
     // | t == TVar a     = return nullSubst
     // | occursCheck a t = throwError $ InfiniteType a t
     // | otherwise       = return $ Map.singleton a t
@@ -553,7 +559,17 @@ fn bind(tv: &TVar, t: &Type) -> Result<Subst, String> {
 
                 Err(String::from("InfiniteType"))
             } else {
-                Ok(Subst::from([(tv.to_owned(), t.to_owned())]))
+                match &tv.constraint {
+                    Some(c) => {
+                        let mut s = match rel {
+                            Relation::SubType => unify(c, t, ctx)?,
+                            Relation::SuperType => unify(t, c, ctx)?,
+                        };
+                        s.insert(tv.to_owned(), t.to_owned());
+                        Ok(s)
+                    }
+                    None => Ok(Subst::from([(tv.to_owned(), t.to_owned())])),
+                }
             }
         }
     }

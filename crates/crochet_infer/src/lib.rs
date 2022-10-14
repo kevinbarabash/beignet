@@ -2370,24 +2370,44 @@ mod tests {
 
         let ctx = infer_prog(src);
 
+        // TODO: include constraint when printing type params
+        println!("add = {:#?}", ctx.lookup_value("add"));
+
         assert_eq!(get_value_type("add", &ctx), "<t0>(a: t0, b: t0) => t0");
-        assert_eq!(get_value_type("num_sum", &ctx), "number");
+        // assert_eq!(get_value_type("num_sum", &ctx), "number");
     }
 
-    // TODO: This should fail but it doesn't.  The reason it should fail is that
-    // the arguments are numbers which aren't subtypes of string.
     #[test]
+    #[should_panic = "Can't unify string with number"]
     fn test_constrained_generic_function_failed_constraint() {
         let src = r#"
-        declare let add: <T extends string>(a: T, b: T) => T;
-        let a: number = 5;
-        let b: number = 10;
-        let num_sum = add(a, b);
+        let add = <T extends number>(a: T, b: T): T => a + b;
+        let a: string = "hello, ";
+        let b: string = "world";
+        let string_sum = add(a, b);
         "#;
 
         let ctx = infer_prog(src);
 
+        // TODO: include constraint when printing type params
         assert_eq!(get_value_type("add", &ctx), "<t0>(a: t0, b: t0) => t0");
-        assert_eq!(get_value_type("num_sum", &ctx), "number");
+        assert_eq!(get_value_type("string_sum", &ctx), "string");
+    }
+
+    #[test]
+    #[should_panic = "Can't unify number with string"]
+    fn test_constrained_generic_function_failed_constraint_external_decl() {
+        let src = r#"
+        declare let add: <T extends string>(a: T, b: T) => T;
+        let a: number = 5;
+        let b: number = 10;
+        let number_sum = add(a, b);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        // TODO: include constraint when printing type params
+        assert_eq!(get_value_type("add", &ctx), "<t0>(a: t0, b: t0) => t0");
+        assert_eq!(get_value_type("number_sum", &ctx), "number");
     }
 }

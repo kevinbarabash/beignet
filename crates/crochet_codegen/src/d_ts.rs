@@ -405,7 +405,7 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
             let _ = build_type_params(t);
             build_type(t, type_params)
         }
-        Type::Var(TVar { id, quals: _ }) => {
+        Type::Var(TVar { id, constraint: _ }) => {
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                 .chars()
                 .collect();

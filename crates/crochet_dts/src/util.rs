@@ -22,16 +22,16 @@ pub fn replace_aliases(
         .map(|tp| {
             // NOTE: We can't use .map() here because infer_ts_type_ann
             // returns a Result.
-            let quals = match &tp.constraint {
+            let constraint = match &tp.constraint {
                 Some(constraint) => {
                     let t = infer_ts_type_ann(constraint, ctx)?;
-                    Some(vec![t])
+                    Some(Box::from(t))
                 }
                 None => None,
             };
             let tv = TVar {
                 id: ctx.fresh_id(),
-                quals,
+                constraint,
             };
             type_params.push(tv.clone());
             Ok((tp.name.sym.to_string(), tv))
