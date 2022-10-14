@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use crochet_types::*;
 
-pub type Subst = HashMap<TVar, Type>;
+pub type Subst = HashMap<i32, Type>;
 
 pub trait Substitutable {
     fn apply(&self, subs: &Subst) -> Self;
@@ -19,7 +19,7 @@ impl Substitutable for Type {
                 // substitutions?
                 let type_params: Vec<_> = type_params
                     .iter()
-                    .filter(|tp| !sub.contains_key(tp))
+                    .filter(|tp| !sub.contains_key(&tp.id))
                     .cloned()
                     .collect();
 
@@ -35,7 +35,7 @@ impl Substitutable for Type {
                 }
             }
 
-            Type::Var(tv) => match sub.get(tv) {
+            Type::Var(tv) => match sub.get(&tv.id) {
                 Some(replacement) => {
                     // TODO: apply the constraint and then check if the replacement
                     // is a subtype of it.
@@ -168,7 +168,7 @@ impl Substitutable for TCallable {
         let type_params = self
             .type_params
             .iter()
-            .filter(|tp| !sub.contains_key(tp))
+            .filter(|tp| !sub.contains_key(&tp.id))
             .cloned()
             .collect();
 

@@ -163,6 +163,7 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     // Creates a mapping from type params in t2 to those in t1
     let subs: Subst = tp2
         .into_iter()
+        .map(|tv| tv.id.to_owned())
         .zip(tp1.iter().map(|tv| Type::Var(tv.to_owned())))
         .collect();
 

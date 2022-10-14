@@ -145,7 +145,7 @@ impl Context {
 
                     // Replaces qualifiers in the type with the corresponding type params
                     // from the alias type.
-                    let ids = type_params.iter().map(|id| id.to_owned());
+                    let ids = type_params.iter().map(|tv| tv.id.to_owned());
                     let subs: Subst = match &alias.type_args {
                         Some(type_params) => {
                             if type_params.len() != type_params.len() {
@@ -165,8 +165,13 @@ impl Context {
                                     "mismatch between the number of qualifiers and type params",
                                 ));
                             }
-                            ids.zip(type_params.iter().map(|_| self.fresh_var()))
-                                .collect()
+                            ids.zip(type_params.iter().map(|tp| {
+                                Type::Var(TVar {
+                                    id: self.fresh_id(),
+                                    constraint: tp.constraint.to_owned(),
+                                })
+                            }))
+                            .collect()
                         }
                     };
 
@@ -181,18 +186,23 @@ impl Context {
     pub fn instantiate(&self, t: &Type) -> Type {
         match t {
             Type::Generic(TGeneric { t, type_params }) => {
-                let ids = type_params.iter().map(|id| id.to_owned());
-                let fresh_quals = type_params.iter().map(|_| self.fresh_var());
-                let subs: Subst = ids.zip(fresh_quals).collect();
+                let ids = type_params.iter().map(|tv| tv.id.to_owned());
+                let fresh_params = type_params.iter().map(|tp| {
+                    Type::Var(TVar {
+                        id: self.fresh_id(),
+                        constraint: tp.constraint.to_owned(),
+                    })
+                });
+                let subs: Subst = ids.zip(fresh_params).collect();
 
                 t.apply(&subs)
             }
             _ => {
                 let type_params = get_type_params(t);
 
-                let ids = type_params.iter().map(|id| id.to_owned());
-                let fresh_quals = type_params.iter().map(|_| self.fresh_var());
-                let subs: Subst = ids.zip(fresh_quals).collect();
+                let ids = type_params.iter().map(|tv| tv.id.to_owned());
+                let fresh_type_params = type_params.iter().map(|_| self.fresh_var());
+                let subs: Subst = ids.zip(fresh_type_params).collect();
 
                 t.apply(&subs)
             }

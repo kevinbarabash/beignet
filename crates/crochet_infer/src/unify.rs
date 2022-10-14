@@ -553,7 +553,7 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
                             Type::Union(types)
                         };
 
-                        return Ok(Subst::from([(tv.to_owned(), t)]));
+                        return Ok(Subst::from([(tv.id.to_owned(), t)]));
                     }
                 }
 
@@ -565,10 +565,10 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
                             Relation::SubType => unify(c, t, ctx)?,
                             Relation::SuperType => unify(t, c, ctx)?,
                         };
-                        s.insert(tv.to_owned(), t.to_owned());
+                        s.insert(tv.id.to_owned(), t.to_owned());
                         Ok(s)
                     }
-                    None => Ok(Subst::from([(tv.to_owned(), t.to_owned())])),
+                    None => Ok(Subst::from([(tv.id.to_owned(), t.to_owned())])),
                 }
             }
         }

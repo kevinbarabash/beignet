@@ -62,7 +62,19 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 // `normalize` itself on each qualified type in the tree.
                 Type::Generic(TGeneric {
                     t: Box::from(norm_type(inner_t, mapping, ctx)),
-                    type_params: type_params.to_owned(),
+                    type_params: type_params
+                        .iter()
+                        .map(|tp| match mapping.get(&tp.id) {
+                            Some(t) => {
+                                if let Type::Var(tv) = t {
+                                    tv.to_owned()
+                                } else {
+                                    panic!("Expected a type variable in mapping when update type_params");
+                                }
+                            },
+                            None => tp.to_owned(),
+                        })
+                        .collect(),
                 })
             }
             Type::Var(tv) => match mapping.get(&tv.id) {
@@ -184,15 +196,9 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
         }
     }
 
-    let t = norm_type(t, &mapping, ctx);
-    let type_params: Vec<_> = (0..mapping.len())
-        .map(|x| TVar {
-            id: x as i32,
-            constraint: None,
-        })
-        .collect();
-
-    set_type_params(&t, &type_params)
+    // NOTE: normalize() is usually called on a type that's already been generalized so we
+    // don't need to re-generalize the result type here.
+    norm_type(t, &mapping, ctx)
 }
 
 pub fn generalize(env: &Env, t: &Type) -> Type {

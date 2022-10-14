@@ -621,7 +621,7 @@ fn infer_property_type(
             // TODO: Instead of instantiating the whole interface for one method, do
             // the lookup call first and then instantiate the method.
             let s: Subst =
-                Subst::from([(type_params[0].to_owned(), type_param.as_ref().to_owned())]);
+                Subst::from([(type_params[0].id.to_owned(), type_param.as_ref().to_owned())]);
             let t = t.apply(&s);
             infer_property_type(&t, prop, ctx)
         }
@@ -638,7 +638,7 @@ fn infer_property_type(
                     let type_param = Type::Union(elem_types.to_owned());
                     let type_params = get_type_params(&t); // ReadonlyArray type params
 
-                    let s: Subst = Subst::from([(type_params[0].to_owned(), type_param)]);
+                    let s: Subst = Subst::from([(type_params[0].id.to_owned(), type_param)]);
                     let t = t.apply(&s);
                     infer_property_type(&t, prop, ctx)
                 }

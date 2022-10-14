@@ -2370,11 +2370,11 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        // TODO: include constraint when printing type params
-        println!("add = {:#?}", ctx.lookup_value("add"));
-
-        assert_eq!(get_value_type("add", &ctx), "<t0>(a: t0, b: t0) => t0");
-        // assert_eq!(get_value_type("num_sum", &ctx), "number");
+        assert_eq!(
+            get_value_type("add", &ctx),
+            "<t0 extends number | string>(a: t0, b: t0) => t0"
+        );
+        assert_eq!(get_value_type("num_sum", &ctx), "number");
     }
 
     #[test]
