@@ -562,33 +562,32 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
 
                 Err(String::from("InfiniteType"))
             } else {
-                match &tv.constraint {
-                    Some(c) => {
-                        // We only care whether the `unify()` call fails or not.  If it succeeds,
-                        // that indicates that type `t` is a subtype of constraint `c`.
-                        match rel {
-                            Relation::SubType => unify(c, t, ctx)?,
-                            Relation::SuperType => unify(t, c, ctx)?,
+                if let Some(c) = &tv.constraint {
+                    // We only care whether the `unify()` call fails or not.  If it succeeds,
+                    // that indicates that type `t` is a subtype of constraint `c`.
+                    match rel {
+                        Relation::SubType => unify(c, t, ctx)?,
+                        Relation::SuperType => unify(t, c, ctx)?,
+                    };
+
+                    // If the `t` is a type variable we need to make sure their constraints are
+                    // the same.
+                    if let Type::Var(TVar { id, constraint }) = t {
+                        let t: Type = match constraint {
+                            Some(constraint) => {
+                                // TODO: merge constraints and copy them over
+                                todo!("merge {constraint:#?} and {:#?} and update both type variables with the result", tv.constraint);
+                            }
+                            None => Type::Var(TVar {
+                                id: id.to_owned(),
+                                constraint: Some(c.to_owned()),
+                            }),
                         };
-                        // If the `t` is a type variable we need to make sure their constraints are
-                        // the same.
-                        if let Type::Var(TVar { id, constraint }) = t {
-                            let t: Type = match constraint {
-                                Some(constraint) => {
-                                    // TODO: merge constraints and copy them over
-                                    todo!("merge {constraint:#?} and {:#?} and update both type variables with the result", tv.constraint);
-                                }
-                                None => Type::Var(TVar {
-                                    id: id.to_owned(),
-                                    constraint: Some(c.to_owned()),
-                                }),
-                            };
-                            return Ok(Subst::from([(tv.id.to_owned(), t)]));
-                        }
-                        Ok(Subst::from([(tv.id.to_owned(), t.to_owned())]))
+                        return Ok(Subst::from([(tv.id.to_owned(), t)]));
                     }
-                    None => Ok(Subst::from([(tv.id.to_owned(), t.to_owned())])),
                 }
+
+                Ok(Subst::from([(tv.id.to_owned(), t.to_owned())]))
             }
         }
     }
