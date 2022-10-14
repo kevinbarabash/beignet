@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use types::{TCallable, TIndex, TObjElem, TObject};
 
@@ -21,7 +21,7 @@ pub struct InterfaceCollector {
     pub namespace: Vec<String>,
 }
 
-fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
+pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
     match type_ann {
         TsType::TsKeywordType(keyword) => match &keyword.kind {
             TsKeywordTypeKind::TsAnyKeyword => Ok(ctx.fresh_var()),
@@ -53,7 +53,7 @@ fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
                 });
 
                 match &fn_type.type_params {
-                    Some(type_param_decl) => Ok(util::replace_aliases(&t, type_param_decl, ctx)),
+                    Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx),
                     None => Ok(t),
                 }
             }
@@ -201,7 +201,7 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
     });
 
     let t = match &sig.type_params {
-        Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx),
+        Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,
         None => t,
     };
 
@@ -223,7 +223,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
             Some(type_ann) => {
                 let params = infer_fn_params(&decl.params, ctx)?;
                 let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
-                let mut qualifiers: HashSet<_> = params.ftv();
+                let mut qualifiers = params.ftv();
                 qualifiers.extend(ret.ftv());
 
                 Ok(TObjElem::Call(TCallable {
@@ -238,7 +238,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
             Some(type_ann) => {
                 let params = infer_fn_params(&decl.params, ctx)?;
                 let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
-                let mut qualifiers: HashSet<_> = params.ftv();
+                let mut qualifiers = params.ftv();
                 qualifiers.extend(ret.ftv());
 
                 Ok(TObjElem::Constructor(TCallable {
@@ -321,10 +321,11 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, S
         })
         .collect();
 
+    // TODO: make this generic if the decl has any type params
     let t = Type::Object(TObject { elems });
 
     let t = match &decl.type_params {
-        Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx),
+        Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,
         None => t,
     };
 

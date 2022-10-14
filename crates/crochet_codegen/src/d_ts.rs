@@ -8,7 +8,7 @@ use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
 use crochet_infer::{get_type_params, Context};
-use crochet_types::{self as types, TFnParam, TPat, TQualified, Type};
+use crochet_types::{self as types, TFnParam, TGeneric, TPat, TVar, Type};
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -370,8 +370,8 @@ pub fn build_type_params(t: &Type) -> Option<TsTypeParamDecl> {
             span: DUMMY_SP,
             params: type_params
                 .iter()
-                .map(|id| {
-                    let id = chars.get(id.to_owned() as usize).unwrap();
+                .map(|tv| {
+                    let id = chars.get(tv.id.to_owned() as usize).unwrap();
 
                     TsTypeParam {
                         span: DUMMY_SP,
@@ -399,13 +399,13 @@ pub fn build_type_params(t: &Type) -> Option<TsTypeParamDecl> {
 /// from if it exists.
 pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
     match t {
-        Type::Qualified(TQualified { t, .. }) => {
+        Type::Generic(TGeneric { t, .. }) => {
             // TODO: combine the return value from the `build_type_params()` call
             // with the `type_params` passed into this function.
             let _ = build_type_params(t);
             build_type(t, type_params)
         }
-        Type::Var(id) => {
+        Type::Var(TVar { id, constraint: _ }) => {
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                 .chars()
                 .collect();

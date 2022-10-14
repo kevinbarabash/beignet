@@ -482,6 +482,43 @@ fn function_with_optional_param_and_rest_param() {
 }
 
 #[test]
+fn generic_function() {
+    let src = r#"
+    let fst = <T>(a: T, b: T) => a;
+    "#;
+
+    insta::assert_snapshot!(compile(src), @"export const fst = (a, b)=>a;
+");
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const fst: <A>(a: A, b: A) => A;
+");
+}
+
+#[test]
+#[ignore] // TODO: fix this test case
+fn constrained_generic_function() {
+    let src = r#"
+    let fst = <T extends number | string>(a: T, b: T) => a;
+    "#;
+
+    insta::assert_snapshot!(compile(src), @"export const fst = (a, b)=>a;
+");
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const fst: (a: number | string, b: number | string) => number | string;
+");
+}
+
+#[test]
 fn variable_declaration_with_destructuring() {
     let src = r#"
     let [x, y] = [5, 10];

@@ -4,30 +4,50 @@ use swc_ecma_ast::*;
 
 use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substitutable};
 use crochet_types::{
-    self as types, TCallable, TFnParam, TIndexAccess, TObjElem, TObject, TQualified, Type,
+    self as types, TCallable, TFnParam, TGeneric, TIndexAccess, TObjElem, TObject, TVar, Type,
 };
 
-pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Context) -> Type {
-    let mut type_params: Vec<i32> = vec![];
-    let type_param_map: HashMap<String, i32> = type_param_decl
+use crate::parse_dts::infer_ts_type_ann;
+
+// TODO: rename this replace_refs
+pub fn replace_aliases(
+    t: &Type,
+    type_param_decl: &TsTypeParamDecl,
+    ctx: &Context,
+) -> Result<Type, String> {
+    let mut type_params: Vec<TVar> = vec![];
+    let type_param_map: HashMap<String, TVar> = type_param_decl
         .params
         .iter()
         .map(|tp| {
-            let id = ctx.fresh_id();
-            type_params.push(id);
-            (tp.name.sym.to_string(), id)
+            // NOTE: We can't use .map() here because infer_ts_type_ann
+            // returns a Result.
+            let constraint = match &tp.constraint {
+                Some(constraint) => {
+                    let t = infer_ts_type_ann(constraint, ctx)?;
+                    Some(Box::from(t))
+                }
+                None => None,
+            };
+            let tv = TVar {
+                id: ctx.fresh_id(),
+                constraint,
+            };
+            type_params.push(tv.clone());
+            Ok((tp.name.sym.to_string(), tv))
         })
-        .collect();
+        .collect::<Result<HashMap<String, TVar>, String>>()?;
 
     let t = set_type_params(t, &type_params);
-    replace_aliases_rec(&t, &type_param_map)
+    Ok(replace_aliases_rec(&t, &type_param_map))
 }
 
-fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
+// TODO: rename this replace_refs_rec
+fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
     match t {
-        Type::Qualified(TQualified { t, type_params }) => {
+        Type::Generic(TGeneric { t, type_params }) => {
             // TODO: create a new `map` that adds in `type_params`
-            Type::Qualified(TQualified {
+            Type::Generic(TGeneric {
                 t: Box::from(replace_aliases_rec(t, map)),
                 type_params: type_params.to_owned(),
             })
@@ -115,7 +135,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, i32>) -> Type {
             Type::Object(TObject { elems })
         }
         Type::Ref(alias) => match map.get(&alias.name) {
-            Some(id) => Type::Var(*id),
+            Some(tv) => Type::Var(tv.to_owned()),
             None => t.to_owned(),
         },
         Type::Tuple(types) => {
@@ -143,17 +163,18 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     // Creates a mapping from type params in t2 to those in t1
     let subs: Subst = tp2
         .into_iter()
-        .zip(tp1.iter().map(|id| Type::Var(*id)))
+        .map(|tv| tv.id.to_owned())
+        .zip(tp1.iter().map(|tv| Type::Var(tv.to_owned())))
         .collect();
 
     // Unwrap qualified types since we return a qualified
     // type if there are any type qualifiers.
     let t1 = match t1 {
-        Type::Qualified(TQualified { t, .. }) => t,
+        Type::Generic(TGeneric { t, .. }) => t,
         t => t,
     };
     let t2 = match t2 {
-        Type::Qualified(TQualified { t, .. }) => t,
+        Type::Generic(TGeneric { t, .. }) => t,
         t => t,
     };
 
@@ -178,7 +199,7 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     if type_params.is_empty() {
         t
     } else {
-        Type::Qualified(TQualified {
+        Type::Generic(TGeneric {
             t: Box::from(t),
             type_params,
         })

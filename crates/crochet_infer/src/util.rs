@@ -1,3 +1,4 @@
+use array_tool::vec::*;
 use defaultmap::*;
 use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
@@ -8,21 +9,31 @@ use crate::context::{Context, Env};
 use crate::substitutable::{Subst, Substitutable};
 
 fn get_mapping(t: &Type) -> HashMap<i32, Type> {
-    let body = t;
-    let keys = body.ftv();
-    let mut keys: Vec<_> = keys.iter().cloned().collect();
-    keys.sort_unstable();
-
-    let mut mapping: HashMap<i32, Type> = keys
+    let mut mapping: HashMap<i32, Type> = t
+        .ftv()
         .iter()
         .enumerate()
-        .map(|(index, key)| (key.to_owned(), Type::Var(index as i32)))
+        .map(|(index, key)| {
+            (
+                key.id,
+                Type::Var(TVar {
+                    id: index as i32,
+                    constraint: key.constraint.clone(),
+                }),
+            )
+        })
         .collect();
 
     let type_params = get_type_params(t);
     let offset = mapping.len();
     for (index, tp) in type_params.iter().enumerate() {
-        mapping.insert(tp.to_owned(), Type::Var((offset + index) as i32));
+        mapping.insert(
+            tp.id,
+            Type::Var(TVar {
+                id: (offset + index) as i32,
+                constraint: tp.constraint.clone(),
+            }),
+        );
     }
 
     mapping
@@ -41,7 +52,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     // type variables that are bound to the object element as opposed to the encompassing object type.
     fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
         match t {
-            Type::Qualified(TQualified {
+            Type::Generic(TGeneric {
                 t: inner_t,
                 type_params,
             }) => {
@@ -49,12 +60,24 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 // mappings from higher up may cause type variables to be reassigned
                 // to the incorrect type.  In order to fix this, we'd have to run
                 // `normalize` itself on each qualified type in the tree.
-                Type::Qualified(TQualified {
+                Type::Generic(TGeneric {
                     t: Box::from(norm_type(inner_t, mapping, ctx)),
-                    type_params: type_params.to_owned(),
+                    type_params: type_params
+                        .iter()
+                        .map(|tp| match mapping.get(&tp.id) {
+                            Some(t) => {
+                                if let Type::Var(tv) = t {
+                                    tv.to_owned()
+                                } else {
+                                    panic!("Expected a type variable in mapping when update type_params");
+                                }
+                            },
+                            None => tp.to_owned(),
+                        })
+                        .collect(),
                 })
             }
-            Type::Var(id) => match mapping.get(id) {
+            Type::Var(tv) => match mapping.get(&tv.id) {
                 Some(t) => t.to_owned(),
                 // If `id` doesn't exist in `mapping` we return the original type variable.
                 // In this situation, it should appear in some other list of qualifiers.
@@ -173,26 +196,21 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
         }
     }
 
-    let t = norm_type(t, &mapping, ctx);
-    let type_params: Vec<_> = (0..mapping.len()).map(|x| x as i32).collect();
-
-    set_type_params(&t, &type_params)
+    // NOTE: normalize() is usually called on a type that's already been generalized so we
+    // don't need to re-generalize the result type here.
+    norm_type(t, &mapping, ctx)
 }
 
 pub fn generalize(env: &Env, t: &Type) -> Type {
-    // ftv() returns a Set which is not ordered
-    // TODO: switch to an ordered set
     let mut type_params = get_type_params(t);
 
     // We do this to account for type params from the environment.
     // QUESTION: Why is it okay to ignore the keys of env?
-    type_params.extend(t.ftv().difference(&env.ftv()).cloned());
+    type_params.extend(t.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id));
 
     if type_params.is_empty() {
         return t.to_owned();
     }
-
-    type_params.sort_unstable();
 
     set_type_params(t, &type_params)
 }
@@ -332,7 +350,10 @@ pub fn union_many_types(ts: &[Type]) -> Type {
 }
 
 pub fn compose_subs(s2: &Subst, s1: &Subst) -> Subst {
-    let mut result: Subst = s1.iter().map(|(id, tv)| (*id, tv.apply(s2))).collect();
+    let mut result: Subst = s1
+        .iter()
+        .map(|(tv, t)| (tv.to_owned(), t.apply(s2)))
+        .collect();
     result.extend(s2.to_owned());
     result
 }
@@ -347,14 +368,17 @@ pub fn compose_many_subs(subs: &[Subst]) -> Subst {
 // If are multiple entries for the same type variable, this function merges
 // them into a union type (simplifying the type if possible).
 fn compose_subs_with_context(s1: &Subst, s2: &Subst) -> Subst {
-    let mut result: Subst = s2.iter().map(|(i, t)| (*i, t.apply(s1))).collect();
-    for (i, t) in s1 {
-        match result.get(i) {
+    let mut result: Subst = s2
+        .iter()
+        .map(|(tv, t)| (tv.to_owned(), t.apply(s1)))
+        .collect();
+    for (tv, t) in s1 {
+        match result.get(tv) {
             Some(t1) => {
                 let t = union_types(t, t1);
-                result.insert(*i, t)
+                result.insert(tv.to_owned(), t)
             }
-            None => result.insert(*i, t.to_owned()),
+            None => result.insert(tv.to_owned(), t.to_owned()),
         };
     }
     result
@@ -374,14 +398,14 @@ pub fn get_property_type(prop: &TProp) -> Type {
     }
 }
 
-pub fn get_type_params(t: &Type) -> Vec<i32> {
+pub fn get_type_params(t: &Type) -> Vec<TVar> {
     match t {
-        Type::Qualified(qual) => qual.type_params.to_owned(),
+        Type::Generic(gen) => gen.type_params.to_owned(),
         _ => vec![],
     }
 }
 
-pub fn set_type_params(t: &Type, type_params: &[i32]) -> Type {
+pub fn set_type_params(t: &Type, type_params: &[TVar]) -> Type {
     // If there are no type params then the returned type shouldn't be
     // a qualified type.
     if type_params.is_empty() {
@@ -390,16 +414,16 @@ pub fn set_type_params(t: &Type, type_params: &[i32]) -> Type {
 
     match t {
         Type::Var(_) => t.to_owned(),
-        Type::Qualified(TQualified {
+        Type::Generic(TGeneric {
             t,
             // NOTE: `generalize_type` is responsible for merge type params so
             // it's safe to ignore `type_params` here.
             type_params: _,
-        }) => Type::Qualified(TQualified {
+        }) => Type::Generic(TGeneric {
             t: t.to_owned(),
             type_params: type_params.to_owned(),
         }),
-        _ => Type::Qualified(TQualified {
+        _ => Type::Generic(TGeneric {
             t: Box::from(t.to_owned()),
             type_params: type_params.to_owned(),
         }),

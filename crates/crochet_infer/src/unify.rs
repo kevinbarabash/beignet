@@ -1,7 +1,7 @@
 use std::cmp;
 use std::collections::HashSet;
 
-use crochet_types::{self as types, TLam, TObjElem, TObject, TQualified, Type};
+use crochet_types::{self as types, TGeneric, TLam, TObjElem, TObject, TVar, Type};
 use types::TKeyword;
 
 use crate::context::Context;
@@ -13,8 +13,8 @@ use crate::util::*;
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     let result = match (&t1, &t2) {
         // All binding must be done first
-        (Type::Var(id), _) => bind(id, t2),
-        (_, Type::Var(id)) => bind(id, t1),
+        (Type::Var(tv), _) => bind(tv, t2, Relation::SubType, ctx),
+        (_, Type::Var(tv)) => bind(tv, t1, Relation::SuperType, ctx),
 
         (Type::Lit(lit), Type::Keyword(keyword)) => {
             let b = matches!(
@@ -83,7 +83,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         let t = if call.type_params.is_empty() {
                             lam
                         } else {
-                            Type::Qualified(TQualified {
+                            Type::Generic(TGeneric {
                                 t: Box::from(lam),
                                 type_params: call.type_params.to_owned(),
                             })
@@ -514,20 +514,26 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
     result
 }
 
-fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
+#[derive(PartialEq)]
+enum Relation {
+    SubType,
+    SuperType,
+}
+
+fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, String> {
     // | t == TVar a     = return nullSubst
     // | occursCheck a t = throwError $ InfiniteType a t
     // | otherwise       = return $ Map.singleton a t
     match t {
-        Type::Var(other_id) if other_id == id => Ok(Subst::default()),
+        Type::Var(other_tv) if other_tv == tv => Ok(Subst::default()),
         _ => {
-            if occurs_check(id, t) {
+            if occurs_check(tv, t) {
                 // Union types are a special case since `t1` unifies trivially with `t1 | t2 | ... tn`
                 if let Type::Union(elem_types) = &t {
                     let elem_types_without_id: Vec<Type> = elem_types
                         .iter()
                         .filter(|elem_type| match elem_type {
-                            Type::Var(elem_id) => elem_id != id,
+                            Type::Var(other_tv) => other_tv != tv,
                             _ => true,
                         })
                         .cloned()
@@ -547,20 +553,30 @@ fn bind(id: &i32, t: &Type) -> Result<Subst, String> {
                             Type::Union(types)
                         };
 
-                        return Ok(Subst::from([(id.to_owned(), t)]));
+                        return Ok(Subst::from([(tv.id.to_owned(), t)]));
                     }
                 }
 
                 Err(String::from("InfiniteType"))
             } else {
-                Ok(Subst::from([(id.to_owned(), t.to_owned())]))
+                match &tv.constraint {
+                    Some(c) => {
+                        let mut s = match rel {
+                            Relation::SubType => unify(c, t, ctx)?,
+                            Relation::SuperType => unify(t, c, ctx)?,
+                        };
+                        s.insert(tv.id.to_owned(), t.to_owned());
+                        Ok(s)
+                    }
+                    None => Ok(Subst::from([(tv.id.to_owned(), t.to_owned())])),
+                }
             }
         }
     }
 }
 
-fn occurs_check(id: &i32, t: &Type) -> bool {
-    t.ftv().contains(id)
+fn occurs_check(tv: &TVar, t: &Type) -> bool {
+    t.ftv().contains(tv)
 }
 
 #[cfg(test)]

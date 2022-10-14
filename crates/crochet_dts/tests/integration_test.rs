@@ -45,7 +45,7 @@ fn infer_method_on_readonly_array() {
     let result = format!("{}", ctx.lookup_value("map").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: string, index: number) => t1, thisArg?: t0) => t1[]"
+        "<t0, t1>(callbackfn: (value: string, index: number) => t0, thisArg?: t1) => t0[]"
     );
 }
 
@@ -73,12 +73,12 @@ fn infer_method_on_readonly_arrays_of_different_things() {
     let result = format!("{}", ctx.lookup_value("map1").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: string, index: number) => t1, thisArg?: t0) => t1[]"
+        "<t0, t1>(callbackfn: (value: string, index: number) => t0, thisArg?: t1) => t0[]"
     );
     let result = format!("{}", ctx.lookup_value("map2").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: number, index: number) => t1, thisArg?: t0) => t1[]"
+        "<t0, t1>(callbackfn: (value: number, index: number) => t0, thisArg?: t1) => t0[]"
     );
 }
 
@@ -92,7 +92,7 @@ fn infer_array_method_on_tuple() {
     let result = format!("{}", ctx.lookup_value("map").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: \"hello\" | 5 | true, index: number) => t1, thisArg?: t0) => t1[]"
+        "<t0, t1>(callbackfn: (value: \"hello\" | 5 | true, index: number) => t0, thisArg?: t1) => t0[]"
     );
 }
 

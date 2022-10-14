@@ -3,41 +3,7 @@ use crochet_types::Type;
 
 use crate::substitutable::{Subst, Substitutable};
 
-pub fn update_program(prog: &mut Program, s: &Subst) {
-    for stmt in prog.body.iter_mut() {
-        match stmt {
-            Statement::VarDecl {
-                span: _,
-                pattern,
-                type_ann,
-                init,
-                declare: _,
-            } => {
-                update_pattern(pattern, s);
-                if let Some(type_ann) = type_ann {
-                    update_type_ann(type_ann, s);
-                }
-                if let Some(init) = init.as_mut() {
-                    update_expr(init, s);
-                }
-            }
-            Statement::TypeDecl {
-                span: _,
-                declare: _,
-                id: _,
-                type_ann,
-                type_params: _,
-            } => {
-                update_type_ann(type_ann, s);
-            }
-            Statement::Expr { span: _, expr } => {
-                update_expr(expr, s);
-            }
-        }
-    }
-}
-
-fn update_pattern(pattern: &mut Pattern, s: &Subst) {
+pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
     // Since we process the node first, if `expr` is a leaf node we
     // ignore it in the match statement below.
     if let Some(t) = &pattern.inferred_type {
@@ -87,7 +53,7 @@ fn update_pattern(pattern: &mut Pattern, s: &Subst) {
     }
 }
 
-fn update_expr(expr: &mut Expr, s: &Subst) {
+pub fn update_expr(expr: &mut Expr, s: &Subst) {
     // Since we process the node first, if `expr` is a leaf node we
     // ignore it in the match statement below.
     if let Some(t) = &expr.inferred_type {
@@ -263,7 +229,7 @@ fn update_fn_param_pat(pat: &mut EFnParamPat, s: &Subst) {
     }
 }
 
-fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
+pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
     // Since we process the node first, if `expr` is a leaf node we
     // ignore it in the match statement below.
     if let Some(t) = &type_ann.inferred_type {

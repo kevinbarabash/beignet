@@ -5,12 +5,10 @@ use crate::context::Context;
 use crate::infer_expr::infer_expr as infer_expr_rec;
 use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
-use crate::substitutable::Subst;
-use crate::update::update_program;
+use crate::update::*;
 use crate::util::*;
 
 pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, String> {
-    // let mut ctx: Context = Context::default();
     // TODO: replace with Class type once it exists
     // We use {_name: "Promise"} to differentiate it from other
     // object types.
@@ -38,8 +36,6 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
     // module definitions.
     ctx.push_scope(false);
 
-    let mut ss: Vec<Subst> = vec![];
-
     // TODO: figure out how report multiple errors
     for stmt in &mut prog.body {
         match stmt {
@@ -59,11 +55,12 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
                             }) => {
                                 match type_ann {
                                     Some(type_ann) => {
-                                        let (s, t) = infer_type_ann(type_ann, ctx, &None)?;
+                                        let (s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
                                         let t = close_over(&s, &t, ctx);
                                         ctx.insert_value(name.to_owned(), t);
 
-                                        ss.push(s);
+                                        update_type_ann(type_ann, &s);
+                                        update_pattern(pattern, &s);
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
@@ -96,7 +93,8 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
                             ctx.insert_value(name, t);
                         }
 
-                        ss.push(s);
+                        update_expr(init, &s);
+                        update_pattern(pattern, &s);
                     }
                 };
             }
@@ -110,20 +108,16 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
                 let t = close_over(&s, &t, ctx);
                 ctx.insert_type(name.to_owned(), t);
 
-                ss.push(s);
+                update_type_ann(type_ann, &s);
             }
             Statement::Expr { expr, .. } => {
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
                 let (s, _) = infer_expr_rec(ctx, expr)?;
-
-                ss.push(s);
+                update_expr(expr, &s);
             }
         };
     }
-
-    let s = compose_many_subs(&ss);
-    update_program(prog, &s);
 
     Ok(ctx.to_owned())
 }
