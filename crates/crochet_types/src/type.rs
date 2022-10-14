@@ -64,7 +64,7 @@ pub struct TGeneric {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TVar {
     pub id: i32,
-    pub quals: Option<Vec<TRef>>,
+    pub quals: Option<Vec<Type>>,
 }
 
 impl fmt::Display for TVar {

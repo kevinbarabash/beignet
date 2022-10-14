@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-
 use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TGeneric, TKeyword, TObject, TPat, Type};
+use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, TVar, Type};
 use types::TObjElem;
 
+use crate::assump::Assump;
 use crate::context::Context;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
@@ -231,12 +230,25 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
         }) => {
             ctx.push_scope(is_async.to_owned());
 
-            let type_params_map: HashMap<String, Type> = match type_params {
+            let type_params_map: Assump = match type_params {
                 Some(params) => params
-                    .iter()
-                    .map(|param| (param.name.name.to_owned(), ctx.fresh_var()))
-                    .collect(),
-                None => HashMap::default(),
+                    .iter_mut()
+                    .map(|param| {
+                        let tv = match &mut param.constraint {
+                            Some(type_ann) => {
+                                // TODO: push `s` on to `ss`
+                                let (_s, t) = infer_type_ann(type_ann, ctx, &None)?;
+                                Type::Var(TVar {
+                                    id: ctx.fresh_id(),
+                                    quals: Some(vec![t]),
+                                })
+                            }
+                            None => ctx.fresh_var(),
+                        };
+                        Ok((param.name.name.to_owned(), tv))
+                    })
+                    .collect::<Result<Assump, String>>()?,
+                None => Assump::default(),
             };
 
             let params: Result<Vec<(Subst, TFnParam)>, String> = params
@@ -556,7 +568,12 @@ fn infer_property_type(
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
     match &obj_t {
-        Type::Generic(TGeneric { t, type_params: _ }) => infer_property_type(t, prop, ctx),
+        Type::Generic(_) => {
+            // TODO: Improve performance by getting the property type first and
+            // then instantiating it instead of instantiating the whole object type.
+            let t = ctx.instantiate(obj_t);
+            infer_property_type(&t, prop, ctx)
+        }
         Type::Object(obj) => get_prop_value(obj, prop, ctx),
         Type::Ref(alias) => {
             let t = ctx.lookup_ref_and_instantiate(alias)?;

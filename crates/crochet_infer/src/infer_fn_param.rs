@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crochet_ast::*;
 use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, Type};
 
@@ -15,10 +13,10 @@ use crate::util::compose_subs;
 pub fn infer_fn_param(
     param: &mut EFnParam,
     ctx: &mut Context,
-    type_param_map: &HashMap<String, Type>,
+    type_param_map: &Assump,
 ) -> Result<(Subst, Assump, TFnParam), String> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
-    let mut new_vars: HashMap<String, Type> = HashMap::new();
+    let mut new_vars: Assump = Assump::default();
 
     let pat_type = infer_param_pattern_rec(&param.pat, ctx, &mut new_vars)?;
     let pat = e_pat_to_t_pat(&param.pat);

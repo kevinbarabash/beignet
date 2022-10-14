@@ -2358,4 +2358,36 @@ mod tests {
 
         insta::assert_debug_snapshot!(prog);
     }
+
+    #[test]
+    fn test_constrained_generic_function() {
+        let src = r#"
+        declare let add: <T extends number | string>(a: T, b: T) => T;
+        let a: number = 5;
+        let b: number = 10;
+        let num_sum = add(a, b);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("add", &ctx), "<t0>(a: t0, b: t0) => t0");
+        assert_eq!(get_value_type("num_sum", &ctx), "number");
+    }
+
+    // TODO: This should fail but it doesn't.  The reason it should fail is that
+    // the arguments are numbers which aren't subtypes of string.
+    #[test]
+    fn test_constrained_generic_function_failed_constraint() {
+        let src = r#"
+        declare let add: <T extends string>(a: T, b: T) => T;
+        let a: number = 5;
+        let b: number = 10;
+        let num_sum = add(a, b);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("add", &ctx), "<t0>(a: t0, b: t0) => t0");
+        assert_eq!(get_value_type("num_sum", &ctx), "number");
+    }
 }

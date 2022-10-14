@@ -7,24 +7,39 @@ use crochet_types::{
     self as types, TCallable, TFnParam, TGeneric, TIndexAccess, TObjElem, TObject, TVar, Type,
 };
 
+use crate::parse_dts::infer_ts_type_ann;
+
 // TODO: rename this replace_refs
-pub fn replace_aliases(t: &Type, type_param_decl: &TsTypeParamDecl, ctx: &Context) -> Type {
+pub fn replace_aliases(
+    t: &Type,
+    type_param_decl: &TsTypeParamDecl,
+    ctx: &Context,
+) -> Result<Type, String> {
     let mut type_params: Vec<TVar> = vec![];
     let type_param_map: HashMap<String, TVar> = type_param_decl
         .params
         .iter()
         .map(|tp| {
+            // NOTE: We can't use .map() here because infer_ts_type_ann
+            // returns a Result.
+            let quals = match &tp.constraint {
+                Some(constraint) => {
+                    let t = infer_ts_type_ann(constraint, ctx)?;
+                    Some(vec![t])
+                }
+                None => None,
+            };
             let tv = TVar {
                 id: ctx.fresh_id(),
-                quals: None,
+                quals,
             };
             type_params.push(tv.clone());
-            (tp.name.sym.to_string(), tv)
+            Ok((tp.name.sym.to_string(), tv))
         })
-        .collect();
+        .collect::<Result<HashMap<String, TVar>, String>>()?;
 
     let t = set_type_params(t, &type_params);
-    replace_aliases_rec(&t, &type_param_map)
+    Ok(replace_aliases_rec(&t, &type_param_map))
 }
 
 // TODO: rename this replace_refs_rec
