@@ -127,18 +127,6 @@ a:visited {
   display: flex;
 }
 
-.caret {
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 4px solid;
-  display: inline-block;
-  height: 0;
-  margin-left: 2px;
-  vertical-align: middle;
-  width: 0;
-  margin-left: 4px;
-}
-
 textarea {
   color: var(--text-color);
   background-color: var(--text-background);

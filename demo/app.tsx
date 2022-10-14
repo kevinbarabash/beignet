@@ -114,14 +114,14 @@ export const App = () => {
           href="https://github.com/crochet-lang/crochet"
           target="_blank"
         >
-          Source
+          Source {"\u2197"}
         </a>
         <a
           className="header-link"
           href="https://github.com/crochet-lang/crochet/issues"
           target="_blank"
         >
-          Issues
+          Issues {"\u2197"}
         </a>
       </div>
       <div style={styles.grid}>

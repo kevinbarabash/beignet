@@ -41,8 +41,7 @@ const Dropdown = () => {
       onClick={toggleOpen}
       ref={(node) => (buttonRef.current = node)}
     >
-      Examples
-      <span style={open ? { transform: "scaleY(-1)" } : {}} className="caret" />
+      Examples {open ? "\u25B2" : "\u25BC"}
       <div
         style={{ display: open ? "flex" : "none" }}
         className="dropdown-contents"
