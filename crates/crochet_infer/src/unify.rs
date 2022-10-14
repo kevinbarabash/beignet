@@ -525,7 +525,10 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
     // | occursCheck a t = throwError $ InfiniteType a t
     // | otherwise       = return $ Map.singleton a t
     match t {
-        Type::Var(other_tv) if other_tv == tv => Ok(Subst::default()),
+        Type::Var(other_tv) if other_tv == tv => {
+            println!("other_tv = {other_tv:#?}, tv = {tv:#?}");
+            Ok(Subst::default())
+        }
         _ => {
             if occurs_check(tv, t) {
                 // Union types are a special case since `t1` unifies trivially with `t1 | t2 | ... tn`
@@ -561,12 +564,28 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
             } else {
                 match &tv.constraint {
                     Some(c) => {
-                        let mut s = match rel {
+                        // We only care whether the `unify()` call fails or not.  If it succeeds,
+                        // that indicates that type `t` is a subtype of constraint `c`.
+                        match rel {
                             Relation::SubType => unify(c, t, ctx)?,
                             Relation::SuperType => unify(t, c, ctx)?,
                         };
-                        s.insert(tv.id.to_owned(), t.to_owned());
-                        Ok(s)
+                        // If the `t` is a type variable we need to make sure their constraints are
+                        // the same.
+                        if let Type::Var(TVar { id, constraint }) = t {
+                            let t: Type = match constraint {
+                                Some(constraint) => {
+                                    // TODO: merge constraints and copy them over
+                                    todo!("merge {constraint:#?} and {:#?} and update both type variables with the result", tv.constraint);
+                                }
+                                None => Type::Var(TVar {
+                                    id: id.to_owned(),
+                                    constraint: Some(c.to_owned()),
+                                }),
+                            };
+                            return Ok(Subst::from([(tv.id.to_owned(), t)]));
+                        }
+                        Ok(Subst::from([(tv.id.to_owned(), t.to_owned())]))
                     }
                     None => Ok(Subst::from([(tv.id.to_owned(), t.to_owned())])),
                 }

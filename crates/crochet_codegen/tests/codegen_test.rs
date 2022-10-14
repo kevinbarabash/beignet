@@ -500,7 +500,6 @@ fn generic_function() {
 }
 
 #[test]
-#[ignore] // TODO: fix this test case
 fn constrained_generic_function() {
     let src = r#"
     let fst = <T extends number | string>(a: T, b: T) => a;
@@ -514,7 +513,7 @@ fn constrained_generic_function() {
     infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
-    insta::assert_snapshot!(result, @"export declare const fst: (a: number | string, b: number | string) => number | string;
+    insta::assert_snapshot!(result, @"export declare const fst: <A extends number | string>(a: A, b: A) => A;
 ");
 }
 

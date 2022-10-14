@@ -2384,7 +2384,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix this test
     fn test_constrained_generic_function() {
         let src = r#"
         let fst = <T extends number | string>(a: T, b: T): T => a;
