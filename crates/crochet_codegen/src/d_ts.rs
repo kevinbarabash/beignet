@@ -382,7 +382,10 @@ pub fn build_type_params(t: &Type) -> Option<TsTypeParamDecl> {
                         },
                         is_in: false,
                         is_out: false,
-                        constraint: None,
+                        constraint: tv
+                            .constraint
+                            .as_ref()
+                            .map(|t| Box::from(build_type(t, None))),
                         default: None,
                     }
                 })
