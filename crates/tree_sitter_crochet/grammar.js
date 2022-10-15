@@ -30,14 +30,14 @@ module.exports = grammar(tsx, {
     _semicolon: ($, prev) => ";",
 
     // Replaces 'readonly' with 'mut'
-    _type: ($) =>
-      choice(
-        $._primary_type,
-        $.function_type,
-        alias($.readonly_type, $.mutable_type),
-        $.constructor_type,
-        $.infer_type
-      ),
+    _type: ($, prev) => {
+      const choices = prev.members.map((member) => {
+        return member.name == "readonly_type"
+          ? alias($.readonly_type, $.mutable_type)
+          : member;
+      });
+      return choice(...choices);
+    },
     readonly_type: ($, prev) => seq("mut", $._type),
 
     expression: ($, prev) => {
