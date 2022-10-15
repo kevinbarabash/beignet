@@ -21,7 +21,7 @@ pub fn parse(src: &str) -> Result<Program, String> {
 
         let mut body: Vec<Statement> = vec![];
         for child in children {
-            let mut stmts = parse_statement(&child, src);
+            let mut stmts = parse_statement(&child, src)?;
             body.append(&mut stmts);
         }
 
@@ -31,16 +31,18 @@ pub fn parse(src: &str) -> Result<Program, String> {
     }
 }
 
-fn parse_statement(node: &tree_sitter::Node, src: &str) -> Vec<Statement> {
+fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, String> {
+    let kind = node.kind();
+    println!("kind = {kind}");
     match node.kind() {
         "lexical_declaration" => parse_declaration(node, false, src),
         "expression_statement" => {
             let expr = node.named_child(0).unwrap();
-            let expr = parse_expression(&expr, src);
-            vec![Statement::Expr {
+            let expr = parse_expression(&expr, src)?;
+            Ok(vec![Statement::Expr {
                 span: node.byte_range(),
                 expr: Box::from(expr),
-            }]
+            }])
         }
         "ambient_declaration" => {
             let decl = node.named_child(0).unwrap();
@@ -53,21 +55,22 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Vec<Statement> {
                 name: text_for_node(&name, src),
             };
             let type_ann = node.child_by_field_name("value").unwrap();
-            let type_ann = parse_type_ann(&type_ann, src);
+            let type_ann = parse_type_ann(&type_ann, src)?;
 
-            let type_params = parse_type_params_for_node(node, src);
+            let type_params = parse_type_params_for_node(node, src)?;
 
-            vec![Statement::TypeDecl {
+            Ok(vec![Statement::TypeDecl {
                 span: node.byte_range(),
                 declare: false,
                 id,
                 type_ann,
                 type_params,
-            }]
+            }])
         }
         "comment" => {
-            vec![] // ignore comments
+            Ok(vec![]) // ignore comments
         }
+        "ERROR" => Err(format!("failed to parse: '{}'", text_for_node(node, src))),
         _ => todo!("unhandled: {:#?}", node),
     }
 
@@ -100,20 +103,28 @@ fn text_for_node(node: &tree_sitter::Node, src: &str) -> String {
     src.get(node.byte_range()).unwrap().to_owned()
 }
 
-fn parse_declaration(node: &tree_sitter::Node, declare: bool, src: &str) -> Vec<Statement> {
+fn parse_declaration(
+    node: &tree_sitter::Node,
+    declare: bool,
+    src: &str,
+) -> Result<Vec<Statement>, String> {
     let decl = node.child_by_field_name("decl").unwrap();
     let rec = node.child_by_field_name("rec").is_some();
 
     let name = decl.child_by_field_name("name").unwrap();
     let pattern = parse_pattern(&name, src);
 
-    let init = decl
-        .child_by_field_name("value")
-        .map(|init| Box::from(parse_expression(&init, src)));
+    let init = if let Some(init) = decl.child_by_field_name("value") {
+        Some(Box::from(parse_expression(&init, src)?))
+    } else {
+        None
+    };
 
-    let type_ann = decl
-        .child_by_field_name("type")
-        .map(|type_ann| parse_type_ann(&type_ann, src));
+    let type_ann = if let Some(type_ann) = decl.child_by_field_name("type") {
+        Some(parse_type_ann(&type_ann, src)?)
+    } else {
+        None
+    };
 
     let stmt = if rec {
         // `let fib = fix((fib) => (n) => ...)`
@@ -165,7 +176,7 @@ fn parse_declaration(node: &tree_sitter::Node, declare: bool, src: &str) -> Vec<
         }
     };
 
-    vec![stmt]
+    Ok(vec![stmt])
 }
 
 fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
@@ -361,7 +372,7 @@ fn parse_func_param_pattern(node: &tree_sitter::Node, src: &str) -> EFnParamPat 
     }
 }
 
-fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Vec<EFnParam> {
+fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Result<Vec<EFnParam>, String> {
     assert_eq!(node.kind(), "formal_parameters");
 
     let mut cursor = node.walk();
@@ -374,62 +385,63 @@ fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Vec<EFnParam>
                 kind => panic!("Unexpected param kind: {kind}"),
             };
             let pattern = param.child_by_field_name("pattern").unwrap();
-            let type_ann = param
-                .child_by_field_name("type")
-                .map(|type_ann| parse_type_ann(&type_ann, src));
+            let type_ann = if let Some(type_ann) = param.child_by_field_name("type") {
+                Some(parse_type_ann(&type_ann, src)?)
+            } else {
+                None
+            };
 
-            EFnParam {
+            Ok(EFnParam {
                 pat: parse_func_param_pattern(&pattern, src),
                 type_ann,
                 optional,
                 mutable: false,
-            }
+            })
         })
-        .collect()
+        .collect::<Result<Vec<_>, String>>()
 }
 
-fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
+fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, String> {
     assert_eq!(node.kind(), "statement_block");
 
     let mut cursor = node.walk();
 
     let child_count = node.named_child_count();
-    let stmts: Vec<Statement> = node
-        .named_children(&mut cursor)
-        .into_iter()
-        .enumerate()
-        .flat_map(|(i, child)| {
-            let is_last = i == child_count - 1;
-            if is_last {
-                // This is the only place where a named `expression` node
-                // should exist.  Everywhere else its contents should be
-                // inline.
-                if child.kind() == "expression" {
-                    let expr = child.named_child(0).unwrap();
-                    let expr = parse_expression(&expr, src);
-                    vec![Statement::Expr {
-                        span: child.byte_range(),
-                        expr: Box::from(expr),
-                    }]
-                } else {
-                    let mut result = parse_statement(&child, src);
-                    // TODO: get the span of the semicolon
-                    let expr = Expr {
-                        span: 0..0,
-                        kind: ExprKind::Empty,
-                        inferred_type: None,
-                    };
-                    result.push(Statement::Expr {
-                        span: 0..0,
-                        expr: Box::from(expr),
-                    });
-                    result
-                }
+
+    let mut stmts: Vec<Statement> = vec![];
+
+    for (i, child) in node.named_children(&mut cursor).into_iter().enumerate() {
+        let is_last = i == child_count - 1;
+        if is_last {
+            // This is the only place where a named `expression` node
+            // should exist.  Everywhere else its contents should be
+            // inline.
+            if child.kind() == "expression" {
+                let expr = child.named_child(0).unwrap();
+                let expr = parse_expression(&expr, src)?;
+                stmts.push(Statement::Expr {
+                    span: child.byte_range(),
+                    expr: Box::from(expr),
+                })
             } else {
-                parse_statement(&child, src)
+                let mut result = parse_statement(&child, src)?;
+                // TODO: get the span of the semicolon
+                let expr = Expr {
+                    span: 0..0,
+                    kind: ExprKind::Empty,
+                    inferred_type: None,
+                };
+                result.push(Statement::Expr {
+                    span: 0..0,
+                    expr: Box::from(expr),
+                });
+                stmts.append(&mut result);
             }
-        })
-        .collect();
+        } else {
+            let mut result = parse_statement(&child, src)?;
+            stmts.append(&mut result);
+        }
+    }
 
     let mut iter = stmts.iter().rev();
 
@@ -489,10 +501,10 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Expr {
         }
     });
 
-    result
+    Ok(result)
 }
 
-fn parse_template_string(node: &tree_sitter::Node, src: &str) -> TemplateLiteral {
+fn parse_template_string(node: &tree_sitter::Node, src: &str) -> Result<TemplateLiteral, String> {
     assert_eq!(node.kind(), "template_string");
 
     let mut cursor = node.walk();
@@ -508,7 +520,7 @@ fn parse_template_string(node: &tree_sitter::Node, src: &str) -> TemplateLiteral
         }
 
         let expr = child.named_child(0).unwrap();
-        exprs.push(parse_expression(&expr, src));
+        exprs.push(parse_expression(&expr, src)?);
 
         let end = child.byte_range().start;
         let span = start..end;
@@ -535,10 +547,10 @@ fn parse_template_string(node: &tree_sitter::Node, src: &str) -> TemplateLiteral
 
     quasis.push(TemplateElem { span, raw, cooked });
 
-    TemplateLiteral { exprs, quasis }
+    Ok(TemplateLiteral { exprs, quasis })
 }
 
-fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
+fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String> {
     let kind = match node.kind() {
         "arrow_function" => {
             let first_child = node.child(0).unwrap();
@@ -553,31 +565,33 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             };
 
             let params = node.child_by_field_name("parameters").unwrap();
-            let params = parse_formal_parameters(&params, src);
+            let params = parse_formal_parameters(&params, src)?;
 
-            let return_type = node
-                .child_by_field_name("return_type")
-                .map(|return_type| parse_type_ann(&return_type, src));
+            let return_type = if let Some(return_type) = node.child_by_field_name("return_type") {
+                Some(parse_type_ann(&return_type, src)?)
+            } else {
+                None
+            };
 
-            let type_params = parse_type_params_for_node(node, src);
+            let type_params = parse_type_params_for_node(node, src)?;
 
             // TODO: report an error if there are multiple rest params
 
             ExprKind::Lambda(Lambda {
                 params,
                 is_async,
-                body: Box::from(body),
+                body: Box::from(body?),
                 return_type,
                 type_params,
             })
         }
         "binary_expression" => {
             let left = node.child_by_field_name("left").unwrap();
-            let left = Box::from(parse_expression(&left, src));
+            let left = Box::from(parse_expression(&left, src)?);
             let operator = node.child_by_field_name("operator").unwrap();
             let operator = text_for_node(&operator, src);
             let right = node.child_by_field_name("right").unwrap();
-            let right = Box::from(parse_expression(&right, src));
+            let right = Box::from(parse_expression(&right, src)?);
 
             let op = match operator.as_str() {
                 "&&" => todo!(),
@@ -615,7 +629,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             let operator = node.child_by_field_name("operator").unwrap();
             let operator = text_for_node(&operator, src);
             let arg = node.child_by_field_name("argument").unwrap();
-            let arg = Box::from(parse_expression(&arg, src));
+            let arg = Box::from(parse_expression(&arg, src)?);
 
             // choice("!", "~", "-", "+", "typeof", "void", "delete")
             let op = match operator.as_str() {
@@ -631,7 +645,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
         }
         "call_expression" => {
             let func = node.child_by_field_name("function").unwrap();
-            let func = parse_expression(&func, src);
+            let func = parse_expression(&func, src)?;
 
             let args = node.child_by_field_name("arguments").unwrap();
 
@@ -649,14 +663,14 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
 
                     let kind = ExprKind::TaggedTemplateLiteral(TaggedTemplateLiteral {
                         tag,
-                        template: parse_template_string(&first_arg, src),
+                        template: parse_template_string(&first_arg, src)?,
                     });
 
-                    return Expr {
+                    return Ok(Expr {
                         span: node.byte_range(),
                         kind,
                         inferred_type: None,
-                    };
+                    });
                 }
             }
 
@@ -666,20 +680,20 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                     if arg.kind() == "spread_element" {
                         let spread = arg.child(0).unwrap();
                         let arg = arg.child(1).unwrap();
-                        let expr = parse_expression(&arg, src);
-                        ExprOrSpread {
+                        let expr = parse_expression(&arg, src)?;
+                        Ok(ExprOrSpread {
                             spread: Some(spread.byte_range()),
                             expr: Box::from(expr),
-                        }
+                        })
                     } else {
-                        let expr = parse_expression(&arg, src);
-                        ExprOrSpread {
+                        let expr = parse_expression(&arg, src)?;
+                        Ok(ExprOrSpread {
                             spread: None,
                             expr: Box::from(expr),
-                        }
+                        })
                     }
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
             // TODO: handle template string
             ExprKind::App(App {
@@ -725,30 +739,32 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                         // };
                         let name = text_for_node(&key_node, src);
                         let value = child.child_by_field_name("value").unwrap();
-                        let value = parse_expression(&value, src);
-                        PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
-                            name,
-                            value: Box::from(value),
-                        })))
+                        let value = parse_expression(&value, src)?;
+                        Ok(PropOrSpread::Prop(Box::from(Prop::KeyValue(
+                            KeyValueProp {
+                                name,
+                                value: Box::from(value),
+                            },
+                        ))))
                     }
                     "spread_element" => {
                         let expr = child.named_child(0).unwrap();
-                        PropOrSpread::Spread(SpreadElement {
-                            expr: Box::from(parse_expression(&expr, src)),
-                        })
+                        Ok(PropOrSpread::Spread(SpreadElement {
+                            expr: Box::from(parse_expression(&expr, src)?),
+                        }))
                     }
                     "method_definition" => todo!(),
                     "shorthand_property_identifier" => {
                         // choice($.identifier, $._reserved_identifier),
                         let name = text_for_node(&child, src);
-                        PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
+                        Ok(PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
                             span: node.byte_range(),
                             name,
-                        })))
+                        }))))
                     }
                     kind => panic!("Unexpect object property kind: {kind}"),
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
             ExprKind::Obj(Obj { props })
         }
@@ -761,27 +777,27 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
                 .map(|elem| match elem.kind() {
                     "spread_element" => {
                         let expr = elem.named_child(0).unwrap();
-                        let expr = Box::from(parse_expression(&expr, src));
-                        ExprOrSpread {
+                        let expr = Box::from(parse_expression(&expr, src)?);
+                        Ok(ExprOrSpread {
                             spread: Some(elem.byte_range()),
                             expr,
-                        }
+                        })
                     }
-                    _ => ExprOrSpread {
+                    _ => Ok(ExprOrSpread {
                         spread: None,
-                        expr: Box::from(parse_expression(&elem, src)),
-                    },
+                        expr: Box::from(parse_expression(&elem, src)?),
+                    }),
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
             ExprKind::Tuple(Tuple { elems })
         }
         "jsx_element" | "jsx_self_closing_element" => {
-            ExprKind::JSXElement(parse_jsx_element(node, src))
+            ExprKind::JSXElement(parse_jsx_element(node, src)?)
         }
         "member_expression" => {
             let obj = node.child_by_field_name("object").unwrap();
-            let obj = parse_expression(&obj, src);
+            let obj = parse_expression(&obj, src)?;
             let prop = node.child_by_field_name("property").unwrap();
             let name = text_for_node(&prop, src);
 
@@ -795,9 +811,9 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
         }
         "subscript_expression" => {
             let obj = node.child_by_field_name("object").unwrap();
-            let obj = parse_expression(&obj, src);
+            let obj = parse_expression(&obj, src)?;
             let index = node.child_by_field_name("index").unwrap();
-            let expr = parse_expression(&index, src);
+            let expr = parse_expression(&index, src)?;
 
             ExprKind::Member(Member {
                 obj: Box::from(obj),
@@ -809,13 +825,13 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
         }
         "await_expression" => {
             let expr = node.named_child(0).unwrap();
-            let expr = parse_expression(&expr, src);
+            let expr = parse_expression(&expr, src)?;
 
             ExprKind::Await(Await {
                 expr: Box::from(expr),
             })
         }
-        "template_string" => ExprKind::TemplateLiteral(parse_template_string(node, src)),
+        "template_string" => ExprKind::TemplateLiteral(parse_template_string(node, src)?),
         "if_expression" => {
             return parse_if_expression(node, src);
         }
@@ -823,7 +839,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             let pat = node.child_by_field_name("name").unwrap();
             let pat = parse_refutable_pattern(&pat, src);
             let expr = node.child_by_field_name("value").unwrap();
-            let expr = parse_expression(&expr, src);
+            let expr = parse_expression(&expr, src)?;
 
             ExprKind::LetExpr(LetExpr {
                 pat,
@@ -836,15 +852,15 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
         }
         "match_expression" => {
             let expr = node.child_by_field_name("expression").unwrap();
-            let expr = parse_expression(&expr, src);
+            let expr = parse_expression(&expr, src)?;
 
             let arms = node.child_by_field_name("arms").unwrap();
             let mut cursor = arms.walk();
-            let arms: Vec<Arm> = arms
+            let arms = arms
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|arm| parse_arm(&arm, src))
-                .collect();
+                .collect::<Result<Vec<Arm>, String>>()?;
 
             ExprKind::Match(Match {
                 expr: Box::from(expr),
@@ -856,11 +872,11 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
         }
     };
 
-    Expr {
+    Ok(Expr {
         span: node.byte_range(),
         kind,
         inferred_type: None,
-    }
+    })
 
     // Expression
 
@@ -905,24 +921,26 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Expr {
     // $.call_expression
 }
 
-fn parse_arm(node: &tree_sitter::Node, src: &str) -> Arm {
+fn parse_arm(node: &tree_sitter::Node, src: &str) -> Result<Arm, String> {
     let pat = node.child_by_field_name("pattern").unwrap();
     let body = node.child_by_field_name("value").unwrap();
     let body = match body.kind() {
-        "statement_block" => parse_block_statement(&body, src),
-        _ => parse_expression(&body, src),
+        "statement_block" => parse_block_statement(&body, src)?,
+        _ => parse_expression(&body, src)?,
     };
 
-    let guard = node
-        .child_by_field_name("condition")
-        .map(|cond| parse_expression(&cond, src));
+    let guard = if let Some(cond) = node.child_by_field_name("condition") {
+        Some(parse_expression(&cond, src)?)
+    } else {
+        None
+    };
 
-    Arm {
+    Ok(Arm {
         span: node.byte_range(),
         pattern: parse_refutable_pattern(&pat, src),
         guard,
         body,
-    }
+    })
 }
 
 fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
@@ -1046,14 +1064,14 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
     }
 }
 
-fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Expr {
+fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String> {
     assert_eq!(node.kind(), "if_expression");
 
     let condition = node.child_by_field_name("condition").unwrap();
-    let condition = parse_expression(&condition, src);
+    let condition = parse_expression(&condition, src)?;
     let consequent = node.child_by_field_name("consequence").unwrap();
-    let consequent = parse_block_statement(&consequent, src);
-    let alternate = node.child_by_field_name("alternative").map(|alt| {
+    let consequent = parse_block_statement(&consequent, src)?;
+    let alternate = if let Some(alt) = node.child_by_field_name("alternative") {
         let expr = match alt.kind() {
             "statement_block" => parse_block_statement(&alt, src),
             "else_clause" => {
@@ -1066,8 +1084,10 @@ fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Expr {
             }
             kind => panic!("Unexpected alternative kind: '{kind}'"),
         };
-        Box::from(expr)
-    });
+        Some(Box::from(expr?))
+    } else {
+        None
+    };
 
     let kind = ExprKind::IfElse(IfElse {
         cond: Box::from(condition),
@@ -1075,14 +1095,14 @@ fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Expr {
         alternate,
     });
 
-    Expr {
+    Ok(Expr {
         span: node.byte_range(),
         kind,
         inferred_type: None,
-    }
+    })
 }
 
-fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
+fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String> {
     let node = if node.kind() == "type_annotation"
         || node.kind() == "constraint"
         || node.kind() == "default_type"
@@ -1132,7 +1152,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|arg| parse_type_ann(&arg, src))
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
             TypeAnnKind::TypeRef(TypeRef {
                 span: node.byte_range(),
@@ -1164,7 +1184,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                         let name = text_for_node(&name_node, src);
 
                         let type_ann = prop.child_by_field_name("type").unwrap();
-                        let type_ann = parse_type_ann(&type_ann, src);
+                        let type_ann = parse_type_ann(&type_ann, src)?;
 
                         let mut optional = false;
                         let mut cursor = prop.walk();
@@ -1174,13 +1194,14 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                             }
                         }
 
-                        TObjElem::Prop(TProp {
+                        let elem = TObjElem::Prop(TProp {
                             span: prop.byte_range(),
                             name,
                             optional,
                             mutable: false, // TODO,
                             type_ann: Box::from(type_ann),
-                        })
+                        });
+                        Ok(elem)
                     }
                     "call_signature" => todo!("call_signature"),
                     "construct_signature" => todo!("construct_signature"),
@@ -1189,10 +1210,10 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                         let name = text_for_node(&name_node, src);
 
                         let index_type_ann = prop.child_by_field_name("index_type").unwrap();
-                        let index_type_ann = parse_type_ann(&index_type_ann, src);
+                        let index_type_ann = parse_type_ann(&index_type_ann, src)?;
 
                         let type_ann = prop.child_by_field_name("type").unwrap();
-                        let type_ann = parse_type_ann(&type_ann, src);
+                        let type_ann = parse_type_ann(&type_ann, src)?;
 
                         let mut optional = false;
                         let mut cursor = prop.walk();
@@ -1202,7 +1223,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                             }
                         }
 
-                        TObjElem::Index(TIndex {
+                        let elem = TObjElem::Index(TIndex {
                             span: prop.byte_range(),
                             key: Box::from(TypeAnnFnParam {
                                 pat: EFnParamPat::Ident(EFnParamBindingIdent {
@@ -1217,13 +1238,14 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                             }),
                             mutable: false, // TODO,
                             type_ann: Box::from(type_ann),
-                        })
+                        });
+                        Ok(elem)
                     }
                     // TODO: remove method_signature, methods should look the same as properties
                     "method_signature" => todo!("remove method_signature from object_type"),
                     kind => panic!("Unsupport prop kind in object_type: '{kind}'"),
                 })
-                .collect();
+                .collect::<Result<Vec<TObjElem>, String>>()?;
 
             TypeAnnKind::Object(ObjectType {
                 span: node.byte_range(),
@@ -1232,7 +1254,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         }
         "array_type" => {
             let elem_type = node.named_child(0).unwrap();
-            let elem_type = parse_type_ann(&elem_type, src);
+            let elem_type = parse_type_ann(&elem_type, src)?;
 
             TypeAnnKind::Array(ArrayType {
                 span: node.byte_range(),
@@ -1248,7 +1270,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                     println!("parsing elem: {elem:#?}");
                     parse_type_ann(&elem, src)
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
             TypeAnnKind::Tuple(TupleType {
                 span: node.byte_range(),
@@ -1258,7 +1280,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         "flow_maybe_type" => todo!(),
         "type_query" => {
             let expr = node.named_child(0).unwrap();
-            let expr = parse_expression(&expr, src);
+            let expr = parse_expression(&expr, src)?;
 
             TypeAnnKind::Query(QueryType {
                 span: node.byte_range(),
@@ -1267,7 +1289,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         }
         "index_type_query" => {
             let type_ann = node.named_child(0).unwrap();
-            let type_ann = parse_type_ann(&type_ann, src);
+            let type_ann = parse_type_ann(&type_ann, src)?;
 
             TypeAnnKind::KeyOf(KeyOfType {
                 span: node.byte_range(),
@@ -1295,9 +1317,9 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         }
         "lookup_type" => {
             let obj_type = node.named_child(0).unwrap();
-            let obj_type = parse_type_ann(&obj_type, src);
+            let obj_type = parse_type_ann(&obj_type, src)?;
             let index_type = node.named_child(1).unwrap();
-            let index_type = parse_type_ann(&index_type, src);
+            let index_type = parse_type_ann(&index_type, src)?;
             TypeAnnKind::IndexedAccess(IndexedAccessType {
                 span: node.byte_range(),
                 obj_type: Box::from(obj_type),
@@ -1312,7 +1334,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|t| parse_type_ann(&t, src))
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
             TypeAnnKind::Intersection(IntersectionType {
                 span: node.byte_range(),
                 types,
@@ -1324,7 +1346,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|t| parse_type_ann(&t, src))
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
             TypeAnnKind::Union(UnionType {
                 span: node.byte_range(),
                 types,
@@ -1346,20 +1368,20 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                     };
                     let pattern = param.child_by_field_name("pattern").unwrap();
                     let type_ann = param.child_by_field_name("type").unwrap();
-                    let type_ann = parse_type_ann(&type_ann, src);
+                    let type_ann = parse_type_ann(&type_ann, src)?;
 
-                    TypeAnnFnParam {
+                    Ok(TypeAnnFnParam {
                         pat: parse_func_param_pattern(&pattern, src),
                         type_ann,
                         optional,
-                    }
+                    })
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
             let return_type = node.child_by_field_name("return_type").unwrap();
-            let return_type = parse_type_ann(&return_type, src);
+            let return_type = parse_type_ann(&return_type, src)?;
 
-            let type_params = parse_type_params_for_node(&node, src);
+            let type_params = parse_type_params_for_node(&node, src)?;
 
             TypeAnnKind::Lam(LamType {
                 span: node.byte_range(),
@@ -1373,7 +1395,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
 
             TypeAnnKind::Mutable(MutableType {
                 span: node.byte_range(),
-                type_ann: Box::from(parse_type_ann(&type_ann, src)),
+                type_ann: Box::from(parse_type_ann(&type_ann, src)?),
             })
         }
         "constructor_type" => todo!(),
@@ -1382,11 +1404,11 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
         kind => panic!("Unexpected type_annotation kind: '{kind}'"),
     };
 
-    TypeAnn {
+    Ok(TypeAnn {
         span: node.byte_range(),
         kind,
         inferred_type: None,
-    }
+    })
 
     // _primary_type: ($) =>
     // choice(
@@ -1418,8 +1440,11 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
     // $.infer_type
 }
 
-fn parse_type_params_for_node(node: &tree_sitter::Node, src: &str) -> Option<Vec<TypeParam>> {
-    match node.child_by_field_name("type_parameters") {
+fn parse_type_params_for_node(
+    node: &tree_sitter::Node,
+    src: &str,
+) -> Result<Option<Vec<TypeParam>>, String> {
+    let type_params = match node.child_by_field_name("type_parameters") {
         Some(type_params) => {
             let mut cursor = type_params.walk();
             let type_params = type_params
@@ -1432,26 +1457,33 @@ fn parse_type_params_for_node(node: &tree_sitter::Node, src: &str) -> Option<Vec
                         name: text_for_node(&name, src),
                     };
 
-                    let constraint = type_param
-                        .child_by_field_name("constraint")
-                        .map(|constraint| Box::from(parse_type_ann(&constraint, src)));
+                    let constraint =
+                        if let Some(constraint) = type_param.child_by_field_name("constraint") {
+                            Some(Box::from(parse_type_ann(&constraint, src)?))
+                        } else {
+                            None
+                        };
 
-                    let default = type_param
-                        .child_by_field_name("value")
-                        .map(|value| Box::from(parse_type_ann(&value, src)));
+                    let default = if let Some(value) = type_param.child_by_field_name("value") {
+                        Some(Box::from(parse_type_ann(&value, src)?))
+                    } else {
+                        None
+                    };
 
-                    TypeParam {
+                    Ok(TypeParam {
                         span: type_param.byte_range(),
                         name,
                         constraint,
                         default,
-                    }
+                    })
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
             Some(type_params)
         }
         None => None,
-    }
+    };
+
+    Ok(type_params)
 }
 
 fn parse_literal(node: &tree_sitter::Node, src: &str) -> Lit {
@@ -1480,7 +1512,7 @@ fn parse_literal(node: &tree_sitter::Node, src: &str) -> Lit {
     }
 }
 
-fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Vec<JSXAttr> {
+fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr>, String> {
     let mut cursor = node.walk();
     let attrs = node.children_by_field_name("attribute", &mut cursor);
     attrs
@@ -1497,7 +1529,7 @@ fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Vec<JSXAttr> {
                 "jsx_expression" => {
                     // TODO: handle None case
                     let expr = value.named_child(0).unwrap();
-                    let expr = parse_expression(&expr, src);
+                    let expr = parse_expression(&expr, src)?;
                     JSXAttrValue::JSXExprContainer(JSXExprContainer {
                         span: value.byte_range(),
                         expr: Box::from(expr),
@@ -1509,65 +1541,65 @@ fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Vec<JSXAttr> {
                 }
                 kind => panic!("Unexpected JSX attr value with kind: '{kind}'"),
             };
-            JSXAttr {
+            Ok(JSXAttr {
                 span: attr.byte_range(),
                 ident,
                 value,
-            }
+            })
         })
-        .collect()
+        .collect::<Result<Vec<_>, String>>()
 }
 
-fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> JSXElement {
+fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, String> {
     match node.kind() {
         "jsx_element" => {
             let mut cursor = node.walk();
-            let children: Vec<JSXElementChild> = node
+            let children = node
                 .named_children(&mut cursor)
                 .into_iter()
                 .filter(|child| {
                     child.kind() != "jsx_opening_element" && child.kind() != "jsx_closing_element"
                 })
                 .map(|child| match child.kind() {
-                    "jsx_text" => JSXElementChild::JSXText(JSXText {
+                    "jsx_text" => Ok(JSXElementChild::JSXText(JSXText {
                         span: child.byte_range(),
                         value: text_for_node(&child, src),
-                    }),
-                    "jsx_element" | "jsx_self_closing_element" => {
-                        JSXElementChild::JSXElement(Box::from(parse_jsx_element(&child, src)))
-                    }
+                    })),
+                    "jsx_element" | "jsx_self_closing_element" => Ok(JSXElementChild::JSXElement(
+                        Box::from(parse_jsx_element(&child, src)?),
+                    )),
                     "jsx_fragment" => todo!(),
                     "jsx_expression" => {
                         // TODO: handle None case
                         let expr = child.named_child(0).unwrap();
-                        let expr = parse_expression(&expr, src);
-                        JSXElementChild::JSXExprContainer(JSXExprContainer {
+                        let expr = parse_expression(&expr, src)?;
+                        Ok(JSXElementChild::JSXExprContainer(JSXExprContainer {
                             span: child.byte_range(),
                             expr: Box::from(expr),
-                        })
+                        }))
                     }
                     kind => panic!("Unexpected JSXElementChild kind: '{kind}'"),
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
             let open_tag = node.child_by_field_name("open_tag").unwrap();
             let name = open_tag.child_by_field_name("name").unwrap();
 
-            JSXElement {
+            Ok(JSXElement {
                 span: node.byte_range(),
                 name: text_for_node(&name, src),
-                attrs: parse_jsx_attrs(&open_tag, src),
+                attrs: parse_jsx_attrs(&open_tag, src)?,
                 children,
-            }
+            })
         }
         "jsx_self_closing_element" => {
             let name = node.child_by_field_name("name").unwrap();
-            JSXElement {
+            Ok(JSXElement {
                 span: node.byte_range(),
                 name: text_for_node(&name, src),
-                attrs: parse_jsx_attrs(node, src),
+                attrs: parse_jsx_attrs(node, src)?,
                 children: vec![],
-            }
+            })
         }
         kind => panic!("Unexpected kind when parsing jsx: '{kind}'"),
     }
@@ -1946,6 +1978,15 @@ mod tests {
                 "other"
             };              
             "#
+        ));
+    }
+
+    #[test]
+    fn top_level_parse_error() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            let obj = {foo: "hello"};
+            let foo = obj."#
         ));
     }
 }
