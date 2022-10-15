@@ -553,14 +553,37 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                 })
                 .collect(),
         }),
-        Type::Array(t) => TsType::TsArrayType(TsArrayType {
+        Type::Array(t) => TsType::TsTypeOperator(TsTypeOperator {
             span: DUMMY_SP,
-            elem_type: Box::from(build_type(t, None)),
+            op: TsTypeOperatorOp::ReadOnly,
+            type_ann: Box::from(TsType::TsArrayType(TsArrayType {
+                span: DUMMY_SP,
+                elem_type: Box::from(build_type(t, None)),
+            })),
         }),
         Type::Rest(_) => todo!(),
         Type::This => TsType::TsThisType(TsThisType { span: DUMMY_SP }),
         Type::KeyOf(_) => todo!(),
         Type::IndexAccess(_) => todo!(),
+        Type::Mutable(t) => {
+            let ts_type = build_type(t, type_params);
+            // By default, Crochet data structures are mapped to `readonly`
+            // data structures in TypeScript.  Since we're processing a `mutable`
+            // Crochet data structure here, we need to remove the `readonly`-ness
+            // of the TypeScript node.
+            if let TsType::TsTypeOperator(TsTypeOperator {
+                op: TsTypeOperatorOp::ReadOnly,
+                type_ann,
+                ..
+            }) = ts_type
+            {
+                return type_ann.as_ref().to_owned();
+            }
+
+            // TODO: check if ReadOnly<> and ReadOnlyArray<> wrappers as well.
+
+            ts_type
+        }
     }
 }
 

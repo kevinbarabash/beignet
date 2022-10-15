@@ -1104,7 +1104,6 @@ a ?. b;
   (expression_statement
     (member_expression
       (identifier)
-      (optional_chain)
       (property_identifier))))
 
 ================================================================================
@@ -1124,7 +1123,6 @@ a ?. [b];
   (expression_statement
     (subscript_expression
       (identifier)
-      (optional_chain)
       (identifier))))
 
 ================================================================================
@@ -1321,10 +1319,10 @@ i + j * 3 - j % 5;
         (number))))
   (expression_statement
     (binary_expression
-      (number)
       (binary_expression
-        (identifier)
-        (number))))
+        (number)
+        (identifier))
+      (number)))
   (expression_statement
     (unary_expression
       (identifier)))

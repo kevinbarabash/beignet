@@ -68,6 +68,7 @@ impl Substitutable for Type {
             Type::Rest(arg) => Type::Rest(Box::from(arg.apply(sub))),
             Type::This => Type::This,
             Type::KeyOf(t) => Type::KeyOf(Box::from(t.apply(sub))),
+            Type::Mutable(t) => Type::Mutable(Box::from(t.apply(sub))),
             Type::IndexAccess(TIndexAccess { object, index }) => Type::IndexAccess(TIndexAccess {
                 object: Box::from(object.apply(sub)),
                 index: Box::from(index.apply(sub)),
@@ -104,6 +105,7 @@ impl Substitutable for Type {
             Type::Rest(arg) => arg.ftv(),
             Type::This => vec![],
             Type::KeyOf(t) => t.ftv(),
+            Type::Mutable(t) => t.ftv(),
             Type::IndexAccess(TIndexAccess { object, index }) => {
                 let mut result = object.ftv();
                 result.extend(index.ftv());

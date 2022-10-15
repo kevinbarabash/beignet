@@ -441,7 +441,7 @@ fn function_with_rest_param() {
     infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
-    insta::assert_snapshot!(result, @"export declare const foo: (x: number, ...y: number[]) => number;
+    insta::assert_snapshot!(result, @"export declare const foo: (x: number, ...y: readonly number[]) => number;
 ");
 }
 
@@ -477,7 +477,7 @@ fn function_with_optional_param_and_rest_param() {
     infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
-    insta::assert_snapshot!(result, @"export declare const foo: (x?: number, ...y: number[]) => number | undefined;
+    insta::assert_snapshot!(result, @"export declare const foo: (x?: number, ...y: readonly number[]) => number | undefined;
 ");
 }
 
