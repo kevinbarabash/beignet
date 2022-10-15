@@ -1,5 +1,5 @@
 {
-  "name": "crochet",
+  "name": "@crochet-lang/crochet",
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
