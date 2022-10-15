@@ -21,6 +21,7 @@ pub fn parse(src: &str) -> Result<Program, String> {
 
         let mut body: Vec<Statement> = vec![];
         for child in children {
+            println!("child.kind = {}", child.kind());
             let mut stmts = parse_statement(&child, src)?;
             body.append(&mut stmts);
         }
@@ -32,8 +33,6 @@ pub fn parse(src: &str) -> Result<Program, String> {
 }
 
 fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, String> {
-    let kind = node.kind();
-    println!("kind = {kind}");
     match node.kind() {
         "lexical_declaration" => parse_declaration(node, false, src),
         "expression_statement" => {
@@ -52,7 +51,7 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>
             let name = node.child_by_field_name("name").unwrap();
             let id = Ident {
                 span: name.byte_range(),
-                name: text_for_node(&name, src),
+                name: text_for_node(&name, src)?,
             };
             let type_ann = node.child_by_field_name("value").unwrap();
             let type_ann = parse_type_ann(&type_ann, src)?;
@@ -70,8 +69,8 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>
         "comment" => {
             Ok(vec![]) // ignore comments
         }
-        "ERROR" => Err(format!("failed to parse: '{}'", text_for_node(node, src))),
-        _ => todo!("unhandled: {:#?}", node),
+        "ERROR" => Err(format!("failed to parse: '{}'", text_for_node(node, src)?)),
+        _ => Err(format!("unhandled: {:#?}", node)),
     }
 
     // $.export_statement,
@@ -99,8 +98,11 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>
 }
 
 // TODO: replace with node.utf8_text()
-fn text_for_node(node: &tree_sitter::Node, src: &str) -> String {
-    src.get(node.byte_range()).unwrap().to_owned()
+fn text_for_node(node: &tree_sitter::Node, src: &str) -> Result<String, String> {
+    let result = src
+        .get(node.byte_range())
+        .ok_or(String::from("error in text_for_node"))?;
+    Ok(result.to_owned())
 }
 
 fn parse_declaration(
@@ -112,7 +114,7 @@ fn parse_declaration(
     let rec = node.child_by_field_name("rec").is_some();
 
     let name = decl.child_by_field_name("name").unwrap();
-    let pattern = parse_pattern(&name, src);
+    let pattern = parse_pattern(&name, src)?;
 
     let init = if let Some(init) = decl.child_by_field_name("value") {
         Some(Box::from(parse_expression(&init, src)?))
@@ -179,7 +181,7 @@ fn parse_declaration(
     Ok(vec![stmt])
 }
 
-fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
+fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String> {
     let kind = match node.kind() {
         "identifier" => {
             let span = node.byte_range();
@@ -198,41 +200,41 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                         let key_node = child.child_by_field_name("key").unwrap();
                         let key = Ident {
                             span: key_node.byte_range(),
-                            name: text_for_node(&key_node, src),
+                            name: text_for_node(&key_node, src)?,
                         };
 
                         let value = Box::from(parse_pattern(
                             &child.child_by_field_name("value").unwrap(),
                             src,
-                        ));
+                        )?);
 
                         // TODO: include `span` in this node
-                        ObjectPatProp::KeyValue(KeyValuePatProp { key, value })
+                        Ok(ObjectPatProp::KeyValue(KeyValuePatProp { key, value }))
                     }
                     "rest_pattern" => {
                         let pattern = child.named_child(0).unwrap();
-                        let pattern = parse_pattern(&pattern, src);
+                        let pattern = parse_pattern(&pattern, src)?;
 
-                        ObjectPatProp::Rest(RestPat {
+                        Ok(ObjectPatProp::Rest(RestPat {
                             arg: Box::from(pattern),
-                        })
+                        }))
                     }
                     "object_assignment_pattern" => todo!(),
                     "shorthand_property_identifier_pattern" => {
                         let key = Ident {
                             span: child.byte_range(),
-                            name: text_for_node(&child, src),
+                            name: text_for_node(&child, src)?,
                         };
 
-                        ObjectPatProp::Assign(AssignPatProp {
+                        Ok(ObjectPatProp::Assign(AssignPatProp {
                             span: child.byte_range(),
                             key,
                             value: None,
-                        })
+                        }))
                     }
                     kind => panic!("Unexpected object property kind: '{kind}'"),
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
             PatternKind::Object(ObjectPat {
                 props,
@@ -248,9 +250,9 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 .into_iter()
                 .map(|child| match child.kind() {
                     "assignment_pattern" => todo!(),
-                    _ => Some(parse_pattern(&child, src)),
+                    _ => Ok(Some(parse_pattern(&child, src)?)),
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
             PatternKind::Array(ArrayPat {
                 elems,
@@ -259,7 +261,7 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
         }
         "rest_pattern" => {
             let arg = node.named_child(0).unwrap();
-            let arg = parse_pattern(&arg, src);
+            let arg = parse_pattern(&arg, src)?;
 
             PatternKind::Rest(RestPat {
                 arg: Box::from(arg),
@@ -268,22 +270,22 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
         _ => panic!("unrecognized pattern {node:#?}"),
     };
 
-    Pattern {
+    Ok(Pattern {
         span: node.byte_range(),
         kind,
         inferred_type: None,
-    }
+    })
 }
 
-fn parse_func_param_pattern(node: &tree_sitter::Node, src: &str) -> EFnParamPat {
+fn parse_func_param_pattern(node: &tree_sitter::Node, src: &str) -> Result<EFnParamPat, String> {
     match node.kind() {
         "identifier" => {
             let span = node.byte_range();
             let name = src.get(span.clone()).unwrap().to_owned();
-            EFnParamPat::Ident(EFnParamBindingIdent {
+            Ok(EFnParamPat::Ident(EFnParamBindingIdent {
                 span: span.clone(),
                 id: Ident { span, name },
-            })
+            }))
         }
         "object_pattern" => {
             let mut cursor = node.walk();
@@ -307,41 +309,47 @@ fn parse_func_param_pattern(node: &tree_sitter::Node, src: &str) -> EFnParamPat 
                         let key_node = child.child_by_field_name("key").unwrap();
                         let key = Ident {
                             span: key_node.byte_range(),
-                            name: text_for_node(&key_node, src),
+                            name: text_for_node(&key_node, src)?,
                         };
                         // value is choice($.pattern, $.assignment_pattern)
                         // TODO: handle assignment_pattern
                         let value = Box::from(parse_func_param_pattern(
                             &child.child_by_field_name("value").unwrap(),
                             src,
-                        ));
-                        EFnParamObjectPatProp::KeyValue(EFnParamKeyValuePatProp { key, value })
+                        )?);
+                        Ok(EFnParamObjectPatProp::KeyValue(EFnParamKeyValuePatProp {
+                            key,
+                            value,
+                        }))
                     }
                     "rest_pattern" => {
                         // TODO: dedup with "rest_pattern" arm below
                         let arg = node.child(1).unwrap(); // child(0) is the '...'
-                        EFnParamObjectPatProp::Rest(EFnParamRestPat {
+                        Ok(EFnParamObjectPatProp::Rest(EFnParamRestPat {
                             span: node.byte_range(),
-                            arg: Box::from(parse_func_param_pattern(&arg, src)),
-                        })
+                            arg: Box::from(parse_func_param_pattern(&arg, src)?),
+                        }))
                     }
                     "object_assign_pattern" => todo!(),
                     "shorthand_property_identifier_pattern" => {
                         // alias of choice($.identifier, $._reserved_identifier),
                         let key = Ident {
                             span: child.byte_range(),
-                            name: text_for_node(&child, src),
+                            name: text_for_node(&child, src)?,
                         };
-                        EFnParamObjectPatProp::Assign(EFnParamAssignPatProp { key, value: None })
+                        Ok(EFnParamObjectPatProp::Assign(EFnParamAssignPatProp {
+                            key,
+                            value: None,
+                        }))
                     }
                     kind => panic!("Unexpected object_pattern prop kind: {kind}"),
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
-            EFnParamPat::Object(EFnParamObjectPat {
+            Ok(EFnParamPat::Object(EFnParamObjectPat {
                 span: node.byte_range(),
                 props,
-            })
+            }))
         }
         "array_pattern" => {
             let mut cursor = node.walk();
@@ -352,21 +360,21 @@ fn parse_func_param_pattern(node: &tree_sitter::Node, src: &str) -> EFnParamPat 
                 .into_iter()
                 .map(|child| match child.kind() {
                     "assignment_pattern" => todo!(),
-                    _ => Some(parse_func_param_pattern(&child, src)),
+                    _ => Ok(Some(parse_func_param_pattern(&child, src)?)),
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
-            EFnParamPat::Array(EFnParamArrayPat {
+            Ok(EFnParamPat::Array(EFnParamArrayPat {
                 span: node.byte_range(),
                 elems,
-            })
+            }))
         }
         "rest_pattern" => {
             let arg = node.named_child(0).unwrap();
-            EFnParamPat::Rest(EFnParamRestPat {
+            Ok(EFnParamPat::Rest(EFnParamRestPat {
                 span: node.byte_range(),
-                arg: Box::from(parse_func_param_pattern(&arg, src)),
-            })
+                arg: Box::from(parse_func_param_pattern(&arg, src)?),
+            }))
         }
         _ => panic!("unrecognized pattern {node:#?}"),
     }
@@ -392,7 +400,7 @@ fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Result<Vec<EF
             };
 
             Ok(EFnParam {
-                pat: parse_func_param_pattern(&pattern, src),
+                pat: parse_func_param_pattern(&pattern, src)?,
                 type_ann,
                 optional,
                 mutable: false,
@@ -554,7 +562,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
     let kind = match node.kind() {
         "arrow_function" => {
             let first_child = node.child(0).unwrap();
-            let is_async = text_for_node(&first_child, src) == *"async";
+            let is_async = text_for_node(&first_child, src)? == *"async";
 
             // TODO: check if the body is a statement_block otherwise parse
             // as a simple expression
@@ -589,7 +597,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
             let left = node.child_by_field_name("left").unwrap();
             let left = Box::from(parse_expression(&left, src)?);
             let operator = node.child_by_field_name("operator").unwrap();
-            let operator = text_for_node(&operator, src);
+            let operator = text_for_node(&operator, src)?;
             let right = node.child_by_field_name("right").unwrap();
             let right = Box::from(parse_expression(&right, src)?);
 
@@ -627,7 +635,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
         }
         "unary_expression" => {
             let operator = node.child_by_field_name("operator").unwrap();
-            let operator = text_for_node(&operator, src);
+            let operator = text_for_node(&operator, src)?;
             let arg = node.child_by_field_name("argument").unwrap();
             let arg = Box::from(parse_expression(&arg, src)?);
 
@@ -707,7 +715,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
             ExprKind::Ident(Ident { span, name })
         }
         "number" | "string" | "true" | "false" => {
-            let lit = parse_literal(node, src);
+            let lit = parse_literal(node, src)?;
             ExprKind::Lit(lit)
         }
         "null" | "undefined" => {
@@ -737,7 +745,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
                         //     span: key_node.byte_range(),
                         //     name: text_for_node(&key_node, src),
                         // };
-                        let name = text_for_node(&key_node, src);
+                        let name = text_for_node(&key_node, src)?;
                         let value = child.child_by_field_name("value").unwrap();
                         let value = parse_expression(&value, src)?;
                         Ok(PropOrSpread::Prop(Box::from(Prop::KeyValue(
@@ -756,7 +764,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
                     "method_definition" => todo!(),
                     "shorthand_property_identifier" => {
                         // choice($.identifier, $._reserved_identifier),
-                        let name = text_for_node(&child, src);
+                        let name = text_for_node(&child, src)?;
                         Ok(PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
                             span: node.byte_range(),
                             name,
@@ -799,7 +807,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
             let obj = node.child_by_field_name("object").unwrap();
             let obj = parse_expression(&obj, src)?;
             let prop = node.child_by_field_name("property").unwrap();
-            let name = text_for_node(&prop, src);
+            let name = text_for_node(&prop, src)?;
 
             ExprKind::Member(Member {
                 obj: Box::from(obj),
@@ -837,7 +845,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
         }
         "let_expression" => {
             let pat = node.child_by_field_name("name").unwrap();
-            let pat = parse_refutable_pattern(&pat, src);
+            let pat = parse_refutable_pattern(&pat, src)?;
             let expr = node.child_by_field_name("value").unwrap();
             let expr = parse_expression(&expr, src)?;
 
@@ -868,7 +876,10 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
             })
         }
         _ => {
-            todo!("unhandled {node:#?} = '{}'", text_for_node(node, src))
+            return Err(format!(
+                "unhandled {node:#?} = '{}'",
+                text_for_node(node, src)?
+            ));
         }
     };
 
@@ -937,13 +948,13 @@ fn parse_arm(node: &tree_sitter::Node, src: &str) -> Result<Arm, String> {
 
     Ok(Arm {
         span: node.byte_range(),
-        pattern: parse_refutable_pattern(&pat, src),
+        pattern: parse_refutable_pattern(&pat, src)?,
         guard,
         body,
     })
 }
 
-fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
+fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String> {
     let child = if node.kind() == "refutable_pattern" {
         node.named_child(0).unwrap()
     } else {
@@ -952,14 +963,14 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
 
     let kind = match child.kind() {
         "number" | "string" | "true" | "false" | "null" | "undefined" => {
-            let lit = parse_literal(&child, src);
+            let lit = parse_literal(&child, src)?;
             PatternKind::Lit(LitPat { lit })
         }
         "identifier" => {
-            let name = text_for_node(&child, src);
+            let name = text_for_node(&child, src)?;
             match name.as_str() {
                 "undefined" => {
-                    let lit = parse_literal(&child, src);
+                    let lit = parse_literal(&child, src)?;
                     PatternKind::Lit(LitPat { lit })
                 }
                 "_" => PatternKind::Wildcard(WildcardPat {}),
@@ -977,8 +988,9 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
                 .named_children(&mut cursor)
                 .into_iter()
                 // TODO: make elems in ArrayPat non-optional
-                .map(|elem| Some(parse_refutable_pattern(&elem, src)))
-                .collect();
+                .map(|elem| Ok(Some(parse_refutable_pattern(&elem, src)?)))
+                .collect::<Result<Vec<_>, String>>()?;
+
             PatternKind::Array(ArrayPat {
                 elems,
                 optional: false,
@@ -986,45 +998,45 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
         }
         "refutable_object_pattern" => {
             let mut cursor = child.walk();
-            let props: Vec<ObjectPatProp> = child
+            let props = child
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|prop| match prop.kind() {
                     "refutable_pair_pattern" => {
                         let key_node = prop.child_by_field_name("key").unwrap();
-                        let key = text_for_node(&key_node, src);
+                        let key = text_for_node(&key_node, src)?;
                         let value = prop.child_by_field_name("value").unwrap();
-                        let value = parse_refutable_pattern(&value, src);
+                        let value = parse_refutable_pattern(&value, src)?;
 
-                        ObjectPatProp::KeyValue(KeyValuePatProp {
+                        Ok(ObjectPatProp::KeyValue(KeyValuePatProp {
                             key: Ident {
                                 span: key_node.byte_range(),
                                 name: key,
                             },
                             value: Box::from(value),
-                        })
+                        }))
                     }
                     "refutable_rest_pattern" => {
                         let arg = prop.named_child(0).unwrap();
-                        let arg = parse_refutable_pattern(&arg, src);
+                        let arg = parse_refutable_pattern(&arg, src)?;
 
-                        ObjectPatProp::Rest(RestPat {
+                        Ok(ObjectPatProp::Rest(RestPat {
                             arg: Box::from(arg),
-                        })
+                        }))
                     }
                     "shorthand_property_identifier_pattern" => {
-                        ObjectPatProp::Assign(AssignPatProp {
+                        Ok(ObjectPatProp::Assign(AssignPatProp {
                             span: prop.byte_range(),
                             key: Ident {
                                 span: prop.byte_range(),
-                                name: text_for_node(&prop, src),
+                                name: text_for_node(&prop, src)?,
                             },
                             value: None,
-                        })
+                        }))
                     }
                     kind => panic!("Unexected prop.kind() = {kind}"),
                 })
-                .collect();
+                .collect::<Result<Vec<_>, String>>()?;
 
             PatternKind::Object(ObjectPat {
                 props,
@@ -1033,7 +1045,7 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
         }
         "refutable_rest_pattern" => {
             let arg = child.named_child(0).unwrap();
-            let arg = parse_refutable_pattern(&arg, src);
+            let arg = parse_refutable_pattern(&arg, src)?;
 
             PatternKind::Rest(RestPat {
                 arg: Box::from(arg),
@@ -1046,22 +1058,22 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Pattern {
             PatternKind::Is(IsPat {
                 id: Ident {
                     span: left.byte_range(),
-                    name: text_for_node(&left, src),
+                    name: text_for_node(&left, src)?,
                 },
                 is_id: Ident {
                     span: right.byte_range(),
-                    name: text_for_node(&right, src),
+                    name: text_for_node(&right, src)?,
                 },
             })
         }
         kind => todo!("Unhandled refutable pattern of kind '{kind}'"),
     };
 
-    Pattern {
+    Ok(Pattern {
         span: child.byte_range(),
         kind,
         inferred_type: None,
-    }
+    })
 }
 
 fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String> {
@@ -1117,7 +1129,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
             let wrapped_type = node.named_child(0).unwrap();
             return parse_type_ann(&wrapped_type, src);
         }
-        "predefined_type" => match text_for_node(&node, src).as_str() {
+        "predefined_type" => match text_for_node(&node, src)?.as_str() {
             "any" => todo!("remove support for 'any'"),
             "number" => TypeAnnKind::Keyword(KeywordType {
                 span: node.byte_range(),
@@ -1140,7 +1152,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
         },
         "type_identifier" => TypeAnnKind::TypeRef(TypeRef {
             span: node.byte_range(),
-            name: text_for_node(&node, src),
+            name: text_for_node(&node, src)?,
             type_args: None,
         }),
         "nested_type_identifier" => todo!(),
@@ -1156,7 +1168,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
 
             TypeAnnKind::TypeRef(TypeRef {
                 span: node.byte_range(),
-                name: text_for_node(&name, src),
+                name: text_for_node(&name, src)?,
                 type_args: Some(type_params),
             })
         }
@@ -1181,7 +1193,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                         // ),
                         // TODO: handle more than just "identifier"
                         let name_node = prop.child_by_field_name("name").unwrap();
-                        let name = text_for_node(&name_node, src);
+                        let name = text_for_node(&name_node, src)?;
 
                         let type_ann = prop.child_by_field_name("type").unwrap();
                         let type_ann = parse_type_ann(&type_ann, src)?;
@@ -1189,7 +1201,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                         let mut optional = false;
                         let mut cursor = prop.walk();
                         for child in prop.children(&mut cursor) {
-                            if text_for_node(&child, src) == "?" {
+                            if text_for_node(&child, src)? == "?" {
                                 optional = true;
                             }
                         }
@@ -1207,7 +1219,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                     "construct_signature" => todo!("construct_signature"),
                     "index_signature" => {
                         let name_node = prop.child_by_field_name("name").unwrap();
-                        let name = text_for_node(&name_node, src);
+                        let name = text_for_node(&name_node, src)?;
 
                         let index_type_ann = prop.child_by_field_name("index_type").unwrap();
                         let index_type_ann = parse_type_ann(&index_type_ann, src)?;
@@ -1218,7 +1230,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                         let mut optional = false;
                         let mut cursor = prop.walk();
                         for child in prop.children(&mut cursor) {
-                            if text_for_node(&child, src) == "?" {
+                            if text_for_node(&child, src)? == "?" {
                                 optional = true;
                             }
                         }
@@ -1310,7 +1322,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                     keyword: Keyword::Null,
                 }),
                 _ => {
-                    let lit = parse_literal(&child, src);
+                    let lit = parse_literal(&child, src)?;
                     TypeAnnKind::Lit(lit)
                 }
             }
@@ -1371,7 +1383,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                     let type_ann = parse_type_ann(&type_ann, src)?;
 
                     Ok(TypeAnnFnParam {
-                        pat: parse_func_param_pattern(&pattern, src),
+                        pat: parse_func_param_pattern(&pattern, src)?,
                         type_ann,
                         optional,
                     })
@@ -1454,7 +1466,7 @@ fn parse_type_params_for_node(
                     let name = type_param.child_by_field_name("name").unwrap();
                     let name = Ident {
                         span: name.byte_range(),
-                        name: text_for_node(&name, src),
+                        name: text_for_node(&name, src)?,
                     };
 
                     let constraint =
@@ -1486,26 +1498,27 @@ fn parse_type_params_for_node(
     Ok(type_params)
 }
 
-fn parse_literal(node: &tree_sitter::Node, src: &str) -> Lit {
+fn parse_literal(node: &tree_sitter::Node, src: &str) -> Result<Lit, String> {
     match node.kind() {
-        "number" => Lit::num(
+        "number" => Ok(Lit::num(
             src.get(node.byte_range()).unwrap().to_owned(),
             node.byte_range(),
-        ),
+        )),
         "string" => {
             let mut cursor = node.walk();
             let raw = join(
                 node.named_children(&mut cursor)
                     .into_iter()
-                    .map(|fragment_or_escape| text_for_node(&fragment_or_escape, src)),
+                    .map(|fragment_or_escape| text_for_node(&fragment_or_escape, src))
+                    .collect::<Result<Vec<_>, String>>()?,
                 "",
             );
 
             let cooked = unescape(&raw).unwrap();
-            Lit::str(cooked, node.byte_range())
+            Ok(Lit::str(cooked, node.byte_range()))
         }
-        "true" => Lit::bool(true, node.byte_range()),
-        "false" => Lit::bool(false, node.byte_range()),
+        "true" => Ok(Lit::bool(true, node.byte_range())),
+        "false" => Ok(Lit::bool(false, node.byte_range())),
         "null" => todo!(),
         "undefined" => todo!(),
         kind => panic!("Unexpected literal kind: '{kind}'"),
@@ -1521,7 +1534,7 @@ fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr>, 
             let ident = attr.named_child(0).unwrap();
             let ident = Ident {
                 span: ident.byte_range(),
-                name: text_for_node(&ident, src),
+                name: text_for_node(&ident, src)?,
             };
             // TODO: handle JSX attr shorthand
             let value = attr.named_child(1).unwrap();
@@ -1536,7 +1549,7 @@ fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr>, 
                     })
                 }
                 "string" => {
-                    let lit = parse_literal(&value, src);
+                    let lit = parse_literal(&value, src)?;
                     JSXAttrValue::Lit(lit)
                 }
                 kind => panic!("Unexpected JSX attr value with kind: '{kind}'"),
@@ -1563,7 +1576,7 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, 
                 .map(|child| match child.kind() {
                     "jsx_text" => Ok(JSXElementChild::JSXText(JSXText {
                         span: child.byte_range(),
-                        value: text_for_node(&child, src),
+                        value: text_for_node(&child, src)?,
                     })),
                     "jsx_element" | "jsx_self_closing_element" => Ok(JSXElementChild::JSXElement(
                         Box::from(parse_jsx_element(&child, src)?),
@@ -1587,7 +1600,7 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, 
 
             Ok(JSXElement {
                 span: node.byte_range(),
-                name: text_for_node(&name, src),
+                name: text_for_node(&name, src)?,
                 attrs: parse_jsx_attrs(&open_tag, src)?,
                 children,
             })
@@ -1596,7 +1609,7 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, 
             let name = node.child_by_field_name("name").unwrap();
             Ok(JSXElement {
                 span: node.byte_range(),
-                name: text_for_node(&name, src),
+                name: text_for_node(&name, src)?,
                 attrs: parse_jsx_attrs(node, src)?,
                 children: vec![],
             })
@@ -1983,10 +1996,14 @@ mod tests {
 
     #[test]
     fn top_level_parse_error() {
-        insta::assert_debug_snapshot!(parse(
+        let result = parse(
             r#"
             let obj = {foo: "hello"};
-            let foo = obj."#
-        ));
+            let foo = obj."#,
+        );
+        assert_eq!(
+            result,
+            Err(String::from("failed to parse: 'let foo = obj.'"))
+        );
     }
 }
