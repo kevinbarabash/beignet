@@ -193,6 +193,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 object: Box::from(norm_type(object, mapping, ctx)),
                 index: Box::from(norm_type(index, mapping, ctx)),
             }),
+            Type::Mutable(t) => Type::Mutable(Box::from(norm_type(t, mapping, ctx))),
         }
     }
 

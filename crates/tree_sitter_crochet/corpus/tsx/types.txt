@@ -54,9 +54,9 @@ Object types
 
 let person: {name: string, age: number};
 let thing: { [type: string]: string };
-type T = { [K in keyof T]-?: any }
-type T = { [K in keyof T]?: any }
-type T = { -readonly [K in keyof T]: any }
+type T = { [K in keyof T]-?: any };
+type T = { [K in keyof T]?: any };
+type T = { -readonly [K in keyof T]: any };
 
 --------------------------------------------------------------------------------
 
@@ -93,8 +93,7 @@ type T = { -readonly [K in keyof T]: any }
           (index_type_query
             (type_identifier)))
         (omitting_type_annotation
-          (predefined_type))))
-    (MISSING ";"))
+          (predefined_type)))))
   (type_alias_declaration
     (type_identifier)
     (object_type
@@ -104,8 +103,7 @@ type T = { -readonly [K in keyof T]: any }
           (index_type_query
             (type_identifier)))
         (opting_type_annotation
-          (predefined_type))))
-    (MISSING ";"))
+          (predefined_type)))))
   (type_alias_declaration
     (type_identifier)
     (object_type
@@ -115,8 +113,7 @@ type T = { -readonly [K in keyof T]: any }
           (index_type_query
             (type_identifier)))
         (type_annotation
-          (predefined_type))))
-    (MISSING ";")))
+          (predefined_type))))))
 
 ================================================================================
 Object types with call signatures
@@ -1274,14 +1271,14 @@ function isFish(object: Fish): object is Fish {
     (statement_block)))
 
 ================================================================================
-Read-only arrays
+Mutable arrays
 ================================================================================
 
 type t = a[];
-type t = readonly a[];
-type t = readonly a[][];
-type t = (readonly a[])[];
-type t = readonly (readonly a[]) [];
+type t = mut a[];
+type t = mut a[][];
+type t = (mut a[])[];
+type t = mut (mut a[]) [];
 
 --------------------------------------------------------------------------------
 
@@ -1292,12 +1289,12 @@ type t = readonly (readonly a[]) [];
       (type_identifier)))
   (type_alias_declaration
     (type_identifier)
-    (readonly_type
+    (mutable_type
       (array_type
         (type_identifier))))
   (type_alias_declaration
     (type_identifier)
-    (readonly_type
+    (mutable_type
       (array_type
         (array_type
           (type_identifier)))))
@@ -1305,15 +1302,15 @@ type t = readonly (readonly a[]) [];
     (type_identifier)
     (array_type
       (parenthesized_type
-        (readonly_type
+        (mutable_type
           (array_type
             (type_identifier))))))
   (type_alias_declaration
     (type_identifier)
-    (readonly_type
+    (mutable_type
       (array_type
         (parenthesized_type
-          (readonly_type
+          (mutable_type
             (array_type
               (type_identifier))))))))
 
@@ -1324,13 +1321,13 @@ Tuple types
 type t = [];
 type t = [A,];
 type t = [A|B, C];
-type t = readonly [A[], B.C];
+type t = mut [A[], B.C];
 
 // special optional and rest type syntax
-type t = [string?, ...B]
+type t = [string?, ...B];
 
 // labeled elements
-type t = [a: A, b?: B, ...c: C[]]
+type t = [a: A, b?: B, ...c: C[]];
 
 --------------------------------------------------------------------------------
 
@@ -1351,7 +1348,7 @@ type t = [a: A, b?: B, ...c: C[]]
       (type_identifier)))
   (type_alias_declaration
     (type_identifier)
-    (readonly_type
+    (mutable_type
       (tuple_type
         (array_type
           (type_identifier))
@@ -1365,9 +1362,8 @@ type t = [a: A, b?: B, ...c: C[]]
       (optional_type
         (predefined_type))
       (rest_type
-        (type_identifier)))
-    (comment)
-    (MISSING ";"))
+        (type_identifier))))
+  (comment)
   (type_alias_declaration
     (type_identifier)
     (tuple_type
@@ -1384,8 +1380,7 @@ type t = [a: A, b?: B, ...c: C[]]
           (identifier))
         (type_annotation
           (array_type
-            (type_identifier)))))
-    (MISSING ";")))
+            (type_identifier)))))))
 
 ================================================================================
 Conditional types

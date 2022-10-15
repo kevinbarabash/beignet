@@ -118,7 +118,25 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
         TsType::TsConditionalType(_) => Err(String::from("can't parse conditional type yet")),
         TsType::TsInferType(_) => Err(String::from("can't parse infer type yet")),
         TsType::TsParenthesizedType(_) => Err(String::from("can't parse parenthesized yet")),
-        TsType::TsTypeOperator(_) => Err(String::from("can't parse type operator yet")),
+        TsType::TsTypeOperator(TsTypeOperator {
+            op,
+            type_ann,
+            span: _,
+        }) => {
+            // TODO: If type_ann is a Type::Mutable(_) then we have to unwrap it here
+            // let type_ann = ;
+            match op {
+                TsTypeOperatorOp::KeyOf => {
+                    let type_ann = infer_ts_type_ann(type_ann, ctx)?;
+                    Ok(Type::KeyOf(Box::from(type_ann)))
+                }
+                TsTypeOperatorOp::Unique => todo!(),
+                TsTypeOperatorOp::ReadOnly => {
+                    let type_ann = infer_ts_type_ann(type_ann, ctx)?;
+                    Ok(type_ann)
+                }
+            }
+        }
         TsType::TsIndexedAccessType(_) => Err(String::from("can't parse indexed type yet")),
         TsType::TsMappedType(_) => Err(String::from("can't parse mapped type yet")),
         TsType::TsLitType(lit) => match &lit.lit {

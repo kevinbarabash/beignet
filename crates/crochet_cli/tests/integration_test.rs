@@ -1616,6 +1616,6 @@ fn codegen_array() {
     "###);
 
     let result = codegen_d_ts(&program, &ctx);
-    insta::assert_snapshot!(result, @"export declare const arr: string[];
+    insta::assert_snapshot!(result, @"export declare const arr: readonly string[];
 ");
 }

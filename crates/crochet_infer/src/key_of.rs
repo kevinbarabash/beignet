@@ -73,6 +73,7 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
             todo!() // Depends on what this is referencing
         }
         Type::KeyOf(t) => key_of(&key_of(t, ctx)?, ctx),
+        Type::Mutable(t) => key_of(t, ctx),
         Type::IndexAccess(_) => {
             todo!() // We have to evaluate the IndexAccess first
         }

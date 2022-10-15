@@ -149,6 +149,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
             object: Box::from(replace_aliases_rec(object, map)),
             index: Box::from(replace_aliases_rec(index, map)),
         }),
+        Type::Mutable(t) => Type::Mutable(Box::from(replace_aliases_rec(t, map))),
     }
 }
 

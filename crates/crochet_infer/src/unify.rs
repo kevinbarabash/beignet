@@ -500,6 +500,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             (TKeyword::Never, TKeyword::Null) => Ok(Subst::new()),
             _ => Err(format!("Can't unify {t1} with {t2}")),
         },
+        (_, Type::Mutable(t)) => unify(t1, t, ctx),
+        (Type::Mutable(t), _) => unify(t, t2, ctx),
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())

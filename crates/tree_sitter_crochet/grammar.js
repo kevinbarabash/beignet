@@ -29,6 +29,17 @@ module.exports = grammar(tsx, {
     // Removes automatic semicolon insertion
     _semicolon: ($, prev) => ";",
 
+    // Replaces 'readonly' with 'mut'
+    _type: ($) =>
+      choice(
+        $._primary_type,
+        $.function_type,
+        alias($.readonly_type, $.mutable_type),
+        $.constructor_type,
+        $.infer_type
+      ),
+    readonly_type: ($, prev) => seq("mut", $._type),
+
     expression: ($, prev) => {
       // Removes ternary expression
       const choices = prev.members.filter(

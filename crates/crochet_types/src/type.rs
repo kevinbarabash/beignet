@@ -96,6 +96,7 @@ pub enum Type {
     Rest(Box<Type>), // TODO: rename this to Spread
     This,
     KeyOf(Box<Type>),
+    Mutable(Box<Type>),
     IndexAccess(TIndexAccess),
     Generic(TGeneric),
 }
@@ -149,6 +150,7 @@ impl fmt::Display for Type {
             Type::Rest(arg) => write!(f, "...{arg}"),
             Type::This => write!(f, "this"),
             Type::KeyOf(t) => write!(f, "keyof {t}"),
+            Type::Mutable(t) => write!(f, "mut {t}"),
             Type::IndexAccess(TIndexAccess { object, index }) => write!(f, "{object}[{index}]"),
         }
     }

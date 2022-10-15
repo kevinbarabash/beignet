@@ -1368,7 +1368,14 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> TypeAnn {
                 type_params,
             })
         }
-        "readonly_type" => todo!(),
+        "mutable_type" => {
+            let type_ann = node.named_child(0).unwrap();
+
+            TypeAnnKind::Mutable(MutableType {
+                span: node.byte_range(),
+                type_ann: Box::from(parse_type_ann(&type_ann, src)),
+            })
+        }
         "constructor_type" => todo!(),
         "infer_type" => todo!(),
 

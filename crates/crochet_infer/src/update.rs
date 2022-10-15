@@ -292,6 +292,9 @@ pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
         TypeAnnKind::Query(QueryType { span: _, expr }) => {
             update_expr(expr, s);
         }
+        TypeAnnKind::Mutable(MutableType { span: _, type_ann }) => {
+            update_type_ann(type_ann, s);
+        }
         TypeAnnKind::IndexedAccess(IndexedAccessType {
             span: _,
             obj_type,
