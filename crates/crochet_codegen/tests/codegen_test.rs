@@ -616,3 +616,79 @@ fn spread_args() {
     ]);
     "###);
 }
+
+#[test]
+fn mutable_array() {
+    let src = r#"
+    let arr: mut number[] = [1, 2, 3];
+    "#;
+
+    insta::assert_snapshot!(compile(src), @r###"
+    export const arr = [
+        1,
+        2,
+        3
+    ];
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    let arr = ctx.lookup_value("arr").unwrap();
+    println!("arr = {arr:#?}");
+    insta::assert_snapshot!(result, @"export declare const arr: number[];
+");
+}
+
+#[test]
+fn mutable_obj() {
+    let src = r#"
+    type Point = {x: number, y: number};
+    type MutablePoint = mut {x: number, y: number};
+    "#;
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    // This should be:
+    // declare type MutablePoint = {x: number; y: number};
+    // declare type Point = Readonly<{x: number; y: number}>;
+    insta::assert_snapshot!(result, @r###"
+    declare type MutablePoint = {
+        x: number;
+        y: number;
+    };
+    declare type Point = {
+        readonly x: number;
+        readonly y: number;
+    };
+    "###);
+}
+
+#[test]
+fn mutable_indexer() {
+    let src = r#"
+    type Dict = {[key: string]: string};
+    type MutableDict = mut {[key: string]: string};
+    "#;
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    // NOTE: `Dict` is missing a `readonly` modifier on the index signature
+    // This needs to be fixed in swc_ecma_codegen itself.
+    insta::assert_snapshot!(result, @r###"
+    declare type Dict = {
+        [key: string]: string;
+    };
+    declare type MutableDict = {
+        [key: string]: string;
+    };
+    "###);
+}

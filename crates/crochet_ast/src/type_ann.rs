@@ -118,6 +118,12 @@ pub struct IndexedAccessType {
     pub index_type: Box<TypeAnn>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MutableType {
+    pub span: Span,
+    pub type_ann: Box<TypeAnn>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnnKind {
     Lam(LamType),
@@ -132,6 +138,7 @@ pub enum TypeAnnKind {
     KeyOf(KeyOfType), // keyof
     Query(QueryType), // typeof
     IndexedAccess(IndexedAccessType),
+    Mutable(MutableType),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

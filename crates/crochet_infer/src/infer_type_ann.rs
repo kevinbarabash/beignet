@@ -250,6 +250,12 @@ fn infer_type_ann_rec(
             Ok((s, t))
         }
         TypeAnnKind::Query(QueryType { expr, .. }) => infer_expr(ctx, expr),
+        TypeAnnKind::Mutable(MutableType { type_ann, .. }) => {
+            let (s, t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
+            let t = Type::Mutable(Box::from(t));
+            type_ann.inferred_type = Some(t.clone());
+            Ok((s, t))
+        }
         TypeAnnKind::IndexedAccess(IndexedAccessType {
             obj_type,
             index_type,

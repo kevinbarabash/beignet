@@ -8,7 +8,9 @@ use swc_ecma_codegen::*;
 
 use crochet_ast as ast;
 use crochet_infer::{get_type_params, Context};
-use crochet_types::{self as types, TFnParam, TGeneric, TPat, TVar, Type};
+use crochet_types::{
+    self as types, TFnParam, TGeneric, TIndex, TObjElem, TObject, TPat, TProp, TVar, Type,
+};
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -103,7 +105,30 @@ pub fn build_ident(id: &ast::Ident) -> Ident {
     }
 }
 
-pub fn build_param(r#type: &Type, e_param: &ast::EFnParam) -> TsFnParam {
+fn build_param(param: &TFnParam) -> TsFnParam {
+    let type_ann = TsTypeAnn {
+        span: DUMMY_SP,
+        type_ann: Box::from(build_type(&param.t, None)),
+    };
+    match &param.pat {
+        TPat::Ident(bi) => {
+            let id = Ident {
+                span: DUMMY_SP,
+                optional: param.optional,
+                sym: JsWord::from(bi.name.to_owned()),
+            };
+            TsFnParam::Ident(BindingIdent {
+                id,
+                type_ann: Some(type_ann),
+            })
+        }
+        TPat::Array(_) => todo!(),
+        TPat::Rest(_) => todo!(),
+        TPat::Object(_) => todo!(),
+    }
+}
+
+pub fn _build_param(r#type: &Type, e_param: &ast::EFnParam) -> TsFnParam {
     let type_ann = Some(TsTypeAnn {
         span: DUMMY_SP,
         type_ann: Box::from(build_type(r#type, None)),
@@ -493,10 +518,19 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
                 .elems
                 .iter()
                 .map(|elem| match elem {
-                    types::TObjElem::Call(_) => todo!(),
-                    types::TObjElem::Constructor(_) => todo!(),
-                    types::TObjElem::Index(_) => todo!(),
-                    types::TObjElem::Prop(prop) => {
+                    TObjElem::Call(_) => todo!(),
+                    TObjElem::Constructor(_) => todo!(),
+                    TObjElem::Index(index) => TsTypeElement::TsIndexSignature(TsIndexSignature {
+                        span: DUMMY_SP,
+                        readonly: true,
+                        params: vec![build_param(&index.key)],
+                        type_ann: Some(TsTypeAnn {
+                            span: DUMMY_SP,
+                            type_ann: Box::from(build_type(&index.t, None)),
+                        }),
+                        is_static: false,
+                    }),
+                    TObjElem::Prop(prop) => {
                         TsTypeElement::TsPropertySignature(TsPropertySignature {
                             span: DUMMY_SP,
                             readonly: !prop.mutable,
@@ -566,7 +600,28 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
         Type::KeyOf(_) => todo!(),
         Type::IndexAccess(_) => todo!(),
         Type::Mutable(t) => {
+            if let Type::Object(TObject { elems }) = t.as_ref() {
+                let elems = elems
+                    .iter()
+                    .map(|elem| match elem {
+                        TObjElem::Call(_) => elem.to_owned(),
+                        TObjElem::Constructor(_) => elem.to_owned(),
+                        TObjElem::Index(index) => TObjElem::Index(TIndex {
+                            mutable: true,
+                            ..index.to_owned()
+                        }),
+                        TObjElem::Prop(prop) => TObjElem::Prop(TProp {
+                            mutable: true,
+                            ..prop.to_owned()
+                        }),
+                    })
+                    .collect();
+
+                return build_type(&Type::Object(TObject { elems }), type_params);
+            }
+
             let ts_type = build_type(t, type_params);
+
             // By default, Crochet data structures are mapped to `readonly`
             // data structures in TypeScript.  Since we're processing a `mutable`
             // Crochet data structure here, we need to remove the `readonly`-ness
@@ -579,8 +634,6 @@ pub fn build_type(t: &Type, type_params: Option<TsTypeParamDecl>) -> TsType {
             {
                 return type_ann.as_ref().to_owned();
             }
-
-            // TODO: check if ReadOnly<> and ReadOnlyArray<> wrappers as well.
 
             ts_type
         }
