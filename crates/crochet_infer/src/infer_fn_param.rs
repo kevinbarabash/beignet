@@ -29,9 +29,7 @@ pub fn infer_fn_param(
             let (type_ann_s, type_ann_t) =
                 infer_type_ann_with_params(type_ann, ctx, type_param_map)?;
 
-            // Allowing type_ann_ty to be a subtype of pat_type because
-            // only non-refutable patterns can have type annotations.
-            let s = unify(&type_ann_t, &pat_type, ctx)?;
+            let s = unify(&pat_type, &type_ann_t, ctx)?;
             let s = compose_subs(&s, &type_ann_s);
 
             // Substs are applied to any new variables introduced.  This handles

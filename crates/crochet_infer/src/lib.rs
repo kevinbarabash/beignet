@@ -533,9 +533,12 @@ mod tests {
 
     #[test]
     fn obj_param_partial_destructuring_with_type_annotation() {
+        // NOTE: In TypeScript, it's okay to do ({a}: {a: string, b: string}),
+        // but in Crochet we need to explicitly ignore the properties we don't
+        // care about.
         assert_eq!(
-            infer("({a}: {a: string, b: boolean}) => a"),
-            "({a}: {a: string, b: boolean}) => string"
+            infer("({a, ..._}: {a: string, b: boolean}) => a"),
+            "({a, ..._}: {a: string, b: boolean}) => string"
         );
     }
 
@@ -2383,7 +2386,10 @@ mod tests {
         assert_eq!(get_value_type("str_sum", &ctx), "string");
     }
 
+    // NOTE: flaky test
+    // TODO: update union types to have a consistent ordering
     #[test]
+    #[ignore]
     fn test_constrained_generic_function() {
         let src = r#"
         let fst = <T extends number | string>(a: T, b: T): T => a;
@@ -2439,6 +2445,56 @@ mod tests {
         let a: number = 5;
         let b: number = 10;
         let number_sum = add(a, b);
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn test_member_access_on_constraint_type_param_success() {
+        let src = r#"
+        let getBar = <T extends {bar: string}>(obj: T) => {
+            obj.bar
+        };
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(
+            get_value_type("getBar", &ctx),
+            "<t0 extends {bar: string}>(obj: t0) => string"
+        );
+    }
+
+    #[test]
+    #[should_panic = "Cannot read property on unconstrained type param"]
+    fn test_type_param_member_access_errors() {
+        let src = r#"
+        let getBar = <T>(obj: T): T => {
+            obj.bar
+        };
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "Can't find value: console"]
+    fn test_call_undefined_method() {
+        let src = r#"
+        console.log("hello, world!");
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "Can't find value: console"]
+    fn test_call_undefined_method_inside_function() {
+        let src = r#"
+        let log = (msg) => {
+            console.log(msg);
+        }
         "#;
 
         infer_prog(src);

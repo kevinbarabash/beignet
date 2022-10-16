@@ -11,6 +11,7 @@ use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
+    println!("attempting to unify {t1} and {t2}");
     let result = match (&t1, &t2) {
         // All binding must be done first
         (Type::Var(tv), _) => bind(tv, t2, Relation::SubType, ctx),

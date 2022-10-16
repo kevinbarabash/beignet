@@ -310,15 +310,23 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             init,
             body,
             ..
-        }) => {
-            match pattern {
-                Some(pat) => infer_let(pat, type_ann, init, body, ctx, &PatternUsage::Assign),
-                None => {
-                    // TODO: warn about unused values
-                    infer_expr(ctx, body)
+        }) => match pattern {
+            Some(pat) => infer_let(pat, type_ann, init, body, ctx, &PatternUsage::Assign),
+            None => {
+                let (init_s, init_t) = infer_expr(ctx, init)?;
+
+                if init_t != Type::Keyword(TKeyword::Undefined) {
+                    println!("WARNING: {init_t} was not assigned");
                 }
+
+                let (body_s, body_t) = infer_expr(ctx, body)?;
+
+                let t = body_t.apply(&init_s);
+                let s = compose_subs(&body_s, &init_s);
+
+                Ok((s, t))
             }
-        }
+        },
         ExprKind::LetExpr(_) => {
             panic!("Unexpected LetExpr.  All LetExprs should be handled by IfElse arm.")
         }
@@ -575,6 +583,10 @@ fn infer_property_type(
             let t = ctx.instantiate(obj_t);
             infer_property_type(&t, prop, ctx)
         }
+        Type::Var(TVar { constraint, .. }) => match constraint {
+            Some(constraint) => infer_property_type(constraint, prop, ctx),
+            None => Err("Cannot read property on unconstrained type param".to_owned()),
+        },
         Type::Object(obj) => get_prop_value(obj, prop, ctx),
         Type::Ref(alias) => {
             let t = ctx.lookup_ref_and_instantiate(alias)?;
