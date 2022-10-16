@@ -21,6 +21,9 @@ pub fn infer_fn_param(
     let pat_type = infer_param_pattern_rec(&param.pat, ctx, &mut new_vars)?;
     let pat = e_pat_to_t_pat(&param.pat);
 
+    // TODO: convert EFnParamPat to Pattern perhaps we can just get rid of EFnParamPat
+    // Use infer_let as a model for this
+
     // If the pattern had a type annotation associated with it, we infer type of the
     // type annotation and add a constraint between the types of the pattern and its
     // type annotation.
@@ -29,6 +32,8 @@ pub fn infer_fn_param(
             let (type_ann_s, type_ann_t) =
                 infer_type_ann_with_params(type_ann, ctx, type_param_map)?;
 
+            // We probably shouldn't have reversed this.  We did it so that the
+            // substitutions would come out in the correct direction.
             let s = unify(&pat_type, &type_ann_t, ctx)?;
             let s = compose_subs(&s, &type_ann_s);
 

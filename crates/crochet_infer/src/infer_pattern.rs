@@ -13,7 +13,7 @@ use crate::util::*;
 
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
-fn infer_pattern(
+pub fn infer_pattern(
     pat: &mut Pattern,
     type_ann: &mut Option<TypeAnn>,
     ctx: &mut Context,

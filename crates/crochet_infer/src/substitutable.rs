@@ -37,7 +37,6 @@ impl Substitutable for Type {
 
             Type::Var(tv) => match sub.get(&tv.id) {
                 Some(replacement) => {
-                    println!("replacing {tv:#?} with {replacement}");
                     // TODO: apply the constraint and then check if the replacement
                     // is a subtype of it.
                     replacement.to_owned()

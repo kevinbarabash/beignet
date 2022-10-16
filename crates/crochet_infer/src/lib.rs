@@ -361,6 +361,28 @@ mod tests {
     }
 
     #[test]
+    fn partial_object_destructuring() {
+        let src = r#"
+        declare let point: {x: number, y: number, z?: number};
+        let {x} = point;
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("x", &ctx), "number");
+    }
+
+    #[test]
+    fn partial_object_destructuring_with_type_annotation() {
+        let src = r#"
+        declare let point: {x: number, y: number, z?: number};
+        let {x}: {x: number, y: number} = point;
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("x", &ctx), "number");
+    }
+
+    #[test]
     fn destructure_obj_with_renaming() {
         let src = "let {x: a, y: b} = {x: 5, y: 10};";
         let ctx = infer_prog(src);
