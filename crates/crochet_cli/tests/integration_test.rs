@@ -1298,6 +1298,7 @@ fn codegen_if_let_with_rename() {
 }
 
 #[test]
+#[should_panic = "Unification failure"]
 fn infer_if_let_with_type_error() {
     let src = r#"
     let p = {x: "hello", y: "world"};

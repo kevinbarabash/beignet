@@ -256,14 +256,12 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
                     }
                     "object_assignment_pattern" => todo!(),
                     "shorthand_property_identifier_pattern" => {
-                        let key = Ident {
-                            span: child.byte_range(),
-                            name: text_for_node(&child, src)?,
-                        };
-
                         Ok(ObjectPatProp::Assign(AssignPatProp {
                             span: child.byte_range(),
-                            key,
+                            key: Ident {
+                                span: child.byte_range(),
+                                name: text_for_node(&child, src)?,
+                            },
                             value: None,
                         }))
                     }
@@ -359,21 +357,20 @@ fn parse_func_param_pattern(node: &tree_sitter::Node, src: &str) -> Result<EFnPa
                     }
                     "rest_pattern" => {
                         // TODO: dedup with "rest_pattern" arm below
-                        let arg = node.child(1).unwrap(); // child(0) is the '...'
+                        let arg = child.named_child(0).unwrap(); // child(0) is the '...'
                         Ok(EFnParamObjectPatProp::Rest(EFnParamRestPat {
                             span: node.byte_range(),
                             arg: Box::from(parse_func_param_pattern(&arg, src)?),
                         }))
                     }
                     "object_assign_pattern" => todo!(),
+                    // alias of choice($.identifier, $._reserved_identifier),
                     "shorthand_property_identifier_pattern" => {
-                        // alias of choice($.identifier, $._reserved_identifier),
-                        let key = Ident {
-                            span: child.byte_range(),
-                            name: text_for_node(&child, src)?,
-                        };
                         Ok(EFnParamObjectPatProp::Assign(EFnParamAssignPatProp {
-                            key,
+                            key: Ident {
+                                span: child.byte_range(),
+                                name: text_for_node(&child, src)?,
+                            },
                             value: None,
                         }))
                     }
@@ -411,6 +408,14 @@ fn parse_func_param_pattern(node: &tree_sitter::Node, src: &str) -> Result<EFnPa
                 arg: Box::from(parse_func_param_pattern(&arg, src)?),
             }))
         }
+        // alias of choice($.identifier, $._reserved_identifier),
+        "shorthand_property_identifier_pattern" => Ok(EFnParamPat::Ident(EFnParamBindingIdent {
+            span: node.byte_range(),
+            id: Ident {
+                span: node.byte_range(),
+                name: text_for_node(node, src)?,
+            },
+        })),
         _ => panic!("unrecognized pattern {node:#?}"),
     }
 }

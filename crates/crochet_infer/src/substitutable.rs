@@ -83,8 +83,8 @@ impl Substitutable for Type {
                 .uniq_via(type_params.to_owned(), |a, b| a.id == b.id),
             Type::Var(tv) => {
                 let mut result = vec![tv.to_owned()];
-                if let Some(quals) = &tv.constraint {
-                    result.extend(quals.ftv());
+                if let Some(constraint) = &tv.constraint {
+                    result.extend(constraint.ftv());
                 }
                 result.unique_via(|a, b| a.id == b.id)
             }
