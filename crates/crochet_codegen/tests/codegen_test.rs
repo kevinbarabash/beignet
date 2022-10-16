@@ -685,7 +685,7 @@ fn mutable_indexer() {
     // This needs to be fixed in swc_ecma_codegen itself.
     insta::assert_snapshot!(result, @r###"
     declare type Dict = {
-        [key: string]: string;
+        readonly [key: string]: string;
     };
     declare type MutableDict = {
         [key: string]: string;
