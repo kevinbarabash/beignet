@@ -1,15 +1,15 @@
 use crochet_types::Type;
 
-use crate::expr::EFnParamPat;
 use crate::expr::Expr;
 use crate::ident::Ident;
 use crate::keyword::Keyword;
 use crate::lit::Lit;
+use crate::pattern::Pattern;
 use crate::span::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAnnFnParam {
-    pub pat: EFnParamPat,
+    pub pat: Pattern,
     pub type_ann: TypeAnn,
     pub optional: bool,
 }

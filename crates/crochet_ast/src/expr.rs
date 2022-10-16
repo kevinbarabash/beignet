@@ -3,7 +3,7 @@ use crochet_types::Type;
 use crate::ident::Ident;
 use crate::jsx::JSXElement;
 use crate::lit::Lit;
-use crate::pattern::Pattern;
+use crate::pattern::{Pattern, PatternKind};
 use crate::span::Span;
 use crate::type_ann::{TypeAnn, TypeParam};
 
@@ -75,7 +75,7 @@ pub struct Lambda {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EFnParam {
-    pub pat: EFnParamPat,
+    pub pat: Pattern,
     pub type_ann: Option<TypeAnn>,
     pub optional: bool,
     pub mutable: bool,
@@ -83,66 +83,11 @@ pub struct EFnParam {
 
 impl EFnParam {
     pub fn get_name(&self, index: &usize) -> String {
-        match &self.pat {
-            EFnParamPat::Ident(bi) => bi.id.name.to_owned(),
+        match &self.pat.kind {
+            PatternKind::Ident(bi) => bi.id.name.to_owned(),
             _ => format!("arg{index}"),
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EFnParamPat {
-    Ident(EFnParamBindingIdent),
-    Rest(EFnParamRestPat),
-    Object(EFnParamObjectPat),
-    Array(EFnParamArrayPat),
-}
-
-impl EFnParamPat {
-    pub fn get_name(&self, index: &usize) -> String {
-        match self {
-            EFnParamPat::Ident(bi) => bi.id.name.to_owned(),
-            _ => format!("arg{index}"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EFnParamBindingIdent {
-    pub span: Span,
-    pub id: Ident,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EFnParamRestPat {
-    pub span: Span,
-    pub arg: Box<EFnParamPat>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EFnParamArrayPat {
-    pub span: Span,
-    pub elems: Vec<Option<EFnParamPat>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EFnParamObjectPat {
-    pub span: Span,
-    pub props: Vec<EFnParamObjectPatProp>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EFnParamObjectPatProp {
-    KeyValue(EFnParamKeyValuePatProp),
-    Assign(EFnParamAssignPatProp),
-    Rest(EFnParamRestPat),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EFnParamKeyValuePatProp {
-    // TODO: span
-    pub key: Ident,
-    pub value: Box<EFnParamPat>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

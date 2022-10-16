@@ -166,16 +166,12 @@ fn parse_declaration(
     let stmt = if rec {
         // `let fib = fix((fib) => (n) => ...)`
         // TODO: Fix always wraps a lambda
-        let id = match &pattern.kind {
-            PatternKind::Ident(bi) => bi.id.to_owned(),
-            _ => panic!("rec can only be used with identifier patterns"),
-        };
 
         let lambda_expr = Expr {
             span: decl.byte_range(),
             kind: ExprKind::Lambda(Lambda {
                 params: vec![EFnParam {
-                    pat: EFnParamPat::Ident(EFnParamBindingIdent { span: 0..0, id }),
+                    pat: pattern.clone(),
                     type_ann: type_ann.clone(),
                     optional: false,
                     mutable: false,
@@ -300,6 +296,9 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
                 arg: Box::from(arg),
             })
         }
+        "shorthand_property_identifier_pattern" => {
+            todo!("handle shorthand_property_identifier_pattern");
+        }
         _ => panic!("unrecognized pattern {node:#?}"),
     };
 
@@ -308,116 +307,6 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
         kind,
         inferred_type: None,
     })
-}
-
-fn parse_func_param_pattern(node: &tree_sitter::Node, src: &str) -> Result<EFnParamPat, String> {
-    match node.kind() {
-        "identifier" => {
-            let span = node.byte_range();
-            let name = src.get(span.clone()).unwrap().to_owned();
-            Ok(EFnParamPat::Ident(EFnParamBindingIdent {
-                span: span.clone(),
-                id: Ident { span, name },
-            }))
-        }
-        "object_pattern" => {
-            let mut cursor = node.walk();
-            let props = node
-                .named_children(&mut cursor)
-                .into_iter()
-                .map(|child| match child.kind() {
-                    "pair_pattern" => {
-                        // NOTE: _property_name is defined as:
-                        // choice(
-                        //   alias(
-                        //     choice($.identifier, $._reserved_identifier),
-                        //     $.property_identifier
-                        //   ),
-                        //   $.private_property_identifier,
-                        //   $.string,
-                        //   $.number,
-                        //   $.computed_property_name
-                        // ),
-                        // TODO: handle more than just "identifier"
-                        let key_node = child.child_by_field_name("key").unwrap();
-                        let key = Ident {
-                            span: key_node.byte_range(),
-                            name: text_for_node(&key_node, src)?,
-                        };
-                        // value is choice($.pattern, $.assignment_pattern)
-                        // TODO: handle assignment_pattern
-                        let value = Box::from(parse_func_param_pattern(
-                            &child.child_by_field_name("value").unwrap(),
-                            src,
-                        )?);
-                        Ok(EFnParamObjectPatProp::KeyValue(EFnParamKeyValuePatProp {
-                            key,
-                            value,
-                        }))
-                    }
-                    "rest_pattern" => {
-                        // TODO: dedup with "rest_pattern" arm below
-                        let arg = child.named_child(0).unwrap(); // child(0) is the '...'
-                        Ok(EFnParamObjectPatProp::Rest(EFnParamRestPat {
-                            span: node.byte_range(),
-                            arg: Box::from(parse_func_param_pattern(&arg, src)?),
-                        }))
-                    }
-                    "object_assign_pattern" => todo!(),
-                    // alias of choice($.identifier, $._reserved_identifier),
-                    "shorthand_property_identifier_pattern" => {
-                        Ok(EFnParamObjectPatProp::Assign(EFnParamAssignPatProp {
-                            key: Ident {
-                                span: child.byte_range(),
-                                name: text_for_node(&child, src)?,
-                            },
-                            value: None,
-                        }))
-                    }
-                    kind => panic!("Unexpected object_pattern prop kind: {kind}"),
-                })
-                .collect::<Result<Vec<_>, String>>()?;
-
-            Ok(EFnParamPat::Object(EFnParamObjectPat {
-                span: node.byte_range(),
-                props,
-            }))
-        }
-        "array_pattern" => {
-            let mut cursor = node.walk();
-            // TODO: handle sparse array patterns
-            // NOTE: named_children() does not include gaps in the array
-            let elems = node
-                .named_children(&mut cursor)
-                .into_iter()
-                .map(|child| match child.kind() {
-                    "assignment_pattern" => todo!(),
-                    _ => Ok(Some(parse_func_param_pattern(&child, src)?)),
-                })
-                .collect::<Result<Vec<_>, String>>()?;
-
-            Ok(EFnParamPat::Array(EFnParamArrayPat {
-                span: node.byte_range(),
-                elems,
-            }))
-        }
-        "rest_pattern" => {
-            let arg = node.named_child(0).unwrap();
-            Ok(EFnParamPat::Rest(EFnParamRestPat {
-                span: node.byte_range(),
-                arg: Box::from(parse_func_param_pattern(&arg, src)?),
-            }))
-        }
-        // alias of choice($.identifier, $._reserved_identifier),
-        "shorthand_property_identifier_pattern" => Ok(EFnParamPat::Ident(EFnParamBindingIdent {
-            span: node.byte_range(),
-            id: Ident {
-                span: node.byte_range(),
-                name: text_for_node(node, src)?,
-            },
-        })),
-        _ => panic!("unrecognized pattern {node:#?}"),
-    }
 }
 
 fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Result<Vec<EFnParam>, String> {
@@ -440,7 +329,7 @@ fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Result<Vec<EF
             };
 
             Ok(EFnParam {
-                pat: parse_func_param_pattern(&pattern, src)?,
+                pat: parse_pattern(&pattern, src)?,
                 type_ann,
                 optional,
                 mutable: false,
@@ -1275,16 +1164,21 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                             }
                         }
 
+                        let pat: Pattern = Pattern {
+                            span: name_node.byte_range(),
+                            kind: PatternKind::Ident(BindingIdent {
+                                id: Ident {
+                                    span: name_node.byte_range(),
+                                    name,
+                                },
+                            }),
+                            inferred_type: None,
+                        };
+
                         let elem = TObjElem::Index(TIndex {
                             span: prop.byte_range(),
                             key: Box::from(TypeAnnFnParam {
-                                pat: EFnParamPat::Ident(EFnParamBindingIdent {
-                                    span: name_node.byte_range(),
-                                    id: Ident {
-                                        span: name_node.byte_range(),
-                                        name,
-                                    },
-                                }),
+                                pat,
                                 type_ann: index_type_ann,
                                 optional,
                             }),
@@ -1423,7 +1317,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                     let type_ann = parse_type_ann(&type_ann, src)?;
 
                     Ok(TypeAnnFnParam {
-                        pat: parse_func_param_pattern(&pattern, src)?,
+                        pat: parse_pattern(&pattern, src)?,
                         type_ann,
                         optional,
                     })

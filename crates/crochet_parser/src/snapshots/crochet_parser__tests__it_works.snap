@@ -27,29 +27,35 @@ Ok(
                             Lambda {
                                 params: [
                                     EFnParam {
-                                        pat: Ident(
-                                            EFnParamBindingIdent {
-                                                span: 20..21,
-                                                id: Ident {
-                                                    span: 20..21,
-                                                    name: "a",
+                                        pat: Pattern {
+                                            span: 20..21,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    id: Ident {
+                                                        span: 20..21,
+                                                        name: "a",
+                                                    },
                                                 },
-                                            },
-                                        ),
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         type_ann: None,
                                         optional: false,
                                         mutable: false,
                                     },
                                     EFnParam {
-                                        pat: Ident(
-                                            EFnParamBindingIdent {
-                                                span: 23..24,
-                                                id: Ident {
-                                                    span: 23..24,
-                                                    name: "b",
+                                        pat: Pattern {
+                                            span: 23..24,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    id: Ident {
+                                                        span: 23..24,
+                                                        name: "b",
+                                                    },
                                                 },
-                                            },
-                                        ),
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         type_ann: None,
                                         optional: false,
                                         mutable: false,
@@ -116,29 +122,35 @@ Ok(
                             Lambda {
                                 params: [
                                     EFnParam {
-                                        pat: Ident(
-                                            EFnParamBindingIdent {
-                                                span: 55..56,
-                                                id: Ident {
-                                                    span: 55..56,
-                                                    name: "a",
+                                        pat: Pattern {
+                                            span: 55..56,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    id: Ident {
+                                                        span: 55..56,
+                                                        name: "a",
+                                                    },
                                                 },
-                                            },
-                                        ),
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         type_ann: None,
                                         optional: false,
                                         mutable: false,
                                     },
                                     EFnParam {
-                                        pat: Ident(
-                                            EFnParamBindingIdent {
-                                                span: 58..59,
-                                                id: Ident {
-                                                    span: 58..59,
-                                                    name: "b",
+                                        pat: Pattern {
+                                            span: 58..59,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    id: Ident {
+                                                        span: 58..59,
+                                                        name: "b",
+                                                    },
                                                 },
-                                            },
-                                        ),
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         type_ann: None,
                                         optional: false,
                                         mutable: false,

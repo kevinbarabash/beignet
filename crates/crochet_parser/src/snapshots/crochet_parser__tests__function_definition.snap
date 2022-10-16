@@ -13,29 +13,35 @@ Ok(
                         Lambda {
                             params: [
                                 EFnParam {
-                                    pat: Ident(
-                                        EFnParamBindingIdent {
-                                            span: 1..2,
-                                            id: Ident {
-                                                span: 1..2,
-                                                name: "a",
+                                    pat: Pattern {
+                                        span: 1..2,
+                                        kind: Ident(
+                                            BindingIdent {
+                                                id: Ident {
+                                                    span: 1..2,
+                                                    name: "a",
+                                                },
                                             },
-                                        },
-                                    ),
+                                        ),
+                                        inferred_type: None,
+                                    },
                                     type_ann: None,
                                     optional: false,
                                     mutable: false,
                                 },
                                 EFnParam {
-                                    pat: Ident(
-                                        EFnParamBindingIdent {
-                                            span: 4..5,
-                                            id: Ident {
-                                                span: 4..5,
-                                                name: "b",
+                                    pat: Pattern {
+                                        span: 4..5,
+                                        kind: Ident(
+                                            BindingIdent {
+                                                id: Ident {
+                                                    span: 4..5,
+                                                    name: "b",
+                                                },
                                             },
-                                        },
-                                    ),
+                                        ),
+                                        inferred_type: None,
+                                    },
                                     type_ann: None,
                                     optional: false,
                                     mutable: false,

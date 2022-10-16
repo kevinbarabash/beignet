@@ -26,15 +26,18 @@ Ok(
                                 span: 21..36,
                                 params: [
                                     TypeAnnFnParam {
-                                        pat: Ident(
-                                            EFnParamBindingIdent {
-                                                span: 22..25,
-                                                id: Ident {
-                                                    span: 22..25,
-                                                    name: "foo",
+                                        pat: Pattern {
+                                            span: 22..25,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    id: Ident {
+                                                        span: 22..25,
+                                                        name: "foo",
+                                                    },
                                                 },
-                                            },
-                                        ),
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         type_ann: TypeAnn {
                                             kind: TypeRef(
                                                 TypeRef {

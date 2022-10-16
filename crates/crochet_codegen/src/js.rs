@@ -146,7 +146,15 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
             id: build_ident(id),
             type_ann: None,
         })),
-        ast::PatternKind::Rest(_) => todo!(),
+        ast::PatternKind::Rest(ast::RestPat { arg }) => {
+            let arg = build_pattern(arg, stmts, ctx).unwrap();
+            Some(Pat::Rest(RestPat {
+                span: DUMMY_SP,
+                dot3_token: DUMMY_SP,
+                type_ann: None,
+                arg: Box::from(arg),
+            }))
+        }
         ast::PatternKind::Object(ast::ObjectPat {
             props, optional, ..
         }) => {
@@ -248,76 +256,6 @@ fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Context)
     BlockStmt {
         span: DUMMY_SP,
         stmts,
-    }
-}
-
-fn e_fn_param_pat_to_js_pat(
-    pat: &ast::EFnParamPat,
-    stmts: &mut Vec<Stmt>,
-    ctx: &mut Context,
-) -> Pat {
-    match pat {
-        ast::EFnParamPat::Ident(ast::EFnParamBindingIdent { id, .. }) => Pat::Ident(BindingIdent {
-            id: build_ident(id),
-            type_ann: None,
-        }),
-        ast::EFnParamPat::Rest(rest) => Pat::Rest(RestPat {
-            span: DUMMY_SP,
-            dot3_token: DUMMY_SP,
-            arg: Box::from(e_fn_param_pat_to_js_pat(&rest.arg, stmts, ctx)),
-            type_ann: None,
-        }),
-        ast::EFnParamPat::Object(ast::EFnParamObjectPat { props, .. }) => {
-            let props: Vec<ObjectPatProp> = props
-                .iter()
-                .map(|prop| match prop {
-                    ast::EFnParamObjectPatProp::KeyValue(kv) => {
-                        ObjectPatProp::KeyValue(KeyValuePatProp {
-                            key: PropName::Ident(build_ident(&kv.key)),
-                            value: Box::from(e_fn_param_pat_to_js_pat(&kv.value, stmts, ctx)),
-                        })
-                    }
-                    ast::EFnParamObjectPatProp::Assign(assign) => {
-                        ObjectPatProp::Assign(AssignPatProp {
-                            span: DUMMY_SP,
-                            key: build_ident(&assign.key),
-                            value: assign
-                                .value
-                                .as_ref()
-                                .map(|value| Box::from(build_expr(value.as_ref(), stmts, ctx))),
-                        })
-                    }
-                    ast::EFnParamObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
-                        span: DUMMY_SP,
-                        dot3_token: DUMMY_SP,
-                        arg: Box::from(e_fn_param_pat_to_js_pat(&rest.arg, stmts, ctx)),
-                        type_ann: None,
-                    }),
-                })
-                .collect();
-            Pat::Object(ObjectPat {
-                span: DUMMY_SP,
-                props,
-                optional: false,
-                type_ann: None,
-            })
-        }
-        ast::EFnParamPat::Array(array) => {
-            let elems: Vec<Option<Pat>> = array
-                .elems
-                .iter()
-                .map(|elem| {
-                    elem.as_ref()
-                        .map(|elem| e_fn_param_pat_to_js_pat(elem, stmts, ctx))
-                })
-                .collect();
-            Pat::Array(ArrayPat {
-                span: DUMMY_SP,
-                elems,
-                optional: false,
-                type_ann: None,
-            })
-        }
     }
 }
 
@@ -429,7 +367,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
         }) => {
             let params: Vec<Pat> = args
                 .iter()
-                .map(|arg| e_fn_param_pat_to_js_pat(&arg.pat, stmts, ctx))
+                .map(|arg| build_pattern(&arg.pat, stmts, ctx).unwrap())
                 .collect();
 
             let body = build_fn_body(body.as_ref(), ctx);

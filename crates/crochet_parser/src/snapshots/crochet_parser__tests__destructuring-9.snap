@@ -27,31 +27,37 @@ Ok(
                             Lambda {
                                 params: [
                                     EFnParam {
-                                        pat: Object(
-                                            EFnParamObjectPat {
-                                                span: 11..17,
-                                                props: [
-                                                    Assign(
-                                                        EFnParamAssignPatProp {
-                                                            key: Ident {
+                                        pat: Pattern {
+                                            span: 11..17,
+                                            kind: Object(
+                                                ObjectPat {
+                                                    props: [
+                                                        Assign(
+                                                            AssignPatProp {
                                                                 span: 12..13,
-                                                                name: "a",
+                                                                key: Ident {
+                                                                    span: 12..13,
+                                                                    name: "a",
+                                                                },
+                                                                value: None,
                                                             },
-                                                            value: None,
-                                                        },
-                                                    ),
-                                                    Assign(
-                                                        EFnParamAssignPatProp {
-                                                            key: Ident {
+                                                        ),
+                                                        Assign(
+                                                            AssignPatProp {
                                                                 span: 15..16,
-                                                                name: "b",
+                                                                key: Ident {
+                                                                    span: 15..16,
+                                                                    name: "b",
+                                                                },
+                                                                value: None,
                                                             },
-                                                            value: None,
-                                                        },
-                                                    ),
-                                                ],
-                                            },
-                                        ),
+                                                        ),
+                                                    ],
+                                                    optional: false,
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         type_ann: Some(
                                             TypeAnn {
                                                 kind: Object(

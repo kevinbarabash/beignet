@@ -199,33 +199,38 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
 // If we're worried about generated blocks of AST being invalid, we can have a validate
 // function to detect the issue.  Trying to enforce all restrictions at the type level
 // can result in near duplicate code which is a worse problem to deal with.
-fn update_fn_param_pat(pat: &mut EFnParamPat, s: &Subst) {
-    match pat {
-        EFnParamPat::Ident(_) => (), // leaf node
-        EFnParamPat::Rest(EFnParamRestPat { span: _, arg }) => update_fn_param_pat(arg, s),
-        EFnParamPat::Object(EFnParamObjectPat { span: _, props }) => {
+fn update_fn_param_pat(pat: &mut Pattern, s: &Subst) {
+    match &mut pat.kind {
+        PatternKind::Ident(_) => (), // leaf node
+        PatternKind::Rest(RestPat { arg }) => update_fn_param_pat(arg, s),
+        PatternKind::Object(ObjectPat { props, optional: _ }) => {
             props.iter_mut().for_each(|prop| match prop {
                 // TODO: figure out how to attach inferred_types to idents
-                EFnParamObjectPatProp::KeyValue(EFnParamKeyValuePatProp { key: _, value }) => {
+                ObjectPatProp::KeyValue(KeyValuePatProp { key: _, value }) => {
                     update_fn_param_pat(value, s);
                 }
-                EFnParamObjectPatProp::Assign(EFnParamAssignPatProp { key: _, value }) => {
+                ObjectPatProp::Assign(AssignPatProp {
+                    value,
+                    key: _,
+                    span: _,
+                }) => {
                     if let Some(value) = value {
                         update_expr(value, s);
                     }
                 }
-                EFnParamObjectPatProp::Rest(EFnParamRestPat { span: _, arg }) => {
+                ObjectPatProp::Rest(RestPat { arg }) => {
                     update_fn_param_pat(arg, s);
                 }
             });
         }
-        EFnParamPat::Array(EFnParamArrayPat { span: _, elems }) => {
-            elems.iter_mut().for_each(|elem| {
-                if let Some(elem) = elem {
-                    update_fn_param_pat(elem, s);
-                }
-            })
-        }
+        PatternKind::Array(ArrayPat { elems, optional: _ }) => elems.iter_mut().for_each(|elem| {
+            if let Some(elem) = elem {
+                update_fn_param_pat(elem, s);
+            }
+        }),
+        PatternKind::Lit(_) => panic!("literal patterns are not allowed in function params"),
+        PatternKind::Is(_) => panic!("'is' patterns are not allowed in function params"),
+        PatternKind::Wildcard(_) => panic!("wildcard patterns are not allowed in function params"),
     }
 }
 

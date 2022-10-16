@@ -27,35 +27,45 @@ Ok(
                             Lambda {
                                 params: [
                                     EFnParam {
-                                        pat: Array(
-                                            EFnParamArrayPat {
-                                                span: 11..17,
-                                                elems: [
-                                                    Some(
-                                                        Ident(
-                                                            EFnParamBindingIdent {
+                                        pat: Pattern {
+                                            span: 11..17,
+                                            kind: Array(
+                                                ArrayPat {
+                                                    elems: [
+                                                        Some(
+                                                            Pattern {
                                                                 span: 12..13,
-                                                                id: Ident {
-                                                                    span: 12..13,
-                                                                    name: "a",
-                                                                },
+                                                                kind: Ident(
+                                                                    BindingIdent {
+                                                                        id: Ident {
+                                                                            span: 12..13,
+                                                                            name: "a",
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                inferred_type: None,
                                                             },
                                                         ),
-                                                    ),
-                                                    Some(
-                                                        Ident(
-                                                            EFnParamBindingIdent {
+                                                        Some(
+                                                            Pattern {
                                                                 span: 15..16,
-                                                                id: Ident {
-                                                                    span: 15..16,
-                                                                    name: "b",
-                                                                },
+                                                                kind: Ident(
+                                                                    BindingIdent {
+                                                                        id: Ident {
+                                                                            span: 15..16,
+                                                                            name: "b",
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                inferred_type: None,
                                                             },
                                                         ),
-                                                    ),
-                                                ],
-                                            },
-                                        ),
+                                                    ],
+                                                    optional: false,
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         type_ann: Some(
                                             TypeAnn {
                                                 kind: Tuple(

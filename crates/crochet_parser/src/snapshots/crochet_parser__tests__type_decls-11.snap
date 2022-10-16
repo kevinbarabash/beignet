@@ -21,15 +21,18 @@ Ok(
                                     TIndex {
                                         span: 17..33,
                                         key: TypeAnnFnParam {
-                                            pat: Ident(
-                                                EFnParamBindingIdent {
-                                                    span: 18..21,
-                                                    id: Ident {
-                                                        span: 18..21,
-                                                        name: "key",
+                                            pat: Pattern {
+                                                span: 18..21,
+                                                kind: Ident(
+                                                    BindingIdent {
+                                                        id: Ident {
+                                                            span: 18..21,
+                                                            name: "key",
+                                                        },
                                                     },
-                                                },
-                                            ),
+                                                ),
+                                                inferred_type: None,
+                                            },
                                             type_ann: TypeAnn {
                                                 kind: Keyword(
                                                     KeywordType {

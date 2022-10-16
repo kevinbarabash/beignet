@@ -13,47 +13,57 @@ Ok(
                         Lambda {
                             params: [
                                 EFnParam {
-                                    pat: Object(
-                                        EFnParamObjectPat {
-                                            span: 1..13,
-                                            props: [
-                                                KeyValue(
-                                                    EFnParamKeyValuePatProp {
-                                                        key: Ident {
-                                                            span: 2..3,
-                                                            name: "x",
-                                                        },
-                                                        value: Ident(
-                                                            EFnParamBindingIdent {
+                                    pat: Pattern {
+                                        span: 1..13,
+                                        kind: Object(
+                                            ObjectPat {
+                                                props: [
+                                                    KeyValue(
+                                                        KeyValuePatProp {
+                                                            key: Ident {
+                                                                span: 2..3,
+                                                                name: "x",
+                                                            },
+                                                            value: Pattern {
                                                                 span: 5..6,
-                                                                id: Ident {
-                                                                    span: 5..6,
-                                                                    name: "p",
-                                                                },
+                                                                kind: Ident(
+                                                                    BindingIdent {
+                                                                        id: Ident {
+                                                                            span: 5..6,
+                                                                            name: "p",
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                inferred_type: None,
                                                             },
-                                                        ),
-                                                    },
-                                                ),
-                                                KeyValue(
-                                                    EFnParamKeyValuePatProp {
-                                                        key: Ident {
-                                                            span: 8..9,
-                                                            name: "y",
                                                         },
-                                                        value: Ident(
-                                                            EFnParamBindingIdent {
-                                                                span: 11..12,
-                                                                id: Ident {
-                                                                    span: 11..12,
-                                                                    name: "q",
-                                                                },
+                                                    ),
+                                                    KeyValue(
+                                                        KeyValuePatProp {
+                                                            key: Ident {
+                                                                span: 8..9,
+                                                                name: "y",
                                                             },
-                                                        ),
-                                                    },
-                                                ),
-                                            ],
-                                        },
-                                    ),
+                                                            value: Pattern {
+                                                                span: 11..12,
+                                                                kind: Ident(
+                                                                    BindingIdent {
+                                                                        id: Ident {
+                                                                            span: 11..12,
+                                                                            name: "q",
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                inferred_type: None,
+                                                            },
+                                                        },
+                                                    ),
+                                                ],
+                                                optional: false,
+                                            },
+                                        ),
+                                        inferred_type: None,
+                                    },
                                     type_ann: None,
                                     optional: false,
                                     mutable: false,
