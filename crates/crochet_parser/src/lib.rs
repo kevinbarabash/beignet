@@ -1,13 +1,48 @@
 use itertools::free::join;
+#[cfg(target_family = "wasm")]
+use std::ffi::CString;
+use std::os::raw::c_char;
 use unescape::unescape;
 
 use crochet_ast::*;
+
+#[link(wasm_import_module = "my_custom_module")]
+extern "C" {
+    fn _log(wasm_str: WasmString);
+}
+
+#[repr(C)]
+pub struct WasmString {
+    pub offset: *const c_char,
+    pub length: u32,
+}
+
+#[cfg(target_family = "wasm")]
+unsafe fn string_to_wasm_string(input: &str) -> WasmString {
+    let length = input.len() as u32;
+    let offset = CString::new(input).unwrap().into_raw();
+    WasmString { offset, length }
+}
+
+#[cfg(target_family = "wasm")]
+fn log(str: &str) {
+    unsafe {
+        _log(string_to_wasm_string(str));
+    }
+}
+
+#[cfg(target_family = "unix")]
+fn log(str: &str) {
+    println!("{}", str);
+}
 
 pub fn parse(src: &str) -> Result<Program, String> {
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(tree_sitter_crochet::language())
         .expect("Error loading crochet language");
+
+    log("hello, world!");
 
     let tree = parser.parse(src, None).unwrap();
 
@@ -99,10 +134,10 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>
 
 // TODO: replace with node.utf8_text()
 fn text_for_node(node: &tree_sitter::Node, src: &str) -> Result<String, String> {
-    let result = src
-        .get(node.byte_range())
-        .ok_or(String::from("error in text_for_node"))?;
-    Ok(result.to_owned())
+    match src.get(node.byte_range()) {
+        Some(text) => Ok(text.to_owned()),
+        None => Err(String::from("error in text_for_node")),
+    }
 }
 
 fn parse_declaration(

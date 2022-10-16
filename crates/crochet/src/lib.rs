@@ -41,7 +41,7 @@ pub unsafe extern "C" fn deallocate(ptr: *mut c_void, length: usize) {
 }
 
 fn _compile(input: &str, lib: &str) -> Result<(String, String), String> {
-    let mut program = crochet_parser::parse(input).unwrap();
+    let mut program = crochet_parser::parse(input)?;
 
     let js = crochet_codegen::js::codegen_js(&program);
 
