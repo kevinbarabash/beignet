@@ -56,7 +56,14 @@ export const loadWasm = async (
   const wasm = await WebAssembly.compile(buffer);
 
   const imports = wasi.getImports(wasm);
-  const instance = await WebAssembly.instantiate(wasm, imports);
+  const instance = await WebAssembly.instantiate(wasm, {
+    ...imports,
+    my_custom_module: {
+      _log: (value: any) => {
+        console.log(decodeString(memory, value));
+      },
+    },
+  });
   wasi.start(instance);
 
   const memory = instance.exports.memory as WebAssembly.Memory;
