@@ -147,7 +147,6 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
             type_ann: None,
         })),
         ast::PatternKind::Rest(ast::RestPat { arg }) => {
-            // TODO: handle the option properly
             let arg = build_pattern(arg, stmts, ctx).unwrap();
             Some(Pat::Rest(RestPat {
                 span: DUMMY_SP,
@@ -368,10 +367,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
         }) => {
             let params: Vec<Pat> = args
                 .iter()
-                .map(|arg| {
-                    // TODO: handle the option correctly instead of calling .unwrap()
-                    build_pattern(&arg.pat, stmts, ctx).unwrap()
-                })
+                .map(|arg| build_pattern(&arg.pat, stmts, ctx).unwrap())
                 .collect();
 
             let body = build_fn_body(body.as_ref(), ctx);

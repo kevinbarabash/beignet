@@ -188,7 +188,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 }
 
                 // Unify remaining args with the rest param
-                println!("rest_arg = {rest_arg:#?}, rest_param = {rest_param:#?}");
                 let s1 = unify(&rest_arg, &rest_param, ctx)?;
 
                 // Unify return types

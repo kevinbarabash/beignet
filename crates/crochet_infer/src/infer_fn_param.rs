@@ -27,12 +27,9 @@ pub fn infer_fn_param(
     };
 
     if param.optional {
-        match pa.iter().find(|(_, value)| pt == **value) {
-            Some((name, t)) => {
-                let t = Type::Union(vec![t.to_owned(), Type::Keyword(TKeyword::Undefined)]);
-                pa.insert(name.to_owned(), t);
-            }
-            None => (),
+        if let Some((name, t)) = pa.iter().find(|(_, value)| pt == **value) {
+            let t = Type::Union(vec![t.to_owned(), Type::Keyword(TKeyword::Undefined)]);
+            pa.insert(name.to_owned(), t);
         };
     }
 
