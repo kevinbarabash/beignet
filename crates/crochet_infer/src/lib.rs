@@ -555,12 +555,9 @@ mod tests {
 
     #[test]
     fn obj_param_partial_destructuring_with_type_annotation() {
-        // NOTE: In TypeScript, it's okay to do ({a}: {a: string, b: string}),
-        // but in Crochet we need to explicitly ignore the properties we don't
-        // care about.
         assert_eq!(
-            infer("({a, ..._}: {a: string, b: boolean}) => a"),
-            "({a, ..._}: {a: string, b: boolean}) => string"
+            infer("({a}: {a: string, b: boolean}) => a"),
+            "({a}: {a: string, b: boolean}) => string"
         );
     }
 

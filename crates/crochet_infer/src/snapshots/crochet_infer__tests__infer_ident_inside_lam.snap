@@ -26,29 +26,35 @@ Program {
                         Lambda {
                             params: [
                                 EFnParam {
-                                    pat: Ident(
-                                        EFnParamBindingIdent {
-                                            span: 11..12,
-                                            id: Ident {
-                                                span: 11..12,
-                                                name: "a",
+                                    pat: Pattern {
+                                        span: 11..12,
+                                        kind: Ident(
+                                            BindingIdent {
+                                                id: Ident {
+                                                    span: 11..12,
+                                                    name: "a",
+                                                },
                                             },
-                                        },
-                                    ),
+                                        ),
+                                        inferred_type: None,
+                                    },
                                     type_ann: None,
                                     optional: false,
                                     mutable: false,
                                 },
                                 EFnParam {
-                                    pat: Ident(
-                                        EFnParamBindingIdent {
-                                            span: 14..15,
-                                            id: Ident {
-                                                span: 14..15,
-                                                name: "b",
+                                    pat: Pattern {
+                                        span: 14..15,
+                                        kind: Ident(
+                                            BindingIdent {
+                                                id: Ident {
+                                                    span: 14..15,
+                                                    name: "b",
+                                                },
                                             },
-                                        },
-                                    ),
+                                        ),
+                                        inferred_type: None,
+                                    },
                                     type_ann: None,
                                     optional: false,
                                     mutable: false,

@@ -13,31 +13,37 @@ Ok(
                         Lambda {
                             params: [
                                 EFnParam {
-                                    pat: Object(
-                                        EFnParamObjectPat {
-                                            span: 1..7,
-                                            props: [
-                                                Assign(
-                                                    EFnParamAssignPatProp {
-                                                        key: Ident {
+                                    pat: Pattern {
+                                        span: 1..7,
+                                        kind: Object(
+                                            ObjectPat {
+                                                props: [
+                                                    Assign(
+                                                        AssignPatProp {
                                                             span: 2..3,
-                                                            name: "x",
+                                                            key: Ident {
+                                                                span: 2..3,
+                                                                name: "x",
+                                                            },
+                                                            value: None,
                                                         },
-                                                        value: None,
-                                                    },
-                                                ),
-                                                Assign(
-                                                    EFnParamAssignPatProp {
-                                                        key: Ident {
+                                                    ),
+                                                    Assign(
+                                                        AssignPatProp {
                                                             span: 5..6,
-                                                            name: "y",
+                                                            key: Ident {
+                                                                span: 5..6,
+                                                                name: "y",
+                                                            },
+                                                            value: None,
                                                         },
-                                                        value: None,
-                                                    },
-                                                ),
-                                            ],
-                                        },
-                                    ),
+                                                    ),
+                                                ],
+                                                optional: false,
+                                            },
+                                        ),
+                                        inferred_type: None,
+                                    },
                                     type_ann: None,
                                     optional: false,
                                     mutable: false,

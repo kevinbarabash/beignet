@@ -27,15 +27,18 @@ Ok(
                             Lambda {
                                 params: [
                                     EFnParam {
-                                        pat: Ident(
-                                            EFnParamBindingIdent {
-                                                span: 11..12,
-                                                id: Ident {
-                                                    span: 11..12,
-                                                    name: "a",
+                                        pat: Pattern {
+                                            span: 11..12,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    id: Ident {
+                                                        span: 11..12,
+                                                        name: "a",
+                                                    },
                                                 },
-                                            },
-                                        ),
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         type_ann: Some(
                                             TypeAnn {
                                                 kind: Keyword(
@@ -52,15 +55,18 @@ Ok(
                                         mutable: false,
                                     },
                                     EFnParam {
-                                        pat: Ident(
-                                            EFnParamBindingIdent {
-                                                span: 22..23,
-                                                id: Ident {
-                                                    span: 22..23,
-                                                    name: "b",
+                                        pat: Pattern {
+                                            span: 22..23,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    id: Ident {
+                                                        span: 22..23,
+                                                        name: "b",
+                                                    },
                                                 },
-                                            },
-                                        ),
+                                            ),
+                                            inferred_type: None,
+                                        },
                                         type_ann: Some(
                                             TypeAnn {
                                                 kind: Keyword(

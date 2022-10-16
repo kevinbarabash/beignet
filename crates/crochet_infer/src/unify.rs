@@ -188,6 +188,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 }
 
                 // Unify remaining args with the rest param
+                println!("rest_arg = {rest_arg:#?}, rest_param = {rest_param:#?}");
                 let s1 = unify(&rest_arg, &rest_param, ctx)?;
 
                 // Unify return types
@@ -572,21 +573,18 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
                         Relation::SuperType => unify(t, c, ctx)?,
                     };
 
-                    // If the `t` is a type variable we need to make sure their constraints are
-                    // the same.
-                    if let Type::Var(TVar { id, constraint }) = t {
-                        let t: Type = match constraint {
-                            Some(constraint) => {
-                                // TODO: merge constraints and copy them over
-                                todo!("merge {constraint:#?} and {:#?} and update both type variables with the result", tv.constraint);
-                            }
-                            None => Type::Var(TVar {
-                                id: id.to_owned(),
-                                constraint: Some(c.to_owned()),
-                            }),
-                        };
-                        return Ok(Subst::from([(tv.id.to_owned(), t)]));
+                    // If the `t` is a type variable, but has no constraints then return a
+                    // substitution from the one that has no constraints to the one that does.
+                    if let Type::Var(TVar {
+                        id,
+                        constraint: None,
+                    }) = t
+                    {
+                        let s: Subst = Subst::from([(id.to_owned(), Type::Var(tv.to_owned()))]);
+                        return Ok(s);
                     }
+
+                    // TODO: handle the case where both type variables have constraints
                 }
 
                 Ok(Subst::from([(tv.id.to_owned(), t.to_owned())]))

@@ -153,29 +153,27 @@ pub fn _build_param(r#type: &Type, e_param: &ast::EFnParam) -> TsFnParam {
     }
 }
 
-pub fn build_param_pat_rec(pattern: &ast::EFnParamPat, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
-    match pattern {
-        ast::EFnParamPat::Ident(ast::EFnParamBindingIdent { id, .. }) => Pat::Ident(BindingIdent {
+pub fn build_param_pat_rec(pattern: &ast::Pattern, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
+    match &pattern.kind {
+        ast::PatternKind::Ident(ast::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
             id: build_ident(id),
             type_ann,
         }),
-        ast::EFnParamPat::Rest(ast::EFnParamRestPat { arg, .. }) => Pat::Rest(RestPat {
+        ast::PatternKind::Rest(ast::RestPat { arg, .. }) => Pat::Rest(RestPat {
             span: DUMMY_SP,
             dot3_token: DUMMY_SP,
             arg: Box::from(build_param_pat_rec(arg.as_ref(), None)),
             type_ann,
         }),
-        ast::EFnParamPat::Object(ast::EFnParamObjectPat { props, .. }) => {
+        ast::PatternKind::Object(ast::ObjectPat { props, .. }) => {
             let props: Vec<ObjectPatProp> = props
                 .iter()
                 .map(|prop| match prop {
-                    ast::EFnParamObjectPatProp::KeyValue(kv) => {
-                        ObjectPatProp::KeyValue(KeyValuePatProp {
-                            key: PropName::Ident(build_ident(&kv.key)),
-                            value: Box::from(build_param_pat_rec(kv.value.as_ref(), None)),
-                        })
-                    }
-                    ast::EFnParamObjectPatProp::Assign(assign) => {
+                    ast::ObjectPatProp::KeyValue(kv) => ObjectPatProp::KeyValue(KeyValuePatProp {
+                        key: PropName::Ident(build_ident(&kv.key)),
+                        value: Box::from(build_param_pat_rec(kv.value.as_ref(), None)),
+                    }),
+                    ast::ObjectPatProp::Assign(assign) => {
                         ObjectPatProp::Assign(AssignPatProp {
                             span: DUMMY_SP,
                             key: build_ident(&assign.key),
@@ -183,7 +181,7 @@ pub fn build_param_pat_rec(pattern: &ast::EFnParamPat, type_ann: Option<Box<TsTy
                             value: None,
                         })
                     }
-                    ast::EFnParamObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
+                    ast::ObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
                         span: DUMMY_SP,
                         dot3_token: DUMMY_SP,
                         arg: Box::from(build_param_pat_rec(rest.arg.as_ref(), None)),
@@ -198,7 +196,7 @@ pub fn build_param_pat_rec(pattern: &ast::EFnParamPat, type_ann: Option<Box<TsTy
                 type_ann,
             })
         }
-        ast::EFnParamPat::Array(array) => {
+        ast::PatternKind::Array(array) => {
             let elems = array
                 .elems
                 .iter()
@@ -211,6 +209,9 @@ pub fn build_param_pat_rec(pattern: &ast::EFnParamPat, type_ann: Option<Box<TsTy
                 type_ann,
             })
         }
+        ast::PatternKind::Lit(_) => panic!("Literal patterns are not allowed in params"),
+        ast::PatternKind::Is(_) => panic!("'is' patterns are not allowed in params"),
+        ast::PatternKind::Wildcard(_) => panic!("Wildcard patterns are not allowed in params"),
     }
 }
 

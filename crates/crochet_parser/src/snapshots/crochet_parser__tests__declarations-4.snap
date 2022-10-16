@@ -31,15 +31,18 @@ Ok(
                                         Lambda {
                                             params: [
                                                 EFnParam {
-                                                    pat: Ident(
-                                                        EFnParamBindingIdent {
-                                                            span: 0..0,
-                                                            id: Ident {
-                                                                span: 8..9,
-                                                                name: "f",
+                                                    pat: Pattern {
+                                                        span: 8..9,
+                                                        kind: Ident(
+                                                            BindingIdent {
+                                                                id: Ident {
+                                                                    span: 8..9,
+                                                                    name: "f",
+                                                                },
                                                             },
-                                                        },
-                                                    ),
+                                                        ),
+                                                        inferred_type: None,
+                                                    },
                                                     type_ann: None,
                                                     optional: false,
                                                     mutable: false,

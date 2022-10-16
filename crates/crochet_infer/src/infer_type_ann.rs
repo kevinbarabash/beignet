@@ -7,7 +7,7 @@ use types::TObjElem;
 use crate::assump::Assump;
 use crate::context::Context;
 use crate::infer_expr::infer_expr;
-use crate::infer_fn_param::e_pat_to_t_pat;
+use crate::infer_fn_param::pattern_to_tpat;
 use crate::util::compose_many_subs;
 use crate::util::get_type_params;
 use crate::Subst;
@@ -78,7 +78,7 @@ fn infer_type_ann_rec(
                     infer_type_ann_rec(&mut param.type_ann, ctx, type_param_map)?;
                 ss.push(param_s);
                 params.push(TFnParam {
-                    pat: e_pat_to_t_pat(&param.pat),
+                    pat: pattern_to_tpat(&param.pat),
                     t: param_t,
                     optional: param.optional,
                 });
@@ -122,7 +122,7 @@ fn infer_type_ann_rec(
                         ss.push(key_s);
                         elems.push(TObjElem::Index(TIndex {
                             key: TFnParam {
-                                pat: e_pat_to_t_pat(&index.key.pat),
+                                pat: pattern_to_tpat(&index.key.pat),
                                 t: key_t,
                                 optional: index.key.optional,
                             },

@@ -31,15 +31,18 @@ Ok(
                                                 span: 18..50,
                                                 params: [
                                                     TypeAnnFnParam {
-                                                        pat: Ident(
-                                                            EFnParamBindingIdent {
-                                                                span: 19..20,
-                                                                id: Ident {
-                                                                    span: 19..20,
-                                                                    name: "a",
+                                                        pat: Pattern {
+                                                            span: 19..20,
+                                                            kind: Ident(
+                                                                BindingIdent {
+                                                                    id: Ident {
+                                                                        span: 19..20,
+                                                                        name: "a",
+                                                                    },
                                                                 },
-                                                            },
-                                                        ),
+                                                            ),
+                                                            inferred_type: None,
+                                                        },
                                                         type_ann: TypeAnn {
                                                             kind: Keyword(
                                                                 KeywordType {
@@ -53,15 +56,18 @@ Ok(
                                                         optional: false,
                                                     },
                                                     TypeAnnFnParam {
-                                                        pat: Ident(
-                                                            EFnParamBindingIdent {
-                                                                span: 30..31,
-                                                                id: Ident {
-                                                                    span: 30..31,
-                                                                    name: "b",
+                                                        pat: Pattern {
+                                                            span: 30..31,
+                                                            kind: Ident(
+                                                                BindingIdent {
+                                                                    id: Ident {
+                                                                        span: 30..31,
+                                                                        name: "b",
+                                                                    },
                                                                 },
-                                                            },
-                                                        ),
+                                                            ),
+                                                            inferred_type: None,
+                                                        },
                                                         type_ann: TypeAnn {
                                                             kind: Keyword(
                                                                 KeywordType {
@@ -97,15 +103,18 @@ Ok(
                                                 span: 54..86,
                                                 params: [
                                                     TypeAnnFnParam {
-                                                        pat: Ident(
-                                                            EFnParamBindingIdent {
-                                                                span: 55..56,
-                                                                id: Ident {
-                                                                    span: 55..56,
-                                                                    name: "a",
+                                                        pat: Pattern {
+                                                            span: 55..56,
+                                                            kind: Ident(
+                                                                BindingIdent {
+                                                                    id: Ident {
+                                                                        span: 55..56,
+                                                                        name: "a",
+                                                                    },
                                                                 },
-                                                            },
-                                                        ),
+                                                            ),
+                                                            inferred_type: None,
+                                                        },
                                                         type_ann: TypeAnn {
                                                             kind: Keyword(
                                                                 KeywordType {
@@ -119,15 +128,18 @@ Ok(
                                                         optional: false,
                                                     },
                                                     TypeAnnFnParam {
-                                                        pat: Ident(
-                                                            EFnParamBindingIdent {
-                                                                span: 66..67,
-                                                                id: Ident {
-                                                                    span: 66..67,
-                                                                    name: "b",
+                                                        pat: Pattern {
+                                                            span: 66..67,
+                                                            kind: Ident(
+                                                                BindingIdent {
+                                                                    id: Ident {
+                                                                        span: 66..67,
+                                                                        name: "b",
+                                                                    },
                                                                 },
-                                                            },
-                                                        ),
+                                                            ),
+                                                            inferred_type: None,
+                                                        },
                                                         type_ann: TypeAnn {
                                                             kind: Keyword(
                                                                 KeywordType {
