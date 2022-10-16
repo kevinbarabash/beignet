@@ -681,11 +681,9 @@ fn mutable_indexer() {
     infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
-    // NOTE: `Dict` is missing a `readonly` modifier on the index signature
-    // This needs to be fixed in swc_ecma_codegen itself.
     insta::assert_snapshot!(result, @r###"
     declare type Dict = {
-        [key: string]: string;
+        readonly [key: string]: string;
     };
     declare type MutableDict = {
         [key: string]: string;

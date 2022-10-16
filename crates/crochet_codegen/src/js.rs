@@ -90,7 +90,7 @@ fn build_js(program: &ast::Program, ctx: &mut Context) -> Program {
                             Some(name) => {
                                 ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                                     span: DUMMY_SP,
-                                    decl: Decl::Var(VarDecl {
+                                    decl: Decl::Var(Box::from(VarDecl {
                                         span: DUMMY_SP,
                                         kind: VarDeclKind::Const,
                                         declare: false,
@@ -102,7 +102,7 @@ fn build_js(program: &ast::Program, ctx: &mut Context) -> Program {
                                             ))),
                                             definite: false,
                                         }],
-                                    }),
+                                    })),
                                 }))
                             }
                             None => todo!(),
@@ -867,8 +867,8 @@ fn build_jsx_element(
                     ast::JSXElementChild::JSXText(ast::JSXText { value, .. }) => {
                         JSXElementChild::JSXText(JSXText {
                             span: DUMMY_SP,
-                            value: Atom::new(value.to_owned()),
-                            raw: Atom::new(value.to_owned()),
+                            value: Atom::new(value.clone()),
+                            raw: Atom::new(value.clone()),
                         })
                     }
                     ast::JSXElementChild::JSXExprContainer(ast::JSXExprContainer {
@@ -1012,8 +1012,8 @@ fn build_template_literal(
                 };
                 TplElement {
                     span: DUMMY_SP,
-                    cooked: Some(Atom::new(cooked.to_owned())),
-                    raw: Atom::new(raw.to_owned()),
+                    cooked: Some(Atom::new(cooked.clone())),
+                    raw: Atom::new(raw.clone()),
                     tail: false, // TODO: set this to `true` if it's the last quasi
                 }
             })
@@ -1169,7 +1169,7 @@ fn build_const_decl_stmt(id: &Ident, expr: Expr) -> Stmt {
 }
 
 fn build_const_decl_stmt_with_pat(name: Pat, expr: Expr) -> Stmt {
-    Stmt::Decl(Decl::Var(VarDecl {
+    Stmt::Decl(Decl::Var(Box::from(VarDecl {
         span: DUMMY_SP,
         kind: VarDeclKind::Const,
         declare: false,
@@ -1179,11 +1179,11 @@ fn build_const_decl_stmt_with_pat(name: Pat, expr: Expr) -> Stmt {
             init: Some(Box::from(expr)),
             definite: false,
         }],
-    }))
+    })))
 }
 
 fn build_let_decl_stmt(id: &Ident) -> Stmt {
-    Stmt::Decl(Decl::Var(VarDecl {
+    Stmt::Decl(Decl::Var(Box::from(VarDecl {
         span: DUMMY_SP,
         kind: VarDeclKind::Let,
         declare: false,
@@ -1193,5 +1193,5 @@ fn build_let_decl_stmt(id: &Ident) -> Stmt {
             init: None,
             definite: false,
         }],
-    }))
+    })))
 }
