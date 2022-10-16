@@ -18,11 +18,8 @@ pub fn infer_fn_param(
 
     let (ps, mut pa, pt) = infer_pattern(&mut param.pat, &mut param.type_ann, ctx, type_param_map)?;
 
-    println!("type_param_map: {type_param_map:#?}");
-    println!("pt: {pt:#?}");
-    println!("pa: {pa:#?}");
-
-    // Converts top-level rest patterns types to array types.
+    // TypeScript annotates rest params using an array type so we do the
+    // same thing by converting top-level rest types to array types.
     let pt = if let Type::Rest(arg) = pt {
         Type::Array(arg)
     } else {
@@ -44,9 +41,6 @@ pub fn infer_fn_param(
         t: pt,
         optional: param.optional,
     };
-
-    println!("pa = {pa:#?}");
-    println!("ps = {ps:#?}");
 
     Ok((ps, pa, param))
 }
