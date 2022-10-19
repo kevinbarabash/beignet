@@ -813,23 +813,25 @@ Functions
 Arrow functions
 ================================================================================
 
-a => 1;
-() => 2;
-(d, e) => 3;
-(f, g) => {
+fn (a) => 1;
+fn () => 2;
+fn (d, e) => 3;
+fn (f, g) => {
   return h;
 };
-(trailing,) => 4;
-(h, trailing,) => 5;
-(set, kv) => 2;
-async => async + 1;
+fn (trailing,) => 4;
+fn (h, trailing,) => 5;
+fn (set, kv) => 2;
+fn (async) => async + 1;
 
 --------------------------------------------------------------------------------
 
 (program
   (expression_statement
     (arrow_function
-      (identifier)
+      (formal_parameters
+        (required_parameter
+          (identifier)))
       (number)))
   (expression_statement
     (arrow_function
@@ -877,7 +879,9 @@ async => async + 1;
       (number)))
   (expression_statement
     (arrow_function
-      (identifier)
+      (formal_parameters
+        (required_parameter
+          (identifier)))
       (binary_expression
         (identifier)
         (number)))))
@@ -1235,7 +1239,7 @@ class Foo {
   async bar() {}
 }
 
-async (a) => { return foo; };
+async fn (a) => { return foo; };
 
 async function* foo() { yield 1 }
 
@@ -2282,7 +2286,7 @@ let result = try { throw [a, b] } catch ([c, d]) { };
 Throw expressions
 ================================================================================
 
-const foo = (msg) => throw new Error(msg);
+const foo = fn (msg) => throw new Error(msg);
 
 --------------------------------------------------------------------------------
 

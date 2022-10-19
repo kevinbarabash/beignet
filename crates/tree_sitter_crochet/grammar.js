@@ -104,6 +104,16 @@ module.exports = grammar(tsx, {
     switch_case: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
     switch_default: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
 
+    arrow_function: ($, prev) => {
+      const members = [
+        prev.members[0],
+        "fn",
+        $._call_signature,
+        ...prev.members.slice(2),
+      ];
+      return seq(...members);
+    },
+
     if_expression: ($) =>
       prec.right(
         seq(

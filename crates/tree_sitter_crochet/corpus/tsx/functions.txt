@@ -161,13 +161,13 @@ A?.<B>();
 Arrow functions and generators with call signatures
 ================================================================================
 
-<A>(amount, interestRate, duration): number => 2;
+fn <A>(amount, interestRate, duration): number => 2;
 
 function* foo<A>(amount, interestRate, duration): number {
 	yield amount * interestRate * duration / 12;
 }
 
-(module: any): number => 2;
+fn (module: any): number => 2;
 
 --------------------------------------------------------------------------------
 
@@ -226,7 +226,7 @@ function* foo<A>(amount, interestRate, duration): number {
 Arrow function with parameter named async
 ================================================================================
 
-const x = async => async;
+const x = fn (async) => async;
 
 --------------------------------------------------------------------------------
 
@@ -235,7 +235,9 @@ const x = async => async;
     (variable_declarator
       (identifier)
       (arrow_function
-        (identifier)
+        (formal_parameters
+          (required_parameter
+            (identifier)))
         (identifier)))))
 
 ================================================================================
