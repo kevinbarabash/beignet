@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use types::{TCallable, TIndex, TObjElem, TObject};
+use types::{TCallable, TIndex, TObjElem, TObject, TypeKind};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
@@ -26,31 +26,49 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
         TsType::TsKeywordType(keyword) => match &keyword.kind {
             TsKeywordTypeKind::TsAnyKeyword => Ok(ctx.fresh_var()),
             TsKeywordTypeKind::TsUnknownKeyword => Ok(ctx.fresh_var()),
-            TsKeywordTypeKind::TsNumberKeyword => Ok(Type::Keyword(TKeyword::Number)),
+            TsKeywordTypeKind::TsNumberKeyword => Ok(Type {
+                kind: TypeKind::Keyword(TKeyword::Number),
+            }),
             TsKeywordTypeKind::TsObjectKeyword => Err(String::from("can't parse Objects yet")),
-            TsKeywordTypeKind::TsBooleanKeyword => Ok(Type::Keyword(TKeyword::Boolean)),
+            TsKeywordTypeKind::TsBooleanKeyword => Ok(Type {
+                kind: TypeKind::Keyword(TKeyword::Boolean),
+            }),
             TsKeywordTypeKind::TsBigIntKeyword => Err(String::from("can't parse BigInt yet")),
-            TsKeywordTypeKind::TsStringKeyword => Ok(Type::Keyword(TKeyword::String)),
-            TsKeywordTypeKind::TsSymbolKeyword => Ok(Type::Keyword(TKeyword::Symbol)),
+            TsKeywordTypeKind::TsStringKeyword => Ok(Type {
+                kind: TypeKind::Keyword(TKeyword::String),
+            }),
+            TsKeywordTypeKind::TsSymbolKeyword => Ok(Type {
+                kind: TypeKind::Keyword(TKeyword::Symbol),
+            }),
             // NOTE: `void` is treated the same as `undefined` ...for now.
-            TsKeywordTypeKind::TsVoidKeyword => Ok(Type::Keyword(TKeyword::Undefined)),
-            TsKeywordTypeKind::TsUndefinedKeyword => Ok(Type::Keyword(TKeyword::Undefined)),
-            TsKeywordTypeKind::TsNullKeyword => Ok(Type::Keyword(TKeyword::Null)),
+            TsKeywordTypeKind::TsVoidKeyword => Ok(Type {
+                kind: TypeKind::Keyword(TKeyword::Undefined),
+            }),
+            TsKeywordTypeKind::TsUndefinedKeyword => Ok(Type {
+                kind: TypeKind::Keyword(TKeyword::Undefined),
+            }),
+            TsKeywordTypeKind::TsNullKeyword => Ok(Type {
+                kind: TypeKind::Keyword(TKeyword::Null),
+            }),
             TsKeywordTypeKind::TsNeverKeyword => Err(String::from("can't parse never keyword yet")),
             TsKeywordTypeKind::TsIntrinsicKeyword => {
                 Err(String::from("can't parse Intrinsics yet"))
             }
         },
-        TsType::TsThisType(_) => Ok(Type::This),
+        TsType::TsThisType(_) => Ok(Type {
+            kind: TypeKind::This,
+        }),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
                 let params: Vec<TFnParam> = infer_fn_params(&fn_type.params, ctx)?;
                 let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?;
 
-                let t = Type::Lam(types::TLam {
-                    params,
-                    ret: Box::from(ret),
-                });
+                let t = Type {
+                    kind: TypeKind::Lam(types::TLam {
+                        params,
+                        ret: Box::from(ret),
+                    }),
+                };
 
                 match &fn_type.type_params {
                     Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx),
@@ -77,22 +95,28 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                         .iter()
                         .map(|t| infer_ts_type_ann(t, ctx))
                         .collect();
-                    Ok(Type::Ref(types::TRef {
-                        name,
-                        type_args: result.ok(),
-                    }))
+                    Ok(Type {
+                        kind: TypeKind::Ref(types::TRef {
+                            name,
+                            type_args: result.ok(),
+                        }),
+                    })
                 }
-                None => Ok(Type::Ref(types::TRef {
-                    name,
-                    type_args: None,
-                })),
+                None => Ok(Type {
+                    kind: TypeKind::Ref(types::TRef {
+                        name,
+                        type_args: None,
+                    }),
+                }),
             }
         }
         TsType::TsTypeQuery(_) => Err(String::from("can't parse type query yet")),
         TsType::TsTypeLit(_) => Err(String::from("can't parse type literal yet")),
         TsType::TsArrayType(array) => {
             let elem_type = infer_ts_type_ann(&array.elem_type, ctx)?;
-            Ok(Type::Array(Box::from(elem_type)))
+            Ok(Type {
+                kind: TypeKind::Array(Box::from(elem_type)),
+            })
         }
         TsType::TsTupleType(_) => Err(String::from("can't parse tuple type yet")),
         TsType::TsOptionalType(_) => Err(String::from("can't parse optional type yet")),
@@ -104,7 +128,9 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                     .iter()
                     .map(|ts_type| infer_ts_type_ann(ts_type, ctx))
                     .collect();
-                Ok(Type::Union(types?))
+                Ok(Type {
+                    kind: TypeKind::Union(types?),
+                })
             }
             TsUnionOrIntersectionType::TsIntersectionType(intersection) => {
                 let types: Result<Vec<_>, String> = intersection
@@ -112,7 +138,9 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                     .iter()
                     .map(|ts_type| infer_ts_type_ann(ts_type, ctx))
                     .collect();
-                Ok(Type::Intersection(types?))
+                Ok(Type {
+                    kind: TypeKind::Intersection(types?),
+                })
             }
         },
         TsType::TsConditionalType(_) => Err(String::from("can't parse conditional type yet")),
@@ -128,7 +156,9 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
             match op {
                 TsTypeOperatorOp::KeyOf => {
                     let type_ann = infer_ts_type_ann(type_ann, ctx)?;
-                    Ok(Type::KeyOf(Box::from(type_ann)))
+                    Ok(Type {
+                        kind: TypeKind::KeyOf(Box::from(type_ann)),
+                    })
                 }
                 TsTypeOperatorOp::Unique => todo!(),
                 TsTypeOperatorOp::ReadOnly => {
@@ -213,10 +243,12 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
         None => Err(String::from("method has no return type")),
     };
 
-    let t = Type::Lam(types::TLam {
-        params,
-        ret: Box::from(ret?),
-    });
+    let t = Type {
+        kind: TypeKind::Lam(types::TLam {
+            params,
+            ret: Box::from(ret?),
+        }),
+    };
 
     let t = match &sig.type_params {
         Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,
@@ -340,7 +372,9 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, S
         .collect();
 
     // TODO: make this generic if the decl has any type params
-    let t = Type::Object(TObject { elems });
+    let t = Type {
+        kind: TypeKind::Object(TObject { elems }),
+    };
 
     let t = match &decl.type_params {
         Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,

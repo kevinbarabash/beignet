@@ -13,8 +13,8 @@ pub trait Substitutable {
 
 impl Substitutable for Type {
     fn apply(&self, sub: &Subst) -> Type {
-        let result = match self {
-            Type::Generic(TGeneric { t, type_params }) => {
+        let kind = match &self.kind {
+            TypeKind::Generic(TGeneric { t, type_params }) => {
                 // QUESTION: Do we really need to be filtering out type_params from
                 // substitutions?
                 let type_params: Vec<_> = type_params
@@ -26,22 +26,22 @@ impl Substitutable for Type {
                 // If there are no type params then the returned type shouldn't be
                 // a qualified type.
                 if type_params.is_empty() {
-                    t.apply(sub)
+                    return norm_type(t.apply(sub));
                 } else {
-                    Type::Generic(TGeneric {
+                    TypeKind::Generic(TGeneric {
                         t: Box::from(t.as_ref().apply(sub)),
                         type_params,
                     })
                 }
             }
 
-            Type::Var(tv) => match sub.get(&tv.id) {
+            TypeKind::Var(tv) => match sub.get(&tv.id) {
                 Some(replacement) => {
                     // TODO: apply the constraint and then check if the replacement
                     // is a subtype of it.
-                    replacement.to_owned()
+                    return norm_type(replacement.to_owned());
                 }
-                None => Type::Var(TVar {
+                None => TypeKind::Var(TVar {
                     id: tv.id.to_owned(),
                     constraint: tv
                         .constraint
@@ -49,64 +49,66 @@ impl Substitutable for Type {
                         .map(|constraint| Box::from(constraint.apply(sub))),
                 }),
             },
-            Type::App(app) => Type::App(TApp {
+            TypeKind::App(app) => TypeKind::App(TApp {
                 args: app.args.iter().map(|param| param.apply(sub)).collect(),
                 ret: Box::from(app.ret.apply(sub)),
             }),
             // TODO: handle widening of lambdas
-            Type::Lam(lam) => Type::Lam(lam.apply(sub)),
-            Type::Lit(_) => self.to_owned(),
-            Type::Keyword(_) => self.to_owned(),
-            Type::Union(types) => Type::Union(types.apply(sub)),
-            Type::Intersection(types) => Type::Intersection(types.apply(sub)),
-            Type::Object(obj) => Type::Object(TObject {
+            TypeKind::Lam(lam) => TypeKind::Lam(lam.apply(sub)),
+            TypeKind::Lit(_) => return norm_type(self.to_owned()),
+            TypeKind::Keyword(_) => return norm_type(self.to_owned()),
+            TypeKind::Union(types) => TypeKind::Union(types.apply(sub)),
+            TypeKind::Intersection(types) => TypeKind::Intersection(types.apply(sub)),
+            TypeKind::Object(obj) => TypeKind::Object(TObject {
                 elems: obj.elems.apply(sub),
             }),
-            Type::Ref(tr) => Type::Ref(tr.apply(sub)),
-            Type::Tuple(types) => Type::Tuple(types.apply(sub)),
-            Type::Array(t) => Type::Array(Box::from(t.apply(sub))),
-            Type::Rest(arg) => Type::Rest(Box::from(arg.apply(sub))),
-            Type::This => Type::This,
-            Type::KeyOf(t) => Type::KeyOf(Box::from(t.apply(sub))),
-            Type::Mutable(t) => Type::Mutable(Box::from(t.apply(sub))),
-            Type::IndexAccess(TIndexAccess { object, index }) => Type::IndexAccess(TIndexAccess {
-                object: Box::from(object.apply(sub)),
-                index: Box::from(index.apply(sub)),
-            }),
+            TypeKind::Ref(tr) => TypeKind::Ref(tr.apply(sub)),
+            TypeKind::Tuple(types) => TypeKind::Tuple(types.apply(sub)),
+            TypeKind::Array(t) => TypeKind::Array(Box::from(t.apply(sub))),
+            TypeKind::Rest(arg) => TypeKind::Rest(Box::from(arg.apply(sub))),
+            TypeKind::This => TypeKind::This,
+            TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(t.apply(sub))),
+            TypeKind::Mutable(t) => TypeKind::Mutable(Box::from(t.apply(sub))),
+            TypeKind::IndexAccess(TIndexAccess { object, index }) => {
+                TypeKind::IndexAccess(TIndexAccess {
+                    object: Box::from(object.apply(sub)),
+                    index: Box::from(index.apply(sub)),
+                })
+            }
         };
-        norm_type(result)
+        norm_type(Type { kind })
     }
     fn ftv(&self) -> Vec<TVar> {
-        match self {
-            Type::Generic(TGeneric { t, type_params }) => t
+        match &self.kind {
+            TypeKind::Generic(TGeneric { t, type_params }) => t
                 .ftv()
                 .uniq_via(type_params.to_owned(), |a, b| a.id == b.id),
-            Type::Var(tv) => {
+            TypeKind::Var(tv) => {
                 let mut result = vec![tv.to_owned()];
                 if let Some(constraint) = &tv.constraint {
                     result.extend(constraint.ftv());
                 }
                 result.unique_via(|a, b| a.id == b.id)
             }
-            Type::App(TApp { args, ret }) => {
+            TypeKind::App(TApp { args, ret }) => {
                 let mut result = args.ftv();
                 result.extend(ret.ftv());
                 result.unique_via(|a, b| a.id == b.id)
             }
-            Type::Lam(lam) => lam.ftv(),
-            Type::Lit(_) => vec![],
-            Type::Keyword(_) => vec![],
-            Type::Union(types) => types.ftv(),
-            Type::Intersection(types) => types.ftv(),
-            Type::Object(obj) => obj.elems.ftv(),
-            Type::Ref(tref) => tref.ftv(),
-            Type::Tuple(types) => types.ftv(),
-            Type::Array(t) => t.ftv(),
-            Type::Rest(arg) => arg.ftv(),
-            Type::This => vec![],
-            Type::KeyOf(t) => t.ftv(),
-            Type::Mutable(t) => t.ftv(),
-            Type::IndexAccess(TIndexAccess { object, index }) => {
+            TypeKind::Lam(lam) => lam.ftv(),
+            TypeKind::Lit(_) => vec![],
+            TypeKind::Keyword(_) => vec![],
+            TypeKind::Union(types) => types.ftv(),
+            TypeKind::Intersection(types) => types.ftv(),
+            TypeKind::Object(obj) => obj.elems.ftv(),
+            TypeKind::Ref(tref) => tref.ftv(),
+            TypeKind::Tuple(types) => types.ftv(),
+            TypeKind::Array(t) => t.ftv(),
+            TypeKind::Rest(arg) => arg.ftv(),
+            TypeKind::This => vec![],
+            TypeKind::KeyOf(t) => t.ftv(),
+            TypeKind::Mutable(t) => t.ftv(),
+            TypeKind::IndexAccess(TIndexAccess { object, index }) => {
                 let mut result = object.ftv();
                 result.extend(index.ftv());
                 result
@@ -265,8 +267,8 @@ where
 }
 
 fn norm_type(t: Type) -> Type {
-    match &t {
-        Type::Union(types) => {
+    match &t.kind {
+        TypeKind::Union(types) => {
             // Removes duplicates
             let types: HashSet<Type> = types.clone().into_iter().collect();
             // Converts set back to an array
@@ -275,10 +277,12 @@ fn norm_type(t: Type) -> Type {
             if types.len() == 1 {
                 types.get(0).unwrap().to_owned()
             } else {
-                Type::Union(types)
+                Type {
+                    kind: TypeKind::Union(types),
+                }
             }
         }
-        Type::Intersection(types) => {
+        TypeKind::Intersection(types) => {
             // Removes duplicates
             let types: HashSet<Type> = types.clone().into_iter().collect();
             // Converts set back to an array
@@ -287,7 +291,9 @@ fn norm_type(t: Type) -> Type {
             if types.len() == 1 {
                 types.get(0).unwrap().to_owned()
             } else {
-                Type::Intersection(types)
+                Type {
+                    kind: TypeKind::Intersection(types),
+                }
             }
         }
         _ => t,

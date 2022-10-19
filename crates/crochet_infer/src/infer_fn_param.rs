@@ -1,5 +1,5 @@
 use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TKeyword, TPat, Type};
+use crochet_types::{self as types, TFnParam, TKeyword, TPat, Type, TypeKind};
 
 use crate::assump::Assump;
 use crate::context::Context;
@@ -20,15 +20,24 @@ pub fn infer_fn_param(
 
     // TypeScript annotates rest params using an array type so we do the
     // same thing by converting top-level rest types to array types.
-    let pt = if let Type::Rest(arg) = pt {
-        Type::Array(arg)
+    let pt = if let TypeKind::Rest(arg) = &pt.kind {
+        Type {
+            kind: TypeKind::Array(arg.to_owned()),
+        }
     } else {
         pt
     };
 
     if param.optional {
         if let Some((name, t)) = pa.iter().find(|(_, value)| pt == **value) {
-            let t = Type::Union(vec![t.to_owned(), Type::Keyword(TKeyword::Undefined)]);
+            let t = Type {
+                kind: TypeKind::Union(vec![
+                    t.to_owned(),
+                    Type {
+                        kind: TypeKind::Keyword(TKeyword::Undefined),
+                    },
+                ]),
+            };
             pa.insert(name.to_owned(), t);
         };
     }

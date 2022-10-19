@@ -5,6 +5,7 @@ use swc_ecma_ast::*;
 use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substitutable};
 use crochet_types::{
     self as types, TCallable, TFnParam, TGeneric, TIndexAccess, TObjElem, TObject, TVar, Type,
+    TypeKind,
 };
 
 use crate::parse_dts::infer_ts_type_ann;
@@ -44,38 +45,46 @@ pub fn replace_aliases(
 
 // TODO: rename this replace_refs_rec
 fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
-    match t {
-        Type::Generic(TGeneric { t, type_params }) => {
+    match &t.kind {
+        TypeKind::Generic(TGeneric { t, type_params }) => {
             // TODO: create a new `map` that adds in `type_params`
-            Type::Generic(TGeneric {
-                t: Box::from(replace_aliases_rec(t, map)),
-                type_params: type_params.to_owned(),
-            })
+            Type {
+                kind: TypeKind::Generic(TGeneric {
+                    t: Box::from(replace_aliases_rec(t, map)),
+                    type_params: type_params.to_owned(),
+                }),
+            }
         }
-        Type::Var(_) => t.to_owned(),
-        Type::App(types::TApp { args, ret }) => Type::App(types::TApp {
-            args: args.iter().map(|t| replace_aliases_rec(t, map)).collect(),
-            ret: Box::from(replace_aliases_rec(ret, map)),
-        }),
-        Type::Lam(types::TLam { params, ret }) => Type::Lam(types::TLam {
-            params: params
-                .iter()
-                .map(|param| TFnParam {
-                    t: replace_aliases_rec(&param.t, map),
-                    ..param.to_owned()
-                })
-                .collect(),
-            ret: Box::from(replace_aliases_rec(ret, map)),
-        }),
-        Type::Lit(_) => t.to_owned(),
-        Type::Keyword(_) => t.to_owned(),
-        Type::Union(types) => {
-            Type::Union(types.iter().map(|t| replace_aliases_rec(t, map)).collect())
-        }
-        Type::Intersection(types) => {
-            Type::Intersection(types.iter().map(|t| replace_aliases_rec(t, map)).collect())
-        }
-        Type::Object(obj) => {
+        TypeKind::Var(_) => t.to_owned(),
+        TypeKind::App(types::TApp { args, ret }) => Type {
+            kind: TypeKind::App(types::TApp {
+                args: args.iter().map(|t| replace_aliases_rec(t, map)).collect(),
+                ret: Box::from(replace_aliases_rec(ret, map)),
+            }),
+        },
+        TypeKind::Lam(types::TLam { params, ret }) => Type {
+            kind: TypeKind::Lam(types::TLam {
+                params: params
+                    .iter()
+                    .map(|param| TFnParam {
+                        t: replace_aliases_rec(&param.t, map),
+                        ..param.to_owned()
+                    })
+                    .collect(),
+                ret: Box::from(replace_aliases_rec(ret, map)),
+            }),
+        },
+        TypeKind::Lit(_) => t.to_owned(),
+        TypeKind::Keyword(_) => t.to_owned(),
+        TypeKind::Union(types) => Type {
+            kind: TypeKind::Union(types.iter().map(|t| replace_aliases_rec(t, map)).collect()),
+        },
+        TypeKind::Intersection(types) => Type {
+            kind: TypeKind::Intersection(
+                types.iter().map(|t| replace_aliases_rec(t, map)).collect(),
+            ),
+        },
+        TypeKind::Object(obj) => {
             let elems: Vec<TObjElem> = obj
                 .elems
                 .iter()
@@ -132,24 +141,40 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                     }
                 })
                 .collect();
-            Type::Object(TObject { elems })
+            Type {
+                kind: TypeKind::Object(TObject { elems }),
+            }
         }
-        Type::Ref(alias) => match map.get(&alias.name) {
-            Some(tv) => Type::Var(tv.to_owned()),
+        TypeKind::Ref(alias) => match map.get(&alias.name) {
+            Some(tv) => Type {
+                kind: TypeKind::Var(tv.to_owned()),
+            },
             None => t.to_owned(),
         },
-        Type::Tuple(types) => {
-            Type::Tuple(types.iter().map(|t| replace_aliases_rec(t, map)).collect())
-        }
-        Type::Array(t) => Type::Array(Box::from(replace_aliases_rec(t, map))),
-        Type::Rest(t) => Type::Rest(Box::from(replace_aliases_rec(t, map))),
-        Type::This => Type::This,
-        Type::KeyOf(t) => Type::KeyOf(Box::from(replace_aliases_rec(t, map))),
-        Type::IndexAccess(TIndexAccess { object, index }) => Type::IndexAccess(TIndexAccess {
-            object: Box::from(replace_aliases_rec(object, map)),
-            index: Box::from(replace_aliases_rec(index, map)),
-        }),
-        Type::Mutable(t) => Type::Mutable(Box::from(replace_aliases_rec(t, map))),
+        TypeKind::Tuple(types) => Type {
+            kind: TypeKind::Tuple(types.iter().map(|t| replace_aliases_rec(t, map)).collect()),
+        },
+        TypeKind::Array(t) => Type {
+            kind: TypeKind::Array(Box::from(replace_aliases_rec(t, map))),
+        },
+        TypeKind::Rest(t) => Type {
+            kind: TypeKind::Rest(Box::from(replace_aliases_rec(t, map))),
+        },
+        TypeKind::This => Type {
+            kind: TypeKind::This,
+        },
+        TypeKind::KeyOf(t) => Type {
+            kind: TypeKind::KeyOf(Box::from(replace_aliases_rec(t, map))),
+        },
+        TypeKind::IndexAccess(TIndexAccess { object, index }) => Type {
+            kind: TypeKind::IndexAccess(TIndexAccess {
+                object: Box::from(replace_aliases_rec(object, map)),
+                index: Box::from(replace_aliases_rec(index, map)),
+            }),
+        },
+        TypeKind::Mutable(t) => Type {
+            kind: TypeKind::Mutable(Box::from(replace_aliases_rec(t, map))),
+        },
     }
 }
 
@@ -165,26 +190,30 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     let subs: Subst = tp2
         .into_iter()
         .map(|tv| tv.id.to_owned())
-        .zip(tp1.iter().map(|tv| Type::Var(tv.to_owned())))
+        .zip(tp1.iter().map(|tv| Type {
+            kind: TypeKind::Var(tv.to_owned()),
+        }))
         .collect();
 
     // Unwrap qualified types since we return a qualified
     // type if there are any type qualifiers.
-    let t1 = match t1 {
-        Type::Generic(TGeneric { t, .. }) => t,
-        t => t,
+    let t1 = if let TypeKind::Generic(TGeneric { t, .. }) = &t1.kind {
+        t
+    } else {
+        t1
     };
-    let t2 = match t2 {
-        Type::Generic(TGeneric { t, .. }) => t,
-        t => t,
+    let t2 = if let TypeKind::Generic(TGeneric { t, .. }) = &t2.kind {
+        t
+    } else {
+        t2
     };
 
     // Updates type variables for type params to match t1
     let t2 = t2.apply(&subs);
 
     let type_params = tp1;
-    let t = match (t1, t2) {
-        (Type::Object(obj1), Type::Object(obj2)) => {
+    let t = match (&t1.kind, &t2.kind) {
+        (TypeKind::Object(obj1), TypeKind::Object(obj2)) => {
             let elems: Vec<_> = obj1
                 .elems
                 .iter()
@@ -192,7 +221,9 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
                 .chain(obj2.elems.iter().cloned())
                 .collect();
 
-            Type::Object(TObject { elems })
+            Type {
+                kind: TypeKind::Object(TObject { elems }),
+            }
         }
         (_, _) => todo!(),
     };
@@ -200,9 +231,11 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     if type_params.is_empty() {
         t
     } else {
-        Type::Generic(TGeneric {
-            t: Box::from(t),
-            type_params,
-        })
+        Type {
+            kind: TypeKind::Generic(TGeneric {
+                t: Box::from(t),
+                type_params,
+            }),
+        }
     }
 }

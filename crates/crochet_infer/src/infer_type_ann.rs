@@ -1,7 +1,9 @@
 use std::iter::Iterator;
 
 use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TIndex, TKeyword, TObject, TProp, TVar, Type};
+use crochet_types::{
+    self as types, TFnParam, TIndex, TKeyword, TObject, TProp, TVar, Type, TypeKind,
+};
 use types::TObjElem;
 
 use crate::assump::Assump;
@@ -38,10 +40,12 @@ pub fn infer_type_ann(
                     Some(type_ann) => {
                         // TODO: push `s` on to `ss`
                         let (_s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
-                        Type::Var(TVar {
-                            id: ctx.fresh_id(),
-                            constraint: Some(Box::from(t)),
-                        })
+                        Type {
+                            kind: TypeKind::Var(TVar {
+                                id: ctx.fresh_id(),
+                                constraint: Some(Box::from(t)),
+                            }),
+                        }
                     }
                     None => ctx.fresh_var(),
                 };
@@ -89,7 +93,9 @@ fn infer_type_ann_rec(
             ss.push(ret_s);
 
             let s = compose_many_subs(&ss);
-            let t = Type::Lam(types::TLam { params, ret });
+            let t = Type {
+                kind: TypeKind::Lam(types::TLam { params, ret }),
+            };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -146,7 +152,9 @@ fn infer_type_ann_rec(
             }
 
             let s = compose_many_subs(&ss);
-            let t = Type::Object(TObject { elems });
+            let t = Type {
+                kind: TypeKind::Object(TObject { elems }),
+            };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -175,14 +183,16 @@ fn infer_type_ann_rec(
                 }
 
                 let s = compose_many_subs(&ss);
-                let t = Type::Ref(types::TRef {
-                    name: name.to_owned(),
-                    type_args: if type_args.is_empty() {
-                        None
-                    } else {
-                        Some(type_args)
-                    },
-                });
+                let t = Type {
+                    kind: TypeKind::Ref(types::TRef {
+                        name: name.to_owned(),
+                        type_args: if type_args.is_empty() {
+                            None
+                        } else {
+                            Some(type_args)
+                        },
+                    }),
+                };
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
@@ -199,7 +209,9 @@ fn infer_type_ann_rec(
             }
 
             let s = compose_many_subs(&ss);
-            let t = Type::Union(ts);
+            let t = Type {
+                kind: TypeKind::Union(ts),
+            };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -215,7 +227,9 @@ fn infer_type_ann_rec(
             }
 
             let s = compose_many_subs(&ss);
-            let t = Type::Intersection(ts);
+            let t = Type {
+                kind: TypeKind::Intersection(ts),
+            };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -231,28 +245,36 @@ fn infer_type_ann_rec(
             }
 
             let s = compose_many_subs(&ss);
-            let t = Type::Tuple(ts);
+            let t = Type {
+                kind: TypeKind::Tuple(ts),
+            };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::Array(ArrayType { elem_type, .. }) => {
             let (elem_s, elem_t) = infer_type_ann_rec(elem_type, ctx, type_param_map)?;
             let s = elem_s;
-            let t = Type::Array(Box::from(elem_t));
+            let t = Type {
+                kind: TypeKind::Array(Box::from(elem_t)),
+            };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::KeyOf(KeyOfType { type_ann, .. }) => {
             let (arg_s, arg_t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
             let s = arg_s;
-            let t = Type::KeyOf(Box::from(arg_t));
+            let t = Type {
+                kind: TypeKind::KeyOf(Box::from(arg_t)),
+            };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::Query(QueryType { expr, .. }) => infer_expr(ctx, expr),
         TypeAnnKind::Mutable(MutableType { type_ann, .. }) => {
             let (s, t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
-            let t = Type::Mutable(Box::from(t));
+            let t = Type {
+                kind: TypeKind::Mutable(Box::from(t)),
+            };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -279,13 +301,13 @@ fn infer_property_type(
     index_t: &Type,
     ctx: &mut Context,
 ) -> Result<(Subst, Type), String> {
-    match &obj_t {
-        Type::Object(TObject { elems }) => match index_t {
-            Type::Ref(alias) => {
+    match &obj_t.kind {
+        TypeKind::Object(TObject { elems }) => match &index_t.kind {
+            TypeKind::Ref(alias) => {
                 let t = ctx.lookup_ref_and_instantiate(alias)?;
                 infer_property_type(obj_t, &t, ctx)
             }
-            Type::Lit(lit) => match lit {
+            TypeKind::Lit(lit) => match lit {
                 types::TLit::Num(_) => {
                     // TODO: support number literals if the ojbect has an indexer
                     // that supports them
@@ -310,8 +332,8 @@ fn infer_property_type(
 
                     if t.is_none() {
                         t = elems.iter().find_map(|elem| match elem {
-                            types::TObjElem::Index(index) => match index.key.t {
-                                Type::Keyword(TKeyword::String) => Some(index.t.to_owned()),
+                            types::TObjElem::Index(index) => match &index.key.t.kind {
+                                TypeKind::Keyword(TKeyword::String) => Some(index.t.to_owned()),
                                 _ => None,
                             },
                             _ => None,
@@ -327,13 +349,15 @@ fn infer_property_type(
                     }
                 }
             },
-            t => Err(format!("{t} can't be used as an indexed type's index",)),
+            _ => Err(format!(
+                "{index_t} can't be used as an indexed type's index",
+            )),
         },
-        Type::Ref(alias) => {
+        TypeKind::Ref(alias) => {
             let t = ctx.lookup_ref_and_instantiate(alias)?;
             infer_property_type(&t, index_t, ctx)
         }
-        Type::Lit(lit) => {
+        TypeKind::Lit(lit) => {
             let t = match lit {
                 types::TLit::Num(_) => ctx.lookup_type_and_instantiate("Number")?,
                 types::TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean")?,
@@ -341,7 +365,7 @@ fn infer_property_type(
             };
             infer_property_type(&t, index_t, ctx)
         }
-        Type::Keyword(keyword) => match keyword {
+        TypeKind::Keyword(keyword) => match keyword {
             TKeyword::Number => {
                 let t = ctx.lookup_type_and_instantiate("Number")?;
                 infer_property_type(&t, index_t, ctx)
@@ -362,7 +386,7 @@ fn infer_property_type(
             TKeyword::Undefined => Err("Cannot read property on 'undefined'".to_owned()),
             TKeyword::Never => Err("Cannot read property on 'never'".to_owned()),
         },
-        Type::Array(type_param) => {
+        TypeKind::Array(type_param) => {
             // TODO: Do this for all interfaces that we lookup
             let t = ctx.lookup_type("ReadonlyArray")?;
             let type_params = get_type_params(&t);
@@ -373,14 +397,16 @@ fn infer_property_type(
             let t = t.apply(&s);
             infer_property_type(&t, index_t, ctx)
         }
-        Type::Tuple(elem_types) => {
+        TypeKind::Tuple(elem_types) => {
             // TODO: Do this for all interfaces that we lookup
             let t = ctx.lookup_type("ReadonlyArray")?;
             println!("ReadonlyArray = {t}");
             // TODO: Instead of instantiating the whole interface for one method, do
             // the lookup call first and then instantiate the method.
             // TODO: remove duplicate types
-            let type_param = Type::Union(elem_types.to_owned());
+            let type_param = Type {
+                kind: TypeKind::Union(elem_types.to_owned()),
+            };
             let type_params = get_type_params(&t); // ReadonlyArray type params
 
             let s: Subst = Subst::from([(type_params[0].id.to_owned(), type_param)]);
