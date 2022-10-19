@@ -7,6 +7,7 @@ use types::TKeyword;
 use crate::context::Context;
 use crate::key_of::key_of;
 use crate::substitutable::{Subst, Substitutable};
+use crate::unify_mut::unify_mut;
 use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
@@ -500,8 +501,17 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             (TKeyword::Never, TKeyword::Null) => Ok(Subst::new()),
             _ => Err(format!("Can't unify {t1} with {t2}")),
         },
-        (_, Type::Mutable(t)) => unify(t1, t, ctx),
-        (Type::Mutable(t), _) => unify(t, t2, ctx),
+        (Type::Mutable(t1), Type::Mutable(t2)) => unify_mut(t1, t2, ctx),
+        (_, Type::Mutable(_)) => {
+            // It's NOT okay to use an immutable in place of a mutable one
+            Err(String::from(
+                "Cannot use immutable type where a mutable type was expected",
+            ))
+        }
+        (Type::Mutable(t), _) => {
+            // It's okay to use a mutable type in place of an immutable one
+            unify(t, t2, ctx)
+        }
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())

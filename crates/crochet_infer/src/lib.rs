@@ -7,6 +7,7 @@ mod infer_type_ann;
 mod key_of;
 mod substitutable;
 mod unify;
+mod unify_mut;
 mod update;
 mod util;
 
@@ -2514,6 +2515,60 @@ mod tests {
         let log = (msg) => {
             console.log(msg);
         }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn test_mutable_arrays() {
+        // TODO: How do we differentiate assigning a literal vs. a variable?
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        declare let arr: mut number[];
+        sort(arr);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("arr", &ctx), "mut number[]");
+    }
+
+    #[test]
+    fn test_mutable_arrays_with_literal_initializer() {
+        // TODO: How do we differentiate assigning a literal vs. a variable?
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        let arr: mut number[] = [1, 2, 3];
+        sort(arr);
+        "#;
+        println!("Hello, world!");
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("arr", &ctx), "mut number[]");
+    }
+
+    #[test]
+    #[should_panic = "Couldn't unify string[] and number[]"]
+    fn test_mutable_arrays_wrong_types() {
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        declare let arr: mut string[];
+        sort(arr);
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "Cannot use immutable type where a mutable type was expected"]
+    fn test_mutable_array_error() {
+        // TODO: How do we differentiate assigning a literal vs. a variable?
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        declare let arr: number[];
+        sort(arr);
         "#;
 
         infer_prog(src);
