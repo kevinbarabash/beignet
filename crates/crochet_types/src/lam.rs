@@ -4,7 +4,7 @@ use std::hash::Hash;
 
 use crate::keyword::TKeyword;
 use crate::pat::TPat;
-use crate::r#type::Type;
+use crate::r#type::{Type, TypeKind};
 
 #[derive(Clone, Debug, Eq)]
 pub struct TLam {
@@ -42,7 +42,14 @@ pub struct TFnParam {
 impl TFnParam {
     pub fn get_type(&self) -> Type {
         match self.optional {
-            true => Type::Union(vec![self.t.to_owned(), Type::Keyword(TKeyword::Undefined)]),
+            true => {
+                let undefined = Type {
+                    kind: TypeKind::Keyword(TKeyword::Undefined),
+                };
+                Type {
+                    kind: TypeKind::Union(vec![self.t.to_owned(), undefined]),
+                }
+            }
             false => self.t.to_owned(),
         }
     }

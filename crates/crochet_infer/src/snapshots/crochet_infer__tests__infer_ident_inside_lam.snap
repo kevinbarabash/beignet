@@ -74,9 +74,11 @@ Program {
                                                 },
                                             ),
                                             inferred_type: Some(
-                                                Keyword(
-                                                    Number,
-                                                ),
+                                                Type {
+                                                    kind: Keyword(
+                                                        Number,
+                                                    ),
+                                                },
                                             ),
                                         },
                                         right: Expr {
@@ -88,17 +90,21 @@ Program {
                                                 },
                                             ),
                                             inferred_type: Some(
-                                                Keyword(
-                                                    Number,
-                                                ),
+                                                Type {
+                                                    kind: Keyword(
+                                                        Number,
+                                                    ),
+                                                },
                                             ),
                                         },
                                     },
                                 ),
                                 inferred_type: Some(
-                                    Keyword(
-                                        Number,
-                                    ),
+                                    Type {
+                                        kind: Keyword(
+                                            Number,
+                                        ),
+                                    },
                                 ),
                             },
                             is_async: false,
@@ -107,39 +113,47 @@ Program {
                         },
                     ),
                     inferred_type: Some(
-                        Lam(
-                            TLam {
-                                params: [
-                                    TFnParam {
-                                        pat: Ident(
-                                            BindingIdent {
-                                                name: "a",
-                                                mutable: false,
+                        Type {
+                            kind: Lam(
+                                TLam {
+                                    params: [
+                                        TFnParam {
+                                            pat: Ident(
+                                                BindingIdent {
+                                                    name: "a",
+                                                    mutable: false,
+                                                },
+                                            ),
+                                            t: Type {
+                                                kind: Keyword(
+                                                    Number,
+                                                ),
                                             },
-                                        ),
-                                        t: Keyword(
+                                            optional: false,
+                                        },
+                                        TFnParam {
+                                            pat: Ident(
+                                                BindingIdent {
+                                                    name: "b",
+                                                    mutable: false,
+                                                },
+                                            ),
+                                            t: Type {
+                                                kind: Keyword(
+                                                    Number,
+                                                ),
+                                            },
+                                            optional: false,
+                                        },
+                                    ],
+                                    ret: Type {
+                                        kind: Keyword(
                                             Number,
                                         ),
-                                        optional: false,
                                     },
-                                    TFnParam {
-                                        pat: Ident(
-                                            BindingIdent {
-                                                name: "b",
-                                                mutable: false,
-                                            },
-                                        ),
-                                        t: Keyword(
-                                            Number,
-                                        ),
-                                        optional: false,
-                                    },
-                                ],
-                                ret: Keyword(
-                                    Number,
-                                ),
-                            },
-                        ),
+                                },
+                            ),
+                        },
                     ),
                 },
             ),

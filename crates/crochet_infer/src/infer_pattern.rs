@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crochet_ast::*;
-use crochet_types::{self as types, TObject, Type};
+use crochet_types::{self as types, TObject, Type, TypeKind};
 
 use crate::assump::Assump;
 use crate::context::Context;
@@ -68,18 +68,19 @@ fn infer_pattern_rec(
         }
         PatternKind::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
         PatternKind::Is(IsPat { id, is_id, .. }) => {
-            let t = match is_id.name.as_str() {
-                "string" => Type::Keyword(types::TKeyword::String),
-                "number" => Type::Keyword(types::TKeyword::Number),
-                "boolean" => Type::Keyword(types::TKeyword::Boolean),
+            let kind = match is_id.name.as_str() {
+                "string" => TypeKind::Keyword(types::TKeyword::String),
+                "number" => TypeKind::Keyword(types::TKeyword::Number),
+                "boolean" => TypeKind::Keyword(types::TKeyword::Boolean),
                 // The alias type will be used for `instanceof` of checks, but
                 // only if the definition of the alias is an object type with a
                 // `constructor` method.
-                name => Type::Ref(types::TRef {
+                name => TypeKind::Ref(types::TRef {
                     name: name.to_owned(),
                     type_args: None,
                 }),
             };
+            let t = Type { kind };
             // TODO: we need a method on Context to get all types that currently in
             // scope so that we can pass them to generalize()
             let all_types = ctx.get_all_types();
@@ -91,7 +92,9 @@ fn infer_pattern_rec(
         }
         PatternKind::Rest(RestPat { arg, .. }) => {
             let t = infer_pattern_rec(arg, ctx, assump)?;
-            Ok(Type::Rest(Box::from(t)))
+            Ok(Type {
+                kind: TypeKind::Rest(Box::from(t)),
+            })
         }
         PatternKind::Array(ArrayPat { elems, .. }) => {
             let elems: Result<Vec<Type>, String> = elems
@@ -101,7 +104,9 @@ fn infer_pattern_rec(
                         Some(elem) => match &mut elem.kind {
                             PatternKind::Rest(rest) => {
                                 let rest_ty = infer_pattern_rec(&mut rest.arg, ctx, assump)?;
-                                Ok(Type::Rest(Box::from(rest_ty)))
+                                Ok(Type {
+                                    kind: TypeKind::Rest(Box::from(rest_ty)),
+                                })
                             }
                             _ => infer_pattern_rec(elem, ctx, assump),
                         },
@@ -113,7 +118,9 @@ fn infer_pattern_rec(
                 })
                 .collect();
 
-            Ok(Type::Tuple(elems?))
+            Ok(Type {
+                kind: TypeKind::Tuple(elems?),
+            })
         }
         // TODO: infer type_params
         PatternKind::Object(ObjectPat { props, .. }) => {
@@ -167,12 +174,16 @@ fn infer_pattern_rec(
                 })
                 .collect();
 
-            let obj_type = Type::Object(TObject { elems });
+            let obj_type = Type {
+                kind: TypeKind::Object(TObject { elems }),
+            };
 
             match rest_opt_ty {
                 // TODO: Replace this with a proper Rest/Spread type
                 // See https://github.com/microsoft/TypeScript/issues/10727
-                Some(rest_ty) => Ok(Type::Intersection(vec![obj_type, rest_ty])),
+                Some(rest_ty) => Ok(Type {
+                    kind: TypeKind::Intersection(vec![obj_type, rest_ty]),
+                }),
                 None => Ok(obj_type),
             }
         }

@@ -9,7 +9,7 @@ use swc_ecma_codegen::*;
 use crochet_ast as ast;
 use crochet_infer::{get_type_params, Context};
 use crochet_types::{
-    self as types, TFnParam, TGeneric, TIndex, TObjElem, TObject, TPat, TProp, TVar, Type,
+    self as types, TFnParam, TGeneric, TIndex, TObjElem, TObject, TPat, TProp, TVar, Type, TypeKind,
 };
 
 pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
@@ -427,14 +427,14 @@ pub fn build_type_params(t: &Type) -> Option<Box<TsTypeParamDecl>> {
 /// `expr` should be the original expression that `t` was inferred
 /// from if it exists.
 pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType {
-    match t {
-        Type::Generic(TGeneric { t, .. }) => {
+    match &t.kind {
+        TypeKind::Generic(TGeneric { t, .. }) => {
             // TODO: combine the return value from the `build_type_params()` call
             // with the `type_params` passed into this function.
             let _ = build_type_params(t);
             build_type(t, type_params)
         }
-        Type::Var(TVar { id, constraint: _ }) => {
+        TypeKind::Var(TVar { id, constraint: _ }) => {
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                 .chars()
                 .collect();
@@ -450,7 +450,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 type_params: None,
             })
         }
-        Type::Keyword(keyword) => {
+        TypeKind::Keyword(keyword) => {
             let kind = match keyword {
                 types::TKeyword::Number => TsKeywordTypeKind::TsNumberKeyword,
                 types::TKeyword::String => TsKeywordTypeKind::TsStringKeyword,
@@ -466,7 +466,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 kind,
             })
         }
-        Type::Lit(lit) => {
+        TypeKind::Lit(lit) => {
             let lit = match lit {
                 types::TLit::Num(n) => TsLit::Number(Number {
                     span: DUMMY_SP,
@@ -489,14 +489,14 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 lit,
             })
         }
-        Type::App(types::TApp { args, ret, .. }) => {
+        TypeKind::App(types::TApp { args, ret, .. }) => {
             // This can happen when a function type is inferred by usage
             build_ts_fn_type_with_args(args, ret, type_params)
         }
-        Type::Lam(types::TLam { params, ret, .. }) => {
+        TypeKind::Lam(types::TLam { params, ret, .. }) => {
             build_ts_fn_type_with_params(params, ret, type_params)
         }
-        Type::Union(types) => {
+        TypeKind::Union(types) => {
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
                 span: DUMMY_SP,
                 types: sort_types(types)
@@ -505,7 +505,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                     .collect(),
             }))
         }
-        Type::Intersection(types) => TsType::TsUnionOrIntersectionType(
+        TypeKind::Intersection(types) => TsType::TsUnionOrIntersectionType(
             TsUnionOrIntersectionType::TsIntersectionType(TsIntersectionType {
                 span: DUMMY_SP,
                 types: sort_types(types)
@@ -514,7 +514,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                     .collect(),
             }),
         ),
-        Type::Object(obj) => {
+        TypeKind::Object(obj) => {
             let members: Vec<TsTypeElement> = obj
                 .elems
                 .iter()
@@ -559,7 +559,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 members,
             })
         }
-        Type::Ref(types::TRef {
+        TypeKind::Ref(types::TRef {
             name, type_args, ..
         }) => TsType::TsTypeRef(TsTypeRef {
             span: DUMMY_SP,
@@ -579,7 +579,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 })
             }),
         }),
-        Type::Tuple(types) => TsType::TsTupleType(TsTupleType {
+        TypeKind::Tuple(types) => TsType::TsTupleType(TsTupleType {
             span: DUMMY_SP,
             elem_types: types
                 .iter()
@@ -590,7 +590,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 })
                 .collect(),
         }),
-        Type::Array(t) => TsType::TsTypeOperator(TsTypeOperator {
+        TypeKind::Array(t) => TsType::TsTypeOperator(TsTypeOperator {
             span: DUMMY_SP,
             op: TsTypeOperatorOp::ReadOnly,
             type_ann: Box::from(TsType::TsArrayType(TsArrayType {
@@ -598,12 +598,12 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 elem_type: Box::from(build_type(t, None)),
             })),
         }),
-        Type::Rest(_) => todo!(),
-        Type::This => TsType::TsThisType(TsThisType { span: DUMMY_SP }),
-        Type::KeyOf(_) => todo!(),
-        Type::IndexAccess(_) => todo!(),
-        Type::Mutable(t) => {
-            if let Type::Object(TObject { elems }) = t.as_ref() {
+        TypeKind::Rest(_) => todo!(),
+        TypeKind::This => TsType::TsThisType(TsThisType { span: DUMMY_SP }),
+        TypeKind::KeyOf(_) => todo!(),
+        TypeKind::IndexAccess(_) => todo!(),
+        TypeKind::Mutable(t) => {
+            if let TypeKind::Object(TObject { elems }) = &t.kind {
                 let elems = elems
                     .iter()
                     .map(|elem| match elem {
@@ -620,7 +620,12 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                     })
                     .collect();
 
-                return build_type(&Type::Object(TObject { elems }), type_params);
+                return build_type(
+                    &Type {
+                        kind: TypeKind::Object(TObject { elems }),
+                    },
+                    type_params,
+                );
             }
 
             let ts_type = build_type(t, type_params);

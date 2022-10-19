@@ -80,7 +80,7 @@ pub struct TVar {
 // }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Type {
+pub enum TypeKind {
     Var(TVar),
     App(TApp),
     Lam(TLam),
@@ -101,17 +101,24 @@ pub enum Type {
     Generic(TGeneric),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Type {
+    pub kind: TypeKind,
+}
+
 impl From<TLit> for Type {
     fn from(lit: TLit) -> Self {
-        Type::Lit(lit)
+        Type {
+            kind: TypeKind::Lit(lit),
+        }
     }
 }
 
 impl fmt::Display for Type {
     // TODO: add in parentheses where necessary to get the precedence right
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Type::Generic(TGeneric { t, type_params }) => {
+        match &self.kind {
+            TypeKind::Generic(TGeneric { t, type_params }) => {
                 if type_params.is_empty() {
                     write!(f, "{t}")
                 } else {
@@ -126,32 +133,32 @@ impl fmt::Display for Type {
                     write!(f, "<{}>{t}", join(type_params, ", "))
                 }
             }
-            Type::Var(tv) => write!(f, "t{}", tv.id),
-            Type::App(TApp { args, ret }) => {
+            TypeKind::Var(tv) => write!(f, "t{}", tv.id),
+            TypeKind::App(TApp { args, ret }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }
-            Type::Lam(lam) => write!(f, "{lam}"),
-            Type::Lit(lit) => write!(f, "{}", lit),
-            Type::Keyword(keyword) => write!(f, "{}", keyword),
-            Type::Union(types) => {
+            TypeKind::Lam(lam) => write!(f, "{lam}"),
+            TypeKind::Lit(lit) => write!(f, "{}", lit),
+            TypeKind::Keyword(keyword) => write!(f, "{}", keyword),
+            TypeKind::Union(types) => {
                 let strings: Vec<_> = types.iter().map(|t| format!("{t}")).sorted().collect();
                 write!(f, "{}", join(strings, " | "))
             }
-            Type::Intersection(types) => {
+            TypeKind::Intersection(types) => {
                 let strings: Vec<_> = types.iter().map(|t| format!("{t}")).sorted().collect();
                 write!(f, "{}", join(strings, " & "))
             }
-            Type::Object(TObject { elems, .. }) => {
+            TypeKind::Object(TObject { elems, .. }) => {
                 write!(f, "{{{}}}", join(elems, ", "))
             }
-            Type::Ref(tr) => write!(f, "{tr}"),
-            Type::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
-            Type::Array(t) => write!(f, "{t}[]"),
-            Type::Rest(arg) => write!(f, "...{arg}"),
-            Type::This => write!(f, "this"),
-            Type::KeyOf(t) => write!(f, "keyof {t}"),
-            Type::Mutable(t) => write!(f, "mut {t}"),
-            Type::IndexAccess(TIndexAccess { object, index }) => write!(f, "{object}[{index}]"),
+            TypeKind::Ref(tr) => write!(f, "{tr}"),
+            TypeKind::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
+            TypeKind::Array(t) => write!(f, "{t}[]"),
+            TypeKind::Rest(arg) => write!(f, "...{arg}"),
+            TypeKind::This => write!(f, "this"),
+            TypeKind::KeyOf(t) => write!(f, "keyof {t}"),
+            TypeKind::Mutable(t) => write!(f, "mut {t}"),
+            TypeKind::IndexAccess(TIndexAccess { object, index }) => write!(f, "{object}[{index}]"),
         }
     }
 }

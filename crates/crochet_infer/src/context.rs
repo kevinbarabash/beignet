@@ -165,11 +165,11 @@ impl Context {
                                     "mismatch between the number of qualifiers and type params",
                                 ));
                             }
-                            ids.zip(type_params.iter().map(|tp| {
-                                Type::Var(TVar {
+                            ids.zip(type_params.iter().map(|tp| Type {
+                                kind: TypeKind::Var(TVar {
                                     id: self.fresh_id(),
                                     constraint: tp.constraint.to_owned(),
-                                })
+                                }),
                             }))
                             .collect()
                         }
@@ -184,14 +184,14 @@ impl Context {
     }
 
     pub fn instantiate(&self, t: &Type) -> Type {
-        match t {
-            Type::Generic(TGeneric { t, type_params }) => {
+        match &t.kind {
+            TypeKind::Generic(TGeneric { t, type_params }) => {
                 let ids = type_params.iter().map(|tv| tv.id.to_owned());
-                let fresh_params = type_params.iter().map(|tp| {
-                    Type::Var(TVar {
+                let fresh_params = type_params.iter().map(|tp| Type {
+                    kind: TypeKind::Var(TVar {
                         id: self.fresh_id(),
                         constraint: tp.constraint.to_owned(),
-                    })
+                    }),
                 });
                 let subs: Subst = ids.zip(fresh_params).collect();
 
@@ -216,9 +216,11 @@ impl Context {
     }
 
     pub fn fresh_var(&self) -> Type {
-        Type::Var(TVar {
-            id: self.fresh_id(),
-            constraint: None,
-        })
+        Type {
+            kind: TypeKind::Var(TVar {
+                id: self.fresh_id(),
+                constraint: None,
+            }),
+        }
     }
 }
