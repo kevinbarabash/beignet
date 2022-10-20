@@ -17,10 +17,7 @@ Ok(
                                         span: 5..6,
                                         kind: Ident(
                                             BindingIdent {
-                                                id: Ident {
-                                                    span: 5..6,
-                                                    name: "a",
-                                                },
+                                                name: "a",
                                             },
                                         ),
                                         inferred_type: None,
@@ -31,10 +28,7 @@ Ok(
                                         span: 8..9,
                                         kind: Ident(
                                             BindingIdent {
-                                                id: Ident {
-                                                    span: 8..9,
-                                                    name: "b",
-                                                },
+                                                name: "b",
                                             },
                                         ),
                                         inferred_type: None,
@@ -49,10 +43,7 @@ Ok(
                                                     span: 14..18,
                                                     kind: Ident(
                                                         BindingIdent {
-                                                            id: Ident {
-                                                                span: 14..18,
-                                                                name: "rest",
-                                                            },
+                                                            name: "rest",
                                                         },
                                                     ),
                                                     inferred_type: None,

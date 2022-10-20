@@ -1,3 +1,4 @@
+use crate::common::binding::*;
 use crate::types::Type;
 use crate::values::ident::Ident;
 use crate::values::jsx::JSXElement;
@@ -83,7 +84,7 @@ pub struct EFnParam {
 impl EFnParam {
     pub fn get_name(&self, index: &usize) -> String {
         match &self.pat.kind {
-            PatternKind::Ident(bi) => bi.id.name.to_owned(),
+            PatternKind::Ident(BindingIdent { name }) => name.to_owned(),
             _ => format!("arg{index}"),
         }
     }

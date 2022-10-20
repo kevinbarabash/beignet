@@ -1,5 +1,7 @@
+use crochet_ast::common::*;
 use crochet_ast::types::{self as types, TFnParam, TKeyword, TObject, TPat, TVar, Type, TypeKind};
 use crochet_ast::values::*;
+
 use types::TObjElem;
 
 use crate::assump::Assump;
@@ -59,9 +61,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let (s1, t) = infer_expr(ctx, expr)?;
             let tv = ctx.fresh_var();
             let param = TFnParam {
-                pat: TPat::Ident(types::BindingIdent {
+                pat: TPat::Ident(BindingIdent {
                     name: String::from("fix_param"),
-                    mutable: false,
                 }),
                 t: tv.clone(),
                 optional: false,

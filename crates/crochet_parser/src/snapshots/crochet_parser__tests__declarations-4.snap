@@ -11,10 +11,7 @@ Ok(
                     span: 8..9,
                     kind: Ident(
                         BindingIdent {
-                            id: Ident {
-                                span: 8..9,
-                                name: "f",
-                            },
+                            name: "f",
                         },
                     ),
                     inferred_type: None,
@@ -35,10 +32,7 @@ Ok(
                                                         span: 8..9,
                                                         kind: Ident(
                                                             BindingIdent {
-                                                                id: Ident {
-                                                                    span: 8..9,
-                                                                    name: "f",
-                                                                },
+                                                                name: "f",
                                                             },
                                                         ),
                                                         inferred_type: None,

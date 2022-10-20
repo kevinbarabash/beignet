@@ -2,6 +2,7 @@ use itertools::join;
 use std::fmt;
 use std::hash::Hash;
 
+use crate::common::binding::*;
 use crate::types::r#type::Type;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -19,22 +20,6 @@ impl fmt::Display for TPat {
             TPat::Rest(rest) => write!(f, "{rest}"),
             TPat::Array(array) => write!(f, "{array}"),
             TPat::Object(obj) => write!(f, "{obj}"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct BindingIdent {
-    pub name: String,
-    pub mutable: bool,
-}
-
-impl fmt::Display for BindingIdent {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { name, mutable } = self;
-        match mutable {
-            false => write!(f, "{name}"),
-            true => write!(f, "mut {name}"),
         }
     }
 }
