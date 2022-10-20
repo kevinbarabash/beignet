@@ -76,7 +76,10 @@ impl Substitutable for Type {
                 })
             }
         };
-        norm_type(Type { kind })
+        norm_type(Type {
+            kind,
+            provenance: None,
+        })
     }
     fn ftv(&self) -> Vec<TVar> {
         match &self.kind {
@@ -279,6 +282,7 @@ fn norm_type(t: Type) -> Type {
             } else {
                 Type {
                     kind: TypeKind::Union(types),
+                    provenance: None,
                 }
             }
         }
@@ -293,6 +297,7 @@ fn norm_type(t: Type) -> Type {
             } else {
                 Type {
                     kind: TypeKind::Intersection(types),
+                    provenance: None,
                 }
             }
         }

@@ -1,3 +1,4 @@
+use derivative::*;
 use itertools::{join, Itertools};
 use std::fmt;
 
@@ -5,6 +6,7 @@ use crate::types::keyword::TKeyword;
 use crate::types::lam::TLam;
 use crate::types::lit::TLit;
 use crate::types::obj::TObjElem;
+use crate::values::expr::Expr;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TApp {
@@ -87,15 +89,20 @@ pub enum TypeKind {
     Generic(TGeneric),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Derivative)]
+#[derivative(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Type {
     pub kind: TypeKind,
+    #[derivative(Ord = "ignore")]
+    #[derivative(PartialOrd = "ignore")]
+    pub provenance: Option<Box<Expr>>,
 }
 
 impl From<TLit> for Type {
     fn from(lit: TLit) -> Self {
         Type {
             kind: TypeKind::Lit(lit),
+            provenance: None,
         }
     }
 }

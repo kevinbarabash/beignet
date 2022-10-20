@@ -44,6 +44,7 @@ pub fn infer_type_ann(
                                 id: ctx.fresh_id(),
                                 constraint: Some(Box::from(t)),
                             }),
+                            provenance: None,
                         }
                     }
                     None => ctx.fresh_var(),
@@ -94,6 +95,7 @@ fn infer_type_ann_rec(
             let s = compose_many_subs(&ss);
             let t = Type {
                 kind: TypeKind::Lam(types::TLam { params, ret }),
+                provenance: None,
             };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -153,6 +155,7 @@ fn infer_type_ann_rec(
             let s = compose_many_subs(&ss);
             let t = Type {
                 kind: TypeKind::Object(TObject { elems }),
+                provenance: None,
             };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -191,6 +194,7 @@ fn infer_type_ann_rec(
                             Some(type_args)
                         },
                     }),
+                    provenance: None,
                 };
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
@@ -210,6 +214,7 @@ fn infer_type_ann_rec(
             let s = compose_many_subs(&ss);
             let t = Type {
                 kind: TypeKind::Union(ts),
+                provenance: None,
             };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -228,6 +233,7 @@ fn infer_type_ann_rec(
             let s = compose_many_subs(&ss);
             let t = Type {
                 kind: TypeKind::Intersection(ts),
+                provenance: None,
             };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -246,6 +252,7 @@ fn infer_type_ann_rec(
             let s = compose_many_subs(&ss);
             let t = Type {
                 kind: TypeKind::Tuple(ts),
+                provenance: None,
             };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -255,6 +262,7 @@ fn infer_type_ann_rec(
             let s = elem_s;
             let t = Type {
                 kind: TypeKind::Array(Box::from(elem_t)),
+                provenance: None,
             };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -264,6 +272,7 @@ fn infer_type_ann_rec(
             let s = arg_s;
             let t = Type {
                 kind: TypeKind::KeyOf(Box::from(arg_t)),
+                provenance: None,
             };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -273,6 +282,7 @@ fn infer_type_ann_rec(
             let (s, t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
             let t = Type {
                 kind: TypeKind::Mutable(Box::from(t)),
+                provenance: None,
             };
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -405,6 +415,7 @@ fn infer_property_type(
             // TODO: remove duplicate types
             let type_param = Type {
                 kind: TypeKind::Union(elem_types.to_owned()),
+                provenance: None,
             };
             let type_params = get_type_params(&t); // ReadonlyArray type params
 

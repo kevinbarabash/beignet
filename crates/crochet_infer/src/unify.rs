@@ -81,6 +81,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                                 params: call.params.to_owned(),
                                 ret: call.ret.to_owned(),
                             }),
+                            provenance: None,
                         };
                         let t = if call.type_params.is_empty() {
                             lam
@@ -90,6 +91,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                                     t: Box::from(lam),
                                     type_params: call.type_params.to_owned(),
                                 }),
+                                provenance: None,
                             }
                         };
                         Some(t)
@@ -179,6 +181,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 let regular_args: Vec<_> = args.drain(0..regular_arg_count).collect();
                 let rest_arg = Type {
                     kind: TypeKind::Tuple(args),
+                    provenance: None,
                 };
 
                 let mut params = lam.params.clone();
@@ -329,6 +332,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 let s = unify(
                     &Type {
                         kind: TypeKind::Tuple(rest1),
+                        provenance: None,
                     },
                     &rest2,
                     ctx,
@@ -416,6 +420,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let s1 = unify(
                         &Type {
                             kind: TypeKind::Object(TObject { elems: obj_elems }),
+                            provenance: None,
                         },
                         &obj_type,
                         ctx,
@@ -425,6 +430,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let s2 = unify(
                         &Type {
                             kind: TypeKind::Object(TObject { elems: rest_elems }),
+                            provenance: None,
                         },
                         rest_type,
                         ctx,
@@ -474,6 +480,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         &obj_type,
                         &Type {
                             kind: TypeKind::Object(TObject { elems: obj_elems }),
+                            provenance: None,
                         },
                         ctx,
                     )?;
@@ -483,6 +490,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         rest_type,
                         &Type {
                             kind: TypeKind::Object(TObject { elems: rest_elems }),
+                            provenance: None,
                         },
                         ctx,
                     )?;
@@ -587,11 +595,12 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
                         // Converts set back to an array
                         let types: Vec<Type> = types.into_iter().collect();
 
-                        let t = if types.len() == 1 {
+                        let t: Type = if types.len() == 1 {
                             types.get(0).unwrap().to_owned()
                         } else {
                             Type {
                                 kind: TypeKind::Union(types),
+                                provenance: None,
                             }
                         };
 
@@ -620,6 +629,7 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
                             id.to_owned(),
                             Type {
                                 kind: TypeKind::Var(tv.to_owned()),
+                                provenance: None,
                             },
                         )]);
                         return Ok(s);
@@ -663,6 +673,7 @@ mod tests {
             &Type::from(num("5")),
             &Type {
                 kind: TypeKind::Keyword(TKeyword::Number),
+                provenance: None,
             },
             &ctx,
         );
@@ -672,6 +683,7 @@ mod tests {
             &Type::from(str("hello")),
             &Type {
                 kind: TypeKind::Keyword(TKeyword::String),
+                provenance: None,
             },
             &ctx,
         );
@@ -681,6 +693,7 @@ mod tests {
             &Type::from(bool(&true)),
             &Type {
                 kind: TypeKind::Keyword(TKeyword::Boolean),
+                provenance: None,
             },
             &ctx,
         );
@@ -711,11 +724,13 @@ mod tests {
                 mutable: false,
                 t: Type {
                     kind: TypeKind::Keyword(TKeyword::String),
+                    provenance: None,
                 },
             }),
         ];
         let t1 = Type {
             kind: TypeKind::Object(TObject { elems }),
+            provenance: None,
         };
 
         let elems = vec![
@@ -725,6 +740,7 @@ mod tests {
                 mutable: false,
                 t: Type {
                     kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
                 },
             }),
             types::TObjElem::Prop(types::TProp {
@@ -733,6 +749,7 @@ mod tests {
                 mutable: false,
                 t: Type {
                     kind: TypeKind::Keyword(TKeyword::Boolean),
+                    provenance: None,
                 },
             }),
             // It's okay for qux to not appear in the subtype since
@@ -743,11 +760,13 @@ mod tests {
                 mutable: false,
                 t: Type {
                     kind: TypeKind::Keyword(TKeyword::String),
+                    provenance: None,
                 },
             }),
         ];
         let t2 = Type {
             kind: TypeKind::Object(TObject { elems }),
+            provenance: None,
         };
 
         let result = unify(&t1, &t2, &ctx);
@@ -763,6 +782,7 @@ mod tests {
         let result = unify(
             &Type {
                 kind: TypeKind::Keyword(TKeyword::Number),
+                provenance: None,
             },
             &Type::from(num("5")),
             &ctx,

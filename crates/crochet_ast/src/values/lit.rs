@@ -108,6 +108,7 @@ impl From<Lit> for Type {
                 Lit::Bool(b) => TLit::Bool(b.value),
                 Lit::Str(s) => TLit::Str(s.value),
             }),
+            provenance: None,
         }
     }
 }

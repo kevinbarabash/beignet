@@ -23,6 +23,7 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
                     TObjElem::Index(_) => todo!(),
                     TObjElem::Prop(prop) => Some(Type {
                         kind: TypeKind::Lit(TLit::Str(prop.name.to_owned())),
+                        provenance: None,
                     }),
                 })
                 .collect();
@@ -39,6 +40,7 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
             for i in 0..tuple.len() {
                 elems.push(Type {
                     kind: TypeKind::Lit(TLit::Num(i.to_string())),
+                    provenance: None,
                 })
             }
             elems.push(key_of(
@@ -50,6 +52,7 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
         TypeKind::Array(_) => Ok(union_many_types(&[
             Type {
                 kind: TypeKind::Keyword(TKeyword::Number),
+                provenance: None,
             },
             key_of(&ctx.lookup_type_and_instantiate("ReadonlyArray")?, ctx)?,
         ])),
@@ -64,12 +67,15 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
             TKeyword::Symbol => key_of(&ctx.lookup_type_and_instantiate("Symbol")?, ctx),
             TKeyword::Null => Ok(Type {
                 kind: TypeKind::Keyword(TKeyword::Never),
+                provenance: None,
             }),
             TKeyword::Undefined => Ok(Type {
                 kind: TypeKind::Keyword(TKeyword::Never),
+                provenance: None,
             }),
             TKeyword::Never => Ok(Type {
                 kind: TypeKind::Keyword(TKeyword::Never),
+                provenance: None,
             }),
         },
         TypeKind::Union(_) => todo!(),

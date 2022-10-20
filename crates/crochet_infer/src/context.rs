@@ -164,6 +164,7 @@ impl Context {
                                 id: self.fresh_id(),
                                 constraint: tp.constraint.to_owned(),
                             }),
+                            provenance: None,
                         }))
                         .collect()
                     }
@@ -184,6 +185,7 @@ impl Context {
                         id: self.fresh_id(),
                         constraint: tp.constraint.to_owned(),
                     }),
+                    provenance: None,
                 });
                 let subs: Subst = ids.zip(fresh_params).collect();
 
@@ -213,6 +215,7 @@ impl Context {
                 id: self.fresh_id(),
                 constraint: None,
             }),
+            provenance: None,
         }
     }
 }
