@@ -6,6 +6,7 @@ use swc_common::{SourceMap, DUMMY_SP};
 use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
+use crochet_ast::common;
 use crochet_ast::types::{
     TFnParam, TGeneric, TIndex, TObjElem, TObject, TPat, TProp, TVar, Type, TypeKind,
 };
@@ -97,10 +98,10 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
 }
 
 // TODO: create a trait for this and then provide multiple implementations
-pub fn build_ident(id: &values::Ident) -> Ident {
+pub fn build_ident(name: &str) -> Ident {
     Ident {
         span: DUMMY_SP,
-        sym: JsWord::from(id.name.to_owned()),
+        sym: JsWord::from(name.to_owned()),
         optional: false,
     }
 }
@@ -155,8 +156,8 @@ pub fn _build_param(r#type: &Type, e_param: &values::EFnParam) -> TsFnParam {
 
 pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
     match &pattern.kind {
-        values::PatternKind::Ident(values::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
-            id: build_ident(id),
+        values::PatternKind::Ident(common::BindingIdent { name }) => Pat::Ident(BindingIdent {
+            id: build_ident(name),
             type_ann,
         }),
         values::PatternKind::Rest(values::RestPat { arg, .. }) => Pat::Rest(RestPat {
@@ -171,14 +172,14 @@ pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTyp
                 .map(|prop| match prop {
                     values::ObjectPatProp::KeyValue(kv) => {
                         ObjectPatProp::KeyValue(KeyValuePatProp {
-                            key: PropName::Ident(build_ident(&kv.key)),
+                            key: PropName::Ident(build_ident(&kv.key.name)),
                             value: Box::from(build_param_pat_rec(kv.value.as_ref(), None)),
                         })
                     }
                     values::ObjectPatProp::Assign(assign) => {
                         ObjectPatProp::Assign(AssignPatProp {
                             span: DUMMY_SP,
-                            key: build_ident(&assign.key),
+                            key: build_ident(&assign.key.name),
                             // TODO: handle default values
                             value: None,
                         })

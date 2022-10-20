@@ -10,10 +10,7 @@ Program {
                 span: 4..7,
                 kind: Ident(
                     BindingIdent {
-                        id: Ident {
-                            span: 4..7,
-                            name: "add",
-                        },
+                        name: "add",
                     },
                 ),
                 inferred_type: None,
@@ -30,10 +27,7 @@ Program {
                                         span: 11..12,
                                         kind: Ident(
                                             BindingIdent {
-                                                id: Ident {
-                                                    span: 11..12,
-                                                    name: "a",
-                                                },
+                                                name: "a",
                                             },
                                         ),
                                         inferred_type: None,
@@ -47,10 +41,7 @@ Program {
                                         span: 14..15,
                                         kind: Ident(
                                             BindingIdent {
-                                                id: Ident {
-                                                    span: 14..15,
-                                                    name: "b",
-                                                },
+                                                name: "b",
                                             },
                                         ),
                                         inferred_type: None,
@@ -121,7 +112,6 @@ Program {
                                             pat: Ident(
                                                 BindingIdent {
                                                     name: "a",
-                                                    mutable: false,
                                                 },
                                             ),
                                             t: Type {
@@ -135,7 +125,6 @@ Program {
                                             pat: Ident(
                                                 BindingIdent {
                                                     name: "b",
-                                                    mutable: false,
                                                 },
                                             ),
                                             t: Type {

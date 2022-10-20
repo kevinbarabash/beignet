@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crochet_ast::common::*;
 use crochet_ast::types::{self as types, TObject, Type, TypeKind};
 use crochet_ast::values::*;
 
@@ -53,9 +54,9 @@ fn infer_pattern_rec(
     assump: &mut Assump,
 ) -> Result<Type, String> {
     match &mut pat.kind {
-        PatternKind::Ident(BindingIdent { id, .. }) => {
+        PatternKind::Ident(BindingIdent { name }) => {
             let tv = ctx.fresh_var();
-            if assump.insert(id.name.to_owned(), tv.clone()).is_some() {
+            if assump.insert(name.to_owned(), tv.clone()).is_some() {
                 return Err(String::from("Duplicate identifier in pattern"));
             }
             Ok(tv)

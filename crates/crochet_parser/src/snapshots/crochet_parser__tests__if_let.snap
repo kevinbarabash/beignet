@@ -11,10 +11,7 @@ Ok(
                     span: 17..20,
                     kind: Ident(
                         BindingIdent {
-                            id: Ident {
-                                span: 17..20,
-                                name: "bar",
-                            },
+                            name: "bar",
                         },
                     ),
                     inferred_type: None,
@@ -54,10 +51,7 @@ Ok(
                                                                         span: 38..39,
                                                                         kind: Ident(
                                                                             BindingIdent {
-                                                                                id: Ident {
-                                                                                    span: 38..39,
-                                                                                    name: "b",
-                                                                                },
+                                                                                name: "b",
                                                                             },
                                                                         ),
                                                                         inferred_type: None,
@@ -70,10 +64,7 @@ Ok(
                                                                         span: 44..48,
                                                                         kind: Ident(
                                                                             BindingIdent {
-                                                                                id: Ident {
-                                                                                    span: 44..48,
-                                                                                    name: "rest",
-                                                                                },
+                                                                                name: "rest",
                                                                             },
                                                                         ),
                                                                         inferred_type: None,
@@ -131,10 +122,7 @@ Ok(
                                                                                     span: 112..113,
                                                                                     kind: Ident(
                                                                                         BindingIdent {
-                                                                                            id: Ident {
-                                                                                                span: 112..113,
-                                                                                                name: "a",
-                                                                                            },
+                                                                                            name: "a",
                                                                                         },
                                                                                     ),
                                                                                     inferred_type: None,
@@ -158,10 +146,7 @@ Ok(
                                                                                                 span: 121..125,
                                                                                                 kind: Ident(
                                                                                                     BindingIdent {
-                                                                                                        id: Ident {
-                                                                                                            span: 121..125,
-                                                                                                            name: "rest",
-                                                                                                        },
+                                                                                                        name: "rest",
                                                                                                     },
                                                                                                 ),
                                                                                                 inferred_type: None,

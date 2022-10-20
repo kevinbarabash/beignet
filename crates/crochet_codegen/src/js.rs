@@ -8,9 +8,10 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 use swc_ecma_transforms_react::{react, Options, Runtime};
 use swc_ecma_visit::*;
-use values::LetExpr;
 
+use crochet_ast::common;
 use crochet_ast::values;
+use values::LetExpr;
 
 pub struct Context {
     pub temp_id: u32,
@@ -146,9 +147,9 @@ fn build_pattern(
         values::PatternKind::Wildcard(_) => None,
 
         // assignable patterns
-        values::PatternKind::Ident(values::BindingIdent { id, .. }) => {
+        values::PatternKind::Ident(common::BindingIdent { name }) => {
             Some(Pat::Ident(BindingIdent {
-                id: build_ident(id),
+                id: build_ident(name),
                 type_ann: None,
             }))
         }
@@ -217,7 +218,7 @@ fn build_pattern(
             }))
         }
         values::PatternKind::Is(values::IsPat { id, .. }) => Some(Pat::Ident(BindingIdent {
-            id: build_ident(id),
+            id: build_ident(&id.name),
             type_ann: None,
         })),
     }
@@ -366,7 +367,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 type_args: None,
             })
         }
-        values::ExprKind::Ident(ident) => Expr::from(build_ident(ident)),
+        values::ExprKind::Ident(ident) => Expr::from(build_ident(&ident.name)),
         values::ExprKind::Lambda(values::Lambda {
             params: args,
             body,
@@ -567,7 +568,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         }),
         values::ExprKind::Member(values::Member { obj, prop, .. }) => {
             let prop = match prop {
-                values::MemberProp::Ident(ident) => MemberProp::Ident(build_ident(ident)),
+                values::MemberProp::Ident(ident) => MemberProp::Ident(build_ident(&ident.name)),
                 values::MemberProp::Computed(values::ComputedPropName { expr, .. }) => {
                     MemberProp::Computed(ComputedPropName {
                         span: DUMMY_SP,
@@ -598,7 +599,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         }) => {
             Expr::TaggedTpl(TaggedTpl {
                 span: DUMMY_SP,
-                tag: Box::from(Expr::Ident(build_ident(tag))),
+                tag: Box::from(Expr::Ident(build_ident(&tag.name))),
                 type_params: None, // TODO: support type params on tagged templates
 
                 tpl: build_template_literal(template, stmts, ctx),
@@ -972,10 +973,10 @@ fn build_template_literal(
     }
 }
 
-fn build_ident(ident: &values::Ident) -> Ident {
+fn build_ident(name: &str) -> Ident {
     Ident {
         span: DUMMY_SP,
-        sym: JsWord::from(ident.name.to_owned()),
+        sym: JsWord::from(name.to_owned()),
         optional: false,
     }
 }

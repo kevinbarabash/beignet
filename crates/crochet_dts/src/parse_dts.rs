@@ -8,6 +8,7 @@ use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
+use crochet_ast::common;
 use crochet_ast::types::{self as types, RestPat, TFnParam, TKeyword, TPat, TProp, Type};
 use crochet_ast::values::Lit;
 use crochet_infer::{close_over, generalize, normalize, Context, Env, Subst, Substitutable};
@@ -189,9 +190,8 @@ fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>,
             TsFnParam::Ident(ident) => {
                 let type_ann = ident.type_ann.clone().unwrap();
                 let param = TFnParam {
-                    pat: TPat::Ident(types::BindingIdent {
+                    pat: TPat::Ident(common::BindingIdent {
                         name: ident.id.sym.to_string(),
-                        mutable: false,
                     }),
                     t: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
                     optional: ident.optional,
@@ -211,10 +211,7 @@ fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>,
                 };
                 let param = TFnParam {
                     pat: TPat::Rest(RestPat {
-                        arg: Box::from(TPat::Ident(types::BindingIdent {
-                            name,
-                            mutable: false,
-                        })),
+                        arg: Box::from(TPat::Ident(common::BindingIdent { name })),
                     }),
                     t: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
                     optional: false,

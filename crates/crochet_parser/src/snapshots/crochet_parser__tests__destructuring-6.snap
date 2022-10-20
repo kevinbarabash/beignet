@@ -11,10 +11,7 @@ Ok(
                     span: 4..7,
                     kind: Ident(
                         BindingIdent {
-                            id: Ident {
-                                span: 4..7,
-                                name: "foo",
-                            },
+                            name: "foo",
                         },
                     ),
                     inferred_type: None,
@@ -37,10 +34,7 @@ Ok(
                                                                 span: 12..13,
                                                                 kind: Ident(
                                                                     BindingIdent {
-                                                                        id: Ident {
-                                                                            span: 12..13,
-                                                                            name: "a",
-                                                                        },
+                                                                        name: "a",
                                                                     },
                                                                 ),
                                                                 inferred_type: None,
@@ -51,10 +45,7 @@ Ok(
                                                                 span: 15..16,
                                                                 kind: Ident(
                                                                     BindingIdent {
-                                                                        id: Ident {
-                                                                            span: 15..16,
-                                                                            name: "b",
-                                                                        },
+                                                                        name: "b",
                                                                     },
                                                                 ),
                                                                 inferred_type: None,

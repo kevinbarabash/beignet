@@ -1,3 +1,4 @@
+use crate::common::binding::*;
 use crate::types::Type;
 use crate::values::expr::Expr;
 use crate::values::ident::Ident;
@@ -32,15 +33,10 @@ pub struct Pattern {
 impl Pattern {
     pub fn get_name(&self, index: &usize) -> String {
         match &self.kind {
-            PatternKind::Ident(BindingIdent { id, .. }) => id.name.to_owned(),
+            PatternKind::Ident(BindingIdent { name }) => name.to_owned(),
             _ => format!("arg{index}"),
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BindingIdent {
-    pub id: Ident,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -140,7 +136,9 @@ mod tests {
     }
 
     fn ident_pattern(name: &str) -> Pattern {
-        let kind = PatternKind::Ident(BindingIdent { id: ident(name) });
+        let kind = PatternKind::Ident(BindingIdent {
+            name: name.to_owned(),
+        });
         Pattern {
             span: 0..0,
             kind,
