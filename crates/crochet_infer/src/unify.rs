@@ -1,5 +1,5 @@
 use std::cmp;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crochet_ast::types::{self as types, TGeneric, TLam, TObjElem, TObject, TVar, Type, TypeKind};
 use types::TKeyword;
@@ -583,7 +583,7 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
                         // TODO: dedupe with `norm_type()` in substitutable.rs
                         // TODO: restrict this special case handling to recursive functions?
                         // Removes duplicates
-                        let types: HashSet<Type> = elem_types_without_id.into_iter().collect();
+                        let types: BTreeSet<Type> = elem_types_without_id.into_iter().collect();
                         // Converts set back to an array
                         let types: Vec<Type> = types.into_iter().collect();
 

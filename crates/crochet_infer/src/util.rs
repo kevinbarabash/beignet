@@ -1,6 +1,6 @@
 use array_tool::vec::*;
 use defaultmap::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::iter::Iterator;
 
 use crochet_ast::types::*;
@@ -258,7 +258,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
         .collect();
 
     // The use of HashSet<Type> here is to avoid duplicate types
-    let mut props_map: DefaultHashMap<String, HashSet<Type>> = defaulthashmap!();
+    let mut props_map: DefaultHashMap<String, BTreeSet<Type>> = defaulthashmap!();
     for obj in obj_types {
         for elem in &obj.elems {
             match elem {
@@ -342,15 +342,15 @@ pub fn union_types(t1: &Type, t2: &Type) -> Type {
 pub fn union_many_types(ts: &[Type]) -> Type {
     let types: Vec<_> = ts.iter().flat_map(flatten_types).collect();
 
-    let types_set: HashSet<_> = types.iter().cloned().collect();
+    let types_set: BTreeSet<_> = types.iter().cloned().collect();
 
-    let keyword_types: HashSet<_> = types_set
+    let keyword_types: BTreeSet<_> = types_set
         .iter()
         .cloned()
         .filter(|t| matches!(&t.kind, TypeKind::Keyword(_)))
         .collect();
 
-    let lit_types: HashSet<_> = types_set
+    let lit_types: BTreeSet<_> = types_set
         .iter()
         .cloned()
         .filter(|t| match &t.kind {
@@ -370,7 +370,7 @@ pub fn union_many_types(ts: &[Type]) -> Type {
         })
         .collect();
 
-    let other_types: HashSet<_> = types_set
+    let other_types: BTreeSet<_> = types_set
         .iter()
         .cloned()
         .filter(|t| !matches!(&t.kind, TypeKind::Lit(_) | TypeKind::Keyword(_)))

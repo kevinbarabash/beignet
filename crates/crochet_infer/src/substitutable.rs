@@ -1,5 +1,5 @@
 use array_tool::vec::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 
 use crochet_ast::types::*;
 
@@ -270,7 +270,7 @@ fn norm_type(t: Type) -> Type {
     match &t.kind {
         TypeKind::Union(types) => {
             // Removes duplicates
-            let types: HashSet<Type> = types.clone().into_iter().collect();
+            let types: BTreeSet<Type> = types.clone().into_iter().collect();
             // Converts set back to an array
             let types: Vec<Type> = types.into_iter().collect();
 
@@ -284,7 +284,7 @@ fn norm_type(t: Type) -> Type {
         }
         TypeKind::Intersection(types) => {
             // Removes duplicates
-            let types: HashSet<Type> = types.clone().into_iter().collect();
+            let types: BTreeSet<Type> = types.clone().into_iter().collect();
             // Converts set back to an array
             let types: Vec<Type> = types.into_iter().collect();
 

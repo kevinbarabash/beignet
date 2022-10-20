@@ -1,7 +1,7 @@
 use std::fmt;
 use std::hash::Hash;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TKeyword {
     Number,
     Boolean,

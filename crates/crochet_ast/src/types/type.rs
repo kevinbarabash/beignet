@@ -1,37 +1,23 @@
 use itertools::{join, Itertools};
 use std::fmt;
-use std::hash::Hash;
 
 use crate::types::keyword::TKeyword;
 use crate::types::lam::TLam;
 use crate::types::lit::TLit;
 use crate::types::obj::TObjElem;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TApp {
     pub args: Vec<Type>,
     pub ret: Box<Type>,
     // TODO: add type_args property to support explicit specification of type args
 }
 
-#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TRef {
     pub name: String,
     // TODO: make this non-optional
     pub type_args: Option<Vec<Type>>,
-}
-
-impl PartialEq for TRef {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.type_args == other.type_args
-    }
-}
-
-impl Hash for TRef {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.name.hash(state);
-        self.type_args.hash(state);
-    }
 }
 
 impl fmt::Display for TRef {
@@ -44,24 +30,24 @@ impl fmt::Display for TRef {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TObject {
     pub elems: Vec<TObjElem>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TIndexAccess {
     pub object: Box<Type>,
     pub index: Box<Type>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TGeneric {
     pub t: Box<Type>,
     pub type_params: Vec<TVar>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TVar {
     pub id: i32,
     pub constraint: Option<Box<Type>>,
@@ -79,7 +65,7 @@ pub struct TVar {
 //     }
 // }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TypeKind {
     Var(TVar),
     App(TApp),
@@ -101,7 +87,7 @@ pub enum TypeKind {
     Generic(TGeneric),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Type {
     pub kind: TypeKind,
 }
