@@ -81,7 +81,10 @@ fn infer_pattern_rec(
                     type_args: None,
                 }),
             };
-            let t = Type { kind };
+            let t = Type {
+                kind,
+                provenance: None,
+            };
             // TODO: we need a method on Context to get all types that currently in
             // scope so that we can pass them to generalize()
             let all_types = ctx.get_all_types();
@@ -95,6 +98,7 @@ fn infer_pattern_rec(
             let t = infer_pattern_rec(arg, ctx, assump)?;
             Ok(Type {
                 kind: TypeKind::Rest(Box::from(t)),
+                provenance: None,
             })
         }
         PatternKind::Array(ArrayPat { elems, .. }) => {
@@ -107,6 +111,7 @@ fn infer_pattern_rec(
                                 let rest_ty = infer_pattern_rec(&mut rest.arg, ctx, assump)?;
                                 Ok(Type {
                                     kind: TypeKind::Rest(Box::from(rest_ty)),
+                                    provenance: None,
                                 })
                             }
                             _ => infer_pattern_rec(elem, ctx, assump),
@@ -121,6 +126,7 @@ fn infer_pattern_rec(
 
             Ok(Type {
                 kind: TypeKind::Tuple(elems?),
+                provenance: None,
             })
         }
         // TODO: infer type_params
@@ -177,6 +183,7 @@ fn infer_pattern_rec(
 
             let obj_type = Type {
                 kind: TypeKind::Object(TObject { elems }),
+                provenance: None,
             };
 
             match rest_opt_ty {
@@ -184,6 +191,7 @@ fn infer_pattern_rec(
                 // See https://github.com/microsoft/TypeScript/issues/10727
                 Some(rest_ty) => Ok(Type {
                     kind: TypeKind::Intersection(vec![obj_type, rest_ty]),
+                    provenance: None,
                 }),
                 None => Ok(obj_type),
             }

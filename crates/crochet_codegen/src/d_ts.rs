@@ -628,6 +628,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 return build_type(
                     &Type {
                         kind: TypeKind::Object(TObject { elems }),
+                        provenance: None,
                     },
                     type_params,
                 );

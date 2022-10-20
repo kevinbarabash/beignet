@@ -21,6 +21,7 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
                         id: index as i32,
                         constraint: key.constraint.clone(),
                     }),
+                    provenance: None,
                 },
             )
         })
@@ -36,6 +37,7 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
                     id: (offset + index) as i32,
                     constraint: tp.constraint.clone(),
                 }),
+                provenance: None,
             },
         );
     }
@@ -79,7 +81,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                             None => tp.to_owned(),
                         })
                         .collect(),
-                })}
+                }), provenance: None}
             }
             TypeKind::Var(tv) => match mapping.get(&tv.id) {
                 Some(t) => t.to_owned(),
@@ -96,6 +98,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 let ret = Box::from(norm_type(&app.ret, mapping, ctx));
                 Type {
                     kind: TypeKind::App(TApp { args, ret }),
+                    provenance: None,
                 }
             }
             TypeKind::Lam(lam) => {
@@ -110,6 +113,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
                 Type {
                     kind: TypeKind::Lam(TLam { params, ret }),
+                    provenance: None,
                 }
             }
             TypeKind::Lit(_) => t.to_owned(),
@@ -120,6 +124,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 let types = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
                 Type {
                     kind: TypeKind::Union(types),
+                    provenance: None,
                 }
             }
             TypeKind::Intersection(types) => {
@@ -182,6 +187,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     .collect();
                 Type {
                     kind: TypeKind::Object(TObject { elems }),
+                    provenance: None,
                 }
             }
             TypeKind::Ref(TRef { name, type_args }) => {
@@ -193,34 +199,42 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                         name: name.to_owned(),
                         type_args,
                     }),
+                    provenance: None,
                 }
             }
             TypeKind::Tuple(types) => {
                 let types = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
                 Type {
                     kind: TypeKind::Tuple(types),
+                    provenance: None,
                 }
             }
             TypeKind::Array(t) => Type {
                 kind: TypeKind::Array(Box::from(norm_type(t, mapping, ctx))),
+                provenance: None,
             },
             TypeKind::Rest(arg) => Type {
                 kind: TypeKind::Rest(Box::from(norm_type(arg, mapping, ctx))),
+                provenance: None,
             },
             TypeKind::This => Type {
                 kind: TypeKind::This,
+                provenance: None,
             },
             TypeKind::KeyOf(t) => Type {
                 kind: TypeKind::KeyOf(Box::from(norm_type(t, mapping, ctx))),
+                provenance: None,
             },
             TypeKind::IndexAccess(TIndexAccess { object, index }) => Type {
                 kind: TypeKind::IndexAccess(TIndexAccess {
                     object: Box::from(norm_type(object, mapping, ctx)),
                     index: Box::from(norm_type(index, mapping, ctx)),
                 }),
+                provenance: None,
             },
             TypeKind::Mutable(t) => Type {
                 kind: TypeKind::Mutable(Box::from(norm_type(t, mapping, ctx))),
+                provenance: None,
             },
         }
     }
@@ -282,6 +296,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
             } else {
                 Type {
                     kind: TypeKind::Intersection(types),
+                    provenance: None,
                 }
             };
             TObjElem::Prop(TProp {
@@ -314,6 +329,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     if !elems.is_empty() {
         out_types.push(Type {
             kind: TypeKind::Object(TObject { elems }),
+            provenance: None,
         });
     }
     // TODO: figure out a consistent way to sort types
@@ -324,6 +340,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     } else {
         Type {
             kind: TypeKind::Intersection(out_types),
+            provenance: None,
         }
     }
 }
@@ -358,12 +375,15 @@ pub fn union_many_types(ts: &[Type]) -> Type {
             TypeKind::Lit(lit) => match lit {
                 TLit::Num(_) => !keyword_types.contains(&Type {
                     kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
                 }),
                 TLit::Bool(_) => !keyword_types.contains(&Type {
                     kind: TypeKind::Keyword(TKeyword::Boolean),
+                    provenance: None,
                 }),
                 TLit::Str(_) => !keyword_types.contains(&Type {
                     kind: TypeKind::Keyword(TKeyword::String),
+                    provenance: None,
                 }),
             },
             _ => false,
@@ -386,6 +406,7 @@ pub fn union_many_types(ts: &[Type]) -> Type {
     if types.len() > 1 {
         Type {
             kind: TypeKind::Union(types),
+            provenance: None,
         }
     } else {
         types[0].clone()
@@ -441,8 +462,10 @@ pub fn get_property_type(prop: &TProp) -> Type {
                 t,
                 Type {
                     kind: TypeKind::Keyword(TKeyword::Undefined),
+                    provenance: None,
                 },
             ]),
+            provenance: None,
         },
         false => t,
     }
@@ -474,12 +497,14 @@ pub fn set_type_params(t: &Type, type_params: &[TVar]) -> Type {
                 t: t.to_owned(),
                 type_params: type_params.to_owned(),
             }),
+            provenance: None,
         },
         _ => Type {
             kind: TypeKind::Generic(TGeneric {
                 t: Box::from(t.to_owned()),
                 type_params: type_params.to_owned(),
             }),
+            provenance: None,
         },
     }
 }

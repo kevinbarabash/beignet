@@ -24,6 +24,7 @@ pub fn infer_fn_param(
     let pt = if let TypeKind::Rest(arg) = &pt.kind {
         Type {
             kind: TypeKind::Array(arg.to_owned()),
+            provenance: None,
         }
     } else {
         pt
@@ -36,8 +37,10 @@ pub fn infer_fn_param(
                     t.to_owned(),
                     Type {
                         kind: TypeKind::Keyword(TKeyword::Undefined),
+                        provenance: None,
                     },
                 ]),
+                provenance: None,
             };
             pa.insert(name.to_owned(), t);
         };

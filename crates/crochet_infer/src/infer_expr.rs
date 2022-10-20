@@ -30,6 +30,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         TypeKind::Tuple(types) => arg_types.extend(types.to_owned()),
                         _ => arg_types.push(Type {
                             kind: TypeKind::Rest(Box::from(arg_t)),
+                            provenance: None,
                         }),
                     }
                 } else {
@@ -46,6 +47,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                     args: arg_types,
                     ret: Box::from(ret_type.clone()),
                 }),
+                provenance: None,
             };
             let s3 = unify(&call_type, &lam_type, ctx)?;
 
@@ -73,6 +75,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         params: vec![param],
                         ret: Box::from(tv),
                     }),
+                    provenance: None,
                 },
                 &t,
                 ctx,
@@ -119,6 +122,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                             &t1,
                             &Type {
                                 kind: TypeKind::Keyword(TKeyword::Boolean),
+                                provenance: None,
                             },
                             ctx,
                         )?;
@@ -138,6 +142,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         &t1,
                         &Type {
                             kind: TypeKind::Keyword(TKeyword::Undefined),
+                            provenance: None,
                         },
                         ctx,
                     ) {
@@ -158,6 +163,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         &t1,
                         &Type {
                             kind: TypeKind::Keyword(TKeyword::Boolean),
+                            provenance: None,
                         },
                         ctx,
                     )?;
@@ -165,6 +171,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         &t2,
                         &Type {
                             kind: TypeKind::Keyword(TKeyword::Undefined),
+                            provenance: None,
                         },
                         ctx,
                     ) {
@@ -226,15 +233,18 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                                 name: String::from("JSXElement"),
                                 type_args: None,
                             }),
+                            provenance: None,
                         };
 
                         let call_type = Type {
                             kind: TypeKind::App(types::TApp {
                                 args: vec![Type {
                                     kind: TypeKind::Object(TObject { elems }),
+                                    provenance: None,
                                 }],
                                 ret: Box::from(ret_type.clone()),
                             }),
+                            provenance: None,
                         };
 
                         let s1 = compose_many_subs(&ss);
@@ -255,6 +265,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                     name: String::from("JSXElement"),
                     type_args: None,
                 }),
+                provenance: None,
             };
             expr.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -282,6 +293,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                                         id: ctx.fresh_id(),
                                         constraint: Some(Box::from(t)),
                                     }),
+                                    provenance: None,
                                 }
                             }
                             None => ctx.fresh_var(),
@@ -321,6 +333,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         name: String::from("Promise"),
                         type_args: Some(vec![rt_1]),
                     }),
+                    provenance: None,
                 }
             } else {
                 rt_1
@@ -342,6 +355,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                     params: t_params,
                     ret: Box::from(rt_1),
                 }),
+                provenance: None,
             };
 
             let s = compose_many_subs(&ss);
@@ -394,6 +408,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 &t1,
                 &Type {
                     kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
                 },
                 ctx,
             )?;
@@ -401,39 +416,50 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 &t2,
                 &Type {
                     kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
                 },
                 ctx,
             )?;
             let t = match op {
                 BinOp::Add => Type {
                     kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
                 },
                 BinOp::Sub => Type {
                     kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
                 },
                 BinOp::Mul => Type {
                     kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
                 },
                 BinOp::Div => Type {
                     kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
                 },
                 BinOp::EqEq => Type {
                     kind: TypeKind::Keyword(TKeyword::Boolean),
+                    provenance: None,
                 },
                 BinOp::NotEq => Type {
                     kind: TypeKind::Keyword(TKeyword::Boolean),
+                    provenance: None,
                 },
                 BinOp::Gt => Type {
                     kind: TypeKind::Keyword(TKeyword::Boolean),
+                    provenance: None,
                 },
                 BinOp::GtEq => Type {
                     kind: TypeKind::Keyword(TKeyword::Boolean),
+                    provenance: None,
                 },
                 BinOp::Lt => Type {
                     kind: TypeKind::Keyword(TKeyword::Boolean),
+                    provenance: None,
                 },
                 BinOp::LtEq => Type {
                     kind: TypeKind::Keyword(TKeyword::Boolean),
+                    provenance: None,
                 },
             };
             expr.inferred_type = Some(t.clone());
@@ -445,12 +471,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 &t1,
                 &Type {
                     kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
                 },
                 ctx,
             )?;
             let t = match op {
                 UnaryOp::Minus => Type {
                     kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
                 },
             };
             expr.inferred_type = Some(t.clone());
@@ -499,11 +527,13 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let t = if spread_types.is_empty() {
                 Type {
                     kind: TypeKind::Object(TObject { elems }),
+                    provenance: None,
                 }
             } else {
                 let mut all_types = spread_types;
                 all_types.push(Type {
                     kind: TypeKind::Object(TObject { elems }),
+                    provenance: None,
                 });
                 simplify_intersection(&all_types)
             };
@@ -522,6 +552,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                     name: String::from("Promise"),
                     type_args: Some(vec![wrapped_type.clone()]),
                 }),
+                provenance: None,
             };
 
             let s2 = unify(&t1, &promise_type, ctx)?;
@@ -540,10 +571,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                     Some(_) => {
                         let (s, t) = infer_expr(ctx, expr)?;
                         ss.push(s);
-                        match &t {
-                            Type {
-                                kind: TypeKind::Tuple(types),
-                            } => {
+                        match &t.kind {
+                            TypeKind::Tuple(types) => {
                                 ts.extend(types.to_owned());
                             }
                             _ => {
@@ -564,6 +593,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let s = compose_many_subs(&ss);
             let t = Type {
                 kind: TypeKind::Tuple(ts),
+                provenance: None,
             };
             expr.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -580,6 +610,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
         ExprKind::Empty => {
             let t = Type {
                 kind: TypeKind::Keyword(TKeyword::Undefined),
+                provenance: None,
             };
             let s = Subst::default();
             expr.inferred_type = Some(t.clone());
@@ -590,6 +621,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
         }) => {
             let t = Type {
                 kind: TypeKind::Keyword(TKeyword::String),
+                provenance: None,
             };
             let result: Result<Vec<(Subst, Type)>, String> =
                 exprs.iter_mut().map(|expr| infer_expr(ctx, expr)).collect();
@@ -666,7 +698,7 @@ fn infer_let(
 }
 
 fn is_promise(t: &Type) -> bool {
-    matches!(&t, Type {kind: TypeKind::Ref(types::TRef { name, .. })} if name == "Promise")
+    matches!(&t, Type {kind: TypeKind::Ref(types::TRef { name, .. }), ..} if name == "Promise")
 }
 
 // TODO: try to dedupe with key_of()
@@ -749,6 +781,7 @@ fn infer_property_type(
                     // TODO: remove duplicate types
                     let type_param = Type {
                         kind: TypeKind::Union(elem_types.to_owned()),
+                        provenance: None,
                     };
                     let type_params = get_type_params(&t); // ReadonlyArray type params
 
@@ -766,9 +799,11 @@ fn infer_property_type(
                                 let mut elem_types = elem_types.to_owned();
                                 elem_types.push(Type {
                                     kind: TypeKind::Keyword(TKeyword::Undefined),
+                                    provenance: None,
                                 });
                                 let t = Type {
                                     kind: TypeKind::Union(elem_types),
+                                    provenance: None,
                                 };
                                 Ok((prop_s, t))
                             }
@@ -853,9 +888,11 @@ fn get_prop_value(
                         // key is a string whose exact value is unknown at compile time.
                         value_types.push(Type {
                             kind: TypeKind::Keyword(TKeyword::Undefined),
+                            provenance: None,
                         });
                         let t = Type {
                             kind: TypeKind::Union(value_types),
+                            provenance: None,
                         };
 
                         Ok((prop_s, t))
@@ -914,6 +951,7 @@ fn get_prop_value(
                                 // we include `| undefined` in the return type here.
                                 let undefined = Type {
                                     kind: TypeKind::Keyword(TKeyword::Undefined),
+                                    provenance: None,
                                 };
                                 let t = union_types(&indexer.t, &undefined);
                                 return Ok((s, t));

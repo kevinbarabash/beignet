@@ -53,6 +53,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                     t: Box::from(replace_aliases_rec(t, map)),
                     type_params: type_params.to_owned(),
                 }),
+                provenance: None,
             }
         }
         TypeKind::Var(_) => t.to_owned(),
@@ -61,6 +62,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                 args: args.iter().map(|t| replace_aliases_rec(t, map)).collect(),
                 ret: Box::from(replace_aliases_rec(ret, map)),
             }),
+            provenance: None,
         },
         TypeKind::Lam(types::TLam { params, ret }) => Type {
             kind: TypeKind::Lam(types::TLam {
@@ -73,16 +75,19 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                     .collect(),
                 ret: Box::from(replace_aliases_rec(ret, map)),
             }),
+            provenance: None,
         },
         TypeKind::Lit(_) => t.to_owned(),
         TypeKind::Keyword(_) => t.to_owned(),
         TypeKind::Union(types) => Type {
             kind: TypeKind::Union(types.iter().map(|t| replace_aliases_rec(t, map)).collect()),
+            provenance: None,
         },
         TypeKind::Intersection(types) => Type {
             kind: TypeKind::Intersection(
                 types.iter().map(|t| replace_aliases_rec(t, map)).collect(),
             ),
+            provenance: None,
         },
         TypeKind::Object(obj) => {
             let elems: Vec<TObjElem> = obj
@@ -143,37 +148,46 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                 .collect();
             Type {
                 kind: TypeKind::Object(TObject { elems }),
+                provenance: None,
             }
         }
         TypeKind::Ref(alias) => match map.get(&alias.name) {
             Some(tv) => Type {
                 kind: TypeKind::Var(tv.to_owned()),
+                provenance: None,
             },
             None => t.to_owned(),
         },
         TypeKind::Tuple(types) => Type {
             kind: TypeKind::Tuple(types.iter().map(|t| replace_aliases_rec(t, map)).collect()),
+            provenance: None,
         },
         TypeKind::Array(t) => Type {
             kind: TypeKind::Array(Box::from(replace_aliases_rec(t, map))),
+            provenance: None,
         },
         TypeKind::Rest(t) => Type {
             kind: TypeKind::Rest(Box::from(replace_aliases_rec(t, map))),
+            provenance: None,
         },
         TypeKind::This => Type {
             kind: TypeKind::This,
+            provenance: None,
         },
         TypeKind::KeyOf(t) => Type {
             kind: TypeKind::KeyOf(Box::from(replace_aliases_rec(t, map))),
+            provenance: None,
         },
         TypeKind::IndexAccess(TIndexAccess { object, index }) => Type {
             kind: TypeKind::IndexAccess(TIndexAccess {
                 object: Box::from(replace_aliases_rec(object, map)),
                 index: Box::from(replace_aliases_rec(index, map)),
             }),
+            provenance: None,
         },
         TypeKind::Mutable(t) => Type {
             kind: TypeKind::Mutable(Box::from(replace_aliases_rec(t, map))),
+            provenance: None,
         },
     }
 }
@@ -192,6 +206,7 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
         .map(|tv| tv.id.to_owned())
         .zip(tp1.iter().map(|tv| Type {
             kind: TypeKind::Var(tv.to_owned()),
+            provenance: None,
         }))
         .collect();
 
@@ -223,6 +238,7 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
 
             Type {
                 kind: TypeKind::Object(TObject { elems }),
+                provenance: None,
             }
         }
         (_, _) => todo!(),
@@ -236,6 +252,7 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
                 t: Box::from(t),
                 type_params,
             }),
+            provenance: None,
         }
     }
 }

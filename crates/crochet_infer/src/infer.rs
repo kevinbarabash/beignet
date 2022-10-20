@@ -21,6 +21,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
     })];
     let promise_type = Type {
         kind: TypeKind::Object(TObject { elems }),
+        provenance: None,
     };
     ctx.insert_type(String::from("Promise"), promise_type);
     // TODO: replace with Class type once it exists
@@ -34,6 +35,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
     })];
     let jsx_element_type = Type {
         kind: TypeKind::Object(TObject { elems }),
+        provenance: None,
     };
     ctx.insert_type(String::from("JSXElement"), jsx_element_type);
 

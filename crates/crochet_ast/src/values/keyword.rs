@@ -52,6 +52,7 @@ impl From<Keyword> for Type {
                 Keyword::Symbol => TKeyword::Symbol,
                 Keyword::Undefined => TKeyword::Undefined,
             }),
+            provenance: None,
         }
     }
 }
