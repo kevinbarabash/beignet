@@ -1,11 +1,10 @@
-use crochet_types::Type;
-
-use crate::expr::Expr;
-use crate::ident::Ident;
-use crate::keyword::Keyword;
-use crate::lit::Lit;
-use crate::pattern::Pattern;
-use crate::span::Span;
+use crate::types::Type;
+use crate::values::expr::Expr;
+use crate::values::ident::Ident;
+use crate::values::keyword::Keyword;
+use crate::values::lit::Lit;
+use crate::values::pattern::Pattern;
+use crate::values::span::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAnnFnParam {

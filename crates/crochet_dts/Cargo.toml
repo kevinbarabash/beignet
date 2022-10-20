@@ -15,7 +15,6 @@ swc_ecma_visit = "0.80.11"
 memoize = "0.3.0"
 crochet_ast = { version = "0.1.0", path = "../crochet_ast" }
 crochet_infer = { version = "0.1.0", path = "../crochet_infer" }
-crochet_types = { version = "0.1.0", path = "../crochet_types" }
 
 [dev-dependencies]
 insta = "1.13.0"

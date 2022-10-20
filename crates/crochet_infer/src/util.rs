@@ -3,7 +3,7 @@ use defaultmap::*;
 use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
 
-use crochet_types::*;
+use crochet_ast::types::*;
 
 use crate::context::{Context, Env};
 use crate::substitutable::{Subst, Substitutable};

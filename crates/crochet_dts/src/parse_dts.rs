@@ -8,9 +8,9 @@ use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
 
 // TODO: have crochet_infer re-export Lit
-use crochet_ast::Lit;
+use crochet_ast::types::{self as types, RestPat, TFnParam, TKeyword, TPat, TProp, Type};
+use crochet_ast::values::Lit;
 use crochet_infer::{close_over, generalize, normalize, Context, Env, Subst, Substitutable};
-use crochet_types::{self as types, RestPat, TFnParam, TKeyword, TPat, TProp, Type};
 
 use crate::util;
 

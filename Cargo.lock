@@ -163,7 +163,7 @@ dependencies = [
 name = "crochet_ast"
 version = "0.1.0"
 dependencies = [
- "crochet_types",
+ "itertools",
  "swc_atoms",
  "swc_common",
  "swc_ecma_ast",
@@ -192,7 +192,6 @@ dependencies = [
  "crochet_ast",
  "crochet_infer",
  "crochet_parser",
- "crochet_types",
  "insta",
  "itertools",
  "pretty_assertions",
@@ -212,7 +211,6 @@ dependencies = [
  "crochet_ast",
  "crochet_infer",
  "crochet_parser",
- "crochet_types",
  "defaultmap",
  "insta",
  "memoize",
@@ -230,7 +228,6 @@ dependencies = [
  "array_tool",
  "crochet_ast",
  "crochet_parser",
- "crochet_types",
  "defaultmap",
  "insta",
  "itertools",
@@ -247,15 +244,6 @@ dependencies = [
  "tree-sitter",
  "tree_sitter_crochet",
  "unescape",
-]
-
-[[package]]
-name = "crochet_types"
-version = "0.1.0"
-dependencies = [
- "insta",
- "itertools",
- "pretty_assertions",
 ]
 
 [[package]]

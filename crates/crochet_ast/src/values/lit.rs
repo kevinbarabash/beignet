@@ -3,9 +3,8 @@ use swc_atoms::{Atom, JsWord};
 use swc_common::source_map::DUMMY_SP;
 use swc_ecma_ast;
 
-use crochet_types::{TLit, Type, TypeKind};
-
-use crate::span::Span;
+use crate::types::{TLit, Type, TypeKind};
+use crate::values::span::Span;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Num {

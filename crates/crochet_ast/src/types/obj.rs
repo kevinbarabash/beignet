@@ -1,8 +1,8 @@
 use itertools::join;
 use std::fmt;
 
-use crate::r#type::{TVar, Type};
-use crate::TFnParam;
+use crate::types::r#type::{TVar, Type};
+use crate::types::TFnParam;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TCallable {

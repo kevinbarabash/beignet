@@ -1,5 +1,5 @@
-use crochet_ast::*;
-use crochet_types::{TObjElem, TObject, TProp, Type, TypeKind};
+use crochet_ast::types::{TObjElem, TObject, TProp, Type, TypeKind};
+use crochet_ast::values::*;
 
 use crate::context::Context;
 use crate::infer_expr::infer_expr as infer_expr_rec;

@@ -6,13 +6,13 @@ use swc_common::{SourceMap, DUMMY_SP};
 use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
-use crochet_ast as ast;
-use crochet_infer::{get_type_params, Context};
-use crochet_types::{
-    self as types, TFnParam, TGeneric, TIndex, TObjElem, TObject, TPat, TProp, TVar, Type, TypeKind,
+use crochet_ast::types::{
+    TFnParam, TGeneric, TIndex, TObjElem, TObject, TPat, TProp, TVar, Type, TypeKind,
 };
+use crochet_ast::{types, values};
+use crochet_infer::{get_type_params, Context};
 
-pub fn codegen_d_ts(program: &ast::Program, ctx: &Context) -> String {
+pub fn codegen_d_ts(program: &values::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
 }
 
@@ -34,7 +34,7 @@ fn print_d_ts(program: &Program) -> String {
     String::from_utf8_lossy(&buf).to_string()
 }
 
-fn build_d_ts(_program: &ast::Program, ctx: &Context) -> Program {
+fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
     let current_scope = ctx.scopes.last().unwrap();
 
     let mut body: Vec<ModuleItem> = vec![];
@@ -97,7 +97,7 @@ fn build_d_ts(_program: &ast::Program, ctx: &Context) -> Program {
 }
 
 // TODO: create a trait for this and then provide multiple implementations
-pub fn build_ident(id: &ast::Ident) -> Ident {
+pub fn build_ident(id: &values::Ident) -> Ident {
     Ident {
         span: DUMMY_SP,
         sym: JsWord::from(id.name.to_owned()),
@@ -128,7 +128,7 @@ fn build_param(param: &TFnParam) -> TsFnParam {
     }
 }
 
-pub fn _build_param(r#type: &Type, e_param: &ast::EFnParam) -> TsFnParam {
+pub fn _build_param(r#type: &Type, e_param: &values::EFnParam) -> TsFnParam {
     let type_ann = Some(Box::from(TsTypeAnn {
         span: DUMMY_SP,
         type_ann: Box::from(build_type(r#type, None)),
@@ -153,27 +153,29 @@ pub fn _build_param(r#type: &Type, e_param: &ast::EFnParam) -> TsFnParam {
     }
 }
 
-pub fn build_param_pat_rec(pattern: &ast::Pattern, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
+pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
     match &pattern.kind {
-        ast::PatternKind::Ident(ast::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
+        values::PatternKind::Ident(values::BindingIdent { id, .. }) => Pat::Ident(BindingIdent {
             id: build_ident(id),
             type_ann,
         }),
-        ast::PatternKind::Rest(ast::RestPat { arg, .. }) => Pat::Rest(RestPat {
+        values::PatternKind::Rest(values::RestPat { arg, .. }) => Pat::Rest(RestPat {
             span: DUMMY_SP,
             dot3_token: DUMMY_SP,
             arg: Box::from(build_param_pat_rec(arg.as_ref(), None)),
             type_ann,
         }),
-        ast::PatternKind::Object(ast::ObjectPat { props, .. }) => {
+        values::PatternKind::Object(values::ObjectPat { props, .. }) => {
             let props: Vec<ObjectPatProp> = props
                 .iter()
                 .map(|prop| match prop {
-                    ast::ObjectPatProp::KeyValue(kv) => ObjectPatProp::KeyValue(KeyValuePatProp {
-                        key: PropName::Ident(build_ident(&kv.key)),
-                        value: Box::from(build_param_pat_rec(kv.value.as_ref(), None)),
-                    }),
-                    ast::ObjectPatProp::Assign(assign) => {
+                    values::ObjectPatProp::KeyValue(kv) => {
+                        ObjectPatProp::KeyValue(KeyValuePatProp {
+                            key: PropName::Ident(build_ident(&kv.key)),
+                            value: Box::from(build_param_pat_rec(kv.value.as_ref(), None)),
+                        })
+                    }
+                    values::ObjectPatProp::Assign(assign) => {
                         ObjectPatProp::Assign(AssignPatProp {
                             span: DUMMY_SP,
                             key: build_ident(&assign.key),
@@ -181,7 +183,7 @@ pub fn build_param_pat_rec(pattern: &ast::Pattern, type_ann: Option<Box<TsTypeAn
                             value: None,
                         })
                     }
-                    ast::ObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
+                    values::ObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
                         span: DUMMY_SP,
                         dot3_token: DUMMY_SP,
                         arg: Box::from(build_param_pat_rec(rest.arg.as_ref(), None)),
@@ -196,7 +198,7 @@ pub fn build_param_pat_rec(pattern: &ast::Pattern, type_ann: Option<Box<TsTypeAn
                 type_ann,
             })
         }
-        ast::PatternKind::Array(array) => {
+        values::PatternKind::Array(array) => {
             let elems = array
                 .elems
                 .iter()
@@ -209,9 +211,11 @@ pub fn build_param_pat_rec(pattern: &ast::Pattern, type_ann: Option<Box<TsTypeAn
                 type_ann,
             })
         }
-        ast::PatternKind::Lit(_) => panic!("Literal patterns are not allowed in params"),
-        ast::PatternKind::Is(_) => panic!("'is' patterns are not allowed in params"),
-        ast::PatternKind::Wildcard(_) => panic!("Wildcard patterns are not allowed in params"),
+        values::PatternKind::Lit(_) => panic!("Literal patterns are not allowed in params"),
+        values::PatternKind::Is(_) => panic!("'is' patterns are not allowed in params"),
+        values::PatternKind::Wildcard(_) => {
+            panic!("Wildcard patterns are not allowed in params")
+        }
     }
 }
 

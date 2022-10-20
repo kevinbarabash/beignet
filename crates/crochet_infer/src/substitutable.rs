@@ -1,7 +1,7 @@
 use array_tool::vec::*;
 use std::collections::{HashMap, HashSet};
 
-use crochet_types::*;
+use crochet_ast::types::*;
 
 pub type Subst = HashMap<i32, Type>;
 

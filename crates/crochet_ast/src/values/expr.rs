@@ -1,11 +1,10 @@
-use crochet_types::Type;
-
-use crate::ident::Ident;
-use crate::jsx::JSXElement;
-use crate::lit::Lit;
-use crate::pattern::{Pattern, PatternKind};
-use crate::span::Span;
-use crate::type_ann::{TypeAnn, TypeParam};
+use crate::types::Type;
+use crate::values::ident::Ident;
+use crate::values::jsx::JSXElement;
+use crate::values::lit::Lit;
+use crate::values::pattern::{Pattern, PatternKind};
+use crate::values::span::Span;
+use crate::values::type_ann::{TypeAnn, TypeParam};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {

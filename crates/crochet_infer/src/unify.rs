@@ -1,7 +1,7 @@
 use std::cmp;
 use std::collections::HashSet;
 
-use crochet_types::{self as types, TGeneric, TLam, TObjElem, TObject, TVar, Type, TypeKind};
+use crochet_ast::types::{self as types, TGeneric, TLam, TObjElem, TObject, TVar, Type, TypeKind};
 use types::TKeyword;
 
 use crate::context::Context;
@@ -641,7 +641,7 @@ fn occurs_check(tv: &TVar, t: &Type) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crochet_ast::Lit;
+    use crochet_ast::values::Lit;
 
     fn num(val: &str) -> Lit {
         Lit::num(val.to_owned(), 0..0)
