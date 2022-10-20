@@ -1,8 +1,7 @@
 use std::fmt;
 
-use crochet_types::{TKeyword, Type, TypeKind};
-
-use crate::span::Span;
+use crate::types::{TKeyword, Type, TypeKind};
+use crate::values::span::Span;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Null {

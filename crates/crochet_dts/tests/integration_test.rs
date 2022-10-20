@@ -1,6 +1,6 @@
 use std::fs;
 
-use crochet_ast::Program;
+use crochet_ast::values::Program;
 use crochet_parser::parse;
 
 use crochet_dts::parse_dts::*;

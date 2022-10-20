@@ -4,7 +4,7 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 use unescape::unescape;
 
-use crochet_ast::*;
+use crochet_ast::values::*;
 
 #[link(wasm_import_module = "my_custom_module")]
 extern "C" {

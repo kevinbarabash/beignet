@@ -2,7 +2,7 @@ use itertools::join;
 use std::fmt;
 use std::hash::Hash;
 
-use crate::r#type::Type;
+use crate::types::r#type::Type;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TPat {

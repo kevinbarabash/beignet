@@ -1,6 +1,5 @@
 use std::rc::Rc;
 
-use ast::LetExpr;
 use swc_atoms::*;
 use swc_common::comments::SingleThreadedComments;
 use swc_common::hygiene::Mark;
@@ -9,8 +8,9 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 use swc_ecma_transforms_react::{react, Options, Runtime};
 use swc_ecma_visit::*;
+use values::LetExpr;
 
-use crochet_ast::{self as ast, is_refutable};
+use crochet_ast::values;
 
 pub struct Context {
     pub temp_id: u32,
@@ -28,7 +28,7 @@ impl Context {
     }
 }
 
-pub fn codegen_js(program: &ast::Program) -> String {
+pub fn codegen_js(program: &values::Program) -> String {
     let mut ctx = Context { temp_id: 0 };
     let program = build_js(program, &mut ctx);
 
@@ -67,14 +67,14 @@ fn print_js(program: &Program) -> String {
     String::from_utf8_lossy(&buf).to_string()
 }
 
-fn build_js(program: &ast::Program, ctx: &mut Context) -> Program {
+fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
     let body: Vec<ModuleItem> = program
         .body
         .iter()
         .flat_map(|child| {
             let mut stmts: Vec<Stmt> = vec![];
             let result = match child {
-                ast::Statement::VarDecl {
+                values::Statement::VarDecl {
                     pattern,
                     init,
                     declare,
@@ -109,10 +109,10 @@ fn build_js(program: &ast::Program, ctx: &mut Context) -> Program {
                         }
                     }
                 },
-                ast::Statement::TypeDecl { .. } => {
+                values::Statement::TypeDecl { .. } => {
                     ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP }))
                 }
-                ast::Statement::Expr { expr, .. } => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                values::Statement::Expr { expr, .. } => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
                     span: DUMMY_SP,
                     expr: Box::from(build_expr(expr, &mut stmts, ctx)),
                 })),
@@ -135,18 +135,24 @@ fn build_js(program: &ast::Program, ctx: &mut Context) -> Program {
     })
 }
 
-fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Option<Pat> {
+fn build_pattern(
+    pattern: &values::Pattern,
+    stmts: &mut Vec<Stmt>,
+    ctx: &mut Context,
+) -> Option<Pat> {
     match &pattern.kind {
         // unassignable patterns
-        ast::PatternKind::Lit(_) => None,
-        ast::PatternKind::Wildcard(_) => None,
+        values::PatternKind::Lit(_) => None,
+        values::PatternKind::Wildcard(_) => None,
 
         // assignable patterns
-        ast::PatternKind::Ident(ast::BindingIdent { id, .. }) => Some(Pat::Ident(BindingIdent {
-            id: build_ident(id),
-            type_ann: None,
-        })),
-        ast::PatternKind::Rest(ast::RestPat { arg }) => {
+        values::PatternKind::Ident(values::BindingIdent { id, .. }) => {
+            Some(Pat::Ident(BindingIdent {
+                id: build_ident(id),
+                type_ann: None,
+            }))
+        }
+        values::PatternKind::Rest(values::RestPat { arg }) => {
             let arg = build_pattern(arg, stmts, ctx).unwrap();
             Some(Pat::Rest(RestPat {
                 span: DUMMY_SP,
@@ -155,13 +161,13 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
                 arg: Box::from(arg),
             }))
         }
-        ast::PatternKind::Object(ast::ObjectPat {
+        values::PatternKind::Object(values::ObjectPat {
             props, optional, ..
         }) => {
             let props: Vec<ObjectPatProp> = props
                 .iter()
                 .filter_map(|p| match p {
-                    ast::ObjectPatProp::KeyValue(kvp) => {
+                    values::ObjectPatProp::KeyValue(kvp) => {
                         build_pattern(kvp.value.as_ref(), stmts, ctx).map(|value| {
                             ObjectPatProp::KeyValue(KeyValuePatProp {
                                 key: PropName::Ident(Ident::from(&kvp.key)),
@@ -169,15 +175,17 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
                             })
                         })
                     }
-                    ast::ObjectPatProp::Assign(ap) => Some(ObjectPatProp::Assign(AssignPatProp {
-                        span: DUMMY_SP,
-                        key: Ident::from(&ap.key),
-                        value: ap
-                            .value
-                            .clone()
-                            .map(|value| Box::from(build_expr(value.as_ref(), stmts, ctx))),
-                    })),
-                    ast::ObjectPatProp::Rest(_) => todo!(),
+                    values::ObjectPatProp::Assign(ap) => {
+                        Some(ObjectPatProp::Assign(AssignPatProp {
+                            span: DUMMY_SP,
+                            key: Ident::from(&ap.key),
+                            value: ap
+                                .value
+                                .clone()
+                                .map(|value| Box::from(build_expr(value.as_ref(), stmts, ctx))),
+                        }))
+                    }
+                    values::ObjectPatProp::Rest(_) => todo!(),
                 })
                 .collect();
 
@@ -188,7 +196,7 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
                 props,
             }))
         }
-        ast::PatternKind::Array(ast::ArrayPat {
+        values::PatternKind::Array(values::ArrayPat {
             elems, optional, ..
         }) => {
             let elems: Vec<Option<Pat>> = elems
@@ -208,7 +216,7 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
                 type_ann: None, // because we're generating .js.
             }))
         }
-        ast::PatternKind::Is(ast::IsPat { id, .. }) => Some(Pat::Ident(BindingIdent {
+        values::PatternKind::Is(values::IsPat { id, .. }) => Some(Pat::Ident(BindingIdent {
             id: build_ident(id),
             type_ann: None,
         })),
@@ -216,13 +224,13 @@ fn build_pattern(pattern: &ast::Pattern, stmts: &mut Vec<Stmt>, ctx: &mut Contex
 }
 
 // This should only be called by `build_expr_in_new_scope` or `build_fn_body`.
-fn _build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
-    if let ast::ExprKind::Let(r#let) = &expr.kind {
+fn _build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
+    if let values::ExprKind::Let(r#let) = &expr.kind {
         let child = let_to_child(r#let, stmts, ctx);
         stmts.push(child);
 
         let mut body = r#let.body.to_owned();
-        while let ast::ExprKind::Let(r#let) = &body.kind {
+        while let values::ExprKind::Let(r#let) = &body.kind {
             let child = let_to_child(r#let, stmts, ctx);
             stmts.push(child);
             body = r#let.body.to_owned();
@@ -234,7 +242,7 @@ fn _build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Ex
     }
 }
 
-fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Context) -> BlockStmt {
+fn build_expr_in_new_scope(expr: &values::Expr, temp_id: &Ident, ctx: &mut Context) -> BlockStmt {
     let mut stmts: Vec<Stmt> = vec![];
 
     let expr = _build_expr(expr, &mut stmts, ctx);
@@ -259,13 +267,13 @@ fn build_expr_in_new_scope(expr: &ast::Expr, temp_id: &Ident, ctx: &mut Context)
     }
 }
 
-fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
+fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
     match &expr.kind {
-        ast::ExprKind::App(ast::App { lam, args, .. }) => {
+        values::ExprKind::App(values::App { lam, args, .. }) => {
             let callee = Callee::Expr(Box::from(build_expr(lam.as_ref(), stmts, ctx)));
 
             let is_partial = args.iter().any(|arg| match &arg.expr.kind {
-                ast::ExprKind::Ident(bi) => bi.name == "_",
+                values::ExprKind::Ident(bi) => bi.name == "_",
                 _ => false,
             });
 
@@ -273,7 +281,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 let params: Vec<Pat> = args
                     .iter()
                     .filter(|arg| match &arg.expr.kind {
-                        ast::ExprKind::Ident(bi) => bi.name == "_",
+                        values::ExprKind::Ident(bi) => bi.name == "_",
                         _ => false,
                     })
                     .enumerate()
@@ -294,7 +302,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 let args: Vec<ExprOrSpread> = args
                     .iter()
                     .map(|arg| match &arg.expr.kind {
-                        ast::ExprKind::Ident(bi) if bi.name == "_" => {
+                        values::ExprKind::Ident(bi) if bi.name == "_" => {
                             let expr = Expr::Ident(Ident {
                                 span: DUMMY_SP,
                                 sym: JsWord::from(format!("$arg{i}")),
@@ -358,8 +366,8 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 type_args: None,
             })
         }
-        ast::ExprKind::Ident(ident) => Expr::from(build_ident(ident)),
-        ast::ExprKind::Lambda(ast::Lambda {
+        values::ExprKind::Ident(ident) => Expr::from(build_ident(ident)),
+        values::ExprKind::Lambda(values::Lambda {
             params: args,
             body,
             is_async,
@@ -382,7 +390,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 return_type: None,
             })
         }
-        ast::ExprKind::Let(_) => {
+        values::ExprKind::Let(_) => {
             // let $temp_n;
             let temp_id = ctx.new_ident();
             let temp_decl = build_let_decl_stmt(&temp_id);
@@ -395,21 +403,21 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
             // $temp_n
             Expr::Ident(temp_id)
         }
-        ast::ExprKind::Lit(lit) => Expr::from(lit),
-        ast::ExprKind::BinaryExpr(ast::BinaryExpr {
+        values::ExprKind::Lit(lit) => Expr::from(lit),
+        values::ExprKind::BinaryExpr(values::BinaryExpr {
             op, left, right, ..
         }) => {
             let op = match op {
-                ast::BinOp::Add => BinaryOp::Add,
-                ast::BinOp::Sub => BinaryOp::Sub,
-                ast::BinOp::Mul => BinaryOp::Mul,
-                ast::BinOp::Div => BinaryOp::Div,
-                ast::BinOp::EqEq => BinaryOp::EqEqEq,
-                ast::BinOp::NotEq => BinaryOp::NotEqEq,
-                ast::BinOp::Lt => BinaryOp::Lt,
-                ast::BinOp::LtEq => BinaryOp::LtEq,
-                ast::BinOp::Gt => BinaryOp::Gt,
-                ast::BinOp::GtEq => BinaryOp::GtEq,
+                values::BinOp::Add => BinaryOp::Add,
+                values::BinOp::Sub => BinaryOp::Sub,
+                values::BinOp::Mul => BinaryOp::Mul,
+                values::BinOp::Div => BinaryOp::Div,
+                values::BinOp::EqEq => BinaryOp::EqEqEq,
+                values::BinOp::NotEq => BinaryOp::NotEqEq,
+                values::BinOp::Lt => BinaryOp::Lt,
+                values::BinOp::LtEq => BinaryOp::LtEq,
+                values::BinOp::Gt => BinaryOp::Gt,
+                values::BinOp::GtEq => BinaryOp::GtEq,
             };
 
             let left = Box::from(build_expr(left, stmts, ctx));
@@ -451,9 +459,9 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 },
             })
         }
-        ast::ExprKind::UnaryExpr(ast::UnaryExpr { arg, op, .. }) => {
+        values::ExprKind::UnaryExpr(values::UnaryExpr { arg, op, .. }) => {
             let op = match op {
-                ast::UnaryOp::Minus => UnaryOp::Minus,
+                values::UnaryOp::Minus => UnaryOp::Minus,
             };
 
             Expr::Unary(UnaryExpr {
@@ -462,17 +470,17 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 arg: Box::from(build_expr(arg, stmts, ctx)),
             })
         }
-        ast::ExprKind::Fix(ast::Fix { expr, .. }) => match &expr.kind {
-            ast::ExprKind::Lambda(ast::Lambda { body, .. }) => build_expr(body, stmts, ctx),
+        values::ExprKind::Fix(values::Fix { expr, .. }) => match &expr.kind {
+            values::ExprKind::Lambda(values::Lambda { body, .. }) => build_expr(body, stmts, ctx),
             _ => panic!("Fix should only wrap a lambda"),
         },
-        ast::ExprKind::IfElse(ast::IfElse {
+        values::ExprKind::IfElse(values::IfElse {
             cond,
             consequent,
             alternate,
             ..
         }) => match &cond.kind {
-            ast::ExprKind::LetExpr(let_expr) => {
+            values::ExprKind::LetExpr(let_expr) => {
                 build_let_expr(let_expr, consequent, alternate, stmts, ctx)
             }
             _ => {
@@ -506,19 +514,19 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 Expr::Ident(temp_id)
             }
         },
-        ast::ExprKind::Obj(ast::Obj { props, .. }) => {
+        values::ExprKind::Obj(values::Obj { props, .. }) => {
             let props: Vec<PropOrSpread> = props
                 .iter()
                 .map(|prop| match prop {
-                    ast::PropOrSpread::Prop(prop) => match prop.as_ref() {
-                        ast::Prop::Shorthand(ast::ident::Ident { name, .. }) => {
+                    values::PropOrSpread::Prop(prop) => match prop.as_ref() {
+                        values::Prop::Shorthand(values::ident::Ident { name, .. }) => {
                             PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
                                 span: DUMMY_SP,
                                 sym: JsWord::from(name.clone()),
                                 optional: false,
                             })))
                         }
-                        ast::Prop::KeyValue(ast::KeyValueProp { name, value, .. }) => {
+                        values::Prop::KeyValue(values::KeyValueProp { name, value, .. }) => {
                             PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
                                 key: PropName::from(Ident {
                                     span: DUMMY_SP,
@@ -529,7 +537,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                             })))
                         }
                     },
-                    ast::PropOrSpread::Spread(_) => todo!(),
+                    values::PropOrSpread::Spread(_) => todo!(),
                 })
                 .collect();
 
@@ -538,18 +546,18 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 props,
             })
         }
-        ast::ExprKind::Await(ast::Await { expr, .. }) => Expr::Await(AwaitExpr {
+        values::ExprKind::Await(values::Await { expr, .. }) => Expr::Await(AwaitExpr {
             span: DUMMY_SP,
             arg: Box::from(build_expr(expr.as_ref(), stmts, ctx)),
         }),
-        ast::ExprKind::JSXElement(elem) => {
+        values::ExprKind::JSXElement(elem) => {
             Expr::JSXElement(Box::from(build_jsx_element(elem, stmts, ctx)))
         }
-        ast::ExprKind::Tuple(ast::Tuple { elems, .. }) => Expr::Array(ArrayLit {
+        values::ExprKind::Tuple(values::Tuple { elems, .. }) => Expr::Array(ArrayLit {
             span: DUMMY_SP,
             elems: elems
                 .iter()
-                .map(|ast::ExprOrSpread { spread, expr }| {
+                .map(|values::ExprOrSpread { spread, expr }| {
                     Some(ExprOrSpread {
                         spread: spread.to_owned().map(|_| DUMMY_SP),
                         expr: Box::from(build_expr(expr.as_ref(), stmts, ctx)),
@@ -557,10 +565,10 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 })
                 .collect(),
         }),
-        ast::ExprKind::Member(ast::Member { obj, prop, .. }) => {
+        values::ExprKind::Member(values::Member { obj, prop, .. }) => {
             let prop = match prop {
-                ast::MemberProp::Ident(ident) => MemberProp::Ident(build_ident(ident)),
-                ast::MemberProp::Computed(ast::ComputedPropName { expr, .. }) => {
+                values::MemberProp::Ident(ident) => MemberProp::Ident(build_ident(ident)),
+                values::MemberProp::Computed(values::ComputedPropName { expr, .. }) => {
                     MemberProp::Computed(ComputedPropName {
                         span: DUMMY_SP,
                         expr: Box::from(build_expr(expr, stmts, ctx)),
@@ -573,18 +581,21 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 prop,
             })
         }
-        ast::ExprKind::Empty => Expr::from(Ident {
+        values::ExprKind::Empty => Expr::from(Ident {
             span: DUMMY_SP,
             sym: JsWord::from("undefined"),
             optional: false,
         }),
-        ast::ExprKind::LetExpr(_) => {
+        values::ExprKind::LetExpr(_) => {
             panic!("LetExpr should always be handled by the IfElse branch")
         }
-        ast::ExprKind::TemplateLiteral(template) => {
+        values::ExprKind::TemplateLiteral(template) => {
             Expr::Tpl(build_template_literal(template, stmts, ctx))
         }
-        ast::ExprKind::TaggedTemplateLiteral(ast::TaggedTemplateLiteral { tag, template }) => {
+        values::ExprKind::TaggedTemplateLiteral(values::TaggedTemplateLiteral {
+            tag,
+            template,
+        }) => {
             Expr::TaggedTpl(TaggedTpl {
                 span: DUMMY_SP,
                 tag: Box::from(Expr::Ident(build_ident(tag))),
@@ -593,7 +604,7 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
                 tpl: build_template_literal(template, stmts, ctx),
             })
         }
-        ast::ExprKind::Match(ast::Match { expr, arms, .. }) => {
+        values::ExprKind::Match(values::Match { expr, arms, .. }) => {
             // let $temp_n;
             let ret_temp_id = ctx.new_ident();
             let ret_decl = build_let_decl_stmt(&ret_temp_id);
@@ -659,9 +670,9 @@ fn build_expr(expr: &ast::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Exp
 }
 
 fn build_let_expr(
-    let_expr: &ast::LetExpr,
-    consequent: &ast::Expr,
-    alternate: &Option<Box<ast::Expr>>,
+    let_expr: &values::LetExpr,
+    consequent: &values::Expr,
+    alternate: &Option<Box<values::Expr>>,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> Expr {
@@ -711,13 +722,13 @@ fn build_let_expr(
 }
 
 fn build_arm(
-    arm: &ast::Arm,
+    arm: &values::Arm,
     id: &Ident,
     ret_id: &Ident,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> (Option<Expr>, BlockStmt) {
-    let ast::Arm {
+    let values::Arm {
         pattern: pat,
         body,
         guard,
@@ -754,7 +765,7 @@ fn build_arm(
 }
 
 fn build_jsx_element(
-    elem: &ast::JSXElement,
+    elem: &values::JSXElement,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> JSXElement {
@@ -772,11 +783,12 @@ fn build_jsx_element(
             attrs: elem
                 .attrs
                 .iter()
-                .map(|ast::JSXAttr { value, ident, .. }| {
+                .map(|values::JSXAttr { value, ident, .. }| {
                     let value = Some(match value {
-                        ast::JSXAttrValue::Lit(lit) => JSXAttrValue::Lit(build_lit(lit)),
-                        ast::JSXAttrValue::JSXExprContainer(ast::JSXExprContainer {
-                            expr, ..
+                        values::JSXAttrValue::Lit(lit) => JSXAttrValue::Lit(build_lit(lit)),
+                        values::JSXAttrValue::JSXExprContainer(values::JSXExprContainer {
+                            expr,
+                            ..
                         }) => JSXAttrValue::JSXExprContainer(JSXExprContainer {
                             span: DUMMY_SP,
                             expr: JSXExpr::Expr(Box::from(build_expr(expr, stmts, ctx))),
@@ -802,20 +814,21 @@ fn build_jsx_element(
             .iter()
             .map(|child| {
                 let result: JSXElementChild = match child {
-                    ast::JSXElementChild::JSXText(ast::JSXText { value, .. }) => {
+                    values::JSXElementChild::JSXText(values::JSXText { value, .. }) => {
                         JSXElementChild::JSXText(JSXText {
                             span: DUMMY_SP,
                             value: Atom::new(value.clone()),
                             raw: Atom::new(value.clone()),
                         })
                     }
-                    ast::JSXElementChild::JSXExprContainer(ast::JSXExprContainer {
-                        expr, ..
+                    values::JSXElementChild::JSXExprContainer(values::JSXExprContainer {
+                        expr,
+                        ..
                     }) => JSXElementChild::JSXExprContainer(JSXExprContainer {
                         span: DUMMY_SP,
                         expr: JSXExpr::Expr(Box::from(build_expr(expr, stmts, ctx))),
                     }),
-                    ast::JSXElementChild::JSXElement(elem) => {
+                    values::JSXElementChild::JSXElement(elem) => {
                         JSXElementChild::JSXElement(Box::from(build_jsx_element(elem, stmts, ctx)))
                     }
                 };
@@ -831,18 +844,18 @@ fn build_jsx_element(
     elem
 }
 
-fn build_lit(lit: &ast::Lit) -> Lit {
+fn build_lit(lit: &values::Lit) -> Lit {
     match lit {
-        ast::Lit::Num(n) => Lit::Num(Number {
+        values::Lit::Num(n) => Lit::Num(Number {
             span: DUMMY_SP,
             value: n.value.parse().unwrap(),
             raw: None,
         }),
-        ast::Lit::Bool(b) => Lit::Bool(Bool {
+        values::Lit::Bool(b) => Lit::Bool(Bool {
             span: DUMMY_SP,
             value: b.value,
         }),
-        ast::Lit::Str(s) => Lit::Str(Str {
+        values::Lit::Str(s) => Lit::Str(Str {
             span: DUMMY_SP,
             value: JsWord::from(s.value.to_owned()),
             raw: None,
@@ -855,7 +868,7 @@ fn build_lit(lit: &ast::Lit) -> Lit {
 // TODO: have an intermediary from between the AST and what we used for
 // codegen that unwraps `Let` nodes into vectors before converting them
 // to statements.
-fn build_fn_body(body: &ast::Expr, ctx: &mut Context) -> BlockStmtOrExpr {
+fn build_fn_body(body: &values::Expr, ctx: &mut Context) -> BlockStmtOrExpr {
     let mut stmts: Vec<Stmt> = vec![];
 
     let ret_expr = _build_expr(body, &mut stmts, ctx);
@@ -877,8 +890,8 @@ fn build_fn_body(body: &ast::Expr, ctx: &mut Context) -> BlockStmtOrExpr {
     }
 }
 
-fn let_to_child(r#let: &ast::Let, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Stmt {
-    let ast::Let { pattern, init, .. } = r#let;
+fn let_to_child(r#let: &values::Let, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Stmt {
+    let values::Let { pattern, init, .. } = r#let;
 
     // TODO: handle shadowed variables in the same scope by introducing
     // unique identifiers.
@@ -894,8 +907,8 @@ fn let_to_child(r#let: &ast::Let, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> S
     }
 }
 
-fn build_cond_for_pat(pat: &ast::Pattern, id: &Ident) -> Option<Expr> {
-    if is_refutable(pat) {
+fn build_cond_for_pat(pat: &values::Pattern, id: &Ident) -> Option<Expr> {
+    if values::is_refutable(pat) {
         // Right now the only refutable pattern we support is LitPat.
         // In the future there will be other refutable patterns such as
         // array length, typeof, and instanceof checks.
@@ -925,7 +938,7 @@ fn build_cond_for_pat(pat: &ast::Pattern, id: &Ident) -> Option<Expr> {
 }
 
 fn build_template_literal(
-    template: &ast::TemplateLiteral,
+    template: &values::TemplateLiteral,
     stmt: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> Tpl {
@@ -941,11 +954,11 @@ fn build_template_literal(
             .iter()
             .map(|quasi| {
                 let cooked = match &quasi.cooked {
-                    ast::Lit::Str(ast::Str { value, .. }) => value,
+                    values::Lit::Str(values::Str { value, .. }) => value,
                     _ => panic!("quasi.cooked must be a string"),
                 };
                 let raw = match &quasi.raw {
-                    ast::Lit::Str(ast::Str { value, .. }) => value,
+                    values::Lit::Str(values::Str { value, .. }) => value,
                     _ => panic!("quasi.raw must be a string"),
                 };
                 TplElement {
@@ -959,7 +972,7 @@ fn build_template_literal(
     }
 }
 
-fn build_ident(ident: &ast::Ident) -> Ident {
+fn build_ident(ident: &values::Ident) -> Ident {
     Ident {
         span: DUMMY_SP,
         sym: JsWord::from(ident.name.to_owned()),
@@ -975,9 +988,9 @@ enum PathElem {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Check {
-    EqualLit(ast::Lit),
+    EqualLit(values::Lit),
     Typeof(String), // limit this to primitives: "number", "string", "boolean"
-    Instanceof(ast::Ident),
+    Instanceof(values::Ident),
     // TODO: array length
 }
 
@@ -989,28 +1002,30 @@ struct Condition {
     check: Check,
 }
 
-fn get_conds_for_pat(pat: &ast::Pattern, conds: &mut Vec<Condition>, path: &mut Path) {
+fn get_conds_for_pat(pat: &values::Pattern, conds: &mut Vec<Condition>, path: &mut Path) {
     match &pat.kind {
         // irrefutable
-        ast::PatternKind::Ident(_) => (),
-        ast::PatternKind::Rest(_) => (),
-        ast::PatternKind::Wildcard(_) => (),
+        values::PatternKind::Ident(_) => (),
+        values::PatternKind::Rest(_) => (),
+        values::PatternKind::Wildcard(_) => (),
 
         // refutable and possibly refutable
-        ast::PatternKind::Object(ast::ObjectPat { props, .. }) => {
+        values::PatternKind::Object(values::ObjectPat { props, .. }) => {
             for prop in props {
                 match prop {
-                    ast::ObjectPatProp::KeyValue(ast::KeyValuePatProp { value, key, .. }) => {
+                    values::ObjectPatProp::KeyValue(values::KeyValuePatProp {
+                        value, key, ..
+                    }) => {
                         path.push(PathElem::ObjProp(key.name.clone()));
                         get_conds_for_pat(value, conds, path);
                         path.pop();
                     }
-                    ast::ObjectPatProp::Rest(_) => (),
-                    ast::ObjectPatProp::Assign(_) => (),
+                    values::ObjectPatProp::Rest(_) => (),
+                    values::ObjectPatProp::Assign(_) => (),
                 }
             }
         }
-        ast::PatternKind::Array(ast::ArrayPat { elems, .. }) => {
+        values::PatternKind::Array(values::ArrayPat { elems, .. }) => {
             for (index, elem) in elems.iter().enumerate() {
                 path.push(PathElem::ArrayIndex(index as u32));
                 if let Some(elem) = elem {
@@ -1019,13 +1034,13 @@ fn get_conds_for_pat(pat: &ast::Pattern, conds: &mut Vec<Condition>, path: &mut 
                 path.pop();
             }
         }
-        ast::PatternKind::Lit(ast::LitPat { lit, .. }) => {
+        values::PatternKind::Lit(values::LitPat { lit, .. }) => {
             conds.push(Condition {
                 path: path.to_owned(),
                 check: Check::EqualLit(lit.to_owned()),
             });
         }
-        ast::PatternKind::Is(ast::IsPat { is_id, .. }) => match is_id.name.as_ref() {
+        values::PatternKind::Is(values::IsPat { is_id, .. }) => match is_id.name.as_ref() {
             "string" | "number" | "boolean" => {
                 conds.push(Condition {
                     path: path.to_owned(),

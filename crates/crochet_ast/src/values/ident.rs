@@ -2,7 +2,7 @@ use swc_atoms::JsWord;
 use swc_common::source_map::DUMMY_SP;
 use swc_ecma_ast;
 
-use crate::span::Span;
+use crate::values::span::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ident {

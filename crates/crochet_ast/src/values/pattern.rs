@@ -1,9 +1,8 @@
-use crochet_types::Type;
-
-use crate::expr::Expr;
-use crate::ident::Ident;
-use crate::span::Span;
-use crate::Lit;
+use crate::types::Type;
+use crate::values::expr::Expr;
+use crate::values::ident::Ident;
+use crate::values::span::Span;
+use crate::values::Lit;
 
 // TODO: split this into separate patterns:
 // - one for assignment (obj, ident, array, rest)

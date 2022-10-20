@@ -1,4 +1,4 @@
-use crochet_types::*;
+use crochet_ast::types::*;
 use std::cell::Cell;
 use std::collections::HashMap;
 

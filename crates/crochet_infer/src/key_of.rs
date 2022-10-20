@@ -1,4 +1,4 @@
-use crochet_types::{TGeneric, TKeyword, TLit, TObjElem, TObject, Type, TypeKind};
+use crochet_ast::types::{TGeneric, TKeyword, TLit, TObjElem, TObject, Type, TypeKind};
 
 use crate::context::Context;
 use crate::util::union_many_types;

@@ -1,5 +1,5 @@
-use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TKeyword, TObject, TPat, TVar, Type, TypeKind};
+use crochet_ast::types::{self as types, TFnParam, TKeyword, TObject, TPat, TVar, Type, TypeKind};
+use crochet_ast::values::*;
 use types::TObjElem;
 
 use crate::assump::Assump;

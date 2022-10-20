@@ -1,5 +1,5 @@
-use crochet_ast::*;
-use crochet_types::TypeKind;
+use crochet_ast::types::TypeKind;
+use crochet_ast::values::*;
 
 use crate::substitutable::{Subst, Substitutable};
 

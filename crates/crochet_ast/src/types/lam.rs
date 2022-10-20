@@ -2,9 +2,9 @@ use itertools::join;
 use std::fmt;
 use std::hash::Hash;
 
-use crate::keyword::TKeyword;
-use crate::pat::TPat;
-use crate::r#type::{Type, TypeKind};
+use crate::types::keyword::TKeyword;
+use crate::types::pat::TPat;
+use crate::types::r#type::{Type, TypeKind};
 
 #[derive(Clone, Debug, Eq)]
 pub struct TLam {

@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use swc_ecma_ast::*;
 
-use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substitutable};
-use crochet_types::{
+use crochet_ast::types::{
     self as types, TCallable, TFnParam, TGeneric, TIndexAccess, TObjElem, TObject, TVar, Type,
     TypeKind,
 };
+use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substitutable};
 
 use crate::parse_dts::infer_ts_type_ann;
 

@@ -1,4 +1,4 @@
-use crochet_ast::{Program, Statement};
+use crochet_ast::values::{Program, Statement};
 use crochet_codegen::*;
 use crochet_infer::*;
 use crochet_parser::parse;

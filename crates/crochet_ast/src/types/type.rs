@@ -2,10 +2,10 @@ use itertools::{join, Itertools};
 use std::fmt;
 use std::hash::Hash;
 
-use crate::keyword::TKeyword;
-use crate::lam::TLam;
-use crate::lit::TLit;
-use crate::obj::TObjElem;
+use crate::types::keyword::TKeyword;
+use crate::types::lam::TLam;
+use crate::types::lit::TLit;
+use crate::types::obj::TObjElem;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TApp {

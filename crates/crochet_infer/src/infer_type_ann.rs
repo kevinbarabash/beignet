@@ -1,10 +1,9 @@
 use std::iter::Iterator;
 
-use crochet_ast::*;
-use crochet_types::{
-    self as types, TFnParam, TIndex, TKeyword, TObject, TProp, TVar, Type, TypeKind,
+use crochet_ast::types::{
+    self as types, TFnParam, TIndex, TKeyword, TObjElem, TObject, TProp, TVar, Type, TypeKind,
 };
-use types::TObjElem;
+use crochet_ast::values::*;
 
 use crate::assump::Assump;
 use crate::context::Context;
@@ -117,7 +116,7 @@ fn infer_type_ann_rec(
 
             for elem in &mut obj.elems {
                 match elem {
-                    crochet_ast::TObjElem::Index(index) => {
+                    crochet_ast::values::TObjElem::Index(index) => {
                         let (index_s, index_t) =
                             infer_type_ann_rec(&mut index.type_ann, ctx, type_param_map)?;
 
@@ -136,7 +135,7 @@ fn infer_type_ann_rec(
                             t: index_t,
                         }))
                     }
-                    crochet_ast::TObjElem::Prop(prop) => {
+                    crochet_ast::values::TObjElem::Prop(prop) => {
                         let (prop_s, prop_t) =
                             infer_type_ann_rec(&mut prop.type_ann, ctx, type_param_map)?;
 
