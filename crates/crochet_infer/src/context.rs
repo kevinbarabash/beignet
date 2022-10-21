@@ -1,4 +1,4 @@
-use crochet_types::*;
+use crochet_ast::types::*;
 use std::cell::Cell;
 use std::collections::HashMap;
 
@@ -88,9 +88,8 @@ impl Context {
 
     pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
-            match scope.values.get(name) {
-                Some(t) => return Ok(self.instantiate(t)),
-                None => (),
+            if let Some(t) = scope.values.get(name) {
+                return Ok(self.instantiate(t));
             }
         }
         Err(format!("Can't find value: {name}"))
@@ -98,9 +97,8 @@ impl Context {
 
     pub fn lookup_value(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
-            match scope.values.get(name) {
-                Some(t) => return Ok(t.to_owned()),
-                None => (),
+            if let Some(t) = scope.values.get(name) {
+                return Ok(t.to_owned());
             }
         }
         Err(format!("Can't find value: {name}"))
@@ -108,9 +106,8 @@ impl Context {
 
     pub fn lookup_type_and_instantiate(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
-            match scope.types.get(name) {
-                Some(t) => return Ok(self.instantiate(t)),
-                None => (),
+            if let Some(t) = scope.types.get(name) {
+                return Ok(self.instantiate(t));
             }
         }
         Err(format!("Can't find type: {name}"))
@@ -118,9 +115,8 @@ impl Context {
 
     pub fn lookup_type(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
-            match scope.types.get(name) {
-                Some(t) => return Ok(t.to_owned()),
-                None => (),
+            if let Some(t) = scope.types.get(name) {
+                return Ok(t.to_owned());
             }
         }
         Err(format!("Can't find type: {name}"))
@@ -128,9 +124,8 @@ impl Context {
 
     pub fn lookup_namespace(&self, name: &str) -> Result<Box<Scope>, String> {
         for scope in self.scopes.iter().rev() {
-            match scope.namespaces.get(name) {
-                Some(namespace) => return Ok(namespace.to_owned()),
-                None => (),
+            if let Some(namespace) = scope.namespaces.get(name) {
+                return Ok(namespace.to_owned());
             }
         }
         Err(format!("Can't find namespace: {name}"))
@@ -139,59 +134,58 @@ impl Context {
     pub fn lookup_ref_and_instantiate(&self, alias: &TRef) -> Result<Type, String> {
         let name = &alias.name;
         for scope in self.scopes.iter().rev() {
-            match scope.types.get(name) {
-                Some(t) => {
-                    let type_params = get_type_params(t);
+            if let Some(t) = scope.types.get(name) {
+                let type_params = get_type_params(t);
 
-                    // Replaces qualifiers in the type with the corresponding type params
-                    // from the alias type.
-                    let ids = type_params.iter().map(|tv| tv.id.to_owned());
-                    let subs: Subst = match &alias.type_args {
-                        Some(type_params) => {
-                            if type_params.len() != type_params.len() {
-                                println!("type = {t}");
-                                println!("type_params = {type_params:#?}");
-                                return Err(String::from(
-                                    "mismatch between the number of qualifiers and type params",
-                                ));
-                            }
-                            ids.zip(type_params.iter().cloned()).collect()
+                // Replaces qualifiers in the type with the corresponding type params
+                // from the alias type.
+                let ids = type_params.iter().map(|tv| tv.id.to_owned());
+                let subs: Subst = match &alias.type_args {
+                    Some(type_params) => {
+                        if type_params.len() != type_params.len() {
+                            println!("type = {t}");
+                            println!("type_params = {type_params:#?}");
+                            return Err(String::from(
+                                "mismatch between the number of qualifiers and type params",
+                            ));
                         }
-                        None => {
-                            if !type_params.is_empty() {
-                                println!("type = {t}");
-                                println!("no type params");
-                                return Err(String::from(
-                                    "mismatch between the number of qualifiers and type params",
-                                ));
-                            }
-                            ids.zip(type_params.iter().map(|tp| {
-                                Type::Var(TVar {
-                                    id: self.fresh_id(),
-                                    constraint: tp.constraint.to_owned(),
-                                })
-                            }))
-                            .collect()
+                        ids.zip(type_params.iter().cloned()).collect()
+                    }
+                    None => {
+                        if !type_params.is_empty() {
+                            println!("type = {t}");
+                            println!("no type params");
+                            return Err(String::from(
+                                "mismatch between the number of qualifiers and type params",
+                            ));
                         }
-                    };
+                        ids.zip(type_params.iter().map(|tp| Type {
+                            kind: TypeKind::Var(TVar {
+                                id: self.fresh_id(),
+                                constraint: tp.constraint.to_owned(),
+                            }),
+                            provenance: None,
+                        }))
+                        .collect()
+                    }
+                };
 
-                    return Ok(t.apply(&subs));
-                }
-                None => (),
+                return Ok(t.apply(&subs));
             }
         }
         Err(format!("Can't find type: {name}"))
     }
 
     pub fn instantiate(&self, t: &Type) -> Type {
-        match t {
-            Type::Generic(TGeneric { t, type_params }) => {
+        match &t.kind {
+            TypeKind::Generic(TGeneric { t, type_params }) => {
                 let ids = type_params.iter().map(|tv| tv.id.to_owned());
-                let fresh_params = type_params.iter().map(|tp| {
-                    Type::Var(TVar {
+                let fresh_params = type_params.iter().map(|tp| Type {
+                    kind: TypeKind::Var(TVar {
                         id: self.fresh_id(),
                         constraint: tp.constraint.to_owned(),
-                    })
+                    }),
+                    provenance: None,
                 });
                 let subs: Subst = ids.zip(fresh_params).collect();
 
@@ -216,9 +210,12 @@ impl Context {
     }
 
     pub fn fresh_var(&self) -> Type {
-        Type::Var(TVar {
-            id: self.fresh_id(),
-            constraint: None,
-        })
+        Type {
+            kind: TypeKind::Var(TVar {
+                id: self.fresh_id(),
+                constraint: None,
+            }),
+            provenance: None,
+        }
     }
 }

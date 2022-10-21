@@ -1,5 +1,6 @@
-use crochet_ast::*;
-use crochet_types::{TObjElem, TObject, TProp, Type};
+use crochet_ast::common::*;
+use crochet_ast::types::{TObjElem, TObject, TProp, Type, TypeKind};
+use crochet_ast::values::*;
 
 use crate::context::Context;
 use crate::infer_expr::infer_expr as infer_expr_rec;
@@ -18,7 +19,10 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
         mutable: false,
         t: Type::from(Lit::str(String::from("Promise"), 0..0)),
     })];
-    let promise_type = Type::Object(TObject { elems });
+    let promise_type = Type {
+        kind: TypeKind::Object(TObject { elems }),
+        provenance: None,
+    };
     ctx.insert_type(String::from("Promise"), promise_type);
     // TODO: replace with Class type once it exists
     // We use {_name: "JSXElement"} to differentiate it from other
@@ -29,7 +33,10 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
         mutable: false,
         t: Type::from(Lit::str(String::from("JSXElement"), 0..0)),
     })];
-    let jsx_element_type = Type::Object(TObject { elems });
+    let jsx_element_type = Type {
+        kind: TypeKind::Object(TObject { elems }),
+        provenance: None,
+    };
     ctx.insert_type(String::from("JSXElement"), jsx_element_type);
 
     // We push a scope here so that it's easy to differentiate globals from
@@ -49,10 +56,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
                 match declare {
                     true => {
                         match &mut pattern.kind {
-                            PatternKind::Ident(BindingIdent {
-                                id: Ident { name, .. },
-                                ..
-                            }) => {
+                            PatternKind::Ident(BindingIdent { name }) => {
                                 match type_ann {
                                     Some(type_ann) => {
                                         let (s, t) = infer_type_ann(type_ann, ctx, &mut None)?;

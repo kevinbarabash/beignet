@@ -1,5 +1,5 @@
-use crochet_ast::*;
-use crochet_types::Type;
+use crochet_ast::types::TypeKind;
+use crochet_ast::values::*;
 
 use crate::substitutable::{Subst, Substitutable};
 
@@ -7,7 +7,7 @@ pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
     // Since we process the node first, if `expr` is a leaf node we
     // ignore it in the match statement below.
     if let Some(t) = &pattern.inferred_type {
-        if let Type::Var(_) = t {
+        if let TypeKind::Var(_) = &t.kind {
             pattern.inferred_type = Some(t.apply(s));
         }
     }
@@ -57,7 +57,7 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
     // Since we process the node first, if `expr` is a leaf node we
     // ignore it in the match statement below.
     if let Some(t) = &expr.inferred_type {
-        if let Type::Var(_) = t {
+        if let TypeKind::Var(_) = &t.kind {
             expr.inferred_type = Some(t.apply(s));
         }
     }
@@ -238,7 +238,7 @@ pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
     // Since we process the node first, if `expr` is a leaf node we
     // ignore it in the match statement below.
     if let Some(t) = &type_ann.inferred_type {
-        if let Type::Var(_) = t {
+        if let TypeKind::Var(_) = &t.kind {
             type_ann.inferred_type = Some(t.apply(s));
         }
     }

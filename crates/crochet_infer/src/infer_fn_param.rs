@@ -1,5 +1,6 @@
-use crochet_ast::*;
-use crochet_types::{self as types, TFnParam, TKeyword, TPat, Type};
+use crochet_ast::common::*;
+use crochet_ast::types::{self as types, TFnParam, TKeyword, TPat, Type, TypeKind};
+use crochet_ast::values::*;
 
 use crate::assump::Assump;
 use crate::context::Context;
@@ -20,15 +21,27 @@ pub fn infer_fn_param(
 
     // TypeScript annotates rest params using an array type so we do the
     // same thing by converting top-level rest types to array types.
-    let pt = if let Type::Rest(arg) = pt {
-        Type::Array(arg)
+    let pt = if let TypeKind::Rest(arg) = &pt.kind {
+        Type {
+            kind: TypeKind::Array(arg.to_owned()),
+            provenance: None,
+        }
     } else {
         pt
     };
 
     if param.optional {
         if let Some((name, t)) = pa.iter().find(|(_, value)| pt == **value) {
-            let t = Type::Union(vec![t.to_owned(), Type::Keyword(TKeyword::Undefined)]);
+            let t = Type {
+                kind: TypeKind::Union(vec![
+                    t.to_owned(),
+                    Type {
+                        kind: TypeKind::Keyword(TKeyword::Undefined),
+                        provenance: None,
+                    },
+                ]),
+                provenance: None,
+            };
             pa.insert(name.to_owned(), t);
         };
     }
@@ -44,9 +57,8 @@ pub fn infer_fn_param(
 
 pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
     match &pattern.kind {
-        PatternKind::Ident(e_bi) => TPat::Ident(types::BindingIdent {
-            name: e_bi.id.name.to_owned(),
-            mutable: false,
+        PatternKind::Ident(BindingIdent { name }) => TPat::Ident(BindingIdent {
+            name: name.to_owned(),
         }),
         PatternKind::Rest(e_rest) => TPat::Rest(types::RestPat {
             arg: Box::from(pattern_to_tpat(e_rest.arg.as_ref())),

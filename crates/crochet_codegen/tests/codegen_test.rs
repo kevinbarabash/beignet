@@ -618,6 +618,7 @@ fn spread_args() {
 }
 
 #[test]
+#[ignore]
 fn mutable_array() {
     let src = r#"
     let arr: mut number[] = [1, 2, 3];

@@ -1,7 +1,7 @@
 use std::cmp;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
-use crochet_types::{self as types, TGeneric, TLam, TObjElem, TObject, TVar, Type};
+use crochet_ast::types::{self as types, TGeneric, TLam, TObjElem, TObject, TVar, Type, TypeKind};
 use types::TKeyword;
 
 use crate::context::Context;
@@ -12,12 +12,12 @@ use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
-    let result = match (&t1, &t2) {
+    let result = match (&t1.kind, &t2.kind) {
         // All binding must be done first
-        (Type::Var(tv), _) => bind(tv, t2, Relation::SubType, ctx),
-        (_, Type::Var(tv)) => bind(tv, t1, Relation::SuperType, ctx),
+        (TypeKind::Var(tv), _) => bind(tv, t2, Relation::SubType, ctx),
+        (_, TypeKind::Var(tv)) => bind(tv, t1, Relation::SuperType, ctx),
 
-        (Type::Lit(lit), Type::Keyword(keyword)) => {
+        (TypeKind::Lit(lit), TypeKind::Keyword(keyword)) => {
             let b = matches!(
                 (lit, keyword),
                 (types::TLit::Num(_), TKeyword::Number)
@@ -30,7 +30,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Err(String::from("Unification failure"))
             }
         }
-        (Type::App(app1), Type::App(app2)) => {
+        (TypeKind::App(app1), TypeKind::App(app2)) => {
             let mut s = Subst::new();
 
             // NOTE: `app1` and `app2` currently must have the same number of args.
@@ -47,7 +47,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Err(String::from("Couldn't unify function calls"))
             }
         }
-        (Type::Lam(lam1), Type::Lam(lam2)) => {
+        (TypeKind::Lam(lam1), TypeKind::Lam(lam2)) => {
             let mut s = Subst::new();
 
             // It's okay if has fewer params than `lam2`.  This is because
@@ -70,24 +70,30 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
         }
         // NOTE: this arm is only hit by the `infer_skk` test case
-        (Type::Lam(_), Type::App(_)) => unify(t2, t1, ctx),
-        (Type::App(_), Type::Object(obj)) => {
+        (TypeKind::Lam(_), TypeKind::App(_)) => unify(t2, t1, ctx),
+        (TypeKind::App(_), TypeKind::Object(obj)) => {
             let callables: Vec<_> = obj
                 .elems
                 .iter()
                 .filter_map(|elem| match elem {
                     TObjElem::Call(call) => {
-                        let lam = Type::Lam(TLam {
-                            params: call.params.to_owned(),
-                            ret: call.ret.to_owned(),
-                        });
+                        let lam = Type {
+                            kind: TypeKind::Lam(TLam {
+                                params: call.params.to_owned(),
+                                ret: call.ret.to_owned(),
+                            }),
+                            provenance: None,
+                        };
                         let t = if call.type_params.is_empty() {
                             lam
                         } else {
-                            Type::Generic(TGeneric {
-                                t: Box::from(lam),
-                                type_params: call.type_params.to_owned(),
-                            })
+                            Type {
+                                kind: TypeKind::Generic(TGeneric {
+                                    t: Box::from(lam),
+                                    type_params: call.type_params.to_owned(),
+                                }),
+                                provenance: None,
+                            }
                         };
                         Some(t)
                     }
@@ -109,7 +115,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Err(String::from("Couldn't application with object"))
             }
         }
-        (Type::App(app), Type::Lam(lam)) => {
+        (TypeKind::App(app), TypeKind::Lam(lam)) => {
             let mut s = Subst::new();
 
             let last_param_2 = lam.params.last();
@@ -149,9 +155,9 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let mut args: Vec<Type> = vec![];
             // TODO: disallow spreading an array if it isn't the last arg
             for arg in app.args.iter() {
-                match &arg {
-                    Type::Rest(spread) => match &spread.as_ref() {
-                        Type::Tuple(types) => args.extend(types.to_owned()),
+                match &arg.kind {
+                    TypeKind::Rest(spread) => match &spread.as_ref().kind {
+                        TypeKind::Tuple(types) => args.extend(types.to_owned()),
                         _ => return Err(format!("spread of type {spread} not allowed")),
                     },
                     _ => args.push(arg.to_owned()),
@@ -174,7 +180,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
                 let mut args = app.args.clone();
                 let regular_args: Vec<_> = args.drain(0..regular_arg_count).collect();
-                let rest_arg = Type::Tuple(args);
+                let rest_arg = Type {
+                    kind: TypeKind::Tuple(args),
+                    provenance: None,
+                };
 
                 let mut params = lam.params.clone();
                 let regular_params: Vec<_> = params.drain(0..regular_arg_count).collect();
@@ -212,7 +221,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Err(String::from("Not enough params provided"))
             }
         }
-        (Type::App(_), Type::Intersection(types)) => {
+        (TypeKind::App(_), TypeKind::Intersection(types)) => {
             for t in types {
                 let result = unify(t1, t, ctx);
                 if result.is_ok() {
@@ -221,7 +230,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             }
             Err(String::from("Couldn't unify lambda with intersection"))
         }
-        (Type::Object(obj1), Type::Object(obj2)) => {
+        (TypeKind::Object(obj1), TypeKind::Object(obj2)) => {
             // Should we be doing something about type_params here?
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
             let result: Result<Vec<_>, String> = obj2
@@ -274,14 +283,14 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             let ss = result?;
             Ok(compose_many_subs(&ss))
         }
-        (Type::Tuple(types1), Type::Tuple(types2)) => {
+        (TypeKind::Tuple(types1), TypeKind::Tuple(types2)) => {
             let mut before2: Vec<Type> = vec![];
             let mut after2: Vec<Type> = vec![];
             let mut maybe_rest2: Option<Type> = None;
 
             for t in types2 {
-                match &t {
-                    Type::Rest(rest_type) => {
+                match &t.kind {
+                    TypeKind::Rest(rest_type) => {
                         if maybe_rest2.is_some() {
                             return Err(String::from(
                                 "Only one rest pattern is allowed in a tuple",
@@ -321,7 +330,14 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 let rest1: Vec<_> = types1.drain(0..rest_len).collect();
                 let after1: Vec<_> = types1;
 
-                let s = unify(&Type::Tuple(rest1), &rest2, ctx)?;
+                let s = unify(
+                    &Type {
+                        kind: TypeKind::Tuple(rest1),
+                        provenance: None,
+                    },
+                    &rest2,
+                    ctx,
+                )?;
                 ss.push(s);
 
                 for (t1, t2) in after1.iter().zip(after2.iter()) {
@@ -332,7 +348,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
             Ok(compose_many_subs(&ss))
         }
-        (Type::Tuple(tuple_types), Type::Array(array_type)) => {
+        (TypeKind::Tuple(tuple_types), TypeKind::Array(array_type)) => {
             if tuple_types.is_empty() {
                 Ok(Subst::default())
             } else {
@@ -344,15 +360,15 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 Ok(compose_many_subs(&ss))
             }
         }
-        (Type::Array(array_type_1), Type::Array(array_type_2)) => {
+        (TypeKind::Array(array_type_1), TypeKind::Array(array_type_2)) => {
             unify(array_type_1, array_type_2, ctx)
         }
-        (Type::Union(types), _) => {
+        (TypeKind::Union(types), _) => {
             let result: Result<Vec<_>, _> = types.iter().map(|t1| unify(t1, t2, ctx)).collect();
             let ss = result?; // This is only okay if all calls to is_subtype are okay
             Ok(compose_many_subs_with_context(&ss))
         }
-        (_, Type::Union(types)) => {
+        (_, TypeKind::Union(types)) => {
             let mut b = false;
             let mut ss = vec![];
             for t2 in types.iter() {
@@ -368,16 +384,16 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 false => Err(String::from("Unification failure")),
             }
         }
-        (Type::Object(obj), Type::Intersection(types)) => {
+        (TypeKind::Object(obj), TypeKind::Intersection(types)) => {
             let obj_types: Vec<_> = types
                 .iter()
-                .filter(|t| matches!(t, Type::Object(_)))
+                .filter(|t| matches!(&t.kind, TypeKind::Object(_)))
                 .cloned()
                 .collect();
             // NOTE: {a, ...x} is converted to {a} & tvar
             let rest_types: Vec<_> = types
                 .iter()
-                .filter(|t| matches!(t, Type::Var(_)))
+                .filter(|t| matches!(&t.kind, TypeKind::Var(_)))
                 .cloned()
                 .collect();
             // TODO: check for other variants, if there are we should error
@@ -387,8 +403,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             match rest_types.len() {
                 0 => unify(t1, &obj_type, ctx),
                 1 => {
-                    let all_obj_elems = match &obj_type {
-                        Type::Object(obj) => obj.elems.to_owned(),
+                    let all_obj_elems = match &obj_type.kind {
+                        TypeKind::Object(obj) => obj.elems.to_owned(),
                         _ => vec![],
                     };
 
@@ -402,10 +418,24 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             })
                         });
 
-                    let s1 = unify(&Type::Object(TObject { elems: obj_elems }), &obj_type, ctx)?;
+                    let s1 = unify(
+                        &Type {
+                            kind: TypeKind::Object(TObject { elems: obj_elems }),
+                            provenance: None,
+                        },
+                        &obj_type,
+                        ctx,
+                    )?;
 
                     let rest_type = rest_types.get(0).unwrap();
-                    let s2 = unify(&Type::Object(TObject { elems: rest_elems }), rest_type, ctx)?;
+                    let s2 = unify(
+                        &Type {
+                            kind: TypeKind::Object(TObject { elems: rest_elems }),
+                            provenance: None,
+                        },
+                        rest_type,
+                        ctx,
+                    )?;
 
                     let s = compose_subs(&s2, &s1);
                     Ok(s)
@@ -413,16 +443,16 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 _ => Err(String::from("Unification is undecidable")),
             }
         }
-        (Type::Intersection(types), Type::Object(obj)) => {
+        (TypeKind::Intersection(types), TypeKind::Object(obj)) => {
             let obj_types: Vec<_> = types
                 .iter()
-                .filter(|t| matches!(t, Type::Object(_)))
+                .filter(|t| matches!(&t.kind, TypeKind::Object(_)))
                 .cloned()
                 .collect();
             // NOTE: {a, ...x} is converted to {a} & tvar
             let rest_types: Vec<_> = types
                 .iter()
-                .filter(|t| matches!(t, Type::Var(_)))
+                .filter(|t| matches!(&t.kind, TypeKind::Var(_)))
                 .cloned()
                 .collect();
             // TODO: check for other variants, if there are we should error
@@ -432,8 +462,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             match rest_types.len() {
                 0 => unify(&obj_type, t2, ctx),
                 1 => {
-                    let all_obj_elems = match &obj_type {
-                        Type::Object(obj) => obj.elems.to_owned(),
+                    let all_obj_elems = match &obj_type.kind {
+                        TypeKind::Object(obj) => obj.elems.to_owned(),
                         _ => vec![],
                     };
 
@@ -447,11 +477,24 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                             })
                         });
 
-                    let s_obj = unify(&obj_type, &Type::Object(TObject { elems: obj_elems }), ctx)?;
+                    let s_obj = unify(
+                        &obj_type,
+                        &Type {
+                            kind: TypeKind::Object(TObject { elems: obj_elems }),
+                            provenance: None,
+                        },
+                        ctx,
+                    )?;
 
                     let rest_type = rest_types.get(0).unwrap();
-                    let s_rest =
-                        unify(rest_type, &Type::Object(TObject { elems: rest_elems }), ctx)?;
+                    let s_rest = unify(
+                        rest_type,
+                        &Type {
+                            kind: TypeKind::Object(TObject { elems: rest_elems }),
+                            provenance: None,
+                        },
+                        ctx,
+                    )?;
 
                     let s = compose_subs(&s_rest, &s_obj);
                     Ok(s)
@@ -459,7 +502,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 _ => Err(String::from("Unification is undecidable")),
             }
         }
-        (Type::Ref(alias1), Type::Ref(alias2)) => {
+        (TypeKind::Ref(alias1), TypeKind::Ref(alias2)) => {
             if alias1.name == alias2.name {
                 match (&alias1.type_args, &alias2.type_args) {
                     (Some(tp1), Some(tp2)) => {
@@ -478,19 +521,19 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 todo!("unify(): handle aliases that point to another alias")
             }
         }
-        (_, Type::Ref(alias)) => {
+        (_, TypeKind::Ref(alias)) => {
             let alias_t = ctx.lookup_ref_and_instantiate(alias)?;
             unify(t1, &alias_t, ctx)
         }
-        (Type::Ref(alias), _) => {
+        (TypeKind::Ref(alias), _) => {
             let alias_t = ctx.lookup_ref_and_instantiate(alias)?;
             unify(&alias_t, t2, ctx)
         }
-        (Type::Array(array_arg), Type::Rest(rest_arg)) => {
+        (TypeKind::Array(array_arg), TypeKind::Rest(rest_arg)) => {
             unify(array_arg.as_ref(), rest_arg.as_ref(), ctx)
         }
-        (_, Type::KeyOf(t)) => unify(t1, &key_of(t, ctx)?, ctx),
-        (Type::Keyword(keyword1), Type::Keyword(keyword2)) => match (keyword1, keyword2) {
+        (_, TypeKind::KeyOf(t)) => unify(t1, &key_of(t, ctx)?, ctx),
+        (TypeKind::Keyword(keyword1), TypeKind::Keyword(keyword2)) => match (keyword1, keyword2) {
             (TKeyword::Number, TKeyword::Number) => Ok(Subst::new()),
             (TKeyword::String, TKeyword::String) => Ok(Subst::new()),
             (TKeyword::Boolean, TKeyword::Boolean) => Ok(Subst::new()),
@@ -501,14 +544,14 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             (TKeyword::Never, TKeyword::Null) => Ok(Subst::new()),
             _ => Err(format!("Can't unify {t1} with {t2}")),
         },
-        (Type::Mutable(t1), Type::Mutable(t2)) => unify_mut(t1, t2, ctx),
-        (_, Type::Mutable(_)) => {
+        (TypeKind::Mutable(t1), TypeKind::Mutable(t2)) => unify_mut(t1, t2, ctx),
+        (_, TypeKind::Mutable(_)) => {
             // It's NOT okay to use an immutable in place of a mutable one
             Err(String::from(
                 "Cannot use immutable type where a mutable type was expected",
             ))
         }
-        (Type::Mutable(t), _) => {
+        (TypeKind::Mutable(t), _) => {
             // It's okay to use a mutable type in place of an immutable one
             unify(t, t2, ctx)
         }
@@ -536,19 +579,19 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
     // | t == TVar a     = return nullSubst
     // | occursCheck a t = throwError $ InfiniteType a t
     // | otherwise       = return $ Map.singleton a t
-    match t {
-        Type::Var(other_tv) if other_tv == tv => {
+    match &t.kind {
+        TypeKind::Var(other_tv) if other_tv == tv => {
             println!("other_tv = {other_tv:#?}, tv = {tv:#?}");
             Ok(Subst::default())
         }
         _ => {
             if occurs_check(tv, t) {
                 // Union types are a special case since `t1` unifies trivially with `t1 | t2 | ... tn`
-                if let Type::Union(elem_types) = &t {
+                if let TypeKind::Union(elem_types) = &t.kind {
                     let elem_types_without_id: Vec<Type> = elem_types
                         .iter()
-                        .filter(|elem_type| match elem_type {
-                            Type::Var(other_tv) => other_tv != tv,
+                        .filter(|elem_type| match &elem_type.kind {
+                            TypeKind::Var(other_tv) => other_tv != tv,
                             _ => true,
                         })
                         .cloned()
@@ -558,14 +601,17 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
                         // TODO: dedupe with `norm_type()` in substitutable.rs
                         // TODO: restrict this special case handling to recursive functions?
                         // Removes duplicates
-                        let types: HashSet<Type> = elem_types_without_id.into_iter().collect();
+                        let types: BTreeSet<Type> = elem_types_without_id.into_iter().collect();
                         // Converts set back to an array
                         let types: Vec<Type> = types.into_iter().collect();
 
-                        let t = if types.len() == 1 {
+                        let t: Type = if types.len() == 1 {
                             types.get(0).unwrap().to_owned()
                         } else {
-                            Type::Union(types)
+                            Type {
+                                kind: TypeKind::Union(types),
+                                provenance: None,
+                            }
                         };
 
                         return Ok(Subst::from([(tv.id.to_owned(), t)]));
@@ -584,12 +630,18 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
 
                     // If the `t` is a type variable, but has no constraints then return a
                     // substitution from the one that has no constraints to the one that does.
-                    if let Type::Var(TVar {
+                    if let TypeKind::Var(TVar {
                         id,
                         constraint: None,
-                    }) = t
+                    }) = t.kind
                     {
-                        let s: Subst = Subst::from([(id.to_owned(), Type::Var(tv.to_owned()))]);
+                        let s: Subst = Subst::from([(
+                            id.to_owned(),
+                            Type {
+                                kind: TypeKind::Var(tv.to_owned()),
+                                provenance: None,
+                            },
+                        )]);
                         return Ok(s);
                     }
 
@@ -609,7 +661,7 @@ fn occurs_check(tv: &TVar, t: &Type) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crochet_ast::Lit;
+    use crochet_ast::values::Lit;
 
     fn num(val: &str) -> Lit {
         Lit::num(val.to_owned(), 0..0)
@@ -629,21 +681,30 @@ mod tests {
 
         let result = unify(
             &Type::from(num("5")),
-            &Type::Keyword(TKeyword::Number),
+            &Type {
+                kind: TypeKind::Keyword(TKeyword::Number),
+                provenance: None,
+            },
             &ctx,
         );
         assert_eq!(result, Ok(Subst::default()));
 
         let result = unify(
             &Type::from(str("hello")),
-            &Type::Keyword(TKeyword::String),
+            &Type {
+                kind: TypeKind::Keyword(TKeyword::String),
+                provenance: None,
+            },
             &ctx,
         );
         assert_eq!(result, Ok(Subst::default()));
 
         let result = unify(
             &Type::from(bool(&true)),
-            &Type::Keyword(TKeyword::Boolean),
+            &Type {
+                kind: TypeKind::Keyword(TKeyword::Boolean),
+                provenance: None,
+            },
             &ctx,
         );
         assert_eq!(result, Ok(Subst::default()));
@@ -671,23 +732,35 @@ mod tests {
                 name: String::from("baz"),
                 optional: false,
                 mutable: false,
-                t: Type::Keyword(TKeyword::String),
+                t: Type {
+                    kind: TypeKind::Keyword(TKeyword::String),
+                    provenance: None,
+                },
             }),
         ];
-        let t1 = Type::Object(TObject { elems });
+        let t1 = Type {
+            kind: TypeKind::Object(TObject { elems }),
+            provenance: None,
+        };
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
-                t: Type::Keyword(TKeyword::Number),
+                t: Type {
+                    kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
+                },
             }),
             types::TObjElem::Prop(types::TProp {
                 name: String::from("bar"),
                 optional: true,
                 mutable: false,
-                t: Type::Keyword(TKeyword::Boolean),
+                t: Type {
+                    kind: TypeKind::Keyword(TKeyword::Boolean),
+                    provenance: None,
+                },
             }),
             // It's okay for qux to not appear in the subtype since
             // it's an optional property.
@@ -695,10 +768,16 @@ mod tests {
                 name: String::from("qux"),
                 optional: true,
                 mutable: false,
-                t: Type::Keyword(TKeyword::String),
+                t: Type {
+                    kind: TypeKind::Keyword(TKeyword::String),
+                    provenance: None,
+                },
             }),
         ];
-        let t2 = Type::Object(TObject { elems });
+        let t2 = Type {
+            kind: TypeKind::Object(TObject { elems }),
+            provenance: None,
+        };
 
         let result = unify(&t1, &t2, &ctx);
         assert_eq!(result, Ok(Subst::default()));
@@ -711,7 +790,10 @@ mod tests {
         let ctx = Context::default();
 
         let result = unify(
-            &Type::Keyword(TKeyword::Number),
+            &Type {
+                kind: TypeKind::Keyword(TKeyword::Number),
+                provenance: None,
+            },
             &Type::from(num("5")),
             &ctx,
         );

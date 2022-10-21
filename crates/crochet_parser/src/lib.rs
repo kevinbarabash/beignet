@@ -4,7 +4,8 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 use unescape::unescape;
 
-use crochet_ast::*;
+use crochet_ast::common::*;
+use crochet_ast::values::*;
 
 #[link(wasm_import_module = "my_custom_module")]
 extern "C" {
@@ -216,10 +217,8 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
     let kind = match node.kind() {
         "identifier" => {
             let span = node.byte_range();
-            let name = src.get(span.clone()).unwrap().to_owned();
-            PatternKind::Ident(BindingIdent {
-                id: Ident { span, name },
-            })
+            let name = src.get(span).unwrap().to_owned();
+            PatternKind::Ident(BindingIdent { name })
         }
         "object_pattern" => {
             let mut cursor = node.walk();
@@ -903,12 +902,7 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                     PatternKind::Lit(LitPat { lit })
                 }
                 "_" => PatternKind::Wildcard(WildcardPat {}),
-                _ => PatternKind::Ident(BindingIdent {
-                    id: Ident {
-                        span: child.byte_range(),
-                        name,
-                    },
-                }),
+                _ => PatternKind::Ident(BindingIdent { name }),
             }
         }
         "refutable_array_pattern" => {
@@ -1166,12 +1160,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
 
                         let pat: Pattern = Pattern {
                             span: name_node.byte_range(),
-                            kind: PatternKind::Ident(BindingIdent {
-                                id: Ident {
-                                    span: name_node.byte_range(),
-                                    name,
-                                },
-                            }),
+                            kind: PatternKind::Ident(BindingIdent { name }),
                             inferred_type: None,
                         };
 

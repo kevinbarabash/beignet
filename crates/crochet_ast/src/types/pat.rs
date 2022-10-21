@@ -1,10 +1,10 @@
 use itertools::join;
 use std::fmt;
-use std::hash::Hash;
 
-use crate::r#type::Type;
+use crate::common::binding::*;
+use crate::types::r#type::Type;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TPat {
     Ident(BindingIdent),
     Rest(RestPat),
@@ -23,23 +23,7 @@ impl fmt::Display for TPat {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct BindingIdent {
-    pub name: String,
-    pub mutable: bool,
-}
-
-impl fmt::Display for BindingIdent {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { name, mutable } = self;
-        match mutable {
-            false => write!(f, "{name}"),
-            true => write!(f, "mut {name}"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RestPat {
     pub arg: Box<TPat>,
 }
@@ -51,7 +35,7 @@ impl fmt::Display for RestPat {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ArrayPat {
     pub elems: Vec<Option<TPat>>,
 }
@@ -67,7 +51,7 @@ impl fmt::Display for ArrayPat {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TObjectPat {
     pub props: Vec<TObjectPatProp>,
 }
@@ -79,7 +63,7 @@ impl fmt::Display for TObjectPat {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TObjectPatProp {
     KeyValue(TObjectKeyValuePatProp),
     Assign(TObjectAssignPatProp),
@@ -96,7 +80,7 @@ impl fmt::Display for TObjectPatProp {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TObjectKeyValuePatProp {
     pub key: String,
     pub value: TPat,
@@ -109,7 +93,7 @@ impl fmt::Display for TObjectKeyValuePatProp {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TObjectAssignPatProp {
     pub key: String,
     pub value: Option<Type>,

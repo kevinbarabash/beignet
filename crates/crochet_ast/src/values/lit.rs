@@ -3,9 +3,8 @@ use swc_atoms::{Atom, JsWord};
 use swc_common::source_map::DUMMY_SP;
 use swc_ecma_ast;
 
-use crochet_types::{TLit, Type};
-
-use crate::span::Span;
+use crate::types::{TLit, Type, TypeKind};
+use crate::values::span::Span;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Num {
@@ -103,11 +102,14 @@ impl From<&Lit> for swc_ecma_ast::Expr {
 
 impl From<Lit> for Type {
     fn from(lit: Lit) -> Self {
-        Type::Lit(match lit {
-            Lit::Num(n) => TLit::Num(n.value),
-            Lit::Bool(b) => TLit::Bool(b.value),
-            Lit::Str(s) => TLit::Str(s.value),
-        })
+        Type {
+            kind: TypeKind::Lit(match lit {
+                Lit::Num(n) => TLit::Num(n.value),
+                Lit::Bool(b) => TLit::Bool(b.value),
+                Lit::Str(s) => TLit::Str(s.value),
+            }),
+            provenance: None,
+        }
     }
 }
 

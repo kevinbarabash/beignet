@@ -1,8 +1,7 @@
 use std::fmt;
 
-use crochet_types::{TKeyword, Type};
-
-use crate::span::Span;
+use crate::types::{TKeyword, Type, TypeKind};
+use crate::values::span::Span;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Null {
@@ -44,13 +43,16 @@ impl fmt::Display for Keyword {
 
 impl From<Keyword> for Type {
     fn from(keyword: Keyword) -> Self {
-        Type::Keyword(match keyword {
-            Keyword::Number => TKeyword::Number,
-            Keyword::String => TKeyword::String,
-            Keyword::Boolean => TKeyword::Boolean,
-            Keyword::Null => TKeyword::Null,
-            Keyword::Symbol => TKeyword::Symbol,
-            Keyword::Undefined => TKeyword::Undefined,
-        })
+        Type {
+            kind: TypeKind::Keyword(match keyword {
+                Keyword::Number => TKeyword::Number,
+                Keyword::String => TKeyword::String,
+                Keyword::Boolean => TKeyword::Boolean,
+                Keyword::Null => TKeyword::Null,
+                Keyword::Symbol => TKeyword::Symbol,
+                Keyword::Undefined => TKeyword::Undefined,
+            }),
+            provenance: None,
+        }
     }
 }

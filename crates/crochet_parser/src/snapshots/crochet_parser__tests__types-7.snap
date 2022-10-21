@@ -11,10 +11,7 @@ Ok(
                     span: 4..14,
                     kind: Ident(
                         BindingIdent {
-                            id: Ident {
-                                span: 4..14,
-                                name: "nested_arr",
-                            },
+                            name: "nested_arr",
                         },
                     ),
                     inferred_type: None,

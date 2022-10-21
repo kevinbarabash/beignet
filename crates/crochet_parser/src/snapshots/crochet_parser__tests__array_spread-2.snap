@@ -11,10 +11,7 @@ Ok(
                     span: 4..9,
                     kind: Ident(
                         BindingIdent {
-                            id: Ident {
-                                span: 4..9,
-                                name: "tuple",
-                            },
+                            name: "tuple",
                         },
                     ),
                     inferred_type: None,

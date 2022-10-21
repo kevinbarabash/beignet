@@ -17,10 +17,7 @@ Ok(
                                         span: 5..8,
                                         kind: Ident(
                                             BindingIdent {
-                                                id: Ident {
-                                                    span: 5..8,
-                                                    name: "foo",
-                                                },
+                                                name: "foo",
                                             },
                                         ),
                                         inferred_type: None,
@@ -41,10 +38,7 @@ Ok(
                                                                         span: 14..17,
                                                                         kind: Ident(
                                                                             BindingIdent {
-                                                                                id: Ident {
-                                                                                    span: 14..17,
-                                                                                    name: "bar",
-                                                                                },
+                                                                                name: "bar",
                                                                             },
                                                                         ),
                                                                         inferred_type: None,
@@ -59,10 +53,7 @@ Ok(
                                                                                     span: 22..26,
                                                                                     kind: Ident(
                                                                                         BindingIdent {
-                                                                                            id: Ident {
-                                                                                                span: 22..26,
-                                                                                                name: "rest",
-                                                                                            },
+                                                                                            name: "rest",
                                                                                         },
                                                                                     ),
                                                                                     inferred_type: None,

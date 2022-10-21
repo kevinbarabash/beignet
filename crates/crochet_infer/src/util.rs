@@ -1,9 +1,9 @@
 use array_tool::vec::*;
 use defaultmap::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::iter::Iterator;
 
-use crochet_types::*;
+use crochet_ast::types::*;
 
 use crate::context::{Context, Env};
 use crate::substitutable::{Subst, Substitutable};
@@ -16,10 +16,13 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
         .map(|(index, key)| {
             (
                 key.id,
-                Type::Var(TVar {
-                    id: index as i32,
-                    constraint: key.constraint.clone(),
-                }),
+                Type {
+                    kind: TypeKind::Var(TVar {
+                        id: index as i32,
+                        constraint: key.constraint.clone(),
+                    }),
+                    provenance: None,
+                },
             )
         })
         .collect();
@@ -29,10 +32,13 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
     for (index, tp) in type_params.iter().enumerate() {
         mapping.insert(
             tp.id,
-            Type::Var(TVar {
-                id: (offset + index) as i32,
-                constraint: tp.constraint.clone(),
-            }),
+            Type {
+                kind: TypeKind::Var(TVar {
+                    id: (offset + index) as i32,
+                    constraint: tp.constraint.clone(),
+                }),
+                provenance: None,
+            },
         );
     }
 
@@ -51,8 +57,8 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
     // type variables that are bound to the object element as opposed to the encompassing object type.
     fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
-        match t {
-            Type::Generic(TGeneric {
+        match &t.kind {
+            TypeKind::Generic(TGeneric {
                 t: inner_t,
                 type_params,
             }) => {
@@ -60,13 +66,13 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 // mappings from higher up may cause type variables to be reassigned
                 // to the incorrect type.  In order to fix this, we'd have to run
                 // `normalize` itself on each qualified type in the tree.
-                Type::Generic(TGeneric {
+                Type { kind: TypeKind::Generic(TGeneric {
                     t: Box::from(norm_type(inner_t, mapping, ctx)),
                     type_params: type_params
                         .iter()
                         .map(|tp| match mapping.get(&tp.id) {
                             Some(t) => {
-                                if let Type::Var(tv) = t {
+                                if let TypeKind::Var(tv) = &t.kind {
                                     tv.to_owned()
                                 } else {
                                     panic!("Expected a type variable in mapping when update type_params");
@@ -75,24 +81,27 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                             None => tp.to_owned(),
                         })
                         .collect(),
-                })
+                }), provenance: None}
             }
-            Type::Var(tv) => match mapping.get(&tv.id) {
+            TypeKind::Var(tv) => match mapping.get(&tv.id) {
                 Some(t) => t.to_owned(),
                 // If `id` doesn't exist in `mapping` we return the original type variable.
                 // In this situation, it should appear in some other list of qualifiers.
                 None => t.to_owned(),
             },
-            Type::App(app) => {
+            TypeKind::App(app) => {
                 let args: Vec<_> = app
                     .args
                     .iter()
                     .map(|arg| norm_type(arg, mapping, ctx))
                     .collect();
                 let ret = Box::from(norm_type(&app.ret, mapping, ctx));
-                Type::App(TApp { args, ret })
+                Type {
+                    kind: TypeKind::App(TApp { args, ret }),
+                    provenance: None,
+                }
             }
-            Type::Lam(lam) => {
+            TypeKind::Lam(lam) => {
                 let params: Vec<_> = lam
                     .params
                     .iter()
@@ -102,23 +111,29 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     })
                     .collect();
                 let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
-                Type::Lam(TLam { params, ret })
+                Type {
+                    kind: TypeKind::Lam(TLam { params, ret }),
+                    provenance: None,
+                }
             }
-            Type::Lit(_) => t.to_owned(),
-            Type::Keyword(_) => t.to_owned(),
-            Type::Union(types) => {
+            TypeKind::Lit(_) => t.to_owned(),
+            TypeKind::Keyword(_) => t.to_owned(),
+            TypeKind::Union(types) => {
                 // TODO: update union_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
                 let types = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
-                Type::Union(types)
+                Type {
+                    kind: TypeKind::Union(types),
+                    provenance: None,
+                }
             }
-            Type::Intersection(types) => {
+            TypeKind::Intersection(types) => {
                 // TODO: update intersection_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
                 let types: Vec<_> = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
                 simplify_intersection(&types)
             }
-            Type::Object(obj) => {
+            TypeKind::Object(obj) => {
                 let elems = obj
                     .elems
                     .iter()
@@ -170,30 +185,57 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                         }),
                     })
                     .collect();
-                Type::Object(TObject { elems })
+                Type {
+                    kind: TypeKind::Object(TObject { elems }),
+                    provenance: None,
+                }
             }
-            Type::Ref(TRef { name, type_args }) => {
+            TypeKind::Ref(TRef { name, type_args }) => {
                 let type_args = type_args
                     .clone()
                     .map(|params| params.iter().map(|t| norm_type(t, mapping, ctx)).collect());
-                Type::Ref(TRef {
-                    name: name.to_owned(),
-                    type_args,
-                })
+                Type {
+                    kind: TypeKind::Ref(TRef {
+                        name: name.to_owned(),
+                        type_args,
+                    }),
+                    provenance: None,
+                }
             }
-            Type::Tuple(types) => {
+            TypeKind::Tuple(types) => {
                 let types = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
-                Type::Tuple(types)
+                Type {
+                    kind: TypeKind::Tuple(types),
+                    provenance: None,
+                }
             }
-            Type::Array(t) => Type::Array(Box::from(norm_type(t, mapping, ctx))),
-            Type::Rest(arg) => Type::Rest(Box::from(norm_type(arg, mapping, ctx))),
-            Type::This => Type::This,
-            Type::KeyOf(t) => Type::KeyOf(Box::from(norm_type(t, mapping, ctx))),
-            Type::IndexAccess(TIndexAccess { object, index }) => Type::IndexAccess(TIndexAccess {
-                object: Box::from(norm_type(object, mapping, ctx)),
-                index: Box::from(norm_type(index, mapping, ctx)),
-            }),
-            Type::Mutable(t) => Type::Mutable(Box::from(norm_type(t, mapping, ctx))),
+            TypeKind::Array(t) => Type {
+                kind: TypeKind::Array(Box::from(norm_type(t, mapping, ctx))),
+                provenance: None,
+            },
+            TypeKind::Rest(arg) => Type {
+                kind: TypeKind::Rest(Box::from(norm_type(arg, mapping, ctx))),
+                provenance: None,
+            },
+            TypeKind::This => Type {
+                kind: TypeKind::This,
+                provenance: None,
+            },
+            TypeKind::KeyOf(t) => Type {
+                kind: TypeKind::KeyOf(Box::from(norm_type(t, mapping, ctx))),
+                provenance: None,
+            },
+            TypeKind::IndexAccess(TIndexAccess { object, index }) => Type {
+                kind: TypeKind::IndexAccess(TIndexAccess {
+                    object: Box::from(norm_type(object, mapping, ctx)),
+                    index: Box::from(norm_type(index, mapping, ctx)),
+                }),
+                provenance: None,
+            },
+            TypeKind::Mutable(t) => Type {
+                kind: TypeKind::Mutable(Box::from(norm_type(t, mapping, ctx))),
+                provenance: None,
+            },
         }
     }
 
@@ -223,14 +265,14 @@ pub fn generalize(env: &Env, t: &Type) -> Type {
 pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let obj_types: Vec<_> = in_types
         .iter()
-        .filter_map(|t| match &t {
-            Type::Object(elems) => Some(elems),
+        .filter_map(|t| match &t.kind {
+            TypeKind::Object(elems) => Some(elems),
             _ => None,
         })
         .collect();
 
     // The use of HashSet<Type> here is to avoid duplicate types
-    let mut props_map: DefaultHashMap<String, HashSet<Type>> = defaulthashmap!();
+    let mut props_map: DefaultHashMap<String, BTreeSet<Type>> = defaulthashmap!();
     for obj in obj_types {
         for elem in &obj.elems {
             match elem {
@@ -252,7 +294,10 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
             let t: Type = if types.len() == 1 {
                 types[0].clone()
             } else {
-                Type::Intersection(types)
+                Type {
+                    kind: TypeKind::Intersection(types),
+                    provenance: None,
+                }
             };
             TObjElem::Prop(TProp {
                 name: name.to_owned(),
@@ -275,14 +320,17 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
 
     let mut not_obj_types: Vec<_> = in_types
         .iter()
-        .filter(|t| !matches!(t, Type::Object(_)))
+        .filter(|t| !matches!(&t.kind, TypeKind::Object(_)))
         .cloned()
         .collect();
 
     let mut out_types = vec![];
     out_types.append(&mut not_obj_types);
     if !elems.is_empty() {
-        out_types.push(Type::Object(TObject { elems }));
+        out_types.push(Type {
+            kind: TypeKind::Object(TObject { elems }),
+            provenance: None,
+        });
     }
     // TODO: figure out a consistent way to sort types
     // out_types.sort_by_key(|t| t.id); // ensure a stable order
@@ -290,13 +338,16 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     if out_types.len() == 1 {
         out_types[0].clone()
     } else {
-        Type::Intersection(out_types)
+        Type {
+            kind: TypeKind::Intersection(out_types),
+            provenance: None,
+        }
     }
 }
 
 fn flatten_types(t: &Type) -> Vec<Type> {
-    match &t {
-        Type::Union(types) => types.iter().flat_map(flatten_types).collect(),
+    match &t.kind {
+        TypeKind::Union(types) => types.iter().flat_map(flatten_types).collect(),
         _ => vec![t.to_owned()],
     }
 }
@@ -308,32 +359,41 @@ pub fn union_types(t1: &Type, t2: &Type) -> Type {
 pub fn union_many_types(ts: &[Type]) -> Type {
     let types: Vec<_> = ts.iter().flat_map(flatten_types).collect();
 
-    let types_set: HashSet<_> = types.iter().cloned().collect();
+    let types_set: BTreeSet<_> = types.iter().cloned().collect();
 
-    let keyword_types: HashSet<_> = types_set
+    let keyword_types: BTreeSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|t| matches!(t, Type::Keyword(_)))
+        .filter(|t| matches!(&t.kind, TypeKind::Keyword(_)))
         .collect();
 
-    let lit_types: HashSet<_> = types_set
+    let lit_types: BTreeSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|t| match &t {
+        .filter(|t| match &t.kind {
             // Primitive types subsume corresponding literal types
-            Type::Lit(lit) => match lit {
-                TLit::Num(_) => !keyword_types.contains(&Type::Keyword(TKeyword::Number)),
-                TLit::Bool(_) => !keyword_types.contains(&Type::Keyword(TKeyword::Boolean)),
-                TLit::Str(_) => !keyword_types.contains(&Type::Keyword(TKeyword::String)),
+            TypeKind::Lit(lit) => match lit {
+                TLit::Num(_) => !keyword_types.contains(&Type {
+                    kind: TypeKind::Keyword(TKeyword::Number),
+                    provenance: None,
+                }),
+                TLit::Bool(_) => !keyword_types.contains(&Type {
+                    kind: TypeKind::Keyword(TKeyword::Boolean),
+                    provenance: None,
+                }),
+                TLit::Str(_) => !keyword_types.contains(&Type {
+                    kind: TypeKind::Keyword(TKeyword::String),
+                    provenance: None,
+                }),
             },
             _ => false,
         })
         .collect();
 
-    let other_types: HashSet<_> = types_set
+    let other_types: BTreeSet<_> = types_set
         .iter()
         .cloned()
-        .filter(|t| !matches!(t, Type::Lit(_) | Type::Keyword(_)))
+        .filter(|t| !matches!(&t.kind, TypeKind::Lit(_) | TypeKind::Keyword(_)))
         .collect();
 
     let types: Vec<_> = keyword_types
@@ -344,7 +404,10 @@ pub fn union_many_types(ts: &[Type]) -> Type {
         .collect();
 
     if types.len() > 1 {
-        Type::Union(types)
+        Type {
+            kind: TypeKind::Union(types),
+            provenance: None,
+        }
     } else {
         types[0].clone()
     }
@@ -394,14 +457,23 @@ pub fn compose_many_subs_with_context(subs: &[Subst]) -> Subst {
 pub fn get_property_type(prop: &TProp) -> Type {
     let t = prop.t.to_owned();
     match prop.optional {
-        true => Type::Union(vec![t, Type::Keyword(TKeyword::Undefined)]),
+        true => Type {
+            kind: TypeKind::Union(vec![
+                t,
+                Type {
+                    kind: TypeKind::Keyword(TKeyword::Undefined),
+                    provenance: None,
+                },
+            ]),
+            provenance: None,
+        },
         false => t,
     }
 }
 
 pub fn get_type_params(t: &Type) -> Vec<TVar> {
-    match t {
-        Type::Generic(gen) => gen.type_params.to_owned(),
+    match &t.kind {
+        TypeKind::Generic(gen) => gen.type_params.to_owned(),
         _ => vec![],
     }
 }
@@ -413,20 +485,26 @@ pub fn set_type_params(t: &Type, type_params: &[TVar]) -> Type {
         return t.to_owned();
     }
 
-    match t {
-        Type::Var(_) => t.to_owned(),
-        Type::Generic(TGeneric {
+    match &t.kind {
+        TypeKind::Var(_) => t.to_owned(),
+        TypeKind::Generic(TGeneric {
             t,
             // NOTE: `generalize_type` is responsible for merge type params so
             // it's safe to ignore `type_params` here.
             type_params: _,
-        }) => Type::Generic(TGeneric {
-            t: t.to_owned(),
-            type_params: type_params.to_owned(),
-        }),
-        _ => Type::Generic(TGeneric {
-            t: Box::from(t.to_owned()),
-            type_params: type_params.to_owned(),
-        }),
+        }) => Type {
+            kind: TypeKind::Generic(TGeneric {
+                t: t.to_owned(),
+                type_params: type_params.to_owned(),
+            }),
+            provenance: None,
+        },
+        _ => Type {
+            kind: TypeKind::Generic(TGeneric {
+                t: Box::from(t.to_owned()),
+                type_params: type_params.to_owned(),
+            }),
+            provenance: None,
+        },
     }
 }

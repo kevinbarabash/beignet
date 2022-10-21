@@ -2535,6 +2535,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_mutable_arrays_with_literal_initializer() {
         // TODO: How do we differentiate assigning a literal vs. a variable?
         let src = r#"

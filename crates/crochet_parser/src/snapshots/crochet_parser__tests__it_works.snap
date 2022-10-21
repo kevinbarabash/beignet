@@ -11,10 +11,7 @@ Ok(
                     span: 13..16,
                     kind: Ident(
                         BindingIdent {
-                            id: Ident {
-                                span: 13..16,
-                                name: "add",
-                            },
+                            name: "add",
                         },
                     ),
                     inferred_type: None,
@@ -31,10 +28,7 @@ Ok(
                                             span: 20..21,
                                             kind: Ident(
                                                 BindingIdent {
-                                                    id: Ident {
-                                                        span: 20..21,
-                                                        name: "a",
-                                                    },
+                                                    name: "a",
                                                 },
                                             ),
                                             inferred_type: None,
@@ -48,10 +42,7 @@ Ok(
                                             span: 23..24,
                                             kind: Ident(
                                                 BindingIdent {
-                                                    id: Ident {
-                                                        span: 23..24,
-                                                        name: "b",
-                                                    },
+                                                    name: "b",
                                                 },
                                             ),
                                             inferred_type: None,
@@ -106,10 +97,7 @@ Ok(
                     span: 48..51,
                     kind: Ident(
                         BindingIdent {
-                            id: Ident {
-                                span: 48..51,
-                                name: "sub",
-                            },
+                            name: "sub",
                         },
                     ),
                     inferred_type: None,
@@ -126,10 +114,7 @@ Ok(
                                             span: 55..56,
                                             kind: Ident(
                                                 BindingIdent {
-                                                    id: Ident {
-                                                        span: 55..56,
-                                                        name: "a",
-                                                    },
+                                                    name: "a",
                                                 },
                                             ),
                                             inferred_type: None,
@@ -143,10 +128,7 @@ Ok(
                                             span: 58..59,
                                             kind: Ident(
                                                 BindingIdent {
-                                                    id: Ident {
-                                                        span: 58..59,
-                                                        name: "b",
-                                                    },
+                                                    name: "b",
                                                 },
                                             ),
                                             inferred_type: None,
@@ -201,10 +183,7 @@ Ok(
                     span: 83..86,
                     kind: Ident(
                         BindingIdent {
-                            id: Ident {
-                                span: 83..86,
-                                name: "sum",
-                            },
+                            name: "sum",
                         },
                     ),
                     inferred_type: None,

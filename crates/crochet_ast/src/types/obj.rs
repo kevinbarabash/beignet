@@ -1,10 +1,10 @@
 use itertools::join;
 use std::fmt;
 
-use crate::r#type::{TVar, Type};
-use crate::TFnParam;
+use crate::types::r#type::{TVar, Type};
+use crate::types::TFnParam;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TCallable {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
@@ -39,7 +39,7 @@ impl fmt::Display for TCallable {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TObjElem {
     Call(TCallable),
     Constructor(TCallable),
@@ -61,7 +61,7 @@ impl fmt::Display for TObjElem {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TIndex {
     // TODO: update this to only allow `<ident>: string` or `<ident>: number`
     pub key: TFnParam,
@@ -79,7 +79,7 @@ impl fmt::Display for TIndex {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TProp {
     pub name: String,
     pub optional: bool,

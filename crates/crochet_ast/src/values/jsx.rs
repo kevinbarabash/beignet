@@ -1,7 +1,7 @@
-use crate::expr::Expr;
-use crate::ident::Ident;
-use crate::lit::Lit;
-use crate::span::Span;
+use crate::values::expr::Expr;
+use crate::values::ident::Ident;
+use crate::values::lit::Lit;
+use crate::values::span::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JSXText {

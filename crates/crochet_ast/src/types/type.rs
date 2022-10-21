@@ -1,37 +1,25 @@
+use derivative::*;
 use itertools::{join, Itertools};
 use std::fmt;
-use std::hash::Hash;
 
-use crate::keyword::TKeyword;
-use crate::lam::TLam;
-use crate::lit::TLit;
-use crate::obj::TObjElem;
+use crate::types::keyword::TKeyword;
+use crate::types::lam::TLam;
+use crate::types::lit::TLit;
+use crate::types::obj::TObjElem;
+use crate::values::expr::Expr;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TApp {
     pub args: Vec<Type>,
     pub ret: Box<Type>,
     // TODO: add type_args property to support explicit specification of type args
 }
 
-#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TRef {
     pub name: String,
     // TODO: make this non-optional
     pub type_args: Option<Vec<Type>>,
-}
-
-impl PartialEq for TRef {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.type_args == other.type_args
-    }
-}
-
-impl Hash for TRef {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.name.hash(state);
-        self.type_args.hash(state);
-    }
 }
 
 impl fmt::Display for TRef {
@@ -44,24 +32,24 @@ impl fmt::Display for TRef {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TObject {
     pub elems: Vec<TObjElem>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TIndexAccess {
     pub object: Box<Type>,
     pub index: Box<Type>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TGeneric {
     pub t: Box<Type>,
     pub type_params: Vec<TVar>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TVar {
     pub id: i32,
     pub constraint: Option<Box<Type>>,
@@ -79,8 +67,8 @@ pub struct TVar {
 //     }
 // }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Type {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TypeKind {
     Var(TVar),
     App(TApp),
     Lam(TLam),
@@ -101,17 +89,29 @@ pub enum Type {
     Generic(TGeneric),
 }
 
+#[derive(Derivative)]
+#[derivative(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Type {
+    pub kind: TypeKind,
+    #[derivative(Ord = "ignore")]
+    #[derivative(PartialOrd = "ignore")]
+    pub provenance: Option<Box<Expr>>,
+}
+
 impl From<TLit> for Type {
     fn from(lit: TLit) -> Self {
-        Type::Lit(lit)
+        Type {
+            kind: TypeKind::Lit(lit),
+            provenance: None,
+        }
     }
 }
 
 impl fmt::Display for Type {
     // TODO: add in parentheses where necessary to get the precedence right
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Type::Generic(TGeneric { t, type_params }) => {
+        match &self.kind {
+            TypeKind::Generic(TGeneric { t, type_params }) => {
                 if type_params.is_empty() {
                     write!(f, "{t}")
                 } else {
@@ -126,32 +126,32 @@ impl fmt::Display for Type {
                     write!(f, "<{}>{t}", join(type_params, ", "))
                 }
             }
-            Type::Var(tv) => write!(f, "t{}", tv.id),
-            Type::App(TApp { args, ret }) => {
+            TypeKind::Var(tv) => write!(f, "t{}", tv.id),
+            TypeKind::App(TApp { args, ret }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }
-            Type::Lam(lam) => write!(f, "{lam}"),
-            Type::Lit(lit) => write!(f, "{}", lit),
-            Type::Keyword(keyword) => write!(f, "{}", keyword),
-            Type::Union(types) => {
+            TypeKind::Lam(lam) => write!(f, "{lam}"),
+            TypeKind::Lit(lit) => write!(f, "{}", lit),
+            TypeKind::Keyword(keyword) => write!(f, "{}", keyword),
+            TypeKind::Union(types) => {
                 let strings: Vec<_> = types.iter().map(|t| format!("{t}")).sorted().collect();
                 write!(f, "{}", join(strings, " | "))
             }
-            Type::Intersection(types) => {
+            TypeKind::Intersection(types) => {
                 let strings: Vec<_> = types.iter().map(|t| format!("{t}")).sorted().collect();
                 write!(f, "{}", join(strings, " & "))
             }
-            Type::Object(TObject { elems, .. }) => {
+            TypeKind::Object(TObject { elems, .. }) => {
                 write!(f, "{{{}}}", join(elems, ", "))
             }
-            Type::Ref(tr) => write!(f, "{tr}"),
-            Type::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
-            Type::Array(t) => write!(f, "{t}[]"),
-            Type::Rest(arg) => write!(f, "...{arg}"),
-            Type::This => write!(f, "this"),
-            Type::KeyOf(t) => write!(f, "keyof {t}"),
-            Type::Mutable(t) => write!(f, "mut {t}"),
-            Type::IndexAccess(TIndexAccess { object, index }) => write!(f, "{object}[{index}]"),
+            TypeKind::Ref(tr) => write!(f, "{tr}"),
+            TypeKind::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
+            TypeKind::Array(t) => write!(f, "{t}[]"),
+            TypeKind::Rest(arg) => write!(f, "...{arg}"),
+            TypeKind::This => write!(f, "this"),
+            TypeKind::KeyOf(t) => write!(f, "keyof {t}"),
+            TypeKind::Mutable(t) => write!(f, "mut {t}"),
+            TypeKind::IndexAccess(TIndexAccess { object, index }) => write!(f, "{object}[{index}]"),
         }
     }
 }
