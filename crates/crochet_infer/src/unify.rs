@@ -546,6 +546,12 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         },
         (TypeKind::Mutable(t1), TypeKind::Mutable(t2)) => unify_mut(t1, t2, ctx),
         (_, TypeKind::Mutable(_)) => {
+            // Right now we only set `.provenance` when inferring tuple and object
+            // literals, but in the future we'll likely be setting it when inferring
+            // any expression including variables.
+            if t1.provenance.is_some() {
+                return Ok(Subst::new());
+            }
             // It's NOT okay to use an immutable in place of a mutable one
             Err(String::from(
                 "Cannot use immutable type where a mutable type was expected",

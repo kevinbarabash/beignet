@@ -78,7 +78,7 @@ impl Substitutable for Type {
         };
         norm_type(Type {
             kind,
-            provenance: None,
+            provenance: self.provenance.to_owned(),
         })
     }
     fn ftv(&self) -> Vec<TVar> {

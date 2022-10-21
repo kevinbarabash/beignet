@@ -216,8 +216,6 @@ pub fn infer_pattern_and_init(
 
     let (is, it) = infer_expr(ctx, init)?;
 
-    println!("init = {init:#?}");
-
     // Unifies initializer and pattern.
     let s = match pu {
         // Assign: The inferred type of the init value must be a sub-type

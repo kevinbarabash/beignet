@@ -2522,7 +2522,6 @@ mod tests {
 
     #[test]
     fn test_mutable_arrays() {
-        // TODO: How do we differentiate assigning a literal vs. a variable?
         let src = r#"
         declare let sort: (num_arr: mut number[]) => undefined;
         declare let arr: mut number[];
@@ -2535,9 +2534,31 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
-    fn test_mutable_arrays_with_literal_initializer() {
+    fn test_pass_tuple_literal_as_mutable_param() {
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        sort([3, 2, 1]);
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn test_pass_mutable_array_as_immutable_param() {
         // TODO: How do we differentiate assigning a literal vs. a variable?
+        let src = r#"
+        declare let count: (num_arr: number[]) => number;
+        declare let mut_arr: mut number[];
+        let len = count(mut_arr);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("len", &ctx), "number");
+    }
+
+    #[test]
+    fn test_mutable_arrays_with_literal_initializer() {
         let src = r#"
         declare let sort: (num_arr: mut number[]) => undefined;
         let arr: mut number[] = [1, 2, 3];
@@ -2548,6 +2569,37 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(get_value_type("arr", &ctx), "mut number[]");
+    }
+
+    #[test]
+    #[should_panic = "Cannot use immutable type where a mutable type was expected"]
+    fn test_mutable_arrays_with_immutable_variable_initializer() {
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        let tuple = [1, 2, 3];
+        let arr: mut number[] = tuple;
+        sort(arr);
+        "#;
+        println!("Hello, world!");
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("arr", &ctx), "mut number[]");
+    }
+
+    #[test]
+    fn test_mutable_arrays_with_mutable_variable_initializer() {
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        let arr1: mut number[] = [1, 2, 3];
+        let arr2: mut number[] = arr1;
+        sort(arr2);
+        "#;
+        println!("Hello, world!");
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("arr2", &ctx), "mut number[]");
     }
 
     #[test]
