@@ -191,17 +191,7 @@ impl Context {
 
                 t.apply(&subs)
             }
-            _ => {
-                // NOTE: get_type_params returns an empty array for other kinds
-                // TODO: clean this up
-                let type_params = get_type_params(t);
-
-                let ids = type_params.iter().map(|tv| tv.id.to_owned());
-                let fresh_type_params = type_params.iter().map(|_| self.fresh_var());
-                let subs: Subst = ids.zip(fresh_type_params).collect();
-
-                t.apply(&subs)
-            }
+            _ => t.to_owned(),
         }
     }
 

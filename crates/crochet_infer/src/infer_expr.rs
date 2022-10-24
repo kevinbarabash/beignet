@@ -703,7 +703,6 @@ fn is_promise(t: &Type) -> bool {
     matches!(&t, Type {kind: TypeKind::Ref(types::TRef { name, .. }), ..} if name == "Promise")
 }
 
-// TODO: try to dedupe with key_of()
 fn infer_property_type(
     obj_t: &Type,
     prop: &mut MemberProp,
@@ -727,41 +726,26 @@ fn infer_property_type(
             let t = ctx.lookup_ref_and_instantiate(alias)?;
             infer_property_type(&t, prop, ctx)
         }
-        TypeKind::Lit(lit) => match lit {
-            types::TLit::Num(_) => {
-                let t = ctx.lookup_type_and_instantiate("Number")?;
-                infer_property_type(&t, prop, ctx)
-            }
-            types::TLit::Bool(_) => {
-                let t = ctx.lookup_type_and_instantiate("Boolean")?;
-                infer_property_type(&t, prop, ctx)
-            }
-            types::TLit::Str(_) => {
-                let t = ctx.lookup_type_and_instantiate("String")?;
-                infer_property_type(&t, prop, ctx)
-            }
-        },
-        TypeKind::Keyword(keyword) => match keyword {
-            TKeyword::Number => {
-                let t = ctx.lookup_type_and_instantiate("Number")?;
-                infer_property_type(&t, prop, ctx)
-            }
-            TKeyword::Boolean => {
-                let t = ctx.lookup_type_and_instantiate("Boolean")?;
-                infer_property_type(&t, prop, ctx)
-            }
-            TKeyword::String => {
-                let t = ctx.lookup_type_and_instantiate("String")?;
-                infer_property_type(&t, prop, ctx)
-            }
-            TKeyword::Symbol => {
-                let t = ctx.lookup_type_and_instantiate("Symbol")?;
-                infer_property_type(&t, prop, ctx)
-            }
-            TKeyword::Null => Err("Cannot read property on 'null'".to_owned()),
-            TKeyword::Undefined => Err("Cannot read property on 'undefined'".to_owned()),
-            TKeyword::Never => Err("Cannot read property on 'never'".to_owned()),
-        },
+        TypeKind::Lit(lit) => {
+            let t = match lit {
+                types::TLit::Num(_) => ctx.lookup_type_and_instantiate("Number")?,
+                types::TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean")?,
+                types::TLit::Str(_) => ctx.lookup_type_and_instantiate("String")?,
+            };
+            infer_property_type(&t, prop, ctx)
+        }
+        TypeKind::Keyword(keyword) => {
+            let t = match keyword {
+                TKeyword::Number => ctx.lookup_type_and_instantiate("Number")?,
+                TKeyword::Boolean => ctx.lookup_type_and_instantiate("Boolean")?,
+                TKeyword::String => ctx.lookup_type_and_instantiate("String")?,
+                TKeyword::Symbol => ctx.lookup_type_and_instantiate("Symbol")?,
+                TKeyword::Null => return Err("Cannot read property on 'null'".to_owned()),
+                TKeyword::Undefined => return Err("Cannot read property on 'undefined'".to_owned()),
+                TKeyword::Never => return Err("Cannot read property on 'never'".to_owned()),
+            };
+            infer_property_type(&t, prop, ctx)
+        }
         TypeKind::Array(type_param) => {
             // TODO: Do this for all interfaces that we lookup
             let t = ctx.lookup_type("ReadonlyArray")?;
