@@ -219,6 +219,10 @@ fn parse_declaration(
 }
 
 fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String> {
+    if node.has_error() {
+        // TODO: get actual error node so that we can report where the error is
+        return Err(String::from("Error parsing pattern"));
+    }
     let kind = match node.kind() {
         "identifier" => {
             let span = node.byte_range();
@@ -492,6 +496,10 @@ fn parse_template_string(node: &tree_sitter::Node, src: &str) -> Result<Template
 }
 
 fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String> {
+    if node.has_error() {
+        // TODO: get actual error node so that we can report where the error is
+        return Err(String::from("Error parsing expression"));
+    }
     let kind = match node.kind() {
         "arrow_function" => {
             let first_child = node.child(0).unwrap();
@@ -1043,6 +1051,10 @@ fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Stri
 }
 
 fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String> {
+    if node.has_error() {
+        // TODO: get actual error node so that we can report where the error is
+        return Err(String::from("Error parsing type annotation"));
+    }
     let node = if node.kind() == "type_annotation"
         || node.kind() == "constraint"
         || node.kind() == "default_type"

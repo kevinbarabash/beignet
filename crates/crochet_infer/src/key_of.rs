@@ -194,7 +194,7 @@ mod tests {
             [key: number]: T;
             length: number;
             map: (item: T, index: number, array: ReadonlyArray<T>) => null;
-            sort: () => mutable T[];
+            sort: () => mut T[];
         };
         type t = mut number[];
         "#;
