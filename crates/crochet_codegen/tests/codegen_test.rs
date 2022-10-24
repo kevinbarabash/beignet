@@ -120,13 +120,14 @@ fn pattern_matching_with_disjoint_union() {
 }
 
 #[test]
+// TODO: Have a better error message when there's multiple catch-alls
 #[should_panic = "Catchall must appear last in match"]
 fn pattern_matching_multiple_catchall_panics() {
     let src = r#"
     let result = match (value) {
         n -> "foo",
         _ -> "bar"
-    }
+    };
     "#;
 
     compile(src);
@@ -137,7 +138,7 @@ fn pattern_matching_multiple_catchall_panics() {
 fn pattern_matching_no_arms_panics() {
     let src = r#"
     let result = match (value) {
-    }
+    };
     "#;
 
     compile(src);

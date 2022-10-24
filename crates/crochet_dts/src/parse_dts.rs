@@ -127,8 +127,11 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
         TsType::TsArrayType(array) => {
             let elem_type = infer_ts_type_ann(&array.elem_type, ctx)?;
             Ok(Type {
-                kind: TypeKind::Array(Box::from(elem_type)),
-                provenance: None,
+                kind: TypeKind::Mutable(Box::from(Type {
+                    kind: TypeKind::Array(Box::from(elem_type)),
+                    provenance: None,
+                })),
+                provenance: None, // TODO: link back to the TypeScript source type annotation
             })
         }
         TsType::TsTupleType(_) => Err(String::from("can't parse tuple type yet")),

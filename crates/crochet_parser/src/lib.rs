@@ -146,6 +146,11 @@ fn parse_declaration(
     declare: bool,
     src: &str,
 ) -> Result<Vec<Statement>, String> {
+    if node.has_error() {
+        // TODO: get actual error node so that we can report where the error is
+        return Err(String::from("Error parsing declaration"));
+    }
+
     let decl = node.child_by_field_name("decl").unwrap();
     let rec = node.child_by_field_name("rec").is_some();
 
@@ -1713,7 +1718,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("<Foo><Bar>{baz}</Bar></Foo>"));
         insta::assert_debug_snapshot!(parse("<Foo>hello<Bar/>{world}<Baz/></Foo>"));
         insta::assert_debug_snapshot!(parse(
-            "let elem = <div point={point} id=\"point\">Hello, {msg}</div>"
+            "let elem = <div point={point} id=\"point\">Hello, {msg}</div>;"
         ));
     }
 
@@ -1737,10 +1742,10 @@ mod tests {
 
     #[test]
     fn decls() {
-        insta::assert_debug_snapshot!(parse("let x = 5"));
-        insta::assert_debug_snapshot!(parse("   let x = 5")); // with leading whitespace
-        insta::assert_debug_snapshot!(parse("declare let x: number"));
-        insta::assert_debug_snapshot!(parse("declare let foo: Foo<string>"));
+        insta::assert_debug_snapshot!(parse("let x = 5;"));
+        insta::assert_debug_snapshot!(parse("   let x = 5;")); // with leading whitespace
+        insta::assert_debug_snapshot!(parse("declare let x: number;"));
+        insta::assert_debug_snapshot!(parse("declare let foo: Foo<string>;"));
     }
 
     #[test]
@@ -1774,8 +1779,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse("type CoordNames = keyof Point;"));
         insta::assert_debug_snapshot!(parse("type Foo = typeof foo;"));
         insta::assert_debug_snapshot!(parse("type FooBar = typeof foo.bar;"));
-        insta::assert_debug_snapshot!(parse(r#"type C = A["b"][C_Key]"#));
-        insta::assert_debug_snapshot!(parse("type Array<T> = {[key: number]: T}"));
+        insta::assert_debug_snapshot!(parse(r#"type C = A["b"][C_Key];"#));
+        insta::assert_debug_snapshot!(parse("type Array<T> = {[key: number]: T};"));
     }
 
     #[test]

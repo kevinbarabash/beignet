@@ -10,6 +10,7 @@ mod unify;
 mod unify_mut;
 mod update;
 mod util;
+mod visitor;
 
 pub mod infer;
 
@@ -157,7 +158,7 @@ mod tests {
             1
         } else {
             fib(n - 1) + fib(n - 2)
-        }
+        };
         "###;
         let ctx = infer_prog(src);
 
@@ -412,7 +413,7 @@ mod tests {
 
     #[test]
     fn partial_destructure_obj() {
-        let ctx = infer_prog("let {x} = {x: 5, y: 10}");
+        let ctx = infer_prog("let {x} = {x: 5, y: 10};");
 
         assert_eq!(get_value_type("x", &ctx), "5");
     }
@@ -846,7 +847,7 @@ mod tests {
     #[test]
     fn infer_if_let_refutable_is_inside_array() {
         let src = r#"
-        declare let point: [string | number, string | number]
+        declare let point: [string | number, string | number];
         let result = if (let [x is number, y is number] = point) {
             x + y
         } else {
@@ -2514,7 +2515,7 @@ mod tests {
         let src = r#"
         let log = (msg) => {
             console.log(msg);
-        }
+        };
         "#;
 
         infer_prog(src);
@@ -2564,7 +2565,6 @@ mod tests {
         let arr: mut number[] = [1, 2, 3];
         sort(arr);
         "#;
-        println!("Hello, world!");
 
         let ctx = infer_prog(src);
 
@@ -2580,7 +2580,6 @@ mod tests {
         let arr: mut number[] = tuple;
         sort(arr);
         "#;
-        println!("Hello, world!");
 
         let ctx = infer_prog(src);
 
@@ -2595,11 +2594,41 @@ mod tests {
         let arr2: mut number[] = arr1;
         sort(arr2);
         "#;
-        println!("Hello, world!");
 
         let ctx = infer_prog(src);
 
         assert_eq!(get_value_type("arr2", &ctx), "mut number[]");
+    }
+
+    #[test]
+    fn test_mutable_reference_is_assignable_to_immutable_reference() {
+        let src = r#"
+        declare let arr1: mut number[];
+        let arr2: number[] = arr1;
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn test_mutable_array_can_be_assigned_to_immutable_subtype() {
+        let src = r#"
+        declare let arr1: mut number[];
+        let arr2: (number | string)[] = arr1;
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "Couldn't unify number[] and number | string[]"]
+    fn test_mutable_array_cannot_be_assigned_to_mutable_subtype() {
+        let src = r#"
+        declare let arr1: mut number[];
+        let arr2: mut (number | string)[] = arr1;
+        "#;
+
+        infer_prog(src);
     }
 
     #[test]

@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"type Array<T> = {[key: number]: T}\")"
+expression: "parse(\"type Array<T> = {[key: number]: T};\")"
 ---
 Ok(
     Program {
         body: [
             TypeDecl {
-                span: 0..34,
+                span: 0..35,
                 declare: false,
                 id: Ident {
                     span: 5..10,

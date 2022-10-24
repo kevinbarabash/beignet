@@ -193,7 +193,7 @@ fn infer_with_subtyping() {
 
 #[test]
 fn infer_if_else_without_widening() {
-    let (_, ctx) = infer_prog("let x = if (true) { 5 } else { 5 }");
+    let (_, ctx) = infer_prog("let x = if (true) { 5 } else { 5 };");
     let result = format!("{}", ctx.lookup_value("x").unwrap());
     assert_eq!(result, "5");
 }
@@ -804,7 +804,7 @@ fn infer_block_with_multiple_non_let_lines() {
     // `x + 0`, we should instead infer that it's a `subtype of number`.
     // that way when we reconcile it with the other inferred type of `x`
     // which is `5`, the final inferred type will be `5`.
-    let src = "let result = do {let x = 5; x + 0; x }";
+    let src = "let result = do {let x = 5; x + 0; x };";
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.lookup_value("result").unwrap());
@@ -813,7 +813,7 @@ fn infer_block_with_multiple_non_let_lines() {
 
 #[test]
 fn codegen_block_with_multiple_non_let_lines() {
-    let src = "let result = do {let x = 5; x + 0; x }";
+    let src = "let result = do {let x = 5; x + 0; x };";
     let (program, ctx) = infer_prog(src);
     let js = codegen_js(&program);
 
