@@ -1,7 +1,14 @@
-use crochet_ast::types::{TGeneric, TKeyword, TLit, TObjElem, TObject, Type, TypeKind};
+use crochet_ast::types::{
+    TFnParam, TGeneric, TIndex, TKeyword, TLit, TObjElem, TObject, Type, TypeKind,
+};
 
 use crate::context::Context;
 use crate::util::union_many_types;
+
+const NEVER_TYPE: Type = Type {
+    kind: TypeKind::Keyword(TKeyword::Never),
+    provenance: None,
+};
 
 // TODO: try to dedupe with infer_property_type()
 pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
@@ -17,24 +24,44 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
         TypeKind::Object(TObject { elems }) => {
             let elems: Vec<_> = elems
                 .iter()
-                .filter_map(|elem| match elem {
-                    TObjElem::Call(_) => None,
-                    TObjElem::Constructor(_) => None,
-                    TObjElem::Index(_) => todo!(),
-                    TObjElem::Prop(prop) => Some(Type {
-                        kind: TypeKind::Lit(TLit::Str(prop.name.to_owned())),
-                        provenance: None,
-                    }),
+                .filter_map(|elem| -> Option<Type> {
+                    match elem {
+                        TObjElem::Call(_) => None,
+                        TObjElem::Constructor(_) => None,
+                        TObjElem::Index(TIndex {
+                            key: TFnParam { t, .. },
+                            ..
+                        }) => Some(t.to_owned()),
+                        TObjElem::Prop(prop) => Some(Type {
+                            kind: TypeKind::Lit(TLit::Str(prop.name.to_owned())),
+                            provenance: None,
+                        }),
+                    }
                 })
                 .collect();
 
             Ok(union_many_types(&elems))
         }
-        TypeKind::Lit(lit) => match lit {
-            TLit::Num(_) => key_of(&ctx.lookup_type_and_instantiate("Number")?, ctx),
-            TLit::Bool(_) => key_of(&ctx.lookup_type_and_instantiate("Boolean")?, ctx),
-            TLit::Str(_) => key_of(&ctx.lookup_type_and_instantiate("String")?, ctx),
-        },
+        TypeKind::Lit(lit) => {
+            let t = match lit {
+                TLit::Num(_) => ctx.lookup_type_and_instantiate("Number")?,
+                TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean")?,
+                TLit::Str(_) => ctx.lookup_type_and_instantiate("String")?,
+            };
+            key_of(&t, ctx)
+        }
+        TypeKind::Keyword(keyword) => {
+            let t = match keyword {
+                TKeyword::Number => ctx.lookup_type_and_instantiate("Number")?,
+                TKeyword::Boolean => ctx.lookup_type_and_instantiate("Boolean")?,
+                TKeyword::String => ctx.lookup_type_and_instantiate("String")?,
+                TKeyword::Symbol => ctx.lookup_type_and_instantiate("Symbol")?,
+                TKeyword::Null => return Ok(NEVER_TYPE),
+                TKeyword::Undefined => return Ok(NEVER_TYPE),
+                TKeyword::Never => return Ok(NEVER_TYPE),
+            };
+            key_of(&t, ctx)
+        }
         TypeKind::Tuple(tuple) => {
             let mut elems: Vec<Type> = vec![];
             for i in 0..tuple.len() {
@@ -49,49 +76,22 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
             )?);
             Ok(union_many_types(&elems))
         }
-        TypeKind::Array(_) => Ok(union_many_types(&[
-            Type {
-                kind: TypeKind::Keyword(TKeyword::Number),
-                provenance: None,
-            },
-            key_of(&ctx.lookup_type_and_instantiate("ReadonlyArray")?, ctx)?,
-        ])),
+        TypeKind::Array(_) => key_of(&ctx.lookup_type_and_instantiate("ReadonlyArray")?, ctx),
         TypeKind::Lam(_) => key_of(&ctx.lookup_type_and_instantiate("Function")?, ctx),
-        TypeKind::App(_) => {
-            todo!() // What does this even mean?
-        }
-        TypeKind::Keyword(keyword) => match keyword {
-            TKeyword::Number => key_of(&ctx.lookup_type_and_instantiate("Number")?, ctx),
-            TKeyword::Boolean => key_of(&ctx.lookup_type_and_instantiate("Boolean")?, ctx),
-            TKeyword::String => key_of(&ctx.lookup_type_and_instantiate("String")?, ctx),
-            TKeyword::Symbol => key_of(&ctx.lookup_type_and_instantiate("Symbol")?, ctx),
-            TKeyword::Null => Ok(Type {
-                kind: TypeKind::Keyword(TKeyword::Never),
-                provenance: None,
-            }),
-            TKeyword::Undefined => Ok(Type {
-                kind: TypeKind::Keyword(TKeyword::Never),
-                provenance: None,
-            }),
-            TKeyword::Never => Ok(Type {
-                kind: TypeKind::Keyword(TKeyword::Never),
-                provenance: None,
-            }),
-        },
+        TypeKind::App(_) => todo!(), // What does this even mean?
         TypeKind::Union(_) => todo!(),
         TypeKind::Intersection(elems) => {
             let elems: Result<Vec<_>, String> =
                 elems.iter().map(|elem| key_of(elem, ctx)).collect();
             Ok(union_many_types(&elems?))
         }
-        TypeKind::Rest(_) => {
-            todo!() // What does this even mean?
-        }
-        TypeKind::This => {
-            todo!() // Depends on what this is referencing
-        }
-        TypeKind::KeyOf(t) => key_of(&key_of(t, ctx)?, ctx),
-        TypeKind::Mutable(t) => key_of(t, ctx),
+        TypeKind::Rest(_) => todo!(), // What does this even mean?
+        TypeKind::This => todo!(),    // Depends on what this is referencing
+        TypeKind::KeyOf(t) => key_of(t, ctx),
+        TypeKind::Mutable(t) => match t.kind {
+            TypeKind::Array(_) => key_of(&ctx.lookup_type_and_instantiate("Array")?, ctx),
+            _ => key_of(t, ctx),
+        },
         TypeKind::IndexAccess(_) => {
             todo!() // We have to evaluate the IndexAccess first
         }
@@ -176,14 +176,34 @@ mod tests {
     fn test_array() {
         let src = r#"
         type ReadonlyArray<T> = {
-            length: number,
-            map: (item: T, index: number, array: ReadonlyArray<T>) => null,
+            [key: number]: T;
+            length: number;
+            map: (item: T, index: number, array: ReadonlyArray<T>) => null;
         };
         type t = number[];
         "#;
         let ctx = infer_prog(src);
 
         assert_eq!(get_key_of("t", &ctx), r#""length" | "map" | number"#);
+    }
+
+    #[test]
+    fn test_mutable_array() {
+        let src = r#"
+        type Array<T> = {
+            [key: number]: T;
+            length: number;
+            map: (item: T, index: number, array: ReadonlyArray<T>) => null;
+            sort: () => mut T[];
+        };
+        type t = mut number[];
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(
+            get_key_of("t", &ctx),
+            r#""length" | "map" | "sort" | number"#
+        );
     }
 
     #[test]

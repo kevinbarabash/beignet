@@ -1644,7 +1644,7 @@ mod tests {
         let src = r#"
         type ReadonlyArray<T> = {
             [key: number]: T;
-        }
+        };
         let array: number[] = [1, 2, 3];
         let fst = array[0];
         "#;
@@ -2358,8 +2358,8 @@ mod tests {
     fn test_indexed_access_with_indexer_elements() {
         let src = r#"
         type ReadonlyArray<T> = {
-            [key: string]: T
-        }
+            [key: string]: T;
+        };
         type MyRecord = {[key: string]: number};
         type MyArray = boolean[];
         type RecVal = MyRecord["foo"];
