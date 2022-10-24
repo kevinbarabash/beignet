@@ -38,14 +38,14 @@ fn infer_adding_variables() {
 #[test]
 fn infer_method_on_readonly_array() {
     let src = r#"
-    declare let arr: string[]
-    let map = arr.map
+    declare let arr: string[];
+    let map = arr.map;
     "#;
     let (_, ctx) = infer_prog(src);
     let result = format!("{}", ctx.lookup_value("map").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: string, index: number, array: string[]) => t0, thisArg?: t1) => t0[]"
+        "<t0, t1>(callbackfn: (value: string, index: number, array: mut string[]) => t0, thisArg?: t1) => mut t0[]"
     );
 }
 
@@ -53,8 +53,8 @@ fn infer_method_on_readonly_array() {
 #[should_panic = "Object type doesn't contain key splice."]
 fn infer_mutable_method_on_readonly_array_errors() {
     let src = r#"
-    declare let arr: string[]
-    let splice = arr.splice
+    declare let arr: string[];
+    let splice = arr.splice;
     "#;
 
     infer_prog(src);
@@ -73,13 +73,37 @@ fn infer_method_on_readonly_arrays_of_different_things() {
     let result = format!("{}", ctx.lookup_value("map1").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: string, index: number, array: string[]) => t0, thisArg?: t1) => t0[]"
+        "<t0, t1>(callbackfn: (value: string, index: number, array: mut string[]) => t0, thisArg?: t1) => mut t0[]"
     );
     let result = format!("{}", ctx.lookup_value("map2").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: number, index: number, array: number[]) => t0, thisArg?: t1) => t0[]"
+        "<t0, t1>(callbackfn: (value: number, index: number, array: mut number[]) => t0, thisArg?: t1) => mut t0[]"
     );
+}
+
+#[test]
+fn infer_method_on_mutable_array() {
+    let src = r#"
+    declare let mut_arr: mut string[];
+    let sort = mut_arr.sort;
+    let splice = mut_arr.splice;
+    let sorted_arr = mut_arr.sort();
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.lookup_value("sort").unwrap());
+    assert_eq!(
+        result,
+        "(compareFn?: (a: string, b: string) => number) => mut string[]"
+    );
+    let result = format!("{}", ctx.lookup_value("splice").unwrap());
+    assert_eq!(
+        result,
+        "(start: number, deleteCount?: number) => mut string[]"
+    );
+    let result = format!("{}", ctx.lookup_value("sorted_arr").unwrap());
+    assert_eq!(result, "mut string[]");
 }
 
 #[test]
@@ -93,7 +117,7 @@ fn infer_array_method_on_tuple() {
     assert_eq!(
         result,
         // TODO: add parens around a union when it's the child of an arry
-        "<t0, t1>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: \"hello\" | 5 | true[]) => t0, thisArg?: t1) => t0[]"
+        "<t0, t1>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: mut \"hello\" | 5 | true[]) => t0, thisArg?: t1) => mut t0[]"
     );
 }
 

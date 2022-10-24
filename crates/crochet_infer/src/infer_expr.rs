@@ -12,6 +12,7 @@ use crate::infer_type_ann::*;
 use crate::substitutable::{Subst, Substitutable};
 use crate::unify::unify;
 use crate::util::*;
+use crate::visitor::Visitor;
 
 pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), String> {
     let result = match &mut expr.kind {
@@ -524,7 +525,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             }
 
             let s = compose_many_subs(&ss);
-            let t = if spread_types.is_empty() {
+            let mut t = if spread_types.is_empty() {
                 Type {
                     kind: TypeKind::Object(TObject { elems }),
                     provenance: None,
@@ -538,6 +539,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 simplify_intersection(&all_types)
             };
             expr.inferred_type = Some(t.clone());
+            t.provenance = Some(Box::from(expr.to_owned()));
             Ok((s, t))
         }
         ExprKind::Await(Await { expr, .. }) => {
@@ -593,7 +595,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let s = compose_many_subs(&ss);
             let t = Type {
                 kind: TypeKind::Tuple(ts),
-                provenance: None,
+                provenance: Some(Box::from(expr.to_owned())),
             };
             expr.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -711,6 +713,8 @@ fn infer_property_type(
         TypeKind::Generic(_) => {
             // TODO: Improve performance by getting the property type first and
             // then instantiating it instead of instantiating the whole object type.
+            // NOTE: This is what introduces new type variables when getting the property
+            // on a generic object type.
             let t = ctx.instantiate(obj_t);
             infer_property_type(&t, prop, ctx)
         }
@@ -824,6 +828,34 @@ fn infer_property_type(
                 }
             }
         }
+        TypeKind::Mutable(t) => match &t.kind {
+            TypeKind::Array(type_param) => {
+                // TODO: Do this for all interfaces that we lookup
+                let t = ctx.lookup_type("Array")?;
+                let type_params = get_type_params(&t);
+                // TODO: Instead of instantiating the whole interface for one method, do
+                // the lookup call first and then instantiate the method.
+                let s: Subst =
+                    Subst::from([(type_params[0].id.to_owned(), type_param.as_ref().to_owned())]);
+
+                let t = t.apply(&s);
+
+                let (s, mut t) = infer_property_type(&t, prop, ctx)?;
+
+                // Replace this with `mut <type_param>[]`
+                let rep_t = Type {
+                    kind: TypeKind::Mutable(Box::from(Type {
+                        kind: TypeKind::Array(type_param.to_owned()),
+                        provenance: None,
+                    })),
+                    provenance: None, // TOOD: update this to be each TypeKind::This that gets replaced
+                };
+                replace_this(&mut t, &rep_t);
+
+                Ok((s, t))
+            }
+            _ => infer_property_type(t, prop, ctx),
+        },
         _ => {
             todo!("Unhandled {obj_t:#?} in infer_property_type")
         }
@@ -854,6 +886,7 @@ fn get_prop_value(
             match prop {
                 Some(prop) => {
                     let t = get_property_type(prop);
+                    println!("property type t = {t}");
                     Ok((Subst::default(), t))
                 }
                 None => Err(format!("Object type doesn't contain key {name}.")),
@@ -963,4 +996,29 @@ fn get_prop_value(
             }
         }
     }
+}
+
+struct ReplaceVisitor {
+    rep: Type,
+}
+
+impl ReplaceVisitor {
+    fn new(t: &Type) -> Self {
+        ReplaceVisitor { rep: t.to_owned() }
+    }
+}
+
+impl Visitor for ReplaceVisitor {
+    fn visit_type(&mut self, t: &mut Type) {
+        println!("visiting {t}");
+
+        if let TypeKind::This = t.kind {
+            t.kind = self.rep.kind.to_owned();
+        }
+    }
+}
+
+fn replace_this(t: &mut Type, rep: &Type) {
+    let mut rep_visitor = ReplaceVisitor::new(rep);
+    rep_visitor.visit_children(t);
 }

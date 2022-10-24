@@ -7,8 +7,10 @@ mod infer_type_ann;
 mod key_of;
 mod substitutable;
 mod unify;
+mod unify_mut;
 mod update;
 mod util;
+mod visitor;
 
 pub mod infer;
 
@@ -156,7 +158,7 @@ mod tests {
             1
         } else {
             fib(n - 1) + fib(n - 2)
-        }
+        };
         "###;
         let ctx = infer_prog(src);
 
@@ -411,7 +413,7 @@ mod tests {
 
     #[test]
     fn partial_destructure_obj() {
-        let ctx = infer_prog("let {x} = {x: 5, y: 10}");
+        let ctx = infer_prog("let {x} = {x: 5, y: 10};");
 
         assert_eq!(get_value_type("x", &ctx), "5");
     }
@@ -845,7 +847,7 @@ mod tests {
     #[test]
     fn infer_if_let_refutable_is_inside_array() {
         let src = r#"
-        declare let point: [string | number, string | number]
+        declare let point: [string | number, string | number];
         let result = if (let [x is number, y is number] = point) {
             x + y
         } else {
@@ -2513,7 +2515,142 @@ mod tests {
         let src = r#"
         let log = (msg) => {
             console.log(msg);
-        }
+        };
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn test_mutable_arrays() {
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        declare let arr: mut number[];
+        sort(arr);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("arr", &ctx), "mut number[]");
+    }
+
+    #[test]
+    fn test_pass_tuple_literal_as_mutable_param() {
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        sort([3, 2, 1]);
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn test_pass_mutable_array_as_immutable_param() {
+        // TODO: How do we differentiate assigning a literal vs. a variable?
+        let src = r#"
+        declare let count: (num_arr: number[]) => number;
+        declare let mut_arr: mut number[];
+        let len = count(mut_arr);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("len", &ctx), "number");
+    }
+
+    #[test]
+    fn test_mutable_arrays_with_literal_initializer() {
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        let arr: mut number[] = [1, 2, 3];
+        sort(arr);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("arr", &ctx), "mut number[]");
+    }
+
+    #[test]
+    #[should_panic = "Cannot use immutable type where a mutable type was expected"]
+    fn test_mutable_arrays_with_immutable_variable_initializer() {
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        let tuple = [1, 2, 3];
+        let arr: mut number[] = tuple;
+        sort(arr);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("arr", &ctx), "mut number[]");
+    }
+
+    #[test]
+    fn test_mutable_arrays_with_mutable_variable_initializer() {
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        let arr1: mut number[] = [1, 2, 3];
+        let arr2: mut number[] = arr1;
+        sort(arr2);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("arr2", &ctx), "mut number[]");
+    }
+
+    #[test]
+    fn test_mutable_reference_is_assignable_to_immutable_reference() {
+        let src = r#"
+        declare let arr1: mut number[];
+        let arr2: number[] = arr1;
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn test_mutable_array_can_be_assigned_to_immutable_subtype() {
+        let src = r#"
+        declare let arr1: mut number[];
+        let arr2: (number | string)[] = arr1;
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "Couldn't unify number[] and number | string[]"]
+    fn test_mutable_array_cannot_be_assigned_to_mutable_subtype() {
+        let src = r#"
+        declare let arr1: mut number[];
+        let arr2: mut (number | string)[] = arr1;
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "Couldn't unify string[] and number[]"]
+    fn test_mutable_arrays_wrong_types() {
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        declare let arr: mut string[];
+        sort(arr);
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "Cannot use immutable type where a mutable type was expected"]
+    fn test_mutable_array_error() {
+        // TODO: How do we differentiate assigning a literal vs. a variable?
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        declare let arr: number[];
+        sort(arr);
         "#;
 
         infer_prog(src);

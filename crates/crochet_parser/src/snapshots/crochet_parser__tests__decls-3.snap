@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"declare let x: number\")"
+expression: "parse(\"declare let x: number;\")"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 8..21,
+                span: 8..22,
                 pattern: Pattern {
                     span: 12..13,
                     kind: Ident(

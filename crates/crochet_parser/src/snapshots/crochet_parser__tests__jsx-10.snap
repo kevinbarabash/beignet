@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"let elem = <div point={point} id=\\\"point\\\">Hello, {msg}</div>\")"
+expression: "parse(\"let elem = <div point={point} id=\\\"point\\\">Hello, {msg}</div>;\")"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 0..59,
+                span: 0..60,
                 pattern: Pattern {
                     span: 4..8,
                     kind: Ident(
