@@ -1057,6 +1057,8 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
     }
     let node = if node.kind() == "type_annotation"
         || node.kind() == "constraint"
+        // TODO: write some tests that verify default types work, e.g.
+        // type Foo<T extends U = V> = { ... }
         || node.kind() == "default_type"
     {
         node.named_child(0).unwrap()
@@ -1139,10 +1141,14 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                         let type_ann = parse_type_ann(&type_ann, src)?;
 
                         let mut optional = false;
+                        let mut mutable = false;
                         let mut cursor = prop.walk();
                         for child in prop.children(&mut cursor) {
                             if text_for_node(&child, src)? == "?" {
                                 optional = true;
+                            }
+                            if text_for_node(&child, src)? == "mut" {
+                                mutable = true;
                             }
                         }
 
@@ -1150,7 +1156,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                             span: prop.byte_range(),
                             name,
                             optional,
-                            mutable: false, // TODO,
+                            mutable,
                             type_ann: Box::from(type_ann),
                         });
                         Ok(elem)
@@ -1194,6 +1200,8 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                         Ok(elem)
                     }
                     // TODO: remove method_signature, methods should look the same as properties
+                    // The reason why JavaScript has both is that methods on object literals can
+                    // access the other properties on the object using this.
                     "method_signature" => todo!("remove method_signature from object_type"),
                     kind => panic!("Unsupport prop kind in object_type: '{kind}'"),
                 })
@@ -1793,6 +1801,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse("type FooBar = typeof foo.bar;"));
         insta::assert_debug_snapshot!(parse(r#"type C = A["b"][C_Key];"#));
         insta::assert_debug_snapshot!(parse("type Array<T> = {[key: number]: T};"));
+        insta::assert_debug_snapshot!(parse("type MutPoint = mut {x: number, y: number};"));
+        insta::assert_debug_snapshot!(parse("type MutPoint = {mut x: number, mut y: number};"));
     }
 
     #[test]
@@ -1862,6 +1872,7 @@ mod tests {
           | {type: "keydown", key: string};
         "#;
         insta::assert_debug_snapshot!(parse(src));
+        insta::assert_debug_snapshot!(parse("let mut_arr: mut string[] = [];"));
     }
 
     #[test]

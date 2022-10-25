@@ -40,6 +40,53 @@ module.exports = grammar(tsx, {
     },
     readonly_type: ($, prev) => seq("mut", $._type),
 
+    // Replaces `optional("readonly")` in sequence with `optional("mut")`
+    property_signature: ($, prev) => {
+      const members = prev.members.map((member) => {
+        if (
+          member.type === "CHOICE" &&
+          member.members[0].value === "readonly"
+        ) {
+          return optional("mut");
+        }
+        return member;
+      });
+
+      return seq(...members);
+    },
+
+    // Replaces `optional("readonly")` in sequence with `optional("mut")`
+    method_signature: ($, prev) => {
+      const members = prev.members.map((member) => {
+        if (
+          member.type === "CHOICE" &&
+          member.members[0].value === "readonly"
+        ) {
+          return optional("mut");
+        }
+        return member;
+      });
+
+      return seq(...members);
+    },
+
+    // Replaces `optional("readonly")` in sequence with `optional("mut")`
+    method_definition: ($, prev) => {
+      const members = prev.content.members.map((member) => {
+        if (
+          member.type === "CHOICE" &&
+          member.members[0].value === "readonly"
+        ) {
+          return optional("mut");
+        }
+        return member;
+      });
+
+      return prec.left(seq(...members));
+    },
+
+    // TODO: Do the same for public_field_definition
+
     expression: ($, prev) => {
       // Removes ternary expression
       const choices = prev.members.filter(

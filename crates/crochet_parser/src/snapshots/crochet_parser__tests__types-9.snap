@@ -1,0 +1,64 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let mut_arr: mut string[] = [];\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 0..31,
+                pattern: Pattern {
+                    span: 4..11,
+                    kind: Ident(
+                        BindingIdent {
+                            name: "mut_arr",
+                        },
+                    ),
+                    inferred_type: None,
+                },
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Mutable(
+                            MutableType {
+                                span: 13..25,
+                                type_ann: TypeAnn {
+                                    kind: Array(
+                                        ArrayType {
+                                            span: 17..25,
+                                            elem_type: TypeAnn {
+                                                kind: Keyword(
+                                                    KeywordType {
+                                                        span: 17..23,
+                                                        keyword: String,
+                                                    },
+                                                ),
+                                                span: 17..23,
+                                                inferred_type: None,
+                                            },
+                                        },
+                                    ),
+                                    span: 17..25,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                        span: 13..25,
+                        inferred_type: None,
+                    },
+                ),
+                init: Some(
+                    Expr {
+                        span: 28..30,
+                        kind: Tuple(
+                            Tuple {
+                                elems: [],
+                            },
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+                declare: false,
+            },
+        ],
+    },
+)

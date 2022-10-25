@@ -1,0 +1,75 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"type MutPoint = mut {x: number, y: number};\")"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                span: 0..43,
+                declare: false,
+                id: Ident {
+                    span: 5..13,
+                    name: "MutPoint",
+                },
+                type_ann: TypeAnn {
+                    kind: Mutable(
+                        MutableType {
+                            span: 16..42,
+                            type_ann: TypeAnn {
+                                kind: Object(
+                                    ObjectType {
+                                        span: 20..42,
+                                        elems: [
+                                            Prop(
+                                                TProp {
+                                                    span: 21..30,
+                                                    name: "x",
+                                                    optional: false,
+                                                    mutable: false,
+                                                    type_ann: TypeAnn {
+                                                        kind: Keyword(
+                                                            KeywordType {
+                                                                span: 24..30,
+                                                                keyword: Number,
+                                                            },
+                                                        ),
+                                                        span: 24..30,
+                                                        inferred_type: None,
+                                                    },
+                                                },
+                                            ),
+                                            Prop(
+                                                TProp {
+                                                    span: 32..41,
+                                                    name: "y",
+                                                    optional: false,
+                                                    mutable: false,
+                                                    type_ann: TypeAnn {
+                                                        kind: Keyword(
+                                                            KeywordType {
+                                                                span: 35..41,
+                                                                keyword: Number,
+                                                            },
+                                                        ),
+                                                        span: 35..41,
+                                                        inferred_type: None,
+                                                    },
+                                                },
+                                            ),
+                                        ],
+                                    },
+                                ),
+                                span: 20..42,
+                                inferred_type: None,
+                            },
+                        },
+                    ),
+                    span: 16..42,
+                    inferred_type: None,
+                },
+                type_params: None,
+            },
+        ],
+    },
+)
