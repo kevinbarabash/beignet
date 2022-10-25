@@ -24,11 +24,11 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             ss.push(s1);
 
             for arg in args {
-                let (arg_s, arg_t) = infer_expr(ctx, &mut arg.expr)?;
+                let (arg_s, mut arg_t) = infer_expr(ctx, &mut arg.expr)?;
                 ss.push(arg_s);
                 if arg.spread.is_some() {
-                    match &arg_t.kind {
-                        TypeKind::Tuple(types) => arg_types.extend(types.to_owned()),
+                    match &mut arg_t.kind {
+                        TypeKind::Tuple(types) => arg_types.append(types),
                         _ => arg_types.push(Type {
                             kind: TypeKind::Rest(Box::from(arg_t)),
                             provenance: None,
@@ -571,12 +571,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 let expr = elem.expr.as_mut();
                 match elem.spread {
                     Some(_) => {
-                        let (s, t) = infer_expr(ctx, expr)?;
+                        let (s, mut t) = infer_expr(ctx, expr)?;
                         ss.push(s);
-                        match &t.kind {
-                            TypeKind::Tuple(types) => {
-                                ts.extend(types.to_owned());
-                            }
+                        match &mut t.kind {
+                            TypeKind::Tuple(types) => ts.append(types),
                             _ => {
                                 return Err(String::from(
                                     "Can only spread tuple types inside a tuple",

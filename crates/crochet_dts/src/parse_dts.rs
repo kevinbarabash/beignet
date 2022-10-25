@@ -290,12 +290,12 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 let params = infer_fn_params(&decl.params, ctx)?;
                 let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
                 let mut qualifiers = params.ftv();
-                qualifiers.extend(ret.ftv());
+                qualifiers.append(&mut ret.ftv());
 
                 Ok(TObjElem::Call(TCallable {
                     params,
                     ret: Box::from(ret),
-                    type_params: qualifiers.clone().into_iter().collect(),
+                    type_params: qualifiers,
                 }))
             }
             None => Err(String::from("Property is missing type annotation")),
@@ -305,12 +305,12 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 let params = infer_fn_params(&decl.params, ctx)?;
                 let ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
                 let mut qualifiers = params.ftv();
-                qualifiers.extend(ret.ftv());
+                qualifiers.append(&mut ret.ftv());
 
                 Ok(TObjElem::Constructor(TCallable {
                     params,
                     ret: Box::from(ret),
-                    type_params: qualifiers.clone().into_iter().collect(),
+                    type_params: qualifiers,
                 }))
             }
             None => Err(String::from("Property is missing type annotation")),

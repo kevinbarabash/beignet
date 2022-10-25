@@ -89,13 +89,13 @@ impl Substitutable for Type {
             TypeKind::Var(tv) => {
                 let mut result = vec![tv.to_owned()];
                 if let Some(constraint) = &tv.constraint {
-                    result.extend(constraint.ftv());
+                    result.append(&mut constraint.ftv());
                 }
                 result.unique_via(|a, b| a.id == b.id)
             }
             TypeKind::App(TApp { args, ret }) => {
                 let mut result = args.ftv();
-                result.extend(ret.ftv());
+                result.append(&mut ret.ftv());
                 result.unique_via(|a, b| a.id == b.id)
             }
             TypeKind::Lam(lam) => lam.ftv(),
@@ -113,7 +113,7 @@ impl Substitutable for Type {
             TypeKind::Mutable(t) => t.ftv(),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => {
                 let mut result = object.ftv();
-                result.extend(index.ftv());
+                result.append(&mut index.ftv());
                 result
             }
         }
@@ -148,7 +148,7 @@ impl Substitutable for TLam {
     }
     fn ftv(&self) -> Vec<TVar> {
         let mut result = self.params.ftv();
-        result.extend(self.ret.ftv());
+        result.append(&mut self.ret.ftv());
         result.unique_via(|a, b| a.id == b.id)
     }
 }
@@ -187,7 +187,7 @@ impl Substitutable for TCallable {
     }
     fn ftv(&self) -> Vec<TVar> {
         let mut result = self.params.ftv();
-        result.extend(self.ret.ftv());
+        result.append(&mut self.ret.ftv());
         result.uniq(self.type_params.to_owned())
     }
 }

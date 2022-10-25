@@ -249,7 +249,7 @@ pub fn generalize(env: &Env, t: &Type) -> Type {
 
     // We do this to account for type params from the environment.
     // QUESTION: Why is it okay to ignore the keys of env?
-    type_params.extend(t.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id));
+    type_params.append(&mut t.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id));
 
     if type_params.is_empty() {
         return t.to_owned();

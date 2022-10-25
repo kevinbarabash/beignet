@@ -157,7 +157,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             for arg in app.args.iter() {
                 match &arg.kind {
                     TypeKind::Rest(spread) => match &spread.as_ref().kind {
-                        TypeKind::Tuple(types) => args.extend(types.to_owned()),
+                        TypeKind::Tuple(types) => args.append(&mut types.to_owned()),
                         _ => return Err(format!("spread of type {spread} not allowed")),
                     },
                     _ => args.push(arg.to_owned()),
