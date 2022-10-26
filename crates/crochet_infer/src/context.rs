@@ -159,12 +159,11 @@ impl Context {
                                 "mismatch between the number of qualifiers and type params",
                             ));
                         }
-                        ids.zip(type_params.iter().map(|tp| Type {
-                            kind: TypeKind::Var(TVar {
+                        ids.zip(type_params.iter().map(|tp| {
+                            Type::from(TypeKind::Var(TVar {
                                 id: self.fresh_id(),
                                 constraint: tp.constraint.to_owned(),
-                            }),
-                            provenance: None,
+                            }))
                         }))
                         .collect()
                     }
@@ -180,12 +179,11 @@ impl Context {
         match &t.kind {
             TypeKind::Generic(TGeneric { t, type_params }) => {
                 let ids = type_params.iter().map(|tv| tv.id.to_owned());
-                let fresh_params = type_params.iter().map(|tp| Type {
-                    kind: TypeKind::Var(TVar {
+                let fresh_params = type_params.iter().map(|tp| {
+                    Type::from(TypeKind::Var(TVar {
                         id: self.fresh_id(),
                         constraint: tp.constraint.to_owned(),
-                    }),
-                    provenance: None,
+                    }))
                 });
                 let subs: Subst = ids.zip(fresh_params).collect();
 
@@ -202,12 +200,9 @@ impl Context {
     }
 
     pub fn fresh_var(&self) -> Type {
-        Type {
-            kind: TypeKind::Var(TVar {
-                id: self.fresh_id(),
-                constraint: None,
-            }),
-            provenance: None,
-        }
+        Type::from(TypeKind::Var(TVar {
+            id: self.fresh_id(),
+            constraint: None,
+        }))
     }
 }

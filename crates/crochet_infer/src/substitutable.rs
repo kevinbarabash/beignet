@@ -39,7 +39,15 @@ impl Substitutable for Type {
                 Some(replacement) => {
                     // TODO: apply the constraint and then check if the replacement
                     // is a subtype of it.
-                    return norm_type(replacement.to_owned());
+                    return norm_type(Type {
+                        kind: replacement.kind.to_owned(),
+                        // We purposefully drop the provenance here so that our hacky check
+                        // at the top of `unify()` workss.  Once we've made that less hacky
+                        // we can update this provenance to point back to the type variable's
+                        // containing Type.
+                        provenance: None,
+                        mutable: replacement.mutable,
+                    });
                 }
                 None => TypeKind::Var(TVar {
                     id: tv.id.to_owned(),
@@ -68,7 +76,6 @@ impl Substitutable for Type {
             TypeKind::Rest(arg) => TypeKind::Rest(Box::from(arg.apply(sub))),
             TypeKind::This => TypeKind::This,
             TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(t.apply(sub))),
-            TypeKind::Mutable(t) => TypeKind::Mutable(Box::from(t.apply(sub))),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => {
                 TypeKind::IndexAccess(TIndexAccess {
                     object: Box::from(object.apply(sub)),
@@ -79,6 +86,7 @@ impl Substitutable for Type {
         norm_type(Type {
             kind,
             provenance: self.provenance.to_owned(),
+            mutable: self.mutable,
         })
     }
     fn ftv(&self) -> Vec<TVar> {
@@ -110,7 +118,6 @@ impl Substitutable for Type {
             TypeKind::Rest(arg) => arg.ftv(),
             TypeKind::This => vec![],
             TypeKind::KeyOf(t) => t.ftv(),
-            TypeKind::Mutable(t) => t.ftv(),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => {
                 let mut result = object.ftv();
                 result.append(&mut index.ftv());
@@ -280,10 +287,7 @@ fn norm_type(t: Type) -> Type {
             if types.len() == 1 {
                 types.get(0).unwrap().to_owned()
             } else {
-                Type {
-                    kind: TypeKind::Union(types),
-                    provenance: None,
-                }
+                Type::from(TypeKind::Union(types))
             }
         }
         TypeKind::Intersection(types) => {
@@ -295,10 +299,7 @@ fn norm_type(t: Type) -> Type {
             if types.len() == 1 {
                 types.get(0).unwrap().to_owned()
             } else {
-                Type {
-                    kind: TypeKind::Intersection(types),
-                    provenance: None,
-                }
+                Type::from(TypeKind::Intersection(types))
             }
         }
         _ => t,

@@ -2572,6 +2572,20 @@ mod tests {
     }
 
     #[test]
+    fn test_assign_mutable_array_to_untyped_identifier() {
+        let src = r#"
+        declare let sort: (num_arr: mut number[]) => undefined;
+        let mut_arr: mut number[] = [1, 2, 3];
+        let arr = mut_arr;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("arr", &ctx), "mut number[]");
+    }
+
+    // TODO: fix this test
+    #[test]
     #[should_panic = "Cannot use immutable type where a mutable type was expected"]
     fn test_mutable_arrays_with_immutable_variable_initializer() {
         let src = r#"
@@ -2583,6 +2597,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
+        assert_eq!(get_value_type("tuple", &ctx), "[1, 2, 3]");
         assert_eq!(get_value_type("arr", &ctx), "mut number[]");
     }
 
@@ -2621,7 +2636,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Couldn't unify number[] and number | string[]"]
+    #[should_panic = "Couldn't unify mut number[] and mut number | string[]"]
     fn test_mutable_array_cannot_be_assigned_to_mutable_subtype() {
         let src = r#"
         declare let arr1: mut number[];
@@ -2632,7 +2647,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Couldn't unify string[] and number[]"]
+    #[should_panic = "Couldn't unify mut string[] and mut number[]"]
     fn test_mutable_arrays_wrong_types() {
         let src = r#"
         declare let sort: (num_arr: mut number[]) => undefined;

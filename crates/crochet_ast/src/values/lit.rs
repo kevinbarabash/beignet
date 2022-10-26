@@ -109,6 +109,7 @@ impl From<Lit> for Type {
                 Lit::Str(s) => TLit::Str(s.value),
             }),
             provenance: None,
+            mutable: false,
         }
     }
 }

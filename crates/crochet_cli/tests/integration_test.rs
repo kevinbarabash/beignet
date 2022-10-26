@@ -1472,7 +1472,7 @@ fn infer_if_let_refutable_pattern_array() {
 
     let result = codegen_d_ts(&program, &ctx);
 
-    insta::assert_snapshot!(result, @"export declare const p: [5, 10];
+    insta::assert_snapshot!(result, @"export declare const p: readonly [5, 10];
 ");
 }
 
@@ -1508,7 +1508,7 @@ fn infer_if_let_refutable_pattern_nested_array() {
 
     let result = codegen_d_ts(&program, &ctx);
 
-    insta::assert_snapshot!(result, @r###"export declare const action: ["moveto", [5, 10]];
+    insta::assert_snapshot!(result, @r###"export declare const action: readonly ["moveto", readonly [5, 10]];
 "###);
 }
 

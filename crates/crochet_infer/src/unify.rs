@@ -12,11 +12,34 @@ use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
-    let result = match (&t1.kind, &t2.kind) {
-        // All binding must be done first
-        (TypeKind::Var(tv), _) => bind(tv, t2, Relation::SubType, ctx),
-        (_, TypeKind::Var(tv)) => bind(tv, t1, Relation::SuperType, ctx),
+    // All binding must be done first
+    match (&t1.kind, &t2.kind) {
+        (TypeKind::Var(tv), _) => return bind(tv, t2, Relation::SubType, ctx),
+        (_, TypeKind::Var(tv)) => return bind(tv, t1, Relation::SuperType, ctx),
+        _ => (),
+    };
 
+    if t1.mutable && t2.mutable {
+        return unify_mut(t1, t2, ctx);
+    }
+    if t2.mutable {
+        // Right now we only set `.provenance` when inferring tuple and object
+        // literals, but in the future we'll likely be setting it when inferring
+        // any expression including variables.
+        if t1.provenance.is_some() {
+            return Ok(Subst::new());
+        }
+        println!("t1 = {t1:#?}, t2 = {t2:#?}");
+        // It's NOT okay to use an immutable in place of a mutable one
+        return Err(String::from(
+            "Cannot use immutable type where a mutable type was expected",
+        ));
+    }
+    // It's okay to use a mutable type in place of an immutable one so it's fine
+    // to continue with the non-mutable unify() call if t1 is mutable as long as
+    // t2 is not.
+
+    let result = match (&t1.kind, &t2.kind) {
         (TypeKind::Lit(lit), TypeKind::Keyword(keyword)) => {
             let b = matches!(
                 (lit, keyword),
@@ -77,23 +100,17 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 .iter()
                 .filter_map(|elem| match elem {
                     TObjElem::Call(call) => {
-                        let lam = Type {
-                            kind: TypeKind::Lam(TLam {
-                                params: call.params.to_owned(),
-                                ret: call.ret.to_owned(),
-                            }),
-                            provenance: None,
-                        };
+                        let lam = Type::from(TypeKind::Lam(TLam {
+                            params: call.params.to_owned(),
+                            ret: call.ret.to_owned(),
+                        }));
                         let t = if call.type_params.is_empty() {
                             lam
                         } else {
-                            Type {
-                                kind: TypeKind::Generic(TGeneric {
-                                    t: Box::from(lam),
-                                    type_params: call.type_params.to_owned(),
-                                }),
-                                provenance: None,
-                            }
+                            Type::from(TypeKind::Generic(TGeneric {
+                                t: Box::from(lam),
+                                type_params: call.type_params.to_owned(),
+                            }))
                         };
                         Some(t)
                     }
@@ -180,10 +197,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
                 let mut args = app.args.clone();
                 let regular_args: Vec<_> = args.drain(0..regular_arg_count).collect();
-                let rest_arg = Type {
-                    kind: TypeKind::Tuple(args),
-                    provenance: None,
-                };
+                let rest_arg = Type::from(TypeKind::Tuple(args));
 
                 let mut params = lam.params.clone();
                 let regular_params: Vec<_> = params.drain(0..regular_arg_count).collect();
@@ -330,14 +344,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 let rest1: Vec<_> = types1.drain(0..rest_len).collect();
                 let after1: Vec<_> = types1;
 
-                let s = unify(
-                    &Type {
-                        kind: TypeKind::Tuple(rest1),
-                        provenance: None,
-                    },
-                    &rest2,
-                    ctx,
-                )?;
+                let s = unify(&Type::from(TypeKind::Tuple(rest1)), &rest2, ctx)?;
                 ss.push(s);
 
                 for (t1, t2) in after1.iter().zip(after2.iter()) {
@@ -419,20 +426,14 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         });
 
                     let s1 = unify(
-                        &Type {
-                            kind: TypeKind::Object(TObject { elems: obj_elems }),
-                            provenance: None,
-                        },
+                        &Type::from(TypeKind::Object(TObject { elems: obj_elems })),
                         &obj_type,
                         ctx,
                     )?;
 
                     let rest_type = rest_types.get(0).unwrap();
                     let s2 = unify(
-                        &Type {
-                            kind: TypeKind::Object(TObject { elems: rest_elems }),
-                            provenance: None,
-                        },
+                        &Type::from(TypeKind::Object(TObject { elems: rest_elems })),
                         rest_type,
                         ctx,
                     )?;
@@ -479,20 +480,14 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
                     let s_obj = unify(
                         &obj_type,
-                        &Type {
-                            kind: TypeKind::Object(TObject { elems: obj_elems }),
-                            provenance: None,
-                        },
+                        &Type::from(TypeKind::Object(TObject { elems: obj_elems })),
                         ctx,
                     )?;
 
                     let rest_type = rest_types.get(0).unwrap();
                     let s_rest = unify(
                         rest_type,
-                        &Type {
-                            kind: TypeKind::Object(TObject { elems: rest_elems }),
-                            provenance: None,
-                        },
+                        &Type::from(TypeKind::Object(TObject { elems: rest_elems })),
                         ctx,
                     )?;
 
@@ -544,23 +539,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             (TKeyword::Never, TKeyword::Null) => Ok(Subst::new()),
             _ => Err(format!("Can't unify {t1} with {t2}")),
         },
-        (TypeKind::Mutable(t1), TypeKind::Mutable(t2)) => unify_mut(t1, t2, ctx),
-        (_, TypeKind::Mutable(_)) => {
-            // Right now we only set `.provenance` when inferring tuple and object
-            // literals, but in the future we'll likely be setting it when inferring
-            // any expression including variables.
-            if t1.provenance.is_some() {
-                return Ok(Subst::new());
-            }
-            // It's NOT okay to use an immutable in place of a mutable one
-            Err(String::from(
-                "Cannot use immutable type where a mutable type was expected",
-            ))
-        }
-        (TypeKind::Mutable(t), _) => {
-            // It's okay to use a mutable type in place of an immutable one
-            unify(t, t2, ctx)
-        }
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())
@@ -614,10 +592,7 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
                         let t: Type = if types.len() == 1 {
                             types.get(0).unwrap().to_owned()
                         } else {
-                            Type {
-                                kind: TypeKind::Union(types),
-                                provenance: None,
-                            }
+                            Type::from(TypeKind::Union(types))
                         };
 
                         return Ok(Subst::from([(tv.id.to_owned(), t)]));
@@ -643,10 +618,7 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
                     {
                         let s: Subst = Subst::from([(
                             id.to_owned(),
-                            Type {
-                                kind: TypeKind::Var(tv.to_owned()),
-                                provenance: None,
-                            },
+                            Type::from(TypeKind::Var(tv.to_owned())),
                         )]);
                         return Ok(s);
                     }
@@ -687,30 +659,21 @@ mod tests {
 
         let result = unify(
             &Type::from(num("5")),
-            &Type {
-                kind: TypeKind::Keyword(TKeyword::Number),
-                provenance: None,
-            },
+            &Type::from(TypeKind::Keyword(TKeyword::Number)),
             &ctx,
         );
         assert_eq!(result, Ok(Subst::default()));
 
         let result = unify(
             &Type::from(str("hello")),
-            &Type {
-                kind: TypeKind::Keyword(TKeyword::String),
-                provenance: None,
-            },
+            &Type::from(TypeKind::Keyword(TKeyword::String)),
             &ctx,
         );
         assert_eq!(result, Ok(Subst::default()));
 
         let result = unify(
             &Type::from(bool(&true)),
-            &Type {
-                kind: TypeKind::Keyword(TKeyword::Boolean),
-                provenance: None,
-            },
+            &Type::from(TypeKind::Keyword(TKeyword::Boolean)),
             &ctx,
         );
         assert_eq!(result, Ok(Subst::default()));
@@ -738,35 +701,23 @@ mod tests {
                 name: String::from("baz"),
                 optional: false,
                 mutable: false,
-                t: Type {
-                    kind: TypeKind::Keyword(TKeyword::String),
-                    provenance: None,
-                },
+                t: Type::from(TypeKind::Keyword(TKeyword::String)),
             }),
         ];
-        let t1 = Type {
-            kind: TypeKind::Object(TObject { elems }),
-            provenance: None,
-        };
+        let t1 = Type::from(TypeKind::Object(TObject { elems }));
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
                 name: String::from("foo"),
                 optional: false,
                 mutable: false,
-                t: Type {
-                    kind: TypeKind::Keyword(TKeyword::Number),
-                    provenance: None,
-                },
+                t: Type::from(TypeKind::Keyword(TKeyword::Number)),
             }),
             types::TObjElem::Prop(types::TProp {
                 name: String::from("bar"),
                 optional: true,
                 mutable: false,
-                t: Type {
-                    kind: TypeKind::Keyword(TKeyword::Boolean),
-                    provenance: None,
-                },
+                t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
             }),
             // It's okay for qux to not appear in the subtype since
             // it's an optional property.
@@ -774,16 +725,10 @@ mod tests {
                 name: String::from("qux"),
                 optional: true,
                 mutable: false,
-                t: Type {
-                    kind: TypeKind::Keyword(TKeyword::String),
-                    provenance: None,
-                },
+                t: Type::from(TypeKind::Keyword(TKeyword::String)),
             }),
         ];
-        let t2 = Type {
-            kind: TypeKind::Object(TObject { elems }),
-            provenance: None,
-        };
+        let t2 = Type::from(TypeKind::Object(TObject { elems }));
 
         let result = unify(&t1, &t2, &ctx);
         assert_eq!(result, Ok(Subst::default()));
@@ -796,10 +741,7 @@ mod tests {
         let ctx = Context::default();
 
         let result = unify(
-            &Type {
-                kind: TypeKind::Keyword(TKeyword::Number),
-                provenance: None,
-            },
+            &Type::from(TypeKind::Keyword(TKeyword::Number)),
             &Type::from(num("5")),
             &ctx,
         );

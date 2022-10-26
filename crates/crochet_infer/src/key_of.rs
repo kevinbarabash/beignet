@@ -8,6 +8,7 @@ use crate::util::union_many_types;
 const NEVER_TYPE: Type = Type {
     kind: TypeKind::Keyword(TKeyword::Never),
     provenance: None,
+    mutable: false,
 };
 
 // TODO: try to dedupe with infer_property_type()
@@ -32,10 +33,9 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
                             key: TFnParam { t, .. },
                             ..
                         }) => Some(t.to_owned()),
-                        TObjElem::Prop(prop) => Some(Type {
-                            kind: TypeKind::Lit(TLit::Str(prop.name.to_owned())),
-                            provenance: None,
-                        }),
+                        TObjElem::Prop(prop) => {
+                            Some(Type::from(TypeKind::Lit(TLit::Str(prop.name.to_owned()))))
+                        }
                     }
                 })
                 .collect();
@@ -65,18 +65,25 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
         TypeKind::Tuple(tuple) => {
             let mut elems: Vec<Type> = vec![];
             for i in 0..tuple.len() {
-                elems.push(Type {
-                    kind: TypeKind::Lit(TLit::Num(i.to_string())),
-                    provenance: None,
-                })
+                elems.push(Type::from(TypeKind::Lit(TLit::Num(i.to_string()))))
             }
+            let array_inferface = match t.mutable {
+                true => "Array",
+                false => "ReadonlyArray",
+            };
             elems.push(key_of(
-                &ctx.lookup_type_and_instantiate("ReadonlyArray")?,
+                &ctx.lookup_type_and_instantiate(array_inferface)?,
                 ctx,
             )?);
             Ok(union_many_types(&elems))
         }
-        TypeKind::Array(_) => key_of(&ctx.lookup_type_and_instantiate("ReadonlyArray")?, ctx),
+        TypeKind::Array(_) => {
+            let array_inferface = match t.mutable {
+                true => "Array",
+                false => "ReadonlyArray",
+            };
+            key_of(&ctx.lookup_type_and_instantiate(array_inferface)?, ctx)
+        }
         TypeKind::Lam(_) => key_of(&ctx.lookup_type_and_instantiate("Function")?, ctx),
         TypeKind::App(_) => todo!(), // What does this even mean?
         TypeKind::Union(_) => todo!(),
@@ -88,10 +95,6 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
         TypeKind::Rest(_) => todo!(), // What does this even mean?
         TypeKind::This => todo!(),    // Depends on what this is referencing
         TypeKind::KeyOf(t) => key_of(t, ctx),
-        TypeKind::Mutable(t) => match t.kind {
-            TypeKind::Array(_) => key_of(&ctx.lookup_type_and_instantiate("Array")?, ctx),
-            _ => key_of(t, ctx),
-        },
         TypeKind::IndexAccess(_) => {
             todo!() // We have to evaluate the IndexAccess first
         }

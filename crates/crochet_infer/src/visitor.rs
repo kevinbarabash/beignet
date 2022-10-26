@@ -33,7 +33,6 @@ pub trait Visitor {
             TypeKind::Rest(t) => self.visit_children(t),
             TypeKind::This => (), // no children
             TypeKind::KeyOf(t) => self.visit_children(t),
-            TypeKind::Mutable(t) => self.visit_children(t),
             TypeKind::IndexAccess(access) => {
                 self.visit_children(&mut access.object);
                 self.visit_children(&mut access.index);

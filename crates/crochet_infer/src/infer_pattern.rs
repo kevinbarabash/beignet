@@ -81,10 +81,7 @@ fn infer_pattern_rec(
                     type_args: None,
                 }),
             };
-            let t = Type {
-                kind,
-                provenance: None,
-            };
+            let t = Type::from(kind);
             // TODO: we need a method on Context to get all types that currently in
             // scope so that we can pass them to generalize()
             let all_types = ctx.get_all_types();
@@ -96,10 +93,7 @@ fn infer_pattern_rec(
         }
         PatternKind::Rest(RestPat { arg, .. }) => {
             let t = infer_pattern_rec(arg, ctx, assump)?;
-            Ok(Type {
-                kind: TypeKind::Rest(Box::from(t)),
-                provenance: None,
-            })
+            Ok(Type::from(TypeKind::Rest(Box::from(t))))
         }
         PatternKind::Array(ArrayPat { elems, .. }) => {
             let elems: Result<Vec<Type>, String> = elems
@@ -109,10 +103,7 @@ fn infer_pattern_rec(
                         Some(elem) => match &mut elem.kind {
                             PatternKind::Rest(rest) => {
                                 let rest_ty = infer_pattern_rec(&mut rest.arg, ctx, assump)?;
-                                Ok(Type {
-                                    kind: TypeKind::Rest(Box::from(rest_ty)),
-                                    provenance: None,
-                                })
+                                Ok(Type::from(TypeKind::Rest(Box::from(rest_ty))))
                             }
                             _ => infer_pattern_rec(elem, ctx, assump),
                         },
@@ -124,10 +115,7 @@ fn infer_pattern_rec(
                 })
                 .collect();
 
-            Ok(Type {
-                kind: TypeKind::Tuple(elems?),
-                provenance: None,
-            })
+            Ok(Type::from(TypeKind::Tuple(elems?)))
         }
         // TODO: infer type_params
         PatternKind::Object(ObjectPat { props, .. }) => {
@@ -181,18 +169,12 @@ fn infer_pattern_rec(
                 })
                 .collect();
 
-            let obj_type = Type {
-                kind: TypeKind::Object(TObject { elems }),
-                provenance: None,
-            };
+            let obj_type = Type::from(TypeKind::Object(TObject { elems }));
 
             match rest_opt_ty {
                 // TODO: Replace this with a proper Rest/Spread type
                 // See https://github.com/microsoft/TypeScript/issues/10727
-                Some(rest_ty) => Ok(Type {
-                    kind: TypeKind::Intersection(vec![obj_type, rest_ty]),
-                    provenance: None,
-                }),
+                Some(rest_ty) => Ok(Type::from(TypeKind::Intersection(vec![obj_type, rest_ty]))),
                 None => Ok(obj_type),
             }
         }

@@ -53,6 +53,7 @@ impl From<Keyword> for Type {
                 Keyword::Undefined => TKeyword::Undefined,
             }),
             provenance: None,
+            mutable: false,
         }
     }
 }
