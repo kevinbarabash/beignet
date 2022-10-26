@@ -1,0 +1,66 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"type MutPoint = {mut x: number, mut y: number};\")"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                span: 0..47,
+                declare: false,
+                id: Ident {
+                    span: 5..13,
+                    name: "MutPoint",
+                },
+                type_ann: TypeAnn {
+                    kind: Object(
+                        ObjectType {
+                            span: 16..46,
+                            elems: [
+                                Prop(
+                                    TProp {
+                                        span: 17..30,
+                                        name: "x",
+                                        optional: false,
+                                        mutable: true,
+                                        type_ann: TypeAnn {
+                                            kind: Keyword(
+                                                KeywordType {
+                                                    span: 24..30,
+                                                    keyword: Number,
+                                                },
+                                            ),
+                                            span: 24..30,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                                Prop(
+                                    TProp {
+                                        span: 32..45,
+                                        name: "y",
+                                        optional: false,
+                                        mutable: true,
+                                        type_ann: TypeAnn {
+                                            kind: Keyword(
+                                                KeywordType {
+                                                    span: 39..45,
+                                                    keyword: Number,
+                                                },
+                                            ),
+                                            span: 39..45,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                    span: 16..46,
+                    inferred_type: None,
+                },
+                type_params: None,
+            },
+        ],
+    },
+)
