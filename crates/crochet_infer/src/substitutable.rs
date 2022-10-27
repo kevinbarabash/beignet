@@ -41,11 +41,7 @@ impl Substitutable for Type {
                     // is a subtype of it.
                     return norm_type(Type {
                         kind: replacement.kind.to_owned(),
-                        // We purposefully drop the provenance here so that our hacky check
-                        // at the top of `unify()` workss.  Once we've made that less hacky
-                        // we can update this provenance to point back to the type variable's
-                        // containing Type.
-                        provenance: None,
+                        provenance: Some(Box::from(Provenance::from(self))),
                         mutable: replacement.mutable,
                     });
                 }

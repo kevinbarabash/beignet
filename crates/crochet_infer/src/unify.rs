@@ -2,6 +2,7 @@ use std::cmp;
 use std::collections::BTreeSet;
 
 use crochet_ast::types::{self as types, TGeneric, TLam, TObjElem, TObject, TVar, Type, TypeKind};
+use crochet_ast::values::ExprKind;
 use types::TKeyword;
 
 use crate::context::Context;
@@ -26,9 +27,26 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         // Right now we only set `.provenance` when inferring tuple and object
         // literals, but in the future we'll likely be setting it when inferring
         // any expression including variables.
-        if t1.provenance.is_some() {
-            return Ok(Subst::new());
-        }
+
+        // TODO: extract this into a `isLitExpr` helper that checks if the expression
+        // is a literal, e.g. 1 + 2, but not something that calls a function or contains
+        // variables.
+        // NOTE: this is different from what a hypothetical `isConstExpr` would return
+        // which is similar, but call also contain:
+        // - binders that have been assigned const expressions
+        // - pure function calls with args that are const expressions
+        match &t1.provenance {
+            Some(provenance) => match provenance.as_ref() {
+                types::Provenance::Type(t) => (),
+                types::Provenance::Expr(e) => match e.kind {
+                    ExprKind::Obj(_) => return Ok(Subst::new()),
+                    ExprKind::Tuple(_) => return Ok(Subst::new()),
+                    _ => (),
+                },
+            },
+            None => (),
+        };
+
         println!("t1 = {t1:#?}, t2 = {t2:#?}");
         // It's NOT okay to use an immutable in place of a mutable one
         return Err(String::from(

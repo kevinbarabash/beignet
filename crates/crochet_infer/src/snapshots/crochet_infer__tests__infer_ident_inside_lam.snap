@@ -69,8 +69,21 @@ Program {
                                                     kind: Keyword(
                                                         Number,
                                                     ),
-                                                    provenance: None,
                                                     mutable: false,
+                                                    provenance: Some(
+                                                        Type(
+                                                            Type {
+                                                                kind: Var(
+                                                                    TVar {
+                                                                        id: 2,
+                                                                        constraint: None,
+                                                                    },
+                                                                ),
+                                                                mutable: false,
+                                                                provenance: None,
+                                                            },
+                                                        ),
+                                                    ),
                                                 },
                                             ),
                                         },
@@ -87,8 +100,21 @@ Program {
                                                     kind: Keyword(
                                                         Number,
                                                     ),
-                                                    provenance: None,
                                                     mutable: false,
+                                                    provenance: Some(
+                                                        Type(
+                                                            Type {
+                                                                kind: Var(
+                                                                    TVar {
+                                                                        id: 3,
+                                                                        constraint: None,
+                                                                    },
+                                                                ),
+                                                                mutable: false,
+                                                                provenance: None,
+                                                            },
+                                                        ),
+                                                    ),
                                                 },
                                             ),
                                         },
@@ -99,8 +125,8 @@ Program {
                                         kind: Keyword(
                                             Number,
                                         ),
-                                        provenance: None,
                                         mutable: false,
+                                        provenance: None,
                                     },
                                 ),
                             },
@@ -124,8 +150,21 @@ Program {
                                                 kind: Keyword(
                                                     Number,
                                                 ),
-                                                provenance: None,
                                                 mutable: false,
+                                                provenance: Some(
+                                                    Type(
+                                                        Type {
+                                                            kind: Var(
+                                                                TVar {
+                                                                    id: 2,
+                                                                    constraint: None,
+                                                                },
+                                                            ),
+                                                            mutable: false,
+                                                            provenance: None,
+                                                        },
+                                                    ),
+                                                ),
                                             },
                                             optional: false,
                                         },
@@ -139,8 +178,21 @@ Program {
                                                 kind: Keyword(
                                                     Number,
                                                 ),
-                                                provenance: None,
                                                 mutable: false,
+                                                provenance: Some(
+                                                    Type(
+                                                        Type {
+                                                            kind: Var(
+                                                                TVar {
+                                                                    id: 3,
+                                                                    constraint: None,
+                                                                },
+                                                            ),
+                                                            mutable: false,
+                                                            provenance: None,
+                                                        },
+                                                    ),
+                                                ),
                                             },
                                             optional: false,
                                         },
@@ -149,13 +201,13 @@ Program {
                                         kind: Keyword(
                                             Number,
                                         ),
-                                        provenance: None,
                                         mutable: false,
+                                        provenance: None,
                                     },
                                 },
                             ),
-                            provenance: None,
                             mutable: false,
+                            provenance: None,
                         },
                     ),
                 },

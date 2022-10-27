@@ -1,5 +1,7 @@
 use crochet_ast::common::*;
-use crochet_ast::types::{self as types, TFnParam, TKeyword, TObject, TPat, TVar, Type, TypeKind};
+use crochet_ast::types::{
+    self as types, Provenance, TFnParam, TKeyword, TObject, TPat, TVar, Type, TypeKind,
+};
 use crochet_ast::values::*;
 
 use types::TObjElem;
@@ -430,7 +432,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 simplify_intersection(&all_types)
             };
             expr.inferred_type = Some(t.clone());
-            t.provenance = Some(Box::from(expr.to_owned()));
+            t.provenance = Some(Box::from(Provenance::from(expr)));
             Ok((s, t))
         }
         ExprKind::Await(Await { expr, .. }) => {
@@ -481,7 +483,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let s = compose_many_subs(&ss);
             let t = Type {
                 kind: TypeKind::Tuple(ts),
-                provenance: Some(Box::from(expr.to_owned())),
+                provenance: Some(Box::from(Provenance::Expr(Box::from(expr.to_owned())))),
                 mutable: false,
             };
             expr.inferred_type = Some(t.clone());
