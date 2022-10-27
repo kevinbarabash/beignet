@@ -6,7 +6,7 @@ use crate::types::keyword::TKeyword;
 use crate::types::lam::TLam;
 use crate::types::lit::TLit;
 use crate::types::obj::TObjElem;
-use crate::values::expr::Expr;
+use crate::types::provenance::Provenance;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TApp {
@@ -92,10 +92,11 @@ pub enum TypeKind {
 #[derivative(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Type {
     pub kind: TypeKind,
-    #[derivative(Ord = "ignore")]
-    #[derivative(PartialOrd = "ignore")]
-    pub provenance: Option<Box<Expr>>,
     pub mutable: bool,
+    #[derivative(PartialOrd = "ignore")]
+    #[derivative(Ord = "ignore")]
+    #[derivative(PartialEq = "ignore")] // we don't care about provenance when comparing types
+    pub provenance: Option<Box<Provenance>>,
 }
 
 impl From<TypeKind> for Type {
