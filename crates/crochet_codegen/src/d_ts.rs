@@ -7,9 +7,7 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast::common;
-use crochet_ast::types::{
-    TFnParam, TGeneric, TIndex, TObjElem, TObject, TPat, TProp, TVar, Type, TypeKind,
-};
+use crochet_ast::types::{TFnParam, TGeneric, TObjElem, TPat, TVar, Type, TypeKind};
 use crochet_ast::{types, values};
 use crochet_infer::{get_type_params, Context};
 
@@ -528,7 +526,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                     TObjElem::Constructor(_) => todo!(),
                     TObjElem::Index(index) => TsTypeElement::TsIndexSignature(TsIndexSignature {
                         span: DUMMY_SP,
-                        readonly: !index.mutable,
+                        readonly: !index.mutable && !t.mutable,
                         params: vec![build_param(&index.key)],
                         type_ann: Some(Box::from(TsTypeAnn {
                             span: DUMMY_SP,
@@ -539,7 +537,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                     TObjElem::Prop(prop) => {
                         TsTypeElement::TsPropertySignature(TsPropertySignature {
                             span: DUMMY_SP,
-                            readonly: !prop.mutable,
+                            readonly: !prop.mutable && !t.mutable,
                             key: Box::from(Expr::from(Ident {
                                 span: DUMMY_SP,
                                 sym: JsWord::from(prop.name.to_owned()),
@@ -584,73 +582,49 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 })
             }),
         }),
-        TypeKind::Tuple(types) => TsType::TsTupleType(TsTupleType {
-            span: DUMMY_SP,
-            elem_types: types
-                .iter()
-                .map(|t| TsTupleElement {
+        TypeKind::Tuple(types) => {
+            let type_ann = TsType::TsTupleType(TsTupleType {
+                span: DUMMY_SP,
+                elem_types: types
+                    .iter()
+                    .map(|t| TsTupleElement {
+                        span: DUMMY_SP,
+                        label: None,
+                        ty: Box::from(build_type(t, None)),
+                    })
+                    .collect(),
+            });
+
+            if t.mutable {
+                type_ann
+            } else {
+                TsType::TsTypeOperator(TsTypeOperator {
                     span: DUMMY_SP,
-                    label: None,
-                    ty: Box::from(build_type(t, None)),
+                    op: TsTypeOperatorOp::ReadOnly,
+                    type_ann: Box::from(type_ann),
                 })
-                .collect(),
-        }),
-        TypeKind::Array(t) => TsType::TsTypeOperator(TsTypeOperator {
-            span: DUMMY_SP,
-            op: TsTypeOperatorOp::ReadOnly,
-            type_ann: Box::from(TsType::TsArrayType(TsArrayType {
+            }
+        }
+        TypeKind::Array(t) => {
+            let type_ann = TsType::TsArrayType(TsArrayType {
                 span: DUMMY_SP,
                 elem_type: Box::from(build_type(t, None)),
-            })),
-        }),
+            });
+
+            if t.mutable {
+                type_ann
+            } else {
+                TsType::TsTypeOperator(TsTypeOperator {
+                    span: DUMMY_SP,
+                    op: TsTypeOperatorOp::ReadOnly,
+                    type_ann: Box::from(type_ann),
+                })
+            }
+        }
         TypeKind::Rest(_) => todo!(),
         TypeKind::This => TsType::TsThisType(TsThisType { span: DUMMY_SP }),
         TypeKind::KeyOf(_) => todo!(),
         TypeKind::IndexAccess(_) => todo!(),
-        TypeKind::Mutable(t) => {
-            if let TypeKind::Object(TObject { elems }) = &t.kind {
-                let elems = elems
-                    .iter()
-                    .map(|elem| match elem {
-                        TObjElem::Call(_) => elem.to_owned(),
-                        TObjElem::Constructor(_) => elem.to_owned(),
-                        TObjElem::Index(index) => TObjElem::Index(TIndex {
-                            mutable: true,
-                            ..index.to_owned()
-                        }),
-                        TObjElem::Prop(prop) => TObjElem::Prop(TProp {
-                            mutable: true,
-                            ..prop.to_owned()
-                        }),
-                    })
-                    .collect();
-
-                return build_type(
-                    &Type {
-                        kind: TypeKind::Object(TObject { elems }),
-                        provenance: None,
-                    },
-                    type_params,
-                );
-            }
-
-            let ts_type = build_type(t, type_params);
-
-            // By default, Crochet data structures are mapped to `readonly`
-            // data structures in TypeScript.  Since we're processing a `mutable`
-            // Crochet data structure here, we need to remove the `readonly`-ness
-            // of the TypeScript node.
-            if let TsType::TsTypeOperator(TsTypeOperator {
-                op: TsTypeOperatorOp::ReadOnly,
-                type_ann,
-                ..
-            }) = ts_type
-            {
-                return type_ann.as_ref().to_owned();
-            }
-
-            ts_type
-        }
     }
 }
 

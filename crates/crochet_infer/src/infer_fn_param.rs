@@ -22,26 +22,17 @@ pub fn infer_fn_param(
     // TypeScript annotates rest params using an array type so we do the
     // same thing by converting top-level rest types to array types.
     let pt = if let TypeKind::Rest(arg) = &pt.kind {
-        Type {
-            kind: TypeKind::Array(arg.to_owned()),
-            provenance: None,
-        }
+        Type::from(TypeKind::Array(arg.to_owned()))
     } else {
         pt
     };
 
     if param.optional {
         if let Some((name, t)) = pa.iter().find(|(_, value)| pt == **value) {
-            let t = Type {
-                kind: TypeKind::Union(vec![
-                    t.to_owned(),
-                    Type {
-                        kind: TypeKind::Keyword(TKeyword::Undefined),
-                        provenance: None,
-                    },
-                ]),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::Union(vec![
+                t.to_owned(),
+                Type::from(TypeKind::Keyword(TKeyword::Undefined)),
+            ]));
             pa.insert(name.to_owned(), t);
         };
     }

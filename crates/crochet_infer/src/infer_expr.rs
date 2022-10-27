@@ -29,10 +29,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 if arg.spread.is_some() {
                     match &mut arg_t.kind {
                         TypeKind::Tuple(types) => arg_types.append(types),
-                        _ => arg_types.push(Type {
-                            kind: TypeKind::Rest(Box::from(arg_t)),
-                            provenance: None,
-                        }),
+                        _ => arg_types.push(Type::from(TypeKind::Rest(Box::from(arg_t)))),
                     }
                 } else {
                     arg_types.push(arg_t);
@@ -43,13 +40,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             // Are we missing an `apply()` call here?
             // Maybe, I could see us needing an apply to handle generic functions properly
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
-            let call_type = Type {
-                kind: TypeKind::App(types::TApp {
-                    args: arg_types,
-                    ret: Box::from(ret_type.clone()),
-                }),
-                provenance: None,
-            };
+            let call_type = Type::from(TypeKind::App(types::TApp {
+                args: arg_types,
+                ret: Box::from(ret_type.clone()),
+            }));
             let s3 = unify(&call_type, &lam_type, ctx)?;
 
             ss.push(s3);
@@ -71,13 +65,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 optional: false,
             };
             let s2 = unify(
-                &Type {
-                    kind: TypeKind::Lam(types::TLam {
-                        params: vec![param],
-                        ret: Box::from(tv),
-                    }),
-                    provenance: None,
-                },
+                &Type::from(TypeKind::Lam(types::TLam {
+                    params: vec![param],
+                    ret: Box::from(tv),
+                })),
                 &t,
                 ctx,
             )?;
@@ -119,14 +110,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         let (s1, t1) = infer_expr(ctx, cond)?;
                         let (s2, t2) = infer_expr(ctx, consequent)?;
                         let (s3, t3) = infer_expr(ctx, alternate)?;
-                        let s4 = unify(
-                            &t1,
-                            &Type {
-                                kind: TypeKind::Keyword(TKeyword::Boolean),
-                                provenance: None,
-                            },
-                            ctx,
-                        )?;
+                        let s4 =
+                            unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
 
                         let s = compose_many_subs(&[s1, s2, s3, s4]);
                         let t = union_types(&t2, &t3);
@@ -141,10 +126,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         infer_let(pat, &mut None, expr, consequent, ctx, &PatternUsage::Match)?;
                     let s2 = match unify(
                         &t1,
-                        &Type {
-                            kind: TypeKind::Keyword(TKeyword::Undefined),
-                            provenance: None,
-                        },
+                        &Type::from(TypeKind::Keyword(TKeyword::Undefined)),
                         ctx,
                     ) {
                         Ok(s) => Ok(s),
@@ -160,20 +142,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 _ => {
                     let (s1, t1) = infer_expr(ctx, cond)?;
                     let (s2, t2) = infer_expr(ctx, consequent)?;
-                    let s3 = unify(
-                        &t1,
-                        &Type {
-                            kind: TypeKind::Keyword(TKeyword::Boolean),
-                            provenance: None,
-                        },
-                        ctx,
-                    )?;
+                    let s3 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
                     let s4 = match unify(
                         &t2,
-                        &Type {
-                            kind: TypeKind::Keyword(TKeyword::Undefined),
-                            provenance: None,
-                        },
+                        &Type::from(TypeKind::Keyword(TKeyword::Undefined)),
                         ctx,
                     ) {
                         Ok(s) => Ok(s),
@@ -229,24 +201,15 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                             elems.push(types::TObjElem::Prop(prop));
                         }
 
-                        let ret_type = Type {
-                            kind: TypeKind::Ref(types::TRef {
-                                name: String::from("JSXElement"),
-                                type_args: None,
-                            }),
-                            provenance: None,
-                        };
+                        let ret_type = Type::from(TypeKind::Ref(types::TRef {
+                            name: String::from("JSXElement"),
+                            type_args: None,
+                        }));
 
-                        let call_type = Type {
-                            kind: TypeKind::App(types::TApp {
-                                args: vec![Type {
-                                    kind: TypeKind::Object(TObject { elems }),
-                                    provenance: None,
-                                }],
-                                ret: Box::from(ret_type.clone()),
-                            }),
-                            provenance: None,
-                        };
+                        let call_type = Type::from(TypeKind::App(types::TApp {
+                            args: vec![Type::from(TypeKind::Object(TObject { elems }))],
+                            ret: Box::from(ret_type.clone()),
+                        }));
 
                         let s1 = compose_many_subs(&ss);
                         let s2 = unify(&call_type, &t, ctx)?;
@@ -261,13 +224,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = Subst::default();
             // TODO: check props on JSXInstrinsics
-            let t = Type {
-                kind: TypeKind::Ref(types::TRef {
-                    name: String::from("JSXElement"),
-                    type_args: None,
-                }),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::Ref(types::TRef {
+                name: String::from("JSXElement"),
+                type_args: None,
+            }));
             expr.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -289,13 +249,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                             Some(type_ann) => {
                                 // TODO: push `s` on to `ss`
                                 let (_s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
-                                Type {
-                                    kind: TypeKind::Var(TVar {
-                                        id: ctx.fresh_id(),
-                                        constraint: Some(Box::from(t)),
-                                    }),
-                                    provenance: None,
-                                }
+                                Type::from(TypeKind::Var(TVar {
+                                    id: ctx.fresh_id(),
+                                    constraint: Some(Box::from(t)),
+                                }))
                             }
                             None => ctx.fresh_var(),
                         };
@@ -329,13 +286,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             ctx.pop_scope();
 
             let rt_1 = if *is_async && !is_promise(&rt_1) {
-                Type {
-                    kind: TypeKind::Ref(types::TRef {
-                        name: String::from("Promise"),
-                        type_args: Some(vec![rt_1]),
-                    }),
-                    provenance: None,
-                }
+                Type::from(TypeKind::Ref(types::TRef {
+                    name: String::from("Promise"),
+                    type_args: Some(vec![rt_1]),
+                }))
             } else {
                 rt_1
             };
@@ -351,13 +305,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 None => Subst::default(),
             };
             ss.push(s);
-            let t = Type {
-                kind: TypeKind::Lam(types::TLam {
-                    params: t_params,
-                    ret: Box::from(rt_1),
-                }),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::Lam(types::TLam {
+                params: t_params,
+                ret: Box::from(rt_1),
+            }));
 
             let s = compose_many_subs(&ss);
             let t = t.apply(&s);
@@ -405,82 +356,28 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             // time and set the result to be appropriate number literal.
             let (s1, t1) = infer_expr(ctx, left)?;
             let (s2, t2) = infer_expr(ctx, right)?;
-            let s3 = unify(
-                &t1,
-                &Type {
-                    kind: TypeKind::Keyword(TKeyword::Number),
-                    provenance: None,
-                },
-                ctx,
-            )?;
-            let s4 = unify(
-                &t2,
-                &Type {
-                    kind: TypeKind::Keyword(TKeyword::Number),
-                    provenance: None,
-                },
-                ctx,
-            )?;
+            let s3 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
+            let s4 = unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
             let t = match op {
-                BinOp::Add => Type {
-                    kind: TypeKind::Keyword(TKeyword::Number),
-                    provenance: None,
-                },
-                BinOp::Sub => Type {
-                    kind: TypeKind::Keyword(TKeyword::Number),
-                    provenance: None,
-                },
-                BinOp::Mul => Type {
-                    kind: TypeKind::Keyword(TKeyword::Number),
-                    provenance: None,
-                },
-                BinOp::Div => Type {
-                    kind: TypeKind::Keyword(TKeyword::Number),
-                    provenance: None,
-                },
-                BinOp::EqEq => Type {
-                    kind: TypeKind::Keyword(TKeyword::Boolean),
-                    provenance: None,
-                },
-                BinOp::NotEq => Type {
-                    kind: TypeKind::Keyword(TKeyword::Boolean),
-                    provenance: None,
-                },
-                BinOp::Gt => Type {
-                    kind: TypeKind::Keyword(TKeyword::Boolean),
-                    provenance: None,
-                },
-                BinOp::GtEq => Type {
-                    kind: TypeKind::Keyword(TKeyword::Boolean),
-                    provenance: None,
-                },
-                BinOp::Lt => Type {
-                    kind: TypeKind::Keyword(TKeyword::Boolean),
-                    provenance: None,
-                },
-                BinOp::LtEq => Type {
-                    kind: TypeKind::Keyword(TKeyword::Boolean),
-                    provenance: None,
-                },
+                BinOp::Add => Type::from(TypeKind::Keyword(TKeyword::Number)),
+                BinOp::Sub => Type::from(TypeKind::Keyword(TKeyword::Number)),
+                BinOp::Mul => Type::from(TypeKind::Keyword(TKeyword::Number)),
+                BinOp::Div => Type::from(TypeKind::Keyword(TKeyword::Number)),
+                BinOp::EqEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                BinOp::NotEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                BinOp::Gt => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                BinOp::GtEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                BinOp::Lt => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                BinOp::LtEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
             };
             expr.inferred_type = Some(t.clone());
             Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
         }
         ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
             let (s1, t1) = infer_expr(ctx, arg)?;
-            let s2 = unify(
-                &t1,
-                &Type {
-                    kind: TypeKind::Keyword(TKeyword::Number),
-                    provenance: None,
-                },
-                ctx,
-            )?;
+            let s2 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
             let t = match op {
-                UnaryOp::Minus => Type {
-                    kind: TypeKind::Keyword(TKeyword::Number),
-                    provenance: None,
-                },
+                UnaryOp::Minus => Type::from(TypeKind::Keyword(TKeyword::Number)),
             };
             expr.inferred_type = Some(t.clone());
             Ok((compose_many_subs(&[s1, s2]), t))
@@ -526,16 +423,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = compose_many_subs(&ss);
             let mut t = if spread_types.is_empty() {
-                Type {
-                    kind: TypeKind::Object(TObject { elems }),
-                    provenance: None,
-                }
+                Type::from(TypeKind::Object(TObject { elems }))
             } else {
                 let mut all_types = spread_types;
-                all_types.push(Type {
-                    kind: TypeKind::Object(TObject { elems }),
-                    provenance: None,
-                });
+                all_types.push(Type::from(TypeKind::Object(TObject { elems })));
                 simplify_intersection(&all_types)
             };
             expr.inferred_type = Some(t.clone());
@@ -549,13 +440,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let (s1, t1) = infer_expr(ctx, expr)?;
             let wrapped_type = ctx.fresh_var();
-            let promise_type = Type {
-                kind: TypeKind::Ref(types::TRef {
-                    name: String::from("Promise"),
-                    type_args: Some(vec![wrapped_type.clone()]),
-                }),
-                provenance: None,
-            };
+            let promise_type = Type::from(TypeKind::Ref(types::TRef {
+                name: String::from("Promise"),
+                type_args: Some(vec![wrapped_type.clone()]),
+            }));
 
             let s2 = unify(&t1, &promise_type, ctx)?;
 
@@ -594,6 +482,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let t = Type {
                 kind: TypeKind::Tuple(ts),
                 provenance: Some(Box::from(expr.to_owned())),
+                mutable: false,
             };
             expr.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -608,10 +497,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             Ok((s, t))
         }
         ExprKind::Empty => {
-            let t = Type {
-                kind: TypeKind::Keyword(TKeyword::Undefined),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
             let s = Subst::default();
             expr.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -619,10 +505,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
         ExprKind::TemplateLiteral(TemplateLiteral {
             exprs, quasis: _, ..
         }) => {
-            let t = Type {
-                kind: TypeKind::Keyword(TKeyword::String),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::Keyword(TKeyword::String));
             let result: Result<Vec<(Subst, Type)>, String> =
                 exprs.iter_mut().map(|expr| infer_expr(ctx, expr)).collect();
             // We ignore the types of expressions if there are any because any expression
@@ -746,14 +629,29 @@ fn infer_property_type(
         }
         TypeKind::Array(type_param) => {
             // TODO: Do this for all interfaces that we lookup
-            let t = ctx.lookup_type("ReadonlyArray")?;
+            let array_name = match obj_t.mutable {
+                true => "Array",
+                false => "ReadonlyArray",
+            };
+            let t = ctx.lookup_type(array_name)?;
             let type_params = get_type_params(&t);
             // TODO: Instead of instantiating the whole interface for one method, do
             // the lookup call first and then instantiate the method.
             let s: Subst =
                 Subst::from([(type_params[0].id.to_owned(), type_param.as_ref().to_owned())]);
             let t = t.apply(&s);
-            infer_property_type(&t, prop, ctx)
+
+            let (s, mut t) = infer_property_type(&t, prop, ctx)?;
+
+            // Replaces `this` with `mut <type_param>[]`
+            let rep_t = Type {
+                kind: TypeKind::Array(type_param.to_owned()),
+                provenance: None,
+                mutable: true,
+            };
+            replace_this(&mut t, &rep_t);
+
+            Ok((s, t))
         }
         TypeKind::Tuple(elem_types) => {
             match prop {
@@ -761,14 +659,10 @@ fn infer_property_type(
                 MemberProp::Ident(_) => {
                     // TODO: Do this for all interfaces that we lookup
                     let t = ctx.lookup_type("ReadonlyArray")?;
-                    println!("ReadonlyArray = {t}");
                     // TODO: Instead of instantiating the whole interface for one method, do
                     // the lookup call first and then instantiate the method.
                     // TODO: remove duplicate types
-                    let type_param = Type {
-                        kind: TypeKind::Union(elem_types.to_owned()),
-                        provenance: None,
-                    };
+                    let type_param = Type::from(TypeKind::Union(elem_types.to_owned()));
                     let type_params = get_type_params(&t); // ReadonlyArray type params
 
                     let s: Subst = Subst::from([(type_params[0].id.to_owned(), type_param)]);
@@ -783,14 +677,8 @@ fn infer_property_type(
                             TKeyword::Number => {
                                 // TODO: remove duplicate types
                                 let mut elem_types = elem_types.to_owned();
-                                elem_types.push(Type {
-                                    kind: TypeKind::Keyword(TKeyword::Undefined),
-                                    provenance: None,
-                                });
-                                let t = Type {
-                                    kind: TypeKind::Union(elem_types),
-                                    provenance: None,
-                                };
+                                elem_types.push(Type::from(TypeKind::Keyword(TKeyword::Undefined)));
+                                let t = Type::from(TypeKind::Union(elem_types));
                                 Ok((prop_s, t))
                             }
                             _ => Err(format!("{keyword} is an invalid indexer for tuple types")),
@@ -810,34 +698,6 @@ fn infer_property_type(
                 }
             }
         }
-        TypeKind::Mutable(t) => match &t.kind {
-            TypeKind::Array(type_param) => {
-                // TODO: Do this for all interfaces that we lookup
-                let t = ctx.lookup_type("Array")?;
-                let type_params = get_type_params(&t);
-                // TODO: Instead of instantiating the whole interface for one method, do
-                // the lookup call first and then instantiate the method.
-                let s: Subst =
-                    Subst::from([(type_params[0].id.to_owned(), type_param.as_ref().to_owned())]);
-
-                let t = t.apply(&s);
-
-                let (s, mut t) = infer_property_type(&t, prop, ctx)?;
-
-                // Replace this with `mut <type_param>[]`
-                let rep_t = Type {
-                    kind: TypeKind::Mutable(Box::from(Type {
-                        kind: TypeKind::Array(type_param.to_owned()),
-                        provenance: None,
-                    })),
-                    provenance: None, // TOOD: update this to be each TypeKind::This that gets replaced
-                };
-                replace_this(&mut t, &rep_t);
-
-                Ok((s, t))
-            }
-            _ => infer_property_type(t, prop, ctx),
-        },
         _ => {
             todo!("Unhandled {obj_t:#?} in infer_property_type")
         }
@@ -868,7 +728,6 @@ fn get_prop_value(
             match prop {
                 Some(prop) => {
                     let t = get_property_type(prop);
-                    println!("property type t = {t}");
                     Ok((Subst::default(), t))
                 }
                 None => Err(format!("Object type doesn't contain key {name}.")),
@@ -901,14 +760,8 @@ fn get_prop_value(
 
                         // We can't tell if the property is in the object or not because the
                         // key is a string whose exact value is unknown at compile time.
-                        value_types.push(Type {
-                            kind: TypeKind::Keyword(TKeyword::Undefined),
-                            provenance: None,
-                        });
-                        let t = Type {
-                            kind: TypeKind::Union(value_types),
-                            provenance: None,
-                        };
+                        value_types.push(Type::from(TypeKind::Keyword(TKeyword::Undefined)));
+                        let t = Type::from(TypeKind::Union(value_types));
 
                         Ok((prop_s, t))
                     }
@@ -964,10 +817,7 @@ fn get_prop_value(
                                 // TODO: handle generic indexers
                                 // NOTE: Since access any indexer could result in an `undefined`
                                 // we include `| undefined` in the return type here.
-                                let undefined = Type {
-                                    kind: TypeKind::Keyword(TKeyword::Undefined),
-                                    provenance: None,
-                                };
+                                let undefined = Type::from(TypeKind::Keyword(TKeyword::Undefined));
                                 let t = union_types(&indexer.t, &undefined);
                                 return Ok((s, t));
                             }
@@ -992,10 +842,10 @@ impl ReplaceVisitor {
 
 impl Visitor for ReplaceVisitor {
     fn visit_type(&mut self, t: &mut Type) {
-        println!("visiting {t}");
-
         if let TypeKind::This = t.kind {
             t.kind = self.rep.kind.to_owned();
+            t.mutable = self.rep.mutable;
+            // TODO: set t.provenance to the original type's kind
         }
     }
 }

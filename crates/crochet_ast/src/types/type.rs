@@ -84,7 +84,6 @@ pub enum TypeKind {
     Rest(Box<Type>), // TODO: rename this to Spread
     This,
     KeyOf(Box<Type>),
-    Mutable(Box<Type>),
     IndexAccess(TIndexAccess),
     Generic(TGeneric),
 }
@@ -96,20 +95,31 @@ pub struct Type {
     #[derivative(Ord = "ignore")]
     #[derivative(PartialOrd = "ignore")]
     pub provenance: Option<Box<Expr>>,
+    pub mutable: bool,
+}
+
+impl From<TypeKind> for Type {
+    fn from(kind: TypeKind) -> Self {
+        Type {
+            kind,
+            provenance: None,
+            mutable: false,
+        }
+    }
 }
 
 impl From<TLit> for Type {
     fn from(lit: TLit) -> Self {
-        Type {
-            kind: TypeKind::Lit(lit),
-            provenance: None,
-        }
+        Type::from(TypeKind::Lit(lit))
     }
 }
 
 impl fmt::Display for Type {
     // TODO: add in parentheses where necessary to get the precedence right
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.mutable {
+            write!(f, "mut ")?;
+        }
         match &self.kind {
             TypeKind::Generic(TGeneric { t, type_params }) => {
                 if type_params.is_empty() {
@@ -150,7 +160,6 @@ impl fmt::Display for Type {
             TypeKind::Rest(arg) => write!(f, "...{arg}"),
             TypeKind::This => write!(f, "this"),
             TypeKind::KeyOf(t) => write!(f, "keyof {t}"),
-            TypeKind::Mutable(t) => write!(f, "mut {t}"),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => write!(f, "{object}[{index}]"),
         }
     }

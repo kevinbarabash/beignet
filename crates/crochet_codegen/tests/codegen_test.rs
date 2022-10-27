@@ -423,9 +423,8 @@ fn destructuring_function_array_params() {
     infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
-    insta::assert_snapshot!(result, @r###"
-    export declare const foo: ([a, b]: [number, number]) => number;
-    "###);
+    insta::assert_snapshot!(result, @"export declare const foo: ([a, b]: readonly [number, number]) => number;
+");
 }
 
 #[test]

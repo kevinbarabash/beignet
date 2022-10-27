@@ -27,58 +27,43 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
         TsType::TsKeywordType(keyword) => match &keyword.kind {
             TsKeywordTypeKind::TsAnyKeyword => Ok(ctx.fresh_var()),
             TsKeywordTypeKind::TsUnknownKeyword => Ok(ctx.fresh_var()),
-            TsKeywordTypeKind::TsNumberKeyword => Ok(Type {
-                kind: TypeKind::Keyword(TKeyword::Number),
-                provenance: None,
-            }),
+            TsKeywordTypeKind::TsNumberKeyword => {
+                Ok(Type::from(TypeKind::Keyword(TKeyword::Number)))
+            }
             TsKeywordTypeKind::TsObjectKeyword => Err(String::from("can't parse Objects yet")),
-            TsKeywordTypeKind::TsBooleanKeyword => Ok(Type {
-                kind: TypeKind::Keyword(TKeyword::Boolean),
-                provenance: None,
-            }),
+            TsKeywordTypeKind::TsBooleanKeyword => {
+                Ok(Type::from(TypeKind::Keyword(TKeyword::Boolean)))
+            }
             TsKeywordTypeKind::TsBigIntKeyword => Err(String::from("can't parse BigInt yet")),
-            TsKeywordTypeKind::TsStringKeyword => Ok(Type {
-                kind: TypeKind::Keyword(TKeyword::String),
-                provenance: None,
-            }),
-            TsKeywordTypeKind::TsSymbolKeyword => Ok(Type {
-                kind: TypeKind::Keyword(TKeyword::Symbol),
-                provenance: None,
-            }),
+            TsKeywordTypeKind::TsStringKeyword => {
+                Ok(Type::from(TypeKind::Keyword(TKeyword::String)))
+            }
+            TsKeywordTypeKind::TsSymbolKeyword => {
+                Ok(Type::from(TypeKind::Keyword(TKeyword::Symbol)))
+            }
             // NOTE: `void` is treated the same as `undefined` ...for now.
-            TsKeywordTypeKind::TsVoidKeyword => Ok(Type {
-                kind: TypeKind::Keyword(TKeyword::Undefined),
-                provenance: None,
-            }),
-            TsKeywordTypeKind::TsUndefinedKeyword => Ok(Type {
-                kind: TypeKind::Keyword(TKeyword::Undefined),
-                provenance: None,
-            }),
-            TsKeywordTypeKind::TsNullKeyword => Ok(Type {
-                kind: TypeKind::Keyword(TKeyword::Null),
-                provenance: None,
-            }),
+            TsKeywordTypeKind::TsVoidKeyword => {
+                Ok(Type::from(TypeKind::Keyword(TKeyword::Undefined)))
+            }
+            TsKeywordTypeKind::TsUndefinedKeyword => {
+                Ok(Type::from(TypeKind::Keyword(TKeyword::Undefined)))
+            }
+            TsKeywordTypeKind::TsNullKeyword => Ok(Type::from(TypeKind::Keyword(TKeyword::Null))),
             TsKeywordTypeKind::TsNeverKeyword => Err(String::from("can't parse never keyword yet")),
             TsKeywordTypeKind::TsIntrinsicKeyword => {
                 Err(String::from("can't parse Intrinsics yet"))
             }
         },
-        TsType::TsThisType(_) => Ok(Type {
-            kind: TypeKind::This,
-            provenance: None,
-        }),
+        TsType::TsThisType(_) => Ok(Type::from(TypeKind::This)),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
                 let params: Vec<TFnParam> = infer_fn_params(&fn_type.params, ctx)?;
                 let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?;
 
-                let t = Type {
-                    kind: TypeKind::Lam(types::TLam {
-                        params,
-                        ret: Box::from(ret),
-                    }),
-                    provenance: None,
-                };
+                let t = Type::from(TypeKind::Lam(types::TLam {
+                    params,
+                    ret: Box::from(ret),
+                }));
 
                 match &fn_type.type_params {
                     Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx),
@@ -105,21 +90,15 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                         .iter()
                         .map(|t| infer_ts_type_ann(t, ctx))
                         .collect();
-                    Ok(Type {
-                        kind: TypeKind::Ref(types::TRef {
-                            name,
-                            type_args: result.ok(),
-                        }),
-                        provenance: None,
-                    })
-                }
-                None => Ok(Type {
-                    kind: TypeKind::Ref(types::TRef {
+                    Ok(Type::from(TypeKind::Ref(types::TRef {
                         name,
-                        type_args: None,
-                    }),
-                    provenance: None,
-                }),
+                        type_args: result.ok(),
+                    })))
+                }
+                None => Ok(Type::from(TypeKind::Ref(types::TRef {
+                    name,
+                    type_args: None,
+                }))),
             }
         }
         TsType::TsTypeQuery(_) => Err(String::from("can't parse type query yet")),
@@ -127,10 +106,8 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
         TsType::TsArrayType(array) => {
             let elem_type = infer_ts_type_ann(&array.elem_type, ctx)?;
             Ok(Type {
-                kind: TypeKind::Mutable(Box::from(Type {
-                    kind: TypeKind::Array(Box::from(elem_type)),
-                    provenance: None,
-                })),
+                kind: TypeKind::Array(Box::from(elem_type)),
+                mutable: true,
                 provenance: None, // TODO: link back to the TypeScript source type annotation
             })
         }
@@ -144,10 +121,7 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                     .iter()
                     .map(|ts_type| infer_ts_type_ann(ts_type, ctx))
                     .collect();
-                Ok(Type {
-                    kind: TypeKind::Union(types?),
-                    provenance: None,
-                })
+                Ok(Type::from(TypeKind::Union(types?)))
             }
             TsUnionOrIntersectionType::TsIntersectionType(intersection) => {
                 let types: Result<Vec<_>, String> = intersection
@@ -155,10 +129,7 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                     .iter()
                     .map(|ts_type| infer_ts_type_ann(ts_type, ctx))
                     .collect();
-                Ok(Type {
-                    kind: TypeKind::Intersection(types?),
-                    provenance: None,
-                })
+                Ok(Type::from(TypeKind::Intersection(types?)))
             }
         },
         TsType::TsConditionalType(_) => Err(String::from("can't parse conditional type yet")),
@@ -174,10 +145,7 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
             match op {
                 TsTypeOperatorOp::KeyOf => {
                     let type_ann = infer_ts_type_ann(type_ann, ctx)?;
-                    Ok(Type {
-                        kind: TypeKind::KeyOf(Box::from(type_ann)),
-                        provenance: None,
-                    })
+                    Ok(Type::from(TypeKind::KeyOf(Box::from(type_ann))))
                 }
                 TsTypeOperatorOp::Unique => todo!(),
                 TsTypeOperatorOp::ReadOnly => {
@@ -258,13 +226,10 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
         None => Err(String::from("method has no return type")),
     };
 
-    let t = Type {
-        kind: TypeKind::Lam(types::TLam {
-            params,
-            ret: Box::from(ret?),
-        }),
-        provenance: None,
-    };
+    let t = Type::from(TypeKind::Lam(types::TLam {
+        params,
+        ret: Box::from(ret?),
+    }));
 
     let t = match &sig.type_params {
         Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,
@@ -388,10 +353,7 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, S
         .collect();
 
     // TODO: make this generic if the decl has any type params
-    let t = Type {
-        kind: TypeKind::Object(TObject { elems }),
-        provenance: None,
-    };
+    let t = Type::from(TypeKind::Object(TObject { elems }));
 
     let t = match &decl.type_params {
         Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,

@@ -31,11 +31,13 @@ impl TFnParam {
             true => {
                 let undefined = Type {
                     kind: TypeKind::Keyword(TKeyword::Undefined),
-                    provenance: None,
+                    provenance: None, // TODO: map this back to the `?`
+                    mutable: false,
                 };
                 Type {
                     kind: TypeKind::Union(vec![self.t.to_owned(), undefined]),
                     provenance: None,
+                    mutable: false,
                 }
             }
             false => self.t.to_owned(),

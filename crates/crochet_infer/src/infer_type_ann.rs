@@ -39,13 +39,10 @@ pub fn infer_type_ann(
                     Some(type_ann) => {
                         // TODO: push `s` on to `ss`
                         let (_s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
-                        Type {
-                            kind: TypeKind::Var(TVar {
-                                id: ctx.fresh_id(),
-                                constraint: Some(Box::from(t)),
-                            }),
-                            provenance: None,
-                        }
+                        Type::from(TypeKind::Var(TVar {
+                            id: ctx.fresh_id(),
+                            constraint: Some(Box::from(t)),
+                        }))
                     }
                     None => ctx.fresh_var(),
                 };
@@ -93,10 +90,7 @@ fn infer_type_ann_rec(
             ss.push(ret_s);
 
             let s = compose_many_subs(&ss);
-            let t = Type {
-                kind: TypeKind::Lam(types::TLam { params, ret }),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::Lam(types::TLam { params, ret }));
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -153,10 +147,7 @@ fn infer_type_ann_rec(
             }
 
             let s = compose_many_subs(&ss);
-            let t = Type {
-                kind: TypeKind::Object(TObject { elems }),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::Object(TObject { elems }));
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -185,17 +176,14 @@ fn infer_type_ann_rec(
                 }
 
                 let s = compose_many_subs(&ss);
-                let t = Type {
-                    kind: TypeKind::Ref(types::TRef {
-                        name: name.to_owned(),
-                        type_args: if type_args.is_empty() {
-                            None
-                        } else {
-                            Some(type_args)
-                        },
-                    }),
-                    provenance: None,
-                };
+                let t = Type::from(TypeKind::Ref(types::TRef {
+                    name: name.to_owned(),
+                    type_args: if type_args.is_empty() {
+                        None
+                    } else {
+                        Some(type_args)
+                    },
+                }));
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
@@ -212,10 +200,7 @@ fn infer_type_ann_rec(
             }
 
             let s = compose_many_subs(&ss);
-            let t = Type {
-                kind: TypeKind::Union(ts),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::Union(ts));
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -231,10 +216,7 @@ fn infer_type_ann_rec(
             }
 
             let s = compose_many_subs(&ss);
-            let t = Type {
-                kind: TypeKind::Intersection(ts),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::Intersection(ts));
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -250,40 +232,28 @@ fn infer_type_ann_rec(
             }
 
             let s = compose_many_subs(&ss);
-            let t = Type {
-                kind: TypeKind::Tuple(ts),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::Tuple(ts));
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::Array(ArrayType { elem_type, .. }) => {
             let (elem_s, elem_t) = infer_type_ann_rec(elem_type, ctx, type_param_map)?;
             let s = elem_s;
-            let t = Type {
-                kind: TypeKind::Array(Box::from(elem_t)),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::Array(Box::from(elem_t)));
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::KeyOf(KeyOfType { type_ann, .. }) => {
             let (arg_s, arg_t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
             let s = arg_s;
-            let t = Type {
-                kind: TypeKind::KeyOf(Box::from(arg_t)),
-                provenance: None,
-            };
+            let t = Type::from(TypeKind::KeyOf(Box::from(arg_t)));
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
         TypeAnnKind::Query(QueryType { expr, .. }) => infer_expr(ctx, expr),
         TypeAnnKind::Mutable(MutableType { type_ann, .. }) => {
-            let (s, t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
-            let t = Type {
-                kind: TypeKind::Mutable(Box::from(t)),
-                provenance: None,
-            };
+            let (s, mut t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
+            t.mutable = true;
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -413,10 +383,7 @@ fn infer_property_type(
             // TODO: Instead of instantiating the whole interface for one method, do
             // the lookup call first and then instantiate the method.
             // TODO: remove duplicate types
-            let type_param = Type {
-                kind: TypeKind::Union(elem_types.to_owned()),
-                provenance: None,
-            };
+            let type_param = Type::from(TypeKind::Union(elem_types.to_owned()));
             let type_params = get_type_params(&t); // ReadonlyArray type params
 
             let s: Subst = Subst::from([(type_params[0].id.to_owned(), type_param)]);

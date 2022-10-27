@@ -45,50 +45,37 @@ pub fn replace_aliases(
 
 // TODO: rename this replace_refs_rec
 fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
-    match &t.kind {
+    let kind = match &t.kind {
         TypeKind::Generic(TGeneric { t, type_params }) => {
             // TODO: create a new `map` that adds in `type_params`
-            Type {
-                kind: TypeKind::Generic(TGeneric {
-                    t: Box::from(replace_aliases_rec(t, map)),
-                    type_params: type_params.to_owned(),
-                }),
-                provenance: None,
-            }
+            TypeKind::Generic(TGeneric {
+                t: Box::from(replace_aliases_rec(t, map)),
+                type_params: type_params.to_owned(),
+            })
         }
-        TypeKind::Var(_) => t.to_owned(),
-        TypeKind::App(types::TApp { args, ret }) => Type {
-            kind: TypeKind::App(types::TApp {
-                args: args.iter().map(|t| replace_aliases_rec(t, map)).collect(),
-                ret: Box::from(replace_aliases_rec(ret, map)),
-            }),
-            provenance: None,
-        },
-        TypeKind::Lam(types::TLam { params, ret }) => Type {
-            kind: TypeKind::Lam(types::TLam {
-                params: params
-                    .iter()
-                    .map(|param| TFnParam {
-                        t: replace_aliases_rec(&param.t, map),
-                        ..param.to_owned()
-                    })
-                    .collect(),
-                ret: Box::from(replace_aliases_rec(ret, map)),
-            }),
-            provenance: None,
-        },
-        TypeKind::Lit(_) => t.to_owned(),
-        TypeKind::Keyword(_) => t.to_owned(),
-        TypeKind::Union(types) => Type {
-            kind: TypeKind::Union(types.iter().map(|t| replace_aliases_rec(t, map)).collect()),
-            provenance: None,
-        },
-        TypeKind::Intersection(types) => Type {
-            kind: TypeKind::Intersection(
-                types.iter().map(|t| replace_aliases_rec(t, map)).collect(),
-            ),
-            provenance: None,
-        },
+        TypeKind::Var(_) => return t.to_owned(),
+        TypeKind::App(types::TApp { args, ret }) => TypeKind::App(types::TApp {
+            args: args.iter().map(|t| replace_aliases_rec(t, map)).collect(),
+            ret: Box::from(replace_aliases_rec(ret, map)),
+        }),
+        TypeKind::Lam(types::TLam { params, ret }) => TypeKind::Lam(types::TLam {
+            params: params
+                .iter()
+                .map(|param| TFnParam {
+                    t: replace_aliases_rec(&param.t, map),
+                    ..param.to_owned()
+                })
+                .collect(),
+            ret: Box::from(replace_aliases_rec(ret, map)),
+        }),
+        TypeKind::Lit(_) => return t.to_owned(),
+        TypeKind::Keyword(_) => return t.to_owned(),
+        TypeKind::Union(types) => {
+            TypeKind::Union(types.iter().map(|t| replace_aliases_rec(t, map)).collect())
+        }
+        TypeKind::Intersection(types) => {
+            TypeKind::Intersection(types.iter().map(|t| replace_aliases_rec(t, map)).collect())
+        }
         TypeKind::Object(obj) => {
             let elems: Vec<TObjElem> = obj
                 .elems
@@ -146,52 +133,43 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                     }
                 })
                 .collect();
-            Type {
-                kind: TypeKind::Object(TObject { elems }),
-                provenance: None,
-            }
+            TypeKind::Object(TObject { elems })
         }
         TypeKind::Ref(alias) => match map.get(&alias.name) {
-            Some(tv) => Type {
-                kind: TypeKind::Var(tv.to_owned()),
-                provenance: None,
-            },
-            None => t.to_owned(),
+            Some(tv) => {
+                return Type {
+                    kind: TypeKind::Var(tv.to_owned()),
+                    // TODO: update provenance to indicate that the ref was replace with type variable
+                    // ideally we should also be able to say where the type variable came from, I guess
+                    // we can look at its provenance.
+                    provenance: None,
+                    mutable: t.mutable,
+                };
+            }
+            None => return t.to_owned(),
         },
-        TypeKind::Tuple(types) => Type {
-            kind: TypeKind::Tuple(types.iter().map(|t| replace_aliases_rec(t, map)).collect()),
-            provenance: None,
-        },
-        TypeKind::Array(t) => Type {
-            kind: TypeKind::Array(Box::from(replace_aliases_rec(t, map))),
-            provenance: None,
-        },
-        TypeKind::Rest(t) => Type {
-            kind: TypeKind::Rest(Box::from(replace_aliases_rec(t, map))),
-            provenance: None,
-        },
-        TypeKind::This => Type {
-            kind: TypeKind::This,
-            provenance: None,
-        },
-        TypeKind::KeyOf(t) => Type {
-            kind: TypeKind::KeyOf(Box::from(replace_aliases_rec(t, map))),
-            provenance: None,
-        },
-        TypeKind::IndexAccess(TIndexAccess { object, index }) => Type {
-            kind: TypeKind::IndexAccess(TIndexAccess {
+        TypeKind::Tuple(types) => {
+            TypeKind::Tuple(types.iter().map(|t| replace_aliases_rec(t, map)).collect())
+        }
+        TypeKind::Array(t) => TypeKind::Array(Box::from(replace_aliases_rec(t, map))),
+        TypeKind::Rest(t) => TypeKind::Rest(Box::from(replace_aliases_rec(t, map))),
+        TypeKind::This => TypeKind::This,
+        TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(replace_aliases_rec(t, map))),
+        TypeKind::IndexAccess(TIndexAccess { object, index }) => {
+            TypeKind::IndexAccess(TIndexAccess {
                 object: Box::from(replace_aliases_rec(object, map)),
                 index: Box::from(replace_aliases_rec(index, map)),
-            }),
-            provenance: None,
-        },
-        TypeKind::Mutable(t) => Type {
-            kind: TypeKind::Mutable(Box::from(replace_aliases_rec(t, map))),
-            provenance: None,
-        },
+            })
+        }
+    };
+
+    Type {
+        kind,
+        ..t.to_owned()
     }
 }
 
+// TODO: rename to merge_interface_types
 pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     let tp1 = get_type_params(t1);
     let tp2 = get_type_params(t2);
@@ -204,10 +182,10 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     let subs: Subst = tp2
         .into_iter()
         .map(|tv| tv.id.to_owned())
-        .zip(tp1.iter().map(|tv| Type {
-            kind: TypeKind::Var(tv.to_owned()),
-            provenance: None,
-        }))
+        .zip(
+            tp1.iter()
+                .map(|tv| Type::from(TypeKind::Var(tv.to_owned()))),
+        )
         .collect();
 
     // Unwrap qualified types since we return a qualified
@@ -236,10 +214,7 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
                 .chain(obj2.elems.iter().cloned())
                 .collect();
 
-            Type {
-                kind: TypeKind::Object(TObject { elems }),
-                provenance: None,
-            }
+            Type::from(TypeKind::Object(TObject { elems }))
         }
         (_, _) => todo!(),
     };
@@ -247,12 +222,9 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     if type_params.is_empty() {
         t
     } else {
-        Type {
-            kind: TypeKind::Generic(TGeneric {
-                t: Box::from(t),
-                type_params,
-            }),
-            provenance: None,
-        }
+        Type::from(TypeKind::Generic(TGeneric {
+            t: Box::from(t),
+            type_params,
+        }))
     }
 }
