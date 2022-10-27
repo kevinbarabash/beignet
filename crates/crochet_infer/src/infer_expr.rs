@@ -52,7 +52,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = compose_many_subs(&ss);
             let t = ret_type.apply(&s);
-            expr.inferred_type = Some(t.clone());
+
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
             Ok((s, t))
         }
@@ -75,19 +75,20 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 ctx,
             )?;
 
+            let s = compose_subs(&s2, &s1);
             // This leaves the function param names intact and returns a TLam
             // instead of a TApp.
             let t = match t.kind {
                 TypeKind::Lam(types::TLam { ret, .. }) => Ok(ret.as_ref().to_owned()),
                 _ => Err(String::from("Expr::Fix should always infer a lambda")),
             }?;
-            expr.inferred_type = Some(t.clone());
-            Ok((compose_subs(&s2, &s1), t))
+
+            Ok((s, t))
         }
         ExprKind::Ident(Ident { name, .. }) => {
             let s = Subst::default();
             let t = ctx.lookup_value_and_instantiate(name)?;
-            expr.inferred_type = Some(t.clone());
+
             Ok((s, t))
         }
         ExprKind::IfElse(IfElse {
@@ -117,7 +118,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
                         let s = compose_many_subs(&[s1, s2, s3, s4]);
                         let t = union_types(&t2, &t3);
-                        expr.inferred_type = Some(t.clone());
+
                         Ok((s, t))
                     }
                 }
@@ -158,7 +159,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
                     let s = compose_many_subs(&[s1, s2, s3, s4]);
                     let t = t2;
-                    expr.inferred_type = Some(t.clone());
+
                     Ok((s, t))
                 }
             },
@@ -217,8 +218,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         let s2 = unify(&call_type, &t, ctx)?;
 
                         let s = compose_subs(&s2, &s1);
-                        expr.inferred_type = Some(ret_type.clone());
-                        return Ok((s, ret_type));
+                        let t = ret_type;
+
+                        return Ok((s, t));
                     }
                     _ => return Err(String::from("Component must be a function")),
                 }
@@ -230,7 +232,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 name: String::from("JSXElement"),
                 type_args: None,
             }));
-            expr.inferred_type = Some(t.clone());
+
             Ok((s, t))
         }
         ExprKind::Lambda(Lambda {
@@ -314,7 +316,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = compose_many_subs(&ss);
             let t = t.apply(&s);
-            expr.inferred_type = Some(t.clone());
+
             Ok((s, t))
         }
         ExprKind::Let(Let {
@@ -346,7 +348,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
         ExprKind::Lit(lit) => {
             let s = Subst::new();
             let t = Type::from(lit.to_owned());
-            expr.inferred_type = Some(t.clone());
+
             Ok((s, t))
         }
         ExprKind::BinaryExpr(BinaryExpr {
@@ -360,6 +362,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let (s2, t2) = infer_expr(ctx, right)?;
             let s3 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
             let s4 = unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
+
+            let s = compose_many_subs(&[s1, s2, s3, s4]);
             let t = match op {
                 BinOp::Add => Type::from(TypeKind::Keyword(TKeyword::Number)),
                 BinOp::Sub => Type::from(TypeKind::Keyword(TKeyword::Number)),
@@ -372,17 +376,19 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 BinOp::Lt => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
                 BinOp::LtEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
             };
-            expr.inferred_type = Some(t.clone());
-            Ok((compose_many_subs(&[s1, s2, s3, s4]), t))
+
+            Ok((s, t))
         }
         ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
             let (s1, t1) = infer_expr(ctx, arg)?;
             let s2 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
+
+            let s = compose_many_subs(&[s1, s2]);
             let t = match op {
                 UnaryOp::Minus => Type::from(TypeKind::Keyword(TKeyword::Number)),
             };
-            expr.inferred_type = Some(t.clone());
-            Ok((compose_many_subs(&[s1, s2]), t))
+
+            Ok((s, t))
         }
         ExprKind::Obj(Obj { props, .. }) => {
             let mut ss: Vec<Subst> = vec![];
@@ -424,15 +430,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             }
 
             let s = compose_many_subs(&ss);
-            let mut t = if spread_types.is_empty() {
+            let t = if spread_types.is_empty() {
                 Type::from(TypeKind::Object(TObject { elems }))
             } else {
                 let mut all_types = spread_types;
                 all_types.push(Type::from(TypeKind::Object(TObject { elems })));
                 simplify_intersection(&all_types)
             };
-            expr.inferred_type = Some(t.clone());
-            t.provenance = Some(Box::from(Provenance::from(expr)));
+
             Ok((s, t))
         }
         ExprKind::Await(Await { expr, .. }) => {
@@ -450,8 +455,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let s2 = unify(&t1, &promise_type, ctx)?;
 
             let s = compose_subs(&s2, &s1);
-            expr.inferred_type = Some(wrapped_type.clone());
-            Ok((s, wrapped_type))
+            let t = wrapped_type;
+
+            Ok((s, t))
         }
         ExprKind::Tuple(Tuple { elems, .. }) => {
             let mut ss: Vec<Subst> = vec![];
@@ -481,12 +487,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             }
 
             let s = compose_many_subs(&ss);
-            let t = Type {
-                kind: TypeKind::Tuple(ts),
-                provenance: Some(Box::from(Provenance::Expr(Box::from(expr.to_owned())))),
-                mutable: false,
-            };
-            expr.inferred_type = Some(t.clone());
+            let t = Type::from(TypeKind::Tuple(ts));
+
             Ok((s, t))
         }
         ExprKind::Member(Member { obj, prop, .. }) => {
@@ -495,13 +497,13 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = compose_subs(&prop_s, &obj_s);
             let t = prop_t;
-            expr.inferred_type = Some(t.clone());
+
             Ok((s, t))
         }
         ExprKind::Empty => {
             let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
             let s = Subst::default();
-            expr.inferred_type = Some(t.clone());
+
             Ok((s, t))
         }
         ExprKind::TemplateLiteral(TemplateLiteral {
@@ -514,7 +516,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             // in JavaScript has a string representation.
             let (ss, _): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
             let s = compose_many_subs(&ss);
-            expr.inferred_type = Some(t.clone());
+
             Ok((s, t))
         }
         ExprKind::TaggedTemplateLiteral(_) => {
@@ -543,14 +545,17 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
             let s = compose_many_subs(&ss);
             let t = union_many_types(&ts);
-            expr.inferred_type = Some(t.clone());
+
             Ok((s, t))
         }
     };
 
-    let (s, t) = result?;
+    let (s, mut t) = result?;
 
     ctx.apply(&s);
+
+    expr.inferred_type = Some(t.clone());
+    t.provenance = Some(Box::from(Provenance::from(expr)));
 
     Ok((s, t))
 }

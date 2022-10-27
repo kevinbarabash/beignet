@@ -24,10 +24,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         return unify_mut(t1, t2, ctx);
     }
     if t2.mutable {
-        // Right now we only set `.provenance` when inferring tuple and object
-        // literals, but in the future we'll likely be setting it when inferring
-        // any expression including variables.
-
         // TODO: extract this into a `isLitExpr` helper that checks if the expression
         // is a literal, e.g. 1 + 2, but not something that calls a function or contains
         // variables.
@@ -37,17 +33,16 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         // - pure function calls with args that are const expressions
         match &t1.provenance {
             Some(provenance) => match provenance.as_ref() {
-                types::Provenance::Type(t) => (),
                 types::Provenance::Expr(e) => match e.kind {
                     ExprKind::Obj(_) => return Ok(Subst::new()),
                     ExprKind::Tuple(_) => return Ok(Subst::new()),
                     _ => (),
                 },
+                types::Provenance::Type(_) => (),
             },
             None => (),
         };
 
-        println!("t1 = {t1:#?}, t2 = {t2:#?}");
         // It's NOT okay to use an immutable in place of a mutable one
         return Err(String::from(
             "Cannot use immutable type where a mutable type was expected",
