@@ -342,6 +342,23 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 Ok((s, t))
             }
         },
+        ExprKind::Assign(Assign { left, right, op }) => {
+            // This is similar to infer let, but without the type annotation and
+            // with pat being an expression instead of a pattern.
+            let (rs, rt) = infer_expr(ctx, left)?;
+            let (ls, lt) = infer_expr(ctx, right)?;
+
+            if op != &AssignOp::Eq {
+                todo!("handle update assignment operators");
+            }
+
+            let s = unify(&rt, &lt, ctx)?;
+
+            let s = compose_many_subs(&[rs, ls, s]);
+            let t = rt; // This is JavaScript's behavior
+
+            Ok((s, t))
+        }
         ExprKind::LetExpr(_) => {
             panic!("Unexpected LetExpr.  All LetExprs should be handled by IfElse arm.")
         }

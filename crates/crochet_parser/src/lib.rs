@@ -534,6 +534,22 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
                 type_params,
             })
         }
+        "assignment_expression" => {
+            let left = node.child_by_field_name("left").unwrap();
+            let left = Box::from(parse_expression(&left, src)?);
+            let right = node.child_by_field_name("right").unwrap();
+            let right = Box::from(parse_expression(&right, src)?);
+
+            ExprKind::Assign(Assign {
+                left,
+                right,
+                op: AssignOp::Eq,
+            })
+        }
+        "augmented_assignment_expression" => {
+            // TODO: handle +=, -=, *=, /=, etc.
+            todo!()
+        }
         "binary_expression" => {
             let left = node.child_by_field_name("left").unwrap();
             let left = Box::from(parse_expression(&left, src)?);
@@ -1705,6 +1721,14 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let x = (a, b) => a + b;"));
         insta::assert_debug_snapshot!(parse("let foo = do {let x = 5; x};"));
         insta::assert_debug_snapshot!(parse("let rec f = () => f();")); // recursive
+    }
+
+    #[test]
+    fn assignments() {
+        insta::assert_debug_snapshot!(parse("x = 5;"));
+        insta::assert_debug_snapshot!(parse("a.b = c;"));
+        insta::assert_debug_snapshot!(parse("a[b] = c;"));
+        insta::assert_debug_snapshot!(parse(r#"a["b"] = c;"#));
     }
 
     #[test]

@@ -1,0 +1,67 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(r#\"a[\"b\"] = c;\"#)"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..11,
+                expr: Expr {
+                    span: 0..10,
+                    kind: Assign(
+                        Assign {
+                            left: Expr {
+                                span: 0..6,
+                                kind: Member(
+                                    Member {
+                                        obj: Expr {
+                                            span: 0..1,
+                                            kind: Ident(
+                                                Ident {
+                                                    span: 0..1,
+                                                    name: "a",
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
+                                        prop: Computed(
+                                            ComputedPropName {
+                                                span: 2..5,
+                                                expr: Expr {
+                                                    span: 2..5,
+                                                    kind: Lit(
+                                                        Str(
+                                                            Str {
+                                                                span: 2..5,
+                                                                value: "b",
+                                                            },
+                                                        ),
+                                                    ),
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                        ),
+                                    },
+                                ),
+                                inferred_type: None,
+                            },
+                            right: Expr {
+                                span: 9..10,
+                                kind: Ident(
+                                    Ident {
+                                        span: 9..10,
+                                        name: "c",
+                                    },
+                                ),
+                                inferred_type: None,
+                            },
+                            op: Eq,
+                        },
+                    ),
+                    inferred_type: None,
+                },
+            },
+        ],
+    },
+)

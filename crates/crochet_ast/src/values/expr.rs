@@ -106,6 +106,24 @@ pub struct Let {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Assign {
+    pub left: Box<Expr>,
+    pub right: Box<Expr>,
+    pub op: AssignOp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AssignOp {
+    Eq,
+    PlusEq,
+    MinusEq,
+    TimesEq,
+    DivEq,
+    ModEq,
+    // TODO: support bit and logic assign ops
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BinaryExpr {
     pub op: BinOp,
     pub left: Box<Expr>,
@@ -113,9 +131,28 @@ pub struct BinaryExpr {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    EqEq,
+    NotEq,
+    Gt,
+    GtEq,
+    Lt,
+    LtEq,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
     pub arg: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UnaryOp {
+    Minus,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -232,6 +269,7 @@ pub enum ExprKind {
     JSXElement(JSXElement),
     Lambda(Lambda),
     Let(Let),
+    Assign(Assign),
     LetExpr(LetExpr), // should only be used in `if let` expressions
     Lit(Lit),
     BinaryExpr(BinaryExpr),
@@ -251,23 +289,4 @@ pub struct Expr {
     pub span: Span,
     pub kind: ExprKind,
     pub inferred_type: Option<Type>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum BinOp {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    EqEq,
-    NotEq,
-    Gt,
-    GtEq,
-    Lt,
-    LtEq,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum UnaryOp {
-    Minus,
 }

@@ -1,0 +1,44 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"x = 5;\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..6,
+                expr: Expr {
+                    span: 0..5,
+                    kind: Assign(
+                        Assign {
+                            left: Expr {
+                                span: 0..1,
+                                kind: Ident(
+                                    Ident {
+                                        span: 0..1,
+                                        name: "x",
+                                    },
+                                ),
+                                inferred_type: None,
+                            },
+                            right: Expr {
+                                span: 4..5,
+                                kind: Lit(
+                                    Num(
+                                        Num {
+                                            span: 4..5,
+                                            value: "5",
+                                        },
+                                    ),
+                                ),
+                                inferred_type: None,
+                            },
+                            op: Eq,
+                        },
+                    ),
+                    inferred_type: None,
+                },
+            },
+        ],
+    },
+)
