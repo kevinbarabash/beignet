@@ -178,6 +178,7 @@ fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>,
                 let param = TFnParam {
                     pat: TPat::Ident(common::BindingIdent {
                         name: ident.id.sym.to_string(),
+                        mutable: false,
                     }),
                     t: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
                     optional: ident.optional,
@@ -197,7 +198,10 @@ fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>,
                 };
                 let param = TFnParam {
                     pat: TPat::Rest(RestPat {
-                        arg: Box::from(TPat::Ident(common::BindingIdent { name })),
+                        arg: Box::from(TPat::Ident(common::BindingIdent {
+                            name,
+                            mutable: false,
+                        })),
                     }),
                     t: infer_ts_type_ann(&type_ann.type_ann, ctx).ok()?,
                     optional: false,

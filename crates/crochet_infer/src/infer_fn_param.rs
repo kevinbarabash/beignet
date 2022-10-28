@@ -1,4 +1,3 @@
-use crochet_ast::common::*;
 use crochet_ast::types::{self as types, TFnParam, TKeyword, TPat, Type, TypeKind};
 use crochet_ast::values::*;
 
@@ -48,9 +47,7 @@ pub fn infer_fn_param(
 
 pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
     match &pattern.kind {
-        PatternKind::Ident(BindingIdent { name }) => TPat::Ident(BindingIdent {
-            name: name.to_owned(),
-        }),
+        PatternKind::Ident(binding_ident) => TPat::Ident(binding_ident.to_owned()),
         PatternKind::Rest(e_rest) => TPat::Rest(types::RestPat {
             arg: Box::from(pattern_to_tpat(e_rest.arg.as_ref())),
         }),

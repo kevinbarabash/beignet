@@ -154,10 +154,12 @@ pub fn _build_param(r#type: &Type, e_param: &values::EFnParam) -> TsFnParam {
 
 pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
     match &pattern.kind {
-        values::PatternKind::Ident(common::BindingIdent { name }) => Pat::Ident(BindingIdent {
-            id: build_ident(name),
-            type_ann,
-        }),
+        values::PatternKind::Ident(common::BindingIdent { name, mutable: _ }) => {
+            Pat::Ident(BindingIdent {
+                id: build_ident(name),
+                type_ann,
+            })
+        }
         values::PatternKind::Rest(values::RestPat { arg, .. }) => Pat::Rest(RestPat {
             span: DUMMY_SP,
             dot3_token: DUMMY_SP,

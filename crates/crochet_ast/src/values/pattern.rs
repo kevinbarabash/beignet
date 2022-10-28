@@ -33,7 +33,7 @@ pub struct Pattern {
 impl Pattern {
     pub fn get_name(&self, index: &usize) -> String {
         match &self.kind {
-            PatternKind::Ident(BindingIdent { name }) => name.to_owned(),
+            PatternKind::Ident(BindingIdent { name, .. }) => name.to_owned(),
             _ => format!("arg{index}"),
         }
     }
@@ -138,6 +138,7 @@ mod tests {
     fn ident_pattern(name: &str) -> Pattern {
         let kind = PatternKind::Ident(BindingIdent {
             name: name.to_owned(),
+            mutable: false,
         });
         Pattern {
             span: 0..0,

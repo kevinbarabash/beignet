@@ -54,7 +54,7 @@ fn infer_pattern_rec(
     assump: &mut Assump,
 ) -> Result<Type, String> {
     match &mut pat.kind {
-        PatternKind::Ident(BindingIdent { name }) => {
+        PatternKind::Ident(BindingIdent { name, mutable: _ }) => {
             let tv = ctx.fresh_var();
             if assump.insert(name.to_owned(), tv.clone()).is_some() {
                 return Err(String::from("Duplicate identifier in pattern"));

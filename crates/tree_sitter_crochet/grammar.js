@@ -127,6 +127,7 @@ module.exports = grammar(tsx, {
       seq(
         // TODO: get rid of "const"
         field("kind", choice("let", "const")),
+        optional(field("mut", "mut")),
         optional(field("rec", "rec")),
         field("decl", $.variable_declarator),
         $._semicolon

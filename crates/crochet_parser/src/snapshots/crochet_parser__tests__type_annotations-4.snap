@@ -12,6 +12,7 @@ Ok(
                     kind: Ident(
                         BindingIdent {
                             name: "p",
+                            mutable: false,
                         },
                     ),
                     inferred_type: None,

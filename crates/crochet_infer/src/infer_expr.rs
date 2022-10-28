@@ -62,6 +62,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let param = TFnParam {
                 pat: TPat::Ident(BindingIdent {
                     name: String::from("fix_param"),
+                    mutable: false,
                 }),
                 t: tv.clone(),
                 optional: false,

@@ -227,7 +227,10 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
         "identifier" => {
             let span = node.byte_range();
             let name = src.get(span).unwrap().to_owned();
-            PatternKind::Ident(BindingIdent { name })
+            PatternKind::Ident(BindingIdent {
+                name,
+                mutable: false,
+            })
         }
         "object_pattern" => {
             let mut cursor = node.walk();
@@ -931,7 +934,10 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                     PatternKind::Lit(LitPat { lit })
                 }
                 "_" => PatternKind::Wildcard(WildcardPat {}),
-                _ => PatternKind::Ident(BindingIdent { name }),
+                _ => PatternKind::Ident(BindingIdent {
+                    name,
+                    mutable: false,
+                }),
             }
         }
         "refutable_array_pattern" => {
@@ -1199,7 +1205,10 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
 
                         let pat: Pattern = Pattern {
                             span: name_node.byte_range(),
-                            kind: PatternKind::Ident(BindingIdent { name }),
+                            kind: PatternKind::Ident(BindingIdent {
+                                name,
+                                mutable: false,
+                            }),
                             inferred_type: None,
                         };
 
@@ -1720,7 +1729,10 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let x = 5;"));
         insta::assert_debug_snapshot!(parse("let x = (a, b) => a + b;"));
         insta::assert_debug_snapshot!(parse("let foo = do {let x = 5; x};"));
-        insta::assert_debug_snapshot!(parse("let rec f = () => f();")); // recursive
+        // recursive
+        insta::assert_debug_snapshot!(parse("let rec f = () => f();"));
+        // mutable
+        insta::assert_debug_snapshot!(parse(r#"let mut msg: string = "hello, world";"#));
     }
 
     #[test]

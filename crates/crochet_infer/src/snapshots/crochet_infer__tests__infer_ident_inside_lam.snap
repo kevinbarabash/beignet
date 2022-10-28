@@ -11,6 +11,7 @@ Program {
                 kind: Ident(
                     BindingIdent {
                         name: "add",
+                        mutable: false,
                     },
                 ),
                 inferred_type: None,
@@ -28,6 +29,7 @@ Program {
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "a",
+                                                mutable: false,
                                             },
                                         ),
                                         inferred_type: None,
@@ -42,6 +44,7 @@ Program {
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "b",
+                                                mutable: false,
                                             },
                                         ),
                                         inferred_type: None,
@@ -144,6 +147,7 @@ Program {
                                             pat: Ident(
                                                 BindingIdent {
                                                     name: "a",
+                                                    mutable: false,
                                                 },
                                             ),
                                             t: Type {
@@ -172,6 +176,7 @@ Program {
                                             pat: Ident(
                                                 BindingIdent {
                                                     name: "b",
+                                                    mutable: false,
                                                 },
                                             ),
                                             t: Type {

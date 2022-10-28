@@ -84,7 +84,10 @@ pub struct EFnParam {
 impl EFnParam {
     pub fn get_name(&self, index: &usize) -> String {
         match &self.pat.kind {
-            PatternKind::Ident(BindingIdent { name }) => name.to_owned(),
+            PatternKind::Ident(BindingIdent {
+                name,
+                mutable: false,
+            }) => name.to_owned(),
             _ => format!("arg{index}"),
         }
     }

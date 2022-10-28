@@ -147,7 +147,7 @@ fn build_pattern(
         values::PatternKind::Wildcard(_) => None,
 
         // assignable patterns
-        values::PatternKind::Ident(common::BindingIdent { name }) => {
+        values::PatternKind::Ident(common::BindingIdent { name, mutable: _ }) => {
             Some(Pat::Ident(BindingIdent {
                 id: build_ident(name),
                 type_ann: None,
