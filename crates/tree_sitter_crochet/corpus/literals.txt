@@ -1,6 +1,6 @@
-============================================
+================================================================================
 Numbers
-============================================
+================================================================================
 
 04000;
 400;
@@ -17,55 +17,81 @@ Numbers
 01;
 00000123;
 
----
+--------------------------------------------------------------------------------
 
 (program
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number))
-  (expression_statement (number)))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number))
+  (expression_statement
+    (number)))
 
-============================================
+================================================================================
 Unicode identifiers
-============================================
+================================================================================
 
 const últimaVez = 1;
 { 県: '大阪府', '': '' };
 
----
+--------------------------------------------------------------------------------
 
 (program
-  (lexical_declaration (variable_declarator (identifier) (number)))
+  (lexical_declaration
+    (variable_declarator
+      (binding_identifier
+        (identifier))
+      (number)))
   (expression_statement
     (object
-      (pair (property_identifier) (string (string_fragment)))
-      (pair (string) (string)))))
+      (pair
+        (property_identifier)
+        (string
+          (string_fragment)))
+      (pair
+        (string)
+        (string)))))
 
-==========================================
+================================================================================
 Strings containing comment-like content
-==========================================
+================================================================================
 
 "//ok\n//what";
 
----
+--------------------------------------------------------------------------------
 
 (program
   (expression_statement
-    (string (string_fragment) (escape_sequence) (string_fragment))))
+    (string
+      (string_fragment)
+      (escape_sequence)
+      (string_fragment))))
 
-==========================================
+================================================================================
 Quote escaping
-==========================================
+================================================================================
 
 "";
 '';
@@ -76,23 +102,39 @@ Quote escaping
 "it's a tiny tiny world";
 '"hello"';
 
----
+--------------------------------------------------------------------------------
 
 (program
-  (expression_statement (string))
-  (expression_statement (string))
-  (expression_statement (string (escape_sequence)))
   (expression_statement
-    (string (string_fragment) (escape_sequence) (string_fragment)))
-  (expression_statement (string (escape_sequence)))
+    (string))
   (expression_statement
-    (string (string_fragment) (escape_sequence) (string_fragment)))
-  (expression_statement (string (string_fragment)))
-  (expression_statement (string (string_fragment))))
+    (string))
+  (expression_statement
+    (string
+      (escape_sequence)))
+  (expression_statement
+    (string
+      (string_fragment)
+      (escape_sequence)
+      (string_fragment)))
+  (expression_statement
+    (string
+      (escape_sequence)))
+  (expression_statement
+    (string
+      (string_fragment)
+      (escape_sequence)
+      (string_fragment)))
+  (expression_statement
+    (string
+      (string_fragment)))
+  (expression_statement
+    (string
+      (string_fragment))))
 
-==========================================
+================================================================================
 Line continuations
-==========================================
+================================================================================
 
 "hello\
 world";
@@ -100,17 +142,23 @@ world";
 'hello\
 world';
 
----
+--------------------------------------------------------------------------------
 
 (program
   (expression_statement
-    (string (string_fragment) (escape_sequence) (string_fragment)))
+    (string
+      (string_fragment)
+      (escape_sequence)
+      (string_fragment)))
   (expression_statement
-    (string (string_fragment) (escape_sequence) (string_fragment))))
+    (string
+      (string_fragment)
+      (escape_sequence)
+      (string_fragment))))
 
-============================================================
+================================================================================
 Non-standard unescaped newlines legal in TSX attributes
-============================================================
+================================================================================
 
 "hello
 world";
@@ -118,15 +166,19 @@ world";
 'hello
 world';
 
----
+--------------------------------------------------------------------------------
 
 (program
-  (expression_statement (string (string_fragment)))
-  (expression_statement (string (string_fragment))))
+  (expression_statement
+    (string
+      (string_fragment)))
+  (expression_statement
+    (string
+      (string_fragment))))
 
-=========================================================
+================================================================================
 JSX strings with unescaped newlines for TSX attributes
-=========================================================
+================================================================================
 
 <Element Attribute="hello
                     world"></Element>;
@@ -134,20 +186,26 @@ JSX strings with unescaped newlines for TSX attributes
 <Element Attribute='hello
                     world'></Element>;
 
----
+--------------------------------------------------------------------------------
 
 (program
   (expression_statement
     (jsx_element
       (jsx_opening_element
         (identifier)
-        (jsx_attribute (property_identifier) (string (string_fragment))))
+        (jsx_attribute
+          (property_identifier)
+          (string
+            (string_fragment))))
       (jsx_closing_element
         (identifier))))
- (expression_statement
-   (jsx_element
-     (jsx_opening_element
-       (identifier)
-       (jsx_attribute (property_identifier) (string (string_fragment))))
-     (jsx_closing_element
-       (identifier)))))
+  (expression_statement
+    (jsx_element
+      (jsx_opening_element
+        (identifier)
+        (jsx_attribute
+          (property_identifier)
+          (string
+            (string_fragment))))
+      (jsx_closing_element
+        (identifier)))))

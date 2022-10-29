@@ -107,7 +107,7 @@ Object destructuring patterns w/ default values
 ================================================================================
 
 let {a: b = c} = object;
-for await (var {a: {b} = object} of asyncIter) {}
+for await (let {a: {b} = object} of asyncIter) {}
 function a({b = true}, [c, d = false]) {}
 function b({c} = {}) {}
 
