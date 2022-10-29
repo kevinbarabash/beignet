@@ -55,8 +55,8 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
         body.push(decl);
     }
 
-    for (name, t) in current_scope.values.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
-        let type_params = build_type_params(t);
+    for (name, b) in current_scope.values.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+        let type_params = build_type_params(&b.t);
         let id = Ident {
             span: DUMMY_SP,
             sym: JsWord::from(name.to_owned()),
@@ -66,7 +66,7 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
             id,
             type_ann: Some(Box::from(TsTypeAnn {
                 span: DUMMY_SP,
-                type_ann: Box::from(build_type(t, type_params)),
+                type_ann: Box::from(build_type(&b.t, type_params)),
             })),
         });
 
@@ -154,10 +154,12 @@ pub fn _build_param(r#type: &Type, e_param: &values::EFnParam) -> TsFnParam {
 
 pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
     match &pattern.kind {
-        values::PatternKind::Ident(common::BindingIdent { name }) => Pat::Ident(BindingIdent {
-            id: build_ident(name),
-            type_ann,
-        }),
+        values::PatternKind::Ident(common::BindingIdent { name, mutable: _ }) => {
+            Pat::Ident(BindingIdent {
+                id: build_ident(name),
+                type_ann,
+            })
+        }
         values::PatternKind::Rest(values::RestPat { arg, .. }) => Pat::Rest(RestPat {
             span: DUMMY_SP,
             dot3_token: DUMMY_SP,

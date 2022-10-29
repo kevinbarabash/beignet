@@ -3,9 +3,12 @@ use std::collections::{BTreeSet, HashMap};
 
 use crochet_ast::types::*;
 
+use crate::context::Binding;
+
 pub type Subst = HashMap<i32, Type>;
 
 pub trait Substitutable {
+    // TODO: make apply mutate self
     fn apply(&self, subs: &Subst) -> Self;
     // The vector return must not contain any `TVar`s with the same `id`.
     fn ftv(&self) -> Vec<TVar>;
@@ -269,6 +272,18 @@ where
         self.as_ref()
             .map(|val| val.to_owned().ftv())
             .unwrap_or_default()
+    }
+}
+
+impl Substitutable for Binding {
+    fn apply(&self, sub: &Subst) -> Binding {
+        Binding {
+            t: self.t.apply(sub),
+            ..self.to_owned()
+        }
+    }
+    fn ftv(&self) -> Vec<TVar> {
+        self.t.ftv()
     }
 }
 

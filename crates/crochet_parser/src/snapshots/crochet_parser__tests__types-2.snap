@@ -12,6 +12,7 @@ Ok(
                     kind: Ident(
                         BindingIdent {
                             name: "get_bar",
+                            mutable: false,
                         },
                     ),
                     inferred_type: None,
@@ -28,6 +29,7 @@ Ok(
                                             kind: Ident(
                                                 BindingIdent {
                                                     name: "foo",
+                                                    mutable: false,
                                                 },
                                             ),
                                             inferred_type: None,

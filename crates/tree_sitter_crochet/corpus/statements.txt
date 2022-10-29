@@ -16,15 +16,18 @@ let d = 0;
       (number)))
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (number)))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (number)))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (number))))
 
 ================================================================================
@@ -38,12 +41,29 @@ let rec f = () => f();
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (arrow_function
         (formal_parameters)
         (call_expression
           (identifier)
           (arguments))))))
+
+================================================================================
+let-mut
+================================================================================
+
+let mut msg = "hello, world";
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      (binding_identifier
+        (identifier))
+      (string
+        (string_fragment)))))
 
 ================================================================================
 'undefined' is a variable
@@ -63,15 +83,18 @@ let undefined = 42;
       (number)))
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (number)))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (number)))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (number))))
 
 ================================================================================
@@ -236,11 +259,13 @@ export { import1 as name1, import2 as name2, nameN } from 'foo';
   (export_statement
     declaration: (lexical_declaration
       decl: (variable_declarator
-        name: (identifier))))
+        name: (binding_identifier
+          name: (identifier)))))
   (export_statement
     declaration: (lexical_declaration
       decl: (variable_declarator
-        name: (identifier)
+        name: (binding_identifier
+          name: (identifier))
         value: (identifier))))
   (export_statement
     value: (identifier))
@@ -397,7 +422,8 @@ let result = if (a) {
                 (null))))))))
   (lexical_declaration
     decl: (variable_declarator
-      name: (identifier)
+      name: (binding_identifier
+        name: (identifier))
       value: (if_expression
         condition: (identifier)
         consequence: (statement_block
@@ -438,7 +464,8 @@ for (var i = 0
   (for_statement
     initializer: (variable_declaration
       (variable_declarator
-        name: (identifier)))
+        name: (binding_identifier
+          name: (identifier))))
     condition: (expression_statement
       (identifier))
     increment: (identifier)
@@ -472,7 +499,8 @@ for (var i = 0
   (for_statement
     initializer: (variable_declaration
       (variable_declarator
-        name: (identifier)
+        name: (binding_identifier
+          name: (identifier))
         value: (number)))
     condition: (expression_statement
       (binary_expression
@@ -490,7 +518,7 @@ for (item in items) {
   item();
 }
 
-for (var item in items || {}) {
+for (let item in items || {}) {
   item();
 }
 
@@ -505,8 +533,6 @@ for (x.y in a) {}
 for ([a, b] in c) {}
 
 for ((a) in b) {}
-
-for (var foo = bar in baz) {}
 
 --------------------------------------------------------------------------------
 
@@ -559,11 +585,6 @@ for (var foo = bar in baz) {}
   (for_in_statement
     (parenthesized_expression
       (identifier))
-    (identifier)
-    (statement_block))
-  (for_in_statement
-    (identifier)
-    (identifier)
     (identifier)
     (statement_block)))
 
@@ -742,16 +763,20 @@ var x, y = {}, z;
 (program
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (number)))
   (variable_declaration
     (variable_declarator
-      (identifier))
+      (binding_identifier
+        (identifier)))
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (object))
     (variable_declarator
-      (identifier))))
+      (binding_identifier
+        (identifier)))))
 
 ================================================================================
 Comments
@@ -809,7 +834,8 @@ var thing = {
   (comment)
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (object
         (comment)
         (comment)
@@ -856,22 +882,26 @@ const d = 1;
   (comment)
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (number)))
   (comment)
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (number)))
   (comment)
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (number)))
   (comment)
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (number))))
 
 ================================================================================

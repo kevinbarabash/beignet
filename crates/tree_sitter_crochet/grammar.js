@@ -132,6 +132,81 @@ module.exports = grammar(tsx, {
         $._semicolon
       ),
 
+    binding_identifier: ($) =>
+      seq(optional(field("mut", "mut")), field("name", $.identifier)),
+
+    // adapted from define-grammar.js
+    // TODO: Create a function that can replace all nodes of a certain type
+    // in a rule declaration.
+    variable_declarator: ($) =>
+      choice(
+        seq(
+          // field("name", choice($.identifier, $._destructuring_pattern)),
+          field("name", choice($.binding_identifier, $._destructuring_pattern)),
+          field("type", optional($.type_annotation)),
+          optional($._initializer)
+        ),
+        prec(
+          "declaration",
+          seq(
+            // field("name", $.identifier),
+            field("name", $.binding_identifier),
+            "!",
+            field("type", $.type_annotation)
+          )
+        )
+      ),
+
+    // TODO: Create a function that can remove all nodes of a certain type
+    // in a rule declaration.
+    for_statement: ($) =>
+      seq(
+        "for",
+        "(",
+        field(
+          "initializer",
+          choice(
+            $.lexical_declaration,
+            // $.variable_declaration,
+            $.expression_statement,
+            $.empty_statement
+          )
+        ),
+        field("condition", choice($.expression_statement, $.empty_statement)),
+        field("increment", optional($._expressions)),
+        ")",
+        field("body", $.statement)
+      ),
+
+    // TODO: Create a function that can remove all nodes of a certain type
+    // in a rule declaration.
+    declaration: ($, previous) => {
+      const choices = previous.members.filter(
+        (choice) => choice.name != "variable_declaration"
+      );
+      return choice(...choices);
+    },
+
+    _for_header: ($) =>
+      seq(
+        "(",
+        choice(
+          field("left", choice($._lhs_expression, $.parenthesized_expression)),
+          // seq(
+          //   field("kind", "var"),
+          //   field("left", choice($.identifier, $._destructuring_pattern)),
+          //   optional($._initializer)
+          // ),
+          seq(
+            field("kind", choice("let", "const")),
+            field("left", choice($.identifier, $._destructuring_pattern))
+          )
+        ),
+        field("operator", choice("in", "of")),
+        field("right", $._expressions),
+        ")"
+      ),
+
     statement_block: ($, prev) =>
       seq(
         "{",

@@ -105,7 +105,8 @@ const lines = new Array<DiffLine>();
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (new_expression
         (identifier)
         (type_arguments
@@ -233,7 +234,8 @@ const x = async => async;
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (arrow_function
         (identifier)
         (identifier)))))

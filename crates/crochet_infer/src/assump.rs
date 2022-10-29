@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use crochet_ast::types::Type;
+use crate::context::Binding;
 
-// NOTE: This is the same as the Env type in context.rs
-pub type Assump = HashMap<String, Type>;
+pub type Assump = HashMap<String, Binding>;

@@ -206,13 +206,16 @@ var a = b
 (program
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (identifier))
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (identifier))
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (identifier))))
 
 ================================================================================
@@ -292,7 +295,8 @@ let foo = /* comment */bar;
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (comment)
       (identifier))))
 
@@ -1559,7 +1563,8 @@ let x = delete thing.prop;
           (string_fragment)))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (unary_expression
         (member_expression
           (identifier)
@@ -2004,7 +2009,8 @@ i = <Foo:Bar bar={}>{...children}</Foo:Bar>;
 (program
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (jsx_element
         (jsx_opening_element
           (identifier))
@@ -2144,7 +2150,8 @@ do { x } while (do { x > y });
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (do_expression
         (statement_block
           (expression_statement
@@ -2161,7 +2168,8 @@ do { x } while (do { x > y });
               (identifier)))))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (do_expression
         (statement_block
           (expression
@@ -2181,7 +2189,8 @@ do { x } while (do { x > y });
                     (identifier))))))))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (do_expression
         (statement_block
           (expression
@@ -2190,7 +2199,8 @@ do { x } while (do { x > y });
               (shorthand_property_identifier)))))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (binary_expression
         (do_expression
           (statement_block
@@ -2226,7 +2236,8 @@ let result = try { throw [a, b] } catch ([c, d]) { };
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (try_statement
         (statement_block
           (expression
@@ -2238,7 +2249,8 @@ let result = try { throw [a, b] } catch ([c, d]) { };
               (identifier)))))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (try_statement
         (statement_block
           (expression
@@ -2249,7 +2261,8 @@ let result = try { throw [a, b] } catch ([c, d]) { };
               (identifier)))))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (try_statement
         (statement_block
           (expression
@@ -2264,7 +2277,8 @@ let result = try { throw [a, b] } catch ([c, d]) { };
               (identifier)))))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (try_statement
         (statement_block
           (expression
@@ -2289,7 +2303,8 @@ const foo = (msg) => throw new Error(msg);
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (arrow_function
         (formal_parameters
           (required_parameter

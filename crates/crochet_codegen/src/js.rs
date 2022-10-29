@@ -147,7 +147,7 @@ fn build_pattern(
         values::PatternKind::Wildcard(_) => None,
 
         // assignable patterns
-        values::PatternKind::Ident(common::BindingIdent { name }) => {
+        values::PatternKind::Ident(common::BindingIdent { name, mutable: _ }) => {
             Some(Pat::Ident(BindingIdent {
                 id: build_ident(name),
                 type_ann: None,
@@ -403,6 +403,15 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
 
             // $temp_n
             Expr::Ident(temp_id)
+        }
+        values::ExprKind::Assign(values::Assign { left, right, op: _ }) => {
+            // TODO: handle other operators
+            Expr::Assign(AssignExpr {
+                span: DUMMY_SP,
+                left: PatOrExpr::Expr(Box::from(build_expr(left, stmts, ctx))),
+                right: Box::from(build_expr(right, stmts, ctx)),
+                op: AssignOp::Assign,
+            })
         }
         values::ExprKind::Lit(lit) => Expr::from(lit),
         values::ExprKind::BinaryExpr(values::BinaryExpr {

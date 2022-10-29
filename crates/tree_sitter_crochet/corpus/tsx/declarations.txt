@@ -73,13 +73,15 @@ declare module Foo {
   (ambient_declaration
     (variable_declaration
       (variable_declarator
-        name: (identifier)
+        name: (binding_identifier
+          name: (identifier))
         type: (type_annotation
           (predefined_type)))))
   (ambient_declaration
     (lexical_declaration
       decl: (variable_declarator
-        name: (identifier)
+        name: (binding_identifier
+          name: (identifier))
         value: (string
           (string_fragment)))))
   (ambient_declaration
@@ -107,7 +109,8 @@ declare module Foo {
             (predefined_type)))
         (lexical_declaration
           decl: (variable_declarator
-            name: (identifier)
+            name: (binding_identifier
+              name: (identifier))
             type: (type_annotation
               (predefined_type))))
         (interface_declaration
@@ -161,7 +164,8 @@ declare module Foo {
         (export_statement
           declaration: (variable_declaration
             (variable_declarator
-              name: (identifier)))))))
+              name: (binding_identifier
+                name: (identifier))))))))
   (empty_statement)
   (ambient_declaration
     (module
@@ -538,7 +542,8 @@ declare module "example" { }
     (statement_block
       (variable_declaration
         (variable_declarator
-          (identifier)
+          (binding_identifier
+            (identifier))
           (type_annotation
             (object_type))))
       (export_statement
@@ -679,7 +684,8 @@ declare namespace moment {
         (export_statement
           (variable_declaration
             (variable_declarator
-              (identifier)
+              (binding_identifier
+                (identifier))
               (type_annotation
                 (predefined_type)))))
         (export_statement
@@ -743,7 +749,8 @@ namespace Bar {
     (statement_block
       (variable_declaration
         (variable_declarator
-          (identifier))))))
+          (binding_identifier
+            (identifier)))))))
 
 ================================================================================
 Method declarations with keywords as names
@@ -1154,12 +1161,14 @@ let a!: b;
 (program
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (type_identifier))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (type_identifier)))))
 

@@ -13,12 +13,18 @@ pub struct State {
     pub count: Cell<i32>,
 }
 
+#[derive(Clone, Debug)]
+pub struct Binding {
+    pub mutable: bool,
+    pub t: Type,
+}
+
 // TODO: each scope has separate namespaces for values and types.  Namespace module
 // imports/decls can include types and values.
 #[derive(Clone, Debug, Default)]
 pub struct Scope {
     pub namespaces: HashMap<String, Box<Scope>>,
-    pub values: Env,
+    pub values: HashMap<String, Binding>,
     pub types: Env,
     pub is_async: bool,
 }
@@ -59,9 +65,15 @@ impl Context {
 
     pub fn apply(&mut self, s: &Subst) {
         let current_scope = self.scopes.last_mut().unwrap();
-        for (k, v) in current_scope.values.clone() {
+        for (k, b) in current_scope.values.clone() {
             // Should we be apply substitions to types as well?
-            current_scope.values.insert(k.to_owned(), v.apply(s));
+            current_scope.values.insert(
+                k.to_owned(),
+                Binding {
+                    mutable: b.mutable,
+                    t: b.t.apply(s),
+                },
+            );
         }
     }
 
@@ -73,7 +85,14 @@ impl Context {
 
     pub fn insert_value(&mut self, name: String, t: Type) {
         let current_scope = self.scopes.last_mut().unwrap();
-        current_scope.values.insert(name, t);
+        current_scope
+            .values
+            .insert(name, Binding { mutable: false, t });
+    }
+
+    pub fn insert_binding(&mut self, name: String, b: Binding) {
+        let current_scope = self.scopes.last_mut().unwrap();
+        current_scope.values.insert(name, b);
     }
 
     pub fn insert_type(&mut self, name: String, t: Type) {
@@ -88,8 +107,8 @@ impl Context {
 
     pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
-            if let Some(t) = scope.values.get(name) {
-                return Ok(self.instantiate(t));
+            if let Some(b) = scope.values.get(name) {
+                return Ok(self.instantiate(&b.t));
             }
         }
         Err(format!("Can't find value: {name}"))
@@ -97,8 +116,17 @@ impl Context {
 
     pub fn lookup_value(&self, name: &str) -> Result<Type, String> {
         for scope in self.scopes.iter().rev() {
-            if let Some(t) = scope.values.get(name) {
-                return Ok(t.to_owned());
+            if let Some(b) = scope.values.get(name) {
+                return Ok(b.t.to_owned());
+            }
+        }
+        Err(format!("Can't find value: {name}"))
+    }
+
+    pub fn lookup_binding(&self, name: &str) -> Result<Binding, String> {
+        for scope in self.scopes.iter().rev() {
+            if let Some(b) = scope.values.get(name) {
+                return Ok(b.to_owned());
             }
         }
         Err(format!("Can't find value: {name}"))

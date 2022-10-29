@@ -10,14 +10,16 @@ var y: number;
 (program
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (predefined_type))
       (string
         (string_fragment))))
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (predefined_type)))))
 
@@ -33,13 +35,15 @@ var x: ({a: any});
 (program
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (parenthesized_type
           (predefined_type)))))
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (parenthesized_type
           (object_type
@@ -63,7 +67,8 @@ type T = { -readonly [K in keyof T]: any };
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (object_type
           (property_signature
@@ -76,7 +81,8 @@ type T = { -readonly [K in keyof T]: any };
               (predefined_type)))))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (object_type
           (index_signature
@@ -129,7 +135,8 @@ let MyFunction: {
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (object_type
           (call_signature
@@ -258,7 +265,8 @@ let x: X[];
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (array_type
           (type_identifier))))))
@@ -276,7 +284,8 @@ const foo: (this: Readable, size?: number) => any;
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (function_type
           (formal_parameters
@@ -287,7 +296,8 @@ const foo: (this: Readable, size?: number) => any;
           (predefined_type)))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (function_type
           (formal_parameters
@@ -312,7 +322,8 @@ let foo: ({a}: Foo) => number;
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (function_type
           (formal_parameters
@@ -334,7 +345,8 @@ let x: new < T1, T2 > ( p1, p2 ) => R;
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (constructor_type
           (type_parameters
@@ -361,13 +373,15 @@ const miscArray: ?T[];
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (flow_maybe_type
           (type_identifier)))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (flow_maybe_type
           (array_type
@@ -778,7 +792,8 @@ let x: Array<*>;
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (generic_type
           (type_identifier)
@@ -871,13 +886,15 @@ let x: false;
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (literal_type
           (number)))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (union_type
           (union_type
@@ -891,14 +908,16 @@ let x: false;
               (number)))))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (literal_type
           (string
             (string_fragment))))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (literal_type
           (false))))))
@@ -950,7 +969,8 @@ var y: Map<number, Promise<Map<bool, Map<Foo, Bar>>>>;
                   (type_identifier)))))))))
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (generic_type
           (type_identifier)
@@ -980,7 +1000,8 @@ let score: (string: string, query: string) => number;
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (type_annotation
         (function_type
           (formal_parameters
@@ -1005,7 +1026,8 @@ const repository = foo++!;
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (non_null_expression
         (update_expression
           (identifier))))))

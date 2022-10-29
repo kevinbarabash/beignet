@@ -227,7 +227,17 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
         "identifier" => {
             let span = node.byte_range();
             let name = src.get(span).unwrap().to_owned();
-            PatternKind::Ident(BindingIdent { name })
+            PatternKind::Ident(BindingIdent {
+                name,
+                mutable: false,
+            })
+        }
+        "binding_identifier" => {
+            // let span = node.byte_range();
+            let name = node.child_by_field_name("name").unwrap();
+            let name = src.get(name.byte_range()).unwrap().to_owned();
+            let mutable = node.child_by_field_name("mut").is_some();
+            PatternKind::Ident(BindingIdent { name, mutable })
         }
         "object_pattern" => {
             let mut cursor = node.walk();
@@ -533,6 +543,22 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
                 return_type,
                 type_params,
             })
+        }
+        "assignment_expression" => {
+            let left = node.child_by_field_name("left").unwrap();
+            let left = Box::from(parse_expression(&left, src)?);
+            let right = node.child_by_field_name("right").unwrap();
+            let right = Box::from(parse_expression(&right, src)?);
+
+            ExprKind::Assign(Assign {
+                left,
+                right,
+                op: AssignOp::Eq,
+            })
+        }
+        "augmented_assignment_expression" => {
+            // TODO: handle +=, -=, *=, /=, etc.
+            todo!()
         }
         "binary_expression" => {
             let left = node.child_by_field_name("left").unwrap();
@@ -915,7 +941,10 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                     PatternKind::Lit(LitPat { lit })
                 }
                 "_" => PatternKind::Wildcard(WildcardPat {}),
-                _ => PatternKind::Ident(BindingIdent { name }),
+                _ => PatternKind::Ident(BindingIdent {
+                    name,
+                    mutable: false,
+                }),
             }
         }
         "refutable_array_pattern" => {
@@ -1183,7 +1212,10 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
 
                         let pat: Pattern = Pattern {
                             span: name_node.byte_range(),
-                            kind: PatternKind::Ident(BindingIdent { name }),
+                            kind: PatternKind::Ident(BindingIdent {
+                                name,
+                                mutable: false,
+                            }),
                             inferred_type: None,
                         };
 
@@ -1704,7 +1736,26 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let x = 5;"));
         insta::assert_debug_snapshot!(parse("let x = (a, b) => a + b;"));
         insta::assert_debug_snapshot!(parse("let foo = do {let x = 5; x};"));
-        insta::assert_debug_snapshot!(parse("let rec f = () => f();")); // recursive
+        // recursive
+        insta::assert_debug_snapshot!(parse("let rec f = () => f();"));
+        // mutable
+        insta::assert_debug_snapshot!(parse(r#"let mut msg: string = "hello, world";"#));
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            let foo = () => {
+                let mut msg: string = "hello, world";
+                msg
+            };
+        "#
+        ));
+    }
+
+    #[test]
+    fn assignments() {
+        insta::assert_debug_snapshot!(parse("x = 5;"));
+        insta::assert_debug_snapshot!(parse("a.b = c;"));
+        insta::assert_debug_snapshot!(parse("a[b] = c;"));
+        insta::assert_debug_snapshot!(parse(r#"a["b"] = c;"#));
     }
 
     #[test]

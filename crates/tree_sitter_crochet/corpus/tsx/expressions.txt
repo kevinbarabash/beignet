@@ -103,7 +103,8 @@ module;
 (program
   (variable_declaration
     (variable_declarator
-      (identifier)))
+      (binding_identifier
+        (identifier))))
   (expression_statement
     (identifier)))
 
@@ -120,13 +121,16 @@ var a = b
 (program
   (variable_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (identifier))
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (identifier))
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (identifier))))
 
 ================================================================================

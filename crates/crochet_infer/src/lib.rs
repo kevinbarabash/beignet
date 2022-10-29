@@ -2670,4 +2670,125 @@ mod tests {
 
         infer_prog(src);
     }
+
+    #[test]
+    fn test_updating_mutable_variables() {
+        let src = r#"
+        let mut x: number = 5;
+        x = 10;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("x", &ctx), "number");
+    }
+
+    #[test]
+    fn test_updating_mutable_variables_inside_functions() {
+        let src = r#"
+        let foo = () => {
+            let mut x: number = 5;
+            x = 10;
+            x
+        };
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("foo", &ctx), "() => number");
+    }
+
+    #[test]
+    #[should_panic = "can't assign to non-mutable binder 'x'"]
+    fn test_updating_immutable_variables_fails() {
+        let src = r#"
+        let x: number = 5;
+        x = 10;
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "can't assign to non-mutable binder 'x'"]
+    fn test_updating_immutable_variables_inside_functions() {
+        let src = r#"
+        let foo = () => {
+            let x: number = 5;
+            x = 10;
+            x
+        };
+        "#;
+
+        infer_prog(src);
+    }
+
+    // TODO: make this test fail
+    #[test]
+    fn test_updating_properties_fails() {
+        let src = r#"
+        let foo: {bar: number} = {bar: 5};
+        foo.bar = 10;
+        "#;
+
+        infer_prog(src);
+    }
+
+    // TODO: make this test fail
+    #[test]
+    fn test_updating_properties_with_string_literal_indexer_fails() {
+        let src = r#"
+        let foo: {bar: number} = {bar: 5};
+        foo["bar"] = 10;
+        "#;
+
+        infer_prog(src);
+    }
+
+    // TODO: make this test fail
+    #[test]
+    fn test_updating_properties_with_computed_property_fails() {
+        let src = r#"
+        let foo: {bar: number} = {bar: 5};
+        let key = "bar";
+        foo[key] = 10;
+        "#;
+
+        infer_prog(src);
+    }
+
+    // TODO: update the parser to support `mut` in the test code
+    #[test]
+    #[ignore]
+    fn test_updating_mutable_destructured_renamed_obj_member() {
+        let src = r#"
+            let {bar: mut foo}: {bar: number} = {bar: 5};
+            foo = 10;
+            "#;
+
+        infer_prog(src);
+    }
+
+    // TODO: update the parser to support `mut` in the test code
+    #[test]
+    #[ignore]
+    fn test_updating_mutable_destructured_shorthand_obj_member() {
+        let src = r#"
+            let {mut bar}: {bar: number} = {bar: 5};
+            bar = 10;
+            "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "can't assign to non-mutable binder 'bar'"]
+    fn test_updating_immutable_destructured_obj_member() {
+        let src = r#"
+            let {bar}: {bar: number} = {bar: 5};
+            bar = 10;
+            "#;
+
+        infer_prog(src);
+    }
 }

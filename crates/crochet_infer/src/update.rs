@@ -130,6 +130,10 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
             update_expr(init, s);
             update_expr(body, s);
         }
+        ExprKind::Assign(Assign { left, right, op: _ }) => {
+            update_expr(left, s);
+            update_expr(right, s)
+        }
         ExprKind::LetExpr(LetExpr { pat, expr }) => {
             update_pattern(pat, s);
             update_expr(expr, s);

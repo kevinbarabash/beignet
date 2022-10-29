@@ -1,9 +1,10 @@
-use crochet_ast::common::*;
+use std::collections::HashMap;
+
 use crochet_ast::types::{self as types, TFnParam, TKeyword, TPat, Type, TypeKind};
 use crochet_ast::values::*;
 
 use crate::assump::Assump;
-use crate::context::Context;
+use crate::context::{Binding, Context};
 use crate::infer_pattern::infer_pattern;
 use crate::substitutable::Subst;
 
@@ -12,7 +13,7 @@ use crate::substitutable::Subst;
 pub fn infer_fn_param(
     param: &mut EFnParam,
     ctx: &mut Context,
-    type_param_map: &Assump,
+    type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Assump, TFnParam), String> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
     // let mut new_vars: Assump = Assump::default();
@@ -28,12 +29,15 @@ pub fn infer_fn_param(
     };
 
     if param.optional {
-        if let Some((name, t)) = pa.iter().find(|(_, value)| pt == **value) {
-            let t = Type::from(TypeKind::Union(vec![
-                t.to_owned(),
-                Type::from(TypeKind::Keyword(TKeyword::Undefined)),
-            ]));
-            pa.insert(name.to_owned(), t);
+        if let Some((name, binding)) = pa.iter().find(|(_, value)| pt == value.t) {
+            let binding = Binding {
+                mutable: false,
+                t: Type::from(TypeKind::Union(vec![
+                    binding.t.to_owned(),
+                    Type::from(TypeKind::Keyword(TKeyword::Undefined)),
+                ])),
+            };
+            pa.insert(name.to_owned(), binding);
         };
     }
 
@@ -48,9 +52,7 @@ pub fn infer_fn_param(
 
 pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
     match &pattern.kind {
-        PatternKind::Ident(BindingIdent { name }) => TPat::Ident(BindingIdent {
-            name: name.to_owned(),
-        }),
+        PatternKind::Ident(binding_ident) => TPat::Ident(binding_ident.to_owned()),
         PatternKind::Rest(e_rest) => TPat::Rest(types::RestPat {
             arg: Box::from(pattern_to_tpat(e_rest.arg.as_ref())),
         }),

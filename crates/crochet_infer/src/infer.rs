@@ -50,7 +50,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
                 match declare {
                     true => {
                         match &mut pattern.kind {
-                            PatternKind::Ident(BindingIdent { name }) => {
+                            PatternKind::Ident(BindingIdent { name, mutable: _ }) => {
                                 match type_ann {
                                     Some(type_ann) => {
                                         let (s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
@@ -86,9 +86,9 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
-                        for (name, t) in pa {
-                            let t = close_over(&s, &t, ctx);
-                            ctx.insert_value(name, t);
+                        for (name, mut binding) in pa {
+                            binding.t = close_over(&s, &binding.t, ctx);
+                            ctx.insert_binding(name, binding);
                         }
 
                         update_expr(init, &s);

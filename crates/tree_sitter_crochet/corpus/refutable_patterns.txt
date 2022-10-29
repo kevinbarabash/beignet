@@ -17,7 +17,8 @@ let bar = match (foo) {
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (match_expression
         (identifier)
         (match_arms
@@ -89,7 +90,8 @@ let bar = match (foo) {
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (match_expression
         (identifier)
         (match_arms
@@ -128,7 +130,8 @@ let bar = match (foo) {
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (match_expression
         (identifier)
         (match_arms
@@ -172,7 +175,8 @@ let bar = match (foo) {
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (match_expression
         (identifier)
         (match_arms
@@ -217,7 +221,8 @@ let bar = if (let {x, y: b, ...rest} = foo) {
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (if_expression
         (let_expression
           (refutable_pattern
@@ -273,7 +278,8 @@ let bar = if (let {x: x is string} = foo) {
 (program
   (lexical_declaration
     (variable_declarator
-      (identifier)
+      (binding_identifier
+        (identifier))
       (if_expression
         (let_expression
           (refutable_pattern

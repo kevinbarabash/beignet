@@ -12,6 +12,7 @@ Ok(
                     kind: Ident(
                         BindingIdent {
                             name: "mut_arr",
+                            mutable: false,
                         },
                     ),
                     inferred_type: None,

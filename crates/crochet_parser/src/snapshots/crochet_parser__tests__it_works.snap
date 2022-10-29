@@ -12,6 +12,7 @@ Ok(
                     kind: Ident(
                         BindingIdent {
                             name: "add",
+                            mutable: false,
                         },
                     ),
                     inferred_type: None,
@@ -29,6 +30,7 @@ Ok(
                                             kind: Ident(
                                                 BindingIdent {
                                                     name: "a",
+                                                    mutable: false,
                                                 },
                                             ),
                                             inferred_type: None,
@@ -43,6 +45,7 @@ Ok(
                                             kind: Ident(
                                                 BindingIdent {
                                                     name: "b",
+                                                    mutable: false,
                                                 },
                                             ),
                                             inferred_type: None,
@@ -98,6 +101,7 @@ Ok(
                     kind: Ident(
                         BindingIdent {
                             name: "sub",
+                            mutable: false,
                         },
                     ),
                     inferred_type: None,
@@ -115,6 +119,7 @@ Ok(
                                             kind: Ident(
                                                 BindingIdent {
                                                     name: "a",
+                                                    mutable: false,
                                                 },
                                             ),
                                             inferred_type: None,
@@ -129,6 +134,7 @@ Ok(
                                             kind: Ident(
                                                 BindingIdent {
                                                     name: "b",
+                                                    mutable: false,
                                                 },
                                             ),
                                             inferred_type: None,
@@ -184,6 +190,7 @@ Ok(
                     kind: Ident(
                         BindingIdent {
                             name: "sum",
+                            mutable: false,
                         },
                     ),
                     inferred_type: None,

@@ -1,18 +1,18 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"let x: number = 5;\")"
+expression: "parse(r#\"let mut msg: string = \"hello, world\";\"#)"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 0..18,
+                span: 0..37,
                 pattern: Pattern {
-                    span: 4..5,
+                    span: 4..11,
                     kind: Ident(
                         BindingIdent {
-                            name: "x",
-                            mutable: false,
+                            name: "msg",
+                            mutable: true,
                         },
                     ),
                     inferred_type: None,
@@ -21,22 +21,22 @@ Ok(
                     TypeAnn {
                         kind: Keyword(
                             KeywordType {
-                                span: 7..13,
-                                keyword: Number,
+                                span: 13..19,
+                                keyword: String,
                             },
                         ),
-                        span: 7..13,
+                        span: 13..19,
                         inferred_type: None,
                     },
                 ),
                 init: Some(
                     Expr {
-                        span: 16..17,
+                        span: 22..36,
                         kind: Lit(
-                            Num(
-                                Num {
-                                    span: 16..17,
-                                    value: "5",
+                            Str(
+                                Str {
+                                    span: 22..36,
+                                    value: "hello, world",
                                 },
                             ),
                         ),
