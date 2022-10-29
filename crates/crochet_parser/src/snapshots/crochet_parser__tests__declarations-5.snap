@@ -13,6 +13,7 @@ Ok(
                         BindingIdent {
                             name: "msg",
                             mutable: true,
+                            span: 4..11,
                         },
                     ),
                     inferred_type: None,

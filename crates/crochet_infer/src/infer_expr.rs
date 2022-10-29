@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use crochet_ast::common::*;
 use crochet_ast::types::{
     self as types, Provenance, TFnParam, TKeyword, TObject, TPat, TVar, Type, TypeKind,
 };
@@ -61,7 +60,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             let (s1, t) = infer_expr(ctx, expr)?;
             let tv = ctx.fresh_var();
             let param = TFnParam {
-                pat: TPat::Ident(BindingIdent {
+                pat: TPat::Ident(types::BindingIdent {
                     name: String::from("fix_param"),
                     mutable: false,
                 }),

@@ -1,7 +1,7 @@
 use itertools::join;
 use std::fmt;
 
-use crate::common::binding::*;
+use crate::types::binding::BindingIdent;
 use crate::types::r#type::Type;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

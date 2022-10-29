@@ -18,6 +18,7 @@ Ok(
                                         BindingIdent {
                                             name: "sum",
                                             mutable: false,
+                                            span: 8..11,
                                         },
                                     ),
                                     inferred_type: None,
@@ -35,6 +36,7 @@ Ok(
                                                     BindingIdent {
                                                         name: "x",
                                                         mutable: false,
+                                                        span: 22..23,
                                                     },
                                                 ),
                                                 inferred_type: None,
@@ -64,6 +66,7 @@ Ok(
                                                                 BindingIdent {
                                                                     name: "y",
                                                                     mutable: false,
+                                                                    span: 33..34,
                                                                 },
                                                             ),
                                                             inferred_type: None,

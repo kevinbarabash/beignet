@@ -4,7 +4,6 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 use unescape::unescape;
 
-use crochet_ast::common::*;
 use crochet_ast::values::*;
 
 #[link(wasm_import_module = "my_custom_module")]
@@ -225,19 +224,22 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
     }
     let kind = match node.kind() {
         "identifier" => {
-            let span = node.byte_range();
-            let name = src.get(span).unwrap().to_owned();
+            let name = src.get(node.byte_range()).unwrap().to_owned();
             PatternKind::Ident(BindingIdent {
                 name,
                 mutable: false,
+                span: node.byte_range(),
             })
         }
         "binding_identifier" => {
-            // let span = node.byte_range();
             let name = node.child_by_field_name("name").unwrap();
             let name = src.get(name.byte_range()).unwrap().to_owned();
             let mutable = node.child_by_field_name("mut").is_some();
-            PatternKind::Ident(BindingIdent { name, mutable })
+            PatternKind::Ident(BindingIdent {
+                name,
+                mutable,
+                span: node.byte_range(),
+            })
         }
         "object_pattern" => {
             let mut cursor = node.walk();
@@ -944,6 +946,7 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                 _ => PatternKind::Ident(BindingIdent {
                     name,
                     mutable: false,
+                    span: child.byte_range(),
                 }),
             }
         }
@@ -1215,6 +1218,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                             kind: PatternKind::Ident(BindingIdent {
                                 name,
                                 mutable: false,
+                                span: name_node.byte_range(),
                             }),
                             inferred_type: None,
                         };

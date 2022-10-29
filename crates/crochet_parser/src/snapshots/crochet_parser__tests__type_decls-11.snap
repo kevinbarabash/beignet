@@ -27,6 +27,7 @@ Ok(
                                                     BindingIdent {
                                                         name: "key",
                                                         mutable: false,
+                                                        span: 18..21,
                                                     },
                                                 ),
                                                 inferred_type: None,

@@ -52,7 +52,10 @@ pub fn infer_fn_param(
 
 pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
     match &pattern.kind {
-        PatternKind::Ident(binding_ident) => TPat::Ident(binding_ident.to_owned()),
+        PatternKind::Ident(binding_ident) => TPat::Ident(types::BindingIdent {
+            name: binding_ident.name.to_owned(),
+            mutable: binding_ident.mutable.to_owned(),
+        }),
         PatternKind::Rest(e_rest) => TPat::Rest(types::RestPat {
             arg: Box::from(pattern_to_tpat(e_rest.arg.as_ref())),
         }),

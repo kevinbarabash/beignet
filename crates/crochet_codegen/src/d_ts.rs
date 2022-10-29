@@ -6,7 +6,6 @@ use swc_common::{SourceMap, DUMMY_SP};
 use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
-use crochet_ast::common;
 use crochet_ast::types::{TFnParam, TGeneric, TObjElem, TPat, TVar, Type, TypeKind};
 use crochet_ast::{types, values};
 use crochet_infer::{get_type_params, Context};
@@ -154,12 +153,14 @@ pub fn _build_param(r#type: &Type, e_param: &values::EFnParam) -> TsFnParam {
 
 pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
     match &pattern.kind {
-        values::PatternKind::Ident(common::BindingIdent { name, mutable: _ }) => {
-            Pat::Ident(BindingIdent {
-                id: build_ident(name),
-                type_ann,
-            })
-        }
+        values::PatternKind::Ident(values::BindingIdent {
+            name,
+            mutable: _,
+            span: _,
+        }) => Pat::Ident(BindingIdent {
+            id: build_ident(name),
+            type_ann,
+        }),
         values::PatternKind::Rest(values::RestPat { arg, .. }) => Pat::Rest(RestPat {
             span: DUMMY_SP,
             dot3_token: DUMMY_SP,

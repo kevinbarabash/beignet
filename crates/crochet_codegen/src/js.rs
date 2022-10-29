@@ -9,7 +9,6 @@ use swc_ecma_codegen::*;
 use swc_ecma_transforms_react::{react, Options, Runtime};
 use swc_ecma_visit::*;
 
-use crochet_ast::common;
 use crochet_ast::values;
 use values::LetExpr;
 
@@ -147,12 +146,14 @@ fn build_pattern(
         values::PatternKind::Wildcard(_) => None,
 
         // assignable patterns
-        values::PatternKind::Ident(common::BindingIdent { name, mutable: _ }) => {
-            Some(Pat::Ident(BindingIdent {
-                id: build_ident(name),
-                type_ann: None,
-            }))
-        }
+        values::PatternKind::Ident(values::BindingIdent {
+            name,
+            mutable: _,
+            span: _,
+        }) => Some(Pat::Ident(BindingIdent {
+            id: build_ident(name),
+            type_ann: None,
+        })),
         values::PatternKind::Rest(values::RestPat { arg }) => {
             let arg = build_pattern(arg, stmts, ctx).unwrap();
             Some(Pat::Rest(RestPat {

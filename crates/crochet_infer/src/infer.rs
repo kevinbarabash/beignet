@@ -1,4 +1,3 @@
-use crochet_ast::common::*;
 use crochet_ast::types::{TObjElem, TObject, TProp, Type, TypeKind};
 use crochet_ast::values::*;
 
@@ -50,7 +49,11 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
                 match declare {
                     true => {
                         match &mut pattern.kind {
-                            PatternKind::Ident(BindingIdent { name, mutable: _ }) => {
+                            PatternKind::Ident(BindingIdent {
+                                name,
+                                mutable: _,
+                                span: _,
+                            }) => {
                                 match type_ann {
                                     Some(type_ann) => {
                                         let (s, t) = infer_type_ann(type_ann, ctx, &mut None)?;

@@ -12,6 +12,7 @@ Program {
                     BindingIdent {
                         name: "add",
                         mutable: false,
+                        span: 4..7,
                     },
                 ),
                 inferred_type: None,
@@ -30,6 +31,7 @@ Program {
                                             BindingIdent {
                                                 name: "a",
                                                 mutable: false,
+                                                span: 11..12,
                                             },
                                         ),
                                         inferred_type: None,
@@ -45,6 +47,7 @@ Program {
                                             BindingIdent {
                                                 name: "b",
                                                 mutable: false,
+                                                span: 14..15,
                                             },
                                         ),
                                         inferred_type: None,
