@@ -1,6 +1,7 @@
 use std::fmt;
 
 // TODO: add `span` field
+// TODO: add an `ident` field so that we can have separate spans
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BindingIdent {
     pub name: String,

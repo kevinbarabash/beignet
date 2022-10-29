@@ -86,9 +86,9 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
 
                         // Inserts the new variables from infer_pattern() into the
                         // current context.
-                        for (name, t) in pa {
-                            let t = close_over(&s, &t, ctx);
-                            ctx.insert_value(name, t);
+                        for (name, mut binding) in pa {
+                            binding.t = close_over(&s, &binding.t, ctx);
+                            ctx.insert_binding(name, binding);
                         }
 
                         update_expr(init, &s);

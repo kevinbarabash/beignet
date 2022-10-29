@@ -8,11 +8,11 @@ Ok(
             VarDecl {
                 span: 0..37,
                 pattern: Pattern {
-                    span: 8..11,
+                    span: 4..11,
                     kind: Ident(
                         BindingIdent {
                             name: "msg",
-                            mutable: false,
+                            mutable: true,
                         },
                     ),
                     inferred_type: None,

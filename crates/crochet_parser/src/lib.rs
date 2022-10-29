@@ -232,6 +232,13 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
                 mutable: false,
             })
         }
+        "binding_identifier" => {
+            // let span = node.byte_range();
+            let name = node.child_by_field_name("name").unwrap();
+            let name = src.get(name.byte_range()).unwrap().to_owned();
+            let mutable = node.child_by_field_name("mut").is_some();
+            PatternKind::Ident(BindingIdent { name, mutable })
+        }
         "object_pattern" => {
             let mut cursor = node.walk();
             let props = node
@@ -1733,6 +1740,14 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let rec f = () => f();"));
         // mutable
         insta::assert_debug_snapshot!(parse(r#"let mut msg: string = "hello, world";"#));
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            let foo = () => {
+                let mut msg: string = "hello, world";
+                msg
+            };
+        "#
+        ));
     }
 
     #[test]

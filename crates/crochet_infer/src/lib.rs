@@ -2670,4 +2670,56 @@ mod tests {
 
         infer_prog(src);
     }
+
+    #[test]
+    fn test_updating_mutable_variables() {
+        let src = r#"
+        let mut x: number = 5;
+        x = 10;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("x", &ctx), "number");
+    }
+
+    #[test]
+    fn test_updating_mutable_variables_inside_functions() {
+        let src = r#"
+        let foo = () => {
+            let mut x: number = 5;
+            x = 10;
+            x
+        };
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("foo", &ctx), "() => number");
+    }
+
+    #[test]
+    #[should_panic = "can't assign to non-mutable binder 'x'"]
+    fn test_updating_immutable_variables_fails() {
+        let src = r#"
+        let x: number = 5;
+        x = 10;
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "can't assign to non-mutable binder 'x'"]
+    fn test_updating_immutable_variables_inside_functions() {
+        let src = r#"
+        let foo = () => {
+            let x: number = 5;
+            x = 10;
+            x
+        };
+        "#;
+
+        infer_prog(src);
+    }
 }

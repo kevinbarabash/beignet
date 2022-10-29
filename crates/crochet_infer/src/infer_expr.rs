@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crochet_ast::common::*;
 use crochet_ast::types::{
     self as types, Provenance, TFnParam, TKeyword, TObject, TPat, TVar, Type, TypeKind,
@@ -6,7 +8,6 @@ use crochet_ast::values::*;
 
 use types::TObjElem;
 
-use crate::assump::Assump;
 use crate::context::Context;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
@@ -246,7 +247,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
         }) => {
             ctx.push_scope(is_async.to_owned());
 
-            let type_params_map: Assump = match type_params {
+            let type_params_map: HashMap<String, Type> = match type_params {
                 Some(params) => params
                     .iter_mut()
                     .map(|param| {
@@ -264,8 +265,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         ctx.insert_type(param.name.name.clone(), tv.clone());
                         Ok((param.name.name.to_owned(), tv))
                     })
-                    .collect::<Result<Assump, String>>()?,
-                None => Assump::default(),
+                    .collect::<Result<HashMap<String, Type>, String>>()?,
+                None => HashMap::default(),
             };
 
             let params: Result<Vec<(Subst, TFnParam)>, String> = params
@@ -275,8 +276,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
                     // Inserts any new variables introduced by infer_fn_param() into
                     // the current context.
-                    for (name, t) in pa {
-                        ctx.insert_value(name, t);
+                    for (name, binding) in pa {
+                        ctx.insert_binding(name, binding);
                     }
 
                     Ok((ps, t_param))
@@ -344,10 +345,21 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             }
         },
         ExprKind::Assign(Assign { left, right, op }) => {
+            // TODO:
+            // - if left is an identifier look it up to see if it exists in the context
+            // - if it does, check if its mutable or not
+            if let ExprKind::Ident(id) = &left.kind {
+                let name = &id.name;
+                let binding = ctx.lookup_binding(name)?;
+                if !binding.mutable {
+                    return Err(format!("can't assign to non-mutable binder '{name}'"));
+                }
+            }
+
             // This is similar to infer let, but without the type annotation and
             // with pat being an expression instead of a pattern.
-            let (rs, rt) = infer_expr(ctx, left)?;
-            let (ls, lt) = infer_expr(ctx, right)?;
+            let (rs, rt) = infer_expr(ctx, right)?;
+            let (ls, lt) = infer_expr(ctx, left)?;
 
             if op != &AssignOp::Eq {
                 todo!("handle update assignment operators");
@@ -592,8 +604,8 @@ fn infer_let(
     // Inserts the new variables from infer_pattern_and_init() into the
     // current context.
     // TODO: have infer_pattern_and_init do this
-    for (name, t) in pa {
-        ctx.insert_value(name.to_owned(), t.to_owned());
+    for (name, binding) in pa {
+        ctx.insert_binding(name.to_owned(), binding.to_owned());
     }
 
     let (s2, t2) = infer_expr(ctx, body)?;

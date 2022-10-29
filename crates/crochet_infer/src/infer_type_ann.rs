@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::types::{
@@ -5,7 +6,6 @@ use crochet_ast::types::{
 };
 use crochet_ast::values::*;
 
-use crate::assump::Assump;
 use crate::context::Context;
 use crate::infer_expr::infer_expr;
 use crate::infer_fn_param::pattern_to_tpat;
@@ -31,7 +31,7 @@ pub fn infer_type_ann(
     // NOTE: There's a scoping issue when using this mapping hash map.
     // <T>(arg: T, cb: <T>(T) => T) => T
     // The <T> type param list for `cb` shadows the outer `T`
-    let type_param_map: Assump = match &mut type_params {
+    let type_param_map: HashMap<String, Type> = match &mut type_params {
         Some(params) => params
             .iter_mut()
             .map(|param| {
@@ -49,8 +49,8 @@ pub fn infer_type_ann(
 
                 Ok((param.name.name.to_owned(), tv))
             })
-            .collect::<Result<Assump, String>>()?,
-        None => Assump::default(),
+            .collect::<Result<HashMap<String, Type>, String>>()?,
+        None => HashMap::default(),
     };
 
     infer_type_ann_with_params(type_ann, ctx, &type_param_map)
@@ -59,7 +59,7 @@ pub fn infer_type_ann(
 pub fn infer_type_ann_with_params(
     type_ann: &mut TypeAnn,
     ctx: &mut Context,
-    type_param_map: &Assump,
+    type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Type), String> {
     infer_type_ann_rec(type_ann, ctx, type_param_map)
 }
@@ -67,7 +67,7 @@ pub fn infer_type_ann_with_params(
 fn infer_type_ann_rec(
     type_ann: &mut TypeAnn,
     ctx: &mut Context,
-    type_param_map: &Assump,
+    type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Type), String> {
     match &mut type_ann.kind {
         TypeAnnKind::Lam(lam) => {
