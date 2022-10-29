@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
-use crochet_ast::common::*;
 use crochet_ast::types::{self as types, TObject, Type, TypeKind};
-use crochet_ast::values::*;
+use crochet_ast::values::{self as values, *};
 
 use crate::assump::Assump;
 use crate::context::{Binding, Context};
@@ -54,7 +53,11 @@ fn infer_pattern_rec(
     assump: &mut Assump,
 ) -> Result<Type, String> {
     match &mut pat.kind {
-        PatternKind::Ident(BindingIdent { name, mutable }) => {
+        PatternKind::Ident(values::BindingIdent {
+            name,
+            mutable,
+            span: _,
+        }) => {
             let tv = ctx.fresh_var();
             if assump
                 .insert(

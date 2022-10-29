@@ -40,6 +40,7 @@ Ok(
                                                 BindingIdent {
                                                     name: "rest",
                                                     mutable: false,
+                                                    span: 14..18,
                                                 },
                                             ),
                                             inferred_type: None,

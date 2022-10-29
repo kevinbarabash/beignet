@@ -13,6 +13,7 @@ Ok(
                         BindingIdent {
                             name: "p",
                             mutable: false,
+                            span: 4..5,
                         },
                     ),
                     inferred_type: None,

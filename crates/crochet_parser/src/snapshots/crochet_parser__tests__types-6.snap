@@ -13,6 +13,7 @@ Ok(
                         BindingIdent {
                             name: "add",
                             mutable: false,
+                            span: 12..15,
                         },
                     ),
                     inferred_type: None,
@@ -35,6 +36,7 @@ Ok(
                                                                 BindingIdent {
                                                                     name: "a",
                                                                     mutable: false,
+                                                                    span: 19..20,
                                                                 },
                                                             ),
                                                             inferred_type: None,
@@ -58,6 +60,7 @@ Ok(
                                                                 BindingIdent {
                                                                     name: "b",
                                                                     mutable: false,
+                                                                    span: 30..31,
                                                                 },
                                                             ),
                                                             inferred_type: None,
@@ -103,6 +106,7 @@ Ok(
                                                                 BindingIdent {
                                                                     name: "a",
                                                                     mutable: false,
+                                                                    span: 55..56,
                                                                 },
                                                             ),
                                                             inferred_type: None,
@@ -126,6 +130,7 @@ Ok(
                                                                 BindingIdent {
                                                                     name: "b",
                                                                     mutable: false,
+                                                                    span: 66..67,
                                                                 },
                                                             ),
                                                             inferred_type: None,

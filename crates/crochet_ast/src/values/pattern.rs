@@ -1,7 +1,6 @@
-use crate::common::binding::*;
 use crate::types::Type;
 use crate::values::expr::Expr;
-use crate::values::ident::Ident;
+use crate::values::ident::*;
 use crate::values::span::Span;
 use crate::values::Lit;
 
@@ -139,6 +138,7 @@ mod tests {
         let kind = PatternKind::Ident(BindingIdent {
             name: name.to_owned(),
             mutable: false,
+            span: 0..0,
         });
         Pattern {
             span: 0..0,

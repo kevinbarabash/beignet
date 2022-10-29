@@ -13,6 +13,7 @@ Ok(
                         BindingIdent {
                             name: "x",
                             mutable: false,
+                            span: 4..5,
                         },
                     ),
                     inferred_type: None,
@@ -31,6 +32,7 @@ Ok(
                                                 BindingIdent {
                                                     name: "a",
                                                     mutable: false,
+                                                    span: 9..10,
                                                 },
                                             ),
                                             inferred_type: None,
@@ -46,6 +48,7 @@ Ok(
                                                 BindingIdent {
                                                     name: "b",
                                                     mutable: false,
+                                                    span: 12..13,
                                                 },
                                             ),
                                             inferred_type: None,

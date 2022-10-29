@@ -13,6 +13,7 @@ Ok(
                         BindingIdent {
                             name: "thunk_arr",
                             mutable: false,
+                            span: 4..13,
                         },
                     ),
                     inferred_type: None,

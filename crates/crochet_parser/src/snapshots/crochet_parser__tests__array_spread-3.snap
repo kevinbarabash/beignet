@@ -13,6 +13,7 @@ Ok(
                         BindingIdent {
                             name: "tuple",
                             mutable: false,
+                            span: 4..9,
                         },
                     ),
                     inferred_type: None,
