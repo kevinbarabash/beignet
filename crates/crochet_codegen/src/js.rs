@@ -219,8 +219,8 @@ fn build_pattern(
                 type_ann: None, // because we're generating .js.
             }))
         }
-        values::PatternKind::Is(values::IsPat { id, .. }) => Some(Pat::Ident(BindingIdent {
-            id: build_ident(&id.name),
+        values::PatternKind::Is(values::IsPat { ident, .. }) => Some(Pat::Ident(BindingIdent {
+            id: build_ident(&ident.name),
             type_ann: None,
         })),
     }

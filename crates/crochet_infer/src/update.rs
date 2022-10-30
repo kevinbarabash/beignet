@@ -56,8 +56,8 @@ pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
             })
         }
         PatternKind::Lit(_) => (), // leaf node
-        // TODO: figure out how to attach inferred_types to idents
-        PatternKind::Is(IsPat { id: _, is_id: _ }) => (),
+        // TODO: update BindingIdent to have an optional .inferred_type property
+        PatternKind::Is(IsPat { ident: _, is_id: _ }) => (),
         PatternKind::Wildcard(_) => (), // leaf node (also has no binding)
     }
 }

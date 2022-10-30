@@ -2725,6 +2725,7 @@ mod tests {
 
     // TODO: make this test fail
     #[test]
+    #[ignore]
     fn test_updating_properties_fails() {
         let src = r#"
         let foo: {bar: number} = {bar: 5};
@@ -2736,6 +2737,7 @@ mod tests {
 
     // TODO: make this test fail
     #[test]
+    #[ignore]
     fn test_updating_properties_with_string_literal_indexer_fails() {
         let src = r#"
         let foo: {bar: number} = {bar: 5};

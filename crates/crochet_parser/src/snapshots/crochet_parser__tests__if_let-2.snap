@@ -43,9 +43,10 @@ Ok(
                                                                         span: 35..46,
                                                                         kind: Is(
                                                                             IsPat {
-                                                                                id: Ident {
-                                                                                    span: 35..36,
+                                                                                ident: BindingIdent {
                                                                                     name: "x",
+                                                                                    mutable: false,
+                                                                                    span: 35..36,
                                                                                 },
                                                                                 is_id: Ident {
                                                                                     span: 40..46,
@@ -110,9 +111,10 @@ Ok(
                                                                                     span: 110..120,
                                                                                     kind: Is(
                                                                                         IsPat {
-                                                                                            id: Ident {
-                                                                                                span: 110..111,
+                                                                                            ident: BindingIdent {
                                                                                                 name: "a",
+                                                                                                mutable: false,
+                                                                                                span: 110..111,
                                                                                             },
                                                                                             is_id: Ident {
                                                                                                 span: 115..120,

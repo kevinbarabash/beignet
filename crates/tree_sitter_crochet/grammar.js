@@ -395,7 +395,7 @@ module.exports = grammar(tsx, {
         "]"
       ),
 
-    refutable_is_pattern: ($) => seq($.identifier, "is", $.identifier),
+    refutable_is_pattern: ($) => seq($.binding_identifier, "is", $.identifier),
 
     refutable_object_pattern: ($) =>
       prec(

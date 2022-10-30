@@ -45,9 +45,7 @@ pub struct LitPat {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IsPat {
-    // TODO: change this to ident: BindingIdent so that we can
-    // use `mut` with `is` patterns as well
-    pub id: Ident,
+    pub ident: BindingIdent,
     pub is_id: Ident,
 }
 
@@ -135,6 +133,14 @@ mod tests {
         Ident {
             span: 0..0,
             name: name.to_owned(),
+        }
+    }
+
+    fn binding_ident(name: &str) -> BindingIdent {
+        BindingIdent {
+            span: 0..0,
+            name: name.to_owned(),
+            mutable: false,
         }
     }
 
@@ -264,7 +270,7 @@ mod tests {
     #[test]
     fn is_is_refutable() {
         let kind = PatternKind::Is(IsPat {
-            id: ident("foo"),
+            ident: binding_ident("foo"),
             is_id: ident("string"),
         });
         let is_pat = Pattern {

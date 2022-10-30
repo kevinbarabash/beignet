@@ -1079,9 +1079,10 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
             let right = child.named_child(1).unwrap();
 
             PatternKind::Is(IsPat {
-                id: Ident {
+                ident: BindingIdent {
                     span: left.byte_range(),
                     name: text_for_node(&left, src)?,
+                    mutable: false,
                 },
                 is_id: Ident {
                     span: right.byte_range(),

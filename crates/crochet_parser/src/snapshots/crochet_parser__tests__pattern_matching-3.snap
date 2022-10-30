@@ -41,9 +41,10 @@ Ok(
                                             span: 53..64,
                                             kind: Is(
                                                 IsPat {
-                                                    id: Ident {
-                                                        span: 53..54,
+                                                    ident: BindingIdent {
                                                         name: "n",
+                                                        mutable: false,
+                                                        span: 53..54,
                                                     },
                                                     is_id: Ident {
                                                         span: 58..64,
@@ -84,9 +85,10 @@ Ok(
                                                                     span: 98..108,
                                                                     kind: Is(
                                                                         IsPat {
-                                                                            id: Ident {
-                                                                                span: 98..99,
+                                                                            ident: BindingIdent {
                                                                                 name: "a",
+                                                                                mutable: false,
+                                                                                span: 98..99,
                                                                             },
                                                                             is_id: Ident {
                                                                                 span: 103..108,

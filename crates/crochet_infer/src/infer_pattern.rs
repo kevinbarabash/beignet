@@ -80,7 +80,7 @@ fn infer_pattern_rec(
             Ok(tv)
         }
         PatternKind::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
-        PatternKind::Is(IsPat { id, is_id, .. }) => {
+        PatternKind::Is(IsPat { ident, is_id, .. }) => {
             let kind = match is_id.name.as_str() {
                 "string" => TypeKind::Keyword(types::TKeyword::String),
                 "number" => TypeKind::Keyword(types::TKeyword::Number),
@@ -100,7 +100,7 @@ fn infer_pattern_rec(
             let t = generalize(&all_types, &t);
             if assump
                 .insert(
-                    id.name.to_owned(),
+                    ident.name.to_owned(),
                     Binding {
                         mutable: false,
                         t: t.clone(),
