@@ -1,6 +1,6 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"let {a, b, ...rest} = letters;\")"
+expression: "parse(\"let {mut x, y: mut z} = point;\")"
 ---
 Ok(
     Program {
@@ -8,41 +8,34 @@ Ok(
             VarDecl {
                 span: 0..30,
                 pattern: Pattern {
-                    span: 4..19,
+                    span: 4..21,
                     kind: Object(
                         ObjectPat {
                             props: [
                                 Assign(
                                     AssignPatProp {
-                                        span: 5..6,
+                                        span: 5..10,
                                         key: BindingIdent {
-                                            name: "a",
-                                            mutable: false,
-                                            span: 5..6,
+                                            name: "x",
+                                            mutable: true,
+                                            span: 9..10,
                                         },
                                         value: None,
                                     },
                                 ),
-                                Assign(
-                                    AssignPatProp {
-                                        span: 8..9,
-                                        key: BindingIdent {
-                                            name: "b",
-                                            mutable: false,
-                                            span: 8..9,
+                                KeyValue(
+                                    KeyValuePatProp {
+                                        key: Ident {
+                                            span: 12..13,
+                                            name: "y",
                                         },
-                                        value: None,
-                                    },
-                                ),
-                                Rest(
-                                    RestPat {
-                                        arg: Pattern {
-                                            span: 14..18,
+                                        value: Pattern {
+                                            span: 15..20,
                                             kind: Ident(
                                                 BindingIdent {
-                                                    name: "rest",
-                                                    mutable: false,
-                                                    span: 14..18,
+                                                    name: "z",
+                                                    mutable: true,
+                                                    span: 15..20,
                                                 },
                                             ),
                                             inferred_type: None,
@@ -58,11 +51,11 @@ Ok(
                 type_ann: None,
                 init: Some(
                     Expr {
-                        span: 22..29,
+                        span: 24..29,
                         kind: Ident(
                             Ident {
-                                span: 22..29,
-                                name: "letters",
+                                span: 24..29,
+                                name: "point",
                             },
                         ),
                         inferred_type: None,

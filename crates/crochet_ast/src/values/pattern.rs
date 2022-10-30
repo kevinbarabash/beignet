@@ -85,7 +85,7 @@ pub struct KeyValuePatProp {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AssignPatProp {
     pub span: Span,
-    pub key: Ident,
+    pub key: BindingIdent,
     pub value: Option<Box<Expr>>,
 }
 

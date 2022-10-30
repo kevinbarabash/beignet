@@ -223,14 +223,6 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
         return Err(String::from("Error parsing pattern"));
     }
     let kind = match node.kind() {
-        "identifier" => {
-            let name = src.get(node.byte_range()).unwrap().to_owned();
-            PatternKind::Ident(BindingIdent {
-                name,
-                mutable: false,
-                span: node.byte_range(),
-            })
-        }
         "binding_identifier" => {
             let name = node.child_by_field_name("name").unwrap();
             let name = src.get(name.byte_range()).unwrap().to_owned();
@@ -272,11 +264,15 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
                     }
                     "object_assignment_pattern" => todo!(),
                     "shorthand_property_identifier_pattern" => {
+                        let name_node = child.child_by_field_name("name").unwrap();
+                        let name = src.get(name_node.byte_range()).unwrap().to_owned();
+                        let mutable = child.child_by_field_name("mut").is_some();
                         Ok(ObjectPatProp::Assign(AssignPatProp {
                             span: child.byte_range(),
-                            key: Ident {
-                                span: child.byte_range(),
-                                name: text_for_node(&child, src)?,
+                            key: BindingIdent {
+                                span: name_node.byte_range(),
+                                name,
+                                mutable,
                             },
                             value: None,
                         }))
@@ -316,8 +312,8 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
                 arg: Box::from(arg),
             })
         }
-        "shorthand_property_identifier_pattern" => {
-            todo!("handle shorthand_property_identifier_pattern");
+        "assignment_pattern" => {
+            todo!("handle assignment_pattern");
         }
         _ => panic!("unrecognized pattern {node:#?}"),
     };
@@ -993,11 +989,13 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                         }))
                     }
                     "shorthand_property_identifier_pattern" => {
+                        let mutable = node.child_by_field_name("mut").is_some();
                         Ok(ObjectPatProp::Assign(AssignPatProp {
                             span: prop.byte_range(),
-                            key: Ident {
+                            key: BindingIdent {
                                 span: prop.byte_range(),
                                 name: text_for_node(&prop, src)?,
+                                mutable,
                             },
                             value: None,
                         }))
@@ -1883,9 +1881,13 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let foo = ([a, b]: [string, number]) => a;"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}) => b;"));
         insta::assert_debug_snapshot!(parse("let foo = ({a, b}: {a: string, b: number}) => b;"));
+        insta::assert_debug_snapshot!(parse("let {mut x, y: mut z} = point;"));
+        insta::assert_debug_snapshot!(parse("let foo = ({mut x, y: mut z}) => {};"));
+        insta::assert_debug_snapshot!(parse("let [a, mut b, ...rest] = letters;"));
+        insta::assert_debug_snapshot!(parse("let foo = ([a, mut b, ...rest]) => {};"));
         // TODO: assigning defaults
-        // TODO: type annotations
-        // TODO: function params
+        // insta::assert_debug_snapshot!(parse("let {x, mut y = 10} = point;"));
+        // insta::assert_debug_snapshot!(parse("let [a, mut b = 98, ...rest] = letters;"));
         // TODO: disallowed patterns, e.g. top-level rest, non-top-level type annotations
     }
 

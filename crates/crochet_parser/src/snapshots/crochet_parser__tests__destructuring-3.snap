@@ -26,9 +26,10 @@ Ok(
                                                         Assign(
                                                             AssignPatProp {
                                                                 span: 10..11,
-                                                                key: Ident {
-                                                                    span: 10..11,
+                                                                key: BindingIdent {
                                                                     name: "x",
+                                                                    mutable: false,
+                                                                    span: 10..11,
                                                                 },
                                                                 value: None,
                                                             },
@@ -36,9 +37,10 @@ Ok(
                                                         Assign(
                                                             AssignPatProp {
                                                                 span: 13..14,
-                                                                key: Ident {
-                                                                    span: 13..14,
+                                                                key: BindingIdent {
                                                                     name: "y",
+                                                                    mutable: false,
+                                                                    span: 13..14,
                                                                 },
                                                                 value: None,
                                                             },
@@ -65,9 +67,10 @@ Ok(
                                                         Assign(
                                                             AssignPatProp {
                                                                 span: 22..23,
-                                                                key: Ident {
-                                                                    span: 22..23,
+                                                                key: BindingIdent {
                                                                     name: "x",
+                                                                    mutable: false,
+                                                                    span: 22..23,
                                                                 },
                                                                 value: None,
                                                             },
@@ -75,9 +78,10 @@ Ok(
                                                         Assign(
                                                             AssignPatProp {
                                                                 span: 25..26,
-                                                                key: Ident {
-                                                                    span: 25..26,
+                                                                key: BindingIdent {
                                                                     name: "y",
+                                                                    mutable: false,
+                                                                    span: 25..26,
                                                                 },
                                                                 value: None,
                                                             },

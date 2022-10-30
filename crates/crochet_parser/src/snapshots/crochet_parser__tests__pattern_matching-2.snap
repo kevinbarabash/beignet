@@ -67,9 +67,10 @@ Ok(
                                                                                                         Assign(
                                                                                                             AssignPatProp {
                                                                                                                 span: 62..63,
-                                                                                                                key: Ident {
-                                                                                                                    span: 62..63,
+                                                                                                                key: BindingIdent {
                                                                                                                     name: "c",
+                                                                                                                    mutable: false,
+                                                                                                                    span: 62..63,
                                                                                                                 },
                                                                                                                 value: None,
                                                                                                             },

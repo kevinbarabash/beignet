@@ -1,0 +1,85 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"let [a, mut b, ...rest] = letters;\")"
+---
+Ok(
+    Program {
+        body: [
+            VarDecl {
+                span: 0..34,
+                pattern: Pattern {
+                    span: 4..23,
+                    kind: Array(
+                        ArrayPat {
+                            elems: [
+                                Some(
+                                    Pattern {
+                                        span: 5..6,
+                                        kind: Ident(
+                                            BindingIdent {
+                                                name: "a",
+                                                mutable: false,
+                                                span: 5..6,
+                                            },
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                ),
+                                Some(
+                                    Pattern {
+                                        span: 8..13,
+                                        kind: Ident(
+                                            BindingIdent {
+                                                name: "b",
+                                                mutable: true,
+                                                span: 8..13,
+                                            },
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                ),
+                                Some(
+                                    Pattern {
+                                        span: 15..22,
+                                        kind: Rest(
+                                            RestPat {
+                                                arg: Pattern {
+                                                    span: 18..22,
+                                                    kind: Ident(
+                                                        BindingIdent {
+                                                            name: "rest",
+                                                            mutable: false,
+                                                            span: 18..22,
+                                                        },
+                                                    ),
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                ),
+                            ],
+                            optional: false,
+                        },
+                    ),
+                    inferred_type: None,
+                },
+                type_ann: None,
+                init: Some(
+                    Expr {
+                        span: 26..33,
+                        kind: Ident(
+                            Ident {
+                                span: 26..33,
+                                name: "letters",
+                            },
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+                declare: false,
+            },
+        ],
+    },
+)
