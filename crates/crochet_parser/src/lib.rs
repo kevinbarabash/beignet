@@ -935,7 +935,7 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
             let lit = parse_literal(&child, src)?;
             PatternKind::Lit(LitPat { lit })
         }
-        "identifier" => {
+        "binding_identifier" => {
             let name = text_for_node(&child, src)?;
             match name.as_str() {
                 "undefined" => {

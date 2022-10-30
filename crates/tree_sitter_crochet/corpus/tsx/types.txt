@@ -142,7 +142,8 @@ let MyFunction: {
           (call_signature
             (formal_parameters
               (required_parameter
-                (identifier)))
+                (binding_identifier
+                  (identifier))))
             (type_annotation
               (predefined_type)))
           (property_signature
@@ -199,7 +200,8 @@ type Something = {
       (call_signature
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (type_annotation
           (predefined_type)))
       (index_signature
@@ -290,7 +292,8 @@ const foo: (this: Readable, size?: number) => any;
         (function_type
           (formal_parameters
             (required_parameter
-              (identifier)
+              (binding_identifier
+                (identifier))
               (type_annotation
                 (predefined_type))))
           (predefined_type)))))
@@ -306,7 +309,8 @@ const foo: (this: Readable, size?: number) => any;
               (type_annotation
                 (type_identifier)))
             (optional_parameter
-              (identifier)
+              (binding_identifier
+                (identifier))
               (type_annotation
                 (predefined_type))))
           (predefined_type))))))
@@ -329,7 +333,8 @@ let foo: ({a}: Foo) => number;
           (formal_parameters
             (required_parameter
               (object_pattern
-                (shorthand_property_identifier_pattern))
+                (shorthand_property_identifier_pattern
+                  (identifier)))
               (type_annotation
                 (type_identifier))))
           (predefined_type))))))
@@ -356,9 +361,11 @@ let x: new < T1, T2 > ( p1, p2 ) => R;
               (type_identifier)))
           (formal_parameters
             (required_parameter
-              (identifier))
+              (binding_identifier
+                (identifier)))
             (required_parameter
-              (identifier)))
+              (binding_identifier
+                (identifier))))
           (type_identifier))))))
 
 ================================================================================
@@ -705,7 +712,8 @@ interface Enum extends Bar, Baz, Foo<A> {
         (property_identifier)
         (formal_parameters
           (required_parameter
-            (identifier)
+            (binding_identifier
+              (identifier))
             (type_annotation
               (type_identifier))))
         (type_annotation
@@ -1006,11 +1014,13 @@ let score: (string: string, query: string) => number;
         (function_type
           (formal_parameters
             (required_parameter
-              (identifier)
+              (binding_identifier
+                (identifier))
               (type_annotation
                 (predefined_type)))
             (required_parameter
-              (identifier)
+              (binding_identifier
+                (identifier))
               (type_annotation
                 (predefined_type))))
           (predefined_type))))))
@@ -1188,7 +1198,8 @@ function f(x: any): asserts x {
     (identifier)
     (formal_parameters
       (required_parameter
-        (identifier)
+        (binding_identifier
+          (identifier))
         (type_annotation
           (predefined_type))))
     (asserts
@@ -1217,7 +1228,8 @@ function isT(t: T): t is T {
     (identifier)
     (formal_parameters
       (required_parameter
-        (identifier)
+        (binding_identifier
+          (identifier))
         (type_annotation
           (predefined_type))))
     (asserts
@@ -1243,7 +1255,8 @@ function isT(t: T): t is T {
     (identifier)
     (formal_parameters
       (required_parameter
-        (identifier)
+        (binding_identifier
+          (identifier))
         (type_annotation
           (type_identifier))))
     (type_predicate_annotation
@@ -1271,7 +1284,8 @@ function isFish(object: Fish): object is Fish {
     (identifier)
     (formal_parameters
       (required_parameter
-        (identifier)
+        (binding_identifier
+          (identifier))
         (type_annotation
           (type_identifier))))
     (type_predicate_annotation
@@ -1283,7 +1297,8 @@ function isFish(object: Fish): object is Fish {
     (identifier)
     (formal_parameters
       (required_parameter
-        (identifier)
+        (binding_identifier
+          (identifier))
         (type_annotation
           (type_identifier))))
     (type_predicate_annotation
@@ -1399,7 +1414,8 @@ type t = [a: A, b?: B, ...c: C[]];
           (type_identifier)))
       (required_parameter
         (rest_pattern
-          (identifier))
+          (binding_identifier
+            (identifier)))
         (type_annotation
           (array_type
             (type_identifier)))))))
@@ -1449,7 +1465,8 @@ type T<X> = T extends { x: infer X } ? X : never;
         (function_type
           (formal_parameters
             (required_parameter
-              (identifier)
+              (binding_identifier
+                (identifier))
               (type_annotation
                 (type_identifier))))
           (conditional_type
@@ -1461,7 +1478,8 @@ type T<X> = T extends { x: infer X } ? X : never;
         (function_type
           (formal_parameters
             (required_parameter
-              (identifier)
+              (binding_identifier
+                (identifier))
               (type_annotation
                 (type_identifier))))
           (conditional_type
@@ -1483,7 +1501,8 @@ type T<X> = T extends { x: infer X } ? X : never;
     (function_type
       (formal_parameters
         (required_parameter
-          (identifier)
+          (binding_identifier
+            (identifier))
           (type_annotation
             (type_identifier))))
       (conditional_type
@@ -1495,7 +1514,8 @@ type T<X> = T extends { x: infer X } ? X : never;
         (function_type
           (formal_parameters
             (required_parameter
-              (identifier)
+              (binding_identifier
+                (identifier))
               (type_annotation
                 (type_identifier))))
           (conditional_type
@@ -1829,7 +1849,8 @@ type Foo<T extends new (...args: any) => any> = T;
             (formal_parameters
               (required_parameter
                 (rest_pattern
-                  (identifier))
+                  (binding_identifier
+                    (identifier)))
                 (type_annotation
                   (predefined_type))))
             (predefined_type)))))
@@ -1844,7 +1865,8 @@ type Foo<T extends new (...args: any) => any> = T;
             (formal_parameters
               (required_parameter
                 (rest_pattern
-                  (identifier))
+                  (binding_identifier
+                    (identifier)))
                 (type_annotation
                   (predefined_type))))
             (predefined_type)))))

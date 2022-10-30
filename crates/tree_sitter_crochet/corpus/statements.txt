@@ -84,17 +84,17 @@ let undefined = 42;
   (variable_declaration
     (variable_declarator
       (binding_identifier
-        (identifier))
+        (undefined))
       (number)))
   (lexical_declaration
     (variable_declarator
       (binding_identifier
-        (identifier))
+        (undefined))
       (number)))
   (lexical_declaration
     (variable_declarator
       (binding_identifier
-        (identifier))
+        (undefined))
       (number))))
 
 ================================================================================
@@ -204,7 +204,8 @@ import.meta.url;
         (arrow_function
           (formal_parameters
             (required_parameter
-              (identifier)))
+              (binding_identifier
+                (identifier))))
           (statement_block)))))
   (expression_statement
     (member_expression
@@ -526,13 +527,7 @@ for (const {thing} in things) {
   thing();
 }
 
-for (x[i] in a) {}
-
-for (x.y in a) {}
-
-for ([a, b] in c) {}
-
-for ((a) in b) {}
+for (let [a, b] in c) {}
 
 --------------------------------------------------------------------------------
 
@@ -546,7 +541,8 @@ for ((a) in b) {}
           (identifier)
           (arguments)))))
   (for_in_statement
-    (identifier)
+    (binding_identifier
+      (identifier))
     (binary_expression
       (identifier)
       (object))
@@ -557,7 +553,8 @@ for ((a) in b) {}
           (arguments)))))
   (for_in_statement
     (object_pattern
-      (shorthand_property_identifier_pattern))
+      (shorthand_property_identifier_pattern
+        (identifier)))
     (identifier)
     (statement_block
       (expression_statement
@@ -565,26 +562,11 @@ for ((a) in b) {}
           (identifier)
           (arguments)))))
   (for_in_statement
-    (subscript_expression
-      (identifier)
-      (identifier))
-    (identifier)
-    (statement_block))
-  (for_in_statement
-    (member_expression
-      (identifier)
-      (property_identifier))
-    (identifier)
-    (statement_block))
-  (for_in_statement
     (array_pattern
-      (identifier)
-      (identifier))
-    (identifier)
-    (statement_block))
-  (for_in_statement
-    (parenthesized_expression
-      (identifier))
+      (binding_identifier
+        (identifier))
+      (binding_identifier
+        (identifier)))
     (identifier)
     (statement_block)))
 
@@ -646,8 +628,10 @@ for (let {a, b} of items || []) {
             (identifier))))))
   (for_in_statement
     (object_pattern
-      (shorthand_property_identifier_pattern)
-      (shorthand_property_identifier_pattern))
+      (shorthand_property_identifier_pattern
+        (identifier))
+      (shorthand_property_identifier_pattern
+        (identifier)))
     (binary_expression
       (identifier)
       (array))
@@ -671,7 +655,8 @@ for await (const chunk of stream) {
 
 (program
   (for_in_statement
-    (identifier)
+    (binding_identifier
+      (identifier))
     (identifier)
     (statement_block
       (expression_statement
@@ -844,7 +829,8 @@ var thing = {
           (function
             (formal_parameters
               (required_parameter
-                (identifier))
+                (binding_identifier
+                  (identifier)))
               (comment))
             (statement_block
               (comment)
@@ -1006,7 +992,8 @@ try { throw [a, b] } catch ([c, d]) { };
         (expression
           (identifier)))
       (catch_clause
-        (identifier)
+        (binding_identifier
+          (identifier))
         (statement_block
           (expression
             (identifier))))))
@@ -1042,8 +1029,10 @@ try { throw [a, b] } catch ([c, d]) { };
               (identifier)))))
       (catch_clause
         (array_pattern
-          (identifier)
-          (identifier))
+          (binding_identifier
+            (identifier))
+          (binding_identifier
+            (identifier)))
         (statement_block)))))
 
 ================================================================================

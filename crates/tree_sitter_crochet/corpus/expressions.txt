@@ -408,9 +408,11 @@ Objects with method definitions
         (property_identifier)
         (formal_parameters
           (required_parameter
-            (identifier))
+            (binding_identifier
+              (identifier)))
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block
           (return_statement
             (binary_expression
@@ -426,7 +428,8 @@ Objects with method definitions
         (property_identifier)
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block
           (expression_statement
             (assignment_expression
@@ -529,7 +532,8 @@ class Foo extends require('another-class') {
         (property_identifier)
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block
           (return_statement
             (identifier))))
@@ -537,7 +541,8 @@ class Foo extends require('another-class') {
         (property_identifier)
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block
           (return_statement
             (identifier))))
@@ -545,7 +550,8 @@ class Foo extends require('another-class') {
         (property_identifier)
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block
           (return_statement
             (identifier))))
@@ -553,7 +559,8 @@ class Foo extends require('another-class') {
         (private_property_identifier)
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block
           (return_statement
             (member_expression
@@ -771,10 +778,12 @@ Functions
       (function
         (formal_parameters
           (required_parameter
-            (identifier))
+            (binding_identifier
+              (identifier)))
           (required_parameter
             (rest_pattern
-              (identifier))))
+              (binding_identifier
+                (identifier)))))
         (statement_block
           (expression_statement
             (identifier))))
@@ -786,21 +795,25 @@ Functions
         (identifier)
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block))
       (function
         (identifier)
         (formal_parameters
           (required_parameter
-            (identifier))
+            (binding_identifier
+              (identifier)))
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block))
       (function
         (identifier)
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block))
       (function
         (identifier)
@@ -809,7 +822,8 @@ Functions
             (rest_pattern
               (array_pattern
                 (assignment_pattern
-                  (identifier)
+                  (binding_identifier
+                    (identifier))
                   (identifier))))))
         (statement_block)))))
 
@@ -843,17 +857,21 @@ async => async + 1;
     (arrow_function
       (formal_parameters
         (required_parameter
-          (identifier))
+          (binding_identifier
+            (identifier)))
         (required_parameter
-          (identifier)))
+          (binding_identifier
+            (identifier))))
       (number)))
   (expression_statement
     (arrow_function
       (formal_parameters
         (required_parameter
-          (identifier))
+          (binding_identifier
+            (identifier)))
         (required_parameter
-          (identifier)))
+          (binding_identifier
+            (identifier))))
       (statement_block
         (return_statement
           (identifier)))))
@@ -861,23 +879,28 @@ async => async + 1;
     (arrow_function
       (formal_parameters
         (required_parameter
-          (identifier)))
+          (binding_identifier
+            (identifier))))
       (number)))
   (expression_statement
     (arrow_function
       (formal_parameters
         (required_parameter
-          (identifier))
+          (binding_identifier
+            (identifier)))
         (required_parameter
-          (identifier)))
+          (binding_identifier
+            (identifier))))
       (number)))
   (expression_statement
     (arrow_function
       (formal_parameters
         (required_parameter
-          (identifier))
+          (binding_identifier
+            (identifier)))
         (required_parameter
-          (identifier)))
+          (binding_identifier
+            (identifier))))
       (number)))
   (expression_statement
     (arrow_function
@@ -911,9 +934,11 @@ Generator Functions
         (identifier)
         (formal_parameters
           (required_parameter
-            (identifier))
+            (binding_identifier
+              (identifier)))
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block
           (expression_statement
             (yield_expression))
@@ -941,15 +966,19 @@ function a({b}, c = d, e = f, async = true) {
     (formal_parameters
       (required_parameter
         (object_pattern
-          (shorthand_property_identifier_pattern)))
+          (shorthand_property_identifier_pattern
+            (identifier))))
       (required_parameter
-        (identifier)
+        (binding_identifier
+          (identifier))
         (identifier))
       (required_parameter
-        (identifier)
+        (binding_identifier
+          (identifier))
         (identifier))
       (required_parameter
-        (identifier)
+        (binding_identifier
+          (identifier))
         (true)))
     (statement_block)))
 
@@ -1038,7 +1067,8 @@ return this.map(function (a) {
             (function
               (formal_parameters
                 (required_parameter
-                  (identifier)))
+                  (binding_identifier
+                    (identifier))))
               (statement_block
                 (return_statement
                   (member_expression
@@ -1050,7 +1080,8 @@ return this.map(function (a) {
         (function
           (formal_parameters
             (required_parameter
-              (identifier)))
+              (binding_identifier
+                (identifier))))
           (statement_block
             (return_statement
               (member_expression
@@ -1083,9 +1114,11 @@ function(x, y) {
       (function
         (formal_parameters
           (required_parameter
-            (identifier))
+            (binding_identifier
+              (identifier)))
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block))
       (arguments
         (identifier)
@@ -1267,7 +1300,8 @@ async function* foo() { yield 1 }
     (arrow_function
       (formal_parameters
         (required_parameter
-          (identifier)))
+          (binding_identifier
+            (identifier))))
       (statement_block
         (return_statement
           (identifier)))))
@@ -1881,11 +1915,15 @@ b = <Text {...j}></Text>;
           (identifier))))))
 
 ================================================================================
-Expressions with rest elements
+Expressions with spread elements
 ================================================================================
 
-foo(...rest);
-foo = [...[bar] = [baz]];
+foo(...spread);
+foo(...[a, b]);
+foo = [...spread];
+foo = [...[a, b]];
+foo = {...spread};
+foo = {...{a, b}};
 
 --------------------------------------------------------------------------------
 
@@ -1897,15 +1935,41 @@ foo = [...[bar] = [baz]];
         (spread_element
           (identifier)))))
   (expression_statement
+    (call_expression
+      (identifier)
+      (arguments
+        (spread_element
+          (array
+            (identifier)
+            (identifier))))))
+  (expression_statement
     (assignment_expression
       (identifier)
       (array
         (spread_element
-          (assignment_expression
-            (array_pattern
-              (identifier))
-            (array
-              (identifier))))))))
+          (identifier)))))
+  (expression_statement
+    (assignment_expression
+      (identifier)
+      (array
+        (spread_element
+          (array
+            (identifier)
+            (identifier))))))
+  (expression_statement
+    (assignment_expression
+      (identifier)
+      (object
+        (spread_element
+          (identifier)))))
+  (expression_statement
+    (assignment_expression
+      (identifier)
+      (object
+        (spread_element
+          (object
+            (shorthand_property_identifier)
+            (shorthand_property_identifier)))))))
 
 ================================================================================
 Forward slashes after parenthesized expressions
@@ -2243,7 +2307,8 @@ let result = try { throw [a, b] } catch ([c, d]) { };
           (expression
             (identifier)))
         (catch_clause
-          (identifier)
+          (binding_identifier
+            (identifier))
           (statement_block
             (expression
               (identifier)))))))
@@ -2288,8 +2353,10 @@ let result = try { throw [a, b] } catch ([c, d]) { };
                 (identifier)))))
         (catch_clause
           (array_pattern
-            (identifier)
-            (identifier))
+            (binding_identifier
+              (identifier))
+            (binding_identifier
+              (identifier)))
           (statement_block))))))
 
 ================================================================================
@@ -2308,7 +2375,8 @@ const foo = (msg) => throw new Error(msg);
       (arrow_function
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (unary_expression
           (new_expression
             (identifier)

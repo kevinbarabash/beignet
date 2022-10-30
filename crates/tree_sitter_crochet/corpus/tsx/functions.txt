@@ -25,7 +25,8 @@ function foo<T, U>(this: T[]): U[] {
     name: (identifier)
     parameters: (formal_parameters
       (required_parameter
-        pattern: (identifier)
+        pattern: (binding_identifier
+          name: (identifier))
         type: (type_annotation
           (predefined_type))))
     body: (statement_block
@@ -41,7 +42,8 @@ function foo<T, U>(this: T[]): U[] {
         name: (type_identifier)))
     parameters: (formal_parameters
       (required_parameter
-        pattern: (identifier)
+        pattern: (binding_identifier
+          name: (identifier))
         type: (type_annotation
           (type_identifier))))
     return_type: (type_annotation
@@ -56,17 +58,20 @@ function foo<T, U>(this: T[]): U[] {
         name: (type_identifier)))
     parameters: (formal_parameters
       (required_parameter
-        pattern: (identifier)
+        pattern: (binding_identifier
+          name: (identifier))
         type: (type_annotation
           (array_type
             (type_identifier))))
       (required_parameter
-        pattern: (identifier)
+        pattern: (binding_identifier
+          name: (identifier))
         type: (type_annotation
           (function_type
             parameters: (formal_parameters
               (required_parameter
-                pattern: (identifier)
+                pattern: (binding_identifier
+                  name: (identifier))
                 type: (type_annotation
                   (type_identifier))))
             return_type: (type_identifier)))))
@@ -180,11 +185,14 @@ function* foo<A>(amount, interestRate, duration): number {
           name: (type_identifier)))
       parameters: (formal_parameters
         (required_parameter
-          pattern: (identifier))
+          pattern: (binding_identifier
+            name: (identifier)))
         (required_parameter
-          pattern: (identifier))
+          pattern: (binding_identifier
+            name: (identifier)))
         (required_parameter
-          pattern: (identifier)))
+          pattern: (binding_identifier
+            name: (identifier))))
       return_type: (type_annotation
         (predefined_type))
       body: (number)))
@@ -195,11 +203,14 @@ function* foo<A>(amount, interestRate, duration): number {
         name: (type_identifier)))
     parameters: (formal_parameters
       (required_parameter
-        pattern: (identifier))
+        pattern: (binding_identifier
+          name: (identifier)))
       (required_parameter
-        pattern: (identifier))
+        pattern: (binding_identifier
+          name: (identifier)))
       (required_parameter
-        pattern: (identifier)))
+        pattern: (binding_identifier
+          name: (identifier))))
     return_type: (type_annotation
       (predefined_type))
     body: (statement_block
@@ -216,7 +227,8 @@ function* foo<A>(amount, interestRate, duration): number {
     (arrow_function
       parameters: (formal_parameters
         (required_parameter
-          pattern: (identifier)
+          pattern: (binding_identifier
+            name: (identifier))
           type: (type_annotation
             (predefined_type))))
       return_type: (type_annotation
@@ -266,11 +278,13 @@ class A extends B {
         name: (property_identifier)
         parameters: (formal_parameters
           (required_parameter
-            pattern: (identifier)
+            pattern: (binding_identifier
+              name: (identifier))
             type: (type_annotation
               (predefined_type)))
           (required_parameter
-            pattern: (identifier)
+            pattern: (binding_identifier
+              name: (identifier))
             type: (type_annotation
               (predefined_type))))
         body: (statement_block
@@ -339,19 +353,22 @@ function foo(): () => { [key: foo]: bar } {}
     name: (identifier)
     parameters: (formal_parameters
       (required_parameter
-        pattern: (identifier))))
+        pattern: (binding_identifier
+          name: (identifier)))))
   (function_signature
     name: (identifier)
     parameters: (formal_parameters
       (required_parameter
-        pattern: (identifier)))
+        pattern: (binding_identifier
+          name: (identifier))))
     return_type: (type_annotation
       (type_identifier)))
   (function_signature
     name: (identifier)
     parameters: (formal_parameters
       (required_parameter
-        pattern: (identifier))))
+        pattern: (binding_identifier
+          name: (identifier)))))
   (function_signature
     name: (identifier)
     parameters: (formal_parameters)
