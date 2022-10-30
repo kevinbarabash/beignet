@@ -19,6 +19,27 @@ const dropLastMember = (node) => {
 module.exports = grammar(tsx, {
   name: "crochet",
 
+  // Always pick $.binding_identifer last when there's a conflict
+  conflicts: ($, previous) =>
+    previous.concat([
+      [$.assignment_expression, $.binding_identifier],
+
+      [$.primary_expression, $.binding_identifier],
+      [$._primary_type, $.binding_identifier],
+      [$.primary_expression, $._primary_type, $.binding_identifier],
+
+      [$.object, $.binding_identifier],
+      [$.object, $._property_name, $.binding_identifier],
+      [$._property_name, $.binding_identifier],
+
+      [$.literal_type, $.binding_identifier],
+      [$.predefined_type, $.binding_identifier],
+      [$.primary_expression, $.literal_type, $.binding_identifier],
+      [$.primary_expression, $.predefined_type, $.binding_identifier],
+
+      [$.export_statement, $.binding_identifier],
+    ]),
+
   rules: {
     // Removes sequence expression and optional flow-style type assertion
     parenthesized_expression: ($, prev) => seq("(", $.expression, ")"),
@@ -71,6 +92,9 @@ module.exports = grammar(tsx, {
     },
 
     // Replaces `optional("readonly")` in sequence with `optional("mut")`
+    // TODO: Do the same for public_field_definition
+    // TODO: Create a function that can replace all nodes of a certain type
+    // in a rule declaration.
     method_definition: ($, prev) => {
       const members = prev.content.members.map((member) => {
         if (
@@ -84,8 +108,6 @@ module.exports = grammar(tsx, {
 
       return prec.left(seq(...members));
     },
-
-    // TODO: Do the same for public_field_definition
 
     expression: ($, prev) => {
       // Removes ternary expression
@@ -133,16 +155,28 @@ module.exports = grammar(tsx, {
       ),
 
     binding_identifier: ($) =>
-      seq(optional(field("mut", "mut")), field("name", $.identifier)),
+      seq(
+        optional(field("mut", "mut")),
+        field(
+          "name",
+          // NOTE: I thought about disallowing reserved identifiers here, but there
+          // are too many reserved identifiers and some of them are just too handy,
+          // e.g. let set = new Set();
+          choice($._identifier, alias($._reserved_identifier, $.identifier))
+        )
+      ),
 
-    // adapted from define-grammar.js
+    // Adapted from define-grammar.js
     // TODO: Create a function that can replace all nodes of a certain type
     // in a rule declaration.
     variable_declarator: ($) =>
       choice(
         seq(
           // field("name", choice($.identifier, $._destructuring_pattern)),
-          field("name", choice($.binding_identifier, $._destructuring_pattern)),
+          field(
+            "name",
+            choice($.binding_identifier, $._binding_destructuring_pattern)
+          ),
           field("type", optional($.type_annotation)),
           optional($._initializer)
         ),
@@ -187,19 +221,38 @@ module.exports = grammar(tsx, {
       return choice(...choices);
     },
 
+    // Removes _destructuring_pattern from _lhs_expression
+    // NOTE: we can't use prev.members.filter here b/c define-grammar.js does
+    // ($, previous) => choice(previous, ...).
+    // TODO: write a function to flatten choices
+    _lhs_expression: ($) =>
+      choice(
+        $.member_expression,
+        $.subscript_expression,
+        $._identifier,
+        alias($._reserved_identifier, $.identifier),
+        // $._destructuring_pattern,
+        $.non_null_expression
+      ),
+
     _for_header: ($) =>
       seq(
         "(",
         choice(
           field("left", choice($._lhs_expression, $.parenthesized_expression)),
+          // We remove this choice b/c we don't want to support `var`
           // seq(
           //   field("kind", "var"),
           //   field("left", choice($.identifier, $._destructuring_pattern)),
           //   optional($._initializer)
           // ),
           seq(
+            // TODO: get rid of `const`
             field("kind", choice("let", "const")),
-            field("left", choice($.identifier, $._destructuring_pattern))
+            field(
+              "left",
+              choice($.binding_identifier, $._binding_destructuring_pattern)
+            )
           )
         ),
         field("operator", choice("in", "of")),
@@ -211,7 +264,7 @@ module.exports = grammar(tsx, {
       seq(
         "{",
         repeat($.statement),
-        // We define an alias here so that it's easyt to check if the
+        // We define an alias here so that it's easy to check if the
         // last named child in the block is an expression or not.
         optional(alias($.expression, $.expression)),
         "}"
@@ -223,8 +276,8 @@ module.exports = grammar(tsx, {
       replaceField(prev, "body", $.statement_block),
     while_statement: ($, prev) => replaceField(prev, "body", $.statement_block),
     do_statement: ($, prev) => replaceField(prev, "body", $.statement_block),
-    switch_case: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
-    switch_default: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeate($.statement)
+    switch_case: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeat($.statement)
+    switch_default: ($, prev) => replaceField(prev, "body", $.statement_block), // replaces repeat($.statement)
 
     if_expression: ($) =>
       prec.right(
@@ -251,6 +304,30 @@ module.exports = grammar(tsx, {
           ),
           field("argument", $.expression)
         )
+      ),
+
+    // Adapted from define-grammar.js
+    // TODO: Create a function that can replace all nodes of a certain type
+    // in a rule declaration.
+    catch_clause: ($) =>
+      seq(
+        "catch",
+        optional(
+          seq(
+            "(",
+            field(
+              "parameter",
+              choice($.binding_identifier, $._binding_destructuring_pattern)
+            ),
+            optional(
+              // only types that resolve to 'any' or 'unknown' are supported
+              // by the language but it's simpler to accept any type here.
+              field("type", $.type_annotation)
+            ),
+            ")"
+          )
+        ),
+        field("body", $.statement_block)
       ),
 
     //
@@ -304,7 +381,7 @@ module.exports = grammar(tsx, {
         $.false,
         // TOOD: support regex literals
 
-        $._identifier, // identifiers + undefined
+        $.binding_identifier, // identifiers + undefined
 
         $.refutable_array_pattern,
         $.refutable_is_pattern,
@@ -331,7 +408,7 @@ module.exports = grammar(tsx, {
                 $.refutable_pair_pattern,
                 $.refutable_rest_pattern,
                 alias(
-                  choice($.identifier, $._reserved_identifier),
+                  $.binding_identifier,
                   $.shorthand_property_identifier_pattern
                 )
               )
@@ -352,10 +429,96 @@ module.exports = grammar(tsx, {
       seq(
         "...",
         choice(
-          $.identifier,
+          $.binding_identifier,
           $.refutable_array_pattern,
           $.refutable_object_pattern
         )
+      ),
+
+    //
+    // Patterns
+    //
+    // We reimplement $.pattern and its dependencies here so that:
+    // - bindings that are introduced can now have an optional `mut` modifier, e.g.
+    //   let {x, mut y} = point;
+    // - LHS expressions are no longer allowed valid patterns
+    ///
+
+    pattern: ($) =>
+      prec.dynamic(
+        -1,
+        choice(
+          $.binding_identifier,
+          $.array_pattern,
+          $.object_pattern,
+          $.rest_pattern
+        )
+      ),
+
+    array_pattern: ($) =>
+      seq("[", commaSep(choice($.pattern, $.assignment_pattern)), "]"),
+
+    assignment_pattern: ($) =>
+      seq(field("left", $.pattern), "=", field("right", $.expression)),
+
+    object_pattern: ($) =>
+      prec(
+        "object",
+        seq(
+          "{",
+          commaSep(
+            optional(
+              choice(
+                $.pair_pattern,
+                $.rest_pattern,
+                alias(
+                  $.binding_identifier,
+                  $.shorthand_property_identifier_pattern
+                ),
+                $.object_assignment_pattern
+              )
+            )
+          ),
+          "}"
+        )
+      ),
+
+    object_assignment_pattern: ($) =>
+      seq(
+        field(
+          "left",
+          choice(
+            $.pair_pattern,
+            alias($.binding_identifier, $.shorthand_property_identifier_pattern)
+          )
+        ),
+        "=",
+        field("right", $.expression)
+      ),
+
+    pair_pattern: ($) =>
+      seq(field("key", $._property_name), ":", field("value", $.pattern)),
+
+    rest_pattern: ($) =>
+      prec.right(
+        seq(
+          "...",
+          choice($.binding_identifier, $.array_pattern, $.object_pattern)
+        )
+      ),
+
+    // We use this instead of _destructuring_pattern in places where new bindings
+    // will be introduced b/c of the destructuring.
+    _binding_destructuring_pattern: ($) =>
+      choice($.object_pattern, $.array_pattern),
+
+    _parameter_name: ($) =>
+      seq(
+        repeat(field("decorator", $.decorator)),
+        optional($.accessibility_modifier),
+        optional($.override_modifier),
+        optional("readonly"),
+        field("pattern", choice($.pattern, $.this))
       ),
   },
 });

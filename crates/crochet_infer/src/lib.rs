@@ -2747,6 +2747,7 @@ mod tests {
 
     // TODO: make this test fail
     #[test]
+    #[ignore]
     fn test_updating_properties_with_computed_property_fails() {
         let src = r#"
         let foo: {bar: number} = {bar: 5};
@@ -2757,28 +2758,32 @@ mod tests {
         infer_prog(src);
     }
 
-    // TODO: update the parser to support `mut` in the test code
     #[test]
-    #[ignore]
     fn test_updating_mutable_destructured_renamed_obj_member() {
         let src = r#"
             let {bar: mut foo}: {bar: number} = {bar: 5};
             foo = 10;
             "#;
 
-        infer_prog(src);
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("foo", &ctx), "number");
     }
 
-    // TODO: update the parser to support `mut` in the test code
-    #[test]
+    // TODO: re-enable once we've update object pattern properties in the AST
+    // to look more like babel's properties
     #[ignore]
+    #[test]
+    #[should_panic = "can't assign to non-mutable binder 'bar'"]
     fn test_updating_mutable_destructured_shorthand_obj_member() {
         let src = r#"
             let {mut bar}: {bar: number} = {bar: 5};
             bar = 10;
             "#;
 
-        infer_prog(src);
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("bar", &ctx), "number");
     }
 
     #[test]

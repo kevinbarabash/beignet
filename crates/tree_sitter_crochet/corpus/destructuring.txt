@@ -12,35 +12,43 @@ const {a, b: {c, d}} = object;
   (expression_statement
     (parenthesized_expression
       (assignment_expression
-        (object_pattern
-          (shorthand_property_identifier_pattern)
-          (pair_pattern
-            (property_identifier)
-            (member_expression
-              (identifier)
-              (property_identifier)))
-          (rest_pattern
-            (subscript_expression
-              (identifier)
-              (identifier))))
+        (non_null_expression
+          (object
+            (shorthand_property_identifier)
+            (pair
+              (property_identifier)
+              (member_expression
+                (identifier)
+                (property_identifier)))
+            (spread_element
+              (subscript_expression
+                (identifier)
+                (identifier))))
+          (MISSING "!"))
         (identifier))))
   (lexical_declaration
     (variable_declarator
       (object_pattern
-        (shorthand_property_identifier_pattern)
-        (shorthand_property_identifier_pattern)
+        (shorthand_property_identifier_pattern
+          (identifier))
+        (shorthand_property_identifier_pattern
+          (identifier))
         (rest_pattern
-          (identifier)))
+          (binding_identifier
+            (identifier))))
       (identifier)))
   (lexical_declaration
     (variable_declarator
       (object_pattern
-        (shorthand_property_identifier_pattern)
+        (shorthand_property_identifier_pattern
+          (identifier))
         (pair_pattern
           (property_identifier)
           (object_pattern
-            (shorthand_property_identifier_pattern)
-            (shorthand_property_identifier_pattern))))
+            (shorthand_property_identifier_pattern
+              (identifier))
+            (shorthand_property_identifier_pattern
+              (identifier)))))
       (identifier))))
 
 ================================================================================
@@ -57,11 +65,14 @@ function a ({b, c}, {d}) {}
     (formal_parameters
       (required_parameter
         (object_pattern
-          (shorthand_property_identifier_pattern)
-          (shorthand_property_identifier_pattern)))
+          (shorthand_property_identifier_pattern
+            (identifier))
+          (shorthand_property_identifier_pattern
+            (identifier))))
       (required_parameter
         (object_pattern
-          (shorthand_property_identifier_pattern))))
+          (shorthand_property_identifier_pattern
+            (identifier)))))
     (statement_block)))
 
 ================================================================================
@@ -77,29 +88,35 @@ Array destructuring assignments
 (program
   (expression_statement
     (assignment_expression
-      (array_pattern
-        (identifier)
-        (member_expression
+      (non_null_expression
+        (array
           (identifier)
-          (property_identifier))
-        (rest_pattern
-          (subscript_expression
+          (member_expression
             (identifier)
-            (identifier))))
+            (property_identifier))
+          (spread_element
+            (subscript_expression
+              (identifier)
+              (identifier))))
+        (MISSING "!"))
       (identifier)))
   (expression_statement
     (assignment_expression
-      (array_pattern
-        (identifier)
-        (identifier)
-        (rest_pattern
-          (identifier)))
+      (non_null_expression
+        (array
+          (identifier)
+          (identifier)
+          (spread_element
+            (identifier)))
+        (MISSING "!"))
       (identifier)))
   (expression_statement
     (assignment_expression
-      (array_pattern
-        (identifier)
-        (identifier))
+      (non_null_expression
+        (array
+          (identifier)
+          (identifier))
+        (MISSING "!"))
       (identifier))))
 
 ================================================================================
@@ -117,20 +134,22 @@ function b({c} = {}) {}
   (lexical_declaration
     (variable_declarator
       (object_pattern
-        (pair_pattern
-          (property_identifier)
-          (assignment_pattern
-            (identifier)
-            (identifier))))
+        (object_assignment_pattern
+          (pair_pattern
+            (property_identifier)
+            (binding_identifier
+              (identifier)))
+          (identifier)))
       (identifier)))
   (for_in_statement
     (object_pattern
-      (pair_pattern
-        (property_identifier)
-        (assignment_pattern
+      (object_assignment_pattern
+        (pair_pattern
+          (property_identifier)
           (object_pattern
-            (shorthand_property_identifier_pattern))
-          (identifier))))
+            (shorthand_property_identifier_pattern
+              (identifier))))
+        (identifier)))
     (identifier)
     (statement_block))
   (function_declaration
@@ -139,13 +158,16 @@ function b({c} = {}) {}
       (required_parameter
         (object_pattern
           (object_assignment_pattern
-            (shorthand_property_identifier_pattern)
+            (shorthand_property_identifier_pattern
+              (identifier))
             (true))))
       (required_parameter
         (array_pattern
-          (identifier)
+          (binding_identifier
+            (identifier))
           (assignment_pattern
-            (identifier)
+            (binding_identifier
+              (identifier))
             (false)))))
     (statement_block))
   (function_declaration
@@ -153,6 +175,7 @@ function b({c} = {}) {}
     (formal_parameters
       (required_parameter
         (object_pattern
-          (shorthand_property_identifier_pattern))
+          (shorthand_property_identifier_pattern
+            (identifier)))
         (object)))
     (statement_block)))

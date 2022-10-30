@@ -89,7 +89,8 @@ declare module Foo {
       name: (identifier)
       parameters: (formal_parameters
         (required_parameter
-          pattern: (identifier)
+          pattern: (binding_identifier
+            name: (identifier))
           type: (type_annotation
             (predefined_type))))
       return_type: (type_annotation
@@ -102,7 +103,8 @@ declare module Foo {
           name: (identifier)
           parameters: (formal_parameters
             (required_parameter
-              pattern: (identifier)
+              pattern: (binding_identifier
+                name: (identifier))
               type: (type_annotation
                 (predefined_type))))
           return_type: (type_annotation
@@ -143,7 +145,8 @@ declare module Foo {
           name: (property_identifier)
           parameters: (formal_parameters
             (required_parameter
-              pattern: (identifier)
+              pattern: (binding_identifier
+                name: (identifier))
               type: (type_annotation
                 (predefined_type)))))
         (public_field_definition
@@ -214,7 +217,8 @@ declare module Foo {
           (try_statement
             body: (statement_block)
             handler: (catch_clause
-              parameter: (identifier)
+              parameter: (binding_identifier
+                name: (identifier))
               body: (statement_block))
             finalizer: (finally_clause
               body: (statement_block))))))))
@@ -234,7 +238,8 @@ finally {}
     (try_statement
       body: (statement_block)
       handler: (catch_clause
-        parameter: (identifier)
+        parameter: (binding_identifier
+          name: (identifier))
         type: (type_annotation
           (predefined_type))
         body: (statement_block))
@@ -329,11 +334,13 @@ export async function readFile(filename: string): Promise<Buffer>;
       (identifier)
       (formal_parameters
         (required_parameter
-          (identifier)
+          (binding_identifier
+            (identifier))
           (type_annotation
             (predefined_type)))
         (required_parameter
-          (identifier)
+          (binding_identifier
+            (identifier))
           (type_annotation
             (predefined_type))))
       (statement_block
@@ -351,7 +358,8 @@ export async function readFile(filename: string): Promise<Buffer>;
       (identifier)
       (formal_parameters
         (required_parameter
-          (identifier)
+          (binding_identifier
+            (identifier))
           (type_annotation
             (predefined_type))))
       (type_annotation
@@ -554,7 +562,8 @@ declare module "example" { }
               (type_identifier)))
           (formal_parameters
             (optional_parameter
-              (identifier)
+              (binding_identifier
+                (identifier))
               (type_annotation
                 (generic_type
                   (type_identifier)
@@ -638,7 +647,8 @@ export interface Foo {
                 (type_identifier)))
             (formal_parameters
               (required_parameter
-                (identifier)
+                (binding_identifier
+                  (identifier))
                 (type_annotation
                   (generic_type
                     (nested_type_identifier
@@ -784,7 +794,8 @@ class Foo {
         (property_identifier)
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block)))))
 
 ================================================================================
@@ -813,7 +824,8 @@ class Foo {
             (type_identifier)))
         (formal_parameters
           (required_parameter
-            (identifier)
+            (binding_identifier
+              (identifier))
             (type_annotation
               (function_type
                 (formal_parameters)
@@ -827,12 +839,14 @@ class Foo {
                         (literal_type
                           (undefined)))))))))
           (optional_parameter
-            (identifier)
+            (binding_identifier
+              (identifier))
             (type_annotation
               (function_type
                 (formal_parameters
                   (required_parameter
-                    (identifier)
+                    (binding_identifier
+                      (identifier))
                     (type_annotation
                       (type_identifier))))
                 (union_type
@@ -842,11 +856,13 @@ class Foo {
                     (type_arguments
                       (predefined_type)))))))
           (optional_parameter
-            (identifier)
+            (binding_identifier
+              (identifier))
             (type_annotation
               (predefined_type)))
           (optional_parameter
-            (identifier)
+            (binding_identifier
+              (identifier))
             (type_annotation
               (predefined_type))))
         (type_annotation
@@ -983,13 +999,15 @@ Classes with decorators
           (required_parameter
             (decorator
               (identifier))
-            (identifier)
+            (binding_identifier
+              (identifier))
             (type_annotation
               (predefined_type)))
           (optional_parameter
             (decorator
               (identifier))
-            (identifier)
+            (binding_identifier
+              (identifier))
             (type_annotation
               (predefined_type))))
         (statement_block)))))
@@ -1019,7 +1037,8 @@ class Foo<Bar> extends Baz { bar = 5; static one(a) { return a; }; two(b) { retu
         (property_identifier)
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block
           (return_statement
             (identifier))))
@@ -1027,7 +1046,8 @@ class Foo<Bar> extends Baz { bar = 5; static one(a) { return a; }; two(b) { retu
         (property_identifier)
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block
           (return_statement
             (identifier))))
@@ -1035,7 +1055,8 @@ class Foo<Bar> extends Baz { bar = 5; static one(a) { return a; }; two(b) { retu
         (property_identifier)
         (formal_parameters
           (required_parameter
-            (identifier)))
+            (binding_identifier
+              (identifier))))
         (statement_block
           (return_statement
             (identifier)))))))

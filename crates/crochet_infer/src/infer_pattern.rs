@@ -157,7 +157,11 @@ fn infer_pattern_rec(
                                 t: value_type,
                             }))
                         }
-                        ObjectPatProp::Assign(AssignPatProp { key, value: _, .. }) => {
+                        ObjectPatProp::Assign(AssignPatProp {
+                            key,
+                            value: _,
+                            span: _,
+                        }) => {
                             // We ignore the value for now, we can come back later to handle
                             // default values.
                             // TODO: handle default values

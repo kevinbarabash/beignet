@@ -23,6 +23,16 @@ impl From<&Ident> for swc_ecma_ast::Ident {
     }
 }
 
+impl From<&BindingIdent> for swc_ecma_ast::Ident {
+    fn from(binding: &BindingIdent) -> Self {
+        swc_ecma_ast::Ident {
+            span: DUMMY_SP,
+            sym: JsWord::from(binding.name.to_owned()),
+            optional: false,
+        }
+    }
+}
+
 // TODO: have a separate struct for BindingIdents in types so that
 // we don't have to create spans for things that don't need them.
 // TODO: add an `ident` field so that we can have separate spans
