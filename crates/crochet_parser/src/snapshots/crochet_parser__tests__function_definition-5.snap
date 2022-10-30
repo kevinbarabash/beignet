@@ -18,26 +18,26 @@ Ok(
                                         kind: Object(
                                             ObjectPat {
                                                 props: [
-                                                    Assign(
-                                                        AssignPatProp {
-                                                            span: 2..3,
-                                                            key: BindingIdent {
+                                                    Shorthand(
+                                                        ShorthandPatProp {
+                                                            ident: BindingIdent {
                                                                 name: "x",
                                                                 mutable: false,
                                                                 span: 2..3,
                                                             },
-                                                            value: None,
+                                                            init: None,
+                                                            span: 2..3,
                                                         },
                                                     ),
-                                                    Assign(
-                                                        AssignPatProp {
-                                                            span: 5..6,
-                                                            key: BindingIdent {
+                                                    Shorthand(
+                                                        ShorthandPatProp {
+                                                            ident: BindingIdent {
                                                                 name: "y",
                                                                 mutable: false,
                                                                 span: 5..6,
                                                             },
-                                                            value: None,
+                                                            init: None,
+                                                            span: 5..6,
                                                         },
                                                     ),
                                                 ],

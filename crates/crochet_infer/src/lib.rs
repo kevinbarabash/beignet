@@ -2725,6 +2725,7 @@ mod tests {
 
     // TODO: make this test fail
     #[test]
+    #[ignore]
     fn test_updating_properties_fails() {
         let src = r#"
         let foo: {bar: number} = {bar: 5};
@@ -2736,6 +2737,7 @@ mod tests {
 
     // TODO: make this test fail
     #[test]
+    #[ignore]
     fn test_updating_properties_with_string_literal_indexer_fails() {
         let src = r#"
         let foo: {bar: number} = {bar: 5};
@@ -2772,7 +2774,6 @@ mod tests {
 
     // TODO: re-enable once we've update object pattern properties in the AST
     // to look more like babel's properties
-    #[ignore]
     #[test]
     #[should_panic = "can't assign to non-mutable binder 'bar'"]
     fn test_updating_mutable_destructured_shorthand_obj_member() {
@@ -2795,5 +2796,37 @@ mod tests {
             "#;
 
         infer_prog(src);
+    }
+
+    #[test]
+    fn test_updating_mutable_destructured_renamed_tuple_element() {
+        let src = r#"
+            declare let tuple: [number, string];
+            let [mut a, mut b = "hello"] = tuple;
+            a = 5;
+            b = "world";
+            "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("a", &ctx), "number");
+        assert_eq!(get_value_type("b", &ctx), "string");
+    }
+
+    #[test]
+    fn test_updating_mutable_destructured_renamed_tuple_element_with_optional_types() {
+        let src = r#"
+            declare let tuple: [number | undefined, string | undefined];
+            let [mut a, mut b = "hello"] = tuple;
+            a = 5;
+            b = "world";
+            "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("a", &ctx), "number | undefined");
+        // TODO: the type of `b` should be just `string` b/c we're providing
+        // a default value when destructuring the tuple.
+        assert_eq!(get_value_type("b", &ctx), "string | undefined");
     }
 }

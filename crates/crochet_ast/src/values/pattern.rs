@@ -45,7 +45,7 @@ pub struct LitPat {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IsPat {
-    pub id: Ident,
+    pub ident: BindingIdent,
     pub is_id: Ident,
 }
 
@@ -59,8 +59,16 @@ pub struct RestPat {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ArrayPat {
-    pub elems: Vec<Option<Pattern>>,
+    // The elements are optional to support sparse arrays.
+    pub elems: Vec<Option<ArrayPatElem>>,
     pub optional: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArrayPatElem {
+    // TODO: add .span property
+    pub pattern: Pattern,
+    pub init: Option<Box<Expr>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,21 +80,23 @@ pub struct ObjectPat {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ObjectPatProp {
     KeyValue(KeyValuePatProp),
+    Shorthand(ShorthandPatProp),
     Rest(RestPat), // TODO: create a new RestPatProp that includes a span
-    Assign(AssignPatProp),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyValuePatProp {
     pub key: Ident,
     pub value: Box<Pattern>,
+    pub init: Option<Box<Expr>>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AssignPatProp {
+pub struct ShorthandPatProp {
+    pub ident: BindingIdent,
+    pub init: Option<Box<Expr>>,
     pub span: Span,
-    pub key: BindingIdent,
-    pub value: Option<Box<Expr>>,
 }
 
 pub fn is_refutable(pat: &Pattern) -> bool {
@@ -103,13 +113,13 @@ pub fn is_refutable(pat: &Pattern) -> bool {
         // refutable if at least one sub-pattern is refutable
         PatternKind::Object(ObjectPat { props, .. }) => props.iter().any(|prop| match prop {
             ObjectPatProp::KeyValue(KeyValuePatProp { value, .. }) => is_refutable(value),
+            ObjectPatProp::Shorthand(_) => false, // corresponds to {x} or {x = 5}
             ObjectPatProp::Rest(RestPat { arg, .. }) => is_refutable(arg),
-            ObjectPatProp::Assign(_) => false, // corresponds to {x = 5}
         }),
         PatternKind::Array(ArrayPat { elems, .. }) => {
             elems.iter().any(|elem| {
                 match elem {
-                    Some(elem) => is_refutable(elem),
+                    Some(elem) => is_refutable(&elem.pattern),
                     // FixMe: this should probably be true since it's equivalent
                     // to having an element with the value `undefined`
                     None => false,
@@ -131,6 +141,14 @@ mod tests {
         Ident {
             span: 0..0,
             name: name.to_owned(),
+        }
+    }
+
+    fn binding_ident(name: &str) -> BindingIdent {
+        BindingIdent {
+            span: 0..0,
+            name: name.to_owned(),
+            mutable: false,
         }
     }
 
@@ -184,6 +202,8 @@ mod tests {
             props: vec![ObjectPatProp::KeyValue(KeyValuePatProp {
                 key: ident("foo"),
                 value: Box::from(ident_pattern("foo")),
+                init: None,
+                span: 0..0,
             })],
             optional: false,
         });
@@ -202,10 +222,14 @@ mod tests {
                 ObjectPatProp::KeyValue(KeyValuePatProp {
                     key: ident("foo"),
                     value: Box::from(ident_pattern("foo")),
+                    init: None,
+                    span: 0..0,
                 }),
                 ObjectPatProp::KeyValue(KeyValuePatProp {
                     key: ident("bar"),
                     value: Box::from(num_lit_pat("5")),
+                    init: None,
+                    span: 0..0,
                 }),
             ],
             optional: false,
@@ -221,7 +245,10 @@ mod tests {
     #[test]
     fn array_with_all_irrefutable_elements_is_irrefutable() {
         let kind = PatternKind::Array(ArrayPat {
-            elems: vec![Some(ident_pattern("foo"))],
+            elems: vec![Some(ArrayPatElem {
+                pattern: ident_pattern("foo"),
+                init: None,
+            })],
             optional: false,
         });
         let array = Pattern {
@@ -235,7 +262,16 @@ mod tests {
     #[test]
     fn array_with_one_refutable_prop_is_refutable() {
         let kind = PatternKind::Array(ArrayPat {
-            elems: vec![Some(ident_pattern("foo")), Some(num_lit_pat("5"))],
+            elems: vec![
+                Some(ArrayPatElem {
+                    pattern: ident_pattern("foo"),
+                    init: None,
+                }),
+                Some(ArrayPatElem {
+                    pattern: num_lit_pat("5"),
+                    init: None,
+                }),
+            ],
             optional: false,
         });
         let array = Pattern {
@@ -254,7 +290,7 @@ mod tests {
     #[test]
     fn is_is_refutable() {
         let kind = PatternKind::Is(IsPat {
-            id: ident("foo"),
+            ident: binding_ident("foo"),
             is_id: ident("string"),
         });
         let is_pat = Pattern {

@@ -63,6 +63,7 @@ impl fmt::Display for TObjectPat {
     }
 }
 
+// TODO: update this to match AST changes to ObjectPatProp
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TObjectPatProp {
     KeyValue(TObjectKeyValuePatProp),

@@ -80,7 +80,7 @@ fn infer_pattern_rec(
             Ok(tv)
         }
         PatternKind::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
-        PatternKind::Is(IsPat { id, is_id, .. }) => {
+        PatternKind::Is(IsPat { ident, is_id, .. }) => {
             let kind = match is_id.name.as_str() {
                 "string" => TypeKind::Keyword(types::TKeyword::String),
                 "number" => TypeKind::Keyword(types::TKeyword::Number),
@@ -100,7 +100,7 @@ fn infer_pattern_rec(
             let t = generalize(&all_types, &t);
             if assump
                 .insert(
-                    id.name.to_owned(),
+                    ident.name.to_owned(),
                     Binding {
                         mutable: false,
                         t: t.clone(),
@@ -121,12 +121,17 @@ fn infer_pattern_rec(
                 .iter_mut()
                 .map(|elem| {
                     match elem {
-                        Some(elem) => match &mut elem.kind {
+                        Some(elem) => match &mut elem.pattern.kind {
                             PatternKind::Rest(rest) => {
                                 let rest_ty = infer_pattern_rec(&mut rest.arg, ctx, assump)?;
                                 Ok(Type::from(TypeKind::Rest(Box::from(rest_ty))))
                             }
-                            _ => infer_pattern_rec(elem, ctx, assump),
+                            _ => {
+                                // TODO: handle elem.init when inferring the element's pattern
+                                // since this can have an impact on the type the assumption we
+                                // insert.
+                                infer_pattern_rec(&mut elem.pattern, ctx, assump)
+                            }
                         },
                         None => {
                             // TODO: figure how to ignore gaps in the array
@@ -146,7 +151,16 @@ fn infer_pattern_rec(
                 .filter_map(|prop| {
                     match prop {
                         // re-assignment, e.g. {x: new_x, y: new_y} = point
-                        ObjectPatProp::KeyValue(KeyValuePatProp { key, value }) => {
+                        ObjectPatProp::KeyValue(KeyValuePatProp {
+                            key,
+                            value,
+                            init: _,
+                            span: _,
+                        }) => {
+                            // We ignore `init` for now, we can come back later to handle
+                            // default values.
+                            // TODO: handle default values
+
                             // TODO: bubble the error up from infer_patter_rec() if there is one.
                             let value_type = infer_pattern_rec(value, ctx, assump).unwrap();
 
@@ -157,19 +171,19 @@ fn infer_pattern_rec(
                                 t: value_type,
                             }))
                         }
-                        ObjectPatProp::Assign(AssignPatProp {
-                            key,
-                            value: _,
+                        ObjectPatProp::Shorthand(ShorthandPatProp {
+                            ident,
+                            init: _,
                             span: _,
                         }) => {
-                            // We ignore the value for now, we can come back later to handle
+                            // We ignore `init` for now, we can come back later to handle
                             // default values.
                             // TODO: handle default values
 
                             let tv = ctx.fresh_var();
                             if assump
                                 .insert(
-                                    key.name.to_owned(),
+                                    ident.name.to_owned(),
                                     Binding {
                                         mutable: false,
                                         t: tv.clone(),
@@ -181,7 +195,7 @@ fn infer_pattern_rec(
                             }
 
                             Some(types::TObjElem::Prop(types::TProp {
-                                name: key.name.to_owned(),
+                                name: ident.name.to_owned(),
                                 optional: false,
                                 mutable: false,
                                 t: tv,

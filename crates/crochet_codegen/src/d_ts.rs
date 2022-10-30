@@ -1,3 +1,4 @@
+use crochet_ast::values::ShorthandPatProp;
 use itertools::Itertools;
 use std::rc::Rc;
 
@@ -177,12 +178,15 @@ pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTyp
                             value: Box::from(build_param_pat_rec(kv.value.as_ref(), None)),
                         })
                     }
-                    values::ObjectPatProp::Assign(assign) => {
+                    values::ObjectPatProp::Shorthand(ShorthandPatProp {
+                        ident,
+                        init: _,
+                        span: _,
+                    }) => {
                         ObjectPatProp::Assign(AssignPatProp {
                             span: DUMMY_SP,
-                            key: build_ident(&assign.key.name),
-                            // TODO: handle default values
-                            value: None,
+                            key: build_ident(&ident.name),
+                            value: None, // TS type annotations don't support default values
                         })
                     }
                     values::ObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
@@ -204,7 +208,10 @@ pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTyp
             let elems = array
                 .elems
                 .iter()
-                .map(|elem| elem.as_ref().map(|elem| build_param_pat_rec(elem, None)))
+                .map(|elem| {
+                    elem.as_ref()
+                        .map(|elem| build_param_pat_rec(&elem.pattern, None))
+                })
                 .collect();
             Pat::Array(ArrayPat {
                 span: DUMMY_SP,

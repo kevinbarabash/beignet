@@ -31,15 +31,15 @@ Ok(
                                             kind: Object(
                                                 ObjectPat {
                                                     props: [
-                                                        Assign(
-                                                            AssignPatProp {
-                                                                span: 12..17,
-                                                                key: BindingIdent {
+                                                        Shorthand(
+                                                            ShorthandPatProp {
+                                                                ident: BindingIdent {
                                                                     name: "x",
                                                                     mutable: true,
                                                                     span: 16..17,
                                                                 },
-                                                                value: None,
+                                                                init: None,
+                                                                span: 12..17,
                                                             },
                                                         ),
                                                         KeyValue(
@@ -59,6 +59,8 @@ Ok(
                                                                     ),
                                                                     inferred_type: None,
                                                                 },
+                                                                init: None,
+                                                                span: 19..27,
                                                             },
                                                         ),
                                                     ],

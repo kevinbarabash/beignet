@@ -252,7 +252,12 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
                         )?);
 
                         // TODO: include `span` in this node
-                        Ok(ObjectPatProp::KeyValue(KeyValuePatProp { key, value }))
+                        Ok(ObjectPatProp::KeyValue(KeyValuePatProp {
+                            key,
+                            value,
+                            init: None,
+                            span: child.byte_range(),
+                        }))
                     }
                     "rest_pattern" => {
                         let pattern = child.named_child(0).unwrap();
@@ -262,19 +267,61 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
                             arg: Box::from(pattern),
                         }))
                     }
-                    "object_assignment_pattern" => todo!(),
+                    "object_assignment_pattern" => {
+                        let left = child.child_by_field_name("left").unwrap();
+                        let right = child.child_by_field_name("right").unwrap();
+                        let init = parse_expression(&right, src)?;
+                        match left.kind() {
+                            "shorthand_property_identifier_pattern" => {
+                                let name_node = left.child_by_field_name("name").unwrap();
+                                let name = src.get(name_node.byte_range()).unwrap().to_owned();
+                                let mutable = left.child_by_field_name("mut").is_some();
+
+                                Ok(ObjectPatProp::Shorthand(ShorthandPatProp {
+                                    ident: BindingIdent {
+                                        span: name_node.byte_range(),
+                                        name,
+                                        mutable,
+                                    },
+                                    init: Some(Box::from(init)),
+                                    span: left.byte_range(),
+                                }))
+                            },
+                            "pair_pattern" => {
+                                let key_node = left.child_by_field_name("key").unwrap();
+                                let key = Ident {
+                                    span: key_node.byte_range(),
+                                    name: text_for_node(&key_node, src)?,
+                                };
+
+                                let value = Box::from(parse_pattern(
+                                    &left.child_by_field_name("value").unwrap(),
+                                    src,
+                                )?);
+
+                                // TODO: include `span` in this node
+                                Ok(ObjectPatProp::KeyValue(KeyValuePatProp {
+                                    key,
+                                    value,
+                                    init: Some(Box::from(init)),
+                                    span: left.byte_range(),
+                                }))
+                            },
+                            kind => panic!("unexpected .right property on object_assignment_pattern of type {kind}"),
+                        }
+                    }
                     "shorthand_property_identifier_pattern" => {
                         let name_node = child.child_by_field_name("name").unwrap();
                         let name = src.get(name_node.byte_range()).unwrap().to_owned();
                         let mutable = child.child_by_field_name("mut").is_some();
-                        Ok(ObjectPatProp::Assign(AssignPatProp {
-                            span: child.byte_range(),
-                            key: BindingIdent {
+                        Ok(ObjectPatProp::Shorthand(ShorthandPatProp {
+                            ident: BindingIdent {
                                 span: name_node.byte_range(),
                                 name,
                                 mutable,
                             },
-                            value: None,
+                            init: None,
+                            span: child.byte_range(),
                         }))
                     }
                     kind => panic!("Unexpected object property kind: '{kind}'"),
@@ -294,8 +341,23 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|child| match child.kind() {
-                    "assignment_pattern" => todo!(),
-                    _ => Ok(Some(parse_pattern(&child, src)?)),
+                    "assignment_pattern" => {
+                        let left = child.child_by_field_name("left").ok_or_else(|| {
+                            String::from("'left' field not found on assignment_pattern")
+                        })?;
+                        let right = child.child_by_field_name("right").ok_or_else(|| {
+                            String::from("'right' field not found on assignment_pattern")
+                        })?;
+
+                        Ok(Some(ArrayPatElem {
+                            pattern: parse_pattern(&left, src)?,
+                            init: Some(Box::from(parse_expression(&right, src)?)),
+                        }))
+                    }
+                    _ => Ok(Some(ArrayPatElem {
+                        pattern: parse_pattern(&child, src)?,
+                        init: None,
+                    })),
                 })
                 .collect::<Result<Vec<_>, String>>()?;
 
@@ -952,7 +1014,12 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                 .named_children(&mut cursor)
                 .into_iter()
                 // TODO: make elems in ArrayPat non-optional
-                .map(|elem| Ok(Some(parse_refutable_pattern(&elem, src)?)))
+                .map(|elem| {
+                    Ok(Some(ArrayPatElem {
+                        pattern: parse_refutable_pattern(&elem, src)?,
+                        init: None,
+                    }))
+                })
                 .collect::<Result<Vec<_>, String>>()?;
 
             PatternKind::Array(ArrayPat {
@@ -978,6 +1045,8 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                                 name: key,
                             },
                             value: Box::from(value),
+                            init: None,
+                            span: prop.byte_range(),
                         }))
                     }
                     "refutable_rest_pattern" => {
@@ -989,15 +1058,15 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                         }))
                     }
                     "shorthand_property_identifier_pattern" => {
-                        let mutable = node.child_by_field_name("mut").is_some();
-                        Ok(ObjectPatProp::Assign(AssignPatProp {
-                            span: prop.byte_range(),
-                            key: BindingIdent {
+                        let mutable = prop.child_by_field_name("mut").is_some();
+                        Ok(ObjectPatProp::Shorthand(ShorthandPatProp {
+                            ident: BindingIdent {
                                 span: prop.byte_range(),
                                 name: text_for_node(&prop, src)?,
                                 mutable,
                             },
-                            value: None,
+                            init: None,
+                            span: prop.byte_range(),
                         }))
                     }
                     kind => panic!("Unexected prop.kind() = {kind}"),
@@ -1022,9 +1091,10 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
             let right = child.named_child(1).unwrap();
 
             PatternKind::Is(IsPat {
-                id: Ident {
+                ident: BindingIdent {
                     span: left.byte_range(),
                     name: text_for_node(&left, src)?,
+                    mutable: false,
                 },
                 is_id: Ident {
                     span: right.byte_range(),
@@ -1885,9 +1955,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let foo = ({mut x, y: mut z}) => {};"));
         insta::assert_debug_snapshot!(parse("let [a, mut b, ...rest] = letters;"));
         insta::assert_debug_snapshot!(parse("let foo = ([a, mut b, ...rest]) => {};"));
-        // TODO: assigning defaults
-        // insta::assert_debug_snapshot!(parse("let {x, mut y = 10} = point;"));
-        // insta::assert_debug_snapshot!(parse("let [a, mut b = 98, ...rest] = letters;"));
+        insta::assert_debug_snapshot!(parse("let {x, mut y = 10} = point;"));
+        insta::assert_debug_snapshot!(parse("let [a, mut b = 98, ...rest] = letters;"));
         // TODO: disallowed patterns, e.g. top-level rest, non-top-level type annotations
     }
 

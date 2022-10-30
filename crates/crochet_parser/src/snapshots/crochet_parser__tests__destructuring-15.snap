@@ -1,14 +1,14 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"let [a, mut b, ...rest] = letters;\")"
+expression: "parse(\"let [a, mut b = 98, ...rest] = letters;\")"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 0..34,
+                span: 0..39,
                 pattern: Pattern {
-                    span: 4..23,
+                    span: 4..28,
                     kind: Array(
                         ArrayPat {
                             elems: [
@@ -41,22 +41,35 @@ Ok(
                                             ),
                                             inferred_type: None,
                                         },
-                                        init: None,
+                                        init: Some(
+                                            Expr {
+                                                span: 16..18,
+                                                kind: Lit(
+                                                    Num(
+                                                        Num {
+                                                            span: 16..18,
+                                                            value: "98",
+                                                        },
+                                                    ),
+                                                ),
+                                                inferred_type: None,
+                                            },
+                                        ),
                                     },
                                 ),
                                 Some(
                                     ArrayPatElem {
                                         pattern: Pattern {
-                                            span: 15..22,
+                                            span: 20..27,
                                             kind: Rest(
                                                 RestPat {
                                                     arg: Pattern {
-                                                        span: 18..22,
+                                                        span: 23..27,
                                                         kind: Ident(
                                                             BindingIdent {
                                                                 name: "rest",
                                                                 mutable: false,
-                                                                span: 18..22,
+                                                                span: 23..27,
                                                             },
                                                         ),
                                                         inferred_type: None,
@@ -77,10 +90,10 @@ Ok(
                 type_ann: None,
                 init: Some(
                     Expr {
-                        span: 26..33,
+                        span: 31..38,
                         kind: Ident(
                             Ident {
-                                span: 26..33,
+                                span: 31..38,
                                 name: "letters",
                             },
                         ),

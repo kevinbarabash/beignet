@@ -23,26 +23,26 @@ Ok(
                                             kind: Object(
                                                 ObjectPat {
                                                     props: [
-                                                        Assign(
-                                                            AssignPatProp {
-                                                                span: 10..11,
-                                                                key: BindingIdent {
+                                                        Shorthand(
+                                                            ShorthandPatProp {
+                                                                ident: BindingIdent {
                                                                     name: "x",
                                                                     mutable: false,
                                                                     span: 10..11,
                                                                 },
-                                                                value: None,
+                                                                init: None,
+                                                                span: 10..11,
                                                             },
                                                         ),
-                                                        Assign(
-                                                            AssignPatProp {
-                                                                span: 13..14,
-                                                                key: BindingIdent {
+                                                        Shorthand(
+                                                            ShorthandPatProp {
+                                                                ident: BindingIdent {
                                                                     name: "y",
                                                                     mutable: false,
                                                                     span: 13..14,
                                                                 },
-                                                                value: None,
+                                                                init: None,
+                                                                span: 13..14,
                                                             },
                                                         ),
                                                     ],
@@ -51,6 +51,8 @@ Ok(
                                             ),
                                             inferred_type: None,
                                         },
+                                        init: None,
+                                        span: 5..15,
                                     },
                                 ),
                                 KeyValue(
@@ -64,26 +66,26 @@ Ok(
                                             kind: Object(
                                                 ObjectPat {
                                                     props: [
-                                                        Assign(
-                                                            AssignPatProp {
-                                                                span: 22..23,
-                                                                key: BindingIdent {
+                                                        Shorthand(
+                                                            ShorthandPatProp {
+                                                                ident: BindingIdent {
                                                                     name: "x",
                                                                     mutable: false,
                                                                     span: 22..23,
                                                                 },
-                                                                value: None,
+                                                                init: None,
+                                                                span: 22..23,
                                                             },
                                                         ),
-                                                        Assign(
-                                                            AssignPatProp {
-                                                                span: 25..26,
-                                                                key: BindingIdent {
+                                                        Shorthand(
+                                                            ShorthandPatProp {
+                                                                ident: BindingIdent {
                                                                     name: "y",
                                                                     mutable: false,
                                                                     span: 25..26,
                                                                 },
-                                                                value: None,
+                                                                init: None,
+                                                                span: 25..26,
                                                             },
                                                         ),
                                                     ],
@@ -92,6 +94,8 @@ Ok(
                                             ),
                                             inferred_type: None,
                                         },
+                                        init: None,
+                                        span: 17..27,
                                     },
                                 ),
                             ],

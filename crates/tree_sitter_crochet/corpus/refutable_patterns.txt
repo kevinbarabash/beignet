@@ -131,7 +131,7 @@ Pattern matching ("is" patterns)
 
 let bar = match (foo) {
   n is number -> "number",
-  {a: a is Array} -> "Array",
+  {a: mut a is Array} -> "Array",
   _ -> "fallthrough"
 };
 
@@ -148,7 +148,8 @@ let bar = match (foo) {
           (match_arm
             (refutable_pattern
               (refutable_is_pattern
-                (identifier)
+                (binding_identifier
+                  (identifier))
                 (identifier)))
             (string
               (string_fragment)))
@@ -159,7 +160,8 @@ let bar = match (foo) {
                   (property_identifier)
                   (refutable_pattern
                     (refutable_is_pattern
-                      (identifier)
+                      (binding_identifier
+                        (identifier))
                       (identifier))))))
             (string
               (string_fragment)))
@@ -286,7 +288,7 @@ if-let ("is" pattern)
 
 let bar = if (let {x: x is string} = foo) {
   "object"
-} else if (let [a is Array, _, ...rest] = foo) {
+} else if (let [mut a is Array, _, ...rest] = foo) {
   "array"
 } else {
   "other"
@@ -307,7 +309,8 @@ let bar = if (let {x: x is string} = foo) {
                 (property_identifier)
                 (refutable_pattern
                   (refutable_is_pattern
-                    (identifier)
+                    (binding_identifier
+                      (identifier))
                     (identifier))))))
           (identifier))
         (statement_block
@@ -321,7 +324,8 @@ let bar = if (let {x: x is string} = foo) {
                 (refutable_array_pattern
                   (refutable_pattern
                     (refutable_is_pattern
-                      (identifier)
+                      (binding_identifier
+                        (identifier))
                       (identifier)))
                   (refutable_pattern
                     (binding_identifier

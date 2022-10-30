@@ -177,16 +177,17 @@ fn build_pattern(
                             })
                         })
                     }
-                    values::ObjectPatProp::Assign(ap) => {
-                        Some(ObjectPatProp::Assign(AssignPatProp {
-                            span: DUMMY_SP,
-                            key: Ident::from(&ap.key),
-                            value: ap
-                                .value
-                                .clone()
-                                .map(|value| Box::from(build_expr(value.as_ref(), stmts, ctx))),
-                        }))
-                    }
+                    values::ObjectPatProp::Shorthand(values::ShorthandPatProp {
+                        ident,
+                        init,
+                        span: _,
+                    }) => Some(ObjectPatProp::Assign(AssignPatProp {
+                        span: DUMMY_SP,
+                        key: Ident::from(ident),
+                        value: init
+                            .clone()
+                            .map(|value| Box::from(build_expr(value.as_ref(), stmts, ctx))),
+                    })),
                     values::ObjectPatProp::Rest(_) => todo!(),
                 })
                 .collect();
@@ -204,7 +205,7 @@ fn build_pattern(
             let elems: Vec<Option<Pat>> = elems
                 .iter()
                 .map(|elem| match elem {
-                    Some(elem) => build_pattern(elem, stmts, ctx),
+                    Some(elem) => build_pattern(&elem.pattern, stmts, ctx),
                     None => None,
                 })
                 .collect();
@@ -218,8 +219,8 @@ fn build_pattern(
                 type_ann: None, // because we're generating .js.
             }))
         }
-        values::PatternKind::Is(values::IsPat { id, .. }) => Some(Pat::Ident(BindingIdent {
-            id: build_ident(&id.name),
+        values::PatternKind::Is(values::IsPat { ident, .. }) => Some(Pat::Ident(BindingIdent {
+            id: build_ident(&ident.name),
             type_ann: None,
         })),
     }
@@ -1031,8 +1032,8 @@ fn get_conds_for_pat(pat: &values::Pattern, conds: &mut Vec<Condition>, path: &m
                         get_conds_for_pat(value, conds, path);
                         path.pop();
                     }
+                    values::ObjectPatProp::Shorthand(_) => (),
                     values::ObjectPatProp::Rest(_) => (),
-                    values::ObjectPatProp::Assign(_) => (),
                 }
             }
         }
@@ -1040,7 +1041,7 @@ fn get_conds_for_pat(pat: &values::Pattern, conds: &mut Vec<Condition>, path: &m
             for (index, elem) in elems.iter().enumerate() {
                 path.push(PathElem::ArrayIndex(index as u32));
                 if let Some(elem) = elem {
-                    get_conds_for_pat(elem, conds, path);
+                    get_conds_for_pat(&elem.pattern, conds, path);
                 }
                 path.pop();
             }
