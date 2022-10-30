@@ -96,6 +96,8 @@ Ok(
                                                                     ),
                                                                     inferred_type: None,
                                                                 },
+                                                                init: None,
+                                                                span: 95..108,
                                                             },
                                                         ),
                                                     ],

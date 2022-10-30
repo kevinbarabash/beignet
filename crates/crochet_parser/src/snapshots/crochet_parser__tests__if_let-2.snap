@@ -55,6 +55,8 @@ Ok(
                                                                         ),
                                                                         inferred_type: None,
                                                                     },
+                                                                    init: None,
+                                                                    span: 32..46,
                                                                 },
                                                             ),
                                                         ],

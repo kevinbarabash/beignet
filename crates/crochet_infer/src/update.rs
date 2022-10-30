@@ -20,22 +20,31 @@ pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
         PatternKind::Object(ObjectPat { props, optional: _ }) => {
             props.iter_mut().for_each(|prop| match prop {
                 ObjectPatProp::KeyValue(KeyValuePatProp {
-                    key: _, // TODO: figure out how to attach inferred_types to idents
+                    // TODO: figure out how to attach inferred_types to idents
+                    // We can do this by updating `BindingIdent` to have an `inferred_type` property
+                    key: _,
                     value,
+                    init,
+                    span: _,
                 }) => {
                     update_pattern(value, s);
+                    if let Some(init) = init {
+                        update_expr(init, s)
+                    }
+                }
+                ObjectPatProp::Shorthand(ShorthandPatProp {
+                    // TODO: figure out how to attach inferred_types to idents
+                    // We can do this by updating `BindingIdent` to have an `inferred_type` property
+                    ident: _,
+                    init,
+                    span: _,
+                }) => {
+                    if let Some(init) = init {
+                        update_expr(init, s)
+                    }
                 }
                 ObjectPatProp::Rest(RestPat { arg }) => {
                     update_pattern(arg, s);
-                }
-                ObjectPatProp::Assign(AssignPatProp {
-                    span: _,
-                    key: _, // TODO: figure out how to attach inferred_types to idents
-                    value,
-                }) => {
-                    if let Some(value) = value {
-                        update_expr(value, s)
-                    }
                 }
             })
             // TODO: process `props`
@@ -209,17 +218,28 @@ fn update_fn_param_pat(pat: &mut Pattern, s: &Subst) {
         PatternKind::Rest(RestPat { arg }) => update_fn_param_pat(arg, s),
         PatternKind::Object(ObjectPat { props, optional: _ }) => {
             props.iter_mut().for_each(|prop| match prop {
-                // TODO: figure out how to attach inferred_types to idents
-                ObjectPatProp::KeyValue(KeyValuePatProp { key: _, value }) => {
-                    update_fn_param_pat(value, s);
-                }
-                ObjectPatProp::Assign(AssignPatProp {
-                    value,
+                ObjectPatProp::KeyValue(KeyValuePatProp {
+                    // TODO: figure out how to attach inferred_types to idents
+                    // We can do this by updating `BindingIdent` to have an `inferred_type` property
                     key: _,
+                    value,
+                    init,
                     span: _,
                 }) => {
-                    if let Some(value) = value {
-                        update_expr(value, s);
+                    update_pattern(value, s);
+                    if let Some(init) = init {
+                        update_expr(init, s)
+                    }
+                }
+                ObjectPatProp::Shorthand(ShorthandPatProp {
+                    // TODO: figure out how to attach inferred_types to idents
+                    // We can do this by updating `BindingIdent` to have an `inferred_type` property
+                    ident: _,
+                    init,
+                    span: _,
+                }) => {
+                    if let Some(init) = init {
+                        update_expr(init, s)
                     }
                 }
                 ObjectPatProp::Rest(RestPat { arg }) => {

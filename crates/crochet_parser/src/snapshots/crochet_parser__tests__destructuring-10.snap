@@ -12,15 +12,15 @@ Ok(
                     kind: Object(
                         ObjectPat {
                             props: [
-                                Assign(
-                                    AssignPatProp {
-                                        span: 5..10,
-                                        key: BindingIdent {
+                                Shorthand(
+                                    ShorthandPatProp {
+                                        ident: BindingIdent {
                                             name: "x",
                                             mutable: true,
                                             span: 9..10,
                                         },
-                                        value: None,
+                                        init: None,
+                                        span: 5..10,
                                     },
                                 ),
                                 KeyValue(
@@ -40,6 +40,8 @@ Ok(
                                             ),
                                             inferred_type: None,
                                         },
+                                        init: None,
+                                        span: 12..20,
                                     },
                                 ),
                             ],

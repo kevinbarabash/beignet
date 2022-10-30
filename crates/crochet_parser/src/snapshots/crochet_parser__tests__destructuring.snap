@@ -12,26 +12,26 @@ Ok(
                     kind: Object(
                         ObjectPat {
                             props: [
-                                Assign(
-                                    AssignPatProp {
-                                        span: 5..6,
-                                        key: BindingIdent {
+                                Shorthand(
+                                    ShorthandPatProp {
+                                        ident: BindingIdent {
                                             name: "x",
                                             mutable: false,
                                             span: 5..6,
                                         },
-                                        value: None,
+                                        init: None,
+                                        span: 5..6,
                                     },
                                 ),
-                                Assign(
-                                    AssignPatProp {
-                                        span: 8..9,
-                                        key: BindingIdent {
+                                Shorthand(
+                                    ShorthandPatProp {
+                                        ident: BindingIdent {
                                             name: "y",
                                             mutable: false,
                                             span: 8..9,
                                         },
-                                        value: None,
+                                        init: None,
+                                        span: 8..9,
                                     },
                                 ),
                             ],

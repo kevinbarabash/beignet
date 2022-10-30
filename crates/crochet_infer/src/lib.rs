@@ -2772,7 +2772,6 @@ mod tests {
 
     // TODO: re-enable once we've update object pattern properties in the AST
     // to look more like babel's properties
-    #[ignore]
     #[test]
     #[should_panic = "can't assign to non-mutable binder 'bar'"]
     fn test_updating_mutable_destructured_shorthand_obj_member() {

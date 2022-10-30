@@ -1,12 +1,12 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"let {a, b, ...rest} = letters;\")"
+expression: "parse(\"let {x, mut y = 10} = point;\")"
 ---
 Ok(
     Program {
         body: [
             VarDecl {
-                span: 0..30,
+                span: 0..28,
                 pattern: Pattern {
                     span: 4..19,
                     kind: Object(
@@ -15,7 +15,7 @@ Ok(
                                 Shorthand(
                                     ShorthandPatProp {
                                         ident: BindingIdent {
-                                            name: "a",
+                                            name: "x",
                                             mutable: false,
                                             span: 5..6,
                                         },
@@ -26,27 +26,25 @@ Ok(
                                 Shorthand(
                                     ShorthandPatProp {
                                         ident: BindingIdent {
-                                            name: "b",
-                                            mutable: false,
-                                            span: 8..9,
+                                            name: "y",
+                                            mutable: true,
+                                            span: 12..13,
                                         },
-                                        init: None,
-                                        span: 8..9,
-                                    },
-                                ),
-                                Rest(
-                                    RestPat {
-                                        arg: Pattern {
-                                            span: 14..18,
-                                            kind: Ident(
-                                                BindingIdent {
-                                                    name: "rest",
-                                                    mutable: false,
-                                                    span: 14..18,
-                                                },
-                                            ),
-                                            inferred_type: None,
-                                        },
+                                        init: Some(
+                                            Expr {
+                                                span: 16..18,
+                                                kind: Lit(
+                                                    Num(
+                                                        Num {
+                                                            span: 16..18,
+                                                            value: "10",
+                                                        },
+                                                    ),
+                                                ),
+                                                inferred_type: None,
+                                            },
+                                        ),
+                                        span: 8..13,
                                     },
                                 ),
                             ],
@@ -58,11 +56,11 @@ Ok(
                 type_ann: None,
                 init: Some(
                     Expr {
-                        span: 22..29,
+                        span: 22..27,
                         kind: Ident(
                             Ident {
-                                span: 22..29,
-                                name: "letters",
+                                span: 22..27,
+                                name: "point",
                             },
                         ),
                         inferred_type: None,

@@ -42,15 +42,15 @@ Ok(
                                             kind: Object(
                                                 ObjectPat {
                                                     props: [
-                                                        Assign(
-                                                            AssignPatProp {
-                                                                span: 54..55,
-                                                                key: BindingIdent {
+                                                        Shorthand(
+                                                            ShorthandPatProp {
+                                                                ident: BindingIdent {
                                                                     name: "x",
                                                                     mutable: false,
                                                                     span: 54..55,
                                                                 },
-                                                                value: None,
+                                                                init: None,
+                                                                span: 54..55,
                                                             },
                                                         ),
                                                         KeyValue(
@@ -70,6 +70,8 @@ Ok(
                                                                     ),
                                                                     inferred_type: None,
                                                                 },
+                                                                init: None,
+                                                                span: 57..61,
                                                             },
                                                         ),
                                                         KeyValue(
@@ -92,6 +94,8 @@ Ok(
                                                                     ),
                                                                     inferred_type: None,
                                                                 },
+                                                                init: None,
+                                                                span: 63..67,
                                                             },
                                                         ),
                                                         Rest(

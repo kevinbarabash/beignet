@@ -72,9 +72,13 @@ pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
                                 value: pattern_to_tpat(&kv.value),
                             })
                         }
-                        ObjectPatProp::Assign(assign) => {
+                        ObjectPatProp::Shorthand(ShorthandPatProp {
+                            ident,
+                            init: _,
+                            span: _,
+                        }) => {
                             types::TObjectPatProp::Assign(types::TObjectAssignPatProp {
-                                key: assign.key.name.to_owned(),
+                                key: ident.name.to_owned(),
                                 // TODO: figure when/how to set this to a non-None value
                                 value: None,
                             })

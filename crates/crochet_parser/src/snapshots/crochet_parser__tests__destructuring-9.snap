@@ -31,26 +31,26 @@ Ok(
                                             kind: Object(
                                                 ObjectPat {
                                                     props: [
-                                                        Assign(
-                                                            AssignPatProp {
-                                                                span: 12..13,
-                                                                key: BindingIdent {
+                                                        Shorthand(
+                                                            ShorthandPatProp {
+                                                                ident: BindingIdent {
                                                                     name: "a",
                                                                     mutable: false,
                                                                     span: 12..13,
                                                                 },
-                                                                value: None,
+                                                                init: None,
+                                                                span: 12..13,
                                                             },
                                                         ),
-                                                        Assign(
-                                                            AssignPatProp {
-                                                                span: 15..16,
-                                                                key: BindingIdent {
+                                                        Shorthand(
+                                                            ShorthandPatProp {
+                                                                ident: BindingIdent {
                                                                     name: "b",
                                                                     mutable: false,
                                                                     span: 15..16,
                                                                 },
-                                                                value: None,
+                                                                init: None,
+                                                                span: 15..16,
                                                             },
                                                         ),
                                                     ],

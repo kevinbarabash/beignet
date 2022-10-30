@@ -146,7 +146,16 @@ fn infer_pattern_rec(
                 .filter_map(|prop| {
                     match prop {
                         // re-assignment, e.g. {x: new_x, y: new_y} = point
-                        ObjectPatProp::KeyValue(KeyValuePatProp { key, value }) => {
+                        ObjectPatProp::KeyValue(KeyValuePatProp {
+                            key,
+                            value,
+                            init: _,
+                            span: _,
+                        }) => {
+                            // We ignore `init` for now, we can come back later to handle
+                            // default values.
+                            // TODO: handle default values
+
                             // TODO: bubble the error up from infer_patter_rec() if there is one.
                             let value_type = infer_pattern_rec(value, ctx, assump).unwrap();
 
@@ -157,19 +166,19 @@ fn infer_pattern_rec(
                                 t: value_type,
                             }))
                         }
-                        ObjectPatProp::Assign(AssignPatProp {
-                            key,
-                            value: _,
+                        ObjectPatProp::Shorthand(ShorthandPatProp {
+                            ident,
+                            init: _,
                             span: _,
                         }) => {
-                            // We ignore the value for now, we can come back later to handle
+                            // We ignore `init` for now, we can come back later to handle
                             // default values.
                             // TODO: handle default values
 
                             let tv = ctx.fresh_var();
                             if assump
                                 .insert(
-                                    key.name.to_owned(),
+                                    ident.name.to_owned(),
                                     Binding {
                                         mutable: false,
                                         t: tv.clone(),
@@ -181,7 +190,7 @@ fn infer_pattern_rec(
                             }
 
                             Some(types::TObjElem::Prop(types::TProp {
-                                name: key.name.to_owned(),
+                                name: ident.name.to_owned(),
                                 optional: false,
                                 mutable: false,
                                 t: tv,

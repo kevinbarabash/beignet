@@ -177,16 +177,17 @@ fn build_pattern(
                             })
                         })
                     }
-                    values::ObjectPatProp::Assign(ap) => {
-                        Some(ObjectPatProp::Assign(AssignPatProp {
-                            span: DUMMY_SP,
-                            key: Ident::from(&ap.key),
-                            value: ap
-                                .value
-                                .clone()
-                                .map(|value| Box::from(build_expr(value.as_ref(), stmts, ctx))),
-                        }))
-                    }
+                    values::ObjectPatProp::Shorthand(values::ShorthandPatProp {
+                        ident,
+                        init,
+                        span: _,
+                    }) => Some(ObjectPatProp::Assign(AssignPatProp {
+                        span: DUMMY_SP,
+                        key: Ident::from(ident),
+                        value: init
+                            .clone()
+                            .map(|value| Box::from(build_expr(value.as_ref(), stmts, ctx))),
+                    })),
                     values::ObjectPatProp::Rest(_) => todo!(),
                 })
                 .collect();
@@ -1031,8 +1032,8 @@ fn get_conds_for_pat(pat: &values::Pattern, conds: &mut Vec<Condition>, path: &m
                         get_conds_for_pat(value, conds, path);
                         path.pop();
                     }
+                    values::ObjectPatProp::Shorthand(_) => (),
                     values::ObjectPatProp::Rest(_) => (),
-                    values::ObjectPatProp::Assign(_) => (),
                 }
             }
         }
