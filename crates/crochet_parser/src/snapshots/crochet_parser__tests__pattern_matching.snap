@@ -141,46 +141,55 @@ Ok(
                                                 ArrayPat {
                                                     elems: [
                                                         Some(
-                                                            Pattern {
-                                                                span: 108..109,
-                                                                kind: Ident(
-                                                                    BindingIdent {
-                                                                        name: "a",
-                                                                        mutable: false,
-                                                                        span: 108..109,
-                                                                    },
-                                                                ),
-                                                                inferred_type: None,
-                                                            },
-                                                        ),
-                                                        Some(
-                                                            Pattern {
-                                                                span: 111..112,
-                                                                kind: Wildcard(
-                                                                    WildcardPat,
-                                                                ),
-                                                                inferred_type: None,
-                                                            },
-                                                        ),
-                                                        Some(
-                                                            Pattern {
-                                                                span: 114..121,
-                                                                kind: Rest(
-                                                                    RestPat {
-                                                                        arg: Pattern {
-                                                                            span: 117..121,
-                                                                            kind: Ident(
-                                                                                BindingIdent {
-                                                                                    name: "rest",
-                                                                                    mutable: false,
-                                                                                    span: 117..121,
-                                                                                },
-                                                                            ),
-                                                                            inferred_type: None,
+                                                            ArrayPatElem {
+                                                                pattern: Pattern {
+                                                                    span: 108..109,
+                                                                    kind: Ident(
+                                                                        BindingIdent {
+                                                                            name: "a",
+                                                                            mutable: false,
+                                                                            span: 108..109,
                                                                         },
-                                                                    },
-                                                                ),
-                                                                inferred_type: None,
+                                                                    ),
+                                                                    inferred_type: None,
+                                                                },
+                                                                init: None,
+                                                            },
+                                                        ),
+                                                        Some(
+                                                            ArrayPatElem {
+                                                                pattern: Pattern {
+                                                                    span: 111..112,
+                                                                    kind: Wildcard(
+                                                                        WildcardPat,
+                                                                    ),
+                                                                    inferred_type: None,
+                                                                },
+                                                                init: None,
+                                                            },
+                                                        ),
+                                                        Some(
+                                                            ArrayPatElem {
+                                                                pattern: Pattern {
+                                                                    span: 114..121,
+                                                                    kind: Rest(
+                                                                        RestPat {
+                                                                            arg: Pattern {
+                                                                                span: 117..121,
+                                                                                kind: Ident(
+                                                                                    BindingIdent {
+                                                                                        name: "rest",
+                                                                                        mutable: false,
+                                                                                        span: 117..121,
+                                                                                    },
+                                                                                ),
+                                                                                inferred_type: None,
+                                                                            },
+                                                                        },
+                                                                    ),
+                                                                    inferred_type: None,
+                                                                },
+                                                                init: None,
                                                             },
                                                         ),
                                                     ],

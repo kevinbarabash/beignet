@@ -205,7 +205,7 @@ fn build_pattern(
             let elems: Vec<Option<Pat>> = elems
                 .iter()
                 .map(|elem| match elem {
-                    Some(elem) => build_pattern(elem, stmts, ctx),
+                    Some(elem) => build_pattern(&elem.pattern, stmts, ctx),
                     None => None,
                 })
                 .collect();
@@ -1041,7 +1041,7 @@ fn get_conds_for_pat(pat: &values::Pattern, conds: &mut Vec<Condition>, path: &m
             for (index, elem) in elems.iter().enumerate() {
                 path.push(PathElem::ArrayIndex(index as u32));
                 if let Some(elem) = elem {
-                    get_conds_for_pat(elem, conds, path);
+                    get_conds_for_pat(&elem.pattern, conds, path);
                 }
                 path.pop();
             }

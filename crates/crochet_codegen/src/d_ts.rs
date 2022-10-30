@@ -208,7 +208,10 @@ pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTyp
             let elems = array
                 .elems
                 .iter()
-                .map(|elem| elem.as_ref().map(|elem| build_param_pat_rec(elem, None)))
+                .map(|elem| {
+                    elem.as_ref()
+                        .map(|elem| build_param_pat_rec(&elem.pattern, None))
+                })
                 .collect();
             Pat::Array(ArrayPat {
                 span: DUMMY_SP,

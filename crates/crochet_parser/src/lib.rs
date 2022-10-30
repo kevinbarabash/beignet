@@ -342,15 +342,22 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
                 .into_iter()
                 .map(|child| match child.kind() {
                     "assignment_pattern" => {
-                        // Right now we don't have an AST node to model this.  The most likely
-                        // solutions are:
-                        // - adding an optional .init property on BindingIdent to handle
-                        // - introducing a ArrayPatElem type to mirror ObjectPatProp
-                        // The second option is a bit more verbose, but avoids invalid ASTs which
-                        // could occur if a top-level binding
-                        todo!()
+                        let left = child.child_by_field_name("left").ok_or_else(|| {
+                            String::from("'left' field not found on assignment_pattern")
+                        })?;
+                        let right = child.child_by_field_name("right").ok_or_else(|| {
+                            String::from("'right' field not found on assignment_pattern")
+                        })?;
+
+                        Ok(Some(ArrayPatElem {
+                            pattern: parse_pattern(&left, src)?,
+                            init: Some(Box::from(parse_expression(&right, src)?)),
+                        }))
                     }
-                    _ => Ok(Some(parse_pattern(&child, src)?)),
+                    _ => Ok(Some(ArrayPatElem {
+                        pattern: parse_pattern(&child, src)?,
+                        init: None,
+                    })),
                 })
                 .collect::<Result<Vec<_>, String>>()?;
 
@@ -1007,7 +1014,12 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                 .named_children(&mut cursor)
                 .into_iter()
                 // TODO: make elems in ArrayPat non-optional
-                .map(|elem| Ok(Some(parse_refutable_pattern(&elem, src)?)))
+                .map(|elem| {
+                    Ok(Some(ArrayPatElem {
+                        pattern: parse_refutable_pattern(&elem, src)?,
+                        init: None,
+                    }))
+                })
                 .collect::<Result<Vec<_>, String>>()?;
 
             PatternKind::Array(ArrayPat {
@@ -1944,8 +1956,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let [a, mut b, ...rest] = letters;"));
         insta::assert_debug_snapshot!(parse("let foo = ([a, mut b, ...rest]) => {};"));
         insta::assert_debug_snapshot!(parse("let {x, mut y = 10} = point;"));
-        // TODO: need to handle "assignment_pattern"
-        // insta::assert_debug_snapshot!(parse("let [a, mut b = 98, ...rest] = letters;"));
+        insta::assert_debug_snapshot!(parse("let [a, mut b = 98, ...rest] = letters;"));
         // TODO: disallowed patterns, e.g. top-level rest, non-top-level type annotations
     }
 

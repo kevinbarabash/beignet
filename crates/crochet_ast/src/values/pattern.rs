@@ -59,8 +59,16 @@ pub struct RestPat {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ArrayPat {
-    pub elems: Vec<Option<Pattern>>,
+    // The elements are optional to support sparse arrays.
+    pub elems: Vec<Option<ArrayPatElem>>,
     pub optional: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArrayPatElem {
+    // TODO: add .span property
+    pub pattern: Pattern,
+    pub init: Option<Box<Expr>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,7 +119,7 @@ pub fn is_refutable(pat: &Pattern) -> bool {
         PatternKind::Array(ArrayPat { elems, .. }) => {
             elems.iter().any(|elem| {
                 match elem {
-                    Some(elem) => is_refutable(elem),
+                    Some(elem) => is_refutable(&elem.pattern),
                     // FixMe: this should probably be true since it's equivalent
                     // to having an element with the value `undefined`
                     None => false,
@@ -237,7 +245,10 @@ mod tests {
     #[test]
     fn array_with_all_irrefutable_elements_is_irrefutable() {
         let kind = PatternKind::Array(ArrayPat {
-            elems: vec![Some(ident_pattern("foo"))],
+            elems: vec![Some(ArrayPatElem {
+                pattern: ident_pattern("foo"),
+                init: None,
+            })],
             optional: false,
         });
         let array = Pattern {
@@ -251,7 +262,16 @@ mod tests {
     #[test]
     fn array_with_one_refutable_prop_is_refutable() {
         let kind = PatternKind::Array(ArrayPat {
-            elems: vec![Some(ident_pattern("foo")), Some(num_lit_pat("5"))],
+            elems: vec![
+                Some(ArrayPatElem {
+                    pattern: ident_pattern("foo"),
+                    init: None,
+                }),
+                Some(ArrayPatElem {
+                    pattern: num_lit_pat("5"),
+                    init: None,
+                }),
+            ],
             optional: false,
         });
         let array = Pattern {

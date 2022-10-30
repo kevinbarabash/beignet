@@ -121,12 +121,17 @@ fn infer_pattern_rec(
                 .iter_mut()
                 .map(|elem| {
                     match elem {
-                        Some(elem) => match &mut elem.kind {
+                        Some(elem) => match &mut elem.pattern.kind {
                             PatternKind::Rest(rest) => {
                                 let rest_ty = infer_pattern_rec(&mut rest.arg, ctx, assump)?;
                                 Ok(Type::from(TypeKind::Rest(Box::from(rest_ty))))
                             }
-                            _ => infer_pattern_rec(elem, ctx, assump),
+                            _ => {
+                                // TODO: handle elem.init when inferring the element's pattern
+                                // since this can have an impact on the type the assumption we
+                                // insert.
+                                infer_pattern_rec(&mut elem.pattern, ctx, assump)
+                            }
                         },
                         None => {
                             // TODO: figure how to ignore gaps in the array

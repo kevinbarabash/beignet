@@ -49,12 +49,11 @@ pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
             })
             // TODO: process `props`
         }
-        PatternKind::Array(ArrayPat { elems, optional: _ }) => {
-            elems.iter_mut().for_each(|elem| match elem {
-                Some(pat) => update_pattern(pat, s),
-                None => (),
-            })
-        }
+        PatternKind::Array(ArrayPat { elems, optional: _ }) => elems.iter_mut().for_each(|elem| {
+            if let Some(elem) = elem {
+                update_pattern(&mut elem.pattern, s);
+            }
+        }),
         PatternKind::Lit(_) => (), // leaf node
         // TODO: update BindingIdent to have an optional .inferred_type property
         PatternKind::Is(IsPat { ident: _, is_id: _ }) => (),
@@ -249,7 +248,7 @@ fn update_fn_param_pat(pat: &mut Pattern, s: &Subst) {
         }
         PatternKind::Array(ArrayPat { elems, optional: _ }) => elems.iter_mut().for_each(|elem| {
             if let Some(elem) = elem {
-                update_fn_param_pat(elem, s);
+                update_fn_param_pat(&mut elem.pattern, s);
             }
         }),
         PatternKind::Lit(_) => panic!("literal patterns are not allowed in function params"),

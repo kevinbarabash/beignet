@@ -98,7 +98,7 @@ pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
                 elems: e_array
                     .elems
                     .iter()
-                    .map(|elem| elem.as_ref().map(pattern_to_tpat))
+                    .map(|elem| elem.as_ref().map(|elem| pattern_to_tpat(&elem.pattern)))
                     .collect(),
             })
         }
