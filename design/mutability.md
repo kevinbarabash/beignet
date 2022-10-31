@@ -194,7 +194,30 @@ class Greeter {
 
 ### `let` and `const`
 
-TODO
+When a .crochet file is compiled, we output a .js and .d.ts file. Each top-level declaration is
+automatically exported as a named export. `let` in Crochet is equivalent to `const` in TypeScript
+and `let mut` is equivalent to `let`.
+
+**example.crochet**
+
+```typescript
+let foo = "foo";
+let mut bar = "bar";
+```
+
+**exammple.js**
+
+```javascript
+export const foo = "foo";
+export let bar = "bar";
+```
+
+**example.d.ts**
+
+```typescript
+declare const foo: "foo";
+declare let bar: "bar";
+```
 
 ### Interfaces and Classes
 
@@ -237,19 +260,27 @@ const array: number[];         // const array: readonly number[];
 
 const set: mut Set<number>;    // const set: Set<number>;
 const set: Set<number>;        // const set: ReadonlySet<number>;
-
-type Point = {                 // type Point = {x: number, y: number};
-  x: number,                   // type ReadonlyPoint = Readonly<Point>;
-  y: number,
-};
-const point: mut Point;        // const point: Point;
-const point: Point;            // const point: ReadonlyPoint;
 ```
 
-Notes:
+In Crochet, types are often defined with any mutable properties. When a mutable version of
+the type is required the `mut` modifier is used with a type reference. This has the effect
+of making all properties mutable.
 
-- `Mutable<T>` is a utility type that Crochet defines that removes the `readonly` modifier
-  from all properties in a type.
+**Crochet (TypeScript in comments)**
+
+```typescript
+type Point = {                 // type Point = {readonly x: number, readonly y: number};
+  x: number,
+  y: number,
+};
+const point: mut Point;        // const point: Mutable<Point>;
+const point: Point;            // const point: Point;
+```
+
+Questions:
+
+- What about types that are defined with a mix of mutable and non-mutable fields? How do you
+  get a version of the type where every field is non-mutable?
 
 ### Literals
 
