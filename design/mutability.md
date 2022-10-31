@@ -223,10 +223,7 @@ Notes:
 
 - `map` is overloaded with mutating and non-mutating versions
 - `map` returns a mutable array in both versions. To get a non-mutable reference to
-  the result you'd have to do `let result: T[] = input.map(cb);`.<br/>
-  **Question:** Given that array literals (aka tuples) are inferred as non-mutable, but
-  can also be passed to functions expecting mutable arrays (when passing the literal directly).
-  Should return types behave similarly to how literals behave in this regard (but in reverse)?
+  the result you'd have to do `let result: T[] = input.map(cb);`.
 
 ### Mutable References
 
@@ -235,11 +232,70 @@ The following Crochet code will be converted to TypeScript as follows:
 **Crochet (TypeScript in comments)**
 
 ```typescript
-const array: mut number[];  // const array: number[];
-const array: number[];      // const array: readonly number[];
-const point: mut Point;     // const point: Point;
-const point: Point;         // const point: Readonly<Point>; (Point imported from .d.ts)
-const point: Point;         // const point: ReadonlyPoint; (Point declared in Crochet)
-const set: mut Set<number>; // const set: Set<number>;
-const set: Set<number>;     // const set: ReadonlySet<number>;
+const array: mut number[];     // const array: number[];
+const array: number[];         // const array: readonly number[];
+
+const set: mut Set<number>;    // const set: Set<number>;
+const set: Set<number>;        // const set: ReadonlySet<number>;
+
+type Point = {                 // type Point = {x: number, y: number};
+  x: number,                   // type ReadonlyPoint = Readonly<Point>;
+  y: number,
+};
+const point: mut Point;        // const point: Point;
+const point: Point;            // const point: ReadonlyPoint;
+```
+
+Notes:
+
+- `Mutable<T>` is a utility type that Crochet defines that removes the `readonly` modifier
+  from all properties in a type.
+
+### Literals
+
+Array and object literals require special treatement. We'd like `[1, 2, 3]` to be inferred
+as a non-mutable tuple when assigning it to a variable, but we also want to be able to call
+mutable methods (or pass the tuple to a function accepting a mutable array), e.g.
+
+```typescript
+let tuple = [1, 2, 3];               // inferred as a non-mutable tuple
+let array = [1, 2, 3].sort();        // inferred as a mutable array
+
+let array: number[] = [1, 2, 3];     // OK: the tuple is a sub-type of number[]
+let array: mut number[] = [1, 2, 3]; // OK: because there are no other refrences to the tuple
+
+let sort = <T>(values: mut T[]): T[] => values.sort();
+let array = sort([1, 2, 3]);
+
+let tuple = [1, 2, 3];
+sort(tuple); // ERROR: passing a variable containing a non-mutable type is not allowed
+let array: number[] = [1, 2, 3];
+sort(array); // ERROR: passing a variable containing a non-mutable type is not allowed
+```
+
+While array spreading is equivalent to calling `.concat()`, the inferred type is different.
+
+```typescript
+let array = [1, 2, 3].concat([4, 5, 6]); // inferred as `number[]`
+let tuple = [1, 2, 3, ...[4, 5, 6]]; // inferred as `[1, 2, 3, 4, 5, 6]`
+```
+
+Object literals are inferred as non-mutable types, but can also be passed to functions with
+mutable parameters, e.g.
+
+```typescript
+type Point = { x: number; y: number };
+
+let scale = (scale: number, point: mut Point) => {
+  point.x *= scale;
+  point.y *= scale;
+};
+
+scale({x: 5, y: 10});  // allowed, but isn't very useful
+
+let point = {x: 5, y: 10}; // inferred as {x: 5, y: 10}
+scale(point); // ERROR: variables pointing to non-mutable Point sub-types are not allowed
+
+let point: mut Point = {x: 5, y: 10}; // OK: the object literal is a sub-type of Point
+let point: Point = {x: 5, y: 10};     // OK: because there are no other refrences to the object
 ```
