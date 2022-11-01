@@ -87,7 +87,112 @@ mutating or not.
 Crochet removes TypeScript's `const` and `readonly` keywords, `Readonly<T>`
 utility type, and readonly interface variants (`ReadonlyArray<T>`,
 `ReadonlyMap<K, V>`, and `ReadonlySet<T>`) and replaces them with a single `mut`
-keyword. The new keyword serves the following purposed:
+keyword.
+
+### `let mut`
+
+This allows a variable to be re-assigned and is equivalent to `let` in
+TypeScript.
+
+**Crochet (TypeScript in comments)**
+
+```typescript
+let message = "hello";              // const message = "hello" as const;
+let message: string = "hello";      // const message = "hello";
+let mut message = "hello";          // let message = "hello";
+let mut message: string = "hello";  // let message = "hello";
+```
+
+Notes:
+
+- `"hello"` is widened to `string` in `let mut message = "hello"` even though
+  the type wasn't specified.
+
+### Struct types
+
+In Crochet, struct types can only contain "simple" properties. This means:
+
+- no getters or setters
+- no methods
+
+Properties can still store functions, objects, arrays, and even other structs.
+
+All of the properties are readonly and can only be modified using a mutable
+reference to the struct. Mutable references are specified using the `mut`
+keyword.
+
+**Crochet**
+
+```typescript
+type Point = {      // type Point {
+  x: number;        //   readonly x: number;
+  y: number;        //   readonly y: number;
+};                  // };
+
+let p: Point = {x: 5, y: 10};
+p.x = 25;           // ERROR: `p` is an immutable reference so we can't use it
+                    // to modify any properties
+
+let q: mut Point = {x: 5, y: 10};
+q.x = 25;           // OK: because `q` is a mutable reference
+
+let r: Point = q;   // OK: assigning a mutable reference to an immutable one is
+                    // allowed
+
+q.x = 50;           // NOTE: r.x is now 50 since the the object it references
+                    // has been modified
+```
+
+While these limitations may feel quite restrictive, they are sufficient for
+dealing with data.
+
+### Interfaces
+
+Interfaces can have getters/setters and methods. They can also use the `mut`
+keyword to specify whether a property is mutable or a method is "mutating".
+
+A method is said to be "mutating" if any of the following are true:
+
+- it modifies a property on `this`
+- it calls another "mutating" method on `this`
+
+A mutable reference to an instance conforming to a given interface can call
+all of its methods (including the mutating ones) and modify all of its mutable
+properties. It does not allow any of the
+
+**Crochet (TypeScript in comments)**
+
+```typescript
+interface Greeter {             // interface Greeter {
+  message: string;              //   readonly message: string;
+  mut name: string;             //   name: string;
+  mut updateName(name: string); //   updateName(name: string);
+  printGreeting();              //   printGreeting();
+}                               // }
+                                //
+                                // interface ReadonlyGreeter {
+                                //   readonly message: string;
+                                //   readonly name: string;
+                                //   printGreeting();
+                                // }
+
+let greeter: Gretter;           // const greeter: ReadonlyGreeter;
+let greeter: mut Greeter;       // const greeter: Greeter;
+let mut greeter: Greeter;       // let greeter: ReadonlyGreeter;
+let mut greeter: mut Greeter;   // let greeter: Greeter;
+```
+
+Notes:
+
+- the TypeScript version of this code requires two interfaces. This is because
+  TypeScript doesn't have a way to differentiate between mutating and
+  non-mutating methods.
+
+TODO: differences between structs and interfaces
+
+---
+
+The new keyword serves the following purposes:
 
 **Crochet (TypeScript in comments)**
 
