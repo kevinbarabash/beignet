@@ -87,12 +87,11 @@ mutating or not.
 Crochet removes TypeScript's `const` and `readonly` keywords, `Readonly<T>`
 utility type, and readonly interface variants (`ReadonlyArray<T>`,
 `ReadonlyMap<K, V>`, and `ReadonlySet<T>`) and replaces them with a single `mut`
-keyword.
+keyword. Below we describe various uses of `mut`.
 
 ### `let mut`
 
-This allows a variable to be re-assigned and is equivalent to `let` in
-TypeScript.
+Variables that can be re-assigned and declared using `let mut`.
 
 **Crochet (TypeScript in comments)**
 
@@ -106,20 +105,21 @@ let mut message: string = "hello";  // let message = "hello";
 Notes:
 
 - `"hello"` is widened to `string` in `let mut message = "hello"` even though
-  the type wasn't specified.
+  the type wasn't specified since a mutable variable that can only be assigned
+  a single values isn't very useful.
 
-### Struct types
+### Object types
 
-In Crochet, struct types can only contain "simple" properties. This means:
+Crochet has object types which are similar to object types in TypeScript but
+with the follow differences:
 
-- no getters or setters
-- no methods
+- getters/setters are not allowed
+- methods are not allowed (but values can be functions)
+- properties cannot be reassigned by default
+- properties can only be reassigned using a mutable reference to the object
 
-Properties can still store functions, objects, arrays, and even other structs.
-
-All of the properties are readonly and can only be modified using a mutable
-reference to the struct. Mutable references are specified using the `mut`
-keyword.
+Mutable references are specified using the `mut` keyword as shown in the
+following example.
 
 **Crochet**
 
@@ -144,21 +144,31 @@ q.x = 50;           // NOTE: r.x is now 50 since the the object it references
 ```
 
 While these limitations may feel quite restrictive, they are sufficient for
-dealing with data.
+dealing with plain old JavaScript objects (POJOs).
+
+Questions:
+
+- Should `mut T` only affect the assignability of properties immediately on `T`
+  or also properties on sub-objects?
 
 ### Interfaces
 
-Interfaces can have getters/setters and methods. They can also use the `mut`
-keyword to specify whether a property is mutable or a method is "mutating".
+Not all objects we want to interact with are POJOs. Interfaces provides a way
+to model objects with getters/setters and methods. An interface can use the
+`mut` keyword to specify whether a property is "mutable" or a method is
+mutating.
+
+A property is said to be "mutable" if we allow it to be reassigned a different
+value of the property's declared type (or a subtype of it).
 
 A method is said to be "mutating" if any of the following are true:
 
 - it modifies a property on `this`
 - it calls another "mutating" method on `this`
 
-A mutable reference to an instance conforming to a given interface can call
-all of its methods (including the mutating ones) and modify all of its mutable
-properties. It does not allow any of the
+A mutable reference of an instance conforming to a given interface can call
+all of its methods (including the mutating ones) and reassign any of its mutable
+properties. It does **not** allow immutable properties to be reassigned.
 
 **Crochet (TypeScript in comments)**
 
@@ -188,132 +198,16 @@ Notes:
   TypeScript doesn't have a way to differentiate between mutating and
   non-mutating methods.
 
-TODO: differences between structs and interfaces
-
----
-
-The new keyword serves the following purposes:
-
-**Crochet (TypeScript in comments)**
-
-```typescript
-let array: number[]; // const array: readonly number[];
-let array: mut number[]; // const array: number[];
-let mut array: number[]; // let array: readonly number[];
-let mut array: mut number[]; // let array: number[];
-
-let point: Point; // const point: Readonly<Point>;
-let point: mut Point; // const point: Point;
-
-let set: Set<string>; // const set: ReadonlySet<string>;
-let set: mut Set<string>; // const set: Set<string>;
-```
-
-The `mut` keyword can also appear wherever a new variable binding is introduced,
-i.e. destructuring patterns in variable declarations, pattern matching, and
-function params.
-
-**Crochet**
-
-```typescript
-let {x, mut y, z: mut w} = point3d;
-let {x, mut y = 5, z: mut w = 10} = point3d;
-let [a, mut b, mut c = "c", ...rest] = letters;
-```
-
-This has the benefit of being able to introduce a mix of mutable and immutable
-references when destructring objects and arrays. In TypeScript (and JavaScript),
-you'd need to have separate declarations for `let` and `const`.
-
-Crochet will also allow methods in classes and interfaces to be marked as
-"mutating". It's important to note here that `mut` doesn't mean "mutable" like
-in the other uses. A method marked with `mut` can't be reassigned to point to a
-different implementation. Instead, it means that the method may mutate instance
-properties marked as `mut`.
-
-**Crochet**
-
-```typescript
-class Greeter {
-  message: string, // readonly, can only be set once by the constructor
-  mut name: string,
-
-  constructor(message: string, name: string) {
-    this.message = message;
-    this.name = name;
-  }
-
-  mut updateName(name: string) {
-    this.name = name;
-  }
-
-  printGreeting(): string {
-    console.log(`${this.message}, ${this.name}`);
-  }
-}
-```
-
-This class is equivalent to the following TypeScript interfaces:
-
-**TypeScript**
-
-```typescript
-interface Greeter {
-  readonly message: string;
-  name: string;
-  updateName(name: string);
-  updateMessage(name);
-}
-
-interface ReadonlyGreeter {
-  readonly message: string;
-  readonly name: string;
-  updateMessage(name);
-}
-```
-
-References to Crochet classes and inferaces work in the following way:
-
-**Crochet (TypeScript in comments):**
-
-```typescript
-let greeter = new Greeter("Hello", "world"); // by default non-mutable references are inferred
-let greeter: Gretter; // const greeter: ReadonlyGreeter;
-let greeter: mut Greeter; // const greeter: Greeter;
-let mut greeter: Greeter; // let greeter: ReadonlyGreeter;
-let mut greeter: mut Greeter; // let greeter: Greeter;
-```
-
-Notes:
-
-- mutating methods cannot mutate immutable properties
-- non-mutating methods cannot mutate any properties
-- non-mutating methods cannot call mutating methods
-- non-mutating methods can call mutating methods and mutate properties on other
-  objects
-
-**Crochet**
-
-```typescript
-class Greeter {
-  greetMany(names: string[]) {
-    // It's okay to call `.sort()` within `greetMany` even though
-    // `greetMany` isn't mutating.
-    let sortedNames = [...names].sort();
-    for (const name of sortedNames) {
-      console.log(`${this.greeting}, ${name}`);
-    }
-  }
-}
-```
-
 ## Making Interop Work
+
+Crochet uses .d.ts to import types from and export types to TypeScript.
 
 ### `let` and `const`
 
-When a .crochet file is compiled, we output a .js and .d.ts file. Each top-level
-declaration is automatically exported as a named export. `let` in Crochet is
-equivalent to `const` in TypeScript and `let mut` is equivalent to `let`.
+When outputting a .d.ts file, each top-level Crochet declaration is
+automatically exported as a named export. `let` in Crochet is equivalent to
+`const` in TypeScript and `let mut` is equivalent to `let`. When Crochet reads
+a .d.ts file it does the reverse conversion.
 
 **example.crochet**
 
@@ -335,6 +229,17 @@ export let bar = "bar";
 declare const foo: "foo";
 declare let bar: "bar";
 ```
+
+### Object Types
+
+When import an object type from a .d.ts file, it checks whether all of the
+properties are marked as `readonly` or none are. If there's some are `readonly`
+and some are not then Crochet will end up converting the type to an interface.
+
+TODO: describe the following two cases:
+
+- all properties are `readonly`
+- no properties are `readonly`
 
 ### Interfaces and Classes
 
