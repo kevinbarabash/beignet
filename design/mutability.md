@@ -236,16 +236,79 @@ When import an object type from a .d.ts file, it checks whether all of the
 properties are marked as `readonly` or none are. If there's some are `readonly`
 and some are not then Crochet will end up converting the type to an interface.
 
-TODO: describe the following two cases:
+The happy path is when all of the properties in the TypeScript object type are
+`readonly`. We can create a Crochet type with the same name and have the two
+types line up exactly.
 
-- all properties are `readonly`
-- no properties are `readonly`
+```typescript
+// point.d.ts
+type Point = {
+  readonly x: number;
+  readonly y: number;
+};
 
-### Interfaces and Classes
+// corresponding Crochet type
+type Point = {
+  x: number;
+  y: number;
+};
+```
 
-Crochet classes will be exported as a `class` in a .js file and two interfaces
-in the corresponding .d.ts. In the case of the `Greeter` class , the .d.ts file
-would contain both `Greeter` and `ReadonlyGreeter` interfaces shown above.
+If a Crochet function accepts a `mut Point`, we need a way to export that
+function's type to TypeScript while re-using the existing TypeScript definition
+of `Point`:
+
+```typescript
+// point_utils.crochet
+let scalePoint = (point: mut Point, scaleFactor: number): void => ...
+let magnitude = (point: Point): number => ...
+
+// point_utils.d.ts
+export declare let scalePoint = (point: Mutable<Point>, scaleFactor: number): void;
+export declare let magnitude = (point: Point): number;
+```
+
+If none of an object's properties are `readonly` in the TypeScript type then
+we have to do more work to map the TypeScript type to the corresponding Crochet
+type.
+
+```typescript
+// point.d.ts
+type Point = {
+  x: number;
+  y: number;
+};
+
+// the Crochet type corresponds to `Readonly<Point>` in TypeScript
+type Point = {
+  x: number;
+  y: number;
+};
+```
+
+If we define the following Crochet functions, we'll output the following .d.ts
+file (re-using the existing TypeScript definition of `Point`):
+
+```typescript
+// point_utils.crochet
+let scalePoint = (point: mut Point, scaleFactor: number) => ...
+let magnitude = (point: Point): number => ...
+
+// point_util.d.ts
+export declare let scalePoint = (point: Point, scaleFactor: number): void;
+export declare let magnitude = (point: Point): number;
+```
+
+Questions:
+
+- What about an object type that is more than one level deep?
+- What about anonymous object types?
+
+Answer:
+
+I think it's okay to treat them like interfaces.
+
+### Interfaces
 
 When Crochet reads a .d.ts file, it will merge readonly and non-readonly
 interfaces into a single interface type. In the case of `Array<T>` and
@@ -260,7 +323,7 @@ type Array<T> = {
   map(cb: (elem: T, index: number, array: T[])): mut U[],
   mut map(cb: (elem: T, index: number, array: mut T[])): mut U[],
   mut sort(): mut T[],
-  // et cetera
+  // ...
 };
 ```
 
@@ -269,52 +332,9 @@ Notes:
 - `map` is overloaded with mutating and non-mutating versions
 - `map` returns a mutable array in both versions. To get a non-mutable reference
   to the result you'd have to do `let result: T[] = input.map(cb);`.
-
-### Mutable References
-
-The following Crochet code will be converted to TypeScript as follows:
-
-**Crochet (TypeScript in comments)**
-
-```typescript
-const array: mut number[];     // const array: number[];
-const array: number[];         // const array: readonly number[];
-
-const set: mut Set<number>;    // const set: Set<number>;
-const set: Set<number>;        // const set: ReadonlySet<number>;
-```
-
-In Crochet, types are often defined with any mutable properties. When a mutable
-version of the type is required the `mut` modifier is used with a type
-reference. This has the effect of making all properties mutable.
-
-**Crochet (TypeScript in comments)**
-
-```typescript
-type Point = {                 // type Point = {readonly x: number, readonly y: number};
-  x: number,
-  y: number,
-};
-const point: mut Point;        // const point: Mutable<Point>;
-const point: Point;            // const point: Point;
-```
-
-Questions:
-
-- What about types that are defined with a mix of mutable and non-mutable
-  fields? How do you get a version of the type where every field is non-mutable?
-
-  We could call types like `Point` data types where the assumption is that all
-  properties are either mutable or non-mutable. For types where we nead a mix,
-  we could those interface types. The `mut` modifier would only be allowed on
-  interface types the mutable version of the interface would keep any
-  non-mutable fields non-mutable.
-
-TODO: Have two separate types:
-
-- data types (maps roughly to Rust's `struct` types)
-- interface types (maps to TypeScript interfaces but with the default being
-  immutable and methods can be "mutating")
+- We should be able to output a Crochet interface to the corresponding mutable
+  and immutable (`Readonly` prefixed) types and then read those TypeScript types
+  in to reconstruct the original Crochet interface.
 
 ### Literals
 
