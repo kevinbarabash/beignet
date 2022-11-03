@@ -64,15 +64,18 @@ Confusingly the following type are not equivalent:
 **TypeScript**
 
 ```typescript
-type T = ReadonlyArray<number>;
-type U = Readonly<Array<number>>;
+type T = ReadonlySet<number>;
+type U = Readonly<Set<number>>;
 ```
 
 The reason being is that the `Readonly<T>` utility type only updates mutable
 properties to be `readonly`. It does **not** remove methods that mutate the
-caller. The `ReadonlyArray<T>` type is in fact a separate interface that
-contains only those methods from `Array<T>` that don't mutate the caller. The
-indexer property on `ReadonlyArray<T>` is also set to be `readonly`.
+caller. The `ReadonlySet<T>` type is in fact a separate interface that
+contains only those methods from `Set<T>` that don't mutate the caller. The
+indexer property on `ReadonlySet<T>` is also set to be `readonly`.
+
+Interestingly, TypeScript appears to special case `ReadonlyArray<T>` and
+`ReadOnly<Array<T>>` to both be equivalent to `readonly T[]`.
 
 There are a few other paired interfaces like this:
 
@@ -200,7 +203,9 @@ Notes:
 
 ## Making Interop Work
 
-Crochet uses .d.ts to import types from and export types to TypeScript.
+Crochet uses .d.ts to import types from and export types to TypeScript. We do
+not generate Crochet types on disk from TypeScript, instead they appear in
+memory only.
 
 ### `let` and `const`
 
@@ -209,23 +214,16 @@ automatically exported as a named export. `let` in Crochet is equivalent to
 `const` in TypeScript and `let mut` is equivalent to `let`. When Crochet reads
 a .d.ts file it does the reverse conversion.
 
-**example.crochet**
-
 ```typescript
+// example.crochet
 let foo = "foo";
 let mut bar = "bar";
-```
 
-**exammple.js**
-
-```javascript
+// example.js
 export const foo = "foo";
 export let bar = "bar";
-```
 
-**example.d.ts**
-
-```typescript
+// example.d.ts
 declare const foo: "foo";
 declare let bar: "bar";
 ```
@@ -247,7 +245,7 @@ type Point = {
   readonly y: number;
 };
 
-// corresponding Crochet type
+// corresponding Crochet type (in-memory)
 type Point = {
   x: number;
   y: number;
@@ -279,7 +277,7 @@ type Point = {
   y: number;
 };
 
-// the Crochet type corresponds to `Readonly<Point>` in TypeScript
+// the Crochet type (in-memory) corresponds to `Readonly<Point>` in TypeScript
 type Point = {
   x: number;
   y: number;
