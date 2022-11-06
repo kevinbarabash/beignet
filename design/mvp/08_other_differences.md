@@ -1,6 +1,6 @@
 # 08 Other Differences
 
-## Legacy Syntax
+## Removal of Legacy Syntax
 
 - `with`: no one should be using this
 - `eval`: no one should be using this

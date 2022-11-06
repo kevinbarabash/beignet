@@ -1,5 +1,9 @@
 # 09 Meeting Developer Expectations
 
+Developers have high expectations of programming languages before they'll decide
+to use a new language for a project. It should support modern tooling and
+shouldn't be obtensible worse than what they're already using.
+
 ## LSP (Language Server Protocol) Support
 
 - show types and docstring

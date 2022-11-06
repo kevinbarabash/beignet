@@ -1,4 +1,4 @@
-# 21 Enums with Payloads
+# 01 Enums with Payloads
 
 Many other languages allow arbitrary data to be attached to enum variants. This
 provides a convenient way to model sum types. In JavaScript and TypeScript it's
@@ -55,6 +55,4 @@ qualified classes, e.g.
 type IpAddrEnum = IpAddr.V4 | IpAddr.V6;
 ```
 
-TODO:
-
-- Add an example that shows enums with type variables
+TODO: Add an example that shows enums with type variables

@@ -1,4 +1,4 @@
-# 24 Traits
+# 03 Traits
 
 ## Motivation
 
@@ -65,10 +65,10 @@ User.prototype[Serializable.toJSON] = function () {
 
 NOTES:
 
-- traits can be used as types
-- trait implementations must appear in either:
-  - the file where the trait is defined
-  - the file where the type implementing the trait is defined
+- Traits can be used as types
+- Trait implementations can appear in any file, but that file needs to be
+  imported wherever that trait is used. This can be useful for reducing the
+  amount of code in bundles.
 
 ## Deriving Traits with Default Implementations
 
@@ -98,7 +98,8 @@ struct User {
 
 In order to use a trait, it must be imported. This serves a multiple purposes:
 
-- It reduces the amount of code
+- It reduces the amount of code by only include code for a type's traits that
+  are actually being used.
 - If multiple traits on implemented for the same type and if there's overlap in
   the method names, importing the trait specifies which methods are available to
   use in this file.
@@ -111,11 +112,3 @@ declare let user: User;
 
 user.toJSON();
 ```
-
-NOTES:
-
-- The trait needs to be imported
-
-TODO: talk about using traits, we need to import the trait to be able to use
-the methods that the trait provides. Also, what happens when two traits are
-in scope that provide a method with the same name.

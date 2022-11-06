@@ -3,9 +3,6 @@
 There are lots of great features from other languages that we can bring to
 Crochet to make it even more of a joy to use.
 
-TODO: split this into multiple files and categorize them into `MVP` and
-`post-MVP` features
-
 ## Typed holes
 
 This is a feature from Haskell/PureScript. It allows you to prefix an identifier
@@ -42,25 +39,11 @@ let slice4 = [:-1]; // tuple.slice(0, -1); === [1, 2, 3, 4]
 let slice5 = [:];   // tuple.slice();      === [1, 2, 3, 4, 5]
 ```
 
-## Pipeline Operator?
-
-TODO, see [TC39 Proposal](https://github.com/tc39/proposal-pipeline-operator).
-
-## Const Expressions
-
-If an expression is composed of literals and operations that can be computed at
-compile time, e.g. math operators, `.length` on string literals, etc. then we
-can compute the result of the expression at compile time.
-
-## Pure/Side-Effect Tracking
-
-TODO
+Post-MVP, I'd like to make ranges a first-class concept in Crochet along with an
+associated type and type checking.
 
 ## Autobinding
 
-One of the confusing aspects of using JavaScript is passing methods as callbacks. To avoid this
-confusion when a method is passed as a callback, Crochet will autobind it.
-
-## Converter
-
-TODO
+One of the confusing aspects of using JavaScript is passing methods as
+callbacks. To avoid this confusion when a method is passed as a callback,
+Crochet will autobind it.

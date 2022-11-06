@@ -1,4 +1,4 @@
-# 23 Struct Types
+# 02 Struct Types
 
 In JavaScript and TypeScript we often use a `.type` or `.kind` field on objects
 as a way of identifying an object type. This is great from a data serialization

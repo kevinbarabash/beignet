@@ -9,10 +9,9 @@
 
 The behavior of `let` has been modified so that it:
 
-- allows redeclarations (like `var`)
-- doesn't allow reassignment (like `const`) without redeclaration
-
-**Crochet**
+- Allows redeclarations (like `var`)
+- Prohibits reassignment (like `const`) without redeclaration. See
+  [Mutability](06_mutability.md) about how reassignment is handled.
 
 ```typescript
 let x = "hello";

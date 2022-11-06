@@ -53,7 +53,7 @@ expression.
 let throwMyError = (message) => throw new MyError(message);
 ```
 
-This will also come in handy later when we look at [Pattern Matching](02_pattern_matching.md).
+This will also come in handy later when we look at [Pattern Matching](05_pattern_matching.md).
 
 ## `do` Expressions
 
