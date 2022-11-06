@@ -1,4 +1,8 @@
-# 05 Meeting Developer Expectations
+# 09 Meeting Developer Expectations
+
+Developers have high expectations of programming languages before they'll decide
+to use a new language for a project. It should support modern tooling and
+shouldn't be obtensible worse than what they're already using.
 
 ## LSP (Language Server Protocol) Support
 
@@ -16,6 +20,7 @@ Good support for sourcemaps will have the following benefits:
 
 - optional chaining
 - nullish coalescing
+- enums
 - JSX support (already codegen'd, but type-checking is incorrect)
 - async/await (already supported)
 - iterators
