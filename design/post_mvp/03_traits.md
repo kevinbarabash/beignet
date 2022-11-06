@@ -70,6 +70,10 @@ NOTES:
   imported wherever that trait is used. This can be useful for reducing the
   amount of code in bundles.
 
+Questions:
+
+- How do traits work with sub-classes and the prototype chain?
+
 ## Deriving Traits with Default Implementations
 
 In some cases, it's possible for traits to have a default implemention. In this

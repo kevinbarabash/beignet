@@ -67,3 +67,20 @@ would do the following:
 - Update all uses of top-level symbols to access them using `exports`
 - Export all private top-level symbols
 - Update all module imports to import `exports` and use it correctly
+
+## Interpreter
+
+One of the great things about JavaScript is that it can be used interactively in
+the browser and in node. Crochet could benefit from having an interpreter as
+well.
+
+## RTTI (Runtime Type Information)
+
+Having type information and associated docs could be very helpful for people
+using the interpreter.
+
+[typescript-rtti](https://github.com/typescript-rtti/typescript-rtti) provides
+this functionality for TypeScript but requires
+[ttypescript](https://github.com/cevek/ttypescript) which patches `tsc` on the
+fly enabling it to run third-party transformers as part of the compilation
+process.
