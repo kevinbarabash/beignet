@@ -1,12 +1,10 @@
-# 06 Bonus Features
+# 07 Bonus Features
 
 There are lots of great features from other languages that we can bring to
 Crochet to make it even more of a joy to use.
 
-TODO:
-
-- split this into two sections, one that's focused on type features and another
-  that's focused value-level computation and one for tooling
+TODO: split this into multiple files and categorize them into `MVP` and
+`post-MVP` features
 
 ## Typed holes
 
@@ -55,18 +53,6 @@ compile time, e.g. math operators, `.length` on string literals, etc. then we
 can compute the result of the expression at compile time.
 
 ## Pure/Side-Effect Tracking
-
-TODO
-
-## Enums with Payloads
-
-TODO
-
-## Struct Types
-
-TODO
-
-## Traits
 
 TODO
 

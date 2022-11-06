@@ -1,4 +1,4 @@
-# 03 Extensibility
+# 10 Extensibility
 
 ## Extensible Type System
 
@@ -14,6 +14,8 @@ queries requires accessing a schema. There are plugins for VSCode that provide e
 GraphQL and SQL. These plugins provide validation of queries in the editor and can also generate
 type definitions for the queries. It's a workable solution, but it results in a lot of generated
 files that need to be kept up to date and may result in merge conflicts with other generated types.
+
+TODO: have an example here of what that would look like
 
 Crochet will solve these issues by providing a plugin API for the type system that can:
 

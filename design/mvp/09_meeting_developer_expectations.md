@@ -1,4 +1,4 @@
-# 05 Meeting Developer Expectations
+# 09 Meeting Developer Expectations
 
 ## LSP (Language Server Protocol) Support
 
@@ -16,6 +16,7 @@ Good support for sourcemaps will have the following benefits:
 
 - optional chaining
 - nullish coalescing
+- enums
 - JSX support (already codegen'd, but type-checking is incorrect)
 - async/await (already supported)
 - iterators
