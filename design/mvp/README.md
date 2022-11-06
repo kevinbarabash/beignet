@@ -1,4 +1,4 @@
-# 00 Overview
+# Crochet: MVP 🧣
 
 Crochet is a compile-to-JavaScript language with tight TypeScript interop and
 modern language features.
@@ -7,16 +7,19 @@ modern language features.
 
 ### Productivity
 
-- performance
-- language constructs like pattern matching, more expressions,
-- Hindley-Milner style type inference reduces the need to explicitly provide
-  types in many situations
+- Performance - the language is implemented in Rust.
+- Language constructs like pattern matching and more expressions make the
+  language more flexible and easier to use.
+- Hindley-Milner style type inference reduces the need to explicitly specify
+  types in many situations.
 
 ### Safety
 
-- readonly by default with opt-in mutability
-- tracking whether a function can through an exception
-- proper handling of variance
+- Readonly by default with opt-in mutability
+- Index access returns optional types.
+- Function signatures include information about what exceptions the function
+  throws.
+- Proper handling of variance.
 
 ### Interoperability
 
