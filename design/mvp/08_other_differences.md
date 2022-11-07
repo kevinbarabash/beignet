@@ -14,3 +14,9 @@
 Default imports/exports make it difficult to maintain consistent naming of
 variables across large projects. You'll still be able to import `default` using
 a named import to support TypeScript interop.
+
+## Autobinding
+
+One of the confusing aspects of using JavaScript is passing methods as
+callbacks. To avoid this confusion when a method is passed as a callback,
+Crochet will autobind it.
