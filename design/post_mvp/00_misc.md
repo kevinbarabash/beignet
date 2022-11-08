@@ -1,5 +1,15 @@
 # 00 Misc Post-MVP Ideas
 
+## Visibility Controls (MVP?)
+
+Right now all top-level symbols are exported by default. There should probably
+be a way to control this.
+
+## Different Scripts and Modules (MVP?)
+
+Modules with side-effects are a bad thing, so it would be good to have a way to
+prevent that from happening.
+
 ## Const Expressions
 
 If an expression is composed of literals and operations that can be computed at
@@ -74,7 +84,7 @@ One of the great things about JavaScript is that it can be used interactively in
 the browser and in node. Crochet could benefit from having an interpreter as
 well.
 
-## RTTI (Runtime Type Information)
+## Runtime Type Information
 
 Having type information and associated docs could be very helpful for people
 using the interpreter.
@@ -84,3 +94,17 @@ this functionality for TypeScript but requires
 [ttypescript](https://github.com/cevek/ttypescript) which patches `tsc` on the
 fly enabling it to run third-party transformers as part of the compilation
 process.
+
+## Integer Type
+
+Right now all numbers are typed `number` which is a floating point number.
+There are certain situations where having an explicit `int` type would be safer,
+e.g. array indexing.
+
+## Operator Overloading
+
+https://github.com/tc39/proposal-operator-overloading
+
+## Numeric Literal Suffixes
+
+https://github.com/tc39/proposal-extended-numeric-literals

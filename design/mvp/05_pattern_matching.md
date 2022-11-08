@@ -22,12 +22,8 @@ The reason for using `->` instead of `=>` was to differentiate the arms of the
 `match` expression from arrow functions. The latter introduces a new stack frame
 whereas the former does not.
 
-While there is a [TC39
-Proposal](https://github.com/tc39/proposal-pattern-matching) for pattern
-matching, it feels overly complex. This is why an alternate syntax was adopted.
-
-NOTE: Pattern matching is syntactic sugar for `if`-`let`-`else`. The example
-above can be rewritten as the following:
+Pattern matching is syntactic sugar for `if`-`let`-`else`. The example above can
+be rewritten as the following:
 
 ```ts
 type Event =
@@ -43,3 +39,11 @@ let result = if (let {type: "mousedown", x, y} = e) {
     \`keydown: \${key}\
 };
 ```
+
+NOTES:
+
+- All of the same patterns that can be use with [Type
+  Narrowing](04_type_narrowing.md) can be used with pattern matching.
+- While there is a [TC39
+  Proposal](https://github.com/tc39/proposal-pattern-matching) for pattern
+  matching, it feels overly complex. This is why an alternate syntax was adopted.
