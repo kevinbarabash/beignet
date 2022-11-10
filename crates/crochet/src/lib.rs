@@ -4,6 +4,7 @@ use std::str;
 
 use crochet_dts::parse_dts::parse_dts;
 use crochet_infer::*;
+use crochet_parser::ParseError;
 
 #[repr(C)]
 pub struct WasmString {
@@ -41,13 +42,19 @@ pub unsafe extern "C" fn deallocate(ptr: *mut c_void, length: usize) {
 }
 
 fn _compile(input: &str, lib: &str) -> Result<(String, String), String> {
-    let mut program = crochet_parser::parse(input)?;
+    let mut program = match crochet_parser::parse(input) {
+        Ok(program) => program,
+        Err(ParseError { msg }) => return Err(msg),
+    };
 
     let js = crochet_codegen::js::codegen_js(&program);
 
     // TODO: return errors as part of CompileResult
     let mut ctx = parse_dts(lib).unwrap();
-    let ctx = infer_prog(&mut program, &mut ctx)?;
+    let ctx = match infer_prog(&mut program, &mut ctx) {
+        Ok(ctx) => ctx,
+        Err(TypeError { msg }) => return Err(msg),
+    };
     let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
 
     Ok((js, dts))

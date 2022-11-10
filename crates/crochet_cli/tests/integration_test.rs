@@ -1,5 +1,6 @@
 use crochet_ast::values::{Program, Statement};
 use crochet_codegen::*;
+use crochet_infer::TypeError;
 use crochet_infer::*;
 use crochet_parser::parse;
 
@@ -12,7 +13,7 @@ fn infer(input: &str) -> String {
             let mut expr = expr.to_owned();
             infer_expr(&mut ctx, &mut expr)
         }
-        _ => Err(String::from("We can't infer decls yet")),
+        _ => Err(TypeError::from("We can't infer decls yet")),
     };
     format!("{}", result.unwrap())
 }
@@ -440,7 +441,7 @@ fn infer_let_decl_with_type_ann() {
 #[test]
 // TODO: improve this error by checking the flags on the types before reporting
 // "Unification failure".
-#[should_panic = "called `Result::unwrap()` on an `Err` value: \"Unification failure\""]
+#[should_panic = "called `Result::unwrap()` on an `Err` value: TypeError { msg: \"Unification failure\" }"]
 fn infer_let_decl_with_incorrect_type_ann() {
     let src = "let x: string = 10;";
     let (_, ctx) = infer_prog(src);
@@ -546,7 +547,7 @@ fn infer_tuple_with_type_annotation_and_extra_element() {
 #[test]
 // TODO: improve this error by checking the flags on the types before reporting
 // "Unification failure".
-#[should_panic = "called `Result::unwrap()` on an `Err` value: \"Unification failure\""]
+#[should_panic = "called `Result::unwrap()` on an `Err` value: TypeError { msg: \"Unification failure\" }"]
 fn infer_tuple_with_type_annotation_and_incorrect_element() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two", 3];"#;
     infer_prog(src);

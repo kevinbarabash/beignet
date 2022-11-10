@@ -7,6 +7,7 @@ use crate::assump::Assump;
 use crate::context::{Binding, Context};
 use crate::infer_pattern::infer_pattern;
 use crate::substitutable::Subst;
+use crate::type_error::TypeError;
 
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
@@ -14,7 +15,7 @@ pub fn infer_fn_param(
     param: &mut EFnParam,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
-) -> Result<(Subst, Assump, TFnParam), String> {
+) -> Result<(Subst, Assump, TFnParam), TypeError> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
     // let mut new_vars: Assump = Assump::default();
 

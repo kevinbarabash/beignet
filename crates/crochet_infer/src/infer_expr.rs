@@ -12,11 +12,12 @@ use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
 use crate::substitutable::{Subst, Substitutable};
+use crate::type_error::TypeError;
 use crate::unify::unify;
 use crate::util::*;
 use crate::visitor::Visitor;
 
-pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), String> {
+pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), TypeError> {
     let result = match &mut expr.kind {
         ExprKind::App(App { lam, args, .. }) => {
             let mut ss: Vec<Subst> = vec![];
@@ -223,7 +224,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
 
                         return Ok((s, t));
                     }
-                    _ => return Err(String::from("Component must be a function")),
+                    _ => return Err(TypeError::from("Component must be a function")),
                 }
             }
 
@@ -264,11 +265,11 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         ctx.insert_type(param.name.name.clone(), tv.clone());
                         Ok((param.name.name.to_owned(), tv))
                     })
-                    .collect::<Result<HashMap<String, Type>, String>>()?,
+                    .collect::<Result<HashMap<String, Type>, TypeError>>()?,
                 None => HashMap::default(),
             };
 
-            let params: Result<Vec<(Subst, TFnParam)>, String> = params
+            let params: Result<Vec<(Subst, TFnParam)>, TypeError> = params
                 .iter_mut()
                 .map(|e_param| {
                     let (ps, pa, t_param) = infer_fn_param(e_param, ctx, &type_params_map)?;
@@ -351,7 +352,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                 let name = &id.name;
                 let binding = ctx.lookup_binding(name)?;
                 if !binding.mutable {
-                    return Err(format!("can't assign to non-mutable binder '{name}'"));
+                    return Err(TypeError::from(format!(
+                        "can't assign to non-mutable binder '{name}'"
+                    )));
                 }
             }
 
@@ -471,7 +474,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
         }
         ExprKind::Await(Await { expr, .. }) => {
             if !ctx.is_async() {
-                return Err(String::from("Can't use `await` inside non-async lambda"));
+                return Err(TypeError::from("Can't use `await` inside non-async lambda"));
             }
 
             let (s1, t1) = infer_expr(ctx, expr)?;
@@ -501,7 +504,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
                         match &mut t.kind {
                             TypeKind::Tuple(types) => ts.append(types),
                             _ => {
-                                return Err(String::from(
+                                return Err(TypeError::from(
                                     "Can only spread tuple types inside a tuple",
                                 ))
                             }
@@ -539,7 +542,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), S
             exprs, quasis: _, ..
         }) => {
             let t = Type::from(TypeKind::Keyword(TKeyword::String));
-            let result: Result<Vec<(Subst, Type)>, String> =
+            let result: Result<Vec<(Subst, Type)>, TypeError> =
                 exprs.iter_mut().map(|expr| infer_expr(ctx, expr)).collect();
             // We ignore the types of expressions if there are any because any expression
             // in JavaScript has a string representation.
@@ -596,7 +599,7 @@ fn infer_let(
     body: &mut Expr,
     ctx: &mut Context,
     pu: &PatternUsage,
-) -> Result<(Subst, Type), String> {
+) -> Result<(Subst, Type), TypeError> {
     ctx.push_scope(ctx.is_async());
     let (pa, s1) = infer_pattern_and_init(pat, type_ann, init, ctx, pu)?;
 
@@ -624,7 +627,7 @@ fn infer_property_type(
     obj_t: &Type,
     prop: &mut MemberProp,
     ctx: &mut Context,
-) -> Result<(Subst, Type), String> {
+) -> Result<(Subst, Type), TypeError> {
     match &obj_t.kind {
         TypeKind::Generic(_) => {
             // TODO: Improve performance by getting the property type first and
@@ -636,7 +639,9 @@ fn infer_property_type(
         }
         TypeKind::Var(TVar { constraint, .. }) => match constraint {
             Some(constraint) => infer_property_type(constraint, prop, ctx),
-            None => Err("Cannot read property on unconstrained type param".to_owned()),
+            None => Err(TypeError::from(
+                "Cannot read property on unconstrained type param",
+            )),
         },
         TypeKind::Object(obj) => get_prop_value(obj, prop, ctx),
         TypeKind::Ref(alias) => {
@@ -657,9 +662,11 @@ fn infer_property_type(
                 TKeyword::Boolean => ctx.lookup_type_and_instantiate("Boolean")?,
                 TKeyword::String => ctx.lookup_type_and_instantiate("String")?,
                 TKeyword::Symbol => ctx.lookup_type_and_instantiate("Symbol")?,
-                TKeyword::Null => return Err("Cannot read property on 'null'".to_owned()),
-                TKeyword::Undefined => return Err("Cannot read property on 'undefined'".to_owned()),
-                TKeyword::Never => return Err("Cannot read property on 'never'".to_owned()),
+                TKeyword::Null => return Err(TypeError::from("Cannot read property on 'null'")),
+                TKeyword::Undefined => {
+                    return Err(TypeError::from("Cannot read property on 'undefined'"))
+                }
+                TKeyword::Never => return Err(TypeError::from("Cannot read property on 'never'")),
             };
             infer_property_type(&t, prop, ctx)
         }
@@ -717,19 +724,27 @@ fn infer_property_type(
                                 let t = Type::from(TypeKind::Union(elem_types));
                                 Ok((prop_s, t))
                             }
-                            _ => Err(format!("{keyword} is an invalid indexer for tuple types")),
+                            _ => Err(TypeError::from(format!(
+                                "{keyword} is an invalid indexer for tuple types"
+                            ))),
                         },
                         TypeKind::Lit(lit) => match lit {
                             types::TLit::Num(index) => {
                                 let index: usize = index.parse().unwrap();
                                 match elem_types.get(index) {
                                     Some(t) => Ok((prop_s, t.to_owned())),
-                                    None => Err(format!("{index} is out of bounds for {obj_t}")),
+                                    None => Err(TypeError::from(format!(
+                                        "{index} is out of bounds for {obj_t}"
+                                    ))),
                                 }
                             }
-                            _ => Err(format!("{lit} is an invalid indexer for tuple types")),
+                            _ => Err(TypeError::from(format!(
+                                "{lit} is an invalid indexer for tuple types"
+                            ))),
                         },
-                        _ => Err(format!("{prop_t} is an invalid indexer for tuple types")),
+                        _ => Err(TypeError::from(format!(
+                            "{prop_t} is an invalid indexer for tuple types"
+                        ))),
                     }
                 }
             }
@@ -744,7 +759,7 @@ fn get_prop_value(
     obj: &TObject,
     prop: &mut MemberProp,
     ctx: &mut Context,
-) -> Result<(Subst, Type), String> {
+) -> Result<(Subst, Type), TypeError> {
     let elems = &obj.elems;
     match prop {
         MemberProp::Ident(Ident { name, .. }) => {
@@ -766,7 +781,9 @@ fn get_prop_value(
                     let t = get_property_type(prop);
                     Ok((Subst::default(), t))
                 }
-                None => Err(format!("Object type doesn't contain key {name}.")),
+                None => Err(TypeError::from(format!(
+                    "Object type doesn't contain key {name}."
+                ))),
             }
         }
         MemberProp::Computed(ComputedPropName { expr, .. }) => {
@@ -801,7 +818,9 @@ fn get_prop_value(
 
                         Ok((prop_s, t))
                     }
-                    _ => Err(format!("{keyword} is an invalid key for object types")),
+                    _ => Err(TypeError::from(format!(
+                        "{keyword} is an invalid key for object types"
+                    ))),
                 },
                 TypeKind::Lit(lit) => match lit {
                     types::TLit::Str(key) => {
@@ -823,12 +842,18 @@ fn get_prop_value(
                                 // TODO: handle generic object properties
                                 Ok((Subst::default(), prop.t.to_owned()))
                             }
-                            None => Err(format!("Object type doesn't contain key {key}.")),
+                            None => Err(TypeError::from(format!(
+                                "Object type doesn't contain key {key}."
+                            ))),
                         }
                     }
-                    _ => Err(format!("{lit} is an invalid key for object types")),
+                    _ => Err(TypeError::from(format!(
+                        "{lit} is an invalid key for object types"
+                    ))),
                 },
-                _ => Err(format!("{prop_t} is an invalid key for object types")),
+                _ => Err(TypeError::from(format!(
+                    "{prop_t} is an invalid key for object types"
+                ))),
             };
 
             match result {
@@ -858,7 +883,9 @@ fn get_prop_value(
                                 return Ok((s, t));
                             }
                         }
-                        Err(format!("{prop_t_clone} is an invalid key for object types"))
+                        Err(TypeError::from(format!(
+                            "{prop_t_clone} is an invalid key for object types"
+                        )))
                     }
                 }
             }

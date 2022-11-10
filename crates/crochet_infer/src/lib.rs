@@ -6,6 +6,7 @@ mod infer_pattern;
 mod infer_type_ann;
 mod key_of;
 mod substitutable;
+mod type_error;
 mod unify;
 mod unify_mut;
 mod update;
@@ -17,6 +18,7 @@ pub mod infer;
 pub use context::*;
 pub use infer::*;
 pub use substitutable::{Subst, Substitutable};
+pub use type_error::TypeError;
 pub use util::{close_over, generalize, get_type_params, normalize, set_type_params};
 
 #[cfg(test)]

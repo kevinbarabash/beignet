@@ -8,6 +8,7 @@ use crate::context::{Binding, Context};
 use crate::infer_expr::infer_expr;
 use crate::infer_type_ann::*;
 use crate::substitutable::{Subst, Substitutable};
+use crate::type_error::TypeError;
 use crate::unify::unify;
 use crate::util::*;
 
@@ -18,7 +19,7 @@ pub fn infer_pattern(
     type_ann: &mut Option<TypeAnn>,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
-) -> Result<(Subst, Assump, Type), String> {
+) -> Result<(Subst, Assump, Type), TypeError> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
     let mut new_vars: HashMap<String, Binding> = HashMap::new();
 
@@ -240,7 +241,7 @@ pub fn infer_pattern_and_init(
     init: &mut Expr,
     ctx: &mut Context,
     pu: &PatternUsage,
-) -> Result<(Assump, Subst), String> {
+) -> Result<(Assump, Subst), TypeError> {
     let type_param_map = HashMap::new();
     let (ps, pa, pt) = infer_pattern(pat, type_ann, ctx, &type_param_map)?;
 

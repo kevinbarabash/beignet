@@ -9,6 +9,7 @@ use crochet_ast::values::*;
 use crate::context::Context;
 use crate::infer_expr::infer_expr;
 use crate::infer_fn_param::pattern_to_tpat;
+use crate::type_error::TypeError;
 use crate::util::compose_many_subs;
 use crate::util::get_type_params;
 use crate::Subst;
@@ -18,7 +19,7 @@ pub fn infer_type_ann(
     type_ann: &mut TypeAnn,
     ctx: &mut Context,
     type_params: &mut Option<Vec<TypeParam>>,
-) -> Result<(Subst, Type), String> {
+) -> Result<(Subst, Type), TypeError> {
     let mut type_params = if type_params.is_none() {
         match &mut type_ann.kind {
             TypeAnnKind::Lam(lam) => lam.type_params.to_owned(),
@@ -49,7 +50,7 @@ pub fn infer_type_ann(
 
                 Ok((param.name.name.to_owned(), tv))
             })
-            .collect::<Result<HashMap<String, Type>, String>>()?,
+            .collect::<Result<HashMap<String, Type>, TypeError>>()?,
         None => HashMap::default(),
     };
 
@@ -60,7 +61,7 @@ pub fn infer_type_ann_with_params(
     type_ann: &mut TypeAnn,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
-) -> Result<(Subst, Type), String> {
+) -> Result<(Subst, Type), TypeError> {
     infer_type_ann_rec(type_ann, ctx, type_param_map)
 }
 
@@ -68,7 +69,7 @@ fn infer_type_ann_rec(
     type_ann: &mut TypeAnn,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
-) -> Result<(Subst, Type), String> {
+) -> Result<(Subst, Type), TypeError> {
     match &mut type_ann.kind {
         TypeAnnKind::Lam(lam) => {
             let mut ss: Vec<Subst> = vec![];
