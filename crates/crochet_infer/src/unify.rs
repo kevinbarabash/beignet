@@ -8,11 +8,12 @@ use types::TKeyword;
 use crate::context::Context;
 use crate::key_of::key_of;
 use crate::substitutable::{Subst, Substitutable};
+use crate::type_error::TypeError;
 use crate::unify_mut::unify_mut;
 use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
-pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
+pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
     // All binding must be done first
     match (&t1.kind, &t2.kind) {
         (TypeKind::Var(tv), _) => return bind(tv, t2, Relation::SubType, ctx),
@@ -44,7 +45,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
         };
 
         // It's NOT okay to use an immutable in place of a mutable one
-        return Err(String::from(
+        return Err(TypeError::from(
             "Cannot use immutable type where a mutable type was expected",
         ));
     }
@@ -63,7 +64,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             if b {
                 Ok(Subst::default())
             } else {
-                Err(String::from("Unification failure"))
+                Err(TypeError::from("Unification failure"))
             }
         }
         (TypeKind::App(app1), TypeKind::App(app2)) => {
@@ -80,7 +81,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 let s1 = unify(&app1.ret.apply(&s), &app2.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
             } else {
-                Err(String::from("Couldn't unify function calls"))
+                Err(TypeError::from("Couldn't unify function calls"))
             }
         }
         (TypeKind::Lam(lam1), TypeKind::Lam(lam2)) => {
@@ -102,7 +103,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
             } else {
-                Err(String::from("Couldn't unify lambdas"))
+                Err(TypeError::from("Couldn't unify lambdas"))
             }
         }
         // NOTE: this arm is only hit by the `infer_skk` test case
@@ -134,7 +135,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 .collect();
 
             if callables.is_empty() {
-                Err(String::from("Couldn't application with object"))
+                Err(TypeError::from("Couldn't application with object"))
             } else {
                 for callable in callables {
                     let result = unify(t1, &callable, ctx);
@@ -142,7 +143,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         return result;
                     }
                 }
-                Err(String::from("Couldn't application with object"))
+                Err(TypeError::from("Couldn't application with object"))
             }
         }
         (TypeKind::App(app), TypeKind::Lam(lam)) => {
@@ -188,14 +189,18 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 match &arg.kind {
                     TypeKind::Rest(spread) => match &spread.as_ref().kind {
                         TypeKind::Tuple(types) => args.append(&mut types.to_owned()),
-                        _ => return Err(format!("spread of type {spread} not allowed")),
+                        _ => {
+                            return Err(TypeError::from(format!(
+                                "spread of type {spread} not allowed"
+                            )))
+                        }
                     },
                     _ => args.push(arg.to_owned()),
                 }
             }
 
             if args.len() < param_count_low_bound {
-                return Err(String::from("Not enough args provided"));
+                return Err(TypeError::from("Not enough args provided"));
             }
 
             // TODO: Add a `variadic` boolean to the Lambda type as a convenience
@@ -245,7 +250,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 let s1 = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
             } else {
-                Err(String::from("Not enough params provided"))
+                Err(TypeError::from("Not enough params provided"))
             }
         }
         (TypeKind::App(_), TypeKind::Intersection(types)) => {
@@ -255,7 +260,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     return result;
                 }
             }
-            Err(String::from("Couldn't unify lambda with intersection"))
+            Err(TypeError::from("Couldn't unify lambda with intersection"))
         }
         (TypeKind::Object(obj1), TypeKind::Object(obj2)) => {
             // Should we be doing something about type_params here?
@@ -319,7 +324,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                 match &t.kind {
                     TypeKind::Rest(rest_type) => {
                         if maybe_rest2.is_some() {
-                            return Err(String::from(
+                            return Err(TypeError::from(
                                 "Only one rest pattern is allowed in a tuple",
                             ));
                         }
@@ -338,7 +343,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             // If it doesn't, we return an error.
             if types1.len() < min_len {
                 // TODO: include the types in the error message
-                return Err(String::from("not enough elements to unpack"));
+                return Err(TypeError::from("not enough elements to unpack"));
             }
 
             let mut types1 = types1.to_owned();
@@ -401,7 +406,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
 
             match b {
                 true => Ok(compose_many_subs(&ss)),
-                false => Err(String::from("Unification failure")),
+                false => Err(TypeError::from("Unification failure")),
             }
         }
         (TypeKind::Object(obj), TypeKind::Intersection(types)) => {
@@ -454,7 +459,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let s = compose_subs(&s2, &s1);
                     Ok(s)
                 }
-                _ => Err(String::from("Unification is undecidable")),
+                _ => Err(TypeError::from("Unification is undecidable")),
             }
         }
         (TypeKind::Intersection(types), TypeKind::Object(obj)) => {
@@ -507,7 +512,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                     let s = compose_subs(&s_rest, &s_obj);
                     Ok(s)
                 }
-                _ => Err(String::from("Unification is undecidable")),
+                _ => Err(TypeError::from("Unification is undecidable")),
             }
         }
         (TypeKind::Ref(alias1), TypeKind::Ref(alias2)) => {
@@ -523,7 +528,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
                         Ok(compose_many_subs_with_context(&ss))
                     }
                     (None, None) => Ok(Subst::default()),
-                    _ => Err(String::from("Alias type mismatch")),
+                    _ => Err(TypeError::from("Alias type mismatch")),
                 }
             } else {
                 todo!("unify(): handle aliases that point to another alias")
@@ -550,13 +555,13 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, String> {
             (TKeyword::Undefined, TKeyword::Undefined) => Ok(Subst::new()),
             // Is 'never' a subtype of all types?
             (TKeyword::Never, TKeyword::Null) => Ok(Subst::new()),
-            _ => Err(format!("Can't unify {t1} with {t2}")),
+            _ => Err(TypeError::from(format!("Can't unify {t1} with {t2}"))),
         },
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())
             } else {
-                Err(String::from("Unification failure"))
+                Err(TypeError::from("Unification failure"))
             }
         }
     };
@@ -572,7 +577,7 @@ enum Relation {
     SuperType,
 }
 
-fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, String> {
+fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, TypeError> {
     // | t == TVar a     = return nullSubst
     // | occursCheck a t = throwError $ InfiniteType a t
     // | otherwise       = return $ Map.singleton a t
@@ -612,7 +617,7 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Stri
                     }
                 }
 
-                Err(String::from("InfiniteType"))
+                Err(TypeError::from("InfiniteType"))
             } else {
                 if let Some(c) = &tv.constraint {
                     // We only care whether the `unify()` call fails or not.  If it succeeds,
@@ -759,6 +764,6 @@ mod tests {
             &ctx,
         );
 
-        assert_eq!(result, Err(String::from("Unification failure")))
+        assert_eq!(result, Err(TypeError::from("Unification failure")))
     }
 }

@@ -50,7 +50,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
     // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
     // type variables that are bound to the object element as opposed to the encompassing object type.
-    fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, ctx: &Context) -> Type {
+    fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, _ctx: &Context) -> Type {
         let kind = match &t.kind {
             TypeKind::Generic(TGeneric {
                 t: inner_t,
@@ -61,7 +61,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 // to the incorrect type.  In order to fix this, we'd have to run
                 // `normalize` itself on each qualified type in the tree.
                 TypeKind::Generic(TGeneric {
-                    t: Box::from(norm_type(inner_t, mapping, ctx)),
+                    t: Box::from(norm_type(inner_t, mapping, _ctx)),
                     type_params: type_params
                         .iter()
                         .map(|tp| match mapping.get(&tp.id) {
@@ -87,9 +87,9 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 let args: Vec<_> = app
                     .args
                     .iter()
-                    .map(|arg| norm_type(arg, mapping, ctx))
+                    .map(|arg| norm_type(arg, mapping, _ctx))
                     .collect();
-                let ret = Box::from(norm_type(&app.ret, mapping, ctx));
+                let ret = Box::from(norm_type(&app.ret, mapping, _ctx));
                 TypeKind::App(TApp { args, ret })
             }
             TypeKind::Lam(lam) => {
@@ -97,11 +97,11 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     .params
                     .iter()
                     .map(|param| TFnParam {
-                        t: norm_type(&param.t, mapping, ctx),
+                        t: norm_type(&param.t, mapping, _ctx),
                         ..param.to_owned()
                     })
                     .collect();
-                let ret = Box::from(norm_type(&lam.ret, mapping, ctx));
+                let ret = Box::from(norm_type(&lam.ret, mapping, _ctx));
                 TypeKind::Lam(TLam { params, ret })
             }
             TypeKind::Lit(_) => return t.to_owned(),
@@ -109,13 +109,13 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
             TypeKind::Union(types) => {
                 // TODO: update union_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
-                let types = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
+                let types = types.iter().map(|t| norm_type(t, mapping, _ctx)).collect();
                 TypeKind::Union(types)
             }
             TypeKind::Intersection(types) => {
                 // TODO: update intersection_types from constraint_solver.rs to handle
                 // any number of types instead of just two and then call it here.
-                let types: Vec<_> = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
+                let types: Vec<_> = types.iter().map(|t| norm_type(t, mapping, _ctx)).collect();
 
                 let mut result = simplify_intersection(&types);
                 result.provenance = t.provenance.to_owned();
@@ -132,11 +132,11 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                                 .params
                                 .iter()
                                 .map(|param| TFnParam {
-                                    t: norm_type(&param.t, mapping, ctx),
+                                    t: norm_type(&param.t, mapping, _ctx),
                                     ..param.to_owned()
                                 })
                                 .collect();
-                            let ret = Box::from(norm_type(&call.ret, mapping, ctx));
+                            let ret = Box::from(norm_type(&call.ret, mapping, _ctx));
                             TObjElem::Call(TCallable {
                                 params,
                                 ret,
@@ -149,11 +149,11 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                                 .params
                                 .iter()
                                 .map(|param| TFnParam {
-                                    t: norm_type(&param.t, mapping, ctx),
+                                    t: norm_type(&param.t, mapping, _ctx),
                                     ..param.to_owned()
                                 })
                                 .collect();
-                            let ret = Box::from(norm_type(&call.ret, mapping, ctx));
+                            let ret = Box::from(norm_type(&call.ret, mapping, _ctx));
                             TObjElem::Constructor(TCallable {
                                 params,
                                 ret,
@@ -164,13 +164,13 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                         TObjElem::Index(index) => TObjElem::Index(TIndex {
                             key: index.key.to_owned(),
                             mutable: index.mutable,
-                            t: norm_type(&index.t, mapping, ctx),
+                            t: norm_type(&index.t, mapping, _ctx),
                         }),
                         TObjElem::Prop(prop) => TObjElem::Prop(TProp {
                             name: prop.name.to_owned(),
                             optional: prop.optional,
                             mutable: prop.mutable,
-                            t: norm_type(&prop.t, mapping, ctx),
+                            t: norm_type(&prop.t, mapping, _ctx),
                         }),
                     })
                     .collect();
@@ -179,24 +179,24 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
             TypeKind::Ref(TRef { name, type_args }) => {
                 let type_args = type_args
                     .clone()
-                    .map(|params| params.iter().map(|t| norm_type(t, mapping, ctx)).collect());
+                    .map(|params| params.iter().map(|t| norm_type(t, mapping, _ctx)).collect());
                 TypeKind::Ref(TRef {
                     name: name.to_owned(),
                     type_args,
                 })
             }
             TypeKind::Tuple(types) => {
-                let types = types.iter().map(|t| norm_type(t, mapping, ctx)).collect();
+                let types = types.iter().map(|t| norm_type(t, mapping, _ctx)).collect();
                 TypeKind::Tuple(types)
             }
-            TypeKind::Array(t) => TypeKind::Array(Box::from(norm_type(t, mapping, ctx))),
-            TypeKind::Rest(arg) => TypeKind::Rest(Box::from(norm_type(arg, mapping, ctx))),
+            TypeKind::Array(t) => TypeKind::Array(Box::from(norm_type(t, mapping, _ctx))),
+            TypeKind::Rest(arg) => TypeKind::Rest(Box::from(norm_type(arg, mapping, _ctx))),
             TypeKind::This => TypeKind::This,
-            TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(norm_type(t, mapping, ctx))),
+            TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(norm_type(t, mapping, _ctx))),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => {
                 TypeKind::IndexAccess(TIndexAccess {
-                    object: Box::from(norm_type(object, mapping, ctx)),
-                    index: Box::from(norm_type(index, mapping, ctx)),
+                    object: Box::from(norm_type(object, mapping, _ctx)),
+                    index: Box::from(norm_type(index, mapping, _ctx)),
                 })
             }
         };

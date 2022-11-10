@@ -6,6 +6,10 @@ use unescape::unescape;
 
 use crochet_ast::values::*;
 
+mod parse_error;
+
+pub use parse_error::ParseError;
+
 #[link(wasm_import_module = "my_custom_module")]
 extern "C" {
     fn _log(wasm_str: WasmString);
@@ -36,7 +40,7 @@ fn log(str: &str) {
     println!("{}", str);
 }
 
-pub fn parse(src: &str) -> Result<Program, String> {
+pub fn parse(src: &str) -> Result<Program, ParseError> {
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(tree_sitter_crochet::language())
@@ -63,11 +67,11 @@ pub fn parse(src: &str) -> Result<Program, String> {
 
         Ok(Program { body })
     } else {
-        Err("not implemented yet".to_string())
+        Err(ParseError::from("not implemented yet"))
     }
 }
 
-fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, String> {
+fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, ParseError> {
     match node.kind() {
         "lexical_declaration" => parse_declaration(node, false, src),
         "expression_statement" => {
@@ -104,8 +108,11 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>
         "comment" => {
             Ok(vec![]) // ignore comments
         }
-        "ERROR" => Err(format!("failed to parse: '{}'", text_for_node(node, src)?)),
-        _ => Err(format!("unhandled: {:#?}", node)),
+        "ERROR" => Err(ParseError::from(format!(
+            "failed to parse: '{}'",
+            text_for_node(node, src)?
+        ))),
+        _ => Err(ParseError::from(format!("unhandled: {:#?}", node))),
     }
 
     // $.export_statement,
@@ -144,10 +151,10 @@ fn parse_declaration(
     node: &tree_sitter::Node,
     declare: bool,
     src: &str,
-) -> Result<Vec<Statement>, String> {
+) -> Result<Vec<Statement>, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
-        return Err(String::from("Error parsing declaration"));
+        return Err(ParseError::from("Error parsing declaration"));
     }
 
     let decl = node.child_by_field_name("decl").unwrap();
@@ -217,10 +224,10 @@ fn parse_declaration(
     Ok(vec![stmt])
 }
 
-fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String> {
+fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
-        return Err(String::from("Error parsing pattern"));
+        return Err(ParseError::from("Error parsing pattern"));
     }
     let kind = match node.kind() {
         "binding_identifier" => {
@@ -326,7 +333,7 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
                     }
                     kind => panic!("Unexpected object property kind: '{kind}'"),
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
 
             PatternKind::Object(ObjectPat {
                 props,
@@ -359,7 +366,7 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
                         init: None,
                     })),
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
 
             PatternKind::Array(ArrayPat {
                 elems,
@@ -387,7 +394,10 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String>
     })
 }
 
-fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Result<Vec<EFnParam>, String> {
+fn parse_formal_parameters(
+    node: &tree_sitter::Node,
+    src: &str,
+) -> Result<Vec<EFnParam>, ParseError> {
     assert_eq!(node.kind(), "formal_parameters");
 
     let mut cursor = node.walk();
@@ -413,10 +423,10 @@ fn parse_formal_parameters(node: &tree_sitter::Node, src: &str) -> Result<Vec<EF
                 mutable: false,
             })
         })
-        .collect::<Result<Vec<_>, String>>()
+        .collect::<Result<Vec<_>, ParseError>>()
 }
 
-fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, String> {
+fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseError> {
     assert_eq!(node.kind(), "statement_block");
 
     let mut cursor = node.walk();
@@ -519,7 +529,10 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, St
     Ok(result)
 }
 
-fn parse_template_string(node: &tree_sitter::Node, src: &str) -> Result<TemplateLiteral, String> {
+fn parse_template_string(
+    node: &tree_sitter::Node,
+    src: &str,
+) -> Result<TemplateLiteral, ParseError> {
     assert_eq!(node.kind(), "template_string");
 
     let mut cursor = node.walk();
@@ -565,10 +578,10 @@ fn parse_template_string(node: &tree_sitter::Node, src: &str) -> Result<Template
     Ok(TemplateLiteral { exprs, quasis })
 }
 
-fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String> {
+fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
-        return Err(String::from("Error parsing expression"));
+        return Err(ParseError::from("Error parsing expression"));
     }
     let kind = match node.kind() {
         "arrow_function" => {
@@ -728,7 +741,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
                         })
                     }
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
 
             // TODO: handle template string
             ExprKind::App(App {
@@ -799,7 +812,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
                     }
                     kind => panic!("Unexpect object property kind: {kind}"),
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
 
             ExprKind::Obj(Obj { props })
         }
@@ -823,7 +836,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
                         expr: Box::from(parse_expression(&elem, src)?),
                     }),
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
 
             ExprKind::Tuple(Tuple { elems })
         }
@@ -895,7 +908,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|arm| parse_arm(&arm, src))
-                .collect::<Result<Vec<Arm>, String>>()?;
+                .collect::<Result<Vec<Arm>, ParseError>>()?;
 
             ExprKind::Match(Match {
                 expr: Box::from(expr),
@@ -903,10 +916,10 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
             })
         }
         _ => {
-            return Err(format!(
+            return Err(ParseError::from(format!(
                 "unhandled {node:#?} = '{}'",
                 text_for_node(node, src)?
-            ));
+            )));
         }
     };
 
@@ -959,7 +972,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String>
     // $.call_expression
 }
 
-fn parse_arm(node: &tree_sitter::Node, src: &str) -> Result<Arm, String> {
+fn parse_arm(node: &tree_sitter::Node, src: &str) -> Result<Arm, ParseError> {
     let pat = node.child_by_field_name("pattern").unwrap();
     let body = node.child_by_field_name("value").unwrap();
     let body = match body.kind() {
@@ -981,7 +994,7 @@ fn parse_arm(node: &tree_sitter::Node, src: &str) -> Result<Arm, String> {
     })
 }
 
-fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, String> {
+fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseError> {
     let child = if node.kind() == "refutable_pattern" {
         node.named_child(0).unwrap()
     } else {
@@ -1020,7 +1033,7 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                         init: None,
                     }))
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
 
             PatternKind::Array(ArrayPat {
                 elems,
@@ -1071,7 +1084,7 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                     }
                     kind => panic!("Unexected prop.kind() = {kind}"),
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
 
             PatternKind::Object(ObjectPat {
                 props,
@@ -1112,7 +1125,7 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
     })
 }
 
-fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, String> {
+fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseError> {
     assert_eq!(node.kind(), "if_expression");
 
     let condition = node.child_by_field_name("condition").unwrap();
@@ -1150,10 +1163,10 @@ fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Stri
     })
 }
 
-fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String> {
+fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
-        return Err(String::from("Error parsing type annotation"));
+        return Err(ParseError::from("Error parsing type annotation"));
     }
     let node = if node.kind() == "type_annotation"
         || node.kind() == "constraint"
@@ -1206,7 +1219,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|arg| parse_type_ann(&arg, src))
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
 
             TypeAnnKind::TypeRef(TypeRef {
                 span: node.byte_range(),
@@ -1309,7 +1322,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                     "method_signature" => todo!("remove method_signature from object_type"),
                     kind => panic!("Unsupport prop kind in object_type: '{kind}'"),
                 })
-                .collect::<Result<Vec<TObjElem>, String>>()?;
+                .collect::<Result<Vec<TObjElem>, ParseError>>()?;
 
             TypeAnnKind::Object(ObjectType {
                 span: node.byte_range(),
@@ -1334,7 +1347,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                     println!("parsing elem: {elem:#?}");
                     parse_type_ann(&elem, src)
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
 
             TypeAnnKind::Tuple(TupleType {
                 span: node.byte_range(),
@@ -1398,7 +1411,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|t| parse_type_ann(&t, src))
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
             TypeAnnKind::Intersection(IntersectionType {
                 span: node.byte_range(),
                 types,
@@ -1410,7 +1423,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|t| parse_type_ann(&t, src))
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
             TypeAnnKind::Union(UnionType {
                 span: node.byte_range(),
                 types,
@@ -1440,7 +1453,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
                         optional,
                     })
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
 
             let return_type = node.child_by_field_name("return_type").unwrap();
             let return_type = parse_type_ann(&return_type, src)?;
@@ -1507,7 +1520,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, String
 fn parse_type_params_for_node(
     node: &tree_sitter::Node,
     src: &str,
-) -> Result<Option<Vec<TypeParam>>, String> {
+) -> Result<Option<Vec<TypeParam>>, ParseError> {
     let type_params = match node.child_by_field_name("type_parameters") {
         Some(type_params) => {
             let mut cursor = type_params.walk();
@@ -1541,7 +1554,7 @@ fn parse_type_params_for_node(
                         default,
                     })
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
             Some(type_params)
         }
         None => None,
@@ -1550,7 +1563,7 @@ fn parse_type_params_for_node(
     Ok(type_params)
 }
 
-fn parse_literal(node: &tree_sitter::Node, src: &str) -> Result<Lit, String> {
+fn parse_literal(node: &tree_sitter::Node, src: &str) -> Result<Lit, ParseError> {
     match node.kind() {
         "number" => Ok(Lit::num(
             src.get(node.byte_range()).unwrap().to_owned(),
@@ -1577,7 +1590,7 @@ fn parse_literal(node: &tree_sitter::Node, src: &str) -> Result<Lit, String> {
     }
 }
 
-fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr>, String> {
+fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr>, ParseError> {
     let mut cursor = node.walk();
     let attrs = node.children_by_field_name("attribute", &mut cursor);
     attrs
@@ -1612,10 +1625,10 @@ fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr>, 
                 value,
             })
         })
-        .collect::<Result<Vec<_>, String>>()
+        .collect::<Result<Vec<_>, ParseError>>()
 }
 
-fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, String> {
+fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, ParseError> {
     match node.kind() {
         "jsx_element" => {
             let mut cursor = node.walk();
@@ -1645,7 +1658,7 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, 
                     }
                     kind => panic!("Unexpected JSXElementChild kind: '{kind}'"),
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, ParseError>>()?;
 
             let open_tag = node.child_by_field_name("open_tag").unwrap();
             let name = open_tag.child_by_field_name("name").unwrap();
@@ -1767,7 +1780,7 @@ mod tests {
     fn multiple_rest_params() {
         assert_eq!(
             parse("(...a, ...b) => true"),
-            Err("rest params must come last".to_string())
+            Err(ParseError::from("rest params must come last"))
         );
     }
 
@@ -1776,7 +1789,7 @@ mod tests {
     fn optional_params_must_appear_last() {
         assert_eq!(
             parse("(a?, b) => true"),
-            Err("optional params must come last".to_string()),
+            Err(ParseError::from("optional params must come last")),
         );
     }
 
@@ -1870,7 +1883,7 @@ mod tests {
     fn jsx_head_and_tail_must_match() {
         assert_eq!(
             parse("<Foo>Hello</Bar>"),
-            Err("JSX head and tail elements must match".to_string()),
+            Err(ParseError::from("JSX head and tail elements must match")),
         );
     }
 
@@ -2080,7 +2093,7 @@ mod tests {
         );
         assert_eq!(
             result,
-            Err(String::from("failed to parse: 'let foo = obj.'"))
+            Err(ParseError::from("failed to parse: 'let foo = obj.'"))
         );
     }
 }

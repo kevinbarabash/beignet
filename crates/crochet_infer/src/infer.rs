@@ -5,10 +5,11 @@ use crate::context::Context;
 use crate::infer_expr::infer_expr as infer_expr_rec;
 use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
+use crate::type_error::TypeError;
 use crate::update::*;
 use crate::util::*;
 
-pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, String> {
+pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, TypeError> {
     // TODO: replace with Class type once it exists
     // We use {_name: "Promise"} to differentiate it from other
     // object types.
@@ -65,7 +66,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
-                                        return Err(String::from(
+                                        return Err(TypeError::from(
                                             "missing type annotation in declare statement",
                                         ));
                                     }
@@ -123,7 +124,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Stri
     Ok(ctx.to_owned())
 }
 
-pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<Type, String> {
+pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<Type, TypeError> {
     let (s, t) = infer_expr_rec(ctx, expr)?;
     Ok(close_over(&s, &t, ctx))
 }
