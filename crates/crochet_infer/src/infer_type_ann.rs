@@ -1,3 +1,4 @@
+use error_stack::{Report, Result};
 use std::collections::HashMap;
 use std::iter::Iterator;
 
@@ -280,7 +281,7 @@ fn infer_property_type(
     obj_t: &Type,
     index_t: &Type,
     ctx: &mut Context,
-) -> Result<(Subst, Type), String> {
+) -> Result<(Subst, Type), TypeError> {
     match &obj_t.kind {
         TypeKind::Object(TObject { elems }) => match &index_t.kind {
             TypeKind::Ref(alias) => {
@@ -291,11 +292,11 @@ fn infer_property_type(
                 types::TLit::Num(_) => {
                     // TODO: support number literals if the ojbect has an indexer
                     // that supports them
-                    Err(String::from(
+                    Err(Report::new(TypeError).attach_printable(
                         "a number literal can't be used as an indexed type's index",
                     ))
                 }
-                types::TLit::Bool(_) => Err(String::from(
+                types::TLit::Bool(_) => Err(Report::new(TypeError).attach_printable(
                     "a boolean literal can't be used as an indexed type's index",
                 )),
                 types::TLit::Str(name) => {
@@ -325,13 +326,14 @@ fn infer_property_type(
                             let s = Subst::new();
                             Ok((s, t))
                         }
-                        None => Err(format!("'{name}' not found in {obj_t}")),
+                        None => Err(Report::new(TypeError)
+                            .attach_printable(format!("'{name}' not found in {obj_t}"))),
                     }
                 }
             },
-            _ => Err(format!(
+            _ => Err(Report::new(TypeError).attach_printable(format!(
                 "{index_t} can't be used as an indexed type's index",
-            )),
+            ))),
         },
         TypeKind::Ref(alias) => {
             let t = ctx.lookup_ref_and_instantiate(alias)?;
@@ -362,9 +364,15 @@ fn infer_property_type(
                 let t = ctx.lookup_type_and_instantiate("Symbol")?;
                 infer_property_type(&t, index_t, ctx)
             }
-            TKeyword::Null => Err("Cannot read property on 'null'".to_owned()),
-            TKeyword::Undefined => Err("Cannot read property on 'undefined'".to_owned()),
-            TKeyword::Never => Err("Cannot read property on 'never'".to_owned()),
+            TKeyword::Null => {
+                Err(Report::new(TypeError).attach_printable("Cannot read property on 'null'"))
+            }
+            TKeyword::Undefined => {
+                Err(Report::new(TypeError).attach_printable("Cannot read property on 'undefined'"))
+            }
+            TKeyword::Never => {
+                Err(Report::new(TypeError).attach_printable("Cannot read property on 'never'"))
+            }
         },
         TypeKind::Array(type_param) => {
             // TODO: Do this for all interfaces that we lookup

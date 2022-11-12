@@ -1,4 +1,5 @@
 use crochet_ast::types::Type;
+use error_stack::{Report, Result};
 
 use crate::context::Context;
 use crate::substitutable::Subst;
@@ -9,6 +10,6 @@ pub fn unify_mut(t1: &Type, t2: &Type, _ctx: &Context) -> Result<Subst, TypeErro
         println!("unify_mut: {t1} == {t2}");
         Ok(Subst::new())
     } else {
-        Err(TypeError::from(format!("Couldn't unify {t1} and {t2}")))
+        Err(Report::new(TypeError).attach_printable(format!("Couldn't unify {t1} and {t2}")))
     }
 }

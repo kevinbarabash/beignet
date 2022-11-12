@@ -1,18 +1,13 @@
+use error_stack::Context;
+use std::fmt;
+
 #[derive(Debug, PartialEq, Eq)]
-pub struct TypeError {
-    pub msg: String,
-}
+pub struct TypeError;
 
-impl From<String> for TypeError {
-    fn from(msg: String) -> Self {
-        TypeError { msg }
+impl fmt::Display for TypeError {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "TypeError")
     }
 }
 
-impl From<&str> for TypeError {
-    fn from(msg: &str) -> Self {
-        TypeError {
-            msg: msg.to_owned(),
-        }
-    }
-}
+impl Context for TypeError {}

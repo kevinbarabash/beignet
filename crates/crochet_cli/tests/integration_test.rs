@@ -1,3 +1,5 @@
+use error_stack::Report;
+
 use crochet_ast::values::{Program, Statement};
 use crochet_codegen::*;
 use crochet_infer::TypeError;
@@ -13,7 +15,7 @@ fn infer(input: &str) -> String {
             let mut expr = expr.to_owned();
             infer_expr(&mut ctx, &mut expr)
         }
-        _ => Err(TypeError::from("We can't infer decls yet")),
+        _ => Err(Report::new(TypeError).attach_printable("We can't infer decls yet")),
     };
     format!("{}", result.unwrap())
 }
