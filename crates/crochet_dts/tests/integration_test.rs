@@ -1,9 +1,39 @@
+use error_stack::Report;
 use std::fs;
 
 use crochet_ast::values::Program;
 use crochet_parser::parse;
 
 use crochet_dts::parse_dts::*;
+
+use core::{any::TypeId, panic::Location};
+use error_stack::{AttachmentKind, FrameKind};
+
+pub fn messages<E>(report: &Report<E>) -> Vec<String> {
+    report
+        .frames()
+        .map(|frame| match frame.kind() {
+            FrameKind::Context(context) => context.to_string(),
+            FrameKind::Attachment(AttachmentKind::Printable(attachment)) => attachment.to_string(),
+            FrameKind::Attachment(AttachmentKind::Opaque(_)) => {
+                #[cfg(all(rust_1_65, feature = "std"))]
+                if frame.type_id() == TypeId::of::<Backtrace>() {
+                    return String::from("Backtrace");
+                }
+                #[cfg(feature = "spantrace")]
+                if frame.type_id() == TypeId::of::<SpanTrace>() {
+                    return String::from("SpanTrace");
+                }
+                if frame.type_id() == TypeId::of::<Location>() {
+                    String::from("Location")
+                } else {
+                    String::from("opaque")
+                }
+            }
+            FrameKind::Attachment(_) => panic!("attachment was not covered"),
+        })
+        .collect()
+}
 
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
@@ -22,6 +52,24 @@ fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     (prog, ctx)
+}
+
+fn infer_prog_with_type_error(lib: &str, src: &str) -> Vec<String> {
+    let mut ctx = parse_dts(lib).unwrap();
+
+    let result = parse(src);
+    let mut prog = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+
+    match crochet_infer::infer_prog(&mut prog, &mut ctx) {
+        Ok(_) => panic!("was expect infer_prog() to return an error"),
+        Err(report) => messages(&report),
+    }
 }
 
 #[test]
@@ -234,7 +282,7 @@ fn infer_generic_index_value_on_interface() {
 }
 
 #[test]
-#[should_panic = "\\\"hello\\\" is an invalid key for object types"]
+// #[should_panic = "\\\"hello\\\" is an invalid key for object types"]
 fn infer_index_with_incorrect_key_type_on_interface() {
     let lib = r#"
     interface Foo {
@@ -242,23 +290,23 @@ fn infer_index_with_incorrect_key_type_on_interface() {
         bar: boolean;
     }
     "#;
-    let mut ctx = parse_dts(lib).unwrap();
 
     let src = r#"
     declare let foo: Foo;
     let num = foo["hello"];
     let bool = foo.bar;
     "#;
-    let result = parse(src);
-    let mut prog = match result {
-        Ok(prog) => prog,
-        Err(err) => {
-            println!("err = {:?}", err);
-            panic!("Error parsing expression");
-        }
-    };
 
-    crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
+    let error_messages = infer_prog_with_type_error(lib, src);
+
+    assert_eq!(
+        error_messages,
+        vec![
+            "\"hello\" is an invalid key for object types",
+            "Location",
+            "TypeError"
+        ]
+    );
 }
 
 #[test]

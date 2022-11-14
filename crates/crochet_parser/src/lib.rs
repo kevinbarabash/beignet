@@ -1812,8 +1812,14 @@ mod tests {
         match parse("(...a, ...b) => true") {
             Ok(_) => panic!("expected test parse() to return an error"),
             Err(report) => {
-                let expected: Vec<String> = vec![];
-                assert_eq!(messages(&report), expected);
+                assert_eq!(
+                    messages(&report),
+                    vec![
+                        "failed to parse: '(...a, ...b) => true'",
+                        "Location",
+                        "ParseError"
+                    ]
+                );
             }
         }
     }

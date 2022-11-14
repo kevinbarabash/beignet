@@ -23,9 +23,40 @@ pub use util::{close_over, generalize, get_type_params, normalize, set_type_para
 
 #[cfg(test)]
 mod tests {
+    use core::{any::TypeId, panic::Location};
     use crochet_parser::*;
+    use error_stack::Report;
+    use error_stack::{AttachmentKind, FrameKind};
 
     use super::*;
+
+    pub fn messages<E>(report: &Report<E>) -> Vec<String> {
+        report
+            .frames()
+            .map(|frame| match frame.kind() {
+                FrameKind::Context(context) => context.to_string(),
+                FrameKind::Attachment(AttachmentKind::Printable(attachment)) => {
+                    attachment.to_string()
+                }
+                FrameKind::Attachment(AttachmentKind::Opaque(_)) => {
+                    #[cfg(all(rust_1_65, feature = "std"))]
+                    if frame.type_id() == TypeId::of::<Backtrace>() {
+                        return String::from("Backtrace");
+                    }
+                    #[cfg(feature = "spantrace")]
+                    if frame.type_id() == TypeId::of::<SpanTrace>() {
+                        return String::from("SpanTrace");
+                    }
+                    if frame.type_id() == TypeId::of::<Location>() {
+                        String::from("Location")
+                    } else {
+                        String::from("opaque")
+                    }
+                }
+                FrameKind::Attachment(_) => panic!("attachment was not covered"),
+            })
+            .collect()
+    }
 
     fn infer(input: &str) -> String {
         let mut ctx = Context::default();
@@ -38,6 +69,23 @@ mod tests {
         let mut prog = parse(input).unwrap();
         let mut ctx: Context = Context::default();
         infer::infer_prog(&mut prog, &mut ctx).unwrap()
+    }
+
+    fn infer_prog_with_type_error(src: &str) -> Vec<String> {
+        let result = parse(src);
+        let mut prog = match result {
+            Ok(prog) => prog,
+            Err(err) => {
+                println!("err = {:?}", err);
+                panic!("Error parsing expression");
+            }
+        };
+        let mut ctx = Context::default();
+
+        match infer::infer_prog(&mut prog, &mut ctx) {
+            Ok(_) => panic!("was expect infer_prog() to return an error"),
+            Err(report) => messages(&report),
+        }
     }
 
     fn get_value_type(name: &str, ctx: &Context) -> String {
@@ -1597,14 +1645,22 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "4 is out of bounds for [5, \\\"hello\\\", true]"]
     fn infer_number_index_on_tuple_out_of_bounds() {
         let src = r#"
         let tuple = [5, "hello", true];
         tuple[4];
         "#;
 
-        infer_prog(src);
+        let error_messages = infer_prog_with_type_error(src);
+
+        assert_eq!(
+            error_messages,
+            vec![
+                "4 is out of bounds for [5, \"hello\", true]",
+                "Location",
+                "TypeError"
+            ]
+        );
     }
 
     #[test]
@@ -1631,14 +1687,22 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "[5, \\\"hello\\\", true] is an invalid indexer for tuple types"]
     fn infer_invalid_other_index_type_on_tuple() {
         let src = r#"
         let tuple = [5, "hello", true];
         tuple[tuple];
         "#;
 
-        infer_prog(src);
+        let error_messages = infer_prog_with_type_error(src);
+
+        assert_eq!(
+            error_messages,
+            vec![
+                "[5, \"hello\", true] is an invalid indexer for tuple types",
+                "Location",
+                "TypeError"
+            ]
+        );
     }
 
     #[test]

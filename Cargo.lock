@@ -226,6 +226,7 @@ dependencies = [
  "crochet_infer",
  "crochet_parser",
  "defaultmap",
+ "error-stack",
  "insta",
  "memoize",
  "swc_atoms",
