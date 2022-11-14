@@ -1,8 +1,10 @@
 use crochet_ast::types::*;
+use error_stack::{Report, Result};
 use std::cell::Cell;
 use std::collections::HashMap;
 
 use crate::substitutable::*;
+use crate::type_error::TypeError;
 use crate::util::get_type_params;
 
 // NOTE: This is the same as the Assump type in assump.rs
@@ -105,61 +107,61 @@ impl Context {
         current_scope.namespaces.insert(name, Box::from(namespace));
     }
 
-    pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, String> {
+    pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, TypeError> {
         for scope in self.scopes.iter().rev() {
             if let Some(b) = scope.values.get(name) {
                 return Ok(self.instantiate(&b.t));
             }
         }
-        Err(format!("Can't find value: {name}"))
+        Err(Report::new(TypeError).attach_printable(format!("Can't find value: {name}")))
     }
 
-    pub fn lookup_value(&self, name: &str) -> Result<Type, String> {
+    pub fn lookup_value(&self, name: &str) -> Result<Type, TypeError> {
         for scope in self.scopes.iter().rev() {
             if let Some(b) = scope.values.get(name) {
                 return Ok(b.t.to_owned());
             }
         }
-        Err(format!("Can't find value: {name}"))
+        Err(Report::new(TypeError).attach_printable(format!("Can't find value: {name}")))
     }
 
-    pub fn lookup_binding(&self, name: &str) -> Result<Binding, String> {
+    pub fn lookup_binding(&self, name: &str) -> Result<Binding, TypeError> {
         for scope in self.scopes.iter().rev() {
             if let Some(b) = scope.values.get(name) {
                 return Ok(b.to_owned());
             }
         }
-        Err(format!("Can't find value: {name}"))
+        Err(Report::new(TypeError).attach_printable(format!("Can't find value: {name}")))
     }
 
-    pub fn lookup_type_and_instantiate(&self, name: &str) -> Result<Type, String> {
+    pub fn lookup_type_and_instantiate(&self, name: &str) -> Result<Type, TypeError> {
         for scope in self.scopes.iter().rev() {
             if let Some(t) = scope.types.get(name) {
                 return Ok(self.instantiate(t));
             }
         }
-        Err(format!("Can't find type: {name}"))
+        Err(Report::new(TypeError).attach_printable(format!("Can't find type: {name}")))
     }
 
-    pub fn lookup_type(&self, name: &str) -> Result<Type, String> {
+    pub fn lookup_type(&self, name: &str) -> Result<Type, TypeError> {
         for scope in self.scopes.iter().rev() {
             if let Some(t) = scope.types.get(name) {
                 return Ok(t.to_owned());
             }
         }
-        Err(format!("Can't find type: {name}"))
+        Err(Report::new(TypeError).attach_printable(format!("Can't find type: {name}")))
     }
 
-    pub fn lookup_namespace(&self, name: &str) -> Result<Box<Scope>, String> {
+    pub fn lookup_namespace(&self, name: &str) -> Result<Box<Scope>, TypeError> {
         for scope in self.scopes.iter().rev() {
             if let Some(namespace) = scope.namespaces.get(name) {
                 return Ok(namespace.to_owned());
             }
         }
-        Err(format!("Can't find namespace: {name}"))
+        Err(Report::new(TypeError).attach_printable(format!("Can't find namespace: {name}")))
     }
 
-    pub fn lookup_ref_and_instantiate(&self, alias: &TRef) -> Result<Type, String> {
+    pub fn lookup_ref_and_instantiate(&self, alias: &TRef) -> Result<Type, TypeError> {
         let name = &alias.name;
         for scope in self.scopes.iter().rev() {
             if let Some(t) = scope.types.get(name) {
@@ -173,7 +175,7 @@ impl Context {
                         if type_params.len() != type_params.len() {
                             println!("type = {t}");
                             println!("type_params = {type_params:#?}");
-                            return Err(String::from(
+                            return Err(Report::new(TypeError).attach_printable(
                                 "mismatch between the number of qualifiers and type params",
                             ));
                         }
@@ -183,7 +185,7 @@ impl Context {
                         if !type_params.is_empty() {
                             println!("type = {t}");
                             println!("no type params");
-                            return Err(String::from(
+                            return Err(Report::new(TypeError).attach_printable(
                                 "mismatch between the number of qualifiers and type params",
                             ));
                         }
@@ -200,7 +202,7 @@ impl Context {
                 return Ok(t.apply(&subs));
             }
         }
-        Err(format!("Can't find type: {name}"))
+        Err(Report::new(TypeError).attach_printable(format!("Can't find type: {name}")))
     }
 
     pub fn instantiate(&self, t: &Type) -> Type {

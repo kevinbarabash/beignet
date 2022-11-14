@@ -1,5 +1,6 @@
 use crochet_ast::types::{TObjElem, TObject, TProp, Type, TypeKind};
 use crochet_ast::values::*;
+use error_stack::{Report, Result};
 
 use crate::context::Context;
 use crate::infer_expr::infer_expr as infer_expr_rec;
@@ -66,7 +67,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
-                                        return Err(TypeError::from(
+                                        return Err(Report::new(TypeError).attach_printable(
                                             "missing type annotation in declare statement",
                                         ));
                                     }

@@ -1,3 +1,4 @@
+use error_stack::{Report, Result};
 use std::collections::HashMap;
 
 use crochet_ast::types::{self as types, TObject, Type, TypeKind};
@@ -52,7 +53,7 @@ fn infer_pattern_rec(
     pat: &mut Pattern,
     ctx: &Context,
     assump: &mut Assump,
-) -> Result<Type, String> {
+) -> Result<Type, TypeError> {
     match &mut pat.kind {
         PatternKind::Ident(values::BindingIdent {
             name,
@@ -70,7 +71,9 @@ fn infer_pattern_rec(
                 )
                 .is_some()
             {
-                return Err(String::from("Duplicate identifier in pattern"));
+                return Err(
+                    Report::new(TypeError).attach_printable("Duplicate identifier in pattern")
+                );
             }
             Ok(tv)
         }
@@ -109,7 +112,9 @@ fn infer_pattern_rec(
                 )
                 .is_some()
             {
-                return Err(String::from("Duplicate identifier in pattern"));
+                return Err(
+                    Report::new(TypeError).attach_printable("Duplicate identifier in pattern")
+                );
             }
             Ok(t)
         }
@@ -118,7 +123,7 @@ fn infer_pattern_rec(
             Ok(Type::from(TypeKind::Rest(Box::from(t))))
         }
         PatternKind::Array(ArrayPat { elems, .. }) => {
-            let elems: Result<Vec<Type>, String> = elems
+            let elems: Result<Vec<Type>, TypeError> = elems
                 .iter_mut()
                 .map(|elem| {
                     match elem {

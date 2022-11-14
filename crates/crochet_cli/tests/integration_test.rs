@@ -1,8 +1,39 @@
+use error_stack::Report;
+
 use crochet_ast::values::{Program, Statement};
 use crochet_codegen::*;
 use crochet_infer::TypeError;
 use crochet_infer::*;
 use crochet_parser::parse;
+
+use core::{any::TypeId, panic::Location};
+use error_stack::{AttachmentKind, FrameKind};
+
+pub fn messages<E>(report: &Report<E>) -> Vec<String> {
+    report
+        .frames()
+        .map(|frame| match frame.kind() {
+            FrameKind::Context(context) => context.to_string(),
+            FrameKind::Attachment(AttachmentKind::Printable(attachment)) => attachment.to_string(),
+            FrameKind::Attachment(AttachmentKind::Opaque(_)) => {
+                #[cfg(all(rust_1_65, feature = "std"))]
+                if frame.type_id() == TypeId::of::<Backtrace>() {
+                    return String::from("Backtrace");
+                }
+                #[cfg(feature = "spantrace")]
+                if frame.type_id() == TypeId::of::<SpanTrace>() {
+                    return String::from("SpanTrace");
+                }
+                if frame.type_id() == TypeId::of::<Location>() {
+                    String::from("Location")
+                } else {
+                    String::from("opaque")
+                }
+            }
+            FrameKind::Attachment(_) => panic!("attachment was not covered"),
+        })
+        .collect()
+}
 
 fn infer(input: &str) -> String {
     let mut ctx = crochet_infer::Context::default();
@@ -13,7 +44,7 @@ fn infer(input: &str) -> String {
             let mut expr = expr.to_owned();
             infer_expr(&mut ctx, &mut expr)
         }
-        _ => Err(TypeError::from("We can't infer decls yet")),
+        _ => Err(Report::new(TypeError).attach_printable("We can't infer decls yet")),
     };
     format!("{}", result.unwrap())
 }
@@ -32,6 +63,23 @@ fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     (prog, ctx)
+}
+
+fn infer_prog_with_type_error(src: &str) -> Vec<String> {
+    let result = parse(src);
+    let mut prog = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+    let mut ctx = crochet_infer::Context::default();
+
+    match crochet_infer::infer_prog(&mut prog, &mut ctx) {
+        Ok(_) => panic!("was expect infer_prog() to return an error"),
+        Err(report) => messages(&report),
+    }
 }
 
 #[test]
@@ -441,13 +489,15 @@ fn infer_let_decl_with_type_ann() {
 #[test]
 // TODO: improve this error by checking the flags on the types before reporting
 // "Unification failure".
-#[should_panic = "called `Result::unwrap()` on an `Err` value: TypeError { msg: \"Unification failure\" }"]
 fn infer_let_decl_with_incorrect_type_ann() {
     let src = "let x: string = 10;";
-    let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.lookup_value("x").unwrap());
-    assert_eq!(result, "number");
+    let error_messages = infer_prog_with_type_error(src);
+
+    assert_eq!(
+        error_messages,
+        vec!["Unification failure", "Location", "TypeError"]
+    );
 }
 
 #[test]
@@ -547,10 +597,15 @@ fn infer_tuple_with_type_annotation_and_extra_element() {
 #[test]
 // TODO: improve this error by checking the flags on the types before reporting
 // "Unification failure".
-#[should_panic = "called `Result::unwrap()` on an `Err` value: TypeError { msg: \"Unification failure\" }"]
 fn infer_tuple_with_type_annotation_and_incorrect_element() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two", 3];"#;
-    infer_prog(src);
+
+    let error_messages = infer_prog_with_type_error(src);
+
+    assert_eq!(
+        error_messages,
+        vec!["Unification failure", "Location", "TypeError"]
+    );
 }
 
 #[test]

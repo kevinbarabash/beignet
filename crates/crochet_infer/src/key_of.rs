@@ -1,8 +1,10 @@
 use crochet_ast::types::{
     TFnParam, TGeneric, TIndex, TKeyword, TLit, TObjElem, TObject, Type, TypeKind,
 };
+use error_stack::{Report, Result, ResultExt};
 
 use crate::context::Context;
+use crate::type_error::TypeError;
 use crate::util::union_many_types;
 
 const NEVER_TYPE: Type = Type {
@@ -12,14 +14,15 @@ const NEVER_TYPE: Type = Type {
 };
 
 // TODO: try to dedupe with infer_property_type()
-pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
+pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
     match &t.kind {
         TypeKind::Generic(TGeneric { t, type_params: _ }) => key_of(t, ctx),
-        TypeKind::Var(_) => Err(String::from(
-            "There isn't a way to infer a type from its keys",
-        )),
+        TypeKind::Var(_) => Err(Report::new(TypeError)
+            .attach_printable("There isn't a way to infer a type from its keys")),
         TypeKind::Ref(alias) => {
-            let t = ctx.lookup_ref_and_instantiate(alias)?;
+            let t = ctx
+                .lookup_ref_and_instantiate(alias)
+                .change_context(TypeError)?;
             key_of(&t, ctx)
         }
         TypeKind::Object(TObject { elems }) => {
@@ -88,7 +91,7 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, String> {
         TypeKind::App(_) => todo!(), // What does this even mean?
         TypeKind::Union(_) => todo!(),
         TypeKind::Intersection(elems) => {
-            let elems: Result<Vec<_>, String> =
+            let elems: Result<Vec<_>, TypeError> =
                 elems.iter().map(|elem| key_of(elem, ctx)).collect();
             Ok(union_many_types(&elems?))
         }

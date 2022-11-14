@@ -1,10 +1,14 @@
+use error_stack::{Result, ResultExt};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
 use std::str;
 
 use crochet_dts::parse_dts::parse_dts;
 use crochet_infer::*;
-use crochet_parser::ParseError;
+
+mod compile_error;
+
+use crate::compile_error::CompileError;
 
 #[repr(C)]
 pub struct WasmString {
@@ -41,19 +45,19 @@ pub unsafe extern "C" fn deallocate(ptr: *mut c_void, length: usize) {
     std::mem::drop(Vec::from_raw_parts(ptr, 0, length));
 }
 
-fn _compile(input: &str, lib: &str) -> Result<(String, String), String> {
-    let mut program = match crochet_parser::parse(input) {
+fn _compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
+    let mut program = match crochet_parser::parse(input).change_context(CompileError) {
         Ok(program) => program,
-        Err(ParseError { msg }) => return Err(msg),
+        Err(error) => return Err(error),
     };
 
     let js = crochet_codegen::js::codegen_js(&program);
 
     // TODO: return errors as part of CompileResult
     let mut ctx = parse_dts(lib).unwrap();
-    let ctx = match infer_prog(&mut program, &mut ctx) {
+    let ctx = match infer_prog(&mut program, &mut ctx).change_context(CompileError) {
         Ok(ctx) => ctx,
-        Err(TypeError { msg }) => return Err(msg),
+        Err(error) => return Err(error),
     };
     let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
 
@@ -87,7 +91,7 @@ pub unsafe extern "C" fn compile(input: *const c_char, lib: *const c_char) -> *c
             let result = CompileResult {
                 js: string_to_wasm_string(""),
                 dts: string_to_wasm_string(""),
-                error: string_to_wasm_string(&error),
+                error: string_to_wasm_string(&error.to_string()),
             };
             Box::into_raw(Box::new(result))
         }
