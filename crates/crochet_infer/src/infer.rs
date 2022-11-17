@@ -38,6 +38,8 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
     // module definitions.
     ctx.push_scope(false);
 
+    let mut reports: Vec<Report<TypeError>> = vec![];
+
     // TODO: figure out how report multiple errors
     for stmt in &mut prog.body {
         match stmt {
@@ -58,12 +60,16 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
                             }) => {
                                 match type_ann {
                                     Some(type_ann) => {
-                                        let (s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
-                                        let t = close_over(&s, &t, ctx);
-                                        ctx.insert_value(name.to_owned(), t);
+                                        match infer_type_ann(type_ann, ctx, &mut None) {
+                                            Ok((s, t)) => {
+                                                let t = close_over(&s, &t, ctx);
+                                                ctx.insert_value(name.to_owned(), t);
 
-                                        update_type_ann(type_ann, &s);
-                                        update_pattern(pattern, &s);
+                                                update_type_ann(type_ann, &s);
+                                                update_pattern(pattern, &s);
+                                            }
+                                            Err(report) => reports.push(report),
+                                        }
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
@@ -81,23 +87,26 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
                         // `let` statement
                         let init = init.as_mut().unwrap();
 
-                        let (pa, s) = infer_pattern_and_init(
+                        match infer_pattern_and_init(
                             pattern,
                             type_ann,
                             init,
                             ctx,
                             &PatternUsage::Assign,
-                        )?;
+                        ) {
+                            Ok((pa, s)) => {
+                                // Inserts the new variables from infer_pattern() into the
+                                // current context.
+                                for (name, mut binding) in pa {
+                                    binding.t = close_over(&s, &binding.t, ctx);
+                                    ctx.insert_binding(name, binding);
+                                }
 
-                        // Inserts the new variables from infer_pattern() into the
-                        // current context.
-                        for (name, mut binding) in pa {
-                            binding.t = close_over(&s, &binding.t, ctx);
-                            ctx.insert_binding(name, binding);
+                                update_expr(init, &s);
+                                update_pattern(pattern, &s);
+                            }
+                            Err(report) => reports.push(report),
                         }
-
-                        update_expr(init, &s);
-                        update_pattern(pattern, &s);
                     }
                 };
             }
@@ -106,23 +115,40 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
                 type_ann,
                 type_params,
                 ..
-            } => {
-                let (s, t) = infer_type_ann(type_ann, ctx, type_params)?;
-                let t = close_over(&s, &t, ctx);
-                ctx.insert_type(name.to_owned(), t);
+            } => match infer_type_ann(type_ann, ctx, type_params) {
+                Ok((s, t)) => {
+                    let t = close_over(&s, &t, ctx);
+                    ctx.insert_type(name.to_owned(), t);
 
-                update_type_ann(type_ann, &s);
-            }
+                    update_type_ann(type_ann, &s);
+                }
+                Err(report) => reports.push(report),
+            },
             Statement::Expr { expr, .. } => {
-                // We ignore the type that was inferred, we only care that
-                // it succeeds since we aren't assigning it to variable.
-                let (s, _) = infer_expr_rec(ctx, expr)?;
-                update_expr(expr, &s);
+                match infer_expr_rec(ctx, expr) {
+                    // We ignore the type that was inferred, we only care that
+                    // it succeeds since we aren't assigning it to variable.
+                    Ok((s, _)) => update_expr(expr, &s),
+                    Err(report) => reports.push(report),
+                }
             }
         };
     }
 
-    Ok(ctx.to_owned())
+    if reports.is_empty() {
+        return Ok(ctx.to_owned());
+    }
+
+    let report: Option<Report<TypeError>> =
+        reports.into_iter().fold(None, |accum, report| match accum {
+            Some(mut accum) => {
+                accum.extend_one(report);
+                Some(accum)
+            }
+            None => Some(report),
+        });
+
+    Err(report.unwrap())
 }
 
 pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<Type, TypeError> {
