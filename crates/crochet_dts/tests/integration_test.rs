@@ -304,7 +304,7 @@ fn infer_index_with_incorrect_key_type_on_interface() {
         vec![
             "\"hello\" is an invalid key for object types",
             "Location",
-            "TypeError"
+            "TypeError::InvalidKey: \"hello\" is not a valid key"
         ]
     );
 }

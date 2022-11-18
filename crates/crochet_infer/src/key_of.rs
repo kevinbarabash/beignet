@@ -17,12 +17,12 @@ const NEVER_TYPE: Type = Type {
 pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
     match &t.kind {
         TypeKind::Generic(TGeneric { t, type_params: _ }) => key_of(t, ctx),
-        TypeKind::Var(_) => Err(Report::new(TypeError)
+        TypeKind::Var(_) => Err(Report::new(TypeError::TODO)
             .attach_printable("There isn't a way to infer a type from its keys")),
         TypeKind::Ref(alias) => {
             let t = ctx
                 .lookup_ref_and_instantiate(alias)
-                .change_context(TypeError)?;
+                .change_context(TypeError::TODO)?;
             key_of(&t, ctx)
         }
         TypeKind::Object(TObject { elems }) => {

@@ -1658,7 +1658,7 @@ mod tests {
             vec![
                 "4 is out of bounds for [5, \"hello\", true]",
                 "Location",
-                "TypeError"
+                "TypeError::IndexOutOfBounds: 4 out of bounds for [5, \"hello\", true]"
             ]
         );
     }
@@ -1700,7 +1700,7 @@ mod tests {
             vec![
                 "[5, \"hello\", true] is an invalid indexer for tuple types",
                 "Location",
-                "TypeError"
+                "TypeError::InvalidIndex: [5, \"hello\", true] is not a valid index"
             ]
         );
     }
@@ -2916,10 +2916,10 @@ mod tests {
                     vec![
                         "Unification failure",
                         "Location",
-                        "TypeError",
+                        "TypeError::UnificationError: \"hello\", number",
                         "Unification failure",
                         "Location",
-                        "TypeError"
+                        "TypeError::UnificationError: true, number"
                     ]
                 );
             }

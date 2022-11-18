@@ -71,9 +71,8 @@ fn infer_pattern_rec(
                 )
                 .is_some()
             {
-                return Err(
-                    Report::new(TypeError).attach_printable("Duplicate identifier in pattern")
-                );
+                return Err(Report::new(TypeError::DuplicateIdentInPat(name.to_owned()))
+                    .attach_printable("Duplicate identifier in pattern"));
             }
             Ok(tv)
         }
@@ -113,7 +112,8 @@ fn infer_pattern_rec(
                 .is_some()
             {
                 return Err(
-                    Report::new(TypeError).attach_printable("Duplicate identifier in pattern")
+                    Report::new(TypeError::DuplicateIdentInPat(ident.name.to_owned()))
+                        .attach_printable("Duplicate identifier in pattern"),
                 );
             }
             Ok(t)

@@ -46,7 +46,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
         };
 
         // It's NOT okay to use an immutable in place of a mutable one
-        return Err(Report::new(TypeError)
+        return Err(Report::new(TypeError::UnexpectedImutableValue)
             .attach_printable("Cannot use immutable type where a mutable type was expected"));
     }
     // It's okay to use a mutable type in place of an immutable one so it's fine
@@ -64,7 +64,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             if b {
                 Ok(Subst::default())
             } else {
-                Err(Report::new(TypeError).attach_printable("Unification failure"))
+                Err(Report::new(TypeError::UnificationError(
+                    Box::from(t1.to_owned()),
+                    Box::from(t2.to_owned()),
+                ))
+                .attach_printable("Unification failure"))
             }
         }
         (TypeKind::App(app1), TypeKind::App(app2)) => {
@@ -81,7 +85,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 let s1 = unify(&app1.ret.apply(&s), &app2.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
             } else {
-                Err(Report::new(TypeError).attach_printable("Couldn't unify function calls"))
+                Err(Report::new(TypeError::TODO).attach_printable("Couldn't unify function calls"))
             }
         }
         (TypeKind::Lam(lam1), TypeKind::Lam(lam2)) => {
@@ -103,7 +107,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
             } else {
-                Err(Report::new(TypeError).attach_printable("Couldn't unify lambdas"))
+                Err(Report::new(TypeError::UnificationError(
+                    Box::from(t1.to_owned()),
+                    Box::from(t2.to_owned()),
+                ))
+                .attach_printable("Couldn't unify lambdas"))
             }
         }
         // NOTE: this arm is only hit by the `infer_skk` test case
@@ -135,7 +143,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 .collect();
 
             if callables.is_empty() {
-                Err(Report::new(TypeError).attach_printable("Couldn't application with object"))
+                Err(Report::new(TypeError::TODO)
+                    .attach_printable("Couldn't application with object"))
             } else {
                 for callable in callables {
                     let result = unify(t1, &callable, ctx);
@@ -143,7 +152,9 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                         return result;
                     }
                 }
-                Err(Report::new(TypeError).attach_printable("Couldn't application with object"))
+                // TODO: include a report of which callable signatures were tried
+                Err(Report::new(TypeError::TODO)
+                    .attach_printable("Couldn't application with object"))
             }
         }
         (TypeKind::App(app), TypeKind::Lam(lam)) => {
@@ -190,7 +201,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     TypeKind::Rest(spread) => match &spread.as_ref().kind {
                         TypeKind::Tuple(types) => args.append(&mut types.to_owned()),
                         _ => {
-                            return Err(Report::new(TypeError)
+                            return Err(Report::new(TypeError::TODO)
                                 .attach_printable(format!("spread of type {spread} not allowed")))
                         }
                     },
@@ -199,7 +210,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             }
 
             if args.len() < param_count_low_bound {
-                return Err(Report::new(TypeError).attach_printable("Not enough args provided"));
+                return Err(Report::new(TypeError::TooFewArguments)
+                    .attach_printable("Not enough args provided"));
             }
 
             // TODO: Add a `variadic` boolean to the Lambda type as a convenience
@@ -249,7 +261,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 let s1 = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
             } else {
-                Err(Report::new(TypeError).attach_printable("Not enough params provided"))
+                Err(Report::new(TypeError::TooFewArguments)
+                    .attach_printable("Not enough args provided"))
             }
         }
         (TypeKind::App(_), TypeKind::Intersection(types)) => {
@@ -259,63 +272,64 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     return result;
                 }
             }
-            Err(Report::new(TypeError).attach_printable("Couldn't unify lambda with intersection"))
+            Err(Report::new(TypeError::TODO)
+                .attach_printable("Couldn't unify lambda with intersection"))
         }
         (TypeKind::Object(obj1), TypeKind::Object(obj2)) => {
             // Should we be doing something about type_params here?
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
-            let result: Result<Vec<_>, TypeError> =
-                obj2.elems
-                    .iter()
-                    .map(|e2| {
-                        let mut b = false;
-                        let mut ss = vec![];
-                        for e1 in obj1.elems.iter() {
-                            match (e1, e2) {
-                                (TObjElem::Call(_), TObjElem::Call(_)) => {
-                                    // What to do about Call signatures?
-                                    todo!()
-                                }
-                                (TObjElem::Prop(prop1), TObjElem::Prop(prop2)) => {
-                                    if prop1.name == prop2.name {
-                                        let t1 = get_property_type(prop1);
-                                        let t2 = get_property_type(prop2);
-
-                                        if let Ok(s) = unify(&t1, &t2, ctx) {
-                                            b = true;
-                                            ss.push(s);
-                                        }
-                                    }
-                                }
-                                // skip pairs that aren't the same
-                                _ => (),
+            let result: Result<Vec<_>, TypeError> = obj2
+                .elems
+                .iter()
+                .map(|e2| {
+                    let mut b = false;
+                    let mut ss = vec![];
+                    for e1 in obj1.elems.iter() {
+                        match (e1, e2) {
+                            (TObjElem::Call(_), TObjElem::Call(_)) => {
+                                // What to do about Call signatures?
+                                todo!()
                             }
-                        }
+                            (TObjElem::Prop(prop1), TObjElem::Prop(prop2)) => {
+                                if prop1.name == prop2.name {
+                                    let t1 = get_property_type(prop1);
+                                    let t2 = get_property_type(prop2);
 
-                        match b {
-                            true => Ok(compose_many_subs(&ss)),
-                            false => {
-                                match e2 {
-                                    TObjElem::Call(_) => Err(Report::new(TypeError)
-                                        .attach_printable("Unification failure")),
-                                    TObjElem::Constructor(_) => Err(Report::new(TypeError)
-                                        .attach_printable("Unification failure")),
-                                    TObjElem::Index(_) => Err(Report::new(TypeError)
-                                        .attach_printable("Unification failure")),
-                                    TObjElem::Prop(prop2) => {
-                                        // Will all optional properties to be missing
-                                        if prop2.optional {
-                                            Ok(Subst::default())
-                                        } else {
-                                            Err(Report::new(TypeError)
-                                                .attach_printable("Unification failure"))
-                                        }
+                                    if let Ok(s) = unify(&t1, &t2, ctx) {
+                                        b = true;
+                                        ss.push(s);
                                     }
                                 }
                             }
+                            // skip pairs that aren't the same
+                            _ => (),
                         }
-                    })
-                    .collect();
+                    }
+
+                    match b {
+                        true => Ok(compose_many_subs(&ss)),
+                        false => {
+                            match e2 {
+                                TObjElem::Call(_) => Err(Report::new(TypeError::TODO)
+                                    .attach_printable("Unification failure")),
+                                TObjElem::Constructor(_) => Err(Report::new(TypeError::TODO)
+                                    .attach_printable("Unification failure")),
+                                TObjElem::Index(_) => Err(Report::new(TypeError::TODO)
+                                    .attach_printable("Unification failure")),
+                                TObjElem::Prop(prop2) => {
+                                    // Will all optional properties to be missing
+                                    if prop2.optional {
+                                        Ok(Subst::default())
+                                    } else {
+                                        Err(Report::new(TypeError::TODO)
+                                            .attach_printable("Unification failure"))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                })
+                .collect();
 
             let ss = result?;
             Ok(compose_many_subs(&ss))
@@ -329,7 +343,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 match &t.kind {
                     TypeKind::Rest(rest_type) => {
                         if maybe_rest2.is_some() {
-                            return Err(Report::new(TypeError)
+                            return Err(Report::new(TypeError::TODO)
                                 .attach_printable("Only one rest pattern is allowed in a tuple"));
                         }
                         maybe_rest2 = Some(rest_type.as_ref().to_owned());
@@ -347,9 +361,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             // If it doesn't, we return an error.
             if types1.len() < min_len {
                 // TODO: include the types in the error message
-                return Err(
-                    Report::new(TypeError).attach_printable("not enough elements to unpack")
-                );
+                return Err(Report::new(TypeError::NotEnoughElementsToUnpack)
+                    .attach_printable("not enough elements to unpack"));
             }
 
             let mut types1 = types1.to_owned();
@@ -412,7 +425,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
 
             match b {
                 true => Ok(compose_many_subs(&ss)),
-                false => Err(Report::new(TypeError).attach_printable("Unification failure")),
+                false => Err(Report::new(TypeError::UnificationError(
+                    Box::from(t1.to_owned()),
+                    Box::from(t2.to_owned()),
+                ))
+                .attach_printable("Unification failure")),
             }
         }
         (TypeKind::Object(obj), TypeKind::Intersection(types)) => {
@@ -465,7 +482,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     let s = compose_subs(&s2, &s1);
                     Ok(s)
                 }
-                _ => Err(Report::new(TypeError).attach_printable("Unification is undecidable")),
+                _ => Err(Report::new(TypeError::UnificationIsUndecidable)
+                    .attach_printable("Unification is undecidable")),
             }
         }
         (TypeKind::Intersection(types), TypeKind::Object(obj)) => {
@@ -518,7 +536,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     let s = compose_subs(&s_rest, &s_obj);
                     Ok(s)
                 }
-                _ => Err(Report::new(TypeError).attach_printable("Unification is undecidable")),
+                _ => Err(Report::new(TypeError::UnificationIsUndecidable)
+                    .attach_printable("Unification is undecidable")),
             }
         }
         (TypeKind::Ref(alias1), TypeKind::Ref(alias2)) => {
@@ -534,7 +553,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                         Ok(compose_many_subs_with_context(&ss))
                     }
                     (None, None) => Ok(Subst::default()),
-                    _ => Err(Report::new(TypeError).attach_printable("Alias type mismatch")),
+                    _ => Err(Report::new(TypeError::TODO).attach_printable("Alias type mismatch")),
                 }
             } else {
                 todo!("unify(): handle aliases that point to another alias")
@@ -561,15 +580,21 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             (TKeyword::Undefined, TKeyword::Undefined) => Ok(Subst::new()),
             // Is 'never' a subtype of all types?
             (TKeyword::Never, TKeyword::Null) => Ok(Subst::new()),
-            _ => {
-                Err(Report::new(TypeError).attach_printable(format!("Can't unify {t1} with {t2}")))
-            }
+            _ => Err(Report::new(TypeError::UnificationError(
+                Box::from(t1.to_owned()),
+                Box::from(t2.to_owned()),
+            ))
+            .attach_printable(format!("Can't unify {t1} with {t2}"))),
         },
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())
             } else {
-                Err(Report::new(TypeError).attach_printable("Unification failure"))
+                Err(Report::new(TypeError::UnificationError(
+                    Box::from(t1.to_owned()),
+                    Box::from(t2.to_owned()),
+                ))
+                .attach_printable("Unification failure"))
             }
         }
     };
@@ -625,7 +650,7 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Type
                     }
                 }
 
-                Err(Report::new(TypeError).attach_printable("InfiniteType"))
+                Err(Report::new(TypeError::InfiniteType).attach_printable("InfiniteType"))
             } else {
                 if let Some(c) = &tv.constraint {
                     // We only care whether the `unify()` call fails or not.  If it succeeds,
