@@ -5,19 +5,15 @@ and TypeScript which can make writing tests and other activities where you might
 want to reload a fresh copy of a module very difficult.
 
 At the same time, we still want to allow people to use Crochet for scripts which
-necessitates side-effects. One option is to require some sort of entry point
-function like `main()` to be in a script. This feels at odds with how people
-traditionally write scripts. Also, we'd like people to be able to copy/paste
-code from a REPL (post-MVP) into a script and vice versa. Requiring a `main()`
-function to be in scripts would be at odds with this.
-
+necessitates side-effects. Post-MVP we'll be adding a REPL and we want people
+to be able to copy/paste code between REPL and a script file (and vice versa).
 To this end, there will be a way to specify whether a .crochet file is a script
-or a module. This may be a different file extension or compiler directive in
-the file itself.
+or a module. This may be a different file extension or compiler directive in the
+file itself.
 
 Crochet scripts will be allowed to run code that has side-effects at the
-top-level while modules will not. Modules be allowed to declare functions and
-literals (including objects and tuples) at the top-level. Post-MVP we'll be
+top-level while modules will not. Modules will be allowed to declare functions
+and literals (including objects and tuples) at the top-level. Post-MVP we'll be
 adding support for const expressions. These will be also be allowed at the
 top-level of modules once support has been added. Top-level symbols in modules
 can't be shadowed.
@@ -26,9 +22,14 @@ can't be shadowed.
 
 Modules can have imports and exports, but scripts can only have imports.
 
-Imports/exports come in two varieties: named and namespace. There are no
-default imports/exports. The reason for decision is that default exports makes
-it hard to use search. While the LSP can mitigate this, but there can be
-certain situations where it may not be feasible to use it.
+The import/export systax will be roughly the same as what's used by JavaScript
+and TypeScript, but default imports/exports will not be allowed. To import a
+default export from a TypeScript file you'll need to do the following:
 
-TODO: define syntax for imports
+```ts
+import { default as Foo } from "./foo";
+```
+
+The reason for this is that default imports/exports makes it hard to use search.
+While the LSP can mitigate this, but there can be certain situations where it
+may not be feasible to use it.

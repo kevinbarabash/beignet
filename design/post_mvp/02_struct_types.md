@@ -15,9 +15,10 @@ NOTE: This example was adapted from an example in the serde_json documentation.
 ```ts
 // user.crochet
 struct User {
-    name: string,
-    age: number,
-    phones: string[],
+    pub name: string,
+    pub age: number,
+    pub phones: string[],
+    ssn: number,
 };
 
 let user = User {
@@ -26,12 +27,20 @@ let user = User {
     phones: [
         "+44 1234567",
         "+44 2345678"
-    ]
+    ],
+    ssn: 123456789,
 };
 
 // user.js
 class User {
-    constructor(values: {name: string, age: number, phones: string[]}) { ... }
+    name;
+    age;
+    phones;
+    #ssn; // Non-public fields become private fields in the generated code
+
+    constructor(values) {
+        Object.assign(this, values)
+    }
 }
 
 const user = new User({
@@ -40,8 +49,12 @@ const user = new User({
     phones: [
         "+44 1234567",
         "+44 2345678"
-    ]
+    ],
+    ssn: 123456789,
 });
+
+// user.d.ts
+// TODO
 ```
 
 The JavaScript class that is generated for the struct could be implemented to
