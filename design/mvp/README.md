@@ -32,13 +32,15 @@ source code. This provides automatic, bidirectional, interop with TypeScript.
 
 ## Design Docs
 
+0.  [Developer Expectations](00_developer_expectations.md)
 1.  [Preliminaries](01_preliminaries.md)
 2.  [Expressions](02_expressions.md)
 3.  [Type Safety](03_type_safety.md)
 4.  [Type Narrowing](04_type_narrowing.md)
 5.  [Pattern Matching](05_pattern_matching.md)
 6.  [Mutability](06_mutability.md)
-7.  [Bonus Features](07_bonus_features.md)
-8.  [Other Differences](08_other_differences.md)
-9.  [Meeting Developer Expectations](09_meeting_developer_expectations.md)
+7.  [Modules and Scripts](07_modules_and_scripts.md)
+8.  [Visibility and Privacy](08_visibility_and_privacy.md)
+9.  [Testing Target](09_testing_mode.md)
 10. [Extensibility](10_extensibility.md)
+11. [Bonus Features](11_bonus_features.md)

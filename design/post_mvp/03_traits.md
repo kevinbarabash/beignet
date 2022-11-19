@@ -24,27 +24,29 @@ Traits avoid these issues by:
 ```ts
 // serialization.crochet
 trait Serializable {
-    static fromJSON(entries: [string, Serializable]): Result<Self, string>;
-    toJSON(): string;
+  static fromJSON(entries: [string, Serializable]): Result<Self, string>;
+  toJSON(): string;
 }
 
 // serialization.js
 export const Serializable = {
-    fromJSON: Symbol(),
-    toJSON: Symbol(),
+  fromJSON: Symbol(),
+  toJSON: Symbol(),
 };
 
 // user.crochet
 impl Serializable for User {
-    static fromJSON(json: string) {
-        // TODO
-    }
-    toJSON() {
-        let mut result = `{"name": ${name.toJSON()}`;
-        result += `, "age": ${age.toJSON()}`;
-        result += `, "phones": ${phones.toJSON()}}`;
-        return result;
-    }
+  static fromJSON(json: string) {
+  // TODO
+  }
+  toJSON() {
+    const {name, age, phones, ssn} = this;/
+    let mut result = `{"name": ${name.toJSON()}`;
+    result += `, "age": ${age.toJSON()}`;
+    result += `, "phones": ${phones.toJSON()}}`;
+    result += `, "ssn": ${ssn.toJSON()}}`;
+    return result;
+  }
 }
 
 // user.js
@@ -69,6 +71,7 @@ NOTES:
 - Trait implementations can appear in any file, but that file needs to be
   imported wherever that trait is used. This can be useful for reducing the
   amount of code in bundles.
+- Traits have access to private instance members
 
 Questions:
 
@@ -92,9 +95,10 @@ import { Serializable } from "./serialization";
 
 @derive(Serializable)
 struct User {
-    name: string,
-    age: number,
-    phones: string[],
+    pub name: string,
+    pub age: number,
+    pub phones: string[],
+    ssn: number,
 }
 ```
 
