@@ -1,6 +1,14 @@
 name: CI
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - "**.crochet"
+      - "**.js"
+      - "**.rs"
 
 jobs:
   clippy:
