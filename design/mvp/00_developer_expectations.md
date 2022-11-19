@@ -1,4 +1,4 @@
-# 09 Meeting Developer Expectations
+# 00 Developer Expectations
 
 Developers have high expectations of programming languages before they'll decide
 to use a new language for a project. It should support modern tooling and
