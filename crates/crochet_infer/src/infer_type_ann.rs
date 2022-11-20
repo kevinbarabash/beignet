@@ -348,27 +348,27 @@ fn infer_property_type(
         }
         TypeKind::Lit(lit) => {
             let t = match lit {
-                types::TLit::Num(_) => ctx.lookup_type_and_instantiate("Number")?,
-                types::TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean")?,
-                types::TLit::Str(_) => ctx.lookup_type_and_instantiate("String")?,
+                types::TLit::Num(_) => ctx.lookup_type_and_instantiate("Number", false)?,
+                types::TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean", false)?,
+                types::TLit::Str(_) => ctx.lookup_type_and_instantiate("String", false)?,
             };
             infer_property_type(&t, index_t, ctx)
         }
         TypeKind::Keyword(keyword) => match keyword {
             TKeyword::Number => {
-                let t = ctx.lookup_type_and_instantiate("Number")?;
+                let t = ctx.lookup_type_and_instantiate("Number", false)?;
                 infer_property_type(&t, index_t, ctx)
             }
             TKeyword::Boolean => {
-                let t = ctx.lookup_type_and_instantiate("Boolean")?;
+                let t = ctx.lookup_type_and_instantiate("Boolean", false)?;
                 infer_property_type(&t, index_t, ctx)
             }
             TKeyword::String => {
-                let t = ctx.lookup_type_and_instantiate("String")?;
+                let t = ctx.lookup_type_and_instantiate("String", false)?;
                 infer_property_type(&t, index_t, ctx)
             }
             TKeyword::Symbol => {
-                let t = ctx.lookup_type_and_instantiate("Symbol")?;
+                let t = ctx.lookup_type_and_instantiate("Symbol", false)?;
                 infer_property_type(&t, index_t, ctx)
             }
             TKeyword::Null => Err(Report::new(TypeError::NotAnObjectType(Box::from(
@@ -385,8 +385,7 @@ fn infer_property_type(
             .attach_printable("Cannot read property on 'never'")),
         },
         TypeKind::Array(type_param) => {
-            // TODO: Do this for all interfaces that we lookup
-            let t = ctx.lookup_type("ReadonlyArray")?;
+            let t = ctx.lookup_type("Array", obj_t.mutable)?;
             let type_params = get_type_params(&t);
             // TODO: Instead of instantiating the whole interface for one method, do
             // the lookup call first and then instantiate the method.
@@ -396,9 +395,8 @@ fn infer_property_type(
             infer_property_type(&t, index_t, ctx)
         }
         TypeKind::Tuple(elem_types) => {
-            // TODO: Do this for all interfaces that we lookup
-            let t = ctx.lookup_type("ReadonlyArray")?;
-            println!("ReadonlyArray = {t}");
+            // TODO: make mutable tuples a parse error
+            let t = ctx.lookup_type("Array", false)?;
             // TODO: Instead of instantiating the whole interface for one method, do
             // the lookup call first and then instantiate the method.
             // TODO: remove duplicate types

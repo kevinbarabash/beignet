@@ -137,17 +137,25 @@ impl Context {
             .attach_printable(format!("Can't find value: {name}")))
     }
 
-    pub fn lookup_type_and_instantiate(&self, name: &str) -> Result<Type, TypeError> {
-        for scope in self.scopes.iter().rev() {
-            if let Some(t) = scope.types.get(name) {
-                return Ok(self.instantiate(t));
-            }
-        }
-        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
-            .attach_printable(format!("Can't find type: {name}")))
+    pub fn lookup_type_and_instantiate(
+        &self,
+        name: &str,
+        mutable: bool,
+    ) -> Result<Type, TypeError> {
+        let t = self.lookup_type(name, mutable)?;
+        Ok(self.instantiate(&t))
     }
 
-    pub fn lookup_type(&self, name: &str) -> Result<Type, TypeError> {
+    pub fn lookup_type(&self, name: &str, mutable: bool) -> Result<Type, TypeError> {
+        if !mutable {
+            if let Ok(t) = self._lookup_type(&format!("Readonly{name}")) {
+                return Ok(t);
+            }
+        }
+        self._lookup_type(name)
+    }
+
+    fn _lookup_type(&self, name: &str) -> Result<Type, TypeError> {
         for scope in self.scopes.iter().rev() {
             if let Some(t) = scope.types.get(name) {
                 return Ok(t.to_owned());
