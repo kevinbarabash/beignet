@@ -85,7 +85,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 let s1 = unify(&app1.ret.apply(&s), &app2.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
             } else {
-                Err(Report::new(TypeError::TODO).attach_printable("Couldn't unify function calls"))
+                Err(Report::new(TypeError::UnificationError(
+                    Box::from(t1.to_owned()),
+                    Box::from(t2.to_owned()),
+                )))
             }
         }
         (TypeKind::Lam(lam1), TypeKind::Lam(lam2)) => {
@@ -143,8 +146,9 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 .collect();
 
             if callables.is_empty() {
-                Err(Report::new(TypeError::TODO)
-                    .attach_printable("Couldn't application with object"))
+                Err(Report::new(TypeError::ObjectIsNotCallable(Box::from(
+                    t1.to_owned(),
+                ))))
             } else {
                 for callable in callables {
                     let result = unify(t1, &callable, ctx);
@@ -153,8 +157,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     }
                 }
                 // TODO: include a report of which callable signatures were tried
-                Err(Report::new(TypeError::TODO)
-                    .attach_printable("Couldn't application with object"))
+                Err(Report::new(TypeError::NoValidCallable))
             }
         }
         (TypeKind::App(app), TypeKind::Lam(lam)) => {
@@ -200,10 +203,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 match &arg.kind {
                     TypeKind::Rest(spread) => match &spread.as_ref().kind {
                         TypeKind::Tuple(types) => args.append(&mut types.to_owned()),
-                        _ => {
-                            return Err(Report::new(TypeError::TODO)
-                                .attach_printable(format!("spread of type {spread} not allowed")))
-                        }
+                        _ => return Err(Report::new(TypeError::InvalidSpread(spread.to_owned()))),
                     },
                     _ => args.push(arg.to_owned()),
                 }
@@ -272,8 +272,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     return result;
                 }
             }
-            Err(Report::new(TypeError::TODO)
-                .attach_printable("Couldn't unify lambda with intersection"))
+            Err(Report::new(TypeError::NoValidOverload))
         }
         (TypeKind::Object(obj1), TypeKind::Object(obj2)) => {
             // Should we be doing something about type_params here?
@@ -306,27 +305,18 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                         }
                     }
 
+                    // TODO: track which properties t1 is missing from t2 so that
+                    // we can report a more specific error.
                     match b {
                         true => Ok(compose_many_subs(&ss)),
-                        false => {
-                            match e2 {
-                                TObjElem::Call(_) => Err(Report::new(TypeError::TODO)
-                                    .attach_printable("Unification failure")),
-                                TObjElem::Constructor(_) => Err(Report::new(TypeError::TODO)
-                                    .attach_printable("Unification failure")),
-                                TObjElem::Index(_) => Err(Report::new(TypeError::TODO)
-                                    .attach_printable("Unification failure")),
-                                TObjElem::Prop(prop2) => {
-                                    // Will all optional properties to be missing
-                                    if prop2.optional {
-                                        Ok(Subst::default())
-                                    } else {
-                                        Err(Report::new(TypeError::TODO)
-                                            .attach_printable("Unification failure"))
-                                    }
-                                }
-                            }
-                        }
+                        false => match e2 {
+                            TObjElem::Prop(prop2) if prop2.optional => Ok(Subst::default()),
+                            _ => Err(Report::new(TypeError::UnificationError(
+                                Box::from(t1.to_owned()),
+                                Box::from(t2.to_owned()),
+                            ))
+                            .attach_printable("Unification failure")),
+                        },
                     }
                 })
                 .collect();
@@ -343,8 +333,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 match &t.kind {
                     TypeKind::Rest(rest_type) => {
                         if maybe_rest2.is_some() {
-                            return Err(Report::new(TypeError::TODO)
-                                .attach_printable("Only one rest pattern is allowed in a tuple"));
+                            return Err(Report::new(TypeError::MoreThanOneRestPattern));
                         }
                         maybe_rest2 = Some(rest_type.as_ref().to_owned());
                     }
@@ -553,7 +542,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                         Ok(compose_many_subs_with_context(&ss))
                     }
                     (None, None) => Ok(Subst::default()),
-                    _ => Err(Report::new(TypeError::TODO).attach_printable("Alias type mismatch")),
+                    _ => Err(Report::new(TypeError::AliasTypeMismatch)),
                 }
             } else {
                 todo!("unify(): handle aliases that point to another alias")

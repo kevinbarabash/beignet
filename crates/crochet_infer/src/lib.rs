@@ -1879,14 +1879,18 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Only one rest pattern is allowed in a tuple"]
     fn infer_tuple_more_than_one_rest() {
         let src = r#"
         let tuple = [5, "hello", true];
         let [a, ...b, ...c, d] = tuple;
         "#;
 
-        infer_prog(src);
+        let error_messages = infer_prog_with_type_error(src);
+
+        assert_eq!(
+            error_messages,
+            vec!["Location", "TypeError::MoreThanOneRestPattern"]
+        );
     }
 
     #[test]
@@ -1998,14 +2002,18 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Couldn't unify lambda with intersection"]
     fn call_overloaded_function_with_wrong_params() {
         let src = r#"
         declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string);
         add("hello", 10);
         "#;
 
-        infer_prog(src);
+        let error_messages = infer_prog_with_type_error(src);
+
+        assert_eq!(
+            error_messages,
+            vec!["Location", "TypeError::NoValidOverload"]
+        );
     }
 
     #[test]

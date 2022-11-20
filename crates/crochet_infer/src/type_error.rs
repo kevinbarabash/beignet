@@ -2,41 +2,48 @@ use error_stack::Context;
 use std::fmt;
 
 use crochet_ast::types::Type;
-use crochet_ast::values::Assign;
+use crochet_ast::values::{Assign, Statement};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TypeError {
-    TODO,
     UnificationError(Box<Type>, Box<Type>),
     UnificationIsUndecidable,
+    Unhandled,
     InfiniteType,
 
-    // async/await
+    // Async/Await
     AwaitOutsideOfAsync,
 
     // if-else
     ConsequentMustReturnVoid,
 
-    // mutability
+    // Mutability
     NonMutableBindingAssignment(Box<Assign>),
     UnexpectedImutableValue,
 
-    // tuples and arrays
+    // Tuples and Arrays
     InvalidIndex(Box<Type>),
     IndexOutOfBounds(usize, Box<Type>),
     TupleSpreadOutsideTuple, // include types
     NotEnoughElementsToUnpack,
+    MoreThanOneRestPattern,
 
-    // property access on objects
+    // Property access on objects
     InvalidKey(Box<Type>),
     MissingKey(String),
     NotAnObject(Box<Type>),
     PossiblyNotAnObject(Box<Type>),
 
+    // Function calls
+    ObjectIsNotCallable(Box<Type>),
+    NoValidCallable,
+    NoValidOverload,
+    InvalidSpread(Box<Type>),
+
     // JSX
     InvalidComponent,
 
-    // functions
+    // Functions
     InvalidFix,
     TooFewArguments,
 
@@ -53,6 +60,13 @@ pub enum TypeError {
     // This was originally "mismatch between the number of qualifiers and type params"
     // TODO: make this error enum better
     TypeInstantiationFailure,
+
+    // Types
+    MissingTypeAnnotation(Box<Statement>),
+    AliasTypeMismatch,
+
+    // Objects
+    CantInferTypeFromItKeys,
 }
 
 impl fmt::Display for TypeError {
@@ -89,7 +103,6 @@ impl fmt::Display for TypeError {
             TypeError::PossiblyNotAnObject(t) => {
                 write!(fmt, "PossiblyNotAnObject: {t} might not be an object")
             }
-            TypeError::TODO => write!(fmt, "TODO"),
             TypeError::TooFewArguments => write!(fmt, "TooFewArguments"),
             TypeError::TupleSpreadOutsideTuple => write!(fmt, "TupleSpreadOutsideTuple"),
             TypeError::UnexpectedImutableValue => write!(fmt, "UnexpectedImutableValue"),
@@ -101,6 +114,18 @@ impl fmt::Display for TypeError {
             TypeError::DuplicateIdentInPat(name) => write!(fmt, "DuplicateIdentInPat: {name}"),
             TypeError::CantFindIdent(name) => write!(fmt, "CantFindIdent: {name}"),
             TypeError::TypeInstantiationFailure => write!(fmt, "TypeInstantiationFailure"),
+            TypeError::MoreThanOneRestPattern => write!(fmt, "MoreThanOneRestPattern"),
+            TypeError::ObjectIsNotCallable(obj) => write!(fmt, "ObjectIsNotCallable: {obj}"),
+            TypeError::NoValidCallable => write!(fmt, "NoValidCallable"),
+            TypeError::NoValidOverload => write!(fmt, "NoValidOverload"),
+            TypeError::InvalidSpread(spread) => write!(fmt, "InvalidSpread: {spread}"),
+            TypeError::MissingTypeAnnotation(_) => {
+                // TODO: include information about the statement in the error message
+                write!(fmt, "MissingTypeAnnotation")
+            }
+            TypeError::AliasTypeMismatch => write!(fmt, "AliasTypeMismatch"),
+            TypeError::CantInferTypeFromItKeys => write!(fmt, "CantInferTypeFromItKeys"),
+            TypeError::Unhandled => write!(fmt, "Unhandled"),
         }
     }
 }
