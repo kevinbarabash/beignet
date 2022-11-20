@@ -1658,7 +1658,7 @@ mod tests {
             vec![
                 "4 is out of bounds for [5, \"hello\", true]",
                 "Location",
-                "TypeError"
+                "TypeError::IndexOutOfBounds: 4 out of bounds for [5, \"hello\", true]"
             ]
         );
     }
@@ -1700,7 +1700,7 @@ mod tests {
             vec![
                 "[5, \"hello\", true] is an invalid indexer for tuple types",
                 "Location",
-                "TypeError"
+                "TypeError::InvalidIndex: [5, \"hello\", true] is not a valid index"
             ]
         );
     }
@@ -1879,14 +1879,18 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Only one rest pattern is allowed in a tuple"]
     fn infer_tuple_more_than_one_rest() {
         let src = r#"
         let tuple = [5, "hello", true];
         let [a, ...b, ...c, d] = tuple;
         "#;
 
-        infer_prog(src);
+        let error_messages = infer_prog_with_type_error(src);
+
+        assert_eq!(
+            error_messages,
+            vec!["Location", "TypeError::MoreThanOneRestPattern"]
+        );
     }
 
     #[test]
@@ -1998,14 +2002,18 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Couldn't unify lambda with intersection"]
     fn call_overloaded_function_with_wrong_params() {
         let src = r#"
         declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string);
         add("hello", 10);
         "#;
 
-        infer_prog(src);
+        let error_messages = infer_prog_with_type_error(src);
+
+        assert_eq!(
+            error_messages,
+            vec!["Location", "TypeError::NoValidOverload"]
+        );
     }
 
     #[test]
@@ -2916,10 +2924,10 @@ mod tests {
                     vec![
                         "Unification failure",
                         "Location",
-                        "TypeError",
+                        "TypeError::UnificationError: \"hello\", number",
                         "Unification failure",
                         "Location",
-                        "TypeError"
+                        "TypeError::UnificationError: true, number"
                     ]
                 );
             }

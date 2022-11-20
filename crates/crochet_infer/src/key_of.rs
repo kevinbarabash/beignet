@@ -1,7 +1,7 @@
 use crochet_ast::types::{
     TFnParam, TGeneric, TIndex, TKeyword, TLit, TObjElem, TObject, Type, TypeKind,
 };
-use error_stack::{Report, Result, ResultExt};
+use error_stack::{Report, Result};
 
 use crate::context::Context;
 use crate::type_error::TypeError;
@@ -17,12 +17,9 @@ const NEVER_TYPE: Type = Type {
 pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
     match &t.kind {
         TypeKind::Generic(TGeneric { t, type_params: _ }) => key_of(t, ctx),
-        TypeKind::Var(_) => Err(Report::new(TypeError)
-            .attach_printable("There isn't a way to infer a type from its keys")),
+        TypeKind::Var(_) => Err(Report::new(TypeError::CantInferTypeFromItKeys)),
         TypeKind::Ref(alias) => {
-            let t = ctx
-                .lookup_ref_and_instantiate(alias)
-                .change_context(TypeError)?;
+            let t = ctx.lookup_ref_and_instantiate(alias)?;
             key_of(&t, ctx)
         }
         TypeKind::Object(TObject { elems }) => {

@@ -73,9 +73,9 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
-                                        return Err(Report::new(TypeError).attach_printable(
-                                            "missing type annotation in declare statement",
-                                        ));
+                                        return Err(Report::new(TypeError::MissingTypeAnnotation(
+                                            Box::from(stmt.to_owned()),
+                                        )));
                                     }
                                 }
                             }

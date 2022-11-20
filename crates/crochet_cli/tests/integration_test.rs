@@ -44,7 +44,7 @@ fn infer(input: &str) -> String {
             let mut expr = expr.to_owned();
             infer_expr(&mut ctx, &mut expr)
         }
-        _ => Err(Report::new(TypeError).attach_printable("We can't infer decls yet")),
+        _ => Err(Report::new(TypeError::Unhandled).attach_printable("We can't infer decls yet")),
     };
     format!("{}", result.unwrap())
 }
@@ -496,7 +496,13 @@ fn infer_let_decl_with_incorrect_type_ann() {
 
     assert_eq!(
         error_messages,
-        vec!["Unification failure", "Location", "TypeError"]
+        vec![
+            "Unification failure",
+            "Location",
+            // Ideally we'd want the error message to be something like:
+            // "can't assign '10' to 'string'"
+            "TypeError::UnificationError: 10, string"
+        ]
     );
 }
 
@@ -604,7 +610,11 @@ fn infer_tuple_with_type_annotation_and_incorrect_element() {
 
     assert_eq!(
         error_messages,
-        vec!["Unification failure", "Location", "TypeError"]
+        vec![
+            "Unification failure",
+            "Location",
+            "TypeError::UnificationError: 3, boolean"
+        ]
     );
 }
 
@@ -808,13 +818,17 @@ fn infer_function_overloading() {
 }
 
 #[test]
-#[should_panic = "Couldn't unify lambda with intersection"]
 fn infer_function_overloading_with_incorrect_args() {
     let src = r#"
     declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string);
     let bool = add(true, false);
     "#;
-    infer_prog(src);
+    let error_messages = infer_prog_with_type_error(src);
+
+    assert_eq!(
+        error_messages,
+        vec!["Location", "TypeError::NoValidOverload"]
+    );
 }
 
 #[test]

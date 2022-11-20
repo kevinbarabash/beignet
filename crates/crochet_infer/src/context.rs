@@ -113,7 +113,8 @@ impl Context {
                 return Ok(self.instantiate(&b.t));
             }
         }
-        Err(Report::new(TypeError).attach_printable(format!("Can't find value: {name}")))
+        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
+            .attach_printable(format!("Can't find value: {name}")))
     }
 
     pub fn lookup_value(&self, name: &str) -> Result<Type, TypeError> {
@@ -122,7 +123,8 @@ impl Context {
                 return Ok(b.t.to_owned());
             }
         }
-        Err(Report::new(TypeError).attach_printable(format!("Can't find value: {name}")))
+        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
+            .attach_printable(format!("Can't find value: {name}")))
     }
 
     pub fn lookup_binding(&self, name: &str) -> Result<Binding, TypeError> {
@@ -131,7 +133,8 @@ impl Context {
                 return Ok(b.to_owned());
             }
         }
-        Err(Report::new(TypeError).attach_printable(format!("Can't find value: {name}")))
+        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
+            .attach_printable(format!("Can't find value: {name}")))
     }
 
     pub fn lookup_type_and_instantiate(&self, name: &str) -> Result<Type, TypeError> {
@@ -140,7 +143,8 @@ impl Context {
                 return Ok(self.instantiate(t));
             }
         }
-        Err(Report::new(TypeError).attach_printable(format!("Can't find type: {name}")))
+        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
+            .attach_printable(format!("Can't find type: {name}")))
     }
 
     pub fn lookup_type(&self, name: &str) -> Result<Type, TypeError> {
@@ -149,7 +153,8 @@ impl Context {
                 return Ok(t.to_owned());
             }
         }
-        Err(Report::new(TypeError).attach_printable(format!("Can't find type: {name}")))
+        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
+            .attach_printable(format!("Can't find type: {name}")))
     }
 
     pub fn lookup_namespace(&self, name: &str) -> Result<Box<Scope>, TypeError> {
@@ -158,7 +163,8 @@ impl Context {
                 return Ok(namespace.to_owned());
             }
         }
-        Err(Report::new(TypeError).attach_printable(format!("Can't find namespace: {name}")))
+        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
+            .attach_printable(format!("Can't find namespace: {name}")))
     }
 
     pub fn lookup_ref_and_instantiate(&self, alias: &TRef) -> Result<Type, TypeError> {
@@ -175,9 +181,10 @@ impl Context {
                         if type_params.len() != type_params.len() {
                             println!("type = {t}");
                             println!("type_params = {type_params:#?}");
-                            return Err(Report::new(TypeError).attach_printable(
-                                "mismatch between the number of qualifiers and type params",
-                            ));
+                            return Err(Report::new(TypeError::TypeInstantiationFailure)
+                                .attach_printable(
+                                    "mismatch between the number of qualifiers and type params",
+                                ));
                         }
                         ids.zip(type_params.iter().cloned()).collect()
                     }
@@ -185,9 +192,10 @@ impl Context {
                         if !type_params.is_empty() {
                             println!("type = {t}");
                             println!("no type params");
-                            return Err(Report::new(TypeError).attach_printable(
-                                "mismatch between the number of qualifiers and type params",
-                            ));
+                            return Err(Report::new(TypeError::TypeInstantiationFailure)
+                                .attach_printable(
+                                    "mismatch between the number of qualifiers and type params",
+                                ));
                         }
                         ids.zip(type_params.iter().map(|tp| {
                             Type::from(TypeKind::Var(TVar {
@@ -202,7 +210,8 @@ impl Context {
                 return Ok(t.apply(&subs));
             }
         }
-        Err(Report::new(TypeError).attach_printable(format!("Can't find type: {name}")))
+        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
+            .attach_printable(format!("Can't find type: {name}")))
     }
 
     pub fn instantiate(&self, t: &Type) -> Type {

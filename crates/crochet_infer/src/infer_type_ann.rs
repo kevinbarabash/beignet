@@ -292,13 +292,17 @@ fn infer_property_type(
                 types::TLit::Num(_) => {
                     // TODO: support number literals if the ojbect has an indexer
                     // that supports them
-                    Err(Report::new(TypeError).attach_printable(
-                        "a number literal can't be used as an indexed type's index",
-                    ))
+                    Err(
+                        Report::new(TypeError::InvalidTypeIndex(Box::from(index_t.to_owned())))
+                            .attach_printable(
+                                "a number literal can't be used as an indexed type's index",
+                            ),
+                    )
                 }
-                types::TLit::Bool(_) => Err(Report::new(TypeError).attach_printable(
-                    "a boolean literal can't be used as an indexed type's index",
-                )),
+                types::TLit::Bool(_) => Err(Report::new(TypeError::InvalidTypeIndex(Box::from(
+                    index_t.to_owned(),
+                )))
+                .attach_printable("a boolean literal can't be used as an indexed type's index")),
                 types::TLit::Str(name) => {
                     let mut t = elems.iter().find_map(|elem| match elem {
                         types::TObjElem::Prop(prop) => {
@@ -326,14 +330,17 @@ fn infer_property_type(
                             let s = Subst::new();
                             Ok((s, t))
                         }
-                        None => Err(Report::new(TypeError)
+                        None => Err(Report::new(TypeError::MissingTypeIndex)
                             .attach_printable(format!("'{name}' not found in {obj_t}"))),
                     }
                 }
             },
-            _ => Err(Report::new(TypeError).attach_printable(format!(
-                "{index_t} can't be used as an indexed type's index",
-            ))),
+            _ => Err(
+                Report::new(TypeError::InvalidTypeIndex(Box::from(index_t.to_owned())))
+                    .attach_printable(format!(
+                        "{index_t} can't be used as an indexed type's index",
+                    )),
+            ),
         },
         TypeKind::Ref(alias) => {
             let t = ctx.lookup_ref_and_instantiate(alias)?;
@@ -364,15 +371,18 @@ fn infer_property_type(
                 let t = ctx.lookup_type_and_instantiate("Symbol")?;
                 infer_property_type(&t, index_t, ctx)
             }
-            TKeyword::Null => {
-                Err(Report::new(TypeError).attach_printable("Cannot read property on 'null'"))
-            }
-            TKeyword::Undefined => {
-                Err(Report::new(TypeError).attach_printable("Cannot read property on 'undefined'"))
-            }
-            TKeyword::Never => {
-                Err(Report::new(TypeError).attach_printable("Cannot read property on 'never'"))
-            }
+            TKeyword::Null => Err(Report::new(TypeError::NotAnObjectType(Box::from(
+                obj_t.to_owned(),
+            )))
+            .attach_printable("Cannot read property on 'null'")),
+            TKeyword::Undefined => Err(Report::new(TypeError::NotAnObjectType(Box::from(
+                obj_t.to_owned(),
+            )))
+            .attach_printable("Cannot read property on 'undefined'")),
+            TKeyword::Never => Err(Report::new(TypeError::NotAnObjectType(Box::from(
+                obj_t.to_owned(),
+            )))
+            .attach_printable("Cannot read property on 'never'")),
         },
         TypeKind::Array(type_param) => {
             // TODO: Do this for all interfaces that we lookup

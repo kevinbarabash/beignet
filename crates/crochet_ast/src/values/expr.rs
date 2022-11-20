@@ -11,6 +11,7 @@ pub struct Program {
     pub body: Vec<Statement>,
 }
 
+// TODO: Update Statement to mimic structure of Expr/ExprKind
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     VarDecl {
