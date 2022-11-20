@@ -372,7 +372,11 @@ impl Visit for InterfaceCollector {
         println!("inferring: {name}");
         match infer_interface_decl(decl, &self.ctx) {
             Ok(t) => {
-                match self.ctx.lookup_type(&name).ok() {
+                // HACK(kevinb): Passing true bypasses logic to check if there's
+                // a type called "Readonly{name}".  Since the types coming from
+                // .d.ts files are already prefixed with "Readonly", we can skip
+                // adding the prefix a second time.
+                match self.ctx.lookup_type(&name, true).ok() {
                     Some(existing_t) => {
                         let merged_t = util::merge_types(&existing_t, &t);
                         let merged_t = normalize(&merged_t, &self.ctx);

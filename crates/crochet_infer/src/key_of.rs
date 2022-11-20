@@ -44,18 +44,18 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
         }
         TypeKind::Lit(lit) => {
             let t = match lit {
-                TLit::Num(_) => ctx.lookup_type_and_instantiate("Number")?,
-                TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean")?,
-                TLit::Str(_) => ctx.lookup_type_and_instantiate("String")?,
+                TLit::Num(_) => ctx.lookup_type_and_instantiate("Number", false)?,
+                TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean", false)?,
+                TLit::Str(_) => ctx.lookup_type_and_instantiate("String", false)?,
             };
             key_of(&t, ctx)
         }
         TypeKind::Keyword(keyword) => {
             let t = match keyword {
-                TKeyword::Number => ctx.lookup_type_and_instantiate("Number")?,
-                TKeyword::Boolean => ctx.lookup_type_and_instantiate("Boolean")?,
-                TKeyword::String => ctx.lookup_type_and_instantiate("String")?,
-                TKeyword::Symbol => ctx.lookup_type_and_instantiate("Symbol")?,
+                TKeyword::Number => ctx.lookup_type_and_instantiate("Number", false)?,
+                TKeyword::Boolean => ctx.lookup_type_and_instantiate("Boolean", false)?,
+                TKeyword::String => ctx.lookup_type_and_instantiate("String", false)?,
+                TKeyword::Symbol => ctx.lookup_type_and_instantiate("Symbol", false)?,
                 TKeyword::Null => return Ok(NEVER_TYPE),
                 TKeyword::Undefined => return Ok(NEVER_TYPE),
                 TKeyword::Never => return Ok(NEVER_TYPE),
@@ -67,24 +67,14 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
             for i in 0..tuple.len() {
                 elems.push(Type::from(TypeKind::Lit(TLit::Num(i.to_string()))))
             }
-            let array_inferface = match t.mutable {
-                true => "Array",
-                false => "ReadonlyArray",
-            };
             elems.push(key_of(
-                &ctx.lookup_type_and_instantiate(array_inferface)?,
+                &ctx.lookup_type_and_instantiate("Array", t.mutable)?,
                 ctx,
             )?);
             Ok(union_many_types(&elems))
         }
-        TypeKind::Array(_) => {
-            let array_inferface = match t.mutable {
-                true => "Array",
-                false => "ReadonlyArray",
-            };
-            key_of(&ctx.lookup_type_and_instantiate(array_inferface)?, ctx)
-        }
-        TypeKind::Lam(_) => key_of(&ctx.lookup_type_and_instantiate("Function")?, ctx),
+        TypeKind::Array(_) => key_of(&ctx.lookup_type_and_instantiate("Array", t.mutable)?, ctx),
+        TypeKind::Lam(_) => key_of(&ctx.lookup_type_and_instantiate("Function", false)?, ctx),
         TypeKind::App(_) => todo!(), // What does this even mean?
         TypeKind::Union(_) => todo!(),
         TypeKind::Intersection(elems) => {
@@ -114,7 +104,7 @@ mod tests {
     }
 
     fn get_key_of(name: &str, ctx: &Context) -> String {
-        match ctx.lookup_type(name) {
+        match ctx.lookup_type(name, true) {
             Ok(t) => {
                 let t = key_of(&t, ctx).unwrap();
                 format!("{t}")

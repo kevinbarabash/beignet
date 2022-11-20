@@ -96,7 +96,7 @@ mod tests {
     }
 
     fn get_type_type(name: &str, ctx: &Context) -> String {
-        match ctx.lookup_type(name) {
+        match ctx.lookup_type(name, false) {
             Ok(t) => format!("{t}"),
             Err(_) => panic!("Couldn't find type with name '{name}'"),
         }
