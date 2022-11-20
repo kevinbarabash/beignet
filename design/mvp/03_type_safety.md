@@ -48,7 +48,7 @@ let point: {x: 5, y: 10} as const; // {x: 5, y: 10}
 **Crochet**
 
 ```ts
-let point: { x: 5; y: 10 }; // {x: 5, y: 5}
+let point: { x: 5; y: 10 }; // {x: 5, y: 10}
 ```
 
 ## Accessing Indexer returns `T | undefined`

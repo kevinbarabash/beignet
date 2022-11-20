@@ -11,7 +11,7 @@ the following statements as expressions:
 ## `if`-`else`
 
 The result of an `if`-`else` in Crochet is defined as the last expression in
-each block. `if`-`else` can be chained and is much more readable than changed
+each block. `if`-`else` can be chained and is much more readable than chained
 ternaries. This obviates the need for ternary expressions.
 
 ```ts
