@@ -721,8 +721,7 @@ fn infer_property_type(
             match prop {
                 // TODO: lookup methods on Array.prototype
                 MemberProp::Ident(_) => {
-                    // TODO: Make mutable tuples a parse error
-                    let t = ctx.lookup_type("Array", false)?;
+                    let t = ctx.lookup_type("Array", obj_t.mutable)?;
                     // TODO: Instead of instantiating the whole interface for one method, do
                     // the lookup call first and then instantiate the method.
                     // TODO: remove duplicate types

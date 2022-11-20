@@ -255,6 +255,21 @@ fn infer_type_ann_rec(
         TypeAnnKind::Query(QueryType { expr, .. }) => infer_expr(ctx, expr),
         TypeAnnKind::Mutable(MutableType { type_ann, .. }) => {
             let (s, mut t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
+
+            match &t.kind {
+                TypeKind::Keyword(_) => {
+                    return Err(Report::new(TypeError::PrimitivesCantBeMutable(Box::from(
+                        t.to_owned(),
+                    ))))
+                }
+                TypeKind::Tuple(_) => {
+                    return Err(Report::new(TypeError::TuplesCantBeMutable(Box::from(
+                        t.to_owned(),
+                    ))))
+                }
+                _ => (),
+            };
+
             t.mutable = true;
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
@@ -395,8 +410,7 @@ fn infer_property_type(
             infer_property_type(&t, index_t, ctx)
         }
         TypeKind::Tuple(elem_types) => {
-            // TODO: make mutable tuples a parse error
-            let t = ctx.lookup_type("Array", false)?;
+            let t = ctx.lookup_type("Array", obj_t.mutable)?;
             // TODO: Instead of instantiating the whole interface for one method, do
             // the lookup call first and then instantiate the method.
             // TODO: remove duplicate types
