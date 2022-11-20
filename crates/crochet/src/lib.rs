@@ -1,4 +1,5 @@
-use error_stack::{Result, ResultExt};
+use core::panic::Location;
+use error_stack::{Report, Result, ResultExt};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
 use std::str;
@@ -75,6 +76,11 @@ unsafe fn string_to_wasm_string(input: &str) -> WasmString {
 ///
 #[no_mangle]
 pub unsafe extern "C" fn compile(input: *const c_char, lib: *const c_char) -> *const CompileResult {
+    Report::install_debug_hook::<Location>(|_location, _context| {
+        // This function doesn't do anything b/c we want to override the default
+        // behavior of Locations being printed.
+    });
+
     let input = CStr::from_ptr(input).to_str().unwrap();
     let lib = CStr::from_ptr(lib).to_str().unwrap();
 
@@ -87,11 +93,12 @@ pub unsafe extern "C" fn compile(input: *const c_char, lib: *const c_char) -> *c
             };
             Box::into_raw(Box::new(result))
         }
-        Err(error) => {
+        Err(report) => {
             let result = CompileResult {
                 js: string_to_wasm_string(""),
                 dts: string_to_wasm_string(""),
-                error: string_to_wasm_string(&error.to_string()),
+                // TODO: update report to exclude Crochet source code locations
+                error: string_to_wasm_string(&format!("{report:#?}")),
             };
             Box::into_raw(Box::new(result))
         }
