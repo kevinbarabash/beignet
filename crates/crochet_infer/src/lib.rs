@@ -2933,4 +2933,58 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn primitives_cannot_be_mutable() {
+        let src = r#"
+        declare let mut_str: mut string;
+        declare let mut_bool: mut boolean;
+        declare let mut_number: mut number;
+        "#;
+
+        let mut prog = parse(src).unwrap();
+        let mut ctx: Context = Context::default();
+        match infer::infer_prog(&mut prog, &mut ctx) {
+            Ok(_) => panic!("expected an error"),
+            Err(report) => {
+                println!("{report:#?}");
+                let messages = messages(&report);
+                assert_eq!(
+                    messages,
+                    vec![
+                        "Location",
+                        "TypeError::PrimitivesCantBeMutable: string",
+                        "Location",
+                        "TypeError::PrimitivesCantBeMutable: boolean",
+                        "Location",
+                        "TypeError::PrimitivesCantBeMutable: number"
+                    ]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn tuples_cannot_be_mutable() {
+        let src = r#"
+        declare let mut_tuple: mut [string, boolean, number];
+        "#;
+
+        let mut prog = parse(src).unwrap();
+        let mut ctx: Context = Context::default();
+        match infer::infer_prog(&mut prog, &mut ctx) {
+            Ok(_) => panic!("expected an error"),
+            Err(report) => {
+                println!("{report:#?}");
+                let messages = messages(&report);
+                assert_eq!(
+                    messages,
+                    vec![
+                        "Location",
+                        "TypeError::TuplesCantBeMutable: [string, boolean, number]",
+                    ]
+                );
+            }
+        }
+    }
 }
