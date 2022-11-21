@@ -7,7 +7,7 @@ use std::str;
 use crochet_dts::parse_dts::parse_dts;
 use crochet_infer::*;
 
-mod compile_error;
+pub mod compile_error;
 
 use crate::compile_error::CompileError;
 

@@ -7,7 +7,7 @@ edition = "2021"
 strip = "debuginfo"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -25,3 +25,4 @@ tree_sitter_crochet = { version = "0.1.0", path = "../tree_sitter_crochet" }
 insta = "1.13.0"
 pretty_assertions = "1.2.1"
 testing_macros = "0.2.5"
+strip-ansi-escapes = "0.1.1"
