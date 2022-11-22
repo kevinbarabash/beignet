@@ -2987,16 +2987,4 @@ mod tests {
             }
         }
     }
-
-    #[test]
-    fn provenance_of_inferrred_types() {
-        let src = r#"
-        let add = (a, b) => a + b;
-        "#;
-
-        let ctx = infer_prog(src);
-        let add = ctx.lookup_value("add");
-
-        println!("add = {add:#?}");
-    }
 }

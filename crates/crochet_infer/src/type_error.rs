@@ -41,13 +41,13 @@ pub enum TypeError {
     NoValidCallable,
     NoValidOverload,
     InvalidSpread(Box<Type>),
+    TooFewArguments(Box<Type>, Box<Type>), // application, lambda
+
+    // Recursive functions
+    InvalidFix,
 
     // JSX
     InvalidComponent,
-
-    // Functions
-    InvalidFix,
-    TooFewArguments,
 
     // Indexed Access Types
     InvalidTypeIndex(Box<Type>),
@@ -105,7 +105,7 @@ impl fmt::Display for TypeError {
             TypeError::PossiblyNotAnObject(t) => {
                 write!(fmt, "PossiblyNotAnObject: {t} might not be an object")
             }
-            TypeError::TooFewArguments => write!(fmt, "TooFewArguments"),
+            TypeError::TooFewArguments(_, _) => write!(fmt, "TooFewArguments"),
             TypeError::TupleSpreadOutsideTuple => write!(fmt, "TupleSpreadOutsideTuple"),
             TypeError::UnexpectedImutableValue => write!(fmt, "UnexpectedImutableValue"),
             // TODO: differentiate between sub-typing unification and exact unification

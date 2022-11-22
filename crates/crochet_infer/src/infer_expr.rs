@@ -44,10 +44,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
             // Are we missing an `apply()` call here?
             // Maybe, I could see us needing an apply to handle generic functions properly
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
-            let call_type = Type::from(TypeKind::App(types::TApp {
+            let mut call_type = Type::from(TypeKind::App(types::TApp {
                 args: arg_types,
                 ret: Box::from(ret_type.clone()),
             }));
+            call_type.provenance = Some(Box::from(Provenance::Expr(Box::from(expr.to_owned()))));
+
             let s3 = unify(&call_type, &lam_type, ctx)?;
 
             ss.push(s3);
@@ -92,6 +94,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
         ExprKind::Ident(Ident { name, .. }) => {
             let s = Subst::default();
             let t = ctx.lookup_value_and_instantiate(name)?;
+            // println!("name = {name}, t = {t}");
+            // println!("t.provenance = {:#?}", t.provenance);
+
+            // Sometimes provenance is a type variable
+            // How can check for that type variable in the current set of
+            // Substitutions?
 
             Ok((s, t))
         }
@@ -599,7 +607,19 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
     ctx.apply(&s);
 
     expr.inferred_type = Some(t.clone());
-    t.provenance = Some(Box::from(Provenance::from(expr)));
+
+    // If the type inferred from an Ident already has its provenance, don't
+    // overwrite it.
+    match expr.kind {
+        ExprKind::Ident(_) => {
+            if t.provenance.is_none() {
+                t.provenance = Some(Box::from(Provenance::from(expr)));
+            }
+        }
+        _ => {
+            t.provenance = Some(Box::from(Provenance::from(expr)));
+        }
+    }
 
     Ok((s, t))
 }
