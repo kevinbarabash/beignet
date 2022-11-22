@@ -40,6 +40,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     ExprKind::Tuple(_) => return Ok(Subst::new()),
                     _ => (),
                 },
+                types::Provenance::Pattern(_) => (),
                 types::Provenance::Type(_) => (),
                 types::Provenance::TypeAnn(_) => (),
             },

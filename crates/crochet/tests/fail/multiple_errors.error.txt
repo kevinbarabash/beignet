@@ -2,22 +2,22 @@ Error: Incompatible types
    ╭─[<unknown>:3:5]
    │
  1 │ let add = (a: number, b: number): number => a + b;
-   ·               ──────  
-   ·                        
+   ·               ───┬──  
+   ·                  ╰──── number
    · 
  3 │ add("hello", "world");
    ·     ───┬───  
-   ·        ╰───── This argument should be a number
+   ·        ╰───── "hello"
 ───╯
 
 Error: Incompatible types
-   ╭─[<unknown>:4:5]
+   ╭─[<unknown>:7:5]
    │
- 1 │ let add = (a: number, b: number): number => a + b;
-   ·               ──────  
-   ·                        
+ 5 │ let add = (a, b) => a + b;
+   ·            ┬  
+   ·            ╰── number
    · 
- 4 │ add(true, false);
-   ·     ──┬─  
-   ·       ╰─── This argument should be a number
+ 7 │ add("hello", "world");
+   ·     ───┬───  
+   ·        ╰───── "hello"
 ───╯

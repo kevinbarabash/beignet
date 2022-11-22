@@ -168,7 +168,21 @@ Program {
                                                                 },
                                                             ),
                                                             mutable: false,
-                                                            provenance: None,
+                                                            provenance: Some(
+                                                                Pattern(
+                                                                    Pattern {
+                                                                        span: 11..12,
+                                                                        kind: Ident(
+                                                                            BindingIdent {
+                                                                                name: "a",
+                                                                                mutable: false,
+                                                                                span: 11..12,
+                                                                            },
+                                                                        ),
+                                                                        inferred_type: None,
+                                                                    },
+                                                                ),
+                                                            ),
                                                         },
                                                     ),
                                                 ),
@@ -197,7 +211,21 @@ Program {
                                                                 },
                                                             ),
                                                             mutable: false,
-                                                            provenance: None,
+                                                            provenance: Some(
+                                                                Pattern(
+                                                                    Pattern {
+                                                                        span: 14..15,
+                                                                        kind: Ident(
+                                                                            BindingIdent {
+                                                                                name: "b",
+                                                                                mutable: false,
+                                                                                span: 14..15,
+                                                                            },
+                                                                        ),
+                                                                        inferred_type: None,
+                                                                    },
+                                                                ),
+                                                            ),
                                                         },
                                                     ),
                                                 ),

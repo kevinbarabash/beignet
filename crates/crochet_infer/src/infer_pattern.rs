@@ -1,7 +1,7 @@
 use error_stack::{Report, Result};
 use std::collections::HashMap;
 
-use crochet_ast::types::{self as types, TObject, Type, TypeKind};
+use crochet_ast::types::{self as types, Provenance, TObject, Type, TypeKind};
 use crochet_ast::values::{self as values, *};
 
 use crate::assump::Assump;
@@ -54,7 +54,7 @@ fn infer_pattern_rec(
     ctx: &Context,
     assump: &mut Assump,
 ) -> Result<Type, TypeError> {
-    match &mut pat.kind {
+    let result: Result<Type, TypeError> = match &mut pat.kind {
         PatternKind::Ident(values::BindingIdent {
             name,
             mutable,
@@ -232,7 +232,12 @@ fn infer_pattern_rec(
                 None => Ok(obj_type),
             }
         }
-    }
+    };
+    let mut t = result?;
+
+    t.provenance = Some(Box::from(Provenance::Pattern(Box::from(pat.to_owned()))));
+
+    Ok(t)
 }
 
 pub enum PatternUsage {
