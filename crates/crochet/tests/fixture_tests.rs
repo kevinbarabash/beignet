@@ -14,6 +14,7 @@ use crochet_infer::*;
 use crochet_parser::parse;
 
 use crochet::compile_error::CompileError;
+use crochet::diagnostics::get_diagnostics;
 
 enum Mode {
     Check,
@@ -108,8 +109,10 @@ fn fail(in_path: PathBuf) {
     match compile(&input, &lib) {
         Ok(_) => panic!("Expected an error"),
         Err(report) => {
-            let buf = strip_ansi_escapes::strip(format!("{report:#?}")).unwrap();
-            let error_output = str::from_utf8(&buf).unwrap();
+            // let buf = strip_ansi_escapes::strip(format!("{report:#?}")).unwrap();
+            // let error_output = str::from_utf8(&buf).unwrap();
+            let diagnostics = get_diagnostics(report, &input);
+            let error_output = diagnostics.join("\n");
             match mode {
                 Mode::Check => {
                     let error_fixture = fs::read_to_string(error_output_path).unwrap();

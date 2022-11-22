@@ -41,6 +41,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     _ => (),
                 },
                 types::Provenance::Type(_) => (),
+                types::Provenance::TypeAnn(_) => (),
             },
             None => (),
         };

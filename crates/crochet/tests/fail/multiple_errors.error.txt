@@ -1,7 +1,23 @@
-CompileError
-│
-╰┬▶ TypeError::UnificationError: "hello", number
- │  ╰╴ Unification failure
- │
- ╰▶ TypeError::UnificationError: true, number
-    ╰╴ Unification failure
+Error: Incompatible types
+   ╭─[<unknown>:3:5]
+   │
+ 1 │ let add = (a: number, b: number): number => a + b;
+   ·               ──────  
+   ·                        
+   · 
+ 3 │ add("hello", "world");
+   ·     ───┬───  
+   ·        ╰───── This argument should be a number
+───╯
+
+Error: Incompatible types
+   ╭─[<unknown>:4:5]
+   │
+ 1 │ let add = (a: number, b: number): number => a + b;
+   ·               ──────  
+   ·                        
+   · 
+ 4 │ add(true, false);
+   ·     ──┬─  
+   ·       ╰─── This argument should be a number
+───╯

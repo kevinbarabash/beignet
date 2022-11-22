@@ -1,10 +1,21 @@
 use crate::types::Type;
-use crate::values::Expr;
+use crate::values::{Expr, Span, TypeAnn};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Provenance {
     Expr(Box<Expr>),
     Type(Box<Type>),
+    TypeAnn(Box<TypeAnn>),
+}
+
+impl Provenance {
+    pub fn get_span(&'_ self) -> &'_ Span {
+        match self {
+            Provenance::Expr(expr) => &expr.span,
+            Provenance::Type(_t) => todo!(),
+            Provenance::TypeAnn(type_ann) => &type_ann.span,
+        }
+    }
 }
 
 impl From<Expr> for Provenance {
