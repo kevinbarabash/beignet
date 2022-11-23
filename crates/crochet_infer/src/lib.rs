@@ -2659,19 +2659,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "assigning a tuple to a mutable array should fail"]
-    fn test_mutable_arrays_with_immutable_variable_initializer() {
+    #[should_panic = "Cannot use immutable type where a mutable type was expected"]
+    fn test_mutable_array_cannot_be_assigned_immutable_tuple() {
         let src = r#"
-        // declare let sort: (num_arr: mut number[]) => undefined;
         let tuple = [1, 2, 3];
         let mut_arr: mut number[] = tuple;
-        // sort(mut_arr);
         "#;
 
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_value_type("tuple", &ctx), "[1, 2, 3]");
-        assert_eq!(get_value_type("mut_arr", &ctx), "mut number[]");
+        infer_prog(src);
     }
 
     #[test]
