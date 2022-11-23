@@ -94,12 +94,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
         ExprKind::Ident(Ident { name, .. }) => {
             let s = Subst::default();
             let t = ctx.lookup_value_and_instantiate(name)?;
-            // println!("name = {name}, t = {t}");
-            // println!("t.provenance = {:#?}", t.provenance);
-
-            // Sometimes provenance is a type variable
-            // How can check for that type variable in the current set of
-            // Substitutions?
 
             Ok((s, t))
         }
@@ -607,19 +601,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
     ctx.apply(&s);
 
     expr.inferred_type = Some(t.clone());
-
-    // If the type inferred from an Ident already has its provenance, don't
-    // overwrite it.
-    match expr.kind {
-        ExprKind::Ident(_) => {
-            if t.provenance.is_none() {
-                t.provenance = Some(Box::from(Provenance::from(expr)));
-            }
-        }
-        _ => {
-            t.provenance = Some(Box::from(Provenance::from(expr)));
-        }
-    }
+    t.provenance = Some(Box::from(Provenance::from(expr)));
 
     Ok((s, t))
 }

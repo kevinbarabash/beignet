@@ -12,7 +12,15 @@ pub enum Provenance {
 impl Provenance {
     pub fn get_span(&self) -> Option<Span> {
         match self {
-            Provenance::Expr(expr) => Some(expr.span.to_owned()),
+            Provenance::Expr(expr) => match &expr.inferred_type {
+                Some(t) => match &t.provenance {
+                    Some(prov) => prov.get_span(),
+                    // Fallback to `expr`'s span, if the `inferred_type` has no
+                    // provenance.
+                    None => Some(expr.span.to_owned()),
+                },
+                None => Some(expr.span.to_owned()),
+            },
             Provenance::Pattern(pattern) => Some(pattern.span.to_owned()),
             Provenance::Type(t) => match &t.provenance {
                 Some(prov) => prov.get_span(),

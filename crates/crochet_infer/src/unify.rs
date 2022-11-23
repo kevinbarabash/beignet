@@ -674,8 +674,6 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Type
                     // TODO: handle the case where both type variables have constraints
                 }
 
-                println!("tv.id = {}, t.provenance = {:#?}", tv.id, t.provenance);
-
                 Ok(Subst::from([(tv.id.to_owned(), t.to_owned())]))
             }
         }

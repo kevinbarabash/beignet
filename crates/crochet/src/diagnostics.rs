@@ -35,7 +35,6 @@ pub fn get_diagnostics(report: Report<CompileError>, src: &str) -> Vec<String> {
                     let prov2 = t2.provenance.as_ref().unwrap();
                     match (prov1.get_span(), prov2.get_span()) {
                         (Some(span1), Some(span2)) => {
-                            println!("span1 = {span1:#?}, span2 = {span2:#?}");
                             let mut vec = vec![];
                             AriadneReport::build(ReportKind::Error, (), 0)
                                 .with_config(Config::default().with_color(false))
