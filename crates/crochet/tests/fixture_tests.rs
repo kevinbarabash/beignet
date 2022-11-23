@@ -102,7 +102,7 @@ fn fail(in_path: PathBuf) {
     };
 
     let mut error_output_path = in_path.clone();
-    error_output_path.set_extension("error.txt");
+    error_output_path.set_extension("error");
 
     let input = fs::read_to_string(in_path).unwrap();
 

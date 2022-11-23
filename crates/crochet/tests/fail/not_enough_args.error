@@ -1,47 +1,21 @@
-Error: Incompatible types
-   ╭─[<unknown>:3:5]
-   │
- 1 │ let add = (a: number, b: number): number => a + b;
-   ·               ───┬──  
-   ·                  ╰──── number
-   · 
- 3 │ add("hello", "world");
-   ·     ───┬───  
-   ·        ╰───── "hello"
-───╯
-
 Error: Not enough args provided
    ╭─[<unknown>:1:1]
    │
  1 │ let add = (a: number, b: number): number => a + b;
    ·           ───────────────────┬───────────────────  
    ·                              ╰───────────────────── (a: number, b: number) => number
-   · 
- 4 │ add();
+ 2 │ add();
    · ──┬──  
    ·   ╰──── Expected 2 args, received 0 args
-───╯
-
-Error: Incompatible types
-   ╭─[<unknown>:8:5]
-   │
- 6 │ let add = (a, b) => a + b;
-   ·            ┬  
-   ·            ╰── number
-   · 
- 8 │ add("hello", "world");
-   ·     ───┬───  
-   ·        ╰───── "hello"
 ───╯
 
 Error: Not enough args provided
    ╭─[<unknown>:1:1]
    │
- 6 │ let add = (a, b) => a + b;
+ 4 │ let add = (a, b) => a + b;
    ·           ───────┬───────  
    ·                  ╰───────── (a: number, b: number) => number
-   · 
- 9 │ add();
+ 5 │ add();
    · ──┬──  
    ·   ╰──── Expected 2 args, received 0 args
 ───╯
