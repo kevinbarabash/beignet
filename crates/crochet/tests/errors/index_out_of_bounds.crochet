@@ -1,0 +1,3 @@
+let tuple = [5, "hello", true];
+let last = tuple[2];
+let out_of_bounds = tuple[3];

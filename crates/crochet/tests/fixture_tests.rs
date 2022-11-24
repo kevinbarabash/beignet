@@ -87,7 +87,7 @@ fn compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
 
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
-#[testing_macros::fixture("tests/fail/*.crochet")]
+#[testing_macros::fixture("tests/errors/*.crochet")]
 fn fail(in_path: PathBuf) {
     Report::install_debug_hook::<Location>(|_location, _context| {
         // This function doesn't do anything b/c we want to override the default

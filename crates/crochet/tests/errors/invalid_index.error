@@ -1,0 +1,10 @@
+Error: Invalid Index
+   ╭─[<unknown>:1:13]
+   │
+ 1 │ let tuple = [5, "hello", true];
+   ·             ─────────┬────────  
+   ·                      ╰────────── for tuples
+ 2 │ tuple["2"];
+   ·       ─┬─  
+   ·        ╰─── "2" is not a valid index
+───╯

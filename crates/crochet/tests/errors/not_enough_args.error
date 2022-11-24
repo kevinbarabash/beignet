@@ -1,21 +1,21 @@
 Error: Not enough args provided
-   ╭─[<unknown>:1:1]
+   ╭─[<unknown>:2:1]
    │
  1 │ let add = (a: number, b: number): number => a + b;
    ·           ───────────────────┬───────────────────  
-   ·                              ╰───────────────────── (a: number, b: number) => number
+   ·                              ╰───────────────────── expected 2 args
  2 │ add();
    · ──┬──  
-   ·   ╰──── Expected 2 args, received 0 args
+   ·   ╰──── was passed 0 args
 ───╯
 
 Error: Not enough args provided
-   ╭─[<unknown>:1:1]
+   ╭─[<unknown>:5:1]
    │
  4 │ let add = (a, b) => a + b;
    ·           ───────┬───────  
-   ·                  ╰───────── (a: number, b: number) => number
+   ·                  ╰───────── expected 2 args
  5 │ add();
    · ──┬──  
-   ·   ╰──── Expected 2 args, received 0 args
+   ·   ╰──── was passed 0 args
 ───╯

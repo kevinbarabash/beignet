@@ -746,9 +746,10 @@ fn infer_property_type(
                                 let t = Type::from(TypeKind::Union(elem_types));
                                 Ok((prop_s, t))
                             }
-                            _ => Err(Report::new(TypeError::InvalidIndex(Box::from(
-                                prop_t.to_owned(),
-                            )))
+                            _ => Err(Report::new(TypeError::InvalidIndex(
+                                Box::from(obj_t.to_owned()),
+                                Box::from(prop_t.to_owned()),
+                            ))
                             .attach_printable(format!(
                                 "{keyword} is an invalid indexer for tuple types"
                             ))),
@@ -759,24 +760,26 @@ fn infer_property_type(
                                 match elem_types.get(index) {
                                     Some(t) => Ok((prop_s, t.to_owned())),
                                     None => Err(Report::new(TypeError::IndexOutOfBounds(
-                                        index,
                                         Box::from(obj_t.to_owned()),
+                                        Box::from(prop_t.to_owned()),
                                     ))
                                     .attach_printable(format!(
                                         "{index} is out of bounds for {obj_t}"
                                     ))),
                                 }
                             }
-                            _ => Err(Report::new(TypeError::InvalidIndex(Box::from(
-                                prop_t.to_owned(),
-                            )))
+                            _ => Err(Report::new(TypeError::InvalidIndex(
+                                Box::from(obj_t.to_owned()),
+                                Box::from(prop_t.to_owned()),
+                            ))
                             .attach_printable(format!(
                                 "{lit} is an invalid indexer for tuple types"
                             ))),
                         },
-                        _ => Err(Report::new(TypeError::InvalidIndex(Box::from(
-                            prop_t.to_owned(),
-                        )))
+                        _ => Err(Report::new(TypeError::InvalidIndex(
+                            Box::from(obj_t.to_owned()),
+                            Box::from(prop_t.to_owned()),
+                        ))
                         .attach_printable(format!(
                             "{prop_t} is an invalid indexer for tuple types"
                         ))),

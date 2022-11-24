@@ -24,8 +24,8 @@ pub enum TypeError {
     UnexpectedImutableValue,
 
     // Tuples and Arrays
-    InvalidIndex(Box<Type>),
-    IndexOutOfBounds(usize, Box<Type>),
+    InvalidIndex(Box<Type>, Box<Type>),
+    IndexOutOfBounds(Box<Type>, Box<Type>),
     TupleSpreadOutsideTuple, // include types
     NotEnoughElementsToUnpack,
     MoreThanOneRestPattern,
@@ -84,8 +84,8 @@ impl fmt::Display for TypeError {
             TypeError::InfiniteType => write!(fmt, "InfiniteType"),
             TypeError::InvalidComponent => write!(fmt, "InvalidComponent"),
             TypeError::InvalidFix => write!(fmt, "InvalidFix"),
-            TypeError::InvalidIndex(index) => {
-                write!(fmt, "InvalidIndex: {index} is not a valid index")
+            TypeError::InvalidIndex(obj, index) => {
+                write!(fmt, "InvalidIndex: {index} is not a valid index on {obj}")
             }
             TypeError::InvalidKey(key) => write!(fmt, "InvalidKey: {key} is not a valid key"),
             TypeError::InvalidTypeIndex(index) => write!(
