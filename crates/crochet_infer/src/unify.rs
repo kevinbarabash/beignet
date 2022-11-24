@@ -223,55 +223,59 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             // so that we don't have to search through all the params for the rest
             // param.
 
-            // TODO: Refactor this logic to be simpler, try to unify the rest and non-rest
-            // cases if possible.
-            if let Some(rest_param) = maybe_rest_param {
+            let (args, params) = if let Some(rest_param) = maybe_rest_param {
+                // let rest_param = maybe_rest_param.unwrap();
                 let max_regular_arg_count = lam.params.len() - 1;
                 let regular_arg_count = cmp::min(max_regular_arg_count, args.len());
 
                 let mut args = app.args.clone();
-                let regular_args: Vec<_> = args.drain(0..regular_arg_count).collect();
+                let mut regular_args: Vec<_> = args.drain(0..regular_arg_count).collect();
                 let rest_arg = Type::from(TypeKind::Tuple(args));
+                regular_args.push(rest_arg);
 
                 let mut params = lam.params.clone();
-                let regular_params: Vec<_> = params.drain(0..regular_arg_count).collect();
+                let mut regular_params: Vec<_> = params
+                    .drain(0..regular_arg_count)
+                    .map(|p| p.get_type())
+                    .collect();
+                regular_params.push(rest_param);
 
-                // Unify regular args and params
-                for (p1, p2) in regular_args.iter().zip(&regular_params) {
-                    // Each argument must be a subtype of the corresponding param.
-                    let arg = p1.apply(&s);
-                    let param = p2.apply(&s);
-                    let s1 = unify(&arg, &param.get_type(), ctx)?;
-                    s = compose_subs(&s, &s1);
-                }
-
-                // Unify remaining args with the rest param
-                let s1 = unify(&rest_arg, &rest_param, ctx)?;
-
-                // Unify return types
-                let s2 = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
-
-                Ok(compose_subs(&s2, &s1))
+                (regular_args, regular_params)
             } else if args.len() >= param_count_low_bound {
                 // NOTE: Any extra args are ignored.
+                let params = lam.params.iter().map(|p| p.get_type()).collect();
 
-                // Regular Application
-                for (p1, p2) in args.iter().zip(&lam.params) {
-                    // Each argument must be a subtype of the corresponding param.
-                    let arg = p1.apply(&s);
-                    let param = p2.get_type().apply(&s);
-                    let s1 = unify(&arg, &param, ctx)?;
-                    s = compose_subs(&s, &s1);
-                }
-                let s1 = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
-                Ok(compose_subs(&s, &s1))
+                (args, params)
             } else {
-                Err(Report::new(TypeError::TooFewArguments(
+                return Err(Report::new(TypeError::TooFewArguments(
                     Box::from(t1.to_owned()),
                     Box::from(t2.to_owned()),
                 ))
-                .attach_printable("Not enough args provided"))
+                .attach_printable("Not enough args provided"));
+            };
+
+            // Unify args with params
+            let mut reports: Vec<Report<TypeError>> = vec![];
+            for (p1, p2) in args.iter().zip(params) {
+                let arg = p1.apply(&s);
+                let param = p2.apply(&s);
+
+                // Each argument must be a subtype of the corresponding param.
+                match unify(&arg, &param, ctx) {
+                    Ok(s1) => s = compose_subs(&s, &s1),
+                    Err(report) => reports.push(report),
+                }
             }
+
+            if let Some(report) = merge_reports(reports) {
+                return Err(report);
+            }
+
+            // Unify return types
+            // Once #352 has been addressed we'll be able to also report
+            // unification errors with return types.
+            let s_ret = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
+            Ok(compose_subs(&s, &s_ret))
         }
         (TypeKind::App(_), TypeKind::Intersection(types)) => {
             for t in types {
@@ -682,6 +686,16 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Type
 
 fn occurs_check(tv: &TVar, t: &Type) -> bool {
     t.ftv().contains(tv)
+}
+
+fn merge_reports(reports: Vec<Report<TypeError>>) -> Option<Report<TypeError>> {
+    reports.into_iter().fold(None, |accum, report| match accum {
+        Some(mut accum) => {
+            accum.extend_one(report);
+            Some(accum)
+        }
+        None => Some(report),
+    })
 }
 
 #[cfg(test)]

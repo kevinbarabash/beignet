@@ -1,12 +1,23 @@
 Error: Incompatible types
-   ╭─[<unknown>:2:5]
+   ╭─[<unknown>:2:23]
    │
  1 │ let add = (a: number, b: number): number => a + b;
    ·               ───┬──  
    ·                  ╰──── number
- 2 │ add("hello", "world");
-   ·     ───┬───  
-   ·        ╰───── "hello"
+ 2 │ let sum: string = add("hello", "world");
+   ·                       ───┬───  
+   ·                          ╰───── "hello"
+───╯
+
+Error: Incompatible types
+   ╭─[<unknown>:2:32]
+   │
+ 1 │ let add = (a: number, b: number): number => a + b;
+   ·                          ───┬──  
+   ·                             ╰──── number
+ 2 │ let sum: string = add("hello", "world");
+   ·                                ───┬───  
+   ·                                   ╰───── "world"
 ───╯
 
 Error: Incompatible types
@@ -18,6 +29,17 @@ Error: Incompatible types
  5 │ add("hello", "world");
    ·     ───┬───  
    ·        ╰───── "hello"
+───╯
+
+Error: Incompatible types
+   ╭─[<unknown>:5:14]
+   │
+ 4 │ let add = (a, b) => a + b;
+   ·               ┬  
+   ·               ╰── number
+ 5 │ add("hello", "world");
+   ·              ───┬───  
+   ·                 ╰───── "world"
 ───╯
 
 Error: Incompatible types
