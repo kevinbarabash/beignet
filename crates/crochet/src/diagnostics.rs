@@ -5,7 +5,7 @@ use error_stack::Report;
 use crate::compile_error::CompileError;
 use crochet_ast::{
     types::{Type, TypeKind},
-    values::Span,
+    values::{ExprKind, Span},
 };
 
 fn get_provenance_spans(t1: &Type, t2: &Type) -> Option<(Span, Span)> {
@@ -65,6 +65,18 @@ pub fn get_diagnostics(report: Report<CompileError>, src: &str) -> Vec<String> {
                     } else {
                         0
                     };
+                    let expr = if let Some(prov) = &lam_t.provenance {
+                        prov.get_expr()
+                    } else {
+                        None
+                    };
+                    if let Some(expr) = expr {
+                        if let ExprKind::Lambda(lam) = &expr.kind {
+                            // TODO: Add a span to lam.params so that we don't
+                            // have to compute it here.
+                            println!("params = {:#?}", lam.params)
+                        }
+                    }
                     // TODO: figure out how to get a span for just the function
                     // signature or just the param list.
                     get_diagnostic_string(

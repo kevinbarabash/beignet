@@ -78,7 +78,7 @@ impl fmt::Display for TypeError {
         match self {
             TypeError::AwaitOutsideOfAsync => write!(fmt, "AwaitOutsideOfAsync"),
             TypeError::ConsequentMustReturnVoid => write!(fmt, "ConsequentMustReturnVoid"),
-            TypeError::IndexOutOfBounds(index, tuple_t) => {
+            TypeError::IndexOutOfBounds(tuple_t, index) => {
                 write!(fmt, "IndexOutOfBounds: {index} out of bounds for {tuple_t}")
             }
             TypeError::InfiniteType => write!(fmt, "InfiniteType"),

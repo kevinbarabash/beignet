@@ -1700,7 +1700,7 @@ mod tests {
             vec![
                 "[5, \"hello\", true] is an invalid indexer for tuple types",
                 "Location",
-                "TypeError::InvalidIndex: [5, \"hello\", true] is not a valid index"
+                "TypeError::InvalidIndex: [5, \"hello\", true] is not a valid index on [5, \"hello\", true]"
             ]
         );
     }
