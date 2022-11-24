@@ -1,0 +1,33 @@
+Error: Incompatible types
+   ╭─[<unknown>:2:15]
+   │
+ 1 │ let add = (...args: [number, number]): number => args[0] + args[1];
+   ·                      ───┬──  
+   ·                         ╰──── number
+ 2 │ let sum = add("hello", "world");
+   ·               ───┬───  
+   ·                  ╰───── "hello"
+───╯
+
+Error: Incompatible types
+   ╭─[<unknown>:2:24]
+   │
+ 1 │ let add = (...args: [number, number]): number => args[0] + args[1];
+   ·                              ───┬──  
+   ·                                 ╰──── number
+ 2 │ let sum = add("hello", "world");
+   ·                        ───┬───  
+   ·                           ╰───── "world"
+───╯
+
+Error: Not enough args provided
+   ╭─[<unknown>:3:1]
+   │
+ 1 │ let add = (...args: [number, number]): number => args[0] + args[1];
+   ·           ────────────────────────────┬───────────────────────────  
+   ·                                       ╰───────────────────────────── expected 1 args
+   · 
+ 3 │ add();
+   · ──┬──  
+   ·   ╰──── was passed 0 args
+───╯

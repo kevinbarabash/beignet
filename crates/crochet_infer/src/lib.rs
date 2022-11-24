@@ -1137,6 +1137,25 @@ mod tests {
     }
 
     #[test]
+    fn call_fn_with_rest_param_and_optional_param() {
+        let src = r#"
+        // let add = (a, b?: number, ...c: number[]) => a;
+        // let add5 = add(5);
+        let foo = (a: number, b?: number, ...c: number[]) => a;
+        foo(5);
+        foo(5, 10);
+        foo(5, 10, 15);
+        foo(5, 10, 15, 20);
+
+        let bar = (a: number, b?: number, ...c: [number, number]) => a;
+        // bar(5, undefined, 15, 20);
+        bar(5, 10, 15, 20);
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
     fn infer_optional_param_type() {
         let src = r#"
         let plus_one = (a, b?) => {
