@@ -40,7 +40,9 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     ExprKind::Tuple(_) => return Ok(Subst::new()),
                     _ => (),
                 },
+                types::Provenance::Pattern(_) => (),
                 types::Provenance::Type(_) => (),
+                types::Provenance::TypeAnn(_) => (),
             },
             None => (),
         };
@@ -210,8 +212,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             }
 
             if args.len() < param_count_low_bound {
-                return Err(Report::new(TypeError::TooFewArguments)
-                    .attach_printable("Not enough args provided"));
+                return Err(Report::new(TypeError::TooFewArguments(
+                    Box::from(t1.to_owned()),
+                    Box::from(t2.to_owned()),
+                ))
+                .attach_printable("Not enough args provided"));
             }
 
             // TODO: Add a `variadic` boolean to the Lambda type as a convenience
@@ -261,8 +266,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 let s1 = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
             } else {
-                Err(Report::new(TypeError::TooFewArguments)
-                    .attach_printable("Not enough args provided"))
+                Err(Report::new(TypeError::TooFewArguments(
+                    Box::from(t1.to_owned()),
+                    Box::from(t2.to_owned()),
+                ))
+                .attach_printable("Not enough args provided"))
             }
         }
         (TypeKind::App(_), TypeKind::Intersection(types)) => {

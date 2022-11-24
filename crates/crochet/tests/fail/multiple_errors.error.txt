@@ -1,7 +1,0 @@
-CompileError
-│
-╰┬▶ TypeError::UnificationError: "hello", number
- │  ╰╴ Unification failure
- │
- ╰▶ TypeError::UnificationError: true, number
-    ╰╴ Unification failure

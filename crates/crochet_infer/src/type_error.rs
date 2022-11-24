@@ -24,8 +24,8 @@ pub enum TypeError {
     UnexpectedImutableValue,
 
     // Tuples and Arrays
-    InvalidIndex(Box<Type>),
-    IndexOutOfBounds(usize, Box<Type>),
+    InvalidIndex(Box<Type>, Box<Type>),
+    IndexOutOfBounds(Box<Type>, Box<Type>),
     TupleSpreadOutsideTuple, // include types
     NotEnoughElementsToUnpack,
     MoreThanOneRestPattern,
@@ -41,13 +41,13 @@ pub enum TypeError {
     NoValidCallable,
     NoValidOverload,
     InvalidSpread(Box<Type>),
+    TooFewArguments(Box<Type>, Box<Type>), // application, lambda
+
+    // Recursive functions
+    InvalidFix,
 
     // JSX
     InvalidComponent,
-
-    // Functions
-    InvalidFix,
-    TooFewArguments,
 
     // Indexed Access Types
     InvalidTypeIndex(Box<Type>),
@@ -78,14 +78,14 @@ impl fmt::Display for TypeError {
         match self {
             TypeError::AwaitOutsideOfAsync => write!(fmt, "AwaitOutsideOfAsync"),
             TypeError::ConsequentMustReturnVoid => write!(fmt, "ConsequentMustReturnVoid"),
-            TypeError::IndexOutOfBounds(index, tuple_t) => {
+            TypeError::IndexOutOfBounds(tuple_t, index) => {
                 write!(fmt, "IndexOutOfBounds: {index} out of bounds for {tuple_t}")
             }
             TypeError::InfiniteType => write!(fmt, "InfiniteType"),
             TypeError::InvalidComponent => write!(fmt, "InvalidComponent"),
             TypeError::InvalidFix => write!(fmt, "InvalidFix"),
-            TypeError::InvalidIndex(index) => {
-                write!(fmt, "InvalidIndex: {index} is not a valid index")
+            TypeError::InvalidIndex(obj, index) => {
+                write!(fmt, "InvalidIndex: {index} is not a valid index on {obj}")
             }
             TypeError::InvalidKey(key) => write!(fmt, "InvalidKey: {key} is not a valid key"),
             TypeError::InvalidTypeIndex(index) => write!(
@@ -105,7 +105,7 @@ impl fmt::Display for TypeError {
             TypeError::PossiblyNotAnObject(t) => {
                 write!(fmt, "PossiblyNotAnObject: {t} might not be an object")
             }
-            TypeError::TooFewArguments => write!(fmt, "TooFewArguments"),
+            TypeError::TooFewArguments(_, _) => write!(fmt, "TooFewArguments"),
             TypeError::TupleSpreadOutsideTuple => write!(fmt, "TupleSpreadOutsideTuple"),
             TypeError::UnexpectedImutableValue => write!(fmt, "UnexpectedImutableValue"),
             // TODO: differentiate between sub-typing unification and exact unification

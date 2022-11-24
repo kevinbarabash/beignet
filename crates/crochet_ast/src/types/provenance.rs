@@ -1,10 +1,54 @@
 use crate::types::Type;
-use crate::values::Expr;
+use crate::values::{Expr, Pattern, Span, TypeAnn};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Provenance {
     Expr(Box<Expr>),
+    Pattern(Box<Pattern>),
     Type(Box<Type>),
+    TypeAnn(Box<TypeAnn>),
+}
+
+impl Provenance {
+    pub fn get_span(&self) -> Option<Span> {
+        match self {
+            Provenance::Expr(expr) => match &expr.inferred_type {
+                Some(t) => match &t.provenance {
+                    Some(prov) => prov.get_span(),
+                    // Fallback to `expr`'s span, if the `inferred_type` has no
+                    // provenance.
+                    None => Some(expr.span.to_owned()),
+                },
+                None => Some(expr.span.to_owned()),
+            },
+            Provenance::Pattern(pattern) => Some(pattern.span.to_owned()),
+            Provenance::Type(t) => match &t.provenance {
+                Some(prov) => prov.get_span(),
+                None => None,
+            },
+            Provenance::TypeAnn(type_ann) => Some(type_ann.span.to_owned()),
+        }
+    }
+
+    pub fn get_expr(&self) -> Option<Box<Expr>> {
+        match self {
+            Provenance::Expr(expr) => match &expr.inferred_type {
+                Some(t) => match &t.provenance {
+                    Some(prov) => prov.get_expr(),
+                    // Fallback to `expr`'s span, if the `inferred_type` has no
+                    // provenance.
+                    None => Some(expr.to_owned()),
+                },
+                None => Some(expr.to_owned()),
+            },
+            Provenance::Pattern(_) => None,
+            Provenance::Type(t) => match &t.provenance {
+                Some(prov) => prov.get_expr(),
+                None => None,
+            },
+            Provenance::TypeAnn(_) => None,
+        }
+    }
 }
 
 impl From<Expr> for Provenance {

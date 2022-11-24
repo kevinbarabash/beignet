@@ -1700,7 +1700,7 @@ mod tests {
             vec![
                 "[5, \"hello\", true] is an invalid indexer for tuple types",
                 "Location",
-                "TypeError::InvalidIndex: [5, \"hello\", true] is not a valid index"
+                "TypeError::InvalidIndex: [5, \"hello\", true] is not a valid index on [5, \"hello\", true]"
             ]
         );
     }
@@ -2658,21 +2658,15 @@ mod tests {
         assert_eq!(get_value_type("arr", &ctx), "mut number[]");
     }
 
-    // TODO: fix this test
     #[test]
     #[should_panic = "Cannot use immutable type where a mutable type was expected"]
-    fn test_mutable_arrays_with_immutable_variable_initializer() {
+    fn test_mutable_array_cannot_be_assigned_immutable_tuple() {
         let src = r#"
-        declare let sort: (num_arr: mut number[]) => undefined;
         let tuple = [1, 2, 3];
-        let arr: mut number[] = tuple;
-        sort(arr);
+        let mut_arr: mut number[] = tuple;
         "#;
 
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_value_type("tuple", &ctx), "[1, 2, 3]");
-        assert_eq!(get_value_type("arr", &ctx), "mut number[]");
+        infer_prog(src);
     }
 
     #[test]

@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::types::{
-    self as types, TFnParam, TIndex, TKeyword, TObjElem, TObject, TProp, TVar, Type, TypeKind,
+    self as types, Provenance, TFnParam, TIndex, TKeyword, TObjElem, TObject, TProp, TVar, Type,
+    TypeKind,
 };
 use crochet_ast::values::*;
 
@@ -71,7 +72,7 @@ fn infer_type_ann_rec(
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Type), TypeError> {
-    match &mut type_ann.kind {
+    let (s, mut t) = match &mut type_ann.kind {
         TypeAnnKind::Lam(lam) => {
             let mut ss: Vec<Subst> = vec![];
             let mut params: Vec<types::TFnParam> = vec![];
@@ -289,7 +290,13 @@ fn infer_type_ann_rec(
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
-    }
+    }?;
+
+    t.provenance = Some(Box::from(Provenance::TypeAnn(Box::from(
+        type_ann.to_owned(),
+    ))));
+
+    Ok((s, t))
 }
 
 fn infer_property_type(

@@ -14,6 +14,7 @@ use crochet_infer::*;
 use crochet_parser::parse;
 
 use crochet::compile_error::CompileError;
+use crochet::diagnostics::get_diagnostics;
 
 enum Mode {
     Check,
@@ -86,7 +87,7 @@ fn compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
 
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
-#[testing_macros::fixture("tests/fail/*.crochet")]
+#[testing_macros::fixture("tests/errors/*.crochet")]
 fn fail(in_path: PathBuf) {
     Report::install_debug_hook::<Location>(|_location, _context| {
         // This function doesn't do anything b/c we want to override the default
@@ -101,15 +102,17 @@ fn fail(in_path: PathBuf) {
     };
 
     let mut error_output_path = in_path.clone();
-    error_output_path.set_extension("error.txt");
+    error_output_path.set_extension("error");
 
     let input = fs::read_to_string(in_path).unwrap();
 
     match compile(&input, &lib) {
         Ok(_) => panic!("Expected an error"),
         Err(report) => {
-            let buf = strip_ansi_escapes::strip(format!("{report:#?}")).unwrap();
-            let error_output = str::from_utf8(&buf).unwrap();
+            // let buf = strip_ansi_escapes::strip(format!("{report:#?}")).unwrap();
+            // let error_output = str::from_utf8(&buf).unwrap();
+            let diagnostics = get_diagnostics(report, &input);
+            let error_output = diagnostics.join("\n");
             match mode {
                 Mode::Check => {
                     let error_fixture = fs::read_to_string(error_output_path).unwrap();

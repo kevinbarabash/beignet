@@ -30,10 +30,14 @@ pub fn infer_fn_param(
         pt
     };
 
+    // If the param is optional...
     if param.optional {
+        // ...we replace all bindings with new bindings where the type `T` is
+        // updated to `T | undefined`.
         if let Some((name, binding)) = pa.iter().find(|(_, value)| pt == value.t) {
             let binding = Binding {
-                mutable: false,
+                mutable: binding.mutable,
+                // TODO: copy over the provenance from binding.t
                 t: Type::from(TypeKind::Union(vec![
                     binding.t.to_owned(),
                     Type::from(TypeKind::Keyword(TKeyword::Undefined)),

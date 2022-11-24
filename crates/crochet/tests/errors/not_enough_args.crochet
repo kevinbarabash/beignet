@@ -1,0 +1,5 @@
+let add = (a: number, b: number): number => a + b;
+add();
+
+let add = (a, b) => a + b;
+add();

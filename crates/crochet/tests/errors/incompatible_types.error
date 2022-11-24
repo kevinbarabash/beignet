@@ -1,0 +1,31 @@
+Error: Incompatible types
+   ╭─[<unknown>:2:5]
+   │
+ 1 │ let add = (a: number, b: number): number => a + b;
+   ·               ───┬──  
+   ·                  ╰──── number
+ 2 │ add("hello", "world");
+   ·     ───┬───  
+   ·        ╰───── "hello"
+───╯
+
+Error: Incompatible types
+   ╭─[<unknown>:5:5]
+   │
+ 4 │ let add = (a, b) => a + b;
+   ·            ┬  
+   ·            ╰── number
+ 5 │ add("hello", "world");
+   ·     ───┬───  
+   ·        ╰───── "hello"
+───╯
+
+Error: Incompatible types
+   ╭─[<unknown>:8:17]
+   │
+ 8 │ let b: number = "5";
+   ·        ───┬──   ─┬─  
+   ·           ╰────────── number
+   ·                  │   
+   ·                  ╰─── "5"
+───╯

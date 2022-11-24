@@ -8,8 +8,10 @@ use crochet_dts::parse_dts::parse_dts;
 use crochet_infer::*;
 
 pub mod compile_error;
+pub mod diagnostics;
 
 use crate::compile_error::CompileError;
+use crate::diagnostics::get_diagnostics;
 
 #[repr(C)]
 pub struct WasmString {
@@ -94,11 +96,12 @@ pub unsafe extern "C" fn compile(input: *const c_char, lib: *const c_char) -> *c
             Box::into_raw(Box::new(result))
         }
         Err(report) => {
+            let diagnostics = get_diagnostics(report, input);
             let result = CompileResult {
                 js: string_to_wasm_string(""),
                 dts: string_to_wasm_string(""),
                 // TODO: update report to exclude Crochet source code locations
-                error: string_to_wasm_string(&format!("{report:#?}")),
+                error: string_to_wasm_string(&diagnostics.join("\n")),
             };
             Box::into_raw(Box::new(result))
         }

@@ -40,11 +40,17 @@ impl Substitutable for Type {
 
             TypeKind::Var(tv) => match sub.get(&tv.id) {
                 Some(replacement) => {
+                    // If the replacement has no provenance, point to ourselves.
+                    let provenance = match replacement.provenance {
+                        Some(_) => replacement.provenance.to_owned(),
+                        None => Some(Box::from(Provenance::from(self))),
+                    };
+
                     // TODO: apply the constraint and then check if the replacement
                     // is a subtype of it.
                     return norm_type(Type {
                         kind: replacement.kind.to_owned(),
-                        provenance: Some(Box::from(Provenance::from(self))),
+                        provenance,
                         mutable: replacement.mutable,
                     });
                 }

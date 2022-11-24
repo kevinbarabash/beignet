@@ -44,10 +44,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
             // Are we missing an `apply()` call here?
             // Maybe, I could see us needing an apply to handle generic functions properly
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
-            let call_type = Type::from(TypeKind::App(types::TApp {
+            let mut call_type = Type::from(TypeKind::App(types::TApp {
                 args: arg_types,
                 ret: Box::from(ret_type.clone()),
             }));
+            call_type.provenance = Some(Box::from(Provenance::Expr(Box::from(expr.to_owned()))));
+
             let s3 = unify(&call_type, &lam_type, ctx)?;
 
             ss.push(s3);
@@ -744,9 +746,10 @@ fn infer_property_type(
                                 let t = Type::from(TypeKind::Union(elem_types));
                                 Ok((prop_s, t))
                             }
-                            _ => Err(Report::new(TypeError::InvalidIndex(Box::from(
-                                prop_t.to_owned(),
-                            )))
+                            _ => Err(Report::new(TypeError::InvalidIndex(
+                                Box::from(obj_t.to_owned()),
+                                Box::from(prop_t.to_owned()),
+                            ))
                             .attach_printable(format!(
                                 "{keyword} is an invalid indexer for tuple types"
                             ))),
@@ -757,24 +760,26 @@ fn infer_property_type(
                                 match elem_types.get(index) {
                                     Some(t) => Ok((prop_s, t.to_owned())),
                                     None => Err(Report::new(TypeError::IndexOutOfBounds(
-                                        index,
                                         Box::from(obj_t.to_owned()),
+                                        Box::from(prop_t.to_owned()),
                                     ))
                                     .attach_printable(format!(
                                         "{index} is out of bounds for {obj_t}"
                                     ))),
                                 }
                             }
-                            _ => Err(Report::new(TypeError::InvalidIndex(Box::from(
-                                prop_t.to_owned(),
-                            )))
+                            _ => Err(Report::new(TypeError::InvalidIndex(
+                                Box::from(obj_t.to_owned()),
+                                Box::from(prop_t.to_owned()),
+                            ))
                             .attach_printable(format!(
                                 "{lit} is an invalid indexer for tuple types"
                             ))),
                         },
-                        _ => Err(Report::new(TypeError::InvalidIndex(Box::from(
-                            prop_t.to_owned(),
-                        )))
+                        _ => Err(Report::new(TypeError::InvalidIndex(
+                            Box::from(obj_t.to_owned()),
+                            Box::from(prop_t.to_owned()),
+                        ))
                         .attach_printable(format!(
                             "{prop_t} is an invalid indexer for tuple types"
                         ))),

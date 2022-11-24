@@ -1,4 +1,0 @@
-let add = (a, b) => a + b;
-
-add("hello", "world");
-add(true, false);
