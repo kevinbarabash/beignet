@@ -165,8 +165,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
         (TypeKind::App(app), TypeKind::Lam(lam)) => {
             let mut s = Subst::new();
 
-            let last_param_2 = lam.params.last();
-            let maybe_rest_param = if let Some(param) = last_param_2 {
+            let maybe_rest_param = if let Some(param) = lam.params.last() {
                 match &param.pat {
                     types::TPat::Rest(_) => Some(param.t.to_owned()),
                     _ => None,
@@ -190,11 +189,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     false => accum,
                 });
 
-            let param_count_low_bound = match maybe_rest_param {
-                Some(_) => lam.params.len() - optional_count - 1,
-                None => lam.params.len() - optional_count,
-            };
-
             // NOTE: placeholder spreads must come last because we don't know they're
             // length.  This will also be true for spreading arrays, but in the case
             // of array spreads, they also need to come after the start of a rest param.
@@ -211,67 +205,114 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 }
             }
 
-            if args.len() < param_count_low_bound {
-                return Err(Report::new(TypeError::TooFewArguments(
-                    Box::from(t1.to_owned()),
-                    Box::from(t2.to_owned()),
-                ))
-                .attach_printable("Not enough args provided"));
-            }
-
             // TODO: Add a `variadic` boolean to the Lambda type as a convenience
             // so that we don't have to search through all the params for the rest
             // param.
 
-            // TODO: Refactor this logic to be simpler, try to unify the rest and non-rest
-            // cases if possible.
-            if let Some(rest_param) = maybe_rest_param {
-                let max_regular_arg_count = lam.params.len() - 1;
-                let regular_arg_count = cmp::min(max_regular_arg_count, args.len());
+            let (args, params) = match maybe_rest_param {
+                Some(rest_param) => match &rest_param.kind {
+                    TypeKind::Array(_) => {
+                        let max_regular_arg_count = lam.params.len() - 1;
 
-                let mut args = app.args.clone();
-                let regular_args: Vec<_> = args.drain(0..regular_arg_count).collect();
-                let rest_arg = Type::from(TypeKind::Tuple(args));
+                        if args.len() < max_regular_arg_count - optional_count {
+                            return Err(Report::new(TypeError::TooFewArguments(
+                                Box::from(t1.to_owned()),
+                                Box::from(t2.to_owned()),
+                            ))
+                            .attach_printable("Not enough args provided"));
+                        }
 
-                let mut params = lam.params.clone();
-                let regular_params: Vec<_> = params.drain(0..regular_arg_count).collect();
+                        let regular_arg_count = cmp::min(max_regular_arg_count, args.len());
+                        let (args, rest_args) = app.args.split_at(regular_arg_count);
+                        let mut args = args.to_vec();
+                        // If there are any optional params for which there isn't
+                        // an arg, we provide `undefined` as an arg.  This is done
+                        // so that the number of args and params will line up with
+                        // the last arg being a tuple type and the last param being
+                        // an array type.
+                        for _ in 0..max_regular_arg_count - regular_arg_count {
+                            args.push(Type::from(TypeKind::Keyword(TKeyword::Undefined)));
+                        }
+                        args.push(Type::from(TypeKind::Tuple(rest_args.to_owned())));
 
-                // Unify regular args and params
-                for (p1, p2) in regular_args.iter().zip(&regular_params) {
-                    // Each argument must be a subtype of the corresponding param.
-                    let arg = p1.apply(&s);
-                    let param = p2.apply(&s);
-                    let s1 = unify(&arg, &param.get_type(), ctx)?;
-                    s = compose_subs(&s, &s1);
+                        let mut params: Vec<_> = lam.params.iter().map(|p| p.get_type()).collect();
+                        params.pop(); // Remove rest type
+                        params.push(rest_param); // Add array type
+
+                        // Given the function: let foo = (x: number, y?: number, ...z: number[]);
+                        // `params` should be `[number, number | undefined, number[]]`
+                        //
+                        // Given the call foo(5);
+                        // `args` should be `[5, undefined, []]`
+                        //
+                        // Given the call foo(5, 10);
+                        // `args` should be `[5, 10, []]`
+                        //
+                        // Given the call foo(5, 10, 15, 20);
+                        // `args` should be `[5, 10, [15, 20]]`
+                        //
+                        // All of these calls are valid and `args` and `params`
+                        // should piece-wise unify successfully.
+
+                        // NOTE: Any extra args are ignored.
+                        (args, params)
+                    }
+                    TypeKind::Tuple(tuple) => {
+                        let mut params: Vec<_> = lam.params.iter().map(|p| p.get_type()).collect();
+                        params.pop(); // Remove rest type
+                        params.extend(tuple.to_owned()); // Add each type from the tuple type
+
+                        if args.len() < params.len() {
+                            return Err(Report::new(TypeError::TooFewArguments(
+                                Box::from(t1.to_owned()),
+                                Box::from(t2.to_owned()),
+                            ))
+                            .attach_printable("Not enough args provided"));
+                        }
+
+                        // NOTE: Any extra args are ignored.
+                        (args, params)
+                    }
+                    _ => panic!("{rest_param} cannot be used as a rest param"),
+                },
+                None => {
+                    let params = lam.params.iter().map(|p| p.get_type()).collect();
+
+                    if args.len() < lam.params.len() - optional_count {
+                        return Err(Report::new(TypeError::TooFewArguments(
+                            Box::from(t1.to_owned()),
+                            Box::from(t2.to_owned()),
+                        ))
+                        .attach_printable("Not enough args provided"));
+                    }
+
+                    // NOTE: Any extra args are ignored.
+                    (args, params)
                 }
+            };
 
-                // Unify remaining args with the rest param
-                let s1 = unify(&rest_arg, &rest_param, ctx)?;
+            // Unify args with params
+            let mut reports: Vec<Report<TypeError>> = vec![];
+            for (p1, p2) in args.iter().zip(params) {
+                let arg = p1.apply(&s);
+                let param = p2.apply(&s);
 
-                // Unify return types
-                let s2 = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
-
-                Ok(compose_subs(&s2, &s1))
-            } else if args.len() >= param_count_low_bound {
-                // NOTE: Any extra args are ignored.
-
-                // Regular Application
-                for (p1, p2) in args.iter().zip(&lam.params) {
-                    // Each argument must be a subtype of the corresponding param.
-                    let arg = p1.apply(&s);
-                    let param = p2.get_type().apply(&s);
-                    let s1 = unify(&arg, &param, ctx)?;
-                    s = compose_subs(&s, &s1);
+                // Each argument must be a subtype of the corresponding param.
+                match unify(&arg, &param, ctx) {
+                    Ok(s1) => s = compose_subs(&s, &s1),
+                    Err(report) => reports.push(report),
                 }
-                let s1 = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
-                Ok(compose_subs(&s, &s1))
-            } else {
-                Err(Report::new(TypeError::TooFewArguments(
-                    Box::from(t1.to_owned()),
-                    Box::from(t2.to_owned()),
-                ))
-                .attach_printable("Not enough args provided"))
             }
+
+            if let Some(report) = merge_reports(reports) {
+                return Err(report);
+            }
+
+            // Unify return types
+            // Once #352 has been addressed we'll be able to also report
+            // unification errors with return types.
+            let s_ret = unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
+            Ok(compose_subs(&s, &s_ret))
         }
         (TypeKind::App(_), TypeKind::Intersection(types)) => {
             for t in types {
@@ -369,9 +410,12 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
 
             let mut ss: Vec<Subst> = vec![];
 
+            let mut reports: Vec<_> = vec![];
             for (t1, t2) in before1.iter().zip(before2.iter()) {
-                let s = unify(t1, t2, ctx)?;
-                ss.push(s);
+                match unify(t1, t2, ctx) {
+                    Ok(s) => ss.push(s),
+                    Err(report) => reports.push(report),
+                }
             }
 
             if let Some(rest2) = maybe_rest2 {
@@ -382,12 +426,17 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 ss.push(s);
 
                 for (t1, t2) in after1.iter().zip(after2.iter()) {
-                    let s = unify(t1, t2, ctx)?;
-                    ss.push(s);
+                    match unify(t1, t2, ctx) {
+                        Ok(s) => ss.push(s),
+                        Err(report) => reports.push(report),
+                    }
                 }
             }
 
-            Ok(compose_many_subs(&ss))
+            match merge_reports(reports) {
+                Some(report) => Err(report),
+                None => Ok(compose_many_subs(&ss)),
+            }
         }
         (TypeKind::Tuple(tuple_types), TypeKind::Array(array_type)) => {
             if tuple_types.is_empty() {
@@ -564,9 +613,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             let alias_t = ctx.lookup_ref_and_instantiate(alias)?;
             unify(&alias_t, t2, ctx)
         }
-        (TypeKind::Array(array_arg), TypeKind::Rest(rest_arg)) => {
-            unify(array_arg.as_ref(), rest_arg.as_ref(), ctx)
-        }
+        (TypeKind::Array(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_ref(), ctx),
+        (TypeKind::Tuple(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_ref(), ctx),
         (_, TypeKind::KeyOf(t)) => unify(t1, &key_of(t, ctx)?, ctx),
         (TypeKind::Keyword(keyword1), TypeKind::Keyword(keyword2)) => match (keyword1, keyword2) {
             (TKeyword::Number, TKeyword::Number) => Ok(Subst::new()),
@@ -682,6 +730,16 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Type
 
 fn occurs_check(tv: &TVar, t: &Type) -> bool {
     t.ftv().contains(tv)
+}
+
+fn merge_reports(reports: Vec<Report<TypeError>>) -> Option<Report<TypeError>> {
+    reports.into_iter().fold(None, |accum, report| match accum {
+        Some(mut accum) => {
+            accum.extend_one(report);
+            Some(accum)
+        }
+        None => Some(report),
+    })
 }
 
 #[cfg(test)]

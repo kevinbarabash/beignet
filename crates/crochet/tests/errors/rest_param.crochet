@@ -1,0 +1,3 @@
+let add = (...args: [number, number]): number => args[0] + args[1];
+let sum = add("hello", "world");
+add();

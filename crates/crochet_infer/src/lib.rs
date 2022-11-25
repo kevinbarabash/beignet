@@ -2899,36 +2899,6 @@ mod tests {
     }
 
     #[test]
-    fn report_multiple_errors() {
-        let src = r#"
-        declare let add: (a: number, b: number) => number;
-        add("hello", "world");
-        add(true, false);
-        "#;
-
-        let mut prog = parse(src).unwrap();
-        let mut ctx: Context = Context::default();
-        match infer::infer_prog(&mut prog, &mut ctx) {
-            Ok(_) => panic!("expected an error"),
-            Err(report) => {
-                println!("{report:#?}");
-                let messages = messages(&report);
-                assert_eq!(
-                    messages,
-                    vec![
-                        "Unification failure",
-                        "Location",
-                        "TypeError::UnificationError: \"hello\", number",
-                        "Unification failure",
-                        "Location",
-                        "TypeError::UnificationError: true, number"
-                    ]
-                );
-            }
-        }
-    }
-
-    #[test]
     fn primitives_cannot_be_mutable() {
         let src = r#"
         declare let mut_str: mut string;

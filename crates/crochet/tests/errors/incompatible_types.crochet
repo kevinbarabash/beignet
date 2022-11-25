@@ -1,5 +1,5 @@
 let add = (a: number, b: number): number => a + b;
-add("hello", "world");
+let sum: string = add("hello", "world");
 
 let add = (a, b) => a + b;
 add("hello", "world");

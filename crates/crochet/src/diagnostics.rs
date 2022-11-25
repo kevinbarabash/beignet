@@ -104,7 +104,10 @@ pub fn get_diagnostics(report: Report<CompileError>, src: &str) -> Vec<String> {
                     "for tuples",
                     &format!("{prop_t} is not a valid index"),
                 ),
-                _ => None,
+                error => {
+                    println!("TODO: handle {error}");
+                    None
+                }
             },
             None => None,
         })
