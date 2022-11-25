@@ -255,9 +255,10 @@ fn infer_if_else_with_widening() {
 }
 
 #[test]
-#[should_panic = "statement blocks cannot end with a declaration"]
-fn infer_value_of_let_decl_is_undefined() {
-    infer_prog("let x = if (true) { let a = 5; };");
+fn infer_value_of_let_from_a_block_return_is_undefined() {
+    let (_, ctx) = infer_prog("let x = if (true) { let a = 5; };");
+    let result = format!("{}", ctx.lookup_value("x").unwrap());
+    assert_eq!(result, "undefined");
 }
 
 #[test]
@@ -1242,7 +1243,6 @@ fn return_empty() {
 }
 
 #[test]
-#[should_panic = "statement blocks cannot end with a declaration"]
 fn return_empty_with_body() {
     let src = r#"
     let foo = () => {
@@ -1250,7 +1250,10 @@ fn return_empty_with_body() {
     };
     "#;
 
-    infer_prog(src);
+    let (_, ctx) = infer_prog(src);
+
+    let func = format!("{}", ctx.lookup_value("foo").unwrap());
+    assert_eq!(func, "() => undefined");
 }
 
 #[test]
