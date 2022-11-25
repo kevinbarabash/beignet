@@ -1,6 +1,7 @@
 use crate::types::Type;
 use crate::values::ident::*;
 use crate::values::jsx::JSXElement;
+use crate::values::keyword::Keyword;
 use crate::values::lit::Lit;
 use crate::values::pattern::{Pattern, PatternKind};
 use crate::values::span::Span;
@@ -272,6 +273,7 @@ pub enum ExprKind {
     Assign(Assign),
     LetExpr(LetExpr), // should only be used in `if let` expressions
     Lit(Lit),
+    Keyword(Keyword),
     BinaryExpr(BinaryExpr),
     UnaryExpr(UnaryExpr),
     Obj(Obj),

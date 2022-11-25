@@ -416,6 +416,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             })
         }
         values::ExprKind::Lit(lit) => Expr::from(lit),
+        values::ExprKind::Keyword(keyword) => Expr::from(keyword),
         values::ExprKind::BinaryExpr(values::BinaryExpr {
             op, left, right, ..
         }) => {

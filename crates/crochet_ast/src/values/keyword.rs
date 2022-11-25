@@ -1,5 +1,7 @@
 use std::fmt;
 
+use swc_common::DUMMY_SP;
+
 use crate::types::{TKeyword, Type, TypeKind};
 use crate::values::span::Span;
 
@@ -54,6 +56,29 @@ impl From<Keyword> for Type {
             }),
             provenance: None,
             mutable: false,
+        }
+    }
+}
+
+impl From<&Keyword> for swc_ecma_ast::Expr {
+    fn from(keyword: &Keyword) -> Self {
+        match keyword {
+            Keyword::Number => todo!(),
+            Keyword::Boolean => todo!(),
+            Keyword::String => todo!(),
+            Keyword::Null => {
+                let lit = swc_ecma_ast::Lit::Null(swc_ecma_ast::Null { span: DUMMY_SP });
+                swc_ecma_ast::Expr::Lit(lit)
+            }
+            Keyword::Symbol => todo!(),
+            Keyword::Undefined => {
+                let ident = swc_ecma_ast::Ident {
+                    span: DUMMY_SP,
+                    sym: swc_atoms::JsWord::from(String::from("undefined")),
+                    optional: false,
+                };
+                swc_ecma_ast::Expr::Ident(ident)
+            }
         }
     }
 }
