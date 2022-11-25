@@ -189,14 +189,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     false => accum,
                 });
 
-            // TODO: We need to check whether the rest param is a tuple or an
-            // array.  If it's a tuple then we can know the exact number of params
-            // ahead of time.
-            // let param_count_low_bound = match maybe_rest_param {
-            //     Some(_) => lam.params.len() - optional_count - 1,
-            //     None => lam.params.len() - optional_count,
-            // };
-
             // NOTE: placeholder spreads must come last because we don't know they're
             // length.  This will also be true for spreading arrays, but in the case
             // of array spreads, they also need to come after the start of a rest param.
@@ -212,14 +204,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     _ => args.push(arg.to_owned()),
                 }
             }
-
-            // if args.len() < param_count_low_bound {
-            //     return Err(Report::new(TypeError::TooFewArguments(
-            //         Box::from(t1.to_owned()),
-            //         Box::from(t2.to_owned()),
-            //     ))
-            //     .attach_printable("Not enough args provided"));
-            // }
 
             // TODO: Add a `variadic` boolean to the Lambda type as a convenience
             // so that we don't have to search through all the params for the rest
