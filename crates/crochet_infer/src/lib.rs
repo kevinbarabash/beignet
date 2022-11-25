@@ -179,24 +179,26 @@ mod tests {
     }
 
     #[test]
-    fn infer_if() {
+    fn infer_if_with_semi() {
         let src = r#"
         let n = 0;
         let result = if (n == 0) { 5; };
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_value_type("result", &ctx), "undefined");
+        assert_eq!(get_value_type("result", &ctx), "5 | undefined");
     }
 
     #[test]
-    #[should_panic = "Consequent for 'if' without 'else' must not return a value"]
-    fn infer_if_must_be_undefined() {
+    fn infer_if_without_semi() {
         let src = r#"
         let n = 0;
         let result = if (n == 0) { 5 };
         "#;
-        infer_prog(src);
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("result", &ctx), "5 | undefined");
     }
 
     #[test]
@@ -648,28 +650,31 @@ mod tests {
     }
 
     #[test]
-    fn infer_if_let_without_else_no_return() {
+    fn infer_if_let_without_else_with_semi() {
         let src = r#"
         let p = {x: 5, y: 10};
-        if (let {x, y} = p) {
+        let result = if (let {x, y} = p) {
             x + y;
         };
         "#;
 
-        infer_prog(src);
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("result", &ctx), "number | undefined");
     }
 
     #[test]
-    #[should_panic = "Consequent for 'if' without 'else' must not return a value"]
-    fn infer_if_let_without_else_errors_with_return() {
+    fn infer_if_let_without_else_without_semi() {
         let src = r#"
         let p = {x: 5, y: 10};
-        if (let {x, y} = p) {
+        let result = if (let {x, y} = p) {
             x + y
         };
         "#;
 
-        infer_prog(src);
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("result", &ctx), "number | undefined");
     }
 
     #[test]

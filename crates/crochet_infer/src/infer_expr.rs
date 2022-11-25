@@ -131,42 +131,23 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
             }
             None => match &mut cond.kind {
                 ExprKind::LetExpr(LetExpr { pat, expr, .. }) => {
-                    let (s1, t1) =
+                    let (s, t) =
                         infer_let(pat, &mut None, expr, consequent, ctx, &PatternUsage::Match)?;
-                    let s2 = match unify(
-                        &t1,
-                        &Type::from(TypeKind::Keyword(TKeyword::Undefined)),
-                        ctx,
-                    ) {
-                        Ok(s) => Ok(s),
-                        Err(_) => Err(Report::new(TypeError::ConsequentMustReturnVoid)
-                            .attach_printable(
-                                "Consequent for 'if' without 'else' must not return a value",
-                            )),
-                    }?;
 
-                    let s = compose_subs(&s2, &s1);
-                    let t = t1;
+                    let undefined = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+                    let t = union_types(&t, &undefined);
+
                     Ok((s, t))
                 }
                 _ => {
                     let (s1, t1) = infer_expr(ctx, cond)?;
                     let (s2, t2) = infer_expr(ctx, consequent)?;
                     let s3 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
-                    let s4 = match unify(
-                        &t2,
-                        &Type::from(TypeKind::Keyword(TKeyword::Undefined)),
-                        ctx,
-                    ) {
-                        Ok(s) => Ok(s),
-                        Err(_) => Err(Report::new(TypeError::ConsequentMustReturnVoid)
-                            .attach_printable(
-                                "Consequent for 'if' without 'else' must not return a value",
-                            )),
-                    }?;
 
-                    let s = compose_many_subs(&[s1, s2, s3, s4]);
-                    let t = t2;
+                    let s = compose_many_subs(&[s1, s2, s3]);
+
+                    let undefined = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+                    let t = union_types(&t2, &undefined);
 
                     Ok((s, t))
                 }

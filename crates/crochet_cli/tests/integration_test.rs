@@ -255,16 +255,17 @@ fn infer_if_else_with_widening() {
 }
 
 #[test]
-fn infer_only_if_must_be_undefined() {
+fn infer_value_of_let_from_a_block_return_is_undefined() {
     let (_, ctx) = infer_prog("let x = if (true) { let a = 5; };");
     let result = format!("{}", ctx.lookup_value("x").unwrap());
     assert_eq!(result, "undefined");
 }
 
 #[test]
-#[should_panic = "Consequent for 'if' without 'else' must not return a value"]
-fn infer_only_if_must_be_undefined_error() {
-    infer_prog("let x = if (true) { let a = 5; a };");
+fn infer_only_if() {
+    let (_, ctx) = infer_prog("let x = if (true) { let a = 5; a };");
+    let result = format!("{}", ctx.lookup_value("x").unwrap());
+    assert_eq!(result, "5 | undefined");
 }
 
 #[test]
@@ -1248,12 +1249,11 @@ fn return_empty_with_body() {
         let a = 5;
     };
     "#;
+
     let (_, ctx) = infer_prog(src);
 
-    assert_eq!(
-        format!("{}", ctx.lookup_value("foo").unwrap()),
-        "() => undefined"
-    );
+    let func = format!("{}", ctx.lookup_value("foo").unwrap());
+    assert_eq!(func, "() => undefined");
 }
 
 #[test]
@@ -1316,8 +1316,7 @@ fn codegen_if_let() {
     const $temp_1 = p;
     {
         const { x , y  } = $temp_1;
-        x + y;
-        $temp_0 = undefined;
+        $temp_0 = x + y;
     }$temp_0;
     "###);
 
@@ -1352,8 +1351,7 @@ fn codegen_if_let_with_rename() {
     const $temp_1 = p;
     {
         const { x: a , y: b  } = $temp_1;
-        a + b;
-        $temp_0 = undefined;
+        $temp_0 = a + b;
     }$temp_0;
     "###);
 
@@ -1406,8 +1404,7 @@ fn infer_if_let_refutable_pattern_obj() {
     const $temp_1 = p;
     if ($temp_1.x === 5) {
         const { y  } = $temp_1;
-        y;
-        $temp_0 = undefined;
+        $temp_0 = y;
     }
     $temp_0;
     "###);
@@ -1446,8 +1443,7 @@ fn infer_if_let_refutable_pattern_nested_obj() {
     const $temp_1 = action;
     if ($temp_1.type === "moveto") {
         const { point: { x , y  }  } = $temp_1;
-        x + y;
-        $temp_0 = undefined;
+        $temp_0 = x + y;
     }
     $temp_0;
     "###);
@@ -1487,8 +1483,7 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
     const $temp_1 = action;
     if ($temp_1.type === "moveto") {
         const { point: { x , y  }  } = $temp_1;
-        x + y;
-        $temp_0 = undefined;
+        $temp_0 = x + y;
     }
     $temp_0;
     "###);
@@ -1534,8 +1529,7 @@ fn infer_if_let_refutable_pattern_array() {
     const $temp_1 = p;
     if ($temp_1[0] === 5) {
         const [, y] = $temp_1;
-        y;
-        $temp_0 = undefined;
+        $temp_0 = y;
     }
     $temp_0;
     "###);
@@ -1570,8 +1564,7 @@ fn infer_if_let_refutable_pattern_nested_array() {
     const $temp_1 = action;
     if ($temp_1[0] === "moveto") {
         const [, [x, y]] = $temp_1;
-        x + y;
-        $temp_0 = undefined;
+        $temp_0 = x + y;
     }
     $temp_0;
     "###);
@@ -1600,8 +1593,7 @@ fn codegen_if_let_with_is_prim() {
     const $temp_1 = b;
     if (typeof $temp_1 === "number") {
         const a = $temp_1;
-        a + 5;
-        $temp_0 = undefined;
+        $temp_0 = a + 5;
     }
     $temp_0;
     "###);
@@ -1663,8 +1655,7 @@ fn codegen_if_let_with_is_class() {
     const $temp_1 = b;
     if ($temp_1 instanceof Foo) {
         const a = $temp_1;
-        a.getNum() + 5;
-        $temp_0 = undefined;
+        $temp_0 = a.getNum() + 5;
     }
     $temp_0;
     "###);

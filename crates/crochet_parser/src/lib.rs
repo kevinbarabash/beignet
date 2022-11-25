@@ -451,16 +451,6 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
                 })
             } else {
                 let mut result = parse_statement(&child, src)?;
-                // TODO: get the span of the semicolon
-                let expr = Expr {
-                    span: 0..0,
-                    kind: ExprKind::Empty,
-                    inferred_type: None,
-                };
-                result.push(Statement::Expr {
-                    span: 0..0,
-                    expr: Box::from(expr),
-                });
                 stmts.append(&mut result);
             }
         } else {
@@ -473,7 +463,33 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
 
     let last: Expr = match iter.next() {
         Some(term) => match term {
-            Statement::VarDecl { .. } => panic!("Didn't expect `let` here"),
+            // TODO: warn that the variable introduced here will go unused.
+            Statement::VarDecl {
+                span,
+                pattern,
+                init,
+                type_ann,
+                ..
+            } => Expr {
+                span: span.to_owned(),
+                kind: ExprKind::Let(Let {
+                    pattern: Some(pattern.to_owned()),
+                    // TODO: Think about how to deal with variable declarations
+                    // without initializers.  Right now these are allowed by our
+                    // tree-sitter grammar, but aren't handled by the rust code
+                    // which processes its CST.  We probably don't want to allow
+                    // this for normal `let` declarations, we need to allow this
+                    // for `declare let`.
+                    init: init.as_ref().unwrap().to_owned(),
+                    type_ann: type_ann.to_owned(),
+                    body: Box::from(Expr {
+                        span: 0..0,
+                        kind: ExprKind::Empty,
+                        inferred_type: None,
+                    }),
+                }),
+                inferred_type: None,
+            },
             Statement::TypeDecl { .. } => {
                 todo!("decide how to handle type decls within BlockStatements")
             }
