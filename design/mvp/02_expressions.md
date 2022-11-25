@@ -27,6 +27,20 @@ let result = if (condition1) {
 };
 ```
 
+The type of the `if`-`else` is the union of the consequent and alternative
+blocks, e.g.
+
+```ts
+let result = if (cond) { 5 } else { 10 }; // `result` has type `5 | 10`
+```
+
+When using `if` without an `else` block, it will be inferred as `T | undefined`
+where `T` is the type of the consequent, e.g.
+
+```ts
+let result  = if (cond) { 5 };  // `result` has type `5 | undefined`
+```
+
 ## `try`-`catch`
 
 This works similarly for `try`-`catch`.
@@ -79,25 +93,18 @@ let foo;
 ```
 
 The Crochet implementation of this is very similar to the [TC39
-Proposal](https://github.com/tc39/proposal-do-expressions).
+Proposal](https://github.com/tc39/proposal-do-expressions). One notable
+difference is that `let` and `if` can appear last within a block.
 
-If the last statement within the block ends with a semicolon then value of
-the `do` expression is `undefined`. This mimics Rust's behavior with
-`undefined` standing in for `()`.
+The `;` is optional on the last statement in a block. If it's omitted, the
+statement will be parsed as an expression. This means that a bunch of things
+that aren't currently expressions (looping constructs, class declarations, etc)
+are not allowed to come last.
 
-```ts
-// foo.crochet
-let foo = do {
-    let bar = getBar();
-    console.log(`bar = ${bar}`);
-    bar;
-};
+TODO:
 
-// foo.js
-let foo;
-{
-    let bar = getBar();
-    console.log(`bar = ${bar}`);
-    bar;
-}
-```
+- make more things expressions
+- look at changing the parser so that we can allow statements to appear last
+  without having the place a `;` after each one (maybe we can use `;` as a
+  separator between statements within a block - what does this mean for
+  top-level parsing that isn't in a block?)
