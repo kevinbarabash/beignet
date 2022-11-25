@@ -72,6 +72,7 @@ impl From<&Keyword> for swc_ecma_ast::Expr {
             }
             Keyword::Symbol => todo!(),
             Keyword::Undefined => {
+                // NOTE: `undefined` is actually an identifier in JavaScript.
                 let ident = swc_ecma_ast::Ident {
                     span: DUMMY_SP,
                     sym: swc_atoms::JsWord::from(String::from("undefined")),
