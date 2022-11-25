@@ -759,9 +759,8 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
             let lit = parse_literal(node, src)?;
             ExprKind::Lit(lit)
         }
-        "null" | "undefined" => {
-            todo!()
-        }
+        "null" => ExprKind::Keyword(Keyword::Null),
+        "undefined" => ExprKind::Keyword(Keyword::Undefined),
         "object" => {
             let mut cursor = node.walk();
             let props = node

@@ -146,7 +146,8 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
             update_pattern(pat, s);
             update_expr(expr, s);
         }
-        ExprKind::Lit(_) => (), // leaf node
+        ExprKind::Lit(_) => (),     // leaf node
+        ExprKind::Keyword(_) => (), // leaf node
         ExprKind::BinaryExpr(BinaryExpr { left, right, op: _ }) => {
             update_expr(left, s);
             update_expr(right, s);

@@ -395,6 +395,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
 
             Ok((s, t))
         }
+        ExprKind::Keyword(keyword) => {
+            let s = Subst::new();
+            let t = Type::from(keyword.to_owned());
+
+            Ok((s, t))
+        }
         ExprKind::BinaryExpr(BinaryExpr {
             op, left, right, ..
         }) => {
