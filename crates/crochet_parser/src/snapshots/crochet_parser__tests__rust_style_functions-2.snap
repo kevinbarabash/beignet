@@ -77,26 +77,11 @@ Ok(
                                                 inferred_type: None,
                                             },
                                             body: Expr {
-                                                span: 41..43,
-                                                kind: Let(
-                                                    Let {
-                                                        pattern: None,
-                                                        type_ann: None,
-                                                        init: Expr {
-                                                            span: 41..42,
-                                                            kind: Ident(
-                                                                Ident {
-                                                                    span: 41..42,
-                                                                    name: "x",
-                                                                },
-                                                            ),
-                                                            inferred_type: None,
-                                                        },
-                                                        body: Expr {
-                                                            span: 0..0,
-                                                            kind: Empty,
-                                                            inferred_type: None,
-                                                        },
+                                                span: 41..42,
+                                                kind: Ident(
+                                                    Ident {
+                                                        span: 41..42,
+                                                        name: "x",
                                                     },
                                                 ),
                                                 inferred_type: None,

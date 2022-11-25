@@ -451,16 +451,6 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
                 })
             } else {
                 let mut result = parse_statement(&child, src)?;
-                // TODO: get the span of the semicolon
-                let expr = Expr {
-                    span: 0..0,
-                    kind: ExprKind::Empty,
-                    inferred_type: None,
-                };
-                result.push(Statement::Expr {
-                    span: 0..0,
-                    expr: Box::from(expr),
-                });
                 stmts.append(&mut result);
             }
         } else {
@@ -473,7 +463,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
 
     let last: Expr = match iter.next() {
         Some(term) => match term {
-            Statement::VarDecl { .. } => panic!("Didn't expect `let` here"),
+            Statement::VarDecl { .. } => panic!("statement blocks cannot end with a declaration"),
             Statement::TypeDecl { .. } => {
                 todo!("decide how to handle type decls within BlockStatements")
             }
