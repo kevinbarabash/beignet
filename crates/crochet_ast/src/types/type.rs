@@ -76,21 +76,19 @@ pub struct TypeParam {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TMappedType {
     pub type_param: TVar,
-    pub optional: Option<TMappedTypeOptional>,
-    pub readonly: Option<TMappedTypeReadonly>,
+    pub optional: Option<TMappedTypeChangeProp>,
+    pub mutable: Option<TMappedTypeChangeProp>,
     pub t: Box<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum TMappedTypeOptional {
-    True,
+pub enum TMappedTypeChangeProp {
     Plus,
     Minus,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum TMappedTypeReadonly {
-    True,
+pub enum TMappedTypeMutable {
     Plus,
     Minus,
 }
@@ -200,16 +198,15 @@ impl fmt::Display for Type {
             TypeKind::MappedType(TMappedType {
                 type_param,
                 optional,
-                readonly,
+                mutable,
                 t,
             }) => {
                 write!(f, "{{")?;
 
-                if let Some(readonly) = readonly {
-                    match readonly {
-                        TMappedTypeReadonly::True => write!(f, "readonly ")?,
-                        TMappedTypeReadonly::Plus => write!(f, "+readonly ")?,
-                        TMappedTypeReadonly::Minus => write!(f, "-readonly ")?,
+                if let Some(mutable) = mutable {
+                    match mutable {
+                        TMappedTypeChangeProp::Plus => write!(f, "+mut ")?,
+                        TMappedTypeChangeProp::Minus => write!(f, "-mut ")?,
                     }
                 }
 
@@ -221,9 +218,8 @@ impl fmt::Display for Type {
 
                 if let Some(optional) = optional {
                     match optional {
-                        TMappedTypeOptional::True => write!(f, "?")?,
-                        TMappedTypeOptional::Plus => write!(f, "+?")?,
-                        TMappedTypeOptional::Minus => write!(f, "-?")?,
+                        TMappedTypeChangeProp::Plus => write!(f, "+?")?,
+                        TMappedTypeChangeProp::Minus => write!(f, "-?")?,
                     }
                 }
 

@@ -87,9 +87,10 @@ impl Substitutable for Type {
                     index: Box::from(index.apply(sub)),
                 })
             }
-            TypeKind::MappedType(TMappedType { .. }) => {
-                todo!()
-            }
+            TypeKind::MappedType(mapped) => TypeKind::MappedType(TMappedType {
+                t: Box::from(mapped.t.apply(sub)),
+                ..mapped.to_owned()
+            }),
         };
         norm_type(Type {
             kind,
@@ -132,8 +133,15 @@ impl Substitutable for Type {
                 result
             }
             // What does it mean to be a free variable?
-            TypeKind::MappedType(TMappedType { .. }) => {
-                todo!()
+            TypeKind::MappedType(TMappedType { type_param, t, .. }) => {
+                // TODO: get free variables in the value and the key and take
+                // the set difference of them.
+                let mut result = t.ftv();
+                if let Some(index) = result.iter().position(|tv| tv == type_param) {
+                    result.remove(index);
+                }
+                // TODO: warn that the type param doesn't appear in the `t`
+                result
             }
         }
     }

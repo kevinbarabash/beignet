@@ -11,6 +11,8 @@ use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substituta
 use crate::parse_dts::infer_ts_type_ann;
 
 // TODO: rename this replace_refs
+// TODO: use the same technique we use in infer_type_ann.rs, as this stands, it
+// doesn't handle type param shadowing.
 pub fn replace_aliases(
     t: &Type,
     type_param_decl: &TsTypeParamDecl,
@@ -125,8 +127,6 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                         })
                     }
                     TObjElem::Prop(prop) => {
-                        println!("replacing prop.t");
-                        println!("prop.t = {:#}", prop.t);
                         let t = replace_aliases_rec(&prop.t, map);
                         TObjElem::Prop(types::TProp {
                             t,
