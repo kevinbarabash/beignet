@@ -76,7 +76,7 @@ fn infer_pattern_rec(
             }
             Ok(tv)
         }
-        PatternKind::Wildcard(_) => {
+        PatternKind::Wildcard => {
             // Same as Pattern::Ident but we don't insert an assumption since
             // we don't want to bind it to a variable.
             let tv = ctx.fresh_var();

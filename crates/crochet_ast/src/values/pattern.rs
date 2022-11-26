@@ -17,7 +17,7 @@ pub enum PatternKind {
     Array(ArrayPat),
     Lit(LitPat),
     Is(IsPat),
-    Wildcard(WildcardPat),
+    Wildcard,
     // This can't be used at the top level similar to rest
     // Assign(AssignPat),
 }
@@ -48,9 +48,6 @@ pub struct IsPat {
     pub ident: BindingIdent,
     pub is_id: Ident,
 }
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WildcardPat {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RestPat {
@@ -104,7 +101,7 @@ pub fn is_refutable(pat: &Pattern) -> bool {
         // irrefutable
         PatternKind::Ident(_) => false,
         PatternKind::Rest(_) => false,
-        PatternKind::Wildcard(_) => false,
+        PatternKind::Wildcard => false,
 
         // refutable
         PatternKind::Lit(_) => true,

@@ -160,9 +160,7 @@ Ok(
                                                             ArrayPatElem {
                                                                 pattern: Pattern {
                                                                     span: 111..112,
-                                                                    kind: Wildcard(
-                                                                        WildcardPat,
-                                                                    ),
+                                                                    kind: Wildcard,
                                                                     inferred_type: None,
                                                                 },
                                                                 init: None,
@@ -333,9 +331,7 @@ Ok(
                                         span: 288..303,
                                         pattern: Pattern {
                                             span: 288..289,
-                                            kind: Wildcard(
-                                                WildcardPat,
-                                            ),
+                                            kind: Wildcard,
                                             inferred_type: None,
                                         },
                                         guard: None,

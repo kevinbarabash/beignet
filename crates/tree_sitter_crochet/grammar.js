@@ -336,6 +336,8 @@ module.exports = grammar(tsx, {
     // New expressions
     //
 
+    wildcard: ($) => "_",
+
     do_expression: ($) => seq("do", $.statement_block),
 
     let_expression: ($) =>
@@ -387,7 +389,8 @@ module.exports = grammar(tsx, {
 
         $.refutable_array_pattern,
         $.refutable_is_pattern,
-        $.refutable_object_pattern
+        $.refutable_object_pattern,
+        $.wildcard
       ),
 
     refutable_array_pattern: ($) =>
@@ -453,7 +456,8 @@ module.exports = grammar(tsx, {
           $.binding_identifier,
           $.array_pattern,
           $.object_pattern,
-          $.rest_pattern
+          $.rest_pattern,
+          $.wildcard
         )
       ),
 

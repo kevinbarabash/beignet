@@ -48,8 +48,7 @@ let bar = match (foo) {
                   (binding_identifier
                     (identifier)))
                 (refutable_pattern
-                  (binding_identifier
-                    (identifier)))
+                  (wildcard))
                 (refutable_rest_pattern
                   (binding_identifier
                     (identifier)))))
@@ -79,8 +78,7 @@ let bar = match (foo) {
               (string_fragment)))
           (match_arm
             (refutable_pattern
-              (binding_identifier
-                (identifier)))
+              (wildcard))
             (string
               (string_fragment))))))))
 
@@ -120,8 +118,7 @@ let bar = match (foo) {
               (string_fragment)))
           (match_arm
             (refutable_pattern
-              (binding_identifier
-                (identifier)))
+              (wildcard))
             (string
               (string_fragment))))))))
 
@@ -167,8 +164,7 @@ let bar = match (foo) {
               (string_fragment)))
           (match_arm
             (refutable_pattern
-              (binding_identifier
-                (identifier)))
+              (wildcard))
             (string
               (string_fragment))))))))
 
@@ -214,8 +210,7 @@ let bar = match (foo) {
               (string_fragment)))
           (match_arm
             (refutable_pattern
-              (binding_identifier
-                (identifier)))
+              (wildcard))
             (string
               (string_fragment))))))))
 
@@ -266,8 +261,7 @@ let bar = if (let {x, y: b, ...rest} = foo) {
                     (binding_identifier
                       (identifier)))
                   (refutable_pattern
-                    (binding_identifier
-                      (identifier)))
+                    (wildcard))
                   (refutable_rest_pattern
                     (binding_identifier
                       (identifier)))))
@@ -328,8 +322,7 @@ let bar = if (let {x: x is string} = foo) {
                         (identifier))
                       (identifier)))
                   (refutable_pattern
-                    (binding_identifier
-                      (identifier)))
+                    (wildcard))
                   (refutable_rest_pattern
                     (binding_identifier
                       (identifier)))))

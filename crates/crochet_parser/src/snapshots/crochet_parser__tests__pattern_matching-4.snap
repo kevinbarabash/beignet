@@ -158,9 +158,7 @@ Ok(
                                         span: 148..159,
                                         pattern: Pattern {
                                             span: 148..149,
-                                            kind: Wildcard(
-                                                WildcardPat,
-                                            ),
+                                            kind: Wildcard,
                                             inferred_type: None,
                                         },
                                         guard: None,

@@ -110,6 +110,6 @@ pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
         }
         PatternKind::Lit(_) => panic!("Literal patterns not allowed in function params"),
         PatternKind::Is(_) => panic!("'is' patterns not allowed in function params"),
-        PatternKind::Wildcard(_) => panic!("Wildcard patterns not allowed in function params"),
+        PatternKind::Wildcard => panic!("Wildcard patterns not allowed in function params"),
     }
 }

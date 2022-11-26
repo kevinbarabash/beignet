@@ -764,7 +764,7 @@ Functions
   function trailing(a,) {},
   function trailing(a,b,) {},
   function reserved(async) {},
-  function rest(...[_ = x]) {}
+  function rest(...[x = y]) {}
 ];
 
 --------------------------------------------------------------------------------
