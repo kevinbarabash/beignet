@@ -229,7 +229,7 @@ Exception handling
 
 try {}
 catch (e: unknown) {}
-finally {}
+finally {};
 
 --------------------------------------------------------------------------------
 
@@ -244,8 +244,7 @@ finally {}
           (predefined_type))
         body: (statement_block))
       finalizer: (finally_clause
-        body: (statement_block)))
-    (MISSING ";")))
+        body: (statement_block)))))
 
 ================================================================================
 Flow-style ambient class declarations with commas

@@ -221,7 +221,6 @@ module.exports = grammar(tsx, {
       return choice(...choices);
     },
 
-    // Removes _destructuring_pattern from _lhs_expression
     // NOTE: we can't use prev.members.filter here b/c define-grammar.js does
     // ($, previous) => choice(previous, ...).
     // TODO: write a function to flatten choices
@@ -231,6 +230,9 @@ module.exports = grammar(tsx, {
         $.subscript_expression,
         $._identifier,
         alias($._reserved_identifier, $.identifier),
+        // We disallow destructing in assignment expressions since it isn't used
+        // very often and the fact that `let`-binding can shadow variables reduces
+        // the need for it even further.
         // $._destructuring_pattern,
         $.non_null_expression
       ),

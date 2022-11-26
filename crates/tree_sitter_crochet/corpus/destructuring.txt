@@ -2,41 +2,11 @@
 Object destructuring assignments
 ================================================================================
 
-({a, b: c.d, ...e[f]} = object);
-let {a, b, ...c} = object;
-const {a, b: {c, d}} = object;
+let {a, b: {c: d}, ...{e, f}} = object;
 
 --------------------------------------------------------------------------------
 
 (program
-  (expression_statement
-    (parenthesized_expression
-      (assignment_expression
-        (non_null_expression
-          (object
-            (shorthand_property_identifier)
-            (pair
-              (property_identifier)
-              (member_expression
-                (identifier)
-                (property_identifier)))
-            (spread_element
-              (subscript_expression
-                (identifier)
-                (identifier))))
-          (MISSING "!"))
-        (identifier))))
-  (lexical_declaration
-    (variable_declarator
-      (object_pattern
-        (shorthand_property_identifier_pattern
-          (identifier))
-        (shorthand_property_identifier_pattern
-          (identifier))
-        (rest_pattern
-          (binding_identifier
-            (identifier))))
-      (identifier)))
   (lexical_declaration
     (variable_declarator
       (object_pattern
@@ -44,6 +14,12 @@ const {a, b: {c, d}} = object;
           (identifier))
         (pair_pattern
           (property_identifier)
+          (object_pattern
+            (pair_pattern
+              (property_identifier)
+              (binding_identifier
+                (identifier)))))
+        (rest_pattern
           (object_pattern
             (shorthand_property_identifier_pattern
               (identifier))
@@ -79,44 +55,24 @@ function a ({b, c}, {d}) {}
 Array destructuring assignments
 ================================================================================
 
-[a, b.c, ...c[d]] = array;
-[a, b, ...c] = array;
-[,, c,, d,] = array;
+let [a, b, ...[c, d]] = array;
 
 --------------------------------------------------------------------------------
 
 (program
-  (expression_statement
-    (assignment_expression
-      (non_null_expression
-        (array
-          (identifier)
-          (member_expression
-            (identifier)
-            (property_identifier))
-          (spread_element
-            (subscript_expression
-              (identifier)
-              (identifier))))
-        (MISSING "!"))
-      (identifier)))
-  (expression_statement
-    (assignment_expression
-      (non_null_expression
-        (array
-          (identifier)
-          (identifier)
-          (spread_element
-            (identifier)))
-        (MISSING "!"))
-      (identifier)))
-  (expression_statement
-    (assignment_expression
-      (non_null_expression
-        (array
-          (identifier)
+  (lexical_declaration
+    (variable_declarator
+      (array_pattern
+        (binding_identifier
           (identifier))
-        (MISSING "!"))
+        (binding_identifier
+          (identifier))
+        (rest_pattern
+          (array_pattern
+            (binding_identifier
+              (identifier))
+            (binding_identifier
+              (identifier)))))
       (identifier))))
 
 ================================================================================
