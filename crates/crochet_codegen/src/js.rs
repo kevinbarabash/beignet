@@ -147,7 +147,10 @@ fn build_pattern(
         // TODO: we need to have something we can assign `_` to when it appears
         // in object destructuring otherwise if there's a `...rest` that's also
         // in the pattern we'll end up with the wrong items assigned to `rest`.
-        values::PatternKind::Wildcard => None,
+        values::PatternKind::Wildcard => Some(Pat::Ident(BindingIdent {
+            id: ctx.new_ident(),
+            type_ann: None,
+        })),
 
         // assignable patterns
         values::PatternKind::Ident(values::BindingIdent {

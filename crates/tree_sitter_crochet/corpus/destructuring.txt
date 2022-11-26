@@ -25,7 +25,7 @@ let {a, b: {c: d}, ...{e, f: _}} = object;
               (identifier))
             (pair_pattern
               (property_identifier)
-              (ignored)))))
+              (wildcard)))))
       (identifier))))
 
 ================================================================================
@@ -66,14 +66,14 @@ let [a, _, b, ...[c, _, d]] = array;
       (array_pattern
         (binding_identifier
           (identifier))
-        (ignored)
+        (wildcard)
         (binding_identifier
           (identifier))
         (rest_pattern
           (array_pattern
             (binding_identifier
               (identifier))
-            (ignored)
+            (wildcard)
             (binding_identifier
               (identifier)))))
       (identifier))))
