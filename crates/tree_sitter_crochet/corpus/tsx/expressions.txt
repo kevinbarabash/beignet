@@ -169,7 +169,7 @@ Subscript expressions in if statements
 
 if ( foo ) {
 	set[ 1 ].apply();
-}
+};
 
 --------------------------------------------------------------------------------
 
@@ -185,8 +185,7 @@ if ( foo ) {
                 (identifier)
                 (number))
               (property_identifier))
-            (arguments)))))
-    (MISSING ";")))
+            (arguments)))))))
 
 ================================================================================
 Objects with reserved words as keys
