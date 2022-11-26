@@ -86,6 +86,7 @@ fn pattern_matching() {
         console.log(`n = ${n}`);
         $temp_0 = "a few";
     } else {
+        const $temp_2 = $temp_1;
         console.log("fallthrough");
         $temp_0 = "many";
     }
