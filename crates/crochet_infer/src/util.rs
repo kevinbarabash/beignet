@@ -199,6 +199,10 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     index: Box::from(norm_type(index, mapping, _ctx)),
                 })
             }
+            TypeKind::MappedType(mapped) => TypeKind::MappedType(TMappedType {
+                t: Box::from(norm_type(&mapped.t, mapping, _ctx)),
+                ..mapped.to_owned()
+            }),
         };
 
         Type {

@@ -88,6 +88,9 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
         TypeKind::IndexAccess(_) => {
             todo!() // We have to evaluate the IndexAccess first
         }
+        TypeKind::MappedType(_) => {
+            todo!() // We have to evaluate the MappedType first
+        }
     }
 }
 

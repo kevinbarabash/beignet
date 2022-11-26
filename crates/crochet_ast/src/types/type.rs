@@ -46,13 +46,19 @@ pub struct TIndexAccess {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TGeneric {
     pub t: Box<Type>,
-    pub type_params: Vec<TVar>,
+    pub type_params: Vec<TVar>, // TODO: update to use TypeParam
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TVar {
     pub id: i32,
     pub constraint: Option<Box<Type>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TypeParam {
+    pub name: String,
+    pub tvar: TVar,
 }
 
 // impl fmt::Display for TVar {
@@ -68,11 +74,32 @@ pub struct TVar {
 // }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TMappedType {
+    pub type_param: TVar,
+    pub optional: Option<TMappedTypeOptional>,
+    pub readonly: Option<TMappedTypeReadonly>,
+    pub t: Box<Type>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TMappedTypeOptional {
+    True,
+    Plus,
+    Minus,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TMappedTypeReadonly {
+    True,
+    Plus,
+    Minus,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TypeKind {
     Var(TVar),
     App(TApp),
     Lam(TLam),
-    // Query, // use for typed holes
     Lit(TLit),
     Keyword(TKeyword),
     Union(Vec<Type>),
@@ -83,8 +110,16 @@ pub enum TypeKind {
     Array(Box<Type>),
     Rest(Box<Type>), // TODO: rename this to Spread
     This,
+
+    // Type operations
     KeyOf(Box<Type>),
     IndexAccess(TIndexAccess),
+    MappedType(TMappedType),
+    // Query, // use for typed holes
+
+    // We encapsulate type polymorphism in a wrapper type instead of a separate
+    // data structure like a `Scheme`.  This allows us to nest polymorphic types
+    // with independent type parameters which isn't possible when using `Scheme`.
     Generic(TGeneric),
 }
 
@@ -162,6 +197,38 @@ impl fmt::Display for Type {
             TypeKind::This => write!(f, "this"),
             TypeKind::KeyOf(t) => write!(f, "keyof {t}"),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => write!(f, "{object}[{index}]"),
+            TypeKind::MappedType(TMappedType {
+                type_param,
+                optional,
+                readonly,
+                t,
+            }) => {
+                write!(f, "{{")?;
+
+                if let Some(readonly) = readonly {
+                    match readonly {
+                        TMappedTypeReadonly::True => write!(f, "readonly ")?,
+                        TMappedTypeReadonly::Plus => write!(f, "+readonly ")?,
+                        TMappedTypeReadonly::Minus => write!(f, "-readonly ")?,
+                    }
+                }
+
+                write!(f, "[t{}", type_param.id)?;
+                if let Some(constraint) = &type_param.constraint {
+                    write!(f, " in {constraint}")?;
+                }
+                write!(f, "]")?;
+
+                if let Some(optional) = optional {
+                    match optional {
+                        TMappedTypeOptional::True => write!(f, "?")?,
+                        TMappedTypeOptional::Plus => write!(f, "+?")?,
+                        TMappedTypeOptional::Minus => write!(f, "-?")?,
+                    }
+                }
+
+                write!(f, ": {t}}}")
+            }
         }
     }
 }

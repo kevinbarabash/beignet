@@ -87,6 +87,9 @@ impl Substitutable for Type {
                     index: Box::from(index.apply(sub)),
                 })
             }
+            TypeKind::MappedType(TMappedType { .. }) => {
+                todo!()
+            }
         };
         norm_type(Type {
             kind,
@@ -127,6 +130,10 @@ impl Substitutable for Type {
                 let mut result = object.ftv();
                 result.append(&mut index.ftv());
                 result
+            }
+            // What does it mean to be a free variable?
+            TypeKind::MappedType(TMappedType { .. }) => {
+                todo!()
             }
         }
     }

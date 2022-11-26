@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use swc_ecma_ast::*;
 
 use crochet_ast::types::{
-    self as types, TCallable, TFnParam, TGeneric, TIndexAccess, TObjElem, TObject, TVar, Type,
-    TypeKind,
+    self as types, TCallable, TFnParam, TGeneric, TIndexAccess, TMappedType, TObjElem, TObject,
+    TVar, Type, TypeKind,
 };
 use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substitutable};
 
@@ -43,6 +43,8 @@ pub fn replace_aliases(
     Ok(replace_aliases_rec(&t, &type_param_map))
 }
 
+// TODO: update this to use Visitor from crochet_infer, which should probably
+// be moved into the crochet_ast crate.
 // TODO: rename this replace_refs_rec
 fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
     let kind = match &t.kind {
@@ -161,6 +163,10 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                 index: Box::from(replace_aliases_rec(index, map)),
             })
         }
+        TypeKind::MappedType(mapped) => TypeKind::MappedType(TMappedType {
+            t: Box::from(replace_aliases_rec(&mapped.t, map)),
+            ..mapped.to_owned()
+        }),
     };
 
     Type {

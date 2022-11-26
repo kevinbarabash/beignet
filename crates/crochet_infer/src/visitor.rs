@@ -37,6 +37,9 @@ pub trait Visitor {
                 self.visit_children(&mut access.object);
                 self.visit_children(&mut access.index);
             }
+            TypeKind::MappedType(mapped) => {
+                self.visit_children(&mut mapped.t);
+            }
             TypeKind::Generic(gen) => {
                 self.visit_children(&mut gen.t);
             }
