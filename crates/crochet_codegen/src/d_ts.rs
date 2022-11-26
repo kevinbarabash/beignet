@@ -222,7 +222,7 @@ pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTyp
         }
         values::PatternKind::Lit(_) => panic!("Literal patterns are not allowed in params"),
         values::PatternKind::Is(_) => panic!("'is' patterns are not allowed in params"),
-        values::PatternKind::Wildcard(_) => {
+        values::PatternKind::Wildcard => {
             panic!("Wildcard patterns are not allowed in params")
         }
     }

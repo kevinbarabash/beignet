@@ -146,9 +146,7 @@ Ok(
                                                                                 ArrayPatElem {
                                                                                     pattern: Pattern {
                                                                                         span: 115..116,
-                                                                                        kind: Wildcard(
-                                                                                            WildcardPat,
-                                                                                        ),
+                                                                                        kind: Wildcard,
                                                                                         inferred_type: None,
                                                                                     },
                                                                                     init: None,

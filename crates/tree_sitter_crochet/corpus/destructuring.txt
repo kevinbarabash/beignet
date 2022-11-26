@@ -2,7 +2,7 @@
 Object destructuring assignments
 ================================================================================
 
-let {a, b: {c: d}, ...{e, f}} = object;
+let {a, b: {c: d}, ...{e, f: _}} = object;
 
 --------------------------------------------------------------------------------
 
@@ -23,8 +23,9 @@ let {a, b: {c: d}, ...{e, f}} = object;
           (object_pattern
             (shorthand_property_identifier_pattern
               (identifier))
-            (shorthand_property_identifier_pattern
-              (identifier)))))
+            (pair_pattern
+              (property_identifier)
+              (wildcard)))))
       (identifier))))
 
 ================================================================================
@@ -55,7 +56,7 @@ function a ({b, c}, {d}) {}
 Array destructuring assignments
 ================================================================================
 
-let [a, b, ...[c, d]] = array;
+let [a, _, b, ...[c, _, d]] = array;
 
 --------------------------------------------------------------------------------
 
@@ -65,12 +66,14 @@ let [a, b, ...[c, d]] = array;
       (array_pattern
         (binding_identifier
           (identifier))
+        (wildcard)
         (binding_identifier
           (identifier))
         (rest_pattern
           (array_pattern
             (binding_identifier
               (identifier))
+            (wildcard)
             (binding_identifier
               (identifier)))))
       (identifier))))

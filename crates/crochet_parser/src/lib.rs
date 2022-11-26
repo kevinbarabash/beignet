@@ -385,7 +385,8 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseEr
         "assignment_pattern" => {
             todo!("handle assignment_pattern");
         }
-        _ => panic!("unrecognized pattern {node:#?}"),
+        "wildcard" => PatternKind::Wildcard,
+        name => panic!("unrecognized pattern: {name} @ {node:#?}"),
     };
 
     Ok(Pattern {
@@ -1029,7 +1030,6 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                     let lit = parse_literal(&child, src)?;
                     PatternKind::Lit(LitPat { lit })
                 }
-                "_" => PatternKind::Wildcard(WildcardPat {}),
                 _ => PatternKind::Ident(BindingIdent {
                     name,
                     mutable: false,
@@ -1131,6 +1131,7 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                 },
             })
         }
+        "wildcard" => PatternKind::Wildcard,
         kind => todo!("Unhandled refutable pattern of kind '{kind}'"),
     };
 

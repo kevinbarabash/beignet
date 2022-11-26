@@ -57,7 +57,7 @@ pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
         PatternKind::Lit(_) => (), // leaf node
         // TODO: update BindingIdent to have an optional .inferred_type property
         PatternKind::Is(IsPat { ident: _, is_id: _ }) => (),
-        PatternKind::Wildcard(_) => (), // leaf node (also has no binding)
+        PatternKind::Wildcard => (), // leaf node (also has no binding)
     }
 }
 
@@ -254,7 +254,7 @@ fn update_fn_param_pat(pat: &mut Pattern, s: &Subst) {
         }),
         PatternKind::Lit(_) => panic!("literal patterns are not allowed in function params"),
         PatternKind::Is(_) => panic!("'is' patterns are not allowed in function params"),
-        PatternKind::Wildcard(_) => panic!("wildcard patterns are not allowed in function params"),
+        PatternKind::Wildcard => panic!("wildcard patterns are not allowed in function params"),
     }
 }
 

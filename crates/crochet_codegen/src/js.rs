@@ -143,7 +143,14 @@ fn build_pattern(
     match &pattern.kind {
         // unassignable patterns
         values::PatternKind::Lit(_) => None,
-        values::PatternKind::Wildcard(_) => None,
+
+        // TODO: we need to have something we can assign `_` to when it appears
+        // in object destructuring otherwise if there's a `...rest` that's also
+        // in the pattern we'll end up with the wrong items assigned to `rest`.
+        values::PatternKind::Wildcard => Some(Pat::Ident(BindingIdent {
+            id: ctx.new_ident(),
+            type_ann: None,
+        })),
 
         // assignable patterns
         values::PatternKind::Ident(values::BindingIdent {
@@ -186,9 +193,16 @@ fn build_pattern(
                         key: Ident::from(ident),
                         value: init
                             .clone()
-                            .map(|value| Box::from(build_expr(value.as_ref(), stmts, ctx))),
+                            .map(|value| Box::from(build_expr(&value, stmts, ctx))),
                     })),
-                    values::ObjectPatProp::Rest(_) => todo!(),
+                    values::ObjectPatProp::Rest(values::RestPat { arg }) => {
+                        Some(ObjectPatProp::Rest(RestPat {
+                            span: DUMMY_SP,
+                            dot3_token: DUMMY_SP,
+                            arg: Box::from(build_pattern(arg, stmts, ctx)?),
+                            type_ann: None,
+                        }))
+                    }
                 })
                 .collect();
 
@@ -1020,7 +1034,7 @@ fn get_conds_for_pat(pat: &values::Pattern, conds: &mut Vec<Condition>, path: &m
         // irrefutable
         values::PatternKind::Ident(_) => (),
         values::PatternKind::Rest(_) => (),
-        values::PatternKind::Wildcard(_) => (),
+        values::PatternKind::Wildcard => (),
 
         // refutable and possibly refutable
         values::PatternKind::Object(values::ObjectPat { props, .. }) => {
