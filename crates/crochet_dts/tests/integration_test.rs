@@ -416,6 +416,23 @@ fn infer_partial() {
 }
 
 #[test]
+fn infer_required() {
+    let src = r#"
+    type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
+    type RequiredObj = Required<Obj>;
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let t = ctx.lookup_type("RequiredObj", false).unwrap();
+    let t = compute_mapped_type(&t, &ctx).unwrap();
+
+    let result = format!("{}", t);
+    assert_eq!(
+        result,
+        "{a: number, b: string, mut c: boolean, mut d: number}"
+    );
+}
+
+#[test]
 fn infer_readonly() {
     let src = r#"
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
@@ -427,6 +444,37 @@ fn infer_readonly() {
 
     let result = format!("{}", t);
     assert_eq!(result, "{a: number, b?: string, c: boolean, d?: number}");
+}
+
+#[test]
+fn infer_readonly_with_indexer_only() {
+    let src = r#"
+    type Obj = {[key: string]: boolean};
+    type ReadonlyObj = Readonly<Obj>;
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
+    let t = compute_mapped_type(&t, &ctx).unwrap();
+
+    let result = format!("{}", t);
+    assert_eq!(result, "{[key: string]: boolean}");
+}
+
+#[test]
+fn infer_readonly_with_indexer_and_other_properties() {
+    let src = r#"
+    type Obj = {a: number, b?: string, mut c: boolean, mut d?: number, [key: number]: boolean};
+    type ReadonlyObj = Readonly<Obj>;
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
+    let t = compute_mapped_type(&t, &ctx).unwrap();
+
+    let result = format!("{}", t);
+    assert_eq!(
+        result,
+        "{[key: number]: boolean, a: number, b?: string, c: boolean, d?: number}"
+    );
 }
 
 #[test]

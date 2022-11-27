@@ -63,16 +63,46 @@ fn get_prop(obj: &TObject, key: &str) -> Result<TProp, TypeError> {
     Err(Report::new(TypeError::MissingKey(key.to_owned())))
 }
 
+fn get_index(obj: &TObject, key_type: &Type) -> Result<TIndex, TypeError> {
+    for elem in &obj.elems {
+        if let TObjElem::Index(index) = elem {
+            if &index.key.t == key_type {
+                return Ok(index.to_owned());
+            }
+        }
+    }
+
+    Err(Report::new(TypeError::Unhandled))
+}
+
 fn computed_indexed_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, TypeError> {
     let obj = unwrap_obj_type(access.object.as_ref(), ctx)?;
     let index = access.index.as_ref();
 
-    let key = match &index.kind {
-        TypeKind::Lit(lit) => match lit {
-            crochet_ast::types::TLit::Num(num) => num,
-            crochet_ast::types::TLit::Bool(_) => todo!(),
-            crochet_ast::types::TLit::Str(str) => str,
-        },
+    match &index.kind {
+        TypeKind::Lit(lit) => {
+            let key = match lit {
+                crochet_ast::types::TLit::Num(num) => num,
+                crochet_ast::types::TLit::Bool(_) => {
+                    return Err(Report::new(TypeError::InvalidIndex(
+                        access.object.to_owned(),
+                        access.index.to_owned(),
+                    )));
+                }
+                crochet_ast::types::TLit::Str(str) => str,
+            };
+
+            if let TypeKind::Object(obj) = &obj.kind {
+                let prop = get_prop(obj, key)?;
+                return Ok(prop.t);
+            }
+        }
+        TypeKind::Keyword(_) => {
+            if let TypeKind::Object(obj) = &obj.kind {
+                let index = get_index(obj, index)?;
+                return Ok(index.t);
+            }
+        }
         _ => {
             return Err(Report::new(TypeError::InvalidIndex(
                 access.object.to_owned(),
@@ -80,11 +110,6 @@ fn computed_indexed_access(access: &TIndexAccess, ctx: &Context) -> Result<Type,
             )));
         }
     };
-
-    if let TypeKind::Object(obj) = &obj.kind {
-        let prop = get_prop(obj, key)?;
-        return Ok(prop.t);
-    }
 
     Err(Report::new(TypeError::Unhandled))
 }
@@ -125,109 +150,110 @@ pub fn compute_mapped_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
                 _ => vec![],
             };
 
+            let keys = match &keys.kind {
+                TypeKind::Union(keys) => keys.to_owned(),
+                _ => vec![keys],
+            };
+
             // keys is either a union of all the prop keys/indexer types or
             // is a single prop key/indexer type.
-            if let TypeKind::Union(keys) = keys.kind {
-                let elems = keys
-                    .iter()
-                    .map(|key| {
-                        let mut value = mapped.t.clone();
+            let elems = keys
+                .iter()
+                .map(|key| {
+                    let mut value = mapped.t.clone();
 
-                        // if key is a:
-                        // - number, string, or symbol then create an indexer
-                        // - literal of those types then create a normal property
-                        replace_tvar(&mut value, &mapped.type_param.id, key);
+                    // if key is a:
+                    // - number, string, or symbol then create an indexer
+                    // - literal of those types then create a normal property
+                    replace_tvar(&mut value, &mapped.type_param.id, key);
 
-                        let value = match &value.kind {
-                            TypeKind::IndexAccess(access) => computed_indexed_access(access, ctx)?,
-                            _ => value.as_ref().to_owned(),
-                        };
+                    let value = match &value.kind {
+                        TypeKind::IndexAccess(access) => computed_indexed_access(access, ctx)?,
+                        _ => value.as_ref().to_owned(),
+                    };
 
-                        match &key.kind {
-                            TypeKind::Lit(lit) => match lit {
-                                crochet_ast::types::TLit::Num(name) => {
-                                    let prop = get_prop_by_name(&elems, name)?;
-                                    let optional = match &mapped.optional {
-                                        Some(change) => match change {
-                                            crochet_ast::types::TMappedTypeChangeProp::Plus => true,
-                                            crochet_ast::types::TMappedTypeChangeProp::Minus => false,
-                                        },
-                                        None => prop.optional,
-                                    };
-                                    let mutable = match &mapped.mutable {
-                                        Some(change) => match change {
-                                            crochet_ast::types::TMappedTypeChangeProp::Plus => true,
-                                            crochet_ast::types::TMappedTypeChangeProp::Minus => false,
-                                        },
-                                        None => prop.mutable,
-                                    };
-                                    Ok(TObjElem::Prop(TProp {
-                                        name: name.to_owned(),
-                                        optional,
-                                        mutable,
-                                        t: value,
-                                    }))
-                                }
-                                crochet_ast::types::TLit::Bool(_) => {
-                                    Err(Report::new(TypeError::Unhandled))
-                                }
-                                crochet_ast::types::TLit::Str(name) => {
-                                    let prop = get_prop_by_name(&elems, name)?;
-                                    let optional = match &mapped.optional {
-                                        Some(change) => match change {
-                                            crochet_ast::types::TMappedTypeChangeProp::Plus => true,
-                                            crochet_ast::types::TMappedTypeChangeProp::Minus => false,
-                                        },
-                                        None => prop.optional,
-                                    };
-                                    let mutable = match &mapped.mutable {
-                                        Some(change) => match change {
-                                            crochet_ast::types::TMappedTypeChangeProp::Plus => true,
-                                            crochet_ast::types::TMappedTypeChangeProp::Minus => false,
-                                        },
-                                        None => prop.mutable,
-                                    };
-                                    Ok(TObjElem::Prop(TProp {
-                                        name: name.to_owned(),
-                                        optional,
-                                        mutable,
-                                        t: value,
-                                    }))
-                                }
+                    match &key.kind {
+                        TypeKind::Lit(lit) => match lit {
+                            crochet_ast::types::TLit::Num(name) => {
+                                let prop = get_prop_by_name(&elems, name)?;
+                                let optional = match &mapped.optional {
+                                    Some(change) => match change {
+                                        crochet_ast::types::TMappedTypeChangeProp::Plus => true,
+                                        crochet_ast::types::TMappedTypeChangeProp::Minus => false,
+                                    },
+                                    None => prop.optional,
+                                };
+                                let mutable = match &mapped.mutable {
+                                    Some(change) => match change {
+                                        crochet_ast::types::TMappedTypeChangeProp::Plus => true,
+                                        crochet_ast::types::TMappedTypeChangeProp::Minus => false,
+                                    },
+                                    None => prop.mutable,
+                                };
+                                Ok(TObjElem::Prop(TProp {
+                                    name: name.to_owned(),
+                                    optional,
+                                    mutable,
+                                    t: value,
+                                }))
+                            }
+                            crochet_ast::types::TLit::Bool(_) => {
+                                Err(Report::new(TypeError::Unhandled))
+                            }
+                            crochet_ast::types::TLit::Str(name) => {
+                                let prop = get_prop_by_name(&elems, name)?;
+                                let optional = match &mapped.optional {
+                                    Some(change) => match change {
+                                        crochet_ast::types::TMappedTypeChangeProp::Plus => true,
+                                        crochet_ast::types::TMappedTypeChangeProp::Minus => false,
+                                    },
+                                    None => prop.optional,
+                                };
+                                let mutable = match &mapped.mutable {
+                                    Some(change) => match change {
+                                        crochet_ast::types::TMappedTypeChangeProp::Plus => true,
+                                        crochet_ast::types::TMappedTypeChangeProp::Minus => false,
+                                    },
+                                    None => prop.mutable,
+                                };
+                                Ok(TObjElem::Prop(TProp {
+                                    name: name.to_owned(),
+                                    optional,
+                                    mutable,
+                                    t: value,
+                                }))
+                            }
+                        },
+                        // TODO: get indexer(s), you can mix symbol + number
+                        // OR symbol + string, but not number + string.
+                        TypeKind::Keyword(_) => Ok(TObjElem::Index(TIndex {
+                            // TODO: stop using TFnParam for an indexer's key
+                            // since it's confusing.
+                            key: TFnParam {
+                                pat: TPat::Ident(BindingIdent {
+                                    name: String::from("key"),
+                                    mutable: false, // what does this even mean?
+                                }),
+                                t: key.to_owned(),
+                                optional: false, // what does this even mean?
                             },
-                            // TODO: get indexer(s), you can mix symbol + number
-                            // OR symbol + string, but not number + string.
-                            TypeKind::Keyword(_) => Ok(TObjElem::Index(TIndex {
-                                key: TFnParam {
-                                    pat: TPat::Ident(BindingIdent {
-                                        name: String::from("key"),
-                                        mutable: false, // TODO
-                                    }),
-                                    t: key.to_owned(),
-                                    optional: false, // TODO
-                                },
-                                // How do we maintain the optionality of each property
-                                // when we aren't setting it explicitly
-                                mutable: false, // TODO
-                                t: value,
-                            })),
-                            _ => Err(Report::new(TypeError::Unhandled)),
-                        }
-                    })
-                    .collect::<Result<Vec<_>, TypeError>>()?;
+                            // How do we maintain the optionality of each property
+                            // when we aren't setting it explicitly
+                            mutable: false, // TODO
+                            t: value,
+                        })),
+                        _ => Err(Report::new(TypeError::Unhandled)),
+                    }
+                })
+                .collect::<Result<Vec<_>, TypeError>>()?;
 
-                let t = Type {
-                    kind: TypeKind::Object(TObject { elems }),
-                    mutable: false,
-                    provenance: None, // TODO: fill this in
-                };
+            let t = Type {
+                kind: TypeKind::Object(TObject { elems }),
+                mutable: false,
+                provenance: None, // TODO: fill this in
+            };
 
-                Ok(t)
-            } else {
-                // TODO: handle there being only a single key, create a helper
-                // function for getting the keys as a vector.
-                Err(Report::new(TypeError::Unhandled))
-            }
+            Ok(t)
         }
         _ => Err(Report::new(TypeError::Unhandled)),
     }
