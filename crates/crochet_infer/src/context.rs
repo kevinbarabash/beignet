@@ -215,11 +215,7 @@ impl Context {
                         .collect()
                     }
                 };
-                println!("subs: {subs:#?}");
-                println!("before subs: {t:#?}");
-                let t = t.apply(&subs);
-                println!("after subs: {t:#?}");
-                return Ok(t);
+                return Ok(t.apply(&subs));
             }
         }
         Err(Report::new(TypeError::CantFindIdent(name.to_owned()))

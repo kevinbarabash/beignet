@@ -46,22 +46,11 @@ pub fn replace_aliases(
     Ok(replace_aliases_rec(&t, &type_param_map))
 }
 
-pub fn replace_alias(
-    t: &Type,
-    type_param_map: &HashMap<String, TVar>,
-    ctx: &Context,
-) -> Result<Type, String> {
-    let mut type_params: Vec<TVar> = vec![];
-
-    // QUESTION: Do we need to call `set_type_params` before calling `replace_aliases_rec`
-    let t = set_type_params(t, &type_params);
-    Ok(replace_aliases_rec(&t, &type_param_map))
-}
-
 // TODO: update this to use Visitor from crochet_infer, which should probably
 // be moved into the crochet_ast crate.
 // TODO: rename this replace_refs_rec
-fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, TVar>) -> Type {
+// NOTE: This is only used externall by replace_aliases_rec.
+pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, TVar>) -> Type {
     let kind = match &t.kind {
         TypeKind::Generic(TGeneric { t, type_params }) => {
             // TODO: create a new `map` that adds in `type_params`

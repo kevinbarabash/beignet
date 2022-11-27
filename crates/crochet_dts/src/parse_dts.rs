@@ -13,7 +13,7 @@ use crochet_ast::types::{
 use crochet_ast::values::Lit;
 use crochet_infer::{close_over, generalize, normalize, Context, Env, Subst, Substitutable};
 
-use crate::util::{self, replace_alias, replace_aliases};
+use crate::util::{self, replace_aliases_rec};
 
 #[derive(Debug, Clone)]
 pub struct InterfaceCollector {
@@ -186,7 +186,9 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
             let mut type_param_map = HashMap::default();
             type_param_map.insert(type_param.name.sym.to_string(), tvar.clone());
 
-            let type_ann = replace_alias(&type_ann, &type_param_map, ctx)?;
+            // HACK: We call replace_aliases_rec directly here otherwise we'd
+            // get back a generic type that we'd have to instantiate immediately.
+            let type_ann = replace_aliases_rec(&type_ann, &type_param_map);
             let t = Type::from(TypeKind::MappedType(TMappedType {
                 type_param: tvar,
                 optional: match optional {

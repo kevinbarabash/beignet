@@ -399,9 +399,9 @@ fn merging_generic_interfaces() {
 }
 
 #[test]
-fn infer_mapped_types() {
+fn infer_partial() {
     let src = r#"
-    type Obj = {a: number, b: string, c: boolean};
+    type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type PartialObj = Partial<Obj>;
     "#;
     let (_, ctx) = infer_prog(src);
@@ -409,5 +409,22 @@ fn infer_mapped_types() {
     let t = compute_mapped_type(&t, &ctx).unwrap();
 
     let result = format!("{}", t);
-    assert_eq!(result, "{a: Obj[\"a\"], b: Obj[\"b\"], c: Obj[\"c\"]}");
+    assert_eq!(
+        result,
+        "{a?: number, b?: string, mut c?: boolean, mut d?: number}"
+    );
+}
+
+#[test]
+fn infer_readonly() {
+    let src = r#"
+    type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
+    type ReadonlyObj = Readonly<Obj>;
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
+    let t = compute_mapped_type(&t, &ctx).unwrap();
+
+    let result = format!("{}", t);
+    assert_eq!(result, "{a: number, b?: string, c: boolean, d?: number}");
 }
