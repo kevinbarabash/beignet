@@ -8,7 +8,7 @@ use crochet_ast::values::{Assign, Statement};
 pub enum TypeError {
     UnificationError(Box<Type>, Box<Type>),
     UnificationIsUndecidable,
-    Unhandled,
+    Unhandled, // TODO: rename to unspecified
     InfiniteType,
     PrimitivesCantBeMutable(Box<Type>),
     TuplesCantBeMutable(Box<Type>),
