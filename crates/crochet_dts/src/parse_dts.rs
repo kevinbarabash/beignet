@@ -13,7 +13,7 @@ use crochet_ast::types::{
 use crochet_ast::values::Lit;
 use crochet_infer::{close_over, generalize, normalize, Context, Env, Subst, Substitutable};
 
-use crate::util;
+use crate::util::{self, replace_alias, replace_aliases};
 
 #[derive(Debug, Clone)]
 pub struct InterfaceCollector {
@@ -178,11 +178,17 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                 Some(constraint) => Some(Box::from(infer_ts_type_ann(constraint, ctx)?)),
                 None => None,
             };
+            let type_ann = infer_ts_type_ann(type_ann.as_ref().unwrap(), ctx)?;
+            let tvar = TVar {
+                id: ctx.fresh_id(),
+                constraint,
+            };
+            let mut type_param_map = HashMap::default();
+            type_param_map.insert(type_param.name.sym.to_string(), tvar.clone());
+
+            let type_ann = replace_alias(&type_ann, &type_param_map, ctx)?;
             let t = Type::from(TypeKind::MappedType(TMappedType {
-                type_param: TVar {
-                    id: ctx.fresh_id(),
-                    constraint,
-                },
+                type_param: tvar,
                 optional: match optional {
                     Some(change) => match change {
                         TruePlusMinus::True => Some(TMappedTypeChangeProp::Plus),
@@ -201,7 +207,7 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                     },
                     None => None,
                 },
-                t: Box::from(infer_ts_type_ann(type_ann.as_ref().unwrap(), ctx)?),
+                t: Box::from(type_ann),
             }));
             println!("MappedType = {t}");
             Ok(t)
@@ -388,14 +394,22 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
 }
 
 fn infer_type_alias_decl(decl: &TsTypeAliasDecl, ctx: &Context) -> Result<Type, String> {
+    let name = decl.id.sym.to_string();
+    println!("inferring type decl: {name}");
     let t = infer_ts_type_ann(&decl.type_ann, ctx)?;
 
     // If there are any type params, they will be replaced and the returned type
     // be of kind, TypeKind::Generic.
+    if name == "Partial" {
+        println!("before replace_aliases: {t:#?}");
+    }
     let t = match &decl.type_params {
         Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,
         None => t,
     };
+    if name == "Partial" {
+        println!("after replace_aliases: {t:#?}");
+    }
 
     let empty_s = Subst::default();
     Ok(close_over(&empty_s, &t, ctx))

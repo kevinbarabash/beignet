@@ -180,6 +180,7 @@ impl Context {
         for scope in self.scopes.iter().rev() {
             if let Some(t) = scope.types.get(name) {
                 let type_params = get_type_params(t);
+                println!("type_params = {type_params:#?}");
 
                 // Replaces qualifiers in the type with the corresponding type params
                 // from the alias type.
@@ -214,8 +215,11 @@ impl Context {
                         .collect()
                     }
                 };
-
-                return Ok(t.apply(&subs));
+                println!("subs: {subs:#?}");
+                println!("before subs: {t:#?}");
+                let t = t.apply(&subs);
+                println!("after subs: {t:#?}");
+                return Ok(t);
             }
         }
         Err(Report::new(TypeError::CantFindIdent(name.to_owned()))

@@ -2,9 +2,9 @@ use error_stack::Report;
 use std::fs;
 
 use crochet_ast::values::Program;
-use crochet_parser::parse;
-
 use crochet_dts::parse_dts::*;
+use crochet_infer::compute_mapped_type;
+use crochet_parser::parse;
 
 use core::{any::TypeId, panic::Location};
 use error_stack::{AttachmentKind, FrameKind};
@@ -396,4 +396,18 @@ fn merging_generic_interfaces() {
         result,
         "<t0>{bar: (x: t0) => number, baz: (x: t0) => string}"
     );
+}
+
+#[test]
+fn infer_mapped_types() {
+    let src = r#"
+    type Obj = {a: number, b: string, c: boolean};
+    type PartialObj = Partial<Obj>;
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let t = ctx.lookup_type("PartialObj", false).unwrap();
+    let t = compute_mapped_type(&t, &ctx).unwrap();
+
+    let result = format!("{}", t);
+    assert_eq!(result, "{a: Obj[\"a\"], b: Obj[\"b\"], c: Obj[\"c\"]}");
 }

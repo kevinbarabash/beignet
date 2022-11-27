@@ -89,6 +89,14 @@ impl Substitutable for Type {
             }
             TypeKind::MappedType(mapped) => TypeKind::MappedType(TMappedType {
                 t: Box::from(mapped.t.apply(sub)),
+                type_param: TVar {
+                    id: mapped.type_param.id,
+                    constraint: mapped
+                        .type_param
+                        .constraint
+                        .as_ref()
+                        .map(|constraint| Box::from(constraint.apply(sub))),
+                },
                 ..mapped.to_owned()
             }),
         };
