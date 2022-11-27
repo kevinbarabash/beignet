@@ -428,3 +428,17 @@ fn infer_readonly() {
     let result = format!("{}", t);
     assert_eq!(result, "{a: number, b?: string, c: boolean, d?: number}");
 }
+
+#[test]
+fn infer_pick() {
+    let src = r#"
+    type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
+    type PickObj = Pick<Obj, "a" | "b">;
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let t = ctx.lookup_type("PickObj", false).unwrap();
+    let t = compute_mapped_type(&t, &ctx).unwrap();
+
+    let result = format!("{}", t);
+    assert_eq!(result, "{a: number, b?: string}");
+}

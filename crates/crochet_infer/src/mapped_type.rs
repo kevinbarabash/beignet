@@ -36,17 +36,15 @@ fn unwrap_obj_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
 }
 
 fn get_obj_type_from_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeError> {
-    // TODO:
-    // - check if mapped.type_param.constraint is a keyof type
-    // - if not, look at the constraint's provenence to see it was a keyof type
-    // - as a last resort, look at mapped.t to see if it's an indexed access type
     if let Some(constraint) = &mapped.type_param.constraint {
         if let TypeKind::KeyOf(t) = &constraint.kind {
             return unwrap_obj_type(t.as_ref(), ctx);
         }
 
         // TODO: look at constraint.provenence to see if it's a keyof type
-    } else if let TypeKind::IndexAccess(access) = &mapped.t.kind {
+    }
+
+    if let TypeKind::IndexAccess(access) = &mapped.t.kind {
         return unwrap_obj_type(access.object.as_ref(), ctx);
     }
 
@@ -116,7 +114,10 @@ pub fn compute_mapped_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
         }
         TypeKind::MappedType(mapped) => {
             let constraint = mapped.type_param.constraint.as_ref().unwrap();
-            let keys = key_of(constraint, ctx)?;
+            let keys = match &constraint.kind {
+                TypeKind::KeyOf(_) => key_of(constraint, ctx)?,
+                _ => constraint.as_ref().to_owned(),
+            };
             let obj = get_obj_type_from_mapped_type(mapped, ctx)?;
 
             let elems = match &obj.kind {

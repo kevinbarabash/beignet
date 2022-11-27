@@ -180,7 +180,6 @@ impl Context {
         for scope in self.scopes.iter().rev() {
             if let Some(t) = scope.types.get(name) {
                 let type_params = get_type_params(t);
-                println!("type_params = {type_params:#?}");
 
                 // Replaces qualifiers in the type with the corresponding type params
                 // from the alias type.
@@ -188,8 +187,6 @@ impl Context {
                 let subs: Subst = match &alias.type_args {
                     Some(type_params) => {
                         if type_params.len() != type_params.len() {
-                            println!("type = {t}");
-                            println!("type_params = {type_params:#?}");
                             return Err(Report::new(TypeError::TypeInstantiationFailure)
                                 .attach_printable(
                                     "mismatch between the number of qualifiers and type params",

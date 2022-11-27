@@ -211,7 +211,6 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                 },
                 t: Box::from(type_ann),
             }));
-            println!("MappedType = {t}");
             Ok(t)
         }
         TsType::TsLitType(lit) => match &lit.lit {
@@ -396,22 +395,14 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
 }
 
 fn infer_type_alias_decl(decl: &TsTypeAliasDecl, ctx: &Context) -> Result<Type, String> {
-    let name = decl.id.sym.to_string();
-    println!("inferring type decl: {name}");
     let t = infer_ts_type_ann(&decl.type_ann, ctx)?;
 
     // If there are any type params, they will be replaced and the returned type
     // be of kind, TypeKind::Generic.
-    if name == "Partial" {
-        println!("before replace_aliases: {t:#?}");
-    }
     let t = match &decl.type_params {
         Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,
         None => t,
     };
-    if name == "Partial" {
-        println!("after replace_aliases: {t:#?}");
-    }
 
     let empty_s = Subst::default();
     Ok(close_over(&empty_s, &t, ctx))
