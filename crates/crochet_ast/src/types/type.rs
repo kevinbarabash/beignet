@@ -88,12 +88,6 @@ pub enum TMappedTypeChangeProp {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum TMappedTypeMutable {
-    Plus,
-    Minus,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TypeKind {
     Var(TVar),
     App(TApp),
@@ -229,4 +223,45 @@ impl fmt::Display for Type {
     }
 }
 
-// TODO: add unit tests to verify the fmt::Display output
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn simple_mapped_type_display() {
+        let constraint = Type::from(TypeKind::Ref(TRef {
+            name: String::from("T"),
+            type_args: None,
+        }));
+        let t = Type::from(TypeKind::MappedType(TMappedType {
+            type_param: TVar {
+                id: 5,
+                constraint: Some(Box::from(constraint)),
+            },
+            optional: None,
+            mutable: None,
+            t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+        }));
+
+        assert_eq!(format!("{t}"), "{[t5 in T]: number}");
+    }
+
+    #[test]
+    fn complex_mapped_type_display() {
+        let constraint = Type::from(TypeKind::Ref(TRef {
+            name: String::from("T"),
+            type_args: None,
+        }));
+        let t = Type::from(TypeKind::MappedType(TMappedType {
+            type_param: TVar {
+                id: 5,
+                constraint: Some(Box::from(constraint)),
+            },
+            optional: Some(TMappedTypeChangeProp::Plus),
+            mutable: Some(TMappedTypeChangeProp::Plus),
+            t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+        }));
+
+        assert_eq!(format!("{t}"), "{+mut [t5 in T]+?: number}");
+    }
+}
