@@ -8,6 +8,7 @@ use types::TKeyword;
 
 use crate::context::Context;
 use crate::key_of::key_of;
+use crate::mapped_type::compute_mapped_type;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify_mut::unify_mut;
@@ -612,6 +613,14 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
         (TypeKind::Ref(alias), _) => {
             let alias_t = ctx.lookup_ref_and_instantiate(alias)?;
             unify(&alias_t, t2, ctx)
+        }
+        (_, TypeKind::MappedType(_)) => {
+            let mapped_t = compute_mapped_type(t2, ctx)?;
+            unify(t1, &mapped_t, ctx)
+        }
+        (TypeKind::MappedType(_), _) => {
+            let mapped_t = compute_mapped_type(t1, ctx)?;
+            unify(&mapped_t, t2, ctx)
         }
         (TypeKind::Array(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_ref(), ctx),
         (TypeKind::Tuple(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_ref(), ctx),

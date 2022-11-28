@@ -490,3 +490,15 @@ fn infer_pick() {
     let result = format!("{}", t);
     assert_eq!(result, "{a: number, b?: string}");
 }
+
+#[test]
+fn infer_prog_using_partial() {
+    let src = r#"
+    type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
+    type PartialObj = Partial<Obj>;
+
+    let partial_obj: PartialObj = {b: "hello"};
+    "#;
+
+    infer_prog(src);
+}
