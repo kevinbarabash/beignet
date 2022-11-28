@@ -187,8 +187,6 @@ impl Context {
                 let subs: Subst = match &alias.type_args {
                     Some(type_params) => {
                         if type_params.len() != type_params.len() {
-                            println!("type = {t}");
-                            println!("type_params = {type_params:#?}");
                             return Err(Report::new(TypeError::TypeInstantiationFailure)
                                 .attach_printable(
                                     "mismatch between the number of qualifiers and type params",
@@ -214,7 +212,6 @@ impl Context {
                         .collect()
                     }
                 };
-
                 return Ok(t.apply(&subs));
             }
         }

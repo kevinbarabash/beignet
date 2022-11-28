@@ -3,14 +3,16 @@ use std::collections::HashMap;
 use swc_ecma_ast::*;
 
 use crochet_ast::types::{
-    self as types, TCallable, TFnParam, TGeneric, TIndexAccess, TObjElem, TObject, TVar, Type,
-    TypeKind,
+    self as types, TCallable, TFnParam, TGeneric, TIndexAccess, TMappedType, TObjElem, TObject,
+    TVar, Type, TypeKind,
 };
 use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substitutable};
 
 use crate::parse_dts::infer_ts_type_ann;
 
 // TODO: rename this replace_refs
+// TODO: use the same technique we use in infer_type_ann.rs, as this stands, it
+// doesn't handle type param shadowing.
 pub fn replace_aliases(
     t: &Type,
     type_param_decl: &TsTypeParamDecl,
@@ -39,43 +41,62 @@ pub fn replace_aliases(
         })
         .collect::<Result<HashMap<String, TVar>, String>>()?;
 
+    // QUESTION: Do we need to call `set_type_params` before calling `replace_aliases_rec`
     let t = set_type_params(t, &type_params);
     Ok(replace_aliases_rec(&t, &type_param_map))
 }
 
+// TODO: update this to use Visitor from crochet_infer, which should probably
+// be moved into the crochet_ast crate.
 // TODO: rename this replace_refs_rec
-fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
+// NOTE: This is only used externall by replace_aliases_rec.
+pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, TVar>) -> Type {
     let kind = match &t.kind {
         TypeKind::Generic(TGeneric { t, type_params }) => {
             // TODO: create a new `map` that adds in `type_params`
             TypeKind::Generic(TGeneric {
-                t: Box::from(replace_aliases_rec(t, map)),
+                t: Box::from(replace_aliases_rec(t, type_param_map)),
                 type_params: type_params.to_owned(),
             })
         }
-        TypeKind::Var(_) => return t.to_owned(),
+        TypeKind::Var(tvar) => match &tvar.constraint {
+            Some(constraint) => TypeKind::Var(TVar {
+                constraint: Some(Box::from(replace_aliases_rec(constraint, type_param_map))),
+                ..tvar.to_owned()
+            }),
+            None => t.kind.to_owned(),
+        },
         TypeKind::App(types::TApp { args, ret }) => TypeKind::App(types::TApp {
-            args: args.iter().map(|t| replace_aliases_rec(t, map)).collect(),
-            ret: Box::from(replace_aliases_rec(ret, map)),
+            args: args
+                .iter()
+                .map(|t| replace_aliases_rec(t, type_param_map))
+                .collect(),
+            ret: Box::from(replace_aliases_rec(ret, type_param_map)),
         }),
         TypeKind::Lam(types::TLam { params, ret }) => TypeKind::Lam(types::TLam {
             params: params
                 .iter()
                 .map(|param| TFnParam {
-                    t: replace_aliases_rec(&param.t, map),
+                    t: replace_aliases_rec(&param.t, type_param_map),
                     ..param.to_owned()
                 })
                 .collect(),
-            ret: Box::from(replace_aliases_rec(ret, map)),
+            ret: Box::from(replace_aliases_rec(ret, type_param_map)),
         }),
         TypeKind::Lit(_) => return t.to_owned(),
         TypeKind::Keyword(_) => return t.to_owned(),
-        TypeKind::Union(types) => {
-            TypeKind::Union(types.iter().map(|t| replace_aliases_rec(t, map)).collect())
-        }
-        TypeKind::Intersection(types) => {
-            TypeKind::Intersection(types.iter().map(|t| replace_aliases_rec(t, map)).collect())
-        }
+        TypeKind::Union(types) => TypeKind::Union(
+            types
+                .iter()
+                .map(|t| replace_aliases_rec(t, type_param_map))
+                .collect(),
+        ),
+        TypeKind::Intersection(types) => TypeKind::Intersection(
+            types
+                .iter()
+                .map(|t| replace_aliases_rec(t, type_param_map))
+                .collect(),
+        ),
         TypeKind::Object(obj) => {
             let elems: Vec<TObjElem> = obj
                 .elems
@@ -86,11 +107,11 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                             .params
                             .iter()
                             .map(|t| TFnParam {
-                                t: replace_aliases_rec(&t.t, map),
+                                t: replace_aliases_rec(&t.t, type_param_map),
                                 ..t.to_owned()
                             })
                             .collect();
-                        let ret = replace_aliases_rec(lam.ret.as_ref(), map);
+                        let ret = replace_aliases_rec(lam.ret.as_ref(), type_param_map);
 
                         TObjElem::Call(TCallable {
                             params,
@@ -103,11 +124,11 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                             .params
                             .iter()
                             .map(|t| TFnParam {
-                                t: replace_aliases_rec(&t.t, map),
+                                t: replace_aliases_rec(&t.t, type_param_map),
                                 ..t.to_owned()
                             })
                             .collect();
-                        let ret = replace_aliases_rec(lam.ret.as_ref(), map);
+                        let ret = replace_aliases_rec(lam.ret.as_ref(), type_param_map);
 
                         TObjElem::Constructor(TCallable {
                             params,
@@ -116,16 +137,14 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                         })
                     }
                     TObjElem::Index(index) => {
-                        let t = replace_aliases_rec(&index.t, map);
+                        let t = replace_aliases_rec(&index.t, type_param_map);
                         TObjElem::Index(types::TIndex {
                             t,
                             ..index.to_owned()
                         })
                     }
                     TObjElem::Prop(prop) => {
-                        println!("replacing prop.t");
-                        println!("prop.t = {:#}", prop.t);
-                        let t = replace_aliases_rec(&prop.t, map);
+                        let t = replace_aliases_rec(&prop.t, type_param_map);
                         TObjElem::Prop(types::TProp {
                             t,
                             ..prop.to_owned()
@@ -135,7 +154,7 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
                 .collect();
             TypeKind::Object(TObject { elems })
         }
-        TypeKind::Ref(alias) => match map.get(&alias.name) {
+        TypeKind::Ref(alias) => match type_param_map.get(&alias.name) {
             Some(tv) => {
                 return Type {
                     kind: TypeKind::Var(tv.to_owned()),
@@ -148,17 +167,32 @@ fn replace_aliases_rec(t: &Type, map: &HashMap<String, TVar>) -> Type {
             }
             None => return t.to_owned(),
         },
-        TypeKind::Tuple(types) => {
-            TypeKind::Tuple(types.iter().map(|t| replace_aliases_rec(t, map)).collect())
-        }
-        TypeKind::Array(t) => TypeKind::Array(Box::from(replace_aliases_rec(t, map))),
-        TypeKind::Rest(t) => TypeKind::Rest(Box::from(replace_aliases_rec(t, map))),
+        TypeKind::Tuple(types) => TypeKind::Tuple(
+            types
+                .iter()
+                .map(|t| replace_aliases_rec(t, type_param_map))
+                .collect(),
+        ),
+        TypeKind::Array(t) => TypeKind::Array(Box::from(replace_aliases_rec(t, type_param_map))),
+        TypeKind::Rest(t) => TypeKind::Rest(Box::from(replace_aliases_rec(t, type_param_map))),
         TypeKind::This => TypeKind::This,
-        TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(replace_aliases_rec(t, map))),
+        TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(replace_aliases_rec(t, type_param_map))),
         TypeKind::IndexAccess(TIndexAccess { object, index }) => {
             TypeKind::IndexAccess(TIndexAccess {
-                object: Box::from(replace_aliases_rec(object, map)),
-                index: Box::from(replace_aliases_rec(index, map)),
+                object: Box::from(replace_aliases_rec(object, type_param_map)),
+                index: Box::from(replace_aliases_rec(index, type_param_map)),
+            })
+        }
+        TypeKind::MappedType(mapped) => {
+            TypeKind::MappedType(TMappedType {
+                t: Box::from(replace_aliases_rec(&mapped.t, type_param_map)),
+                type_param: TVar {
+                    id: mapped.type_param.id,
+                    constraint: mapped.type_param.constraint.as_ref().map(|constraint| {
+                        Box::from(replace_aliases_rec(constraint, type_param_map))
+                    }),
+                },
+                ..mapped.to_owned()
             })
         }
     };

@@ -1,17 +1,19 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use types::{TCallable, TIndex, TObjElem, TObject, TypeKind};
+use types::{TCallable, TIndex, TIndexAccess, TMappedType, TObjElem, TObject, TypeKind};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
 use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
 
-use crochet_ast::types::{self as types, RestPat, TFnParam, TKeyword, TPat, TProp, Type};
+use crochet_ast::types::{
+    self as types, RestPat, TFnParam, TKeyword, TMappedTypeChangeProp, TPat, TProp, TVar, Type,
+};
 use crochet_ast::values::Lit;
 use crochet_infer::{close_over, generalize, normalize, Context, Env, Subst, Substitutable};
 
-use crate::util;
+use crate::util::{self, replace_aliases_rec};
 
 #[derive(Debug, Clone)]
 pub struct InterfaceCollector {
@@ -152,8 +154,65 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                 }
             }
         }
-        TsType::TsIndexedAccessType(_) => Err(String::from("can't parse indexed type yet")),
-        TsType::TsMappedType(_) => Err(String::from("can't parse mapped type yet")),
+        TsType::TsIndexedAccessType(TsIndexedAccessType {
+            span: _,
+            readonly: _, // What does `readonly` mean in this context?
+            obj_type,
+            index_type,
+        }) => {
+            let t = Type::from(TypeKind::IndexAccess(TIndexAccess {
+                object: Box::from(infer_ts_type_ann(obj_type, ctx)?),
+                index: Box::from(infer_ts_type_ann(index_type, ctx)?),
+            }));
+            Ok(t)
+        }
+        TsType::TsMappedType(TsMappedType {
+            span: _,
+            readonly,
+            type_param,
+            optional,
+            type_ann,
+            ..
+        }) => {
+            let constraint = match &type_param.constraint {
+                Some(constraint) => Some(Box::from(infer_ts_type_ann(constraint, ctx)?)),
+                None => None,
+            };
+            let type_ann = infer_ts_type_ann(type_ann.as_ref().unwrap(), ctx)?;
+            let tvar = TVar {
+                id: ctx.fresh_id(),
+                constraint,
+            };
+            let mut type_param_map = HashMap::default();
+            type_param_map.insert(type_param.name.sym.to_string(), tvar.clone());
+
+            // HACK: We call replace_aliases_rec directly here otherwise we'd
+            // get back a generic type that we'd have to instantiate immediately.
+            let type_ann = replace_aliases_rec(&type_ann, &type_param_map);
+            let t = Type::from(TypeKind::MappedType(TMappedType {
+                type_param: tvar,
+                optional: match optional {
+                    Some(change) => match change {
+                        TruePlusMinus::True => Some(TMappedTypeChangeProp::Plus),
+                        TruePlusMinus::Plus => Some(TMappedTypeChangeProp::Plus),
+                        TruePlusMinus::Minus => Some(TMappedTypeChangeProp::Minus),
+                    },
+                    None => None,
+                },
+                mutable: match readonly {
+                    Some(change) => match change {
+                        // NOTE: We reverse plus/minus here because we converting
+                        // from `readonly` to `mutable`.
+                        TruePlusMinus::True => Some(TMappedTypeChangeProp::Minus),
+                        TruePlusMinus::Plus => Some(TMappedTypeChangeProp::Minus),
+                        TruePlusMinus::Minus => Some(TMappedTypeChangeProp::Plus),
+                    },
+                    None => None,
+                },
+                t: Box::from(type_ann),
+            }));
+            Ok(t)
+        }
         TsType::TsLitType(lit) => match &lit.lit {
             TsLit::Number(num) => Ok(Type::from(Lit::num(format!("{}", num.value), 0..0))),
             TsLit::Str(str) => Ok(Type::from(Lit::str(str.value.to_string(), 0..0))),
@@ -335,6 +394,20 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
     }
 }
 
+fn infer_type_alias_decl(decl: &TsTypeAliasDecl, ctx: &Context) -> Result<Type, String> {
+    let t = infer_ts_type_ann(&decl.type_ann, ctx)?;
+
+    // If there are any type params, they will be replaced and the returned type
+    // be of kind, TypeKind::Generic.
+    let t = match &decl.type_params {
+        Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,
+        None => t,
+    };
+
+    let empty_s = Subst::default();
+    Ok(close_over(&empty_s, &t, ctx))
+}
+
 fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, String> {
     // TODO: skip properties we don't know how to deal with instead of return an error for the whole map
     let elems: Vec<TObjElem> = decl
@@ -354,9 +427,10 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, S
         })
         .collect();
 
-    // TODO: make this generic if the decl has any type params
     let t = Type::from(TypeKind::Object(TObject { elems }));
 
+    // If there are any type params, they will be replaced and the returned type
+    // be of kind, TypeKind::Generic.
     let t = match &decl.type_params {
         Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,
         None => t,
@@ -367,6 +441,15 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, S
 }
 
 impl Visit for InterfaceCollector {
+    fn visit_ts_type_alias_decl(&mut self, decl: &TsTypeAliasDecl) {
+        let name = decl.id.sym.to_string();
+        println!("inferring: {name}");
+        match infer_type_alias_decl(decl, &self.ctx) {
+            Ok(t) => self.ctx.insert_type(name, t),
+            Err(err) => println!("couldn't infer {name}, {err:#?}"),
+        }
+    }
+
     fn visit_ts_interface_decl(&mut self, decl: &TsInterfaceDecl) {
         let name = decl.id.sym.to_string();
         println!("inferring: {name}");
@@ -385,9 +468,7 @@ impl Visit for InterfaceCollector {
                     None => self.ctx.insert_type(name, t),
                 };
             }
-            Err(_) => {
-                println!("couldn't infer {name}");
-            }
+            Err(_) => println!("couldn't infer {name}"),
         }
     }
 

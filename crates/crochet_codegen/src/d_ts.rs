@@ -635,6 +635,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
         TypeKind::This => TsType::TsThisType(TsThisType { span: DUMMY_SP }),
         TypeKind::KeyOf(_) => todo!(),
         TypeKind::IndexAccess(_) => todo!(),
+        TypeKind::MappedType(_) => todo!(),
     }
 }
 

@@ -5,6 +5,7 @@ mod infer_fn_param;
 mod infer_pattern;
 mod infer_type_ann;
 mod key_of;
+mod mapped_type;
 mod substitutable;
 mod type_error;
 mod unify;
@@ -17,6 +18,7 @@ pub mod infer;
 
 pub use context::*;
 pub use infer::*;
+pub use mapped_type::compute_mapped_type;
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
 pub use util::{close_over, generalize, get_type_params, normalize, set_type_params};

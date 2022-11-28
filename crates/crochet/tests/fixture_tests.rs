@@ -7,11 +7,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str;
 
-use crochet_codegen::d_ts::*;
-use crochet_codegen::js::*;
 use crochet_dts::parse_dts::parse_dts;
 use crochet_infer::*;
-use crochet_parser::parse;
 
 use crochet::compile_error::CompileError;
 use crochet::diagnostics::get_diagnostics;
@@ -34,58 +31,31 @@ fn pass(in_path: PathBuf) {
     d_ts_path.set_extension("d.ts");
 
     let input = fs::read_to_string(in_path).unwrap();
+    let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
 
-    let program = parse(&input).unwrap();
-    let js_output = codegen_js(&program);
-    match mode {
-        Mode::Check => {
-            let js_fixture = fs::read_to_string(js_path).unwrap();
-            assert_eq!(js_fixture, js_output);
+    match compile(&input, &lib) {
+        Ok((js_output, d_ts_output)) => match mode {
+            Mode::Check => {
+                let js_fixture = fs::read_to_string(js_path).unwrap();
+                assert_eq!(js_fixture, js_output);
+                let d_ts_fixture = fs::read_to_string(d_ts_path).unwrap();
+                assert_eq!(d_ts_fixture, d_ts_output);
+            }
+            Mode::Write => {
+                let mut file = fs::File::create(js_path).unwrap();
+                file.write_all(js_output.as_bytes())
+                    .expect("unable to write data");
+                let mut file = fs::File::create(d_ts_path).unwrap();
+                file.write_all(d_ts_output.as_bytes())
+                    .expect("unable to write data");
+            }
+        },
+        Err(report) => {
+            println!("{report:#?}");
+            panic!("Unexpected error");
         }
-        Mode::Write => {
-            let mut file = fs::File::create(js_path).unwrap();
-            file.write_all(js_output.as_bytes())
-                .expect("unable to write data");
-        }
-    }
-
-    let mut ctx = crochet_infer::Context::default();
-    let mut program = program;
-    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
-    let d_ts_output = codegen_d_ts(&program, &ctx);
-    match mode {
-        Mode::Check => {
-            let d_ts_fixture = fs::read_to_string(d_ts_path).unwrap();
-            assert_eq!(d_ts_fixture, d_ts_output);
-        }
-        Mode::Write => {
-            let mut file = fs::File::create(d_ts_path).unwrap();
-            file.write_all(d_ts_output.as_bytes())
-                .expect("unable to write data");
-        }
-    }
-}
-
-fn compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
-    let mut program = match crochet_parser::parse(input).change_context(CompileError) {
-        Ok(program) => program,
-        Err(error) => return Err(error),
     };
-
-    let js = crochet_codegen::js::codegen_js(&program);
-
-    // TODO: return errors as part of CompileResult
-    let mut ctx = parse_dts(lib).unwrap();
-    let ctx = match infer_prog(&mut program, &mut ctx).change_context(CompileError) {
-        Ok(ctx) => ctx,
-        Err(error) => return Err(error),
-    };
-    let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
-
-    Ok((js, dts))
 }
-
-static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
 #[testing_macros::fixture("tests/errors/*.crochet")]
 fn fail(in_path: PathBuf) {
@@ -127,3 +97,24 @@ fn fail(in_path: PathBuf) {
         }
     };
 }
+
+fn compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
+    let mut program = match crochet_parser::parse(input).change_context(CompileError) {
+        Ok(program) => program,
+        Err(error) => return Err(error),
+    };
+
+    let js = crochet_codegen::js::codegen_js(&program);
+
+    // TODO: return errors as part of CompileResult
+    let mut ctx = parse_dts(lib).unwrap();
+    let ctx = match infer_prog(&mut program, &mut ctx).change_context(CompileError) {
+        Ok(ctx) => ctx,
+        Err(error) => return Err(error),
+    };
+    let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
+
+    Ok((js, dts))
+}
+
+static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";

@@ -77,12 +77,20 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                         .collect(),
                 })
             }
-            TypeKind::Var(tv) => match mapping.get(&tv.id) {
-                Some(t) => return t.to_owned(),
-                // If `id` doesn't exist in `mapping` we return the original type variable.
-                // In this situation, it should appear in some other list of qualifiers.
-                None => return t.to_owned(),
-            },
+            TypeKind::Var(tv) => {
+                match mapping.get(&tv.id) {
+                    Some(t) => return t.to_owned(),
+                    // If `id` doesn't exist in `mapping` we return the original type variable.
+                    // In this situation, it should appear in some other list of qualifiers.
+                    None => TypeKind::Var(TVar {
+                        id: tv.id,
+                        constraint: tv
+                            .constraint
+                            .as_ref()
+                            .map(|constraint| Box::from(norm_type(constraint, mapping, _ctx))),
+                    }),
+                }
+            }
             TypeKind::App(app) => {
                 let args: Vec<_> = app
                     .args
@@ -199,6 +207,18 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     index: Box::from(norm_type(index, mapping, _ctx)),
                 })
             }
+            TypeKind::MappedType(mapped) => TypeKind::MappedType(TMappedType {
+                t: Box::from(norm_type(&mapped.t, mapping, _ctx)),
+                type_param: TVar {
+                    id: mapped.type_param.id,
+                    constraint: mapped
+                        .type_param
+                        .constraint
+                        .as_ref()
+                        .map(|constraint| Box::from(norm_type(constraint, mapping, _ctx))),
+                },
+                ..mapped.to_owned()
+            }),
         };
 
         Type {

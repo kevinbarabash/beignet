@@ -25,7 +25,11 @@ pub trait Visitor {
                 types.iter_mut().for_each(|t| self.visit_children(t));
             }
             TypeKind::Object(_) => todo!(),
-            TypeKind::Ref(_) => todo!(),
+            TypeKind::Ref(alias) => {
+                if let Some(type_args) = &mut alias.type_args {
+                    type_args.iter_mut().for_each(|t| self.visit_children(t));
+                }
+            }
             TypeKind::Tuple(types) => {
                 types.iter_mut().for_each(|t| self.visit_children(t));
             }
@@ -36,6 +40,9 @@ pub trait Visitor {
             TypeKind::IndexAccess(access) => {
                 self.visit_children(&mut access.object);
                 self.visit_children(&mut access.index);
+            }
+            TypeKind::MappedType(mapped) => {
+                self.visit_children(&mut mapped.t);
             }
             TypeKind::Generic(gen) => {
                 self.visit_children(&mut gen.t);

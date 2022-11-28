@@ -87,6 +87,18 @@ impl Substitutable for Type {
                     index: Box::from(index.apply(sub)),
                 })
             }
+            TypeKind::MappedType(mapped) => TypeKind::MappedType(TMappedType {
+                t: Box::from(mapped.t.apply(sub)),
+                type_param: TVar {
+                    id: mapped.type_param.id,
+                    constraint: mapped
+                        .type_param
+                        .constraint
+                        .as_ref()
+                        .map(|constraint| Box::from(constraint.apply(sub))),
+                },
+                ..mapped.to_owned()
+            }),
         };
         norm_type(Type {
             kind,
@@ -126,6 +138,17 @@ impl Substitutable for Type {
             TypeKind::IndexAccess(TIndexAccess { object, index }) => {
                 let mut result = object.ftv();
                 result.append(&mut index.ftv());
+                result
+            }
+            // What does it mean to be a free variable?
+            TypeKind::MappedType(TMappedType { type_param, t, .. }) => {
+                // TODO: get free variables in the value and the key and take
+                // the set difference of them.
+                let mut result = t.ftv();
+                if let Some(index) = result.iter().position(|tv| tv == type_param) {
+                    result.remove(index);
+                }
+                // TODO: warn that the type param doesn't appear in the `t`
                 result
             }
         }

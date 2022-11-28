@@ -46,13 +46,19 @@ pub struct TIndexAccess {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TGeneric {
     pub t: Box<Type>,
-    pub type_params: Vec<TVar>,
+    pub type_params: Vec<TVar>, // TODO: update to use TypeParam
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TVar {
     pub id: i32,
     pub constraint: Option<Box<Type>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TypeParam {
+    pub name: String,
+    pub tvar: TVar,
 }
 
 // impl fmt::Display for TVar {
@@ -68,11 +74,24 @@ pub struct TVar {
 // }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TMappedType {
+    pub type_param: TVar,
+    pub optional: Option<TMappedTypeChangeProp>,
+    pub mutable: Option<TMappedTypeChangeProp>,
+    pub t: Box<Type>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TMappedTypeChangeProp {
+    Plus,
+    Minus,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TypeKind {
     Var(TVar),
     App(TApp),
     Lam(TLam),
-    // Query, // use for typed holes
     Lit(TLit),
     Keyword(TKeyword),
     Union(Vec<Type>),
@@ -83,8 +102,16 @@ pub enum TypeKind {
     Array(Box<Type>),
     Rest(Box<Type>), // TODO: rename this to Spread
     This,
+
+    // Type operations
     KeyOf(Box<Type>),
     IndexAccess(TIndexAccess),
+    MappedType(TMappedType),
+    // Query, // use for typed holes
+
+    // We encapsulate type polymorphism in a wrapper type instead of a separate
+    // data structure like a `Scheme`.  This allows us to nest polymorphic types
+    // with independent type parameters which isn't possible when using `Scheme`.
     Generic(TGeneric),
 }
 
@@ -162,8 +189,79 @@ impl fmt::Display for Type {
             TypeKind::This => write!(f, "this"),
             TypeKind::KeyOf(t) => write!(f, "keyof {t}"),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => write!(f, "{object}[{index}]"),
+            TypeKind::MappedType(TMappedType {
+                type_param,
+                optional,
+                mutable,
+                t,
+            }) => {
+                write!(f, "{{")?;
+
+                if let Some(mutable) = mutable {
+                    match mutable {
+                        TMappedTypeChangeProp::Plus => write!(f, "+mut ")?,
+                        TMappedTypeChangeProp::Minus => write!(f, "-mut ")?,
+                    }
+                }
+
+                write!(f, "[t{}", type_param.id)?;
+                if let Some(constraint) = &type_param.constraint {
+                    write!(f, " in {constraint}")?;
+                }
+                write!(f, "]")?;
+
+                if let Some(optional) = optional {
+                    match optional {
+                        TMappedTypeChangeProp::Plus => write!(f, "+?")?,
+                        TMappedTypeChangeProp::Minus => write!(f, "-?")?,
+                    }
+                }
+
+                write!(f, ": {t}}}")
+            }
         }
     }
 }
 
-// TODO: add unit tests to verify the fmt::Display output
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn simple_mapped_type_display() {
+        let constraint = Type::from(TypeKind::Ref(TRef {
+            name: String::from("T"),
+            type_args: None,
+        }));
+        let t = Type::from(TypeKind::MappedType(TMappedType {
+            type_param: TVar {
+                id: 5,
+                constraint: Some(Box::from(constraint)),
+            },
+            optional: None,
+            mutable: None,
+            t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+        }));
+
+        assert_eq!(format!("{t}"), "{[t5 in T]: number}");
+    }
+
+    #[test]
+    fn complex_mapped_type_display() {
+        let constraint = Type::from(TypeKind::Ref(TRef {
+            name: String::from("T"),
+            type_args: None,
+        }));
+        let t = Type::from(TypeKind::MappedType(TMappedType {
+            type_param: TVar {
+                id: 5,
+                constraint: Some(Box::from(constraint)),
+            },
+            optional: Some(TMappedTypeChangeProp::Plus),
+            mutable: Some(TMappedTypeChangeProp::Plus),
+            t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+        }));
+
+        assert_eq!(format!("{t}"), "{+mut [t5 in T]+?: number}");
+    }
+}
