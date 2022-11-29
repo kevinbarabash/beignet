@@ -2958,4 +2958,53 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn object_assignment() {
+        let src = r#"
+        type Point = {x: number, y: number};
+        
+        let p: Point = {x: 5, y: 10};
+        
+        // extra properties are okay
+        let q: Point = {x: 5, y: 10, z: 15};
+        "#;
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "TypeError::UnificationError: {x: 5}, {x: number, y: number}"]
+    fn object_assignment_not_enough_properties() {
+        let src = r#"
+        type Point = {x: number, y: number};
+        
+        let p: Point = {x: 5};
+        "#;
+        infer_prog(src);
+    }
+
+    #[test]
+    fn object_assignment_with_optional_properties() {
+        let src = r#"
+        type Point = {x?: number, y?: number};
+        
+        let p: Point = {x: 5};
+        let q: Point = {y: 10};
+
+        // extra properties are okay
+        let r: Point = {z: 15};
+        "#;
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "TypeError::UnificationError: {x: \"hello\"}, {x?: number, y?: number}"]
+    fn object_assignment_with_optional_properties_wrong_type() {
+        let src = r#"
+        type Point = {x?: number, y?: number};
+        
+        let p: Point = {x: "hello"};
+        "#;
+        infer_prog(src);
+    }
 }

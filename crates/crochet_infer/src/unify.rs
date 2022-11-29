@@ -325,27 +325,31 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             Err(Report::new(TypeError::NoValidOverload))
         }
         (TypeKind::Object(obj1), TypeKind::Object(obj2)) => {
-            // Should we be doing something about type_params here?
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
             let result: Result<Vec<_>, TypeError> = obj2
                 .elems
                 .iter()
                 .map(|e2| {
-                    let mut b = false;
+                    let mut has_matching_key = false;
+                    let mut has_matching_value = false;
                     let mut ss = vec![];
                     for e1 in obj1.elems.iter() {
                         match (e1, e2) {
                             (TObjElem::Call(_), TObjElem::Call(_)) => {
                                 // What to do about Call signatures?
+                                // Treat them similarly to callbacks when dealing
+                                // args in function calls / application.
                                 todo!()
                             }
                             (TObjElem::Prop(prop1), TObjElem::Prop(prop2)) => {
                                 if prop1.name == prop2.name {
+                                    has_matching_key = true;
+
                                     let t1 = get_property_type(prop1);
                                     let t2 = get_property_type(prop2);
 
                                     if let Ok(s) = unify(&t1, &t2, ctx) {
-                                        b = true;
+                                        has_matching_value = true;
                                         ss.push(s);
                                     }
                                 }
@@ -355,19 +359,28 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                         }
                     }
 
+                    if has_matching_value {
+                        return Ok(compose_many_subs(&ss));
+                    }
+
+                    // If there's no matching key...
+                    if !has_matching_key {
+                        // ...but the element was optional...
+                        if let TObjElem::Prop(prop) = e2 {
+                            if prop.optional {
+                                // ...that's also Ok.
+                                return Ok(Subst::default());
+                            }
+                        }
+                    }
+
                     // TODO: track which properties t1 is missing from t2 so that
                     // we can report a more specific error.
-                    match b {
-                        true => Ok(compose_many_subs(&ss)),
-                        false => match e2 {
-                            TObjElem::Prop(prop2) if prop2.optional => Ok(Subst::default()),
-                            _ => Err(Report::new(TypeError::UnificationError(
-                                Box::from(t1.to_owned()),
-                                Box::from(t2.to_owned()),
-                            ))
-                            .attach_printable("Unification failure")),
-                        },
-                    }
+                    Err(Report::new(TypeError::UnificationError(
+                        Box::from(t1.to_owned()),
+                        Box::from(t2.to_owned()),
+                    ))
+                    .attach_printable("Unification failure"))
                 })
                 .collect();
 
