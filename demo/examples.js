@@ -105,3 +105,14 @@ let result = match (event) {
     {type: "keydown", key} -> \`keydown: \${key}\`
 };
 `;
+
+export const standardLibrary = `
+let message = "Hello, world!";
+let length = message.length;
+
+let tuple = [1, 2, 3];
+let squares = tuple.map((x) => x * x);
+
+let fruit: mut string[] = ["banana", "grapes", "apple", "pear"];
+fruit.sort();
+`;
