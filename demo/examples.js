@@ -116,3 +116,21 @@ let squares = tuple.map((x) => x * x);
 let fruit: mut string[] = ["banana", "grapes", "apple", "pear"];
 fruit.sort();
 `;
+
+export const utilityTypes = `
+type Point3D = {x: number, y: number, z: number};
+type Point2D = Pick<Point3D, "x" | "y">;
+let p: Point2D = {x: 5, y: 10};
+
+type Obj = {a: number, b?: string, mut c: boolean, mut d?: string};
+let obj: Obj = {a: 5, c: true};
+obj.c = false;
+
+type PartialObj = Partial<Obj>;
+let p_obj: PartialObj = {b: "hello"};
+
+type PartialObj = Partial<Obj>;
+let ro_obj: ReadonlyObj = {a: 5, c: true};
+// uncommenting the following line will cause an error
+// obj.c = false;
+`;
