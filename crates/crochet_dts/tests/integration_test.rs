@@ -502,3 +502,20 @@ fn infer_prog_using_partial() {
 
     infer_prog(src);
 }
+
+#[test]
+fn tuple_mapping() {
+    let src = r#"
+    let tuple = [1, 2, 3];
+    let squares = tuple.map((x) => x * x);
+    let sqr_fn = (x) => x * x;
+    let squares2 = [1, 2, 3].map(sqr_fn);
+    let squares3 = [1, 2, 3].map((x) => x * x);
+    "#;
+
+    let (_, ctx) = infer_prog(src);
+
+    let t = ctx.lookup_value("squares").unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "mut number[]");
+}

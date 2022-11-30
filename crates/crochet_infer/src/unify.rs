@@ -635,6 +635,17 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             let mapped_t = compute_mapped_type(t1, ctx)?;
             unify(&mapped_t, t2, ctx)
         }
+
+        // We instantiate any generic types that haven't already been instantiated
+        // yet.  This handles cases like `[1, 2, 3].map((x) => x * x)` where the
+        // `map` method is generic.
+        // TODO: Consider instantiating properties when we look them up.
+        (TypeKind::Generic(_), TypeKind::Generic(_)) => {
+            unify(&ctx.instantiate(t1), &ctx.instantiate(t2), ctx)
+        }
+        (_, TypeKind::Generic(_)) => unify(t1, &ctx.instantiate(t2), ctx),
+        (TypeKind::Generic(_), _) => unify(&ctx.instantiate(t1), t2, ctx),
+
         (TypeKind::Array(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_ref(), ctx),
         (TypeKind::Tuple(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_ref(), ctx),
         (_, TypeKind::KeyOf(t)) => unify(t1, &key_of(t, ctx)?, ctx),
@@ -666,7 +677,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
         }
     };
     if result.is_err() {
-        println!("Can't unify {t1} with {t2}");
+        println!("Can't unify {t1:#?} with {t2:#?}");
     }
     result
 }
