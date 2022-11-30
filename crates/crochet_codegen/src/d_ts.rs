@@ -440,6 +440,7 @@ pub fn build_type_params(t: &Type) -> Option<Box<TsTypeParamDecl>> {
 /// `expr` should be the original expression that `t` was inferred
 /// from if it exists.
 pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType {
+    let mutable = t.mutable;
     match &t.kind {
         TypeKind::Generic(TGeneric { t, .. }) => {
             // TODO: combine the return value from the `build_type_params()` call
@@ -605,7 +606,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                     .collect(),
             });
 
-            if t.mutable {
+            if mutable {
                 type_ann
             } else {
                 TsType::TsTypeOperator(TsTypeOperator {
@@ -621,7 +622,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 elem_type: Box::from(build_type(t, None)),
             });
 
-            if t.mutable {
+            if mutable {
                 type_ann
             } else {
                 TsType::TsTypeOperator(TsTypeOperator {

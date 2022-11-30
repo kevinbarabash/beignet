@@ -619,7 +619,6 @@ fn spread_args() {
 }
 
 #[test]
-#[ignore]
 fn mutable_array() {
     let src = r#"
     let arr: mut number[] = [1, 2, 3];
@@ -638,8 +637,6 @@ fn mutable_array() {
     infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
-    let arr = ctx.lookup_value("arr").unwrap();
-    println!("arr = {arr:#?}");
     insta::assert_snapshot!(result, @"export declare const arr: number[];
 ");
 }
