@@ -60,6 +60,9 @@ const Dropdown = () => {
         <a href={getPermalinkHref(examples.disjointUnionPatternMatching)}>
           Disjoint Union Pattern Matching
         </a>
+        <a href={getPermalinkHref(examples.standardLibrary)}>
+          Standard Library (lib.es5.d.ts)
+        </a>
       </div>
     </button>
   );
