@@ -128,8 +128,11 @@ obj.c = false;
 
 type PartialObj = Partial<Obj>;
 let p_obj: PartialObj = {b: "hello"};
+let make_p_obj = (a, b, c, d): Partial<Obj> => {
+  {a, b, c, d}
+};
 
-type PartialObj = Partial<Obj>;
+type ReadonlyObj = Readonly<Obj>;
 let ro_obj: ReadonlyObj = {a: 5, c: true};
 // uncommenting the following line will cause an error
 // obj.c = false;
