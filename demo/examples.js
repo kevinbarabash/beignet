@@ -135,5 +135,5 @@ let make_p_obj = (a, b, c, d): Partial<Obj> => {
 type ReadonlyObj = Readonly<Obj>;
 let ro_obj: ReadonlyObj = {a: 5, c: true};
 // uncommenting the following line will cause an error
-// obj.c = false;
+// ro_obj.c = false;
 `;
