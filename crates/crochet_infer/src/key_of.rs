@@ -14,6 +14,8 @@ const NEVER_TYPE: Type = Type {
 };
 
 // TODO: try to dedupe with infer_property_type()
+// TODO: use unwrap_obj_type to get an object type first before computing all
+// of its keys.
 pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
     match &t.kind {
         TypeKind::Generic(TGeneric { t, type_params: _ }) => key_of(t, ctx),
@@ -90,6 +92,9 @@ pub fn key_of(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
         }
         TypeKind::MappedType(_) => {
             todo!() // We have to evaluate the MappedType first
+        }
+        TypeKind::ConditionalType(_) => {
+            todo!() // We have to evaluate the ConditionalType first
         }
     }
 }

@@ -88,6 +88,14 @@ pub enum TMappedTypeChangeProp {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TConditionalType {
+    pub check_type: Box<Type>,
+    pub extends_type: Box<Type>,
+    pub true_type: Box<Type>,
+    pub false_type: Box<Type>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TypeKind {
     Var(TVar),
     App(TApp),
@@ -107,6 +115,7 @@ pub enum TypeKind {
     KeyOf(Box<Type>),
     IndexAccess(TIndexAccess),
     MappedType(TMappedType),
+    ConditionalType(TConditionalType),
     // Query, // use for typed holes
 
     // We encapsulate type polymorphism in a wrapper type instead of a separate
@@ -218,6 +227,17 @@ impl fmt::Display for Type {
                 }
 
                 write!(f, ": {t}}}")
+            }
+            TypeKind::ConditionalType(TConditionalType {
+                check_type,
+                extends_type,
+                true_type,
+                false_type,
+            }) => {
+                write!(
+                    f,
+                    "{check_type} extends {extends_type} ? {true_type} : {false_type}"
+                )
             }
         }
     }

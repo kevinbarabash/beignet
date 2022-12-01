@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use swc_ecma_ast::*;
 
 use crochet_ast::types::{
-    self as types, TCallable, TFnParam, TGeneric, TIndexAccess, TMappedType, TObjElem, TObject,
-    TVar, Type, TypeKind,
+    self as types, TCallable, TConditionalType, TFnParam, TGeneric, TIndexAccess, TMappedType,
+    TObjElem, TObject, TVar, Type, TypeKind,
 };
 use crochet_infer::{get_type_params, set_type_params, Context, Subst, Substitutable};
 
@@ -195,6 +195,17 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, TVar>) -> 
                 ..mapped.to_owned()
             })
         }
+        TypeKind::ConditionalType(TConditionalType {
+            check_type,
+            extends_type,
+            true_type,
+            false_type,
+        }) => TypeKind::ConditionalType(TConditionalType {
+            check_type: Box::from(replace_aliases_rec(check_type, type_param_map)),
+            extends_type: Box::from(replace_aliases_rec(extends_type, type_param_map)),
+            true_type: Box::from(replace_aliases_rec(true_type, type_param_map)),
+            false_type: Box::from(replace_aliases_rec(false_type, type_param_map)),
+        }),
     };
 
     Type {

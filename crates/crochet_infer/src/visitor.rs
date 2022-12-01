@@ -44,6 +44,17 @@ pub trait Visitor {
             TypeKind::MappedType(mapped) => {
                 self.visit_children(&mut mapped.t);
             }
+            TypeKind::ConditionalType(TConditionalType {
+                check_type,
+                extends_type,
+                true_type,
+                false_type,
+            }) => {
+                self.visit_children(check_type);
+                self.visit_children(extends_type);
+                self.visit_children(true_type);
+                self.visit_children(false_type);
+            }
             TypeKind::Generic(gen) => {
                 self.visit_children(&mut gen.t);
             }

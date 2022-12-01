@@ -219,6 +219,17 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 },
                 ..mapped.to_owned()
             }),
+            TypeKind::ConditionalType(TConditionalType {
+                check_type,
+                extends_type,
+                true_type,
+                false_type,
+            }) => TypeKind::ConditionalType(TConditionalType {
+                check_type: Box::from(norm_type(check_type, mapping, _ctx)),
+                extends_type: Box::from(norm_type(extends_type, mapping, _ctx)),
+                true_type: Box::from(norm_type(true_type, mapping, _ctx)),
+                false_type: Box::from(norm_type(false_type, mapping, _ctx)),
+            }),
         };
 
         Type {
