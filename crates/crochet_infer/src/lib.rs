@@ -1,4 +1,5 @@
 mod assump;
+mod conditional_type;
 mod context;
 mod infer_expr;
 mod infer_fn_param;
@@ -16,6 +17,7 @@ mod visitor;
 
 pub mod infer;
 
+pub use conditional_type::compute_conditional_type;
 pub use context::*;
 pub use infer::*;
 pub use mapped_type::compute_mapped_type;

@@ -1424,11 +1424,20 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
         "template_literal_type" => todo!(),
         "intersection_type" => {
             let mut cursor = node.walk();
-            let types = node
-                .named_children(&mut cursor)
-                .into_iter()
-                .map(|t| parse_type_ann(&t, src))
-                .collect::<Result<Vec<_>, ParseError>>()?;
+            let mut types: Vec<TypeAnn> = vec![];
+
+            for t in node.named_children(&mut cursor) {
+                let t = parse_type_ann(&t, src)?;
+                match &t.kind {
+                    TypeAnnKind::Intersection(intersection) => {
+                        types.extend(intersection.types.to_owned());
+                    }
+                    _ => {
+                        types.push(t);
+                    }
+                }
+            }
+
             TypeAnnKind::Intersection(IntersectionType {
                 span: node.byte_range(),
                 types,
@@ -1436,11 +1445,20 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
         }
         "union_type" => {
             let mut cursor = node.walk();
-            let types = node
-                .named_children(&mut cursor)
-                .into_iter()
-                .map(|t| parse_type_ann(&t, src))
-                .collect::<Result<Vec<_>, ParseError>>()?;
+            let mut types: Vec<TypeAnn> = vec![];
+
+            for t in node.named_children(&mut cursor) {
+                let t = parse_type_ann(&t, src)?;
+                match &t.kind {
+                    TypeAnnKind::Union(union) => {
+                        types.extend(union.types.to_owned());
+                    }
+                    _ => {
+                        types.push(t);
+                    }
+                }
+            }
+
             TypeAnnKind::Union(UnionType {
                 span: node.byte_range(),
                 types,

@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use types::{TCallable, TIndex, TIndexAccess, TMappedType, TObjElem, TObject, TypeKind};
+use types::{
+    TCallable, TConditionalType, TIndex, TIndexAccess, TMappedType, TObjElem, TObject, TypeKind,
+};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
@@ -49,7 +51,7 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                 Ok(Type::from(TypeKind::Keyword(TKeyword::Undefined)))
             }
             TsKeywordTypeKind::TsNullKeyword => Ok(Type::from(TypeKind::Keyword(TKeyword::Null))),
-            TsKeywordTypeKind::TsNeverKeyword => Err(String::from("can't parse never keyword yet")),
+            TsKeywordTypeKind::TsNeverKeyword => Ok(Type::from(TypeKind::Keyword(TKeyword::Never))),
             TsKeywordTypeKind::TsIntrinsicKeyword => {
                 Err(String::from("can't parse Intrinsics yet"))
             }
@@ -132,7 +134,21 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                 Ok(Type::from(TypeKind::Intersection(types?)))
             }
         },
-        TsType::TsConditionalType(_) => Err(String::from("can't parse conditional type yet")),
+        TsType::TsConditionalType(TsConditionalType {
+            span: _,
+            check_type,
+            extends_type,
+            true_type,
+            false_type,
+        }) => {
+            let t = Type::from(TypeKind::ConditionalType(TConditionalType {
+                check_type: Box::from(infer_ts_type_ann(check_type, ctx)?),
+                extends_type: Box::from(infer_ts_type_ann(extends_type, ctx)?),
+                true_type: Box::from(infer_ts_type_ann(true_type, ctx)?),
+                false_type: Box::from(infer_ts_type_ann(false_type, ctx)?),
+            }));
+            Ok(t)
+        }
         TsType::TsInferType(_) => Err(String::from("can't parse infer type yet")),
         TsType::TsParenthesizedType(_) => Err(String::from("can't parse parenthesized yet")),
         TsType::TsTypeOperator(TsTypeOperator {
