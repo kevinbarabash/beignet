@@ -3,7 +3,7 @@ use std::fs;
 
 use crochet_ast::values::Program;
 use crochet_dts::parse_dts::*;
-use crochet_infer::compute_mapped_type;
+use crochet_infer::{compute_conditional_type, compute_mapped_type};
 use crochet_parser::parse;
 
 use core::{any::TypeId, panic::Location};
@@ -518,4 +518,41 @@ fn tuple_mapping() {
     let t = ctx.lookup_value("squares").unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "mut number[]");
+}
+
+#[test]
+fn infer_exclude() {
+    let src = r#"
+    type T1 = Exclude<"a" | "b" | "c", "a" | "b">;
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let t = ctx.lookup_type("T1", false).unwrap();
+
+    let result = format!("{}", t);
+    assert_eq!(result, "Exclude<\"a\" | \"b\" | \"c\", \"a\" | \"b\">");
+
+    let t = compute_conditional_type(&t, &ctx).unwrap();
+    let result = format!("{}", t);
+
+    assert_eq!(result, "\"c\"");
+}
+
+// TODO: fix this test case, we want to fully expand this type alias
+#[test]
+#[ignore]
+fn infer_omit() {
+    let src = r#"
+    type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
+    type T1 = Omit<Obj, "b" | "c">;
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let t = ctx.lookup_type("T1", false).unwrap();
+
+    let result = format!("{}", t);
+    assert_eq!(result, "Omit<Obj, \"b\" | \"c\">");
+
+    let t = compute_conditional_type(&t, &ctx).unwrap();
+    let result = format!("{}", t);
+
+    assert_eq!(result, "{a: number; mut d?: number}");
 }

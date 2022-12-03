@@ -99,6 +99,17 @@ impl Substitutable for Type {
                 },
                 ..mapped.to_owned()
             }),
+            TypeKind::ConditionalType(TConditionalType {
+                check_type,
+                extends_type,
+                true_type,
+                false_type,
+            }) => TypeKind::ConditionalType(TConditionalType {
+                check_type: Box::from(check_type.apply(sub)),
+                extends_type: Box::from(extends_type.apply(sub)),
+                true_type: Box::from(true_type.apply(sub)),
+                false_type: Box::from(false_type.apply(sub)),
+            }),
         };
         norm_type(Type {
             kind,
@@ -149,6 +160,19 @@ impl Substitutable for Type {
                     result.remove(index);
                 }
                 // TODO: warn that the type param doesn't appear in the `t`
+                result
+            }
+            TypeKind::ConditionalType(TConditionalType {
+                check_type,
+                extends_type,
+                true_type,
+                false_type,
+            }) => {
+                let mut result = vec![];
+                result.append(&mut check_type.ftv());
+                result.append(&mut extends_type.ftv());
+                result.append(&mut true_type.ftv());
+                result.append(&mut false_type.ftv());
                 result
             }
         }

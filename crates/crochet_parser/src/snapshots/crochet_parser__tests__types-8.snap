@@ -18,81 +18,70 @@ Ok(
                             span: 33..119,
                             types: [
                                 TypeAnn {
-                                    kind: Union(
-                                        UnionType {
-                                            span: 33..76,
-                                            types: [
-                                                TypeAnn {
-                                                    kind: Object(
-                                                        ObjectType {
-                                                            span: 35..76,
-                                                            elems: [
-                                                                Prop(
-                                                                    TProp {
-                                                                        span: 36..53,
-                                                                        name: "type",
-                                                                        optional: false,
-                                                                        mutable: false,
-                                                                        type_ann: TypeAnn {
-                                                                            kind: Lit(
-                                                                                Str(
-                                                                                    Str {
-                                                                                        span: 42..53,
-                                                                                        value: "mousedown",
-                                                                                    },
-                                                                                ),
-                                                                            ),
-                                                                            span: 42..53,
-                                                                            inferred_type: None,
-                                                                        },
+                                    kind: Object(
+                                        ObjectType {
+                                            span: 35..76,
+                                            elems: [
+                                                Prop(
+                                                    TProp {
+                                                        span: 36..53,
+                                                        name: "type",
+                                                        optional: false,
+                                                        mutable: false,
+                                                        type_ann: TypeAnn {
+                                                            kind: Lit(
+                                                                Str(
+                                                                    Str {
+                                                                        span: 42..53,
+                                                                        value: "mousedown",
                                                                     },
                                                                 ),
-                                                                Prop(
-                                                                    TProp {
-                                                                        span: 55..64,
-                                                                        name: "x",
-                                                                        optional: false,
-                                                                        mutable: false,
-                                                                        type_ann: TypeAnn {
-                                                                            kind: Keyword(
-                                                                                KeywordType {
-                                                                                    span: 58..64,
-                                                                                    keyword: Number,
-                                                                                },
-                                                                            ),
-                                                                            span: 58..64,
-                                                                            inferred_type: None,
-                                                                        },
-                                                                    },
-                                                                ),
-                                                                Prop(
-                                                                    TProp {
-                                                                        span: 66..75,
-                                                                        name: "y",
-                                                                        optional: false,
-                                                                        mutable: false,
-                                                                        type_ann: TypeAnn {
-                                                                            kind: Keyword(
-                                                                                KeywordType {
-                                                                                    span: 69..75,
-                                                                                    keyword: Number,
-                                                                                },
-                                                                            ),
-                                                                            span: 69..75,
-                                                                            inferred_type: None,
-                                                                        },
-                                                                    },
-                                                                ),
-                                                            ],
+                                                            ),
+                                                            span: 42..53,
+                                                            inferred_type: None,
                                                         },
-                                                    ),
-                                                    span: 35..76,
-                                                    inferred_type: None,
-                                                },
+                                                    },
+                                                ),
+                                                Prop(
+                                                    TProp {
+                                                        span: 55..64,
+                                                        name: "x",
+                                                        optional: false,
+                                                        mutable: false,
+                                                        type_ann: TypeAnn {
+                                                            kind: Keyword(
+                                                                KeywordType {
+                                                                    span: 58..64,
+                                                                    keyword: Number,
+                                                                },
+                                                            ),
+                                                            span: 58..64,
+                                                            inferred_type: None,
+                                                        },
+                                                    },
+                                                ),
+                                                Prop(
+                                                    TProp {
+                                                        span: 66..75,
+                                                        name: "y",
+                                                        optional: false,
+                                                        mutable: false,
+                                                        type_ann: TypeAnn {
+                                                            kind: Keyword(
+                                                                KeywordType {
+                                                                    span: 69..75,
+                                                                    keyword: Number,
+                                                                },
+                                                            ),
+                                                            span: 69..75,
+                                                            inferred_type: None,
+                                                        },
+                                                    },
+                                                ),
                                             ],
                                         },
                                     ),
-                                    span: 33..76,
+                                    span: 35..76,
                                     inferred_type: None,
                                 },
                                 TypeAnn {

@@ -30,6 +30,7 @@ fn unwrap_obj_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
         TypeKind::KeyOf(_) => todo!(),
         TypeKind::IndexAccess(_) => todo!(),
         TypeKind::MappedType(_) => todo!(),
+        TypeKind::ConditionalType(_) => todo!(),
         TypeKind::Generic(_) => todo!(),
     };
     Ok(t)

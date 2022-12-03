@@ -677,7 +677,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
         }
     };
     if result.is_err() {
-        println!("Can't unify {t1:#?} with {t2:#?}");
+        println!("Can't unify {t1} with {t2}");
     }
     result
 }

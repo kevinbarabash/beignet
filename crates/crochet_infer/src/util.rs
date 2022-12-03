@@ -219,6 +219,17 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 },
                 ..mapped.to_owned()
             }),
+            TypeKind::ConditionalType(TConditionalType {
+                check_type,
+                extends_type,
+                true_type,
+                false_type,
+            }) => TypeKind::ConditionalType(TConditionalType {
+                check_type: Box::from(norm_type(check_type, mapping, _ctx)),
+                extends_type: Box::from(norm_type(extends_type, mapping, _ctx)),
+                true_type: Box::from(norm_type(true_type, mapping, _ctx)),
+                false_type: Box::from(norm_type(false_type, mapping, _ctx)),
+            }),
         };
 
         Type {
@@ -324,7 +335,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     }
 }
 
-fn flatten_types(t: &Type) -> Vec<Type> {
+pub fn flatten_types(t: &Type) -> Vec<Type> {
     match &t.kind {
         TypeKind::Union(types) => types.iter().flat_map(flatten_types).collect(),
         _ => vec![t.to_owned()],
@@ -335,6 +346,7 @@ pub fn union_types(t1: &Type, t2: &Type) -> Type {
     union_many_types(&[t1.to_owned(), t2.to_owned()])
 }
 
+// TODO: remove any extraneous 'never' types
 pub fn union_many_types(ts: &[Type]) -> Type {
     let types: Vec<_> = ts.iter().flat_map(flatten_types).collect();
 
@@ -374,12 +386,16 @@ pub fn union_many_types(ts: &[Type]) -> Type {
         .chain(lit_types.iter())
         .chain(other_types.iter())
         .cloned()
+        .filter(|t| match &t.kind {
+            TypeKind::Keyword(keyword) => !matches!(keyword, TKeyword::Never),
+            _ => true,
+        })
         .collect();
 
-    if types.len() > 1 {
-        Type::from(TypeKind::Union(types))
-    } else {
-        types[0].clone()
+    match types.len() {
+        0 => Type::from(TypeKind::Keyword(TKeyword::Never)),
+        1 => types[0].clone(),
+        _ => Type::from(TypeKind::Union(types)),
     }
 }
 
@@ -439,6 +455,13 @@ pub fn get_type_params(t: &Type) -> Vec<TVar> {
     match &t.kind {
         TypeKind::Generic(gen) => gen.type_params.to_owned(),
         _ => vec![],
+    }
+}
+
+pub fn unwrap_generic(t: &Type) -> Type {
+    match &t.kind {
+        TypeKind::Generic(TGeneric { t, .. }) => t.as_ref().to_owned(),
+        _ => t.to_owned(),
     }
 }
 
