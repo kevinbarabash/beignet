@@ -536,3 +536,23 @@ fn infer_exclude() {
 
     assert_eq!(result, "\"c\"");
 }
+
+// TODO: fix this test case, we want to fully expand this type alias
+#[test]
+#[ignore]
+fn infer_omit() {
+    let src = r#"
+    type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
+    type T1 = Omit<Obj, "b" | "c">;
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let t = ctx.lookup_type("T1", false).unwrap();
+
+    let result = format!("{}", t);
+    assert_eq!(result, "Omit<Obj, \"b\" | \"c\">");
+
+    let t = compute_conditional_type(&t, &ctx).unwrap();
+    let result = format!("{}", t);
+
+    assert_eq!(result, "{a: number; mut d?: number}");
+}
