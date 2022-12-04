@@ -1,6 +1,7 @@
 mod assump;
 mod conditional_type;
 mod context;
+mod expand_type;
 mod infer_expr;
 mod infer_fn_param;
 mod infer_pattern;
@@ -19,11 +20,14 @@ pub mod infer;
 
 pub use conditional_type::compute_conditional_type;
 pub use context::*;
+pub use expand_type::expand_type;
 pub use infer::*;
 pub use mapped_type::compute_mapped_type;
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
-pub use util::{close_over, generalize, get_type_params, normalize, set_type_params};
+pub use util::{
+    close_over, generalize, get_type_params, normalize, replace_aliases_rec, set_type_params,
+};
 
 #[cfg(test)]
 mod tests {

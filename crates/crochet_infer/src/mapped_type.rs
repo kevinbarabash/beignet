@@ -3,11 +3,12 @@ use crochet_ast::types::{
     Type, TypeKind,
 };
 use error_stack::{Report, Result};
+use std::collections::HashMap;
 
 use crate::context::Context;
 use crate::key_of::key_of;
 use crate::type_error::TypeError;
-use crate::visitor::Visitor;
+use crate::util::replace_aliases_rec;
 
 // unwraps `t` recursively until it finds an object type or something that is
 // definitely not an object type
@@ -161,16 +162,19 @@ pub fn compute_mapped_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
             let elems = keys
                 .iter()
                 .map(|key| {
-                    let mut value = mapped.t.clone();
+                    let value = mapped.t.clone();
 
-                    // if key is a:
-                    // - number, string, or symbol then create an indexer
-                    // - literal of those types then create a normal property
-                    replace_tvar(&mut value, &mapped.type_param.id, key);
+                    // NOTE: This assumes that `key` has already been expanded
+                    // TODO: Add a call to expand_type here so that we don't have
+                    // rely on this assumption
+                    let mut type_arg_map: HashMap<String, Type> = HashMap::default();
+                    let name = mapped.type_param.name.to_owned();
+                    type_arg_map.insert(name, key.to_owned());
+                    let value = replace_aliases_rec(value.as_ref(), &type_arg_map);
 
                     let value = match &value.kind {
                         TypeKind::IndexAccess(access) => computed_indexed_access(access, ctx)?,
-                        _ => value.as_ref().to_owned(),
+                        _ => value,
                     };
 
                     match &key.kind {
@@ -258,34 +262,4 @@ pub fn compute_mapped_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
         }
         _ => Err(Report::new(TypeError::Unhandled)),
     }
-}
-
-struct ReplaceVisitor {
-    search_id: i32,
-    rep: Type,
-}
-
-impl ReplaceVisitor {
-    fn new(search_id: &i32, rep: &Type) -> Self {
-        ReplaceVisitor {
-            search_id: *search_id,
-            rep: rep.to_owned(),
-        }
-    }
-}
-
-impl Visitor for ReplaceVisitor {
-    fn visit_type(&mut self, t: &mut Type) {
-        if let TypeKind::Var(tvar) = &t.kind {
-            if tvar.id == self.search_id {
-                t.kind = self.rep.kind.to_owned();
-                t.mutable = self.rep.mutable;
-            }
-        }
-    }
-}
-
-fn replace_tvar(t: &mut Type, search_id: &i32, rep: &Type) {
-    let mut rep_visitor = ReplaceVisitor::new(search_id, rep);
-    rep_visitor.visit_children(t);
 }

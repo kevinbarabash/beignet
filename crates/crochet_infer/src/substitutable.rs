@@ -89,13 +89,18 @@ impl Substitutable for Type {
             }
             TypeKind::MappedType(mapped) => TypeKind::MappedType(TMappedType {
                 t: Box::from(mapped.t.apply(sub)),
-                type_param: TVar {
-                    id: mapped.type_param.id,
+                type_param: TypeParam {
+                    name: mapped.type_param.name.to_owned(),
                     constraint: mapped
                         .type_param
                         .constraint
                         .as_ref()
                         .map(|constraint| Box::from(constraint.apply(sub))),
+                    default: mapped
+                        .type_param
+                        .default
+                        .as_ref()
+                        .map(|default| Box::from(default.apply(sub))),
                 },
                 ..mapped.to_owned()
             }),
@@ -151,15 +156,15 @@ impl Substitutable for Type {
                 result.append(&mut index.ftv());
                 result
             }
-            // What does it mean to be a free variable?
             TypeKind::MappedType(TMappedType { type_param, t, .. }) => {
-                // TODO: get free variables in the value and the key and take
-                // the set difference of them.
                 let mut result = t.ftv();
-                if let Some(index) = result.iter().position(|tv| tv == type_param) {
-                    result.remove(index);
+                if let Some(constraint) = &type_param.constraint {
+                    result.append(&mut constraint.ftv());
                 }
-                // TODO: warn that the type param doesn't appear in the `t`
+                if let Some(default) = &type_param.default {
+                    result.append(&mut default.ftv());
+                }
+
                 result
             }
             TypeKind::ConditionalType(TConditionalType {
