@@ -7,7 +7,6 @@ mod infer_fn_param;
 mod infer_pattern;
 mod infer_type_ann;
 mod key_of;
-mod mapped_type;
 mod substitutable;
 mod type_error;
 mod unify;
@@ -22,7 +21,6 @@ pub use conditional_type::compute_conditional_type;
 pub use context::*;
 pub use expand_type::expand_type;
 pub use infer::*;
-pub use mapped_type::compute_mapped_type;
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
 pub use util::{

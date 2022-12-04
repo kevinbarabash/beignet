@@ -3,7 +3,7 @@ use std::fs;
 
 use crochet_ast::values::Program;
 use crochet_dts::parse_dts::*;
-use crochet_infer::{compute_conditional_type, compute_mapped_type, expand_type};
+use crochet_infer::expand_type;
 use crochet_parser::parse;
 
 use core::{any::TypeId, panic::Location};
@@ -406,7 +406,7 @@ fn infer_partial() {
     "#;
     let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("PartialObj", false).unwrap();
-    let t = compute_mapped_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -423,7 +423,7 @@ fn infer_required() {
     "#;
     let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("RequiredObj", false).unwrap();
-    let t = compute_mapped_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -440,7 +440,7 @@ fn infer_readonly() {
     "#;
     let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let t = compute_mapped_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{a: number, b?: string, c: boolean, d?: number}");
@@ -454,7 +454,7 @@ fn infer_readonly_with_indexer_only() {
     "#;
     let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let t = compute_mapped_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{[key: string]: boolean}");
@@ -468,7 +468,7 @@ fn infer_readonly_with_indexer_and_other_properties() {
     "#;
     let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let t = compute_mapped_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -485,7 +485,7 @@ fn infer_pick() {
     "#;
     let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("PickObj", false).unwrap();
-    let t = compute_mapped_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{a: number, b?: string}");
@@ -531,7 +531,7 @@ fn infer_exclude() {
     let result = format!("{}", t);
     assert_eq!(result, "Exclude<\"a\" | \"b\" | \"c\", \"a\" | \"b\">");
 
-    let t = compute_conditional_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &ctx).unwrap();
     let result = format!("{}", t);
 
     assert_eq!(result, "\"c\"");
