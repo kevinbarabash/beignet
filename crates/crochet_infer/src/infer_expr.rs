@@ -2,7 +2,7 @@ use error_stack::{Report, Result};
 use std::collections::HashMap;
 
 use crochet_ast::types::{
-    self as types, Provenance, TFnParam, TKeyword, TObject, TPat, TVar, Type, TypeKind,
+    self as types, Provenance, TFnParam, TKeyword, TObject, TPat, TPropKey, TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
 
@@ -185,7 +185,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
                             ss.push(s);
 
                             let prop = types::TProp {
-                                name: attr.ident.name.to_owned(),
+                                name: TPropKey::StringKey(attr.ident.name.to_owned()),
                                 optional: false,
                                 mutable: false,
                                 t,
@@ -432,7 +432,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
                             Prop::Shorthand(Ident { name, .. }) => {
                                 let t = ctx.lookup_value_and_instantiate(name)?;
                                 elems.push(types::TObjElem::Prop(types::TProp {
-                                    name: name.to_owned(),
+                                    name: TPropKey::StringKey(name.to_owned()),
                                     optional: false,
                                     mutable: false,
                                     t,
@@ -444,7 +444,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
                                 // TODO: check if the inferred type is T | undefined and use that
                                 // determine the value of optional
                                 elems.push(types::TObjElem::Prop(types::TProp {
-                                    name: name.to_owned(),
+                                    name: TPropKey::StringKey(name.to_owned()),
                                     optional: false,
                                     mutable: false,
                                     t,
@@ -624,6 +624,7 @@ fn is_promise(t: &Type) -> bool {
     matches!(&t, Type {kind: TypeKind::Ref(types::TRef { name, .. }), ..} if name == "Promise")
 }
 
+// TODO: update this function to make use of get_obj_type
 fn infer_property_type(
     obj_t: &Type,
     prop: &mut MemberProp,
@@ -707,6 +708,8 @@ fn infer_property_type(
             Ok((s, t))
         }
         TypeKind::Tuple(elem_types) => {
+            // If `prop` is a number literal then look up the index entry, if
+            // not, treat it the same as a regular property look up on Array.
             match prop {
                 // TODO: lookup methods on Array.prototype
                 MemberProp::Ident(_) => {
@@ -793,7 +796,7 @@ fn get_prop_value(
                 types::TObjElem::Constructor(_) => None,
                 types::TObjElem::Index(_) => None,
                 types::TObjElem::Prop(prop) => {
-                    if prop.name == *name {
+                    if prop.name == TPropKey::StringKey(name.to_owned()) {
                         Some(prop)
                     } else {
                         None
@@ -856,7 +859,7 @@ fn get_prop_value(
                             types::TObjElem::Constructor(_) => None,
                             types::TObjElem::Index(_) => None,
                             types::TObjElem::Prop(prop) => {
-                                if &prop.name == key {
+                                if prop.name == TPropKey::StringKey(key.to_owned()) {
                                     Some(prop)
                                 } else {
                                     None

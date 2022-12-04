@@ -285,7 +285,11 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
                 TObjElem::Constructor(_) => todo!(),
                 TObjElem::Index(_) => todo!(),
                 TObjElem::Prop(prop) => {
-                    props_map[prop.name.clone()].insert(prop.t.clone());
+                    let key = match &prop.name {
+                        TPropKey::StringKey(key) => key.to_owned(),
+                        TPropKey::NumberKey(key) => key.to_owned(),
+                    };
+                    props_map[key].insert(prop.t.clone());
                 }
             }
         }
@@ -301,7 +305,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
                 Type::from(TypeKind::Intersection(types))
             };
             TObjElem::Prop(TProp {
-                name: name.to_owned(),
+                name: TPropKey::StringKey(name.to_owned()),
                 // TODO: determine this field from all of the TProps with
                 // the same name.  This should only be optional if all of
                 // the TProps with the current name are optional.

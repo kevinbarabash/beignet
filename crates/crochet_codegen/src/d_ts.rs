@@ -7,7 +7,7 @@ use swc_common::{SourceMap, DUMMY_SP};
 use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
-use crochet_ast::types::{TFnParam, TGeneric, TObjElem, TPat, TVar, Type, TypeKind};
+use crochet_ast::types::{TFnParam, TGeneric, TObjElem, TPat, TPropKey, TVar, Type, TypeKind};
 use crochet_ast::{types, values};
 use crochet_infer::{get_type_params, Context};
 
@@ -546,12 +546,16 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                         is_static: false,
                     }),
                     TObjElem::Prop(prop) => {
+                        let key = match &prop.name {
+                            TPropKey::StringKey(key) => key.to_owned(),
+                            TPropKey::NumberKey(key) => key.to_owned(),
+                        };
                         TsTypeElement::TsPropertySignature(TsPropertySignature {
                             span: DUMMY_SP,
                             readonly: !prop.mutable && !t.mutable,
                             key: Box::from(Expr::from(Ident {
                                 span: DUMMY_SP,
-                                sym: JsWord::from(prop.name.to_owned()),
+                                sym: JsWord::from(key),
                                 optional: false,
                             })),
                             computed: false,

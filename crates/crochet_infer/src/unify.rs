@@ -777,6 +777,7 @@ fn merge_reports(reports: Vec<Report<TypeError>>) -> Option<Report<TypeError>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crochet_ast::types::TPropKey;
     use crochet_ast::values::Lit;
 
     fn num(val: &str) -> Lit {
@@ -825,20 +826,20 @@ mod tests {
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
-                name: String::from("foo"),
+                name: TPropKey::StringKey(String::from("foo")),
                 optional: false,
                 mutable: false,
                 t: Type::from(num("5")),
             }),
             types::TObjElem::Prop(types::TProp {
-                name: String::from("bar"),
+                name: TPropKey::StringKey(String::from("bar")),
                 optional: false,
                 mutable: false,
                 t: Type::from(bool(&true)),
             }),
             // Having extra properties is okay
             types::TObjElem::Prop(types::TProp {
-                name: String::from("baz"),
+                name: TPropKey::StringKey(String::from("baz")),
                 optional: false,
                 mutable: false,
                 t: Type::from(TypeKind::Keyword(TKeyword::String)),
@@ -848,13 +849,13 @@ mod tests {
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
-                name: String::from("foo"),
+                name: TPropKey::StringKey(String::from("foo")),
                 optional: false,
                 mutable: false,
                 t: Type::from(TypeKind::Keyword(TKeyword::Number)),
             }),
             types::TObjElem::Prop(types::TProp {
-                name: String::from("bar"),
+                name: TPropKey::StringKey(String::from("bar")),
                 optional: true,
                 mutable: false,
                 t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
@@ -862,7 +863,7 @@ mod tests {
             // It's okay for qux to not appear in the subtype since
             // it's an optional property.
             types::TObjElem::Prop(types::TProp {
-                name: String::from("qux"),
+                name: TPropKey::StringKey(String::from("qux")),
                 optional: true,
                 mutable: false,
                 t: Type::from(TypeKind::Keyword(TKeyword::String)),

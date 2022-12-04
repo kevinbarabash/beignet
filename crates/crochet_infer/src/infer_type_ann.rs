@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::types::{
-    self as types, Provenance, TFnParam, TIndex, TKeyword, TObjElem, TObject, TProp, TVar, Type,
-    TypeKind,
+    self as types, Provenance, TFnParam, TIndex, TKeyword, TObjElem, TObject, TProp, TPropKey,
+    TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
 
@@ -140,7 +140,7 @@ fn infer_type_ann_rec(
 
                         ss.push(prop_s);
                         elems.push(TObjElem::Prop(TProp {
-                            name: prop.name.to_owned(),
+                            name: TPropKey::StringKey(prop.name.to_owned()),
                             optional: prop.optional,
                             mutable: prop.mutable,
                             t: prop_t,
@@ -328,7 +328,7 @@ fn infer_property_type(
                 types::TLit::Str(name) => {
                     let mut t = elems.iter().find_map(|elem| match elem {
                         types::TObjElem::Prop(prop) => {
-                            if prop.name == *name {
+                            if prop.name == TPropKey::StringKey(name.to_owned()) {
                                 Some(prop.t.to_owned())
                             } else {
                                 None
