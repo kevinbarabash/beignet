@@ -9,13 +9,12 @@ use swc_ecma_ast::*;
 use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
 
+use crate::util;
 use crochet_ast::types::{
-    self as types, RestPat, TFnParam, TKeyword, TMappedTypeChangeProp, TPat, TProp, TVar, Type,
+    self as types, RestPat, TFnParam, TKeyword, TMappedTypeChangeProp, TPat, TProp, Type, TypeParam,
 };
 use crochet_ast::values::Lit;
 use crochet_infer::{close_over, generalize, normalize, Context, Env, Subst, Substitutable};
-
-use crate::util::{self, replace_aliases_rec};
 
 #[derive(Debug, Clone)]
 pub struct InterfaceCollector {
@@ -159,10 +158,23 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
             // TODO: If type_ann is a Type::Mutable(_) then we have to unwrap it here
             // let type_ann = ;
             match op {
-                TsTypeOperatorOp::KeyOf => {
-                    let type_ann = infer_ts_type_ann(type_ann, ctx)?;
-                    Ok(Type::from(TypeKind::KeyOf(Box::from(type_ann))))
-                }
+                TsTypeOperatorOp::KeyOf => match type_ann.as_ref() {
+                    TsType::TsKeywordType(TsKeywordType {
+                        kind: TsKeywordTypeKind::TsAnyKeyword,
+                        ..
+                    }) => {
+                        let t = Type::from(TypeKind::Union(vec![
+                            Type::from(TypeKind::Keyword(TKeyword::Number)),
+                            Type::from(TypeKind::Keyword(TKeyword::String)),
+                            Type::from(TypeKind::Keyword(TKeyword::Symbol)),
+                        ]));
+                        Ok(t)
+                    }
+                    _ => {
+                        let type_ann = infer_ts_type_ann(type_ann, ctx)?;
+                        Ok(Type::from(TypeKind::KeyOf(Box::from(type_ann))))
+                    }
+                },
                 TsTypeOperatorOp::Unique => todo!(),
                 TsTypeOperatorOp::ReadOnly => {
                     let type_ann = infer_ts_type_ann(type_ann, ctx)?;
@@ -190,23 +202,19 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
             type_ann,
             ..
         }) => {
-            let constraint = match &type_param.constraint {
-                Some(constraint) => Some(Box::from(infer_ts_type_ann(constraint, ctx)?)),
-                None => None,
-            };
             let type_ann = infer_ts_type_ann(type_ann.as_ref().unwrap(), ctx)?;
-            let tvar = TVar {
-                id: ctx.fresh_id(),
-                constraint,
-            };
-            let mut type_param_map = HashMap::default();
-            type_param_map.insert(type_param.name.sym.to_string(), tvar.clone());
-
-            // HACK: We call replace_aliases_rec directly here otherwise we'd
-            // get back a generic type that we'd have to instantiate immediately.
-            let type_ann = replace_aliases_rec(&type_ann, &type_param_map);
             let t = Type::from(TypeKind::MappedType(TMappedType {
-                type_param: tvar,
+                type_param: TypeParam {
+                    name: type_param.name.sym.to_string(),
+                    constraint: match &type_param.constraint {
+                        Some(constraint) => Some(Box::from(infer_ts_type_ann(constraint, ctx)?)),
+                        None => None,
+                    },
+                    default: match &type_param.default {
+                        Some(default) => Some(Box::from(infer_ts_type_ann(default, ctx)?)),
+                        None => None,
+                    },
+                },
                 optional: match optional {
                     Some(change) => match change {
                         TruePlusMinus::True => Some(TMappedTypeChangeProp::Plus),
@@ -459,9 +467,11 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, S
 impl Visit for InterfaceCollector {
     fn visit_ts_type_alias_decl(&mut self, decl: &TsTypeAliasDecl) {
         let name = decl.id.sym.to_string();
-        println!("inferring: {name}");
         match infer_type_alias_decl(decl, &self.ctx) {
-            Ok(t) => self.ctx.insert_type(name, t),
+            Ok(t) => {
+                println!("inferring: {name} as type: {t}");
+                self.ctx.insert_type(name, t)
+            }
             Err(err) => println!("couldn't infer {name}, {err:#?}"),
         }
     }

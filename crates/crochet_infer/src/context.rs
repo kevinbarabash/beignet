@@ -3,9 +3,10 @@ use error_stack::{Report, Result};
 use std::cell::Cell;
 use std::collections::HashMap;
 
+use crate::expand_type::expand_type;
+use crate::substitutable::*;
 use crate::type_error::TypeError;
 use crate::util::{get_type_params, union_many_types, unwrap_generic};
-use crate::{compute_conditional_type, substitutable::*};
 
 // NOTE: This is the same as the Assump type in assump.rs
 pub type Env = HashMap<String, Type>;
@@ -213,7 +214,7 @@ impl Context {
                                     let subs: Subst =
                                         ids.clone().zip(type_args.iter().cloned()).collect();
                                     let inner_t = inner_t.apply(&subs);
-                                    let t = compute_conditional_type(&inner_t, self)?;
+                                    let t = expand_type(&inner_t, self)?;
                                     types.push(t);
                                 }
 

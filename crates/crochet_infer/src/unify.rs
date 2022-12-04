@@ -7,8 +7,7 @@ use crochet_ast::values::ExprKind;
 use types::TKeyword;
 
 use crate::context::Context;
-use crate::key_of::key_of;
-use crate::mapped_type::compute_mapped_type;
+use crate::expand_type::expand_type;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify_mut::unify_mut;
@@ -628,11 +627,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             unify(&alias_t, t2, ctx)
         }
         (_, TypeKind::MappedType(_)) => {
-            let mapped_t = compute_mapped_type(t2, ctx)?;
+            let mapped_t = expand_type(t2, ctx)?;
             unify(t1, &mapped_t, ctx)
         }
         (TypeKind::MappedType(_), _) => {
-            let mapped_t = compute_mapped_type(t1, ctx)?;
+            let mapped_t = expand_type(t1, ctx)?;
             unify(&mapped_t, t2, ctx)
         }
 
@@ -648,7 +647,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
 
         (TypeKind::Array(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_ref(), ctx),
         (TypeKind::Tuple(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_ref(), ctx),
-        (_, TypeKind::KeyOf(t)) => unify(t1, &key_of(t, ctx)?, ctx),
+        (_, TypeKind::KeyOf(_)) => unify(t1, &expand_type(t2, ctx)?, ctx),
         (TypeKind::Keyword(keyword1), TypeKind::Keyword(keyword2)) => match (keyword1, keyword2) {
             (TKeyword::Number, TKeyword::Number) => Ok(Subst::new()),
             (TKeyword::String, TKeyword::String) => Ok(Subst::new()),

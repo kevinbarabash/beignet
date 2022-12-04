@@ -58,24 +58,13 @@ pub struct TVar {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TypeParam {
     pub name: String,
-    pub tvar: TVar,
+    pub constraint: Option<Box<Type>>,
+    pub default: Option<Box<Type>>,
 }
-
-// impl fmt::Display for TVar {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         let TVar { id, constraint } = self;
-//         match constraint {
-//             // TODO: The only time we should include `extends constraint` is if
-//             // the TVar is being printed as a type param (not a type arg).
-//             Some(_constraint) => write!(f, "t{id}"), // extends {constraint}"),
-//             None => write!(f, "t{id}"),
-//         }
-//     }
-// }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TMappedType {
-    pub type_param: TVar,
+    pub type_param: TypeParam,
     pub optional: Option<TMappedTypeChangeProp>,
     pub mutable: Option<TMappedTypeChangeProp>,
     pub t: Box<Type>,
@@ -213,9 +202,12 @@ impl fmt::Display for Type {
                     }
                 }
 
-                write!(f, "[t{}", type_param.id)?;
+                write!(f, "[{}", type_param.name)?;
                 if let Some(constraint) = &type_param.constraint {
                     write!(f, " in {constraint}")?;
+                }
+                if let Some(default) = &type_param.default {
+                    write!(f, " = {default}")?;
                 }
                 write!(f, "]")?;
 
@@ -250,38 +242,40 @@ mod tests {
     #[test]
     fn simple_mapped_type_display() {
         let constraint = Type::from(TypeKind::Ref(TRef {
-            name: String::from("T"),
+            name: String::from("K"),
             type_args: None,
         }));
         let t = Type::from(TypeKind::MappedType(TMappedType {
-            type_param: TVar {
-                id: 5,
+            type_param: TypeParam {
+                name: String::from("T"),
                 constraint: Some(Box::from(constraint)),
+                default: None,
             },
             optional: None,
             mutable: None,
             t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
         }));
 
-        assert_eq!(format!("{t}"), "{[t5 in T]: number}");
+        assert_eq!(format!("{t}"), "{[T in K]: number}");
     }
 
     #[test]
     fn complex_mapped_type_display() {
         let constraint = Type::from(TypeKind::Ref(TRef {
-            name: String::from("T"),
+            name: String::from("K"),
             type_args: None,
         }));
         let t = Type::from(TypeKind::MappedType(TMappedType {
-            type_param: TVar {
-                id: 5,
+            type_param: TypeParam {
+                name: String::from("T"),
                 constraint: Some(Box::from(constraint)),
+                default: None,
             },
             optional: Some(TMappedTypeChangeProp::Plus),
             mutable: Some(TMappedTypeChangeProp::Plus),
             t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
         }));
 
-        assert_eq!(format!("{t}"), "{+mut [t5 in T]+?: number}");
+        assert_eq!(format!("{t}"), "{+mut [T in K]+?: number}");
     }
 }
