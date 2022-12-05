@@ -618,14 +618,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 todo!("unify(): handle aliases that point to another alias")
             }
         }
-        (_, TypeKind::Ref(alias)) => {
-            let alias_t = ctx.lookup_ref_and_instantiate(alias)?;
-            unify(t1, &alias_t, ctx)
-        }
-        (TypeKind::Ref(alias), _) => {
-            let alias_t = ctx.lookup_ref_and_instantiate(alias)?;
-            unify(&alias_t, t2, ctx)
-        }
+        (_, TypeKind::Ref(_)) => unify(t1, &expand_type(t2, ctx)?, ctx),
+        (TypeKind::Ref(_), _) => unify(&expand_type(t1, ctx)?, t2, ctx),
         (_, TypeKind::MappedType(_)) => unify(t1, &expand_type(t2, ctx)?, ctx),
         (TypeKind::MappedType(_), _) => unify(&expand_type(t1, ctx)?, t2, ctx),
         (_, TypeKind::IndexAccess(_)) => unify(t1, &expand_type(t2, ctx)?, ctx),

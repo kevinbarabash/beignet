@@ -162,7 +162,16 @@ impl fmt::Display for Type {
                     write!(f, "<{}>{t}", join(type_params, ", "))
                 }
             }
-            TypeKind::Var(tv) => write!(f, "t{}", tv.id),
+            TypeKind::Var(tv) => {
+                write!(f, "t{}", tv.id)?;
+                // TODO: Figure out how to only print the constraints when
+                // printint out type variables that appear in a TGeneric's
+                // type_params.
+                // if let Some(constraint) = &tv.constraint {
+                //     write!(f, " extends {constraint}")?;
+                // }
+                Ok(())
+            }
             TypeKind::App(TApp { args, ret }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }

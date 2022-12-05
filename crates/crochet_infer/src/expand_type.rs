@@ -6,13 +6,17 @@ use error_stack::{Report, Result};
 use std::collections::HashMap;
 
 use crate::context::Context;
+use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify::unify;
-use crate::util::{replace_aliases_rec, union_many_types, union_types};
+use crate::util::{
+    get_type_params, replace_aliases_rec, union_many_types, union_types, unwrap_generic,
+};
 
 // `expand_type` is used to expand types that `unify` doesn't know how to unify
 // into something that it does know how to unify.
 pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
+    println!("expand_type t = {t}");
     match &t.kind {
         TypeKind::Var(_) => Ok(t.to_owned()),
         TypeKind::App(_) => Ok(t.to_owned()),
@@ -22,21 +26,7 @@ pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
         TypeKind::Union(_) => Ok(t.to_owned()),
         TypeKind::Intersection(_) => Ok(t.to_owned()),
         TypeKind::Object(_) => Ok(t.to_owned()),
-        TypeKind::Ref(alias) => {
-            let alias = TRef {
-                name: alias.name.to_owned(),
-                type_args: match &alias.type_args {
-                    Some(args) => {
-                        let args: Result<Vec<_>, TypeError> =
-                            args.iter().map(|arg| expand_type(arg, ctx)).collect();
-                        Some(args?)
-                    }
-                    None => None,
-                },
-            };
-            let t = ctx.lookup_ref_and_instantiate(&alias)?;
-            expand_type(&t, ctx)
-        }
+        TypeKind::Ref(alias) => expand_alias_type(alias, ctx),
         TypeKind::Tuple(_) => Ok(t.to_owned()),
         TypeKind::Array(_) => Ok(t.to_owned()),
         TypeKind::Rest(_) => Ok(t.to_owned()),
@@ -47,6 +37,82 @@ pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
         TypeKind::ConditionalType(cond) => expand_conditional_type(cond, ctx),
         TypeKind::Generic(_) => todo!(),
     }
+}
+
+fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, TypeError> {
+    let alias = TRef {
+        name: alias.name.to_owned(),
+        type_args: match &alias.type_args {
+            Some(args) => {
+                let args: Result<Vec<_>, TypeError> =
+                    args.iter().map(|arg| expand_type(arg, ctx)).collect();
+                Some(args?)
+            }
+            None => None,
+        },
+    };
+
+    let name = &alias.name;
+    let t = ctx._lookup_type(name)?;
+    let type_params = get_type_params(&t);
+
+    // Replaces qualifiers in the type with the corresponding type params
+    // from the alias type.
+    let ids = type_params.iter().map(|tv| tv.id.to_owned());
+    let subs: Subst = match &alias.type_args {
+        Some(type_args) => {
+            if type_args.len() != type_params.len() {
+                return Err(
+                    Report::new(TypeError::TypeInstantiationFailure).attach_printable(
+                        "mismatch between the number of qualifiers and type params",
+                    ),
+                );
+            }
+            let inner_t = unwrap_generic(&t);
+            match &inner_t.kind {
+                // When conditional types act on a generic type, they
+                // become distributive when given a union type.
+                TypeKind::ConditionalType(_) => {
+                    // TODO: determine which type arg is being used
+                    // for the `check_type` and use that as the type
+                    // that we distribute.  For now we assume the first
+                    // type arg is one being used as the `check_type`.
+                    let check_args = match &type_args[0].kind {
+                        TypeKind::Union(types) => types.to_owned(),
+                        _ => vec![type_args[0].to_owned()],
+                    };
+                    let mut type_args = type_args.clone();
+
+                    let mut types = vec![];
+                    for check_arg in check_args {
+                        type_args[0] = check_arg;
+                        let subs: Subst = ids.clone().zip(type_args.iter().cloned()).collect();
+                        let inner_t = inner_t.apply(&subs);
+                        let t = expand_type(&inner_t, ctx)?;
+                        types.push(t);
+                    }
+
+                    let t = union_many_types(&types);
+                    return expand_type(&t, ctx);
+                }
+                _ => ids.zip(type_args.iter().cloned()).collect(),
+            }
+        }
+        None => {
+            if !type_params.is_empty() {
+                println!("type = {t}");
+                println!("no type params");
+                return Err(
+                    Report::new(TypeError::TypeInstantiationFailure).attach_printable(
+                        "mismatch between the number of qualifiers and type params",
+                    ),
+                );
+            }
+            Subst::default()
+        }
+    };
+
+    expand_type(&t.apply(&subs), ctx)
 }
 
 fn expand_conditional_type(cond: &TConditionalType, ctx: &Context) -> Result<Type, TypeError> {
@@ -327,12 +393,12 @@ fn expand_keyof(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
     }
 }
 
-fn get_obj_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
+pub fn get_obj_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
     match &t.kind {
         TypeKind::Generic(TGeneric { t, type_params: _ }) => get_obj_type(t, ctx),
         TypeKind::Var(_) => Err(Report::new(TypeError::CantInferTypeFromItKeys)),
         TypeKind::Ref(alias) => {
-            let t = ctx.lookup_ref_and_instantiate(alias)?;
+            let t = expand_alias_type(alias, ctx)?;
             get_obj_type(&t, ctx)
         }
         TypeKind::Object(_) => Ok(t.to_owned()),
@@ -373,6 +439,8 @@ fn get_obj_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
                 })
                 .collect();
 
+            // TODO: Provide a type arg when instantiating "Array".  It should
+            // be the union of all element types in the tuple.
             let array_t = ctx.lookup_type_and_instantiate("Array", t.mutable)?;
             if let TypeKind::Object(TObject { elems: array_elems }) = &array_t.kind {
                 for array_elem in array_elems {
@@ -390,7 +458,19 @@ fn get_obj_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
             let t = Type::from(TypeKind::Object(TObject { elems }));
             Ok(t)
         }
-        TypeKind::Array(_) => ctx.lookup_type_and_instantiate("Array", t.mutable),
+        TypeKind::Array(type_param) => {
+            // TODO: Update lookup_type_and_instantiate() to take type args so
+            // that we don't have to handle them here manually.
+            let t = ctx.lookup_type("Array", t.mutable)?;
+            let type_params = get_type_params(&t);
+            // TODO: Instead of instantiating the whole interface for one method, do
+            // the lookup call first and then instantiate the method.
+            let s: Subst =
+                Subst::from([(type_params[0].id.to_owned(), type_param.as_ref().to_owned())]);
+            let t = t.apply(&s);
+
+            Ok(t)
+        }
         TypeKind::Lam(_) => ctx.lookup_type_and_instantiate("Function", false),
         TypeKind::App(_) => todo!(), // What does this even mean?
         TypeKind::Union(_) => todo!(),
