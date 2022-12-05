@@ -22,6 +22,8 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
         _ => (),
     };
 
+    println!("unifying: {t1} with {t2}");
+
     if t1.mutable && t2.mutable {
         return unify_mut(t1, t2, ctx);
     }

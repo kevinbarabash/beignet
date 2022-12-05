@@ -283,6 +283,9 @@ fn infer_type_ann_rec(
             let (obj_s, obj_t) = infer_type_ann_rec(obj_type, ctx, type_param_map)?;
             let (index_s, index_t) = infer_type_ann_rec(index_type, ctx, type_param_map)?;
 
+            // TODO: return an Indexed Access type from here so that we don't
+            // have multiple paths to unify/expand this kind of type
+
             let mut ss = vec![obj_s, index_s];
             let (s, t) = infer_property_type(&obj_t, &index_t, ctx)?;
             ss.push(s);
