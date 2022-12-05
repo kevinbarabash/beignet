@@ -2453,7 +2453,18 @@ mod tests {
         infer_prog(src);
     }
 
-    // TODO: test index access on tuples
+    #[test]
+    fn test_indexed_access_on_tuples() {
+        let src = r#"
+        type ReadonlyArray<T> = {[key: number]: T};
+        type Tuple = [string, boolean, number];
+        let a: Tuple[0] = "hello";
+        let b: Tuple[1] = true;
+        let c: Tuple[2] = 5;
+        "#;
+
+        infer_prog(src);
+    }
 
     #[test]
     fn infer_ident_inside_lam() {

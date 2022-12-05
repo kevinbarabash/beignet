@@ -70,17 +70,6 @@ fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Typ
 
     match &index.kind {
         TypeKind::Lit(lit) => {
-            let key = match lit {
-                TLit::Num(num) => num,
-                TLit::Bool(_) => {
-                    return Err(Report::new(TypeError::InvalidIndex(
-                        access.object.to_owned(),
-                        access.index.to_owned(),
-                    )));
-                }
-                TLit::Str(str) => str,
-            };
-
             if let TypeKind::Object(obj) = &obj.kind {
                 for elem in &obj.elems {
                     match elem {
@@ -98,23 +87,27 @@ fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Typ
                                         Type::from(TypeKind::Keyword(TKeyword::Undefined));
                                     return Ok(union_types(&index.t, &undefined));
                                 }
-                                _ => {
-                                    return Err(Report::new(TypeError::MissingKey(key.to_owned())));
-                                }
+                                _ => (),
                             },
                             _ => {
                                 todo!("Return an error that object indexer's key is invalid");
                             }
                         },
-                        TObjElem::Prop(prop) => {
-                            if prop.name == TPropKey::StringKey(key.to_owned()) {
+                        TObjElem::Prop(prop) => match (&prop.name, lit) {
+                            (TPropKey::StringKey(key), TLit::Str(str)) if key == str => {
                                 return Ok(prop.t.to_owned());
                             }
-                        }
+                            // NOTE: `get_obj_type` add numeric keys for each element
+                            // in a tuple.
+                            (TPropKey::NumberKey(key), TLit::Num(num)) if key == num => {
+                                return Ok(prop.t.to_owned());
+                            }
+                            _ => (),
+                        },
                     }
                 }
 
-                return Err(Report::new(TypeError::MissingKey(key.to_owned())));
+                return Err(Report::new(TypeError::MissingKey(format!("{lit}"))));
             }
         }
         TypeKind::Keyword(_) => {
@@ -365,21 +358,21 @@ fn get_obj_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
             Ok(t)
         }
         TypeKind::Tuple(tuple) => {
-            let mut elems: Vec<TObjElem> = vec![];
-            // TODO: change this to a for_each
-            for i in 0..tuple.len() {
-                let elem_t = tuple.get(i).unwrap();
-                elems.push(TObjElem::Prop(TProp {
-                    name: TPropKey::NumberKey(i.to_string()),
-                    optional: false,
-                    // If the type we're processing is mutable, then we can
-                    // read/write each element in the tuple
-                    mutable: t.mutable,
-                    t: elem_t.to_owned(),
-                }));
-            }
-            // TODO: filter out the indexer since we only want indexes from
-            // 0 to tuple.len()
+            let mut elems: Vec<TObjElem> = tuple
+                .iter()
+                .enumerate()
+                .map(|(i, elem_t)| {
+                    TObjElem::Prop(TProp {
+                        name: TPropKey::NumberKey(i.to_string()),
+                        optional: false,
+                        // If the type we're processing is mutable, then we can
+                        // read/write each element in the tuple
+                        mutable: t.mutable,
+                        t: elem_t.to_owned(),
+                    })
+                })
+                .collect();
+
             let array_t = ctx.lookup_type_and_instantiate("Array", t.mutable)?;
             if let TypeKind::Object(TObject { elems: array_elems }) = &array_t.kind {
                 for array_elem in array_elems {
@@ -393,6 +386,7 @@ fn get_obj_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
                     };
                 }
             };
+
             let t = Type::from(TypeKind::Object(TObject { elems }));
             Ok(t)
         }
