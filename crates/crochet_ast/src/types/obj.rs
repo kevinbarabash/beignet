@@ -80,8 +80,23 @@ impl fmt::Display for TIndex {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TPropKey {
+    StringKey(String),
+    NumberKey(String),
+}
+
+impl fmt::Display for TPropKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TPropKey::StringKey(key) => write!(f, "{key}"),
+            TPropKey::NumberKey(key) => write!(f, "{key}"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TProp {
-    pub name: String,
+    pub name: TPropKey,
     pub optional: bool,
     pub mutable: bool,
     pub t: Type,

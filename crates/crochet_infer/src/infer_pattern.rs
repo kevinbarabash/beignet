@@ -1,7 +1,7 @@
 use error_stack::{Report, Result};
 use std::collections::HashMap;
 
-use crochet_ast::types::{self as types, Provenance, TObject, Type, TypeKind};
+use crochet_ast::types::{self as types, Provenance, TObject, TPropKey, Type, TypeKind};
 use crochet_ast::values::{self as values, *};
 
 use crate::assump::Assump;
@@ -171,7 +171,7 @@ fn infer_pattern_rec(
                             let value_type = infer_pattern_rec(value, ctx, assump).unwrap();
 
                             Some(types::TObjElem::Prop(types::TProp {
-                                name: key.name.to_owned(),
+                                name: TPropKey::StringKey(key.name.to_owned()),
                                 optional: false,
                                 mutable: false,
                                 t: value_type,
@@ -201,7 +201,7 @@ fn infer_pattern_rec(
                             }
 
                             Some(types::TObjElem::Prop(types::TProp {
-                                name: ident.name.to_owned(),
+                                name: TPropKey::StringKey(ident.name.to_owned()),
                                 optional: false,
                                 mutable: false,
                                 t: tv,

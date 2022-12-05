@@ -626,14 +626,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             let alias_t = ctx.lookup_ref_and_instantiate(alias)?;
             unify(&alias_t, t2, ctx)
         }
-        (_, TypeKind::MappedType(_)) => {
-            let mapped_t = expand_type(t2, ctx)?;
-            unify(t1, &mapped_t, ctx)
-        }
-        (TypeKind::MappedType(_), _) => {
-            let mapped_t = expand_type(t1, ctx)?;
-            unify(&mapped_t, t2, ctx)
-        }
+        (_, TypeKind::MappedType(_)) => unify(t1, &expand_type(t2, ctx)?, ctx),
+        (TypeKind::MappedType(_), _) => unify(&expand_type(t1, ctx)?, t2, ctx),
+        (_, TypeKind::IndexAccess(_)) => unify(t1, &expand_type(t2, ctx)?, ctx),
+        (TypeKind::IndexAccess(_), _) => unify(&expand_type(t1, ctx)?, t2, ctx),
 
         // We instantiate any generic types that haven't already been instantiated
         // yet.  This handles cases like `[1, 2, 3].map((x) => x * x)` where the
@@ -777,6 +773,7 @@ fn merge_reports(reports: Vec<Report<TypeError>>) -> Option<Report<TypeError>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crochet_ast::types::TPropKey;
     use crochet_ast::values::Lit;
 
     fn num(val: &str) -> Lit {
@@ -825,20 +822,20 @@ mod tests {
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
-                name: String::from("foo"),
+                name: TPropKey::StringKey(String::from("foo")),
                 optional: false,
                 mutable: false,
                 t: Type::from(num("5")),
             }),
             types::TObjElem::Prop(types::TProp {
-                name: String::from("bar"),
+                name: TPropKey::StringKey(String::from("bar")),
                 optional: false,
                 mutable: false,
                 t: Type::from(bool(&true)),
             }),
             // Having extra properties is okay
             types::TObjElem::Prop(types::TProp {
-                name: String::from("baz"),
+                name: TPropKey::StringKey(String::from("baz")),
                 optional: false,
                 mutable: false,
                 t: Type::from(TypeKind::Keyword(TKeyword::String)),
@@ -848,13 +845,13 @@ mod tests {
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
-                name: String::from("foo"),
+                name: TPropKey::StringKey(String::from("foo")),
                 optional: false,
                 mutable: false,
                 t: Type::from(TypeKind::Keyword(TKeyword::Number)),
             }),
             types::TObjElem::Prop(types::TProp {
-                name: String::from("bar"),
+                name: TPropKey::StringKey(String::from("bar")),
                 optional: true,
                 mutable: false,
                 t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
@@ -862,7 +859,7 @@ mod tests {
             // It's okay for qux to not appear in the subtype since
             // it's an optional property.
             types::TObjElem::Prop(types::TProp {
-                name: String::from("qux"),
+                name: TPropKey::StringKey(String::from("qux")),
                 optional: true,
                 mutable: false,
                 t: Type::from(TypeKind::Keyword(TKeyword::String)),

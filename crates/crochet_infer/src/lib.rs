@@ -6,7 +6,6 @@ mod infer_expr;
 mod infer_fn_param;
 mod infer_pattern;
 mod infer_type_ann;
-mod key_of;
 mod substitutable;
 mod type_error;
 mod unify;
@@ -2415,14 +2414,13 @@ mod tests {
         let src = r#"        
         type FooBar = {foo: number, bar: string};
         type Foo = FooBar["foo"];
+        let foo: Foo = 5;
         type BarKey = "bar";
         type Bar = FooBar[BarKey];
+        let bar: Bar = "hello";
         "#;
 
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type_type("Foo", &ctx), "number");
-        assert_eq!(get_type_type("Bar", &ctx), "string");
+        infer_prog(src);
     }
 
     #[test]
@@ -2430,31 +2428,42 @@ mod tests {
         let src = r#"        
         type Nested = {a: {b: {c: string}}};
         type B = Nested["a"]["b"];
+        let b: B = {c: "hello"};
         type C = Nested["a"]["b"]["c"];
+        let c: C = "world";
         "#;
 
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type_type("B", &ctx), "{c: string}");
-        assert_eq!(get_type_type("C", &ctx), "string");
+        infer_prog(src);
     }
 
     #[test]
     fn test_indexed_access_with_indexer_elements() {
         let src = r#"
-        type ReadonlyArray<T> = {
-            [key: string]: T;
-        };
         type MyRecord = {[key: string]: number};
-        type MyArray = boolean[];
         type RecVal = MyRecord["foo"];
-        type ArrVal = MyArray["bar"];
+        let rec_val: RecVal = 5;
+        let rec_val: RecVal = undefined;
+
+        type MyOtherRecord = {[key: number]: boolean};
+        type OtherRecVal = MyOtherRecord[10];
+        let rec_other_val: OtherRecVal = true;
+        let rec_other_val: OtherRecVal = undefined;
         "#;
 
-        let ctx = infer_prog(src);
+        infer_prog(src);
+    }
 
-        assert_eq!(get_type_type("RecVal", &ctx), "number");
-        assert_eq!(get_type_type("ArrVal", &ctx), "boolean");
+    #[test]
+    fn test_indexed_access_on_tuples() {
+        let src = r#"
+        type ReadonlyArray<T> = {[key: number]: T};
+        type Tuple = [string, boolean, number];
+        let a: Tuple[0] = "hello";
+        let b: Tuple[1] = true;
+        let c: Tuple[2] = 5;
+        "#;
+
+        infer_prog(src);
     }
 
     #[test]

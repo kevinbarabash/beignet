@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use types::{
-    TCallable, TConditionalType, TIndex, TIndexAccess, TMappedType, TObjElem, TObject, TypeKind,
+    TCallable, TConditionalType, TIndex, TIndexAccess, TMappedType, TObjElem, TObject, TPropKey,
+    TypeKind,
 };
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
@@ -373,7 +374,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                     let gen_t = generalize(&HashMap::default(), &t);
                     let name = get_key_name(sig.key.as_ref())?;
                     Ok(TObjElem::Prop(TProp {
-                        name,
+                        name: TPropKey::StringKey(name),
                         optional: sig.optional,
                         mutable: !sig.readonly,
                         t: gen_t,
@@ -396,7 +397,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
             // println!("t = {t}, gen_t = {gen_t}");
             let name = get_key_name(sig.key.as_ref())?;
             Ok(TObjElem::Prop(TProp {
-                name,
+                name: TPropKey::StringKey(name),
                 optional: sig.optional,
                 mutable: false, // All methods on interfaces are readonly
                 t: gen_t,
@@ -469,16 +470,17 @@ impl Visit for InterfaceCollector {
         let name = decl.id.sym.to_string();
         match infer_type_alias_decl(decl, &self.ctx) {
             Ok(t) => {
-                println!("inferring: {name} as type: {t}");
+                // println!("inferring: {name} as type: {t}");
                 self.ctx.insert_type(name, t)
             }
-            Err(err) => println!("couldn't infer {name}, {err:#?}"),
+            Err(_err) => {
+                // println!("couldn't infer {name}, {err:#?}")
+            }
         }
     }
 
     fn visit_ts_interface_decl(&mut self, decl: &TsInterfaceDecl) {
         let name = decl.id.sym.to_string();
-        println!("inferring: {name}");
         match infer_interface_decl(decl, &self.ctx) {
             Ok(t) => {
                 // HACK(kevinb): Passing true bypasses logic to check if there's

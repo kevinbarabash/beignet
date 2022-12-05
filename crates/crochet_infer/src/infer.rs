@@ -1,4 +1,4 @@
-use crochet_ast::types::{TObjElem, TObject, TProp, Type, TypeKind};
+use crochet_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
 use crochet_ast::values::*;
 use error_stack::{Report, Result};
 
@@ -15,7 +15,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
     // We use {_name: "Promise"} to differentiate it from other
     // object types.
     let elems = vec![TObjElem::Prop(TProp {
-        name: String::from("_name"),
+        name: TPropKey::StringKey(String::from("_name")),
         optional: false,
         mutable: false,
         t: Type::from(Lit::str(String::from("Promise"), 0..0)),
@@ -26,7 +26,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
     // We use {_name: "JSXElement"} to differentiate it from other
     // object types.
     let elems = vec![TObjElem::Prop(TProp {
-        name: String::from("_name"),
+        name: TPropKey::StringKey(String::from("_name")),
         optional: false,
         mutable: false,
         t: Type::from(Lit::str(String::from("JSXElement"), 0..0)),
