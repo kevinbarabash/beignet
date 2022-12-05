@@ -1,6 +1,6 @@
 use crochet_ast::types::*;
 use crochet_ast::types::{
-    BindingIdent, TFnParam, TIndex, TObjElem, TObject, TPat, TProp, TPropKey, Type, TypeKind,
+    BindingIdent, TFnParam, TIndex, TLit, TObjElem, TObject, TPat, TProp, TPropKey, Type, TypeKind,
 };
 use error_stack::{Report, Result};
 use std::collections::HashMap;
@@ -8,12 +8,11 @@ use std::collections::HashMap;
 use crate::context::Context;
 use crate::type_error::TypeError;
 use crate::unify::unify;
-use crate::util::{replace_aliases_rec, union_many_types};
+use crate::util::{replace_aliases_rec, union_many_types, union_types};
 
 // `expand_type` is used to expand types that `unify` doesn't know how to unify
 // into something that it does know how to unify.
 pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
-    println!("expanding: {t}");
     match &t.kind {
         TypeKind::Var(_) => Ok(t.to_owned()),
         TypeKind::App(_) => Ok(t.to_owned()),
@@ -67,26 +66,50 @@ fn expand_conditional_type(cond: &TConditionalType, ctx: &Context) -> Result<Typ
 
 fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, TypeError> {
     let obj = get_obj_type(access.object.as_ref(), ctx)?;
-    let index = access.index.as_ref();
+    let index = expand_type(access.index.as_ref(), ctx)?;
 
     match &index.kind {
         TypeKind::Lit(lit) => {
             let key = match lit {
-                crochet_ast::types::TLit::Num(num) => num,
-                crochet_ast::types::TLit::Bool(_) => {
+                TLit::Num(num) => num,
+                TLit::Bool(_) => {
                     return Err(Report::new(TypeError::InvalidIndex(
                         access.object.to_owned(),
                         access.index.to_owned(),
                     )));
                 }
-                crochet_ast::types::TLit::Str(str) => str,
+                TLit::Str(str) => str,
             };
 
             if let TypeKind::Object(obj) = &obj.kind {
                 for elem in &obj.elems {
-                    if let TObjElem::Prop(prop) = elem {
-                        if prop.name == TPropKey::StringKey(key.to_owned()) {
-                            return Ok(prop.t.to_owned());
+                    match elem {
+                        TObjElem::Call(_) => (),
+                        TObjElem::Constructor(_) => (),
+                        TObjElem::Index(index) => match &index.key.t.kind {
+                            TypeKind::Keyword(keyword) => match (keyword, lit) {
+                                (TKeyword::Number, TLit::Num(_)) => {
+                                    let undefined =
+                                        Type::from(TypeKind::Keyword(TKeyword::Undefined));
+                                    return Ok(union_types(&index.t, &undefined));
+                                }
+                                (TKeyword::String, TLit::Str(_)) => {
+                                    let undefined =
+                                        Type::from(TypeKind::Keyword(TKeyword::Undefined));
+                                    return Ok(union_types(&index.t, &undefined));
+                                }
+                                _ => {
+                                    return Err(Report::new(TypeError::MissingKey(key.to_owned())));
+                                }
+                            },
+                            _ => {
+                                todo!("Return an error that object indexer's key is invalid");
+                            }
+                        },
+                        TObjElem::Prop(prop) => {
+                            if prop.name == TPropKey::StringKey(key.to_owned()) {
+                                return Ok(prop.t.to_owned());
+                            }
                         }
                     }
                 }
@@ -98,7 +121,7 @@ fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Typ
             if let TypeKind::Object(obj) = &obj.kind {
                 for elem in &obj.elems {
                     if let TObjElem::Index(TIndex { key, t, .. }) = elem {
-                        if &key.t == index {
+                        if key.t == index {
                             return Ok(t.to_owned());
                         }
                     }

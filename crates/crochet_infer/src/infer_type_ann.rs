@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::types::{
-    self as types, Provenance, TFnParam, TIndex, TKeyword, TObjElem, TObject, TProp, TPropKey,
+    self as types, Provenance, TFnParam, TIndex, TIndexAccess, TObjElem, TObject, TProp, TPropKey,
     TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
@@ -13,9 +13,7 @@ use crate::infer_expr::infer_expr;
 use crate::infer_fn_param::pattern_to_tpat;
 use crate::type_error::TypeError;
 use crate::util::compose_many_subs;
-use crate::util::get_type_params;
 use crate::Subst;
-use crate::Substitutable;
 
 pub fn infer_type_ann(
     type_ann: &mut TypeAnn,
@@ -283,13 +281,12 @@ fn infer_type_ann_rec(
             let (obj_s, obj_t) = infer_type_ann_rec(obj_type, ctx, type_param_map)?;
             let (index_s, index_t) = infer_type_ann_rec(index_type, ctx, type_param_map)?;
 
-            // TODO: return an Indexed Access type from here so that we don't
-            // have multiple paths to unify/expand this kind of type
+            let s = compose_many_subs(&[obj_s, index_s]);
+            let t = Type::from(TypeKind::IndexAccess(TIndexAccess {
+                object: Box::from(obj_t),
+                index: Box::from(index_t),
+            }));
 
-            let mut ss = vec![obj_s, index_s];
-            let (s, t) = infer_property_type(&obj_t, &index_t, ctx)?;
-            ss.push(s);
-            let s = compose_many_subs(&ss);
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
@@ -300,139 +297,4 @@ fn infer_type_ann_rec(
     ))));
 
     Ok((s, t))
-}
-
-fn infer_property_type(
-    obj_t: &Type,
-    index_t: &Type,
-    ctx: &mut Context,
-) -> Result<(Subst, Type), TypeError> {
-    match &obj_t.kind {
-        TypeKind::Object(TObject { elems }) => match &index_t.kind {
-            TypeKind::Ref(alias) => {
-                let t = ctx.lookup_ref_and_instantiate(alias)?;
-                infer_property_type(obj_t, &t, ctx)
-            }
-            TypeKind::Lit(lit) => match lit {
-                types::TLit::Num(_) => {
-                    // TODO: support number literals if the ojbect has an indexer
-                    // that supports them
-                    Err(
-                        Report::new(TypeError::InvalidTypeIndex(Box::from(index_t.to_owned())))
-                            .attach_printable(
-                                "a number literal can't be used as an indexed type's index",
-                            ),
-                    )
-                }
-                types::TLit::Bool(_) => Err(Report::new(TypeError::InvalidTypeIndex(Box::from(
-                    index_t.to_owned(),
-                )))
-                .attach_printable("a boolean literal can't be used as an indexed type's index")),
-                types::TLit::Str(name) => {
-                    let mut t = elems.iter().find_map(|elem| match elem {
-                        types::TObjElem::Prop(prop) => {
-                            if prop.name == TPropKey::StringKey(name.to_owned()) {
-                                Some(prop.t.to_owned())
-                            } else {
-                                None
-                            }
-                        }
-                        _ => None,
-                    });
-
-                    if t.is_none() {
-                        t = elems.iter().find_map(|elem| match elem {
-                            types::TObjElem::Index(index) => match &index.key.t.kind {
-                                TypeKind::Keyword(TKeyword::String) => Some(index.t.to_owned()),
-                                _ => None,
-                            },
-                            _ => None,
-                        });
-                    }
-
-                    match t {
-                        Some(t) => {
-                            let s = Subst::new();
-                            Ok((s, t))
-                        }
-                        None => Err(Report::new(TypeError::MissingTypeIndex)
-                            .attach_printable(format!("'{name}' not found in {obj_t}"))),
-                    }
-                }
-            },
-            _ => Err(
-                Report::new(TypeError::InvalidTypeIndex(Box::from(index_t.to_owned())))
-                    .attach_printable(format!(
-                        "{index_t} can't be used as an indexed type's index",
-                    )),
-            ),
-        },
-        TypeKind::Ref(alias) => {
-            let t = ctx.lookup_ref_and_instantiate(alias)?;
-            infer_property_type(&t, index_t, ctx)
-        }
-        TypeKind::Lit(lit) => {
-            let t = match lit {
-                types::TLit::Num(_) => ctx.lookup_type_and_instantiate("Number", false)?,
-                types::TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean", false)?,
-                types::TLit::Str(_) => ctx.lookup_type_and_instantiate("String", false)?,
-            };
-            infer_property_type(&t, index_t, ctx)
-        }
-        TypeKind::Keyword(keyword) => match keyword {
-            TKeyword::Number => {
-                let t = ctx.lookup_type_and_instantiate("Number", false)?;
-                infer_property_type(&t, index_t, ctx)
-            }
-            TKeyword::Boolean => {
-                let t = ctx.lookup_type_and_instantiate("Boolean", false)?;
-                infer_property_type(&t, index_t, ctx)
-            }
-            TKeyword::String => {
-                let t = ctx.lookup_type_and_instantiate("String", false)?;
-                infer_property_type(&t, index_t, ctx)
-            }
-            TKeyword::Symbol => {
-                let t = ctx.lookup_type_and_instantiate("Symbol", false)?;
-                infer_property_type(&t, index_t, ctx)
-            }
-            TKeyword::Null => Err(Report::new(TypeError::NotAnObjectType(Box::from(
-                obj_t.to_owned(),
-            )))
-            .attach_printable("Cannot read property on 'null'")),
-            TKeyword::Undefined => Err(Report::new(TypeError::NotAnObjectType(Box::from(
-                obj_t.to_owned(),
-            )))
-            .attach_printable("Cannot read property on 'undefined'")),
-            TKeyword::Never => Err(Report::new(TypeError::NotAnObjectType(Box::from(
-                obj_t.to_owned(),
-            )))
-            .attach_printable("Cannot read property on 'never'")),
-        },
-        TypeKind::Array(type_param) => {
-            let t = ctx.lookup_type("Array", obj_t.mutable)?;
-            let type_params = get_type_params(&t);
-            // TODO: Instead of instantiating the whole interface for one method, do
-            // the lookup call first and then instantiate the method.
-            let s: Subst =
-                Subst::from([(type_params[0].id.to_owned(), type_param.as_ref().to_owned())]);
-            let t = t.apply(&s);
-            infer_property_type(&t, index_t, ctx)
-        }
-        TypeKind::Tuple(elem_types) => {
-            let t = ctx.lookup_type("Array", obj_t.mutable)?;
-            // TODO: Instead of instantiating the whole interface for one method, do
-            // the lookup call first and then instantiate the method.
-            // TODO: remove duplicate types
-            let type_param = Type::from(TypeKind::Union(elem_types.to_owned()));
-            let type_params = get_type_params(&t); // ReadonlyArray type params
-
-            let s: Subst = Subst::from([(type_params[0].id.to_owned(), type_param)]);
-            let t = t.apply(&s);
-            infer_property_type(&t, index_t, ctx)
-        }
-        _ => {
-            todo!("Unhandled {obj_t:#?} in infer_property_type")
-        }
-    }
 }

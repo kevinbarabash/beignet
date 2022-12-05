@@ -2414,14 +2414,13 @@ mod tests {
         let src = r#"        
         type FooBar = {foo: number, bar: string};
         type Foo = FooBar["foo"];
+        let foo: Foo = 5;
         type BarKey = "bar";
         type Bar = FooBar[BarKey];
+        let bar: Bar = "hello";
         "#;
 
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type_type("Foo", &ctx), "number");
-        assert_eq!(get_type_type("Bar", &ctx), "string");
+        infer_prog(src);
     }
 
     #[test]
@@ -2429,32 +2428,32 @@ mod tests {
         let src = r#"        
         type Nested = {a: {b: {c: string}}};
         type B = Nested["a"]["b"];
+        let b: B = {c: "hello"};
         type C = Nested["a"]["b"]["c"];
+        let c: C = "world";
         "#;
 
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type_type("B", &ctx), "{c: string}");
-        assert_eq!(get_type_type("C", &ctx), "string");
+        infer_prog(src);
     }
 
     #[test]
     fn test_indexed_access_with_indexer_elements() {
         let src = r#"
-        type ReadonlyArray<T> = {
-            [key: string]: T;
-        };
         type MyRecord = {[key: string]: number};
-        type MyArray = boolean[];
         type RecVal = MyRecord["foo"];
-        type ArrVal = MyArray["bar"];
+        let rec_val: RecVal = 5;
+        let rec_val: RecVal = undefined;
+
+        type MyOtherRecord = {[key: number]: boolean};
+        type OtherRecVal = MyOtherRecord[10];
+        let rec_other_val: OtherRecVal = true;
+        let rec_other_val: OtherRecVal = undefined;
         "#;
 
-        let ctx = infer_prog(src);
-
-        assert_eq!(get_type_type("RecVal", &ctx), "number");
-        assert_eq!(get_type_type("ArrVal", &ctx), "boolean");
+        infer_prog(src);
     }
+
+    // TODO: test index access on tuples
 
     #[test]
     fn infer_ident_inside_lam() {

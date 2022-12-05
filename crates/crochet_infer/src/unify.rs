@@ -22,8 +22,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
         _ => (),
     };
 
-    println!("unifying: {t1} with {t2}");
-
     if t1.mutable && t2.mutable {
         return unify_mut(t1, t2, ctx);
     }
@@ -628,14 +626,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             let alias_t = ctx.lookup_ref_and_instantiate(alias)?;
             unify(&alias_t, t2, ctx)
         }
-        (_, TypeKind::MappedType(_)) => {
-            let mapped_t = expand_type(t2, ctx)?;
-            unify(t1, &mapped_t, ctx)
-        }
-        (TypeKind::MappedType(_), _) => {
-            let mapped_t = expand_type(t1, ctx)?;
-            unify(&mapped_t, t2, ctx)
-        }
+        (_, TypeKind::MappedType(_)) => unify(t1, &expand_type(t2, ctx)?, ctx),
+        (TypeKind::MappedType(_), _) => unify(&expand_type(t1, ctx)?, t2, ctx),
+        (_, TypeKind::IndexAccess(_)) => unify(t1, &expand_type(t2, ctx)?, ctx),
+        (TypeKind::IndexAccess(_), _) => unify(&expand_type(t1, ctx)?, t2, ctx),
 
         // We instantiate any generic types that haven't already been instantiated
         // yet.  This handles cases like `[1, 2, 3].map((x) => x * x)` where the
