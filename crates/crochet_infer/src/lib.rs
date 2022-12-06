@@ -1,5 +1,4 @@
 mod assump;
-mod conditional_type;
 mod context;
 mod expand_type;
 mod infer_expr;
@@ -16,7 +15,6 @@ mod visitor;
 
 pub mod infer;
 
-pub use conditional_type::compute_conditional_type;
 pub use context::*;
 pub use expand_type::expand_type;
 pub use infer::*;

@@ -3,10 +3,8 @@ use error_stack::{Report, Result};
 use std::cell::Cell;
 use std::collections::HashMap;
 
-use crate::expand_type::expand_type;
 use crate::substitutable::*;
 use crate::type_error::TypeError;
-use crate::util::{get_type_params, union_many_types, unwrap_generic};
 
 // NOTE: This is the same as the Assump type in assump.rs
 pub type Env = HashMap<String, Type>;
@@ -110,8 +108,8 @@ impl Context {
 
     pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, TypeError> {
         for scope in self.scopes.iter().rev() {
-            if let Some(b) = scope.values.get(name) {
-                return Ok(self.instantiate(&b.t));
+            if let Some(binding) = scope.values.get(name) {
+                return Ok(self.instantiate(&binding.t));
             }
         }
         Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
@@ -147,6 +145,10 @@ impl Context {
         Ok(self.instantiate(&t))
     }
 
+    // This method gets confused by
+    // type Obj = {[key: string]: boolean};
+    // type ReadonlyObj = Readonly<Obj>;
+    // TODO: Figure out to fix this so that we can use this method in `expand_alias_type`
     pub fn lookup_type(&self, name: &str, mutable: bool) -> Result<Type, TypeError> {
         if !mutable {
             if let Ok(t) = self._lookup_type(&format!("Readonly{name}")) {
@@ -156,7 +158,7 @@ impl Context {
         self._lookup_type(name)
     }
 
-    fn _lookup_type(&self, name: &str) -> Result<Type, TypeError> {
+    pub fn _lookup_type(&self, name: &str) -> Result<Type, TypeError> {
         for scope in self.scopes.iter().rev() {
             if let Some(t) = scope.types.get(name) {
                 return Ok(t.to_owned());
@@ -174,73 +176,6 @@ impl Context {
         }
         Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
             .attach_printable(format!("Can't find namespace: {name}")))
-    }
-
-    pub fn lookup_ref_and_instantiate(&self, alias: &TRef) -> Result<Type, TypeError> {
-        let name = &alias.name;
-        for scope in self.scopes.iter().rev() {
-            if let Some(t) = scope.types.get(name) {
-                let type_params = get_type_params(t);
-
-                // Replaces qualifiers in the type with the corresponding type params
-                // from the alias type.
-                let ids = type_params.iter().map(|tv| tv.id.to_owned());
-                let subs: Subst = match &alias.type_args {
-                    Some(type_args) => {
-                        if type_args.len() != type_params.len() {
-                            return Err(Report::new(TypeError::TypeInstantiationFailure)
-                                .attach_printable(
-                                    "mismatch between the number of qualifiers and type params",
-                                ));
-                        }
-                        let inner_t = unwrap_generic(t);
-                        match &inner_t.kind {
-                            // When conditional types act on a generic type, they
-                            // become distributive when given a union type.
-                            TypeKind::ConditionalType(_) => {
-                                // TODO: determine which type arg is being used
-                                // for the `check_type` and use that as the type
-                                // that we distribute.  For now we assume the first
-                                // type arg is one being used as the `check_type`.
-                                let check_args = match &type_args[0].kind {
-                                    TypeKind::Union(types) => types.to_owned(),
-                                    _ => vec![type_args[0].to_owned()],
-                                };
-                                let mut type_args = type_args.clone();
-
-                                let mut types = vec![];
-                                for check_arg in check_args {
-                                    type_args[0] = check_arg;
-                                    let subs: Subst =
-                                        ids.clone().zip(type_args.iter().cloned()).collect();
-                                    let inner_t = inner_t.apply(&subs);
-                                    let t = expand_type(&inner_t, self)?;
-                                    types.push(t);
-                                }
-
-                                let t = union_many_types(&types);
-                                return Ok(t);
-                            }
-                            _ => ids.zip(type_args.iter().cloned()).collect(),
-                        }
-                    }
-                    None => {
-                        if !type_params.is_empty() {
-                            println!("type = {t}");
-                            println!("no type params");
-                            return Err(Report::new(TypeError::TypeInstantiationFailure)
-                                .attach_printable(
-                                    "mismatch between the number of qualifiers and type params",
-                                ));
-                        }
-                        Subst::default()
-                    }
-                };
-                return Ok(t.apply(&subs));
-            }
-        }
-        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
-            .attach_printable(format!("Can't find type: {name}")))
     }
 
     pub fn instantiate(&self, t: &Type) -> Type {

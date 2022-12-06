@@ -9,6 +9,7 @@ use crochet_ast::values::*;
 use types::TObjElem;
 
 use crate::context::Context;
+use crate::expand_type::get_obj_type;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
@@ -647,54 +648,20 @@ fn infer_property_type(
             ),
         },
         TypeKind::Object(obj) => get_prop_value(obj, prop, ctx),
-        TypeKind::Ref(alias) => {
-            let t = ctx.lookup_ref_and_instantiate(alias)?;
+        TypeKind::Ref(_) => {
+            let t = get_obj_type(obj_t, ctx)?;
             infer_property_type(&t, prop, ctx)
         }
-        TypeKind::Lit(lit) => {
-            let t = match lit {
-                types::TLit::Num(_) => ctx.lookup_type_and_instantiate("Number", false)?,
-                types::TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean", false)?,
-                types::TLit::Str(_) => ctx.lookup_type_and_instantiate("String", false)?,
-            };
+        TypeKind::Lit(_) => {
+            let t = get_obj_type(obj_t, ctx)?;
             infer_property_type(&t, prop, ctx)
         }
-        TypeKind::Keyword(keyword) => {
-            let t = match keyword {
-                TKeyword::Number => ctx.lookup_type_and_instantiate("Number", false)?,
-                TKeyword::Boolean => ctx.lookup_type_and_instantiate("Boolean", false)?,
-                TKeyword::String => ctx.lookup_type_and_instantiate("String", false)?,
-                TKeyword::Symbol => ctx.lookup_type_and_instantiate("Symbol", false)?,
-                TKeyword::Null => {
-                    return Err(
-                        Report::new(TypeError::NotAnObject(Box::from(obj_t.to_owned())))
-                            .attach_printable("Cannot read property on 'null'"),
-                    )
-                }
-                TKeyword::Undefined => {
-                    return Err(
-                        Report::new(TypeError::NotAnObject(Box::from(obj_t.to_owned())))
-                            .attach_printable("Cannot read property on 'undefined'"),
-                    )
-                }
-                TKeyword::Never => {
-                    return Err(
-                        Report::new(TypeError::NotAnObject(Box::from(obj_t.to_owned())))
-                            .attach_printable("Cannot read property on 'never'"),
-                    )
-                }
-            };
+        TypeKind::Keyword(_) => {
+            let t = get_obj_type(obj_t, ctx)?;
             infer_property_type(&t, prop, ctx)
         }
         TypeKind::Array(type_param) => {
-            let t = ctx.lookup_type("Array", obj_t.mutable)?;
-            let type_params = get_type_params(&t);
-            // TODO: Instead of instantiating the whole interface for one method, do
-            // the lookup call first and then instantiate the method.
-            let s: Subst =
-                Subst::from([(type_params[0].id.to_owned(), type_param.as_ref().to_owned())]);
-            let t = t.apply(&s);
-
+            let t = get_obj_type(obj_t, ctx)?;
             let (s, mut t) = infer_property_type(&t, prop, ctx)?;
 
             // Replaces `this` with `mut <type_param>[]`

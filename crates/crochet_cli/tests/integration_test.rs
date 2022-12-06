@@ -972,6 +972,34 @@ fn infer_fn_param_with_type_alias_with_param_4() {
 }
 
 #[test]
+fn infer_with_constrained_polymorphism_success() {
+    let src = r#"
+    type Foo<T> = {bar: T};
+    declare let get_bar: <T extends string>(foo: Foo<T>) => T;
+    let bar = get_bar({bar: "hello"});
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.lookup_value("bar").unwrap());
+    assert_eq!(result, "\"hello\"");
+}
+
+#[test]
+// TODO: figure out how to get the type constraints in the error message
+#[should_panic = r#"TypeError::UnificationError: {bar: "hello"}, {bar: t4}"#]
+fn infer_with_constrained_polymorphism_failiure() {
+    let src = r#"
+    type Foo<T> = {bar: T};
+    declare let get_bar: <T extends number>(foo: Foo<T>) => T;
+    let bar = get_bar({bar: "hello"});
+    "#;
+    let (_, ctx) = infer_prog(src);
+
+    let result = format!("{}", ctx.lookup_value("bar").unwrap());
+    assert_eq!(result, "\"hello\"");
+}
+
+#[test]
 fn infer_generic_type_aliases() {
     // What's the difference between these two?
     let src = r#"
