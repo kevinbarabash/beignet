@@ -538,6 +538,32 @@ fn infer_exclude() {
 }
 
 #[test]
+fn infer_out_of_order_exclude() {
+    let lib = r#"
+    type Exclude<U, T> = T extends U ? never : T;
+    "#;
+    let mut ctx = parse_dts(lib).unwrap();
+
+    let src = r#"
+    type T1 = Exclude<"a" | "b", "a" | "b" | "c">;
+    "#;
+    let result = parse(src);
+    let mut prog = match result {
+        Ok(prog) => prog,
+        Err(err) => {
+            println!("err = {:?}", err);
+            panic!("Error parsing expression");
+        }
+    };
+    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
+
+    let t = ctx.lookup_type("T1", false).unwrap();
+    let t = expand_type(&t, &ctx).unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "\"c\"");
+}
+
+#[test]
 fn infer_omit() {
     let src = r#"
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};

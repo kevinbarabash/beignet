@@ -3,6 +3,7 @@ use crochet_ast::types::{
     BindingIdent, TFnParam, TIndex, TLit, TObjElem, TObject, TPat, TProp, TPropKey, Type, TypeKind,
 };
 use error_stack::{Report, Result};
+use itertools::Itertools;
 use std::collections::HashMap;
 
 use crate::context::Context;
@@ -40,79 +41,74 @@ pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
 }
 
 fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, TypeError> {
-    let alias = TRef {
-        name: alias.name.to_owned(),
-        type_args: match &alias.type_args {
-            Some(args) => {
-                let args: Result<Vec<_>, TypeError> =
-                    args.iter().map(|arg| expand_type(arg, ctx)).collect();
-                Some(args?)
-            }
-            None => None,
-        },
-    };
-
     let name = &alias.name;
     let t = ctx._lookup_type(name)?;
     let type_params = get_type_params(&t);
 
     // Replaces qualifiers in the type with the corresponding type params
     // from the alias type.
-    let ids = type_params.iter().map(|tv| tv.id.to_owned());
-    let subs: Subst = match &alias.type_args {
-        Some(type_args) => {
-            if type_args.len() != type_params.len() {
-                return Err(
-                    Report::new(TypeError::TypeInstantiationFailure).attach_printable(
-                        "mismatch between the number of qualifiers and type params",
-                    ),
-                );
-            }
-            let inner_t = unwrap_generic(&t);
-            match &inner_t.kind {
-                // When conditional types act on a generic type, they
-                // become distributive when given a union type.
-                TypeKind::ConditionalType(_) => {
-                    // TODO: determine which type arg is being used
-                    // for the `check_type` and use that as the type
-                    // that we distribute.  For now we assume the first
-                    // type arg is one being used as the `check_type`.
-                    let check_args = match &type_args[0].kind {
-                        TypeKind::Union(types) => types.to_owned(),
-                        _ => vec![type_args[0].to_owned()],
-                    };
-                    let mut type_args = type_args.clone();
+    if let Some(type_args) = &alias.type_args {
+        if type_args.len() != type_params.len() {
+            return Err(Report::new(TypeError::TypeInstantiationFailure)
+                .attach_printable("mismatch between the number of qualifiers and type params"));
+        }
+        let ids = type_params.iter().map(|tv| tv.id.to_owned());
+        let type_args = type_args
+            .iter()
+            .map(|arg| expand_type(arg, ctx))
+            .collect::<Result<Vec<_>, TypeError>>()?;
 
-                    let mut types = vec![];
-                    for check_arg in check_args {
-                        type_args[0] = check_arg;
-                        let subs: Subst = ids.clone().zip(type_args.iter().cloned()).collect();
-                        let inner_t = inner_t.apply(&subs);
-                        let t = expand_type(&inner_t, ctx)?;
-                        types.push(t);
-                    }
+        let t = unwrap_generic(&t);
+        if let TypeKind::ConditionalType(TConditionalType { check_type, .. }) = &t.kind {
+            // When conditional types act on a generic type, they
+            // become distributive when given a union type.  In particular,
+            // if the `check_type` of the conditional type is a union, then
+            // we evaluate the conditional type for each element in the union
+            // and return the union of those results.
+            // TypeKind::ConditionalType(TConditionalType { check_type, .. }) => {
+            if let TypeKind::Var(tvar) = &check_type.kind {
+                if let Some((index_of_check_type, _)) = type_params
+                    .iter()
+                    .find_position(|t_param| t_param.id == tvar.id)
+                {
+                    let check_args = match &type_args[index_of_check_type].kind {
+                        TypeKind::Union(types) => types.to_owned(),
+                        _ => vec![type_args[index_of_check_type].to_owned()],
+                    };
+
+                    // Distribute:
+                    // If the condition's `check_type` was a union we compute
+                    // the conditional type once for each element in the union.
+                    // The `Subst` used is slightly different from the normal
+                    // one in that we're replacing the type arg corresponding to
+                    // the `check_type` with each element in the union.
+                    let mut type_args = type_args;
+                    let types = check_args
+                        .iter()
+                        .map(|check_arg| {
+                            type_args[index_of_check_type] = check_arg.to_owned();
+                            let subs: Subst = ids.clone().zip(type_args.iter().cloned()).collect();
+                            let inner_t = t.apply(&subs);
+                            expand_type(&inner_t, ctx)
+                        })
+                        .collect::<Result<Vec<_>, TypeError>>()?;
 
                     let t = union_many_types(&types);
                     return expand_type(&t, ctx);
                 }
-                _ => ids.zip(type_args.iter().cloned()).collect(),
             }
         }
-        None => {
-            if !type_params.is_empty() {
-                println!("type = {t}");
-                println!("no type params");
-                return Err(
-                    Report::new(TypeError::TypeInstantiationFailure).attach_printable(
-                        "mismatch between the number of qualifiers and type params",
-                    ),
-                );
-            }
-            Subst::default()
-        }
-    };
 
-    expand_type(&t.apply(&subs), ctx)
+        // Handle the default case by replacing type variables that match type
+        // params with the corresponding type args.
+        let subs: Subst = ids.zip(type_args.iter().cloned()).collect();
+        expand_type(&t.apply(&subs), ctx)
+    } else if !type_params.is_empty() {
+        Err(Report::new(TypeError::TypeInstantiationFailure)
+            .attach_printable("mismatch between the number of qualifiers and type params"))
+    } else {
+        expand_type(&t, ctx)
+    }
 }
 
 fn expand_conditional_type(cond: &TConditionalType, ctx: &Context) -> Result<Type, TypeError> {
