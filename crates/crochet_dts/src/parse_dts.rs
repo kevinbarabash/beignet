@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use types::{
-    TCallable, TConditionalType, TIndex, TIndexAccess, TMappedType, TObjElem, TObject, TPropKey,
-    TypeKind,
+    TCallable, TConditionalType, TIndex, TIndexAccess, TIndexKey, TMappedType, TObjElem, TObject,
+    TPropKey, TypeKind,
 };
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
@@ -408,11 +408,19 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
                 let params = infer_fn_params(&sig.params, ctx)?;
                 let key = params.get(0).unwrap();
-                Ok(TObjElem::Index(TIndex {
-                    key: key.to_owned(),
-                    mutable: !sig.readonly,
-                    t,
-                }))
+
+                if let TPat::Ident(crochet_ast::types::BindingIdent { name, .. }) = &key.pat {
+                    Ok(TObjElem::Index(TIndex {
+                        key: TIndexKey {
+                            name: name.to_owned(),
+                            t: Box::from(key.t.to_owned()),
+                        },
+                        mutable: !sig.readonly,
+                        t,
+                    }))
+                } else {
+                    Err(String::from("Invalid key in index signature"))
+                }
             }
             None => Err(String::from("Index is missing type annotation")),
         },

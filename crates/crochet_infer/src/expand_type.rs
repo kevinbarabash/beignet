@@ -1,6 +1,6 @@
 use crochet_ast::types::*;
 use crochet_ast::types::{
-    BindingIdent, TFnParam, TIndex, TLit, TObjElem, TObject, TPat, TProp, TPropKey, Type, TypeKind,
+    TIndex, TIndexKey, TLit, TObjElem, TObject, TProp, TPropKey, Type, TypeKind,
 };
 use error_stack::{Report, Result};
 use itertools::Itertools;
@@ -176,7 +176,7 @@ fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Typ
             if let TypeKind::Object(obj) = &obj.kind {
                 for elem in &obj.elems {
                     if let TObjElem::Index(TIndex { key, t, .. }) = elem {
-                        if key.t == index {
+                        if key.t.as_ref() == &index {
                             return Ok(t.to_owned());
                         }
                     }
@@ -219,7 +219,7 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeE
     let keys = expand_type(constraint, ctx)?;
     let obj = get_obj_type_from_mapped_type(mapped, ctx)?;
 
-    let elems = match &obj.kind {
+    let old_elems = match &obj.kind {
         TypeKind::Object(TObject { elems }) => elems.to_owned(),
         _ => vec![],
     };
@@ -229,24 +229,24 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeE
         _ => vec![keys],
     };
 
-    let elems = keys
+    let new_elems = keys
         .iter()
         .map(|key| {
             let name = mapped.type_param.name.to_owned();
             let type_arg_map = HashMap::from([(name, key.to_owned())]);
-            let value = replace_aliases_rec(mapped.t.as_ref(), &type_arg_map);
+            let t = replace_aliases_rec(mapped.t.as_ref(), &type_arg_map);
 
-            // TODO: recursively replace all indexed access types in `value`,
-            // only process a top-level indexed access is insufficient.
-            let value = match &value.kind {
+            let t = match &t.kind {
                 TypeKind::IndexAccess(access) => expand_index_access(access, ctx)?,
-                _ => value,
+                // TODO: recursively replace all indexed access types in `t`,
+                // only processing a top-level indexed access is insufficient.
+                _ => t,
             };
 
             match &key.kind {
                 TypeKind::Lit(lit) => match lit {
                     crochet_ast::types::TLit::Num(name) => {
-                        let prop = get_prop_by_name(&elems, name)?;
+                        let prop = get_prop_by_name(&old_elems, name)?;
                         let optional = match &mapped.optional {
                             Some(change) => match change {
                                 crochet_ast::types::TMappedTypeChangeProp::Plus => true,
@@ -265,12 +265,12 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeE
                             name: TPropKey::NumberKey(name.to_owned()),
                             optional,
                             mutable,
-                            t: value,
+                            t,
                         }))
                     }
                     crochet_ast::types::TLit::Bool(_) => Err(Report::new(TypeError::Unhandled)),
                     crochet_ast::types::TLit::Str(name) => {
-                        let prop = get_prop_by_name(&elems, name)?;
+                        let prop = get_prop_by_name(&old_elems, name)?;
                         let optional = match &mapped.optional {
                             Some(change) => match change {
                                 crochet_ast::types::TMappedTypeChangeProp::Plus => true,
@@ -289,27 +289,21 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeE
                             name: TPropKey::StringKey(name.to_owned()),
                             optional,
                             mutable,
-                            t: value,
+                            t,
                         }))
                     }
                 },
                 // TODO: get indexer(s), you can mix symbol + number
                 // OR symbol + string, but not number + string.
                 TypeKind::Keyword(_) => Ok(TObjElem::Index(TIndex {
-                    // TODO: stop using TFnParam for an indexer's key
-                    // since it's confusing.
-                    key: TFnParam {
-                        pat: TPat::Ident(BindingIdent {
-                            name: String::from("key"),
-                            mutable: false, // what does this even mean?
-                        }),
-                        t: key.to_owned(),
-                        optional: false, // what does this even mean?
+                    key: TIndexKey {
+                        name: String::from("key"),
+                        t: Box::from(key.to_owned()),
                     },
                     // How do we maintain the optionality of each property
                     // when we aren't setting it explicitly
                     mutable: false, // TODO
-                    t: value,
+                    t,
                 })),
                 _ => Err(Report::new(TypeError::Unhandled)),
             }
@@ -317,7 +311,7 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeE
         .collect::<Result<Vec<_>, TypeError>>()?;
 
     let t = Type {
-        kind: TypeKind::Object(TObject { elems }),
+        kind: TypeKind::Object(TObject { elems: new_elems }),
         mutable: false,
         provenance: None, // TODO: fill this in
     };
@@ -368,9 +362,9 @@ fn expand_keyof(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
                         TObjElem::Call(_) => None,
                         TObjElem::Constructor(_) => None,
                         TObjElem::Index(TIndex {
-                            key: TFnParam { t, .. },
+                            key: TIndexKey { t, .. },
                             ..
-                        }) => Some(t.to_owned()),
+                        }) => Some(t.as_ref().to_owned()),
                         TObjElem::Prop(prop) => match &prop.name {
                             crochet_ast::types::TPropKey::StringKey(str) => {
                                 Some(Type::from(TypeKind::Lit(TLit::Str(str.to_owned()))))

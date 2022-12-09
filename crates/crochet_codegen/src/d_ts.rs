@@ -104,54 +104,6 @@ pub fn build_ident(name: &str) -> Ident {
     }
 }
 
-fn build_param(param: &TFnParam) -> TsFnParam {
-    let type_ann = TsTypeAnn {
-        span: DUMMY_SP,
-        type_ann: Box::from(build_type(&param.t, None)),
-    };
-    match &param.pat {
-        TPat::Ident(bi) => {
-            let id = Ident {
-                span: DUMMY_SP,
-                optional: param.optional,
-                sym: JsWord::from(bi.name.to_owned()),
-            };
-            TsFnParam::Ident(BindingIdent {
-                id,
-                type_ann: Some(Box::from(type_ann)),
-            })
-        }
-        TPat::Array(_) => todo!(),
-        TPat::Rest(_) => todo!(),
-        TPat::Object(_) => todo!(),
-    }
-}
-
-pub fn _build_param(r#type: &Type, e_param: &values::EFnParam) -> TsFnParam {
-    let type_ann = Some(Box::from(TsTypeAnn {
-        span: DUMMY_SP,
-        type_ann: Box::from(build_type(r#type, None)),
-    }));
-
-    let pat = build_param_pat_rec(&e_param.pat, type_ann);
-
-    match pat {
-        Pat::Ident(bi) => {
-            let id = Ident {
-                optional: e_param.optional,
-                ..bi.id
-            };
-            TsFnParam::Ident(BindingIdent { id, ..bi })
-        }
-        Pat::Array(array) => TsFnParam::Array(array),
-        Pat::Rest(rest) => TsFnParam::Rest(rest),
-        Pat::Object(obj) => TsFnParam::Object(obj),
-        Pat::Assign(_) => todo!(),
-        Pat::Invalid(_) => todo!(),
-        Pat::Expr(_) => todo!(),
-    }
-}
-
 pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
     match &pattern.kind {
         values::PatternKind::Ident(values::BindingIdent {
@@ -538,11 +490,11 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                     TObjElem::Index(index) => TsTypeElement::TsIndexSignature(TsIndexSignature {
                         span: DUMMY_SP,
                         readonly: !index.mutable && !t.mutable,
-                        params: vec![build_param(&index.key)],
-                        type_ann: Some(Box::from(TsTypeAnn {
-                            span: DUMMY_SP,
-                            type_ann: Box::from(build_type(&index.t, None)),
-                        })),
+                        params: vec![TsFnParam::Ident(BindingIdent {
+                            id: build_ident(&index.key.name),
+                            type_ann: Some(Box::from(build_type_ann(&index.key.t))),
+                        })],
+                        type_ann: Some(Box::from(build_type_ann(&index.t))),
                         is_static: false,
                     }),
                     TObjElem::Prop(prop) => {
@@ -642,6 +594,13 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
         TypeKind::IndexAccess(_) => todo!(),
         TypeKind::MappedType(_) => todo!(),
         TypeKind::ConditionalType(_) => todo!(),
+    }
+}
+
+fn build_type_ann(t: &Type) -> TsTypeAnn {
+    TsTypeAnn {
+        span: DUMMY_SP,
+        type_ann: Box::from(build_type(t, None)),
     }
 }
 

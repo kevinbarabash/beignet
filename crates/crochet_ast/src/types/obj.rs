@@ -62,9 +62,21 @@ impl fmt::Display for TObjElem {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TIndexKey {
+    pub name: String,
+    pub t: Box<Type>,
+}
+
+impl fmt::Display for TIndexKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self { name, t } = self;
+        write!(f, "{name}: {t}")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TIndex {
-    // TODO: update this to only allow `<ident>: string` or `<ident>: number`
-    pub key: TFnParam,
+    pub key: TIndexKey,
     pub mutable: bool,
     pub t: Type,
 }
