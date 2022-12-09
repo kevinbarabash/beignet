@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::types::{
-    self as types, Provenance, TFnParam, TIndex, TIndexAccess, TObjElem, TObject, TProp, TPropKey,
-    TVar, Type, TypeKind,
+    self as types, Provenance, TFnParam, TIndex, TIndexAccess, TIndexKey, TObjElem, TObject, TProp,
+    TPropKey, TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
 
@@ -122,15 +122,19 @@ fn infer_type_ann_rec(
 
                         ss.push(index_s);
                         ss.push(key_s);
-                        elems.push(TObjElem::Index(TIndex {
-                            key: TFnParam {
-                                pat: pattern_to_tpat(&index.key.pat),
-                                t: key_t,
-                                optional: index.key.optional,
-                            },
-                            mutable: index.mutable,
-                            t: index_t,
-                        }))
+
+                        if let PatternKind::Ident(BindingIdent { name, .. }) = &index.key.pat.kind {
+                            elems.push(TObjElem::Index(TIndex {
+                                key: TIndexKey {
+                                    name: name.to_owned(),
+                                    t: Box::from(key_t),
+                                },
+                                mutable: index.mutable,
+                                t: index_t,
+                            }))
+                        } else {
+                            return Err(Report::new(TypeError::Unhandled));
+                        }
                     }
                     crochet_ast::values::TObjElem::Prop(prop) => {
                         let (prop_s, prop_t) =
