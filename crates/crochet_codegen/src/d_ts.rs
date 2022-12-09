@@ -39,15 +39,10 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
     let mut body: Vec<ModuleItem> = vec![];
 
     for (name, t) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
-        let id = Ident {
-            span: DUMMY_SP,
-            sym: JsWord::from(name.to_owned()),
-            optional: false,
-        };
         let decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(TsTypeAliasDecl {
             span: DUMMY_SP,
             declare: true,
-            id,
+            id: build_ident(name),
             type_params: build_type_params(t),
             type_ann: Box::from(build_type(t, None)),
         }))));
@@ -57,13 +52,8 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
 
     for (name, b) in current_scope.values.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
         let type_params = build_type_params(&b.t);
-        let id = Ident {
-            span: DUMMY_SP,
-            sym: JsWord::from(name.to_owned()),
-            optional: false,
-        };
         let pat = Pat::Ident(BindingIdent {
-            id,
+            id: build_ident(name),
             type_ann: Some(Box::from(TsTypeAnn {
                 span: DUMMY_SP,
                 type_ann: Box::from(build_type(&b.t, type_params)),
@@ -183,11 +173,7 @@ pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTyp
 pub fn build_ts_pattern(pat: &TPat) -> Pat {
     match pat {
         TPat::Ident(bi) => Pat::Ident(BindingIdent {
-            id: Ident {
-                span: DUMMY_SP,
-                sym: JsWord::from(bi.name.to_owned()),
-                optional: false,
-            },
+            id: build_ident(&bi.name),
             type_ann: None,
         }),
         _ => todo!(),
@@ -197,11 +183,7 @@ pub fn build_ts_pattern(pat: &TPat) -> Pat {
 fn tpat_to_pat(pat: &TPat, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
     match pat {
         TPat::Ident(bi) => Pat::Ident(BindingIdent {
-            id: Ident {
-                span: DUMMY_SP,
-                sym: JsWord::from(bi.name.to_owned()),
-                optional: false,
-            },
+            id: build_ident(&bi.name),
             type_ann,
         }),
         TPat::Rest(rest) => Pat::Rest(RestPat {
@@ -228,22 +210,14 @@ fn tpat_to_pat(pat: &TPat, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
                     match prop {
                         types::TObjectPatProp::KeyValue(kv) => {
                             ObjectPatProp::KeyValue(KeyValuePatProp {
-                                key: PropName::Ident(Ident {
-                                    span: DUMMY_SP,
-                                    sym: JsWord::from(kv.key.clone()),
-                                    optional: false,
-                                }),
+                                key: PropName::Ident(build_ident(&kv.key)),
                                 value: Box::from(tpat_to_pat(&kv.value, None)),
                             })
                         }
                         types::TObjectPatProp::Assign(assign) => {
                             ObjectPatProp::Assign(AssignPatProp {
                                 span: DUMMY_SP,
-                                key: Ident {
-                                    span: DUMMY_SP,
-                                    sym: JsWord::from(assign.key.clone()),
-                                    optional: false,
-                                },
+                                key: build_ident(&assign.key),
                                 // TODO: handle default values
                                 value: None,
                             })
@@ -275,11 +249,7 @@ pub fn build_ts_fn_type_with_params(
     let params: Vec<TsFnParam> = params
         .iter()
         .map(|param| {
-            let type_ann = Some(Box::from(TsTypeAnn {
-                span: DUMMY_SP,
-                type_ann: Box::from(build_type(&param.t, None)),
-            }));
-
+            let type_ann = Some(Box::from(build_type_ann(&param.t)));
             let pat = tpat_to_pat(&param.pat, type_ann);
 
             let result: TsFnParam = match pat {
@@ -306,10 +276,7 @@ pub fn build_ts_fn_type_with_params(
         span: DUMMY_SP,
         params,
         type_params,
-        type_ann: Box::from(TsTypeAnn {
-            span: DUMMY_SP,
-            type_ann: Box::from(build_type(ret, None)),
-        }),
+        type_ann: Box::from(build_type_ann(ret)),
     }))
 }
 
@@ -322,18 +289,9 @@ pub fn build_ts_fn_type_with_args(
         .iter()
         .enumerate()
         .map(|(index, arg)| {
-            let type_ann = Some(Box::from(TsTypeAnn {
-                span: DUMMY_SP,
-                type_ann: Box::from(build_type(arg, None)),
-            }));
-
             TsFnParam::Ident(BindingIdent {
-                id: Ident {
-                    span: DUMMY_SP,
-                    sym: JsWord::from(format!("arg{}", index)),
-                    optional: false,
-                },
-                type_ann,
+                id: build_ident(&format!("arg{}", index)),
+                type_ann: Some(Box::from(build_type_ann(arg))),
             })
         })
         .collect();
@@ -342,10 +300,7 @@ pub fn build_ts_fn_type_with_args(
         span: DUMMY_SP,
         params: args,
         type_params,
-        type_ann: Box::from(TsTypeAnn {
-            span: DUMMY_SP,
-            type_ann: Box::from(build_type(ret, None)),
-        }),
+        type_ann: Box::from(build_type_ann(ret)),
     }))
 }
 
@@ -366,11 +321,7 @@ pub fn build_type_params(t: &Type) -> Option<Box<TsTypeParamDecl>> {
 
                     TsTypeParam {
                         span: DUMMY_SP,
-                        name: Ident {
-                            span: DUMMY_SP,
-                            sym: JsWord::from(format!("{id}")),
-                            optional: false,
-                        },
+                        name: build_ident(&id.to_string()),
                         is_in: false,
                         is_out: false,
                         constraint: tv
@@ -505,19 +456,12 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                         TsTypeElement::TsPropertySignature(TsPropertySignature {
                             span: DUMMY_SP,
                             readonly: !prop.mutable && !t.mutable,
-                            key: Box::from(Expr::from(Ident {
-                                span: DUMMY_SP,
-                                sym: JsWord::from(key),
-                                optional: false,
-                            })),
+                            key: Box::from(Expr::from(build_ident(&key))),
                             computed: false,
                             optional: prop.optional,
                             init: None,
                             params: vec![],
-                            type_ann: Some(Box::from(TsTypeAnn {
-                                span: DUMMY_SP,
-                                type_ann: Box::from(build_type(&prop.t, None)),
-                            })),
+                            type_ann: Some(Box::from(build_type_ann(&prop.t))),
                             type_params: None,
                         })
                     }
