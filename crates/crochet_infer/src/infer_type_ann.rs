@@ -133,7 +133,7 @@ fn infer_type_ann_rec(
                                 t: index_t,
                             }))
                         } else {
-                            return Err(Report::new(TypeError::Unhandled));
+                            return Err(Report::new(TypeError::Unspecified));
                         }
                     }
                     crochet_ast::values::TObjElem::Prop(prop) => {

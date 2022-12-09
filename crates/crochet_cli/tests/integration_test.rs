@@ -44,7 +44,7 @@ fn infer(input: &str) -> String {
             let mut expr = expr.to_owned();
             infer_expr(&mut ctx, &mut expr)
         }
-        _ => Err(Report::new(TypeError::Unhandled).attach_printable("We can't infer decls yet")),
+        _ => Err(Report::new(TypeError::Unspecified).attach_printable("We can't infer decls yet")),
     };
     format!("{}", result.unwrap())
 }

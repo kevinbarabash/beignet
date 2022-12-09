@@ -8,7 +8,7 @@ use crochet_ast::values::{Assign, Statement};
 pub enum TypeError {
     UnificationError(Box<Type>, Box<Type>),
     UnificationIsUndecidable,
-    Unhandled, // TODO: rename to unspecified
+    Unspecified,
     InfiniteType,
     PrimitivesCantBeMutable(Box<Type>),
     TuplesCantBeMutable(Box<Type>),
@@ -127,7 +127,7 @@ impl fmt::Display for TypeError {
             }
             TypeError::AliasTypeMismatch => write!(fmt, "AliasTypeMismatch"),
             TypeError::CantInferTypeFromItKeys => write!(fmt, "CantInferTypeFromItKeys"),
-            TypeError::Unhandled => write!(fmt, "Unhandled"),
+            TypeError::Unspecified => write!(fmt, "Unhandled"),
             TypeError::PrimitivesCantBeMutable(t) => write!(fmt, "PrimitivesCantBeMutable: {t}"),
             TypeError::TuplesCantBeMutable(t) => write!(fmt, "TuplesCantBeMutable: {t}"),
         }

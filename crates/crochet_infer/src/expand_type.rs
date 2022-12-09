@@ -183,7 +183,7 @@ fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Typ
                 }
             }
 
-            return Err(Report::new(TypeError::Unhandled));
+            return Err(Report::new(TypeError::Unspecified));
         }
         _ => {
             return Err(Report::new(TypeError::InvalidIndex(
@@ -193,7 +193,7 @@ fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Typ
         }
     };
 
-    Err(Report::new(TypeError::Unhandled))
+    Err(Report::new(TypeError::Unspecified))
 }
 
 fn get_obj_type_from_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeError> {
@@ -208,7 +208,7 @@ fn get_obj_type_from_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<
     if let TypeKind::IndexAccess(access) = &mapped.t.kind {
         get_obj_type(access.object.as_ref(), ctx)
     } else {
-        Err(Report::new(TypeError::Unhandled))
+        Err(Report::new(TypeError::Unspecified))
     }
 }
 
@@ -268,7 +268,7 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeE
                             t,
                         }))
                     }
-                    crochet_ast::types::TLit::Bool(_) => Err(Report::new(TypeError::Unhandled)),
+                    crochet_ast::types::TLit::Bool(_) => Err(Report::new(TypeError::Unspecified)),
                     crochet_ast::types::TLit::Str(name) => {
                         let prop = get_prop_by_name(&old_elems, name)?;
                         let optional = match &mapped.optional {
@@ -305,7 +305,7 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeE
                     mutable: false, // TODO
                     t,
                 })),
-                _ => Err(Report::new(TypeError::Unhandled)),
+                _ => Err(Report::new(TypeError::Unspecified)),
             }
         })
         .collect::<Result<Vec<_>, TypeError>>()?;
