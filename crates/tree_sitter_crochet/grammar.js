@@ -137,6 +137,19 @@ module.exports = grammar(tsx, {
       return prec.left(seq(...members));
     },
 
+    conditional_type: ($) =>
+      prec.right(
+        seq(
+          field("left", $._type),
+          "extends",
+          field("right", $._type),
+          "?",
+          field("consequence", $._type),
+          ":",
+          field("alternative", $._type)
+        )
+      ),
+
     expression: ($, prev) => {
       // Removes ternary expression
       const choices = prev.members.filter(
