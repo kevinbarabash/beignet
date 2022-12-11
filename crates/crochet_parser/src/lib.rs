@@ -1246,98 +1246,201 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
         }
         "object_type" => {
             let mut cursor = node.walk();
-            let elems: Vec<TObjElem> = node
-                .named_children(&mut cursor)
-                .into_iter()
-                .map(|prop| match prop.kind() {
-                    "export_statement" => todo!("remove export_statement from object_type"),
-                    "property_signature" => {
-                        // NOTE: _property_name is defined as:
-                        // choice(
-                        //   alias(
-                        //     choice($.identifier, $._reserved_identifier),
-                        //     $.property_identifier
-                        //   ),
-                        //   $.private_property_identifier,
-                        //   $.string,
-                        //   $.number,
-                        //   $.computed_property_name
-                        // ),
-                        // TODO: handle more than just "identifier"
-                        let name_node = prop.child_by_field_name("name").unwrap();
+            let elem_count = node.named_child_count();
+            let span = node.byte_range();
+
+            if elem_count == 1 {
+                let child = node.named_child(0).unwrap();
+                if child.kind() == "index_signature" {
+                    let type_ann = child.child_by_field_name("type").unwrap();
+                    let type_ann = parse_type_ann(&type_ann, src)?;
+
+                    if let Some(mapped_type_clause) =
+                        child.child_by_field_name("mapped_type_clause")
+                    {
+                        let mutable = if let Some(mut_node) = child.child_by_field_name("mut") {
+                            if let Some(sign) = child.child_by_field_name("mut_sign") {
+                                match sign.kind() {
+                                    "+" => Some(TMappedTypeChange {
+                                        span: mut_node.byte_range(),
+                                        change: TMappedTypeChangeProp::Plus,
+                                    }),
+                                    "-" => Some(TMappedTypeChange {
+                                        span: mut_node.byte_range(),
+                                        change: TMappedTypeChangeProp::Minus,
+                                    }),
+                                    _ => todo!(),
+                                }
+                            } else {
+                                Some(TMappedTypeChange {
+                                    span: mut_node.byte_range(),
+                                    change: TMappedTypeChangeProp::Plus,
+                                })
+                            }
+                        } else {
+                            None
+                        };
+
+                        let optional = if let Some(mut_node) = child.child_by_field_name("opt") {
+                            if let Some(sign) = child.child_by_field_name("opt_sign") {
+                                match sign.kind() {
+                                    "+" => Some(TMappedTypeChange {
+                                        span: mut_node.byte_range(),
+                                        change: TMappedTypeChangeProp::Plus,
+                                    }),
+                                    "-" => Some(TMappedTypeChange {
+                                        span: mut_node.byte_range(),
+                                        change: TMappedTypeChangeProp::Minus,
+                                    }),
+                                    _ => todo!(),
+                                }
+                            } else {
+                                Some(TMappedTypeChange {
+                                    span: mut_node.byte_range(),
+                                    change: TMappedTypeChangeProp::Plus,
+                                })
+                            }
+                        } else {
+                            None
+                        };
+
+                        let name_node = mapped_type_clause.child_by_field_name("name").unwrap();
                         let name = text_for_node(&name_node, src)?;
 
-                        let type_ann = prop.child_by_field_name("type").unwrap();
-                        let type_ann = parse_type_ann(&type_ann, src)?;
+                        let constraint = mapped_type_clause.child_by_field_name("type").unwrap();
+                        let constraint = parse_type_ann(&constraint, src)?;
 
-                        let mut optional = false;
-                        let mut mutable = false;
-                        let mut cursor = prop.walk();
-                        for child in prop.children(&mut cursor) {
-                            if text_for_node(&child, src)? == "?" {
-                                optional = true;
-                            }
-                            if text_for_node(&child, src)? == "mut" {
-                                mutable = true;
-                            }
-                        }
+                        // TODO: handle optional 'as AliasT' after "type"
 
-                        let elem = TObjElem::Prop(TProp {
-                            span: prop.byte_range(),
-                            name,
+                        let kind = TypeAnnKind::Mapped(MappedType {
+                            span: child.byte_range(),
+                            type_param: TypeParam {
+                                span: mapped_type_clause.byte_range(),
+                                name: Ident {
+                                    span: name_node.byte_range(),
+                                    name,
+                                },
+                                constraint: Some(Box::from(constraint)),
+                                default: None, // `default` is always None for MappedType
+                            },
                             optional,
                             mutable,
                             type_ann: Box::from(type_ann),
                         });
-                        Ok(elem)
-                    }
-                    "call_signature" => todo!("call_signature"),
-                    "construct_signature" => todo!("construct_signature"),
-                    "index_signature" => {
-                        let name_node = prop.child_by_field_name("name").unwrap();
-                        let name = text_for_node(&name_node, src)?;
 
-                        let index_type_ann = prop.child_by_field_name("index_type").unwrap();
-                        let index_type_ann = parse_type_ann(&index_type_ann, src)?;
-
-                        let type_ann = prop.child_by_field_name("type").unwrap();
-                        let type_ann = parse_type_ann(&type_ann, src)?;
-
-                        let mut optional = false;
-                        let mut cursor = prop.walk();
-                        for child in prop.children(&mut cursor) {
-                            if text_for_node(&child, src)? == "?" {
-                                optional = true;
-                            }
-                        }
-
-                        let pat: Pattern = Pattern {
-                            span: name_node.byte_range(),
-                            kind: PatternKind::Ident(BindingIdent {
-                                name,
-                                mutable: false,
-                                span: name_node.byte_range(),
-                            }),
+                        return Ok(TypeAnn {
+                            span,
+                            kind,
                             inferred_type: None,
-                        };
-
-                        let elem = TObjElem::Index(TIndex {
-                            span: prop.byte_range(),
-                            key: Box::from(TypeAnnFnParam {
-                                pat,
-                                type_ann: index_type_ann,
-                                optional,
-                            }),
-                            mutable: false, // TODO,
-                            type_ann: Box::from(type_ann),
                         });
-                        Ok(elem)
                     }
-                    // TODO: remove method_signature, methods should look the same as properties
-                    // The reason why JavaScript has both is that methods on object literals can
-                    // access the other properties on the object using this.
-                    "method_signature" => todo!("remove method_signature from object_type"),
-                    kind => panic!("Unsupport prop kind in object_type: '{kind}'"),
+                }
+            }
+
+            let elems: Vec<TObjElem> = node
+                .named_children(&mut cursor)
+                .into_iter()
+                .map(|prop| {
+                    println!("prop.kind() = {}", prop.kind());
+                    match prop.kind() {
+                        "export_statement" => todo!("remove export_statement from object_type"),
+                        "property_signature" => {
+                            // NOTE: _property_name is defined as:
+                            // choice(
+                            //   alias(
+                            //     choice($.identifier, $._reserved_identifier),
+                            //     $.property_identifier
+                            //   ),
+                            //   $.private_property_identifier,
+                            //   $.string,
+                            //   $.number,
+                            //   $.computed_property_name
+                            // ),
+                            // TODO: handle more than just "identifier"
+                            let name_node = prop.child_by_field_name("name").unwrap();
+                            let name = text_for_node(&name_node, src)?;
+
+                            let type_ann = prop.child_by_field_name("type").unwrap();
+                            let type_ann = parse_type_ann(&type_ann, src)?;
+
+                            let mut optional = false;
+                            let mut mutable = false;
+                            let mut cursor = prop.walk();
+                            for child in prop.children(&mut cursor) {
+                                if text_for_node(&child, src)? == "?" {
+                                    optional = true;
+                                }
+                                if text_for_node(&child, src)? == "mut" {
+                                    mutable = true;
+                                }
+                            }
+
+                            let elem = TObjElem::Prop(TProp {
+                                span: prop.byte_range(),
+                                name,
+                                optional,
+                                mutable,
+                                type_ann: Box::from(type_ann),
+                            });
+                            Ok(elem)
+                        }
+                        "call_signature" => todo!("call_signature"),
+                        "construct_signature" => todo!("construct_signature"),
+                        "index_signature" => {
+                            // NOTE: `name` is optional an will not be present
+                            // for mapped types.
+                            // NOTE: `mapped_type_clause` should've already been
+                            // handle so if we get here and there's a `mapped_type_clause`
+                            // we should report that as an error.
+                            let name_node = prop.child_by_field_name("name").unwrap();
+                            let name = text_for_node(&name_node, src)?;
+
+                            let index_type_ann = prop.child_by_field_name("index_type").unwrap();
+                            let index_type_ann = parse_type_ann(&index_type_ann, src)?;
+
+                            let type_ann = prop.child_by_field_name("type").unwrap();
+                            let type_ann = parse_type_ann(&type_ann, src)?;
+
+                            let mut optional = false;
+                            let mut mutable = false;
+                            let mut cursor = prop.walk();
+                            for child in prop.children(&mut cursor) {
+                                if text_for_node(&child, src)? == "?" {
+                                    optional = true;
+                                }
+                                if text_for_node(&child, src)? == "mut" {
+                                    mutable = true;
+                                }
+                            }
+
+                            let pat: Pattern = Pattern {
+                                span: name_node.byte_range(),
+                                kind: PatternKind::Ident(BindingIdent {
+                                    name,
+                                    mutable: false,
+                                    span: name_node.byte_range(),
+                                }),
+                                inferred_type: None,
+                            };
+
+                            let elem = TObjElem::Index(TIndex {
+                                span: prop.byte_range(),
+                                key: Box::from(TypeAnnFnParam {
+                                    pat,
+                                    type_ann: index_type_ann,
+                                    optional,
+                                }),
+                                mutable,
+                                type_ann: Box::from(type_ann),
+                            });
+                            Ok(elem)
+                        }
+                        // TODO: remove method_signature, methods should look the same as properties
+                        // The reason why JavaScript has both is that methods on object literals can
+                        // access the other properties on the object using this.
+                        "method_signature" => todo!("remove method_signature from object_type"),
+                        kind => panic!("Unsupport prop kind in object_type: '{kind}'"),
+                    }
                 })
                 .collect::<Result<Vec<TObjElem>, ParseError>>()?;
 
@@ -1420,7 +1523,10 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                 index_type: Box::from(index_type),
             })
         }
-        "conditional_type" => todo!(),
+        "conditional_type" => {
+            // fill this in
+            todo!()
+        }
         "template_literal_type" => todo!(),
         "intersection_type" => {
             let mut cursor = node.walk();
@@ -2086,6 +2192,14 @@ mod tests {
         "#;
         insta::assert_debug_snapshot!(parse(src));
         insta::assert_debug_snapshot!(parse("let mut_arr: mut string[] = [];"));
+    }
+
+    #[test]
+    fn object_types() {
+        insta::assert_debug_snapshot!(parse("type Pick<T, K extends keyof T> = {[P in K]: T[P]};"));
+        insta::assert_debug_snapshot!(parse("type Foo<T> = {mut [P in keyof T]?: T[P]};"));
+        insta::assert_debug_snapshot!(parse("type Bar<T> = {+mut [P in keyof T]+?: T[P]};"));
+        insta::assert_debug_snapshot!(parse("type Baz<T> = {-mut [P in keyof T]-?: T[P]};"));
     }
 
     #[test]

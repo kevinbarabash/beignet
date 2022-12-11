@@ -7,7 +7,9 @@ use swc_common::{SourceMap, DUMMY_SP};
 use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
-use crochet_ast::types::{TFnParam, TGeneric, TObjElem, TPat, TPropKey, TVar, Type, TypeKind};
+use crochet_ast::types::{
+    TFnParam, TGeneric, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey, TVar, Type, TypeKind,
+};
 use crochet_ast::{types, values};
 use crochet_infer::{get_type_params, Context};
 
@@ -44,7 +46,7 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
             declare: true,
             id: build_ident(name),
             type_params: build_type_params(t),
-            type_ann: Box::from(build_type(t, None)),
+            type_ann: Box::from(build_type(t, &None)),
         }))));
 
         body.push(decl);
@@ -56,7 +58,7 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
             id: build_ident(name),
             type_ann: Some(Box::from(TsTypeAnn {
                 span: DUMMY_SP,
-                type_ann: Box::from(build_type(&b.t, type_params)),
+                type_ann: Box::from(build_type(&b.t, &type_params)),
             })),
         });
 
@@ -244,7 +246,7 @@ fn tpat_to_pat(pat: &TPat, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
 pub fn build_ts_fn_type_with_params(
     params: &[TFnParam],
     ret: &Type,
-    type_params: Option<Box<TsTypeParamDecl>>,
+    type_params: &Option<Box<TsTypeParamDecl>>,
 ) -> TsType {
     let params: Vec<TsFnParam> = params
         .iter()
@@ -275,7 +277,7 @@ pub fn build_ts_fn_type_with_params(
     TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
         span: DUMMY_SP,
         params,
-        type_params,
+        type_params: type_params.to_owned(),
         type_ann: Box::from(build_type_ann(ret)),
     }))
 }
@@ -283,7 +285,7 @@ pub fn build_ts_fn_type_with_params(
 pub fn build_ts_fn_type_with_args(
     args: &[Type],
     ret: &Type,
-    type_params: Option<Box<TsTypeParamDecl>>,
+    type_params: &Option<Box<TsTypeParamDecl>>,
 ) -> TsType {
     let args: Vec<TsFnParam> = args
         .iter()
@@ -299,7 +301,7 @@ pub fn build_ts_fn_type_with_args(
     TsType::TsFnOrConstructorType(TsFnOrConstructorType::TsFnType(TsFnType {
         span: DUMMY_SP,
         params: args,
-        type_params,
+        type_params: type_params.to_owned(),
         type_ann: Box::from(build_type_ann(ret)),
     }))
 }
@@ -327,7 +329,7 @@ pub fn build_type_params(t: &Type) -> Option<Box<TsTypeParamDecl>> {
                         constraint: tv
                             .constraint
                             .as_ref()
-                            .map(|t| Box::from(build_type(t, None))),
+                            .map(|t| Box::from(build_type(t, &None))),
                         default: None,
                     }
                 })
@@ -342,7 +344,7 @@ pub fn build_type_params(t: &Type) -> Option<Box<TsTypeParamDecl>> {
 ///
 /// `expr` should be the original expression that `t` was inferred
 /// from if it exists.
-pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType {
+pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsType {
     let mutable = t.mutable;
     match &t.kind {
         TypeKind::Generic(TGeneric { t, .. }) => {
@@ -352,6 +354,9 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
             build_type(t, type_params)
         }
         TypeKind::Var(TVar { id, constraint: _ }) => {
+            // TODO: handle constraints on type variables
+            // This will likely be easier if we stop using type variables for
+            // type parameters.
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                 .chars()
                 .collect();
@@ -418,7 +423,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 span: DUMMY_SP,
                 types: sort_types(types)
                     .iter()
-                    .map(|t| Box::from(build_type(t, None)))
+                    .map(|t| Box::from(build_type(t, &None)))
                     .collect(),
             }))
         }
@@ -427,7 +432,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                 span: DUMMY_SP,
                 types: sort_types(types)
                     .iter()
-                    .map(|t| Box::from(build_type(t, None)))
+                    .map(|t| Box::from(build_type(t, &None)))
                     .collect(),
             }),
         ),
@@ -488,7 +493,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                     span: DUMMY_SP,
                     params: params
                         .iter()
-                        .map(|t| Box::from(build_type(t, None)))
+                        .map(|t| Box::from(build_type(t, &None)))
                         .collect(),
                 })
             }),
@@ -501,7 +506,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
                     .map(|t| TsTupleElement {
                         span: DUMMY_SP,
                         label: None,
-                        ty: Box::from(build_type(t, None)),
+                        ty: Box::from(build_type(t, &None)),
                     })
                     .collect(),
             });
@@ -519,7 +524,7 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
         TypeKind::Array(t) => {
             let type_ann = TsType::TsArrayType(TsArrayType {
                 span: DUMMY_SP,
-                elem_type: Box::from(build_type(t, None)),
+                elem_type: Box::from(build_type(t, &None)),
             });
 
             if mutable {
@@ -534,9 +539,49 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
         }
         TypeKind::Rest(_) => todo!(),
         TypeKind::This => TsType::TsThisType(TsThisType { span: DUMMY_SP }),
-        TypeKind::KeyOf(_) => todo!(),
-        TypeKind::IndexAccess(_) => todo!(),
-        TypeKind::MappedType(_) => todo!(),
+        TypeKind::KeyOf(t) => TsType::TsTypeOperator(TsTypeOperator {
+            span: DUMMY_SP,
+            op: TsTypeOperatorOp::KeyOf,
+            type_ann: Box::from(build_type(t.as_ref(), type_params)),
+        }),
+        TypeKind::IndexAccess(TIndexAccess { object, index }) => {
+            TsType::TsIndexedAccessType(TsIndexedAccessType {
+                span: DUMMY_SP,
+                readonly: false,
+                obj_type: Box::from(build_type(object, type_params)),
+                index_type: Box::from(build_type(index, type_params)),
+            })
+        }
+        TypeKind::MappedType(TMappedType {
+            mutable,
+            type_param,
+            optional,
+            t,
+        }) => {
+            TsType::TsMappedType(TsMappedType {
+                span: DUMMY_SP,
+                readonly: mutable.as_ref().map(|value| match value {
+                    types::TMappedTypeChangeProp::Plus => TruePlusMinus::Minus,
+                    types::TMappedTypeChangeProp::Minus => TruePlusMinus::Plus,
+                }),
+                type_param: TsTypeParam {
+                    span: DUMMY_SP,
+                    name: build_ident(&type_param.name),
+                    is_in: true,
+                    is_out: false,
+                    constraint: type_param.constraint.as_ref().map(|constraint| {
+                        Box::from(build_type(&constraint.as_ref().to_owned(), type_params))
+                    }),
+                    default: None, // NOTE: This is always None for mapped types
+                },
+                name_type: None, // TODO: update when support for constraint aliases is added
+                optional: optional.as_ref().map(|value| match value {
+                    types::TMappedTypeChangeProp::Plus => TruePlusMinus::Plus,
+                    types::TMappedTypeChangeProp::Minus => TruePlusMinus::Minus,
+                }),
+                type_ann: Some(Box::from(build_type(t.as_ref(), type_params))),
+            })
+        }
         TypeKind::ConditionalType(_) => todo!(),
     }
 }
@@ -544,16 +589,12 @@ pub fn build_type(t: &Type, type_params: Option<Box<TsTypeParamDecl>>) -> TsType
 fn build_type_ann(t: &Type) -> TsTypeAnn {
     TsTypeAnn {
         span: DUMMY_SP,
-        type_ann: Box::from(build_type(t, None)),
+        type_ann: Box::from(build_type(t, &None)),
     }
 }
 
 fn sort_types(types: &[Type]) -> Vec<Type> {
     let mut sorted_types = types.to_owned();
-    sorted_types.sort_by(|a, b| {
-        let a = format!("{a}");
-        let b = format!("{b}");
-        a.cmp(&b)
-    });
+    sorted_types.sort_by_key(|a| a.to_string());
     sorted_types
 }

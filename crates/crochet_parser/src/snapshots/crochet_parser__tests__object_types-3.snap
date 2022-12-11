@@ -1,0 +1,113 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"type Bar<T> = {+mut [P in keyof T]+?: T[P]};\")"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                span: 0..44,
+                declare: false,
+                id: Ident {
+                    span: 5..8,
+                    name: "Bar",
+                },
+                type_ann: TypeAnn {
+                    kind: Mapped(
+                        MappedType {
+                            span: 15..42,
+                            type_param: TypeParam {
+                                span: 21..33,
+                                name: Ident {
+                                    span: 21..22,
+                                    name: "P",
+                                },
+                                constraint: Some(
+                                    TypeAnn {
+                                        kind: KeyOf(
+                                            KeyOfType {
+                                                span: 26..33,
+                                                type_ann: TypeAnn {
+                                                    kind: TypeRef(
+                                                        TypeRef {
+                                                            span: 32..33,
+                                                            name: "T",
+                                                            type_args: None,
+                                                        },
+                                                    ),
+                                                    span: 32..33,
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                        ),
+                                        span: 26..33,
+                                        inferred_type: None,
+                                    },
+                                ),
+                                default: None,
+                            },
+                            optional: Some(
+                                TMappedTypeChange {
+                                    span: 35..36,
+                                    change: Plus,
+                                },
+                            ),
+                            mutable: Some(
+                                TMappedTypeChange {
+                                    span: 16..19,
+                                    change: Plus,
+                                },
+                            ),
+                            type_ann: TypeAnn {
+                                kind: IndexedAccess(
+                                    IndexedAccessType {
+                                        span: 38..42,
+                                        obj_type: TypeAnn {
+                                            kind: TypeRef(
+                                                TypeRef {
+                                                    span: 38..39,
+                                                    name: "T",
+                                                    type_args: None,
+                                                },
+                                            ),
+                                            span: 38..39,
+                                            inferred_type: None,
+                                        },
+                                        index_type: TypeAnn {
+                                            kind: TypeRef(
+                                                TypeRef {
+                                                    span: 40..41,
+                                                    name: "P",
+                                                    type_args: None,
+                                                },
+                                            ),
+                                            span: 40..41,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                                span: 38..42,
+                                inferred_type: None,
+                            },
+                        },
+                    ),
+                    span: 14..43,
+                    inferred_type: None,
+                },
+                type_params: Some(
+                    [
+                        TypeParam {
+                            span: 9..10,
+                            name: Ident {
+                                span: 9..10,
+                                name: "T",
+                            },
+                            constraint: None,
+                            default: None,
+                        },
+                    ],
+                ),
+            },
+        ],
+    },
+)

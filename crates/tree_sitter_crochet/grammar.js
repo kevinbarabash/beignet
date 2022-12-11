@@ -59,7 +59,35 @@ module.exports = grammar(tsx, {
       });
       return choice(...choices);
     },
+
     readonly_type: ($, prev) => seq("mut", $._type),
+
+    index_signature: ($) =>
+      seq(
+        optional(
+          seq(
+            optional(field("mut_sign", choice("+", "-"))),
+            field("mut", "mut")
+          )
+        ),
+        "[",
+        choice(
+          seq(
+            field(
+              "name",
+              choice($.identifier, alias($._reserved_identifier, $.identifier))
+            ),
+            ":",
+            field("index_type", $._type)
+          ),
+          field("mapped_type_clause", $.mapped_type_clause)
+        ),
+        "]",
+        optional(
+          seq(optional(field("opt_sign", choice("+", "-"))), field("opt", "?"))
+        ),
+        field("type", $.type_annotation)
+      ),
 
     // Replaces `optional("readonly")` in sequence with `optional("mut")`
     property_signature: ($, prev) => {

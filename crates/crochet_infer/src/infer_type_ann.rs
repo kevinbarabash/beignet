@@ -3,17 +3,17 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::types::{
-    self as types, Provenance, TFnParam, TIndex, TIndexAccess, TIndexKey, TObjElem, TObject, TProp,
-    TPropKey, TVar, Type, TypeKind,
+    self as types, Provenance, TFnParam, TIndex, TIndexAccess, TIndexKey, TMappedType, TObjElem,
+    TObject, TProp, TPropKey, TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
 
 use crate::context::Context;
 use crate::infer_expr::infer_expr;
 use crate::infer_fn_param::pattern_to_tpat;
+use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
-use crate::util::compose_many_subs;
-use crate::Subst;
+use crate::util::{compose_many_subs, compose_subs};
 
 pub fn infer_type_ann(
     type_ann: &mut TypeAnn,
@@ -293,6 +293,51 @@ fn infer_type_ann_rec(
 
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
+        }
+        TypeAnnKind::Mapped(MappedType {
+            type_param,
+            type_ann,
+            optional,
+            mutable,
+            ..
+        }) => {
+            if let Some(constraint) = &mut type_param.constraint {
+                let (constraint_s, constraint_t) =
+                    infer_type_ann_rec(constraint.as_mut(), ctx, type_param_map)?;
+
+                constraint.inferred_type = Some(constraint_t.clone());
+
+                let (type_ann_s, type_ann_t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
+
+                // QUESTION: Do we need to apply `constraint_s` to `type_ann_t`?
+                type_ann.inferred_type = Some(type_ann_t.clone());
+
+                let t = Type::from(TypeKind::MappedType(TMappedType {
+                    type_param: types::TypeParam {
+                        name: type_param.name.name.to_owned(),
+                        constraint: Some(Box::from(constraint_t)),
+                        default: None,
+                    },
+                    optional: optional.as_ref().map(|value| match &value.change {
+                        TMappedTypeChangeProp::Plus => types::TMappedTypeChangeProp::Plus,
+                        TMappedTypeChangeProp::Minus => types::TMappedTypeChangeProp::Minus,
+                    }),
+                    mutable: mutable.as_ref().map(|value| match &value.change {
+                        TMappedTypeChangeProp::Plus => types::TMappedTypeChangeProp::Plus,
+                        TMappedTypeChangeProp::Minus => types::TMappedTypeChangeProp::Minus,
+                    }),
+                    t: Box::from(type_ann_t),
+                }));
+
+                let s = compose_subs(&type_ann_s, &constraint_s);
+                let t = t.apply(&s);
+
+                Ok((s, t))
+            } else {
+                // TODO: this should never happen since the parser only creates
+                // a mapped type when there's a constraint in the index signature.
+                Err(Report::new(TypeError::Unspecified))
+            }
         }
     }?;
 

@@ -2,3 +2,9 @@ type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
 type PartialObj = Partial<Obj>;
 
 let partial_obj: PartialObj = {b: "hello"};
+
+type Custom<T> = {
+    +mut [P in keyof T]+?: T[P];
+};
+let custom_obj: Custom<Obj> = {b: "hello"};
+custom_obj.b = "world";
