@@ -1535,10 +1535,10 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
 
             TypeAnnKind::Conditional(ConditionalType {
                 span: node.byte_range(),
-                left: Box::from(left),
-                right: Box::from(right),
-                consequent: Box::from(consequent),
-                alternate: Box::from(alternate),
+                check_type: Box::from(left),
+                extends_type: Box::from(right),
+                true_type: Box::from(consequent),
+                false_type: Box::from(alternate),
             })
         }
         "template_literal_type" => todo!(),
@@ -2214,6 +2214,13 @@ mod tests {
         insta::assert_debug_snapshot!(parse("type Foo<T> = {mut [P in keyof T]?: T[P]};"));
         insta::assert_debug_snapshot!(parse("type Bar<T> = {+mut [P in keyof T]+?: T[P]};"));
         insta::assert_debug_snapshot!(parse("type Baz<T> = {-mut [P in keyof T]-?: T[P]};"));
+    }
+
+    #[test]
+    fn conditional_types() {
+        insta::assert_debug_snapshot!(parse(
+            r#"type GetTypeName<T extends number | string> = T extends number ? "number" : "string";"#
+        ));
     }
 
     #[test]

@@ -349,10 +349,10 @@ pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
         }
         TypeAnnKind::Conditional(ConditionalType {
             span: _,
-            left,
-            right,
-            consequent,
-            alternate,
+            check_type: left,
+            extends_type: right,
+            true_type: consequent,
+            false_type: alternate,
         }) => {
             update_type_ann(left, s);
             update_type_ann(right, s);

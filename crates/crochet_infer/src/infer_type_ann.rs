@@ -341,10 +341,10 @@ fn infer_type_ann_rec(
         }
         TypeAnnKind::Conditional(ConditionalType {
             span: _,
-            left,
-            right,
-            consequent,
-            alternate,
+            check_type: left,
+            extends_type: right,
+            true_type: consequent,
+            false_type: alternate,
         }) => {
             let (check_s, check_t) = infer_type_ann_rec(left, ctx, type_param_map)?;
             let (extends_s, extends_t) = infer_type_ann_rec(right, ctx, type_param_map)?;

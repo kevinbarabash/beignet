@@ -148,10 +148,10 @@ pub enum TMappedTypeChangeProp {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConditionalType {
     pub span: Span,
-    pub left: Box<TypeAnn>,
-    pub right: Box<TypeAnn>,
-    pub consequent: Box<TypeAnn>,
-    pub alternate: Box<TypeAnn>,
+    pub check_type: Box<TypeAnn>,
+    pub extends_type: Box<TypeAnn>,
+    pub true_type: Box<TypeAnn>,
+    pub false_type: Box<TypeAnn>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
