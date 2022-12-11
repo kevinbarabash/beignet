@@ -59,11 +59,17 @@ module.exports = grammar(tsx, {
       });
       return choice(...choices);
     },
+
     readonly_type: ($, prev) => seq("mut", $._type),
 
     index_signature: ($) =>
       seq(
-        optional(seq(field("mut_sign", optional(choice("+", "-"))), "mut")),
+        optional(
+          seq(
+            optional(field("mut_sign", choice("+", "-"))),
+            field("mut", "mut")
+          )
+        ),
         "[",
         choice(
           seq(
@@ -77,7 +83,9 @@ module.exports = grammar(tsx, {
           field("mapped_type_clause", $.mapped_type_clause)
         ),
         "]",
-        optional(seq(field("optional_sign", optional(choice("+", "-"))), "?")),
+        optional(
+          seq(optional(field("opt_sign", choice("+", "-"))), field("opt", "?"))
+        ),
         field("type", $.type_annotation)
       ),
 

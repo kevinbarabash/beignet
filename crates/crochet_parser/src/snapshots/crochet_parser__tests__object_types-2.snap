@@ -1,119 +1,108 @@
 ---
 source: crates/crochet_parser/src/lib.rs
-expression: "parse(\"type Pick<T, K extends keyof T> = {[P in K]: T[P]};\")"
+expression: "parse(\"type Foo<T> = {mut [P in keyof T]?: T[P]};\")"
 ---
 Ok(
     Program {
         body: [
             TypeDecl {
-                span: 0..51,
+                span: 0..42,
                 declare: false,
                 id: Ident {
-                    span: 5..9,
-                    name: "Pick",
+                    span: 5..8,
+                    name: "Foo",
                 },
                 type_ann: TypeAnn {
                     kind: Mapped(
                         MappedType {
-                            span: 35..49,
+                            span: 15..40,
                             type_param: TypeParam {
-                                span: 36..42,
+                                span: 20..32,
                                 name: Ident {
-                                    span: 36..37,
+                                    span: 20..21,
                                     name: "P",
                                 },
                                 constraint: Some(
                                     TypeAnn {
-                                        kind: TypeRef(
-                                            TypeRef {
-                                                span: 41..42,
-                                                name: "K",
-                                                type_args: None,
+                                        kind: KeyOf(
+                                            KeyOfType {
+                                                span: 25..32,
+                                                type_ann: TypeAnn {
+                                                    kind: TypeRef(
+                                                        TypeRef {
+                                                            span: 31..32,
+                                                            name: "T",
+                                                            type_args: None,
+                                                        },
+                                                    ),
+                                                    span: 31..32,
+                                                    inferred_type: None,
+                                                },
                                             },
                                         ),
-                                        span: 41..42,
+                                        span: 25..32,
                                         inferred_type: None,
                                     },
                                 ),
                                 default: None,
                             },
-                            optional: None,
-                            mutable: None,
+                            optional: Some(
+                                TMappedTypeChange {
+                                    span: 33..34,
+                                    change: Plus,
+                                },
+                            ),
+                            mutable: Some(
+                                TMappedTypeChange {
+                                    span: 15..18,
+                                    change: Plus,
+                                },
+                            ),
                             type_ann: TypeAnn {
                                 kind: IndexedAccess(
                                     IndexedAccessType {
-                                        span: 45..49,
+                                        span: 36..40,
                                         obj_type: TypeAnn {
                                             kind: TypeRef(
                                                 TypeRef {
-                                                    span: 45..46,
+                                                    span: 36..37,
                                                     name: "T",
                                                     type_args: None,
                                                 },
                                             ),
-                                            span: 45..46,
+                                            span: 36..37,
                                             inferred_type: None,
                                         },
                                         index_type: TypeAnn {
                                             kind: TypeRef(
                                                 TypeRef {
-                                                    span: 47..48,
+                                                    span: 38..39,
                                                     name: "P",
                                                     type_args: None,
                                                 },
                                             ),
-                                            span: 47..48,
+                                            span: 38..39,
                                             inferred_type: None,
                                         },
                                     },
                                 ),
-                                span: 45..49,
+                                span: 36..40,
                                 inferred_type: None,
                             },
                         },
                     ),
-                    span: 34..50,
+                    span: 14..41,
                     inferred_type: None,
                 },
                 type_params: Some(
                     [
                         TypeParam {
-                            span: 10..11,
+                            span: 9..10,
                             name: Ident {
-                                span: 10..11,
+                                span: 9..10,
                                 name: "T",
                             },
                             constraint: None,
-                            default: None,
-                        },
-                        TypeParam {
-                            span: 13..30,
-                            name: Ident {
-                                span: 13..14,
-                                name: "K",
-                            },
-                            constraint: Some(
-                                TypeAnn {
-                                    kind: KeyOf(
-                                        KeyOfType {
-                                            span: 23..30,
-                                            type_ann: TypeAnn {
-                                                kind: TypeRef(
-                                                    TypeRef {
-                                                        span: 29..30,
-                                                        name: "T",
-                                                        type_args: None,
-                                                    },
-                                                ),
-                                                span: 29..30,
-                                                inferred_type: None,
-                                            },
-                                        },
-                                    ),
-                                    span: 23..30,
-                                    inferred_type: None,
-                                },
-                            ),
                             default: None,
                         },
                     ],

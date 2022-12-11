@@ -1245,9 +1245,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             })
         }
         "object_type" => {
-            // TODO: handle mapped types
-            // - check if any of the elems is an index signature with a mapped_type_clause
-            // - if it has one, then we need to generate a MappedType
             let mut cursor = node.walk();
             let elem_count = node.named_child_count();
             let span = node.byte_range();
@@ -1255,31 +1252,65 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             if elem_count == 1 {
                 let child = node.named_child(0).unwrap();
                 if child.kind() == "index_signature" {
-                    // check if we have a mapped type on our hands
-                    let mut cursor = child.walk();
-                    child
-                        .named_children(&mut cursor)
-                        .into_iter()
-                        .for_each(|gc| {
-                            println!("{}", text_for_node(&gc, src).unwrap());
-                        });
-
                     let type_ann = child.child_by_field_name("type").unwrap();
                     let type_ann = parse_type_ann(&type_ann, src)?;
 
                     if let Some(mapped_type_clause) =
                         child.child_by_field_name("mapped_type_clause")
                     {
-                        // field('name', $._type_identifier),
-                        // 'in',
-                        // field('type', $._type),
-                        // optional(seq('as', field('alias', $._type)))
+                        let mutable = if let Some(mut_node) = child.child_by_field_name("mut") {
+                            if let Some(sign) = child.child_by_field_name("mut_sign") {
+                                match sign.kind() {
+                                    "+" => Some(TMappedTypeChange {
+                                        span: mut_node.byte_range(),
+                                        change: TMappedTypeChangeProp::Plus,
+                                    }),
+                                    "-" => Some(TMappedTypeChange {
+                                        span: mut_node.byte_range(),
+                                        change: TMappedTypeChangeProp::Minus,
+                                    }),
+                                    _ => todo!(),
+                                }
+                            } else {
+                                Some(TMappedTypeChange {
+                                    span: mut_node.byte_range(),
+                                    change: TMappedTypeChangeProp::Plus,
+                                })
+                            }
+                        } else {
+                            None
+                        };
+
+                        let optional = if let Some(mut_node) = child.child_by_field_name("opt") {
+                            if let Some(sign) = child.child_by_field_name("opt_sign") {
+                                match sign.kind() {
+                                    "+" => Some(TMappedTypeChange {
+                                        span: mut_node.byte_range(),
+                                        change: TMappedTypeChangeProp::Plus,
+                                    }),
+                                    "-" => Some(TMappedTypeChange {
+                                        span: mut_node.byte_range(),
+                                        change: TMappedTypeChangeProp::Minus,
+                                    }),
+                                    _ => todo!(),
+                                }
+                            } else {
+                                Some(TMappedTypeChange {
+                                    span: mut_node.byte_range(),
+                                    change: TMappedTypeChangeProp::Plus,
+                                })
+                            }
+                        } else {
+                            None
+                        };
 
                         let name_node = mapped_type_clause.child_by_field_name("name").unwrap();
                         let name = text_for_node(&name_node, src)?;
 
                         let constraint = mapped_type_clause.child_by_field_name("type").unwrap();
                         let constraint = parse_type_ann(&constraint, src)?;
+
+                        // TODO: handle optional 'as AliasT' after "type"
 
                         let kind = TypeAnnKind::Mapped(MappedType {
                             span: child.byte_range(),
@@ -1292,8 +1323,8 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                                 constraint: Some(Box::from(constraint)),
                                 default: None, // `default` is always None for MappedType
                             },
-                            optional: None, // TODO
-                            mutable: None,  // TODO
+                            optional,
+                            mutable,
                             type_ann: Box::from(type_ann),
                         });
 
@@ -1358,6 +1389,9 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                         "index_signature" => {
                             // NOTE: `name` is optional an will not be present
                             // for mapped types.
+                            // NOTE: `mapped_type_clause` should've already been
+                            // handle so if we get here and there's a `mapped_type_clause`
+                            // we should report that as an error.
                             let name_node = prop.child_by_field_name("name").unwrap();
                             let name = text_for_node(&name_node, src)?;
 
@@ -1368,10 +1402,14 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                             let type_ann = parse_type_ann(&type_ann, src)?;
 
                             let mut optional = false;
+                            let mut mutable = false;
                             let mut cursor = prop.walk();
                             for child in prop.children(&mut cursor) {
                                 if text_for_node(&child, src)? == "?" {
                                     optional = true;
+                                }
+                                if text_for_node(&child, src)? == "mut" {
+                                    mutable = true;
                                 }
                             }
 
@@ -1392,7 +1430,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                                     type_ann: index_type_ann,
                                     optional,
                                 }),
-                                mutable: false, // TODO,
+                                mutable,
                                 type_ann: Box::from(type_ann),
                             });
                             Ok(elem)
@@ -2158,12 +2196,10 @@ mod tests {
 
     #[test]
     fn object_types() {
-        let src = r#"
-        type Pick<T, K extends keyof T> = {
-            [P in K]: T[P];
-        };        
-        "#;
-        insta::assert_debug_snapshot!(parse(src));
+        insta::assert_debug_snapshot!(parse("type Pick<T, K extends keyof T> = {[P in K]: T[P]};"));
+        insta::assert_debug_snapshot!(parse("type Foo<T> = {mut [P in keyof T]?: T[P]};"));
+        insta::assert_debug_snapshot!(parse("type Bar<T> = {+mut [P in keyof T]+?: T[P]};"));
+        insta::assert_debug_snapshot!(parse("type Baz<T> = {-mut [P in keyof T]-?: T[P]};"));
     }
 
     #[test]
