@@ -145,6 +145,15 @@ pub enum TMappedTypeChangeProp {
     Minus,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConditionalType {
+    pub span: Span,
+    pub check_type: Box<TypeAnn>,
+    pub extends_type: Box<TypeAnn>,
+    pub true_type: Box<TypeAnn>,
+    pub false_type: Box<TypeAnn>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MutableType {
     pub span: Span,
@@ -166,6 +175,7 @@ pub enum TypeAnnKind {
     Query(QueryType), // typeof
     IndexedAccess(IndexedAccessType),
     Mapped(MappedType),
+    Conditional(ConditionalType),
     Mutable(MutableType),
 }
 

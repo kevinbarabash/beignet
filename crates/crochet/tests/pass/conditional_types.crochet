@@ -1,0 +1,4 @@
+type GetTypeName<T extends number | string> = T extends number ? "number" : "string";
+
+let a: GetTypeName<5> = "number";
+let b: GetTypeName<"hello"> = "string";

@@ -8,7 +8,8 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast::types::{
-    TFnParam, TGeneric, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey, TVar, Type, TypeKind,
+    TConditionalType, TFnParam, TGeneric, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey,
+    TVar, Type, TypeKind,
 };
 use crochet_ast::{types, values};
 use crochet_infer::{get_type_params, Context};
@@ -582,7 +583,18 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsTyp
                 type_ann: Some(Box::from(build_type(t.as_ref(), type_params))),
             })
         }
-        TypeKind::ConditionalType(_) => todo!(),
+        TypeKind::ConditionalType(TConditionalType {
+            check_type,
+            extends_type,
+            true_type,
+            false_type,
+        }) => TsType::TsConditionalType(TsConditionalType {
+            span: DUMMY_SP,
+            check_type: Box::from(build_type(check_type.as_ref(), type_params)),
+            extends_type: Box::from(build_type(extends_type.as_ref(), type_params)),
+            true_type: Box::from(build_type(true_type.as_ref(), type_params)),
+            false_type: Box::from(build_type(false_type.as_ref(), type_params)),
+        }),
     }
 }
 

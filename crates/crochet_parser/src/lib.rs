@@ -1524,8 +1524,22 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             })
         }
         "conditional_type" => {
-            // fill this in
-            todo!()
+            let left = node.child_by_field_name("left").unwrap();
+            let left = parse_type_ann(&left, src)?;
+            let right = node.child_by_field_name("right").unwrap();
+            let right = parse_type_ann(&right, src)?;
+            let consequent = node.child_by_field_name("consequence").unwrap();
+            let consequent = parse_type_ann(&consequent, src)?;
+            let alternate = node.child_by_field_name("alternative").unwrap();
+            let alternate = parse_type_ann(&alternate, src)?;
+
+            TypeAnnKind::Conditional(ConditionalType {
+                span: node.byte_range(),
+                check_type: Box::from(left),
+                extends_type: Box::from(right),
+                true_type: Box::from(consequent),
+                false_type: Box::from(alternate),
+            })
         }
         "template_literal_type" => todo!(),
         "intersection_type" => {
@@ -2200,6 +2214,13 @@ mod tests {
         insta::assert_debug_snapshot!(parse("type Foo<T> = {mut [P in keyof T]?: T[P]};"));
         insta::assert_debug_snapshot!(parse("type Bar<T> = {+mut [P in keyof T]+?: T[P]};"));
         insta::assert_debug_snapshot!(parse("type Baz<T> = {-mut [P in keyof T]-?: T[P]};"));
+    }
+
+    #[test]
+    fn conditional_types() {
+        insta::assert_debug_snapshot!(parse(
+            r#"type GetTypeName<T extends number | string> = T extends number ? "number" : "string";"#
+        ));
     }
 
     #[test]

@@ -1,0 +1,117 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(r#\"type GetTypeName<T extends number | string> = T extends number ? \"number\" : \"string\";\"#)"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                span: 0..85,
+                declare: false,
+                id: Ident {
+                    span: 5..16,
+                    name: "GetTypeName",
+                },
+                type_ann: TypeAnn {
+                    kind: Conditional(
+                        ConditionalType {
+                            span: 46..84,
+                            check_type: TypeAnn {
+                                kind: TypeRef(
+                                    TypeRef {
+                                        span: 46..47,
+                                        name: "T",
+                                        type_args: None,
+                                    },
+                                ),
+                                span: 46..47,
+                                inferred_type: None,
+                            },
+                            extends_type: TypeAnn {
+                                kind: Keyword(
+                                    KeywordType {
+                                        span: 56..62,
+                                        keyword: Number,
+                                    },
+                                ),
+                                span: 56..62,
+                                inferred_type: None,
+                            },
+                            true_type: TypeAnn {
+                                kind: Lit(
+                                    Str(
+                                        Str {
+                                            span: 65..73,
+                                            value: "number",
+                                        },
+                                    ),
+                                ),
+                                span: 65..73,
+                                inferred_type: None,
+                            },
+                            false_type: TypeAnn {
+                                kind: Lit(
+                                    Str(
+                                        Str {
+                                            span: 76..84,
+                                            value: "string",
+                                        },
+                                    ),
+                                ),
+                                span: 76..84,
+                                inferred_type: None,
+                            },
+                        },
+                    ),
+                    span: 46..84,
+                    inferred_type: None,
+                },
+                type_params: Some(
+                    [
+                        TypeParam {
+                            span: 17..42,
+                            name: Ident {
+                                span: 17..18,
+                                name: "T",
+                            },
+                            constraint: Some(
+                                TypeAnn {
+                                    kind: Union(
+                                        UnionType {
+                                            span: 27..42,
+                                            types: [
+                                                TypeAnn {
+                                                    kind: Keyword(
+                                                        KeywordType {
+                                                            span: 27..33,
+                                                            keyword: Number,
+                                                        },
+                                                    ),
+                                                    span: 27..33,
+                                                    inferred_type: None,
+                                                },
+                                                TypeAnn {
+                                                    kind: Keyword(
+                                                        KeywordType {
+                                                            span: 36..42,
+                                                            keyword: String,
+                                                        },
+                                                    ),
+                                                    span: 36..42,
+                                                    inferred_type: None,
+                                                },
+                                            ],
+                                        },
+                                    ),
+                                    span: 27..42,
+                                    inferred_type: None,
+                                },
+                            ),
+                            default: None,
+                        },
+                    ],
+                ),
+            },
+        ],
+    },
+)
