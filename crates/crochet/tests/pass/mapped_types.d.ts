@@ -1,3 +1,6 @@
+declare type Custom<A> = {
+    -readonly [P in keyof A]+/: A[P];
+};
 declare type Obj = {
     readonly a: number;
     readonly b?: string;
