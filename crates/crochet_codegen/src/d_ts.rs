@@ -550,10 +550,6 @@ fn build_type_ann(t: &Type) -> TsTypeAnn {
 
 fn sort_types(types: &[Type]) -> Vec<Type> {
     let mut sorted_types = types.to_owned();
-    sorted_types.sort_by(|a, b| {
-        let a = format!("{a}");
-        let b = format!("{b}");
-        a.cmp(&b)
-    });
+    sorted_types.sort_by_key(|a| a.to_string());
     sorted_types
 }

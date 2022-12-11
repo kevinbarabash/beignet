@@ -61,6 +61,26 @@ module.exports = grammar(tsx, {
     },
     readonly_type: ($, prev) => seq("mut", $._type),
 
+    index_signature: ($) =>
+      seq(
+        optional(seq(field("mut_sign", optional(choice("+", "-"))), "mut")),
+        "[",
+        choice(
+          seq(
+            field(
+              "name",
+              choice($.identifier, alias($._reserved_identifier, $.identifier))
+            ),
+            ":",
+            field("index_type", $._type)
+          ),
+          field("mapped_type_clause", $.mapped_type_clause)
+        ),
+        "]",
+        optional(seq(field("optional_sign", optional(choice("+", "-"))), "?")),
+        field("type", $.type_annotation)
+      ),
+
     // Replaces `optional("readonly")` in sequence with `optional("mut")`
     property_signature: ($, prev) => {
       const members = prev.members.map((member) => {

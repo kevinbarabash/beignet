@@ -332,6 +332,21 @@ pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
             update_type_ann(obj_type, s);
             update_type_ann(index_type, s);
         }
+        TypeAnnKind::Mapped(MappedType {
+            span: _,
+            type_param,
+            optional: _,
+            mutable: _,
+            type_ann,
+        }) => {
+            if let Some(constraint) = &mut type_param.constraint {
+                update_type_ann(constraint, s);
+            }
+            if let Some(default) = &mut type_param.default {
+                update_type_ann(default, s);
+            }
+            update_type_ann(type_ann, s);
+        }
     }
 }
 

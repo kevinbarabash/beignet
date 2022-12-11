@@ -1,0 +1,124 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: parse(src)
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                span: 9..83,
+                declare: false,
+                id: Ident {
+                    span: 14..18,
+                    name: "Pick",
+                },
+                type_ann: TypeAnn {
+                    kind: Mapped(
+                        MappedType {
+                            span: 57..71,
+                            type_param: TypeParam {
+                                span: 58..64,
+                                name: Ident {
+                                    span: 58..59,
+                                    name: "P",
+                                },
+                                constraint: Some(
+                                    TypeAnn {
+                                        kind: TypeRef(
+                                            TypeRef {
+                                                span: 63..64,
+                                                name: "K",
+                                                type_args: None,
+                                            },
+                                        ),
+                                        span: 63..64,
+                                        inferred_type: None,
+                                    },
+                                ),
+                                default: None,
+                            },
+                            optional: None,
+                            mutable: None,
+                            type_ann: TypeAnn {
+                                kind: IndexedAccess(
+                                    IndexedAccessType {
+                                        span: 67..71,
+                                        obj_type: TypeAnn {
+                                            kind: TypeRef(
+                                                TypeRef {
+                                                    span: 67..68,
+                                                    name: "T",
+                                                    type_args: None,
+                                                },
+                                            ),
+                                            span: 67..68,
+                                            inferred_type: None,
+                                        },
+                                        index_type: TypeAnn {
+                                            kind: TypeRef(
+                                                TypeRef {
+                                                    span: 69..70,
+                                                    name: "P",
+                                                    type_args: None,
+                                                },
+                                            ),
+                                            span: 69..70,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                                span: 67..71,
+                                inferred_type: None,
+                            },
+                        },
+                    ),
+                    span: 43..82,
+                    inferred_type: None,
+                },
+                type_params: Some(
+                    [
+                        TypeParam {
+                            span: 19..20,
+                            name: Ident {
+                                span: 19..20,
+                                name: "T",
+                            },
+                            constraint: None,
+                            default: None,
+                        },
+                        TypeParam {
+                            span: 22..39,
+                            name: Ident {
+                                span: 22..23,
+                                name: "K",
+                            },
+                            constraint: Some(
+                                TypeAnn {
+                                    kind: KeyOf(
+                                        KeyOfType {
+                                            span: 32..39,
+                                            type_ann: TypeAnn {
+                                                kind: TypeRef(
+                                                    TypeRef {
+                                                        span: 38..39,
+                                                        name: "T",
+                                                        type_args: None,
+                                                    },
+                                                ),
+                                                span: 38..39,
+                                                inferred_type: None,
+                                            },
+                                        },
+                                    ),
+                                    span: 32..39,
+                                    inferred_type: None,
+                                },
+                            ),
+                            default: None,
+                        },
+                    ],
+                ),
+            },
+        ],
+    },
+)

@@ -63,6 +63,13 @@ pub struct TProp {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TIndexKey {
+    pub span: Span,
+    pub name: String,
+    pub type_ann: Box<TypeAnn>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TIndex {
     pub span: Span,
     // TODO: update this to only allow `<ident>: string` or `<ident>: number`
@@ -117,6 +124,27 @@ pub struct IndexedAccessType {
     pub index_type: Box<TypeAnn>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MappedType {
+    pub span: Span,
+    pub type_param: TypeParam, // default is always None for MappedType
+    pub optional: Option<TMappedTypeChange>,
+    pub mutable: Option<TMappedTypeChange>,
+    pub type_ann: Box<TypeAnn>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TMappedTypeChange {
+    pub span: Span,
+    pub change: TMappedTypeChangeProp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TMappedTypeChangeProp {
+    Plus,
+    Minus,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MutableType {
     pub span: Span,
@@ -137,6 +165,7 @@ pub enum TypeAnnKind {
     KeyOf(KeyOfType), // keyof
     Query(QueryType), // typeof
     IndexedAccess(IndexedAccessType),
+    Mapped(MappedType),
     Mutable(MutableType),
 }
 
