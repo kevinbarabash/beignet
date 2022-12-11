@@ -60,7 +60,7 @@ let person: {name: string, age: number};
 let thing: { [type: string]: string };
 type T = { [K in keyof T]-?: any };
 type T = { [K in keyof T]?: any };
-type T = { -readonly [K in keyof T]: any };
+type T = { -mut [K in keyof T]: any };
 
 --------------------------------------------------------------------------------
 
@@ -98,7 +98,7 @@ type T = { -readonly [K in keyof T]: any };
           (type_identifier)
           (index_type_query
             (type_identifier)))
-        (omitting_type_annotation
+        (type_annotation
           (predefined_type)))))
   (type_alias_declaration
     (type_identifier)
@@ -108,7 +108,7 @@ type T = { -readonly [K in keyof T]: any };
           (type_identifier)
           (index_type_query
             (type_identifier)))
-        (opting_type_annotation
+        (type_annotation
           (predefined_type)))))
   (type_alias_declaration
     (type_identifier)
@@ -157,7 +157,7 @@ Index signatures
 
 type Foo = {
   [b: string]: any;
-  readonly [c: number]: string;
+  mut [c: number]: string;
 };
 
 --------------------------------------------------------------------------------
