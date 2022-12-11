@@ -1506,25 +1506,25 @@ type T<X> = T extends { x: infer X } ? X : never;
           (type_annotation
             (type_identifier))))
       (conditional_type
+        (type_identifier)
+        (type_identifier)
+        (type_identifier)
         (conditional_type
           (type_identifier)
+          (function_type
+            (formal_parameters
+              (required_parameter
+                (binding_identifier
+                  (identifier))
+                (type_annotation
+                  (type_identifier))))
+            (conditional_type
+              (type_identifier)
+              (type_identifier)
+              (type_identifier)
+              (type_identifier)))
           (type_identifier)
-          (type_identifier)
-          (type_identifier))
-        (function_type
-          (formal_parameters
-            (required_parameter
-              (binding_identifier
-                (identifier))
-              (type_annotation
-                (type_identifier))))
-          (conditional_type
-            (type_identifier)
-            (type_identifier)
-            (type_identifier)
-            (type_identifier)))
-        (type_identifier)
-        (type_identifier))))
+          (type_identifier)))))
   (type_alias_declaration
     (type_identifier)
     (type_parameters

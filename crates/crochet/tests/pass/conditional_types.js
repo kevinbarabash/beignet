@@ -1,3 +1,4 @@
 ;
-export const a = "number";
-export const b = "string";
+export const a = "boolean";
+export const b = "number";
+export const c = "string";

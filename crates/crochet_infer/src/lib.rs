@@ -3018,4 +3018,20 @@ mod tests {
         "#;
         infer_prog(src);
     }
+
+    #[test]
+    fn nested_conditional_types() {
+        let src = r#"
+        type GetTypeName<T extends boolean| number | string> = 
+            T extends boolean ? "boolean" : 
+            T extends number ? "number" : 
+            "string";
+
+        let a: GetTypeName<true> = "boolean";
+        let b: GetTypeName<5> = "number";
+        let c: GetTypeName<"hello"> = "string";
+        "#;
+
+        infer_prog(src);
+    }
 }

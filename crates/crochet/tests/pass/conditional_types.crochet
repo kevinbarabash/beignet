@@ -1,4 +1,8 @@
-type GetTypeName<T extends number | string> = T extends number ? "number" : "string";
+type GetTypeName<T extends boolean| number | string> = 
+    T extends boolean ? "boolean" : 
+    T extends number ? "number" : 
+    "string";
 
-let a: GetTypeName<5> = "number";
-let b: GetTypeName<"hello"> = "string";
+let a: GetTypeName<true> = "boolean";
+let b: GetTypeName<5> = "number";
+let c: GetTypeName<"hello"> = "string";
