@@ -8,4 +8,5 @@ declare type Obj = {
     d?: number;
 };
 declare type PartialObj = Partial<Obj>;
+export declare const custom_obj: Custom<Obj>;
 export declare const partial_obj: PartialObj;
