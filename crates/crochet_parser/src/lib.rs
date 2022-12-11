@@ -1524,8 +1524,22 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             })
         }
         "conditional_type" => {
-            // fill this in
-            todo!()
+            let left = node.child_by_field_name("left").unwrap();
+            let left = parse_type_ann(&left, src)?;
+            let right = node.child_by_field_name("right").unwrap();
+            let right = parse_type_ann(&right, src)?;
+            let consequent = node.child_by_field_name("consequence").unwrap();
+            let consequent = parse_type_ann(&consequent, src)?;
+            let alternate = node.child_by_field_name("alternative").unwrap();
+            let alternate = parse_type_ann(&alternate, src)?;
+
+            TypeAnnKind::Conditional(ConditionalType {
+                span: node.byte_range(),
+                left: Box::from(left),
+                right: Box::from(right),
+                consequent: Box::from(consequent),
+                alternate: Box::from(alternate),
+            })
         }
         "template_literal_type" => todo!(),
         "intersection_type" => {

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::iter::Iterator;
 
 use crochet_ast::types::{
-    self as types, Provenance, TFnParam, TIndex, TIndexAccess, TIndexKey, TMappedType, TObjElem,
-    TObject, TProp, TPropKey, TVar, Type, TypeKind,
+    self as types, Provenance, TConditionalType, TFnParam, TIndex, TIndexAccess, TIndexKey,
+    TMappedType, TObjElem, TObject, TProp, TPropKey, TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
 
@@ -330,7 +330,7 @@ fn infer_type_ann_rec(
                 }));
 
                 let s = compose_subs(&type_ann_s, &constraint_s);
-                let t = t.apply(&s);
+                let t = t.apply(&s); // I think we can skip this
 
                 Ok((s, t))
             } else {
@@ -338,6 +338,29 @@ fn infer_type_ann_rec(
                 // a mapped type when there's a constraint in the index signature.
                 Err(Report::new(TypeError::Unspecified))
             }
+        }
+        TypeAnnKind::Conditional(ConditionalType {
+            span: _,
+            left,
+            right,
+            consequent,
+            alternate,
+        }) => {
+            let (check_s, check_t) = infer_type_ann_rec(left, ctx, type_param_map)?;
+            let (extends_s, extends_t) = infer_type_ann_rec(right, ctx, type_param_map)?;
+            let (true_s, true_t) = infer_type_ann_rec(consequent, ctx, type_param_map)?;
+            let (false_s, false_t) = infer_type_ann_rec(alternate, ctx, type_param_map)?;
+
+            let t = Type::from(TypeKind::ConditionalType(TConditionalType {
+                check_type: Box::from(check_t),
+                extends_type: Box::from(extends_t),
+                true_type: Box::from(true_t),
+                false_type: Box::from(false_t),
+            }));
+
+            let s = compose_many_subs(&[check_s, extends_s, true_s, false_s]);
+
+            Ok((s, t))
         }
     }?;
 
