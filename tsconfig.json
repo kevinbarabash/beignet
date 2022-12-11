@@ -1,19 +1,14 @@
 {
-    "compilerOptions": {
-        "outDir": "./dist/",
-        "noImplicitAny": true,
-        "target": "ES2018",
-        "module": "ES2020",
-        "jsx": "react",
-        "allowJs": true,
-        "moduleResolution": "node",
-        "strict": true,
-        "lib": [
-            "dom",
-            "esnext"
-        ],
-    },
-    "exclude": [
-        "build/**/*",
-    ],
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "noImplicitAny": true,
+    "target": "ES2018",
+    "module": "ES2020",
+    "jsx": "react",
+    "allowJs": true,
+    "moduleResolution": "node",
+    "strict": true,
+    "lib": ["dom", "esnext"]
+  },
+  "exclude": ["build/**/*", "crates/crochet/tests/**/*"]
 }
