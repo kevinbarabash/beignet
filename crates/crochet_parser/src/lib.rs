@@ -61,7 +61,6 @@ pub fn parse(src: &str) -> Result<Program, ParseError> {
 
         let mut body: Vec<Statement> = vec![];
         for child in children {
-            println!("child.kind = {}", child.kind());
             let mut stmts = parse_statement(&child, src)?;
             body.append(&mut stmts);
         }
@@ -767,6 +766,42 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
                 args,
             })
         }
+        "new_expression" => {
+            let constructor = node.child_by_field_name("constructor").unwrap();
+            let constructor = parse_expression(&constructor, src)?;
+
+            let args = node.child_by_field_name("arguments").unwrap();
+
+            let mut cursor = args.walk();
+            let args = args.named_children(&mut cursor);
+
+            // TODO: dedupe with `call_expression`
+            let args = args
+                .into_iter()
+                .map(|arg| {
+                    if arg.kind() == "spread_element" {
+                        let spread = arg.child(0).unwrap();
+                        let arg = arg.child(1).unwrap();
+                        let expr = parse_expression(&arg, src)?;
+                        Ok(ExprOrSpread {
+                            spread: Some(spread.byte_range()),
+                            expr: Box::from(expr),
+                        })
+                    } else {
+                        let expr = parse_expression(&arg, src)?;
+                        Ok(ExprOrSpread {
+                            spread: None,
+                            expr: Box::from(expr),
+                        })
+                    }
+                })
+                .collect::<Result<Vec<_>, ParseError>>()?;
+
+            ExprKind::New(New {
+                expr: Box::from(constructor),
+                args,
+            })
+        }
         "identifier" => {
             let span = node.byte_range();
             let name = src.get(span.clone()).unwrap().to_owned();
@@ -1341,7 +1376,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|prop| {
-                    println!("prop.kind() = {}", prop.kind());
                     match prop.kind() {
                         "export_statement" => todo!("remove export_statement from object_type"),
                         "property_signature" => {
@@ -2008,6 +2042,12 @@ mod tests {
         let I = S(K)(K);
         "#;
         insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    fn new_expression() {
+        insta::assert_debug_snapshot!(parse("new Array();"));
+        insta::assert_debug_snapshot!(parse("new Array(1, 2, 3);"));
     }
 
     #[test]

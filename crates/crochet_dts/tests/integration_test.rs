@@ -580,3 +580,16 @@ fn infer_omit() {
 
     assert_eq!(result, "{a: number, mut d?: number}");
 }
+
+#[test]
+fn new_expressions() {
+    let src = r#"
+    let mut array = new Array(1, 2, 3);
+    "#;
+
+    let (_, ctx) = infer_prog(src);
+
+    let t = ctx.lookup_value("array").unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "<t0>mut t0[]");
+}

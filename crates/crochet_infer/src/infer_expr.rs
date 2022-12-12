@@ -2,7 +2,8 @@ use error_stack::{Report, Result};
 use std::collections::HashMap;
 
 use crochet_ast::types::{
-    self as types, Provenance, TFnParam, TKeyword, TObject, TPat, TPropKey, TVar, Type, TypeKind,
+    self as types, Provenance, TCallable, TFnParam, TKeyword, TObject, TPat, TPropKey, TVar, Type,
+    TypeKind,
 };
 use crochet_ast::values::*;
 
@@ -60,6 +61,86 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
 
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
             Ok((s, t))
+        }
+        ExprKind::New(New { expr, args }) => {
+            let mut ss: Vec<Subst> = vec![];
+            let mut arg_types: Vec<Type> = vec![];
+
+            let (s1, t) = infer_expr(ctx, expr)?;
+            ss.push(s1);
+            let t = get_obj_type(&t, ctx)?;
+            println!("t = {t}");
+
+            for arg in args {
+                let (arg_s, mut arg_t) = infer_expr(ctx, &mut arg.expr)?;
+                ss.push(arg_s);
+                if arg.spread.is_some() {
+                    match &mut arg_t.kind {
+                        TypeKind::Tuple(types) => arg_types.append(types),
+                        _ => arg_types.push(Type::from(TypeKind::Rest(Box::from(arg_t)))),
+                    }
+                } else {
+                    arg_types.push(arg_t);
+                }
+            }
+
+            let ret_type = ctx.fresh_var();
+
+            if let TypeKind::Object(TObject { elems }) = t.kind {
+                for elem in elems {
+                    match elem {
+                        TObjElem::Call(_) => (),
+                        TObjElem::Constructor(TCallable {
+                            params,
+                            ret,
+                            type_params,
+                        }) => {
+                            let call_type = Type::from(TypeKind::App(types::TApp {
+                                args: arg_types.clone(),
+                                ret: Box::from(ret_type.clone()),
+                            }));
+                            // TODO: set provenance
+
+                            let lam_type = Type::from(TypeKind::Lam(types::TLam {
+                                params: params.clone(),
+                                ret,
+                            }));
+                            println!("lam_type = {lam_type}");
+
+                            // TODO: pick the best choice instead of returng the first choice:
+                            // - new <t145>(arrayLength?: number) => mut t145[]
+                            // - new (arrayLength: number) => mut T[]
+                            // - new (...items: mut T[]) => mut T[]
+                            // The "best" choice will be the one that ignores the
+                            // lest number of args.
+                            if let Ok(s3) = unify(&call_type, &lam_type, ctx) {
+                                // TODO: do something with theses
+                                println!("type_params = {type_params:#?}");
+
+                                ss.push(s3);
+
+                                let s = compose_many_subs(&ss);
+                                let t = ret_type.apply(&s);
+
+                                // return (s3 `compose` s2 `compose` s1, apply s3 tv)
+                                return Ok((s, t));
+                            }
+                        }
+                        TObjElem::Index(_) => (),
+                        TObjElem::Prop(_) => (),
+                    }
+                }
+            }
+
+            // TODO: update this to communicate that we couldn't find a valid
+            // constructor for the given arguments
+            Err(Report::new(TypeError::Unspecified))
+
+            // TODO:
+            // - determine the type of `expr`
+            // - check if it has a constructor signature
+            // - if it does, then check that the args match the signature
+            // - if they do, then the inferred type is the return type
         }
         ExprKind::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer_expr(ctx, expr)?;

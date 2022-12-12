@@ -1,0 +1,32 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"new Array();\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..12,
+                expr: Expr {
+                    span: 0..11,
+                    kind: New(
+                        New {
+                            expr: Expr {
+                                span: 4..9,
+                                kind: Ident(
+                                    Ident {
+                                        span: 4..9,
+                                        name: "Array",
+                                    },
+                                ),
+                                inferred_type: None,
+                            },
+                            args: [],
+                        },
+                    ),
+                    inferred_type: None,
+                },
+            },
+        ],
+    },
+)

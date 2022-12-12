@@ -32,7 +32,9 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
             TsKeywordTypeKind::TsNumberKeyword => {
                 Ok(Type::from(TypeKind::Keyword(TKeyword::Number)))
             }
-            TsKeywordTypeKind::TsObjectKeyword => Err(String::from("can't parse Objects yet")),
+            TsKeywordTypeKind::TsObjectKeyword => {
+                Ok(Type::from(TypeKind::Keyword(TKeyword::Object)))
+            }
             TsKeywordTypeKind::TsBooleanKeyword => {
                 Ok(Type::from(TypeKind::Keyword(TKeyword::Boolean)))
             }
@@ -73,6 +75,8 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                 }
             }
             TsFnOrConstructorType::TsConstructorType(_) => {
+                // NOTE: This is only used by `bind` in NewableFunction so it's
+                // okay to ignore for now.
                 Err(String::from("can't parse constructor yet"))
             }
         },
@@ -104,7 +108,26 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
             }
         }
         TsType::TsTypeQuery(_) => Err(String::from("can't parse type query yet")),
-        TsType::TsTypeLit(_) => Err(String::from("can't parse type literal yet")),
+        TsType::TsTypeLit(TsTypeLit { span: _, members }) => {
+            let elems: Vec<TObjElem> = members
+                .iter()
+                .filter_map(|elem| {
+                    let prop = infer_ts_type_element(elem, ctx);
+
+                    match prop {
+                        Ok(prop) => Some(prop),
+                        Err(msg) => {
+                            println!("Err: {msg}");
+                            None
+                        }
+                    }
+                })
+                .collect();
+
+            let t = Type::from(TypeKind::Object(TObject { elems }));
+
+            Ok(t)
+        }
         TsType::TsArrayType(array) => {
             let elem_type = infer_ts_type_ann(&array.elem_type, ctx)?;
             Ok(Type {
@@ -579,6 +602,11 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
     };
 
     module.visit_with(&mut collector);
+
+    // let values = collector.ctx.scopes.last().unwrap().values.keys();
+    // println!("values = {values:#?}");
+    // let types = collector.ctx.scopes.last().unwrap().types.keys();
+    // println!("types = {types:#?}");
 
     Ok(collector.ctx)
 }
