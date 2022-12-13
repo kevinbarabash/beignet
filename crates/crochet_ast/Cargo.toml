@@ -11,4 +11,4 @@ itertools = "0.10.3"
 # TODO: hide these behind a feature and then only use that feature in the codegen crate
 swc_atoms = "0.4.21"
 swc_common = "0.29.8"
-swc_ecma_ast = "0.94.11"
+swc_ecma_ast = "0.95.4"
