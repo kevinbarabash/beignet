@@ -69,7 +69,6 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
             let (s1, t) = infer_expr(ctx, expr)?;
             ss.push(s1);
             let t = get_obj_type(&t, ctx)?;
-            println!("t = {t}");
 
             for arg in args {
                 let (arg_s, mut arg_t) = infer_expr(ctx, &mut arg.expr)?;
@@ -84,8 +83,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
                 }
             }
 
-            let ret_type = ctx.fresh_var();
-
+            let mut results = vec![];
             if let TypeKind::Object(TObject { elems }) = t.kind {
                 for elem in elems {
                     match elem {
@@ -95,6 +93,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
                             ret,
                             type_params,
                         }) => {
+                            let ret_type = ctx.fresh_var();
                             let call_type = Type::from(TypeKind::App(types::TApp {
                                 args: arg_types.clone(),
                                 ret: Box::from(ret_type.clone()),
@@ -103,27 +102,24 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
 
                             let lam_type = Type::from(TypeKind::Lam(types::TLam {
                                 params: params.clone(),
-                                ret,
+                                ret: ret.clone(),
                             }));
-                            println!("lam_type = {lam_type}");
 
-                            // TODO: pick the best choice instead of returng the first choice:
-                            // - new <t145>(arrayLength?: number) => mut t145[]
-                            // - new (arrayLength: number) => mut T[]
-                            // - new (...items: mut T[]) => mut T[]
-                            // The "best" choice will be the one that ignores the
-                            // lest number of args.
+                            // NOTE: We don't have to bother with instantiation here
+                            // because we're cloning the all of the types.
+                            // TODO: We really should be instantiating things here
+                            // anyways so that we maintain the uniqueness of type
+                            // parameter IDs.
+                            let lam_type = set_type_params(&lam_type, &type_params);
+
                             if let Ok(s3) = unify(&call_type, &lam_type, ctx) {
-                                // TODO: do something with theses
-                                println!("type_params = {type_params:#?}");
-
                                 ss.push(s3);
 
-                                let s = compose_many_subs(&ss);
+                                let s = compose_many_subs(&ss.clone());
                                 let t = ret_type.apply(&s);
 
                                 // return (s3 `compose` s2 `compose` s1, apply s3 tv)
-                                return Ok((s, t));
+                                results.push((s, t));
                             }
                         }
                         TObjElem::Index(_) => (),
@@ -132,15 +128,23 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
                 }
             }
 
-            // TODO: update this to communicate that we couldn't find a valid
-            // constructor for the given arguments
-            Err(Report::new(TypeError::Unspecified))
+            // Sorts the results based on number of free type variables in
+            // ascending order.
+            results.sort_by(|a, b| {
+                let a_len = a.1.ftv().len();
+                let b_len = b.1.ftv().len();
+                a_len.cmp(&b_len)
+            });
 
-            // TODO:
-            // - determine the type of `expr`
-            // - check if it has a constructor signature
-            // - if it does, then check that the args match the signature
-            // - if they do, then the inferred type is the return type
+            // Pick the result with the lowest number of of free type variables
+            match results.get(0) {
+                Some(result) => Ok(result.to_owned()),
+                None => {
+                    // TODO: update this to communicate that we couldn't find a
+                    // valid constructor for the given arguments
+                    Err(Report::new(TypeError::Unspecified))
+                }
+            }
         }
         ExprKind::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer_expr(ctx, expr)?;

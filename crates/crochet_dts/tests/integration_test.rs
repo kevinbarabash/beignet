@@ -591,5 +591,37 @@ fn new_expressions() {
 
     let t = ctx.lookup_value("array").unwrap();
     let result = format!("{}", t);
-    assert_eq!(result, "<t0>mut t0[]");
+    assert_eq!(result, "mut 1 | 2 | 3[]");
+}
+
+#[test]
+fn new_expressions_instantiation_check() {
+    let src = r#"
+    let numbers = new Array(1, 2, 3);
+    let letters = new Array("a", "b", "c");
+    "#;
+
+    let (_, ctx) = infer_prog(src);
+
+    let t = ctx.lookup_value("numbers").unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "mut 1 | 2 | 3[]");
+
+    let t = ctx.lookup_value("letters").unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, r#"mut "a" | "b" | "c"[]"#);
+}
+
+#[test]
+fn rest_fn() {
+    let src = r#"
+    declare let foo: <T>(...items: mut T[]) => string;
+    let result = foo(1, 2, 3);
+    "#;
+
+    let (_, ctx) = infer_prog(src);
+
+    let t = ctx.lookup_value("result").unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "string");
 }

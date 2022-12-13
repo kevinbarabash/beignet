@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use types::{
     TCallable, TConditionalType, TIndex, TIndexAccess, TIndexKey, TMappedType, TObjElem, TObject,
-    TPropKey, TypeKind,
+    TPropKey, TVar, TypeKind,
 };
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
@@ -15,7 +15,9 @@ use crochet_ast::types::{
     self as types, RestPat, TFnParam, TKeyword, TMappedTypeChangeProp, TPat, TProp, Type, TypeParam,
 };
 use crochet_ast::values::Lit;
-use crochet_infer::{close_over, generalize, normalize, Context, Env, Subst, Substitutable};
+use crochet_infer::{
+    close_over, generalize, normalize, replace_aliases_rec, Context, Env, Subst, Substitutable,
+};
 
 #[derive(Debug, Clone)]
 pub struct InterfaceCollector {
@@ -381,11 +383,56 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 let mut qualifiers = params.ftv();
                 qualifiers.append(&mut ret.ftv());
 
-                Ok(TObjElem::Constructor(TCallable {
-                    params,
-                    ret: Box::from(ret),
-                    type_params: qualifiers,
-                }))
+                if let Some(type_param_decl) = &decl.type_params {
+                    // TODO: dedupe with `replace_aliases` in ./util.rs
+                    let mut type_params: Vec<TVar> = vec![];
+                    let type_param_map: HashMap<String, Type> = type_param_decl
+                        .params
+                        .iter()
+                        .map(|tp| {
+                            // NOTE: We can't use .map() here because infer_ts_type_ann
+                            // returns a Result.
+                            let constraint = match &tp.constraint {
+                                Some(constraint) => {
+                                    let t = infer_ts_type_ann(constraint, ctx)?;
+                                    Some(Box::from(t))
+                                }
+                                None => None,
+                            };
+                            let tv = TVar {
+                                id: ctx.fresh_id(),
+                                constraint,
+                            };
+                            // TODO: replace type aliases in `constraint` using entries
+                            // in `type_param_map`.  It looks like TypeScript allow any order
+                            // so we'll have to do a second pass to process `type_param_map`.
+                            type_params.push(tv.clone());
+                            Ok((tp.name.sym.to_string(), Type::from(TypeKind::Var(tv))))
+                        })
+                        .collect::<Result<HashMap<String, Type>, String>>()?;
+
+                    qualifiers.append(&mut type_params);
+
+                    let t = TObjElem::Constructor(TCallable {
+                        params: params
+                            .into_iter()
+                            .map(|param| {
+                                let t = replace_aliases_rec(&param.t, &type_param_map);
+                                TFnParam { t, ..param }
+                            })
+                            .collect(),
+                        ret: Box::from(replace_aliases_rec(&ret, &type_param_map)),
+                        type_params: qualifiers,
+                    });
+                    Ok(t)
+                } else {
+                    let t = TObjElem::Constructor(TCallable {
+                        params,
+                        ret: Box::from(ret),
+                        type_params: qualifiers,
+                    });
+                    Ok(t)
+                }
             }
             None => Err(String::from("Property is missing type annotation")),
         },

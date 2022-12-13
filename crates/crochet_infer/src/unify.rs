@@ -235,6 +235,13 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                         }
                         args.push(Type::from(TypeKind::Tuple(rest_args.to_owned())));
 
+                        let mut rest_param = rest_param.clone();
+                        // NOTE: We intentionally change the mutability of the rest
+                        // param to `false` so that the tuple (which is readonly)
+                        // that's created from the arguments can be unified with
+                        // the rest param array.
+                        rest_param.mutable = false;
+
                         let mut params: Vec<_> = lam.params.iter().map(|p| p.get_type()).collect();
                         params.pop(); // Remove rest type
                         params.push(rest_param); // Add array type
@@ -455,12 +462,18 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             if tuple_types.is_empty() {
                 Ok(Subst::default())
             } else {
-                let mut ss = vec![];
-                for t1 in tuple_types.iter() {
-                    let s = unify(t1, array_type.as_ref(), ctx)?;
-                    ss.push(s)
-                }
-                Ok(compose_many_subs(&ss))
+                // let mut ss = vec![];
+                // TODO: take the union of all of the types in tuple_types
+                // Right now if array_type is a type variable, we unify right
+                // away and then the other types in tuple_types are ignored
+                let s = unify(&union_many_types(tuple_types), array_type.as_ref(), ctx)?;
+                // for t1 in tuple_types.iter() {
+                //     println!("unifying {t1} with {array_type}");
+                //     let s = unify(t1, array_type.as_ref(), ctx)?;
+                //     ss.push(s)
+                // }
+                // Ok(compose_many_subs(&ss))
+                Ok(s)
             }
         }
         (TypeKind::Array(array_type_1), TypeKind::Array(array_type_2)) => {
