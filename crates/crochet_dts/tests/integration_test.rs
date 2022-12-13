@@ -584,7 +584,7 @@ fn infer_omit() {
 #[test]
 fn new_expressions() {
     let src = r#"
-    let mut array = new Array(1, 2, 3);
+    let array = new Array(1, 2, 3);
     "#;
 
     let (_, ctx) = infer_prog(src);

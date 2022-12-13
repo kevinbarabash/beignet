@@ -1,0 +1,2 @@
+let numbers = new Array(1, 2, 3);
+let letters = new Array("a", "b", "c");
