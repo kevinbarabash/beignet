@@ -1,4 +1,3 @@
-use error_stack::{Report, Result};
 use itertools::free::join;
 #[cfg(target_family = "wasm")]
 use std::ffi::CString;
@@ -67,7 +66,7 @@ pub fn parse(src: &str) -> Result<Program, ParseError> {
 
         Ok(Program { body })
     } else {
-        Err(Report::new(ParseError).attach_printable("not implemented yet"))
+        Err(ParseError::from("not implemented yet"))
     }
 }
 
@@ -108,9 +107,11 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>
         "comment" => {
             Ok(vec![]) // ignore comments
         }
-        "ERROR" => Err(Report::new(ParseError)
-            .attach_printable(format!("failed to parse: '{}'", text_for_node(node, src)?,))),
-        _ => Err(Report::new(ParseError).attach_printable(format!("unhandled: {:#?}", node))),
+        "ERROR" => Err(ParseError::from(format!(
+            "failed to parse: '{}'",
+            text_for_node(node, src)?
+        ))),
+        _ => Err(ParseError::from(format!("unhandled: {:#?}", node))),
     }
 
     // $.export_statement,
@@ -141,7 +142,7 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>
 fn text_for_node(node: &tree_sitter::Node, src: &str) -> Result<String, ParseError> {
     match src.get(node.byte_range()) {
         Some(text) => Ok(text.to_owned()),
-        None => Err(Report::new(ParseError).attach_printable("error in text_for_node")),
+        None => Err(ParseError::from("error in text_for_node")),
     }
 }
 
@@ -152,7 +153,7 @@ fn parse_declaration(
 ) -> Result<Vec<Statement>, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
-        return Err(Report::new(ParseError).attach_printable("Error parsing declaration"));
+        return Err(ParseError::from("Error parsing declaration"));
     }
 
     let decl = node.child_by_field_name("decl").unwrap();
@@ -225,7 +226,7 @@ fn parse_declaration(
 fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
-        return Err(Report::new(ParseError).attach_printable("Error parsing pattern"));
+        return Err(ParseError::from("Error parsing pattern"));
     }
     let kind = match node.kind() {
         "binding_identifier" => {
@@ -348,12 +349,10 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseEr
                 .map(|child| match child.kind() {
                     "assignment_pattern" => {
                         let left = child.child_by_field_name("left").ok_or_else(|| {
-                            Report::new(ParseError)
-                                .attach_printable("'left' field not found on assignment_pattern")
+                            ParseError::from("'left' field not found on assignment_pattern")
                         })?;
                         let right = child.child_by_field_name("right").ok_or_else(|| {
-                            Report::new(ParseError)
-                                .attach_printable("'right' field not found on assignment_pattern")
+                            ParseError::from("'right' field not found on assignment_pattern")
                         })?;
 
                         Ok(Some(ArrayPatElem {
@@ -598,7 +597,7 @@ fn parse_template_string(
 fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
-        return Err(Report::new(ParseError).attach_printable("Error parsing expression"));
+        return Err(ParseError::from("Error parsing expression"));
     }
     let kind = match node.kind() {
         "arrow_function" => {
@@ -968,7 +967,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
             })
         }
         _ => {
-            return Err(Report::new(ParseError).attach_printable(format!(
+            return Err(ParseError::from(format!(
                 "unhandled {node:#?} = '{}'",
                 text_for_node(node, src)?
             )));
@@ -1218,7 +1217,7 @@ fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pars
 fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
-        return Err(Report::new(ParseError).attach_printable("Error parsing type annotation"));
+        return Err(ParseError::from("Error parsing type annotation"));
     }
     let node = if node.kind() == "type_annotation"
         || node.kind() == "constraint"
@@ -1876,35 +1875,8 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, 
 mod tests {
     use super::*;
 
-    use core::{any::TypeId, panic::Location};
-    use error_stack::{AttachmentKind, FrameKind};
-
-    pub fn messages<E>(report: &Report<E>) -> Vec<String> {
-        report
-            .frames()
-            .map(|frame| match frame.kind() {
-                FrameKind::Context(context) => context.to_string(),
-                FrameKind::Attachment(AttachmentKind::Printable(attachment)) => {
-                    attachment.to_string()
-                }
-                FrameKind::Attachment(AttachmentKind::Opaque(_)) => {
-                    #[cfg(all(rust_1_65, feature = "std"))]
-                    if frame.type_id() == TypeId::of::<Backtrace>() {
-                        return String::from("Backtrace");
-                    }
-                    #[cfg(feature = "spantrace")]
-                    if frame.type_id() == TypeId::of::<SpanTrace>() {
-                        return String::from("SpanTrace");
-                    }
-                    if frame.type_id() == TypeId::of::<Location>() {
-                        String::from("Location")
-                    } else {
-                        String::from("opaque")
-                    }
-                }
-                FrameKind::Attachment(_) => panic!("attachment was not covered"),
-            })
-            .collect()
+    pub fn messages(report: &ParseError) -> String {
+        report.to_string()
     }
 
     #[test]
@@ -2000,14 +1972,7 @@ mod tests {
         match parse("(...a, ...b) => true") {
             Ok(_) => panic!("expected test parse() to return an error"),
             Err(report) => {
-                assert_eq!(
-                    messages(&report),
-                    vec![
-                        "failed to parse: '(...a, ...b) => true'",
-                        "Location",
-                        "ParseError"
-                    ]
-                );
+                assert_eq!(messages(&report), "ParseError");
             }
         }
     }

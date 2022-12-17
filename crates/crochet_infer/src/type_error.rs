@@ -1,4 +1,3 @@
-use error_stack::Context;
 use std::fmt;
 
 use crochet_ast::types::Type;
@@ -133,5 +132,3 @@ impl fmt::Display for TypeError {
         }
     }
 }
-
-impl Context for TypeError {}

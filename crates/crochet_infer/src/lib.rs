@@ -26,39 +26,12 @@ pub use util::{
 
 #[cfg(test)]
 mod tests {
-    use core::{any::TypeId, panic::Location};
     use crochet_parser::*;
-    use error_stack::Report;
-    use error_stack::{AttachmentKind, FrameKind};
 
     use super::*;
 
-    pub fn messages<E>(report: &Report<E>) -> Vec<String> {
-        report
-            .frames()
-            .map(|frame| match frame.kind() {
-                FrameKind::Context(context) => context.to_string(),
-                FrameKind::Attachment(AttachmentKind::Printable(attachment)) => {
-                    attachment.to_string()
-                }
-                FrameKind::Attachment(AttachmentKind::Opaque(_)) => {
-                    #[cfg(all(rust_1_65, feature = "std"))]
-                    if frame.type_id() == TypeId::of::<Backtrace>() {
-                        return String::from("Backtrace");
-                    }
-                    #[cfg(feature = "spantrace")]
-                    if frame.type_id() == TypeId::of::<SpanTrace>() {
-                        return String::from("SpanTrace");
-                    }
-                    if frame.type_id() == TypeId::of::<Location>() {
-                        String::from("Location")
-                    } else {
-                        String::from("opaque")
-                    }
-                }
-                FrameKind::Attachment(_) => panic!("attachment was not covered"),
-            })
-            .collect()
+    pub fn messages(report: &[TypeError]) -> Vec<String> {
+        report.iter().map(|error| error.to_string()).collect()
     }
 
     fn infer(input: &str) -> String {

@@ -1,4 +1,3 @@
-use error_stack::{Report, Result};
 use std::collections::HashMap;
 use std::iter::Iterator;
 
@@ -19,7 +18,7 @@ pub fn infer_type_ann(
     type_ann: &mut TypeAnn,
     ctx: &mut Context,
     type_params: &mut Option<Vec<TypeParam>>,
-) -> Result<(Subst, Type), TypeError> {
+) -> Result<(Subst, Type), Vec<TypeError>> {
     let mut type_params = if type_params.is_none() {
         match &mut type_ann.kind {
             TypeAnnKind::Lam(lam) => lam.type_params.to_owned(),
@@ -50,7 +49,7 @@ pub fn infer_type_ann(
 
                 Ok((param.name.name.to_owned(), tv))
             })
-            .collect::<Result<HashMap<String, Type>, TypeError>>()?,
+            .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
         None => HashMap::default(),
     };
 
@@ -61,7 +60,7 @@ pub fn infer_type_ann_with_params(
     type_ann: &mut TypeAnn,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
-) -> Result<(Subst, Type), TypeError> {
+) -> Result<(Subst, Type), Vec<TypeError>> {
     infer_type_ann_rec(type_ann, ctx, type_param_map)
 }
 
@@ -69,7 +68,7 @@ fn infer_type_ann_rec(
     type_ann: &mut TypeAnn,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
-) -> Result<(Subst, Type), TypeError> {
+) -> Result<(Subst, Type), Vec<TypeError>> {
     let (s, mut t) = match &mut type_ann.kind {
         TypeAnnKind::Lam(lam) => {
             let mut ss: Vec<Subst> = vec![];
@@ -133,7 +132,7 @@ fn infer_type_ann_rec(
                                 t: index_t,
                             }))
                         } else {
-                            return Err(Report::new(TypeError::Unspecified));
+                            return Err(vec![TypeError::Unspecified]);
                         }
                     }
                     crochet_ast::values::TObjElem::Prop(prop) => {
@@ -261,14 +260,14 @@ fn infer_type_ann_rec(
 
             match &t.kind {
                 TypeKind::Keyword(_) => {
-                    return Err(Report::new(TypeError::PrimitivesCantBeMutable(Box::from(
+                    return Err(vec![TypeError::PrimitivesCantBeMutable(Box::from(
                         t.to_owned(),
-                    ))))
+                    ))])
                 }
                 TypeKind::Tuple(_) => {
-                    return Err(Report::new(TypeError::TuplesCantBeMutable(Box::from(
+                    return Err(vec![TypeError::TuplesCantBeMutable(Box::from(
                         t.to_owned(),
-                    ))))
+                    ))])
                 }
                 _ => (),
             };
@@ -336,7 +335,7 @@ fn infer_type_ann_rec(
             } else {
                 // TODO: this should never happen since the parser only creates
                 // a mapped type when there's a constraint in the index signature.
-                Err(Report::new(TypeError::Unspecified))
+                Err(vec![TypeError::Unspecified])
             }
         }
         TypeAnnKind::Conditional(ConditionalType {

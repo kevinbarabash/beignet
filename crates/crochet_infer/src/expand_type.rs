@@ -2,7 +2,6 @@ use crochet_ast::types::*;
 use crochet_ast::types::{
     TIndex, TIndexKey, TLit, TObjElem, TObject, TProp, TPropKey, Type, TypeKind,
 };
-use error_stack::{Report, Result};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -16,7 +15,7 @@ use crate::util::{
 
 // `expand_type` is used to expand types that `unify` doesn't know how to unify
 // into something that it does know how to unify.
-pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
+pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     match &t.kind {
         TypeKind::Var(_) => Ok(t.to_owned()),
         TypeKind::App(_) => Ok(t.to_owned()),
@@ -39,7 +38,7 @@ pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
     }
 }
 
-fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, TypeError> {
+fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     let name = &alias.name;
     let t = ctx._lookup_type(name)?;
     let type_params = get_type_params(&t);
@@ -48,14 +47,14 @@ fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, TypeError> {
     // from the alias type.
     if let Some(type_args) = &alias.type_args {
         if type_args.len() != type_params.len() {
-            return Err(Report::new(TypeError::TypeInstantiationFailure)
-                .attach_printable("mismatch between the number of qualifiers and type params"));
+            // TODO: rename this TypeParamTypeArgCountMismatch
+            return Err(vec![TypeError::TypeInstantiationFailure]);
         }
         let ids = type_params.iter().map(|tv| tv.id.to_owned());
         let type_args = type_args
             .iter()
             .map(|arg| expand_type(arg, ctx))
-            .collect::<Result<Vec<_>, TypeError>>()?;
+            .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
         let t = unwrap_generic(&t);
         if let TypeKind::ConditionalType(TConditionalType { check_type, .. }) = &t.kind {
@@ -90,7 +89,7 @@ fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, TypeError> {
                             let inner_t = t.apply(&subs);
                             expand_type(&inner_t, ctx)
                         })
-                        .collect::<Result<Vec<_>, TypeError>>()?;
+                        .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
                     let t = union_many_types(&types);
                     return expand_type(&t, ctx);
@@ -103,14 +102,13 @@ fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, TypeError> {
         let subs: Subst = ids.zip(type_args.iter().cloned()).collect();
         expand_type(&t.apply(&subs), ctx)
     } else if !type_params.is_empty() {
-        Err(Report::new(TypeError::TypeInstantiationFailure)
-            .attach_printable("mismatch between the number of qualifiers and type params"))
+        Err(vec![TypeError::TypeInstantiationFailure])
     } else {
         expand_type(&t, ctx)
     }
 }
 
-fn expand_conditional_type(cond: &TConditionalType, ctx: &Context) -> Result<Type, TypeError> {
+fn expand_conditional_type(cond: &TConditionalType, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     let TConditionalType {
         check_type,
         extends_type,
@@ -125,7 +123,7 @@ fn expand_conditional_type(cond: &TConditionalType, ctx: &Context) -> Result<Typ
     expand_type(t.as_ref(), ctx)
 }
 
-fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, TypeError> {
+fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     let obj = get_obj_type(access.object.as_ref(), ctx)?;
     let index = expand_type(access.index.as_ref(), ctx)?;
 
@@ -168,7 +166,7 @@ fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Typ
                     }
                 }
 
-                return Err(Report::new(TypeError::MissingKey(format!("{lit}"))));
+                return Err(vec![TypeError::MissingKey(format!("{lit}"))]);
             }
         }
         TypeKind::Keyword(_) => {
@@ -182,20 +180,23 @@ fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Typ
                 }
             }
 
-            return Err(Report::new(TypeError::Unspecified));
+            return Err(vec![TypeError::Unspecified]);
         }
         _ => {
-            return Err(Report::new(TypeError::InvalidIndex(
+            return Err(vec![TypeError::InvalidIndex(
                 access.object.to_owned(),
                 access.index.to_owned(),
-            )));
+            )]);
         }
     };
 
-    Err(Report::new(TypeError::Unspecified))
+    Err(vec![TypeError::Unspecified])
 }
 
-fn get_obj_type_from_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeError> {
+fn get_obj_type_from_mapped_type(
+    mapped: &TMappedType,
+    ctx: &Context,
+) -> Result<Type, Vec<TypeError>> {
     if let Some(constraint) = &mapped.type_param.constraint {
         if let TypeKind::KeyOf(t) = &constraint.kind {
             return get_obj_type(t.as_ref(), ctx);
@@ -207,13 +208,13 @@ fn get_obj_type_from_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<
     if let TypeKind::IndexAccess(access) = &mapped.t.kind {
         get_obj_type(access.object.as_ref(), ctx)
     } else {
-        Err(Report::new(TypeError::Unspecified))
+        Err(vec![TypeError::Unspecified])
     }
 }
 
 // TODO: This should only be used to process object types and arrays/tuples
 // all other types (number, string, etc.) should be passed through.
-fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeError> {
+fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     let constraint = mapped.type_param.constraint.as_ref().unwrap();
     let keys = expand_type(constraint, ctx)?;
     let obj = get_obj_type_from_mapped_type(mapped, ctx)?;
@@ -267,7 +268,7 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeE
                             t,
                         }))
                     }
-                    crochet_ast::types::TLit::Bool(_) => Err(Report::new(TypeError::Unspecified)),
+                    crochet_ast::types::TLit::Bool(_) => Err(vec![TypeError::Unspecified]),
                     crochet_ast::types::TLit::Str(name) => {
                         let prop = get_prop_by_name(&old_elems, name)?;
                         let optional = match &mapped.optional {
@@ -304,10 +305,10 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeE
                     mutable: false, // TODO
                     t,
                 })),
-                _ => Err(Report::new(TypeError::Unspecified)),
+                _ => Err(vec![TypeError::Unspecified]),
             }
         })
-        .collect::<Result<Vec<_>, TypeError>>()?;
+        .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
     let t = Type {
         kind: TypeKind::Object(TObject { elems: new_elems }),
@@ -318,7 +319,7 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, TypeE
     Ok(t)
 }
 
-fn get_prop_by_name(elems: &[TObjElem], name: &str) -> Result<TProp, TypeError> {
+fn get_prop_by_name(elems: &[TObjElem], name: &str) -> Result<TProp, Vec<TypeError>> {
     for elem in elems {
         match elem {
             TObjElem::Call(_) => (),
@@ -336,7 +337,7 @@ fn get_prop_by_name(elems: &[TObjElem], name: &str) -> Result<TProp, TypeError> 
         }
     }
 
-    Err(Report::new(TypeError::MissingKey(name.to_owned())))
+    Err(vec![TypeError::MissingKey(name.to_owned())])
 }
 
 const NEVER_TYPE: Type = Type {
@@ -345,7 +346,7 @@ const NEVER_TYPE: Type = Type {
     mutable: false,
 };
 
-fn expand_keyof(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
+fn expand_keyof(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     if let TypeKind::KeyOf(t) = &t.kind {
         return expand_keyof(t, ctx);
     }
@@ -382,10 +383,10 @@ fn expand_keyof(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
     }
 }
 
-pub fn get_obj_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
+pub fn get_obj_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     match &t.kind {
         TypeKind::Generic(TGeneric { t, type_params: _ }) => get_obj_type(t, ctx),
-        TypeKind::Var(_) => Err(Report::new(TypeError::CantInferTypeFromItKeys)),
+        TypeKind::Var(_) => Err(vec![TypeError::CantInferTypeFromItKeys]),
         TypeKind::Ref(alias) => {
             let t = expand_alias_type(alias, ctx)?;
             get_obj_type(&t, ctx)

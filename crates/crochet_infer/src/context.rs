@@ -1,5 +1,4 @@
 use crochet_ast::types::*;
-use error_stack::{Report, Result};
 use std::cell::Cell;
 use std::collections::HashMap;
 
@@ -106,41 +105,38 @@ impl Context {
         current_scope.namespaces.insert(name, Box::from(namespace));
     }
 
-    pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, TypeError> {
+    pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, Vec<TypeError>> {
         for scope in self.scopes.iter().rev() {
             if let Some(binding) = scope.values.get(name) {
                 return Ok(self.instantiate(&binding.t));
             }
         }
-        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
-            .attach_printable(format!("Can't find value: {name}")))
+        Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    pub fn lookup_value(&self, name: &str) -> Result<Type, TypeError> {
+    pub fn lookup_value(&self, name: &str) -> Result<Type, Vec<TypeError>> {
         for scope in self.scopes.iter().rev() {
             if let Some(b) = scope.values.get(name) {
                 return Ok(b.t.to_owned());
             }
         }
-        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
-            .attach_printable(format!("Can't find value: {name}")))
+        Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    pub fn lookup_binding(&self, name: &str) -> Result<Binding, TypeError> {
+    pub fn lookup_binding(&self, name: &str) -> Result<Binding, Vec<TypeError>> {
         for scope in self.scopes.iter().rev() {
             if let Some(b) = scope.values.get(name) {
                 return Ok(b.to_owned());
             }
         }
-        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
-            .attach_printable(format!("Can't find value: {name}")))
+        Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
     pub fn lookup_type_and_instantiate(
         &self,
         name: &str,
         mutable: bool,
-    ) -> Result<Type, TypeError> {
+    ) -> Result<Type, Vec<TypeError>> {
         let t = self.lookup_type(name, mutable)?;
         Ok(self.instantiate(&t))
     }
@@ -149,7 +145,7 @@ impl Context {
     // type Obj = {[key: string]: boolean};
     // type ReadonlyObj = Readonly<Obj>;
     // TODO: Figure out to fix this so that we can use this method in `expand_alias_type`
-    pub fn lookup_type(&self, name: &str, mutable: bool) -> Result<Type, TypeError> {
+    pub fn lookup_type(&self, name: &str, mutable: bool) -> Result<Type, Vec<TypeError>> {
         if !mutable {
             if let Ok(t) = self._lookup_type(&format!("Readonly{name}")) {
                 return Ok(t);
@@ -158,14 +154,13 @@ impl Context {
         self._lookup_type(name)
     }
 
-    pub fn _lookup_type(&self, name: &str) -> Result<Type, TypeError> {
+    pub fn _lookup_type(&self, name: &str) -> Result<Type, Vec<TypeError>> {
         for scope in self.scopes.iter().rev() {
             if let Some(t) = scope.types.get(name) {
                 return Ok(t.to_owned());
             }
         }
-        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
-            .attach_printable(format!("Can't find type: {name}")))
+        Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
     pub fn lookup_namespace(&self, name: &str) -> Result<Box<Scope>, TypeError> {
@@ -174,8 +169,8 @@ impl Context {
                 return Ok(namespace.to_owned());
             }
         }
-        Err(Report::new(TypeError::CantFindIdent(name.to_owned()))
-            .attach_printable(format!("Can't find namespace: {name}")))
+        // TODO: Add a CantFindNamespace error
+        Err(TypeError::CantFindIdent(name.to_owned()))
     }
 
     pub fn instantiate(&self, t: &Type) -> Type {

@@ -1,4 +1,3 @@
-use error_stack::{Report, Result};
 use std::collections::HashMap;
 
 use crochet_ast::types::{self as types, Provenance, TObject, TPropKey, Type, TypeKind};
@@ -20,7 +19,7 @@ pub fn infer_pattern(
     type_ann: &mut Option<TypeAnn>,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
-) -> Result<(Subst, Assump, Type), TypeError> {
+) -> Result<(Subst, Assump, Type), Vec<TypeError>> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
     let mut new_vars: HashMap<String, Binding> = HashMap::new();
 
@@ -53,8 +52,8 @@ fn infer_pattern_rec(
     pat: &mut Pattern,
     ctx: &Context,
     assump: &mut Assump,
-) -> Result<Type, TypeError> {
-    let result: Result<Type, TypeError> = match &mut pat.kind {
+) -> Result<Type, Vec<TypeError>> {
+    let result: Result<Type, Vec<TypeError>> = match &mut pat.kind {
         PatternKind::Ident(values::BindingIdent {
             name,
             mutable,
@@ -71,8 +70,7 @@ fn infer_pattern_rec(
                 )
                 .is_some()
             {
-                return Err(Report::new(TypeError::DuplicateIdentInPat(name.to_owned()))
-                    .attach_printable("Duplicate identifier in pattern"));
+                return Err(vec![TypeError::DuplicateIdentInPat(name.to_owned())]);
             }
             Ok(tv)
         }
@@ -111,10 +109,7 @@ fn infer_pattern_rec(
                 )
                 .is_some()
             {
-                return Err(
-                    Report::new(TypeError::DuplicateIdentInPat(ident.name.to_owned()))
-                        .attach_printable("Duplicate identifier in pattern"),
-                );
+                return Err(vec![TypeError::DuplicateIdentInPat(ident.name.to_owned())]);
             }
             Ok(t)
         }
@@ -123,7 +118,7 @@ fn infer_pattern_rec(
             Ok(Type::from(TypeKind::Rest(Box::from(t))))
         }
         PatternKind::Array(ArrayPat { elems, .. }) => {
-            let elems: Result<Vec<Type>, TypeError> = elems
+            let elems: Result<Vec<Type>, Vec<TypeError>> = elems
                 .iter_mut()
                 .map(|elem| {
                     match elem {
@@ -251,7 +246,7 @@ pub fn infer_pattern_and_init(
     init: &mut Expr,
     ctx: &mut Context,
     pu: &PatternUsage,
-) -> Result<(Assump, Subst), TypeError> {
+) -> Result<(Assump, Subst), Vec<TypeError>> {
     let type_param_map = HashMap::new();
     let (ps, pa, pt) = infer_pattern(pat, type_ann, ctx, &type_param_map)?;
 

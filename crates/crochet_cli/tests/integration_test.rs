@@ -1,38 +1,11 @@
-use error_stack::Report;
-
 use crochet_ast::values::{Program, Statement};
 use crochet_codegen::*;
 use crochet_infer::TypeError;
 use crochet_infer::*;
 use crochet_parser::parse;
 
-use core::{any::TypeId, panic::Location};
-use error_stack::{AttachmentKind, FrameKind};
-
-pub fn messages<E>(report: &Report<E>) -> Vec<String> {
-    report
-        .frames()
-        .map(|frame| match frame.kind() {
-            FrameKind::Context(context) => context.to_string(),
-            FrameKind::Attachment(AttachmentKind::Printable(attachment)) => attachment.to_string(),
-            FrameKind::Attachment(AttachmentKind::Opaque(_)) => {
-                #[cfg(all(rust_1_65, feature = "std"))]
-                if frame.type_id() == TypeId::of::<Backtrace>() {
-                    return String::from("Backtrace");
-                }
-                #[cfg(feature = "spantrace")]
-                if frame.type_id() == TypeId::of::<SpanTrace>() {
-                    return String::from("SpanTrace");
-                }
-                if frame.type_id() == TypeId::of::<Location>() {
-                    String::from("Location")
-                } else {
-                    String::from("opaque")
-                }
-            }
-            FrameKind::Attachment(_) => panic!("attachment was not covered"),
-        })
-        .collect()
+pub fn messages(report: &[TypeError]) -> Vec<String> {
+    report.iter().map(|error| error.to_string()).collect()
 }
 
 fn infer(input: &str) -> String {
@@ -44,7 +17,7 @@ fn infer(input: &str) -> String {
             let mut expr = expr.to_owned();
             infer_expr(&mut ctx, &mut expr)
         }
-        _ => Err(Report::new(TypeError::Unspecified).attach_printable("We can't infer decls yet")),
+        _ => Err(vec![TypeError::Unspecified]),
     };
     format!("{}", result.unwrap())
 }

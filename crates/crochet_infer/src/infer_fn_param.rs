@@ -1,4 +1,3 @@
-use error_stack::Result;
 use std::collections::HashMap;
 
 use crochet_ast::types::{self as types, TFnParam, TKeyword, TPat, Type, TypeKind};
@@ -16,7 +15,7 @@ pub fn infer_fn_param(
     param: &mut EFnParam,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
-) -> Result<(Subst, Assump, TFnParam), TypeError> {
+) -> Result<(Subst, Assump, TFnParam), Vec<TypeError>> {
     // Keeps track of all of the variables the need to be introduced by this pattern.
     // let mut new_vars: Assump = Assump::default();
 

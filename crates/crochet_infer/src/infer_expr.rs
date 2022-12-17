@@ -1,13 +1,10 @@
-use error_stack::{Report, Result};
 use std::collections::HashMap;
 
 use crochet_ast::types::{
-    self as types, Provenance, TCallable, TFnParam, TKeyword, TObject, TPat, TPropKey, TVar, Type,
-    TypeKind,
+    self as types, Provenance, TCallable, TFnParam, TKeyword, TObjElem, TObject, TPat, TPropKey,
+    TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
-
-use types::TObjElem;
 
 use crate::context::{Context, Env};
 use crate::expand_type::get_obj_type;
@@ -20,7 +17,7 @@ use crate::unify::unify;
 use crate::util::*;
 use crate::visitor::Visitor;
 
-pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), TypeError> {
+pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), Vec<TypeError>> {
     let result = match &mut expr.kind {
         ExprKind::App(App { lam, args, .. }) => {
             let mut ss: Vec<Subst> = vec![];
@@ -141,7 +138,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
                 None => {
                     // TODO: update this to communicate that we couldn't find a
                     // valid constructor for the given arguments
-                    Err(Report::new(TypeError::Unspecified))
+                    Err(vec![TypeError::Unspecified])
                 }
             }
         }
@@ -170,8 +167,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
             // instead of a TApp.
             let t = match t.kind {
                 TypeKind::Lam(types::TLam { ret, .. }) => Ok(ret.as_ref().to_owned()),
-                _ => Err(Report::new(TypeError::InvalidFix)
-                    .attach_printable("Expr::Fix should always infer a lambda")),
+                _ => Err(vec![TypeError::InvalidFix]),
             }?;
 
             Ok((s, t))
@@ -296,10 +292,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
 
                         return Ok((s, t));
                     }
-                    _ => {
-                        return Err(Report::new(TypeError::InvalidComponent)
-                            .attach_printable("Component must be a function"))
-                    }
+                    _ => return Err(vec![TypeError::InvalidComponent]),
                 }
             }
 
@@ -340,11 +333,11 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
                         ctx.insert_type(param.name.name.clone(), tv.clone());
                         Ok((param.name.name.to_owned(), tv))
                     })
-                    .collect::<Result<HashMap<String, Type>, TypeError>>()?,
+                    .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
                 None => HashMap::default(),
             };
 
-            let params: Result<Vec<(Subst, TFnParam)>, TypeError> = params
+            let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = params
                 .iter_mut()
                 .map(|e_param| {
                     let (ps, pa, t_param) = infer_fn_param(e_param, ctx, &type_params_map)?;
@@ -427,12 +420,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
                 let name = &id.name;
                 let binding = ctx.lookup_binding(name)?;
                 if !binding.mutable {
-                    return Err(
-                        Report::new(TypeError::NonMutableBindingAssignment(Box::from(
-                            assign.to_owned(),
-                        )))
-                        .attach_printable(format!("can't assign to non-mutable binder '{name}'")),
-                    );
+                    return Err(vec![TypeError::NonMutableBindingAssignment(Box::from(
+                        assign.to_owned(),
+                    ))]);
                 }
             }
 
@@ -558,8 +548,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
         }
         ExprKind::Await(Await { expr, .. }) => {
             if !ctx.is_async() {
-                return Err(Report::new(TypeError::AwaitOutsideOfAsync)
-                    .attach_printable("Can't use `await` inside non-async lambda"));
+                return Err(vec![TypeError::AwaitOutsideOfAsync]);
             }
 
             let (s1, t1) = infer_expr(ctx, expr)?;
@@ -589,10 +578,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
                         match &mut t.kind {
                             TypeKind::Tuple(types) => ts.append(types),
                             _ => {
-                                return Err(Report::new(TypeError::TupleSpreadOutsideTuple)
-                                    .attach_printable(
-                                        "Can only spread tuple types inside a tuple",
-                                    ))
+                                return Err(vec![TypeError::TupleSpreadOutsideTuple]);
                             }
                         }
                     }
@@ -628,7 +614,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
             exprs, quasis: _, ..
         }) => {
             let t = Type::from(TypeKind::Keyword(TKeyword::String));
-            let result: Result<Vec<(Subst, Type)>, TypeError> =
+            let result: Result<Vec<(Subst, Type)>, Vec<TypeError>> =
                 exprs.iter_mut().map(|expr| infer_expr(ctx, expr)).collect();
             // We ignore the types of expressions if there are any because any expression
             // in JavaScript has a string representation.
@@ -685,7 +671,7 @@ fn infer_let(
     body: &mut Expr,
     ctx: &mut Context,
     pu: &PatternUsage,
-) -> Result<(Subst, Type), TypeError> {
+) -> Result<(Subst, Type), Vec<TypeError>> {
     ctx.push_scope(ctx.is_async());
     let (pa, s1) = infer_pattern_and_init(pat, type_ann, init, ctx, pu)?;
 
@@ -714,7 +700,7 @@ fn infer_property_type(
     obj_t: &Type,
     prop: &mut MemberProp,
     ctx: &mut Context,
-) -> Result<(Subst, Type), TypeError> {
+) -> Result<(Subst, Type), Vec<TypeError>> {
     match &obj_t.kind {
         TypeKind::Generic(_) => {
             // TODO: Improve performance by getting the property type first and
@@ -726,10 +712,9 @@ fn infer_property_type(
         }
         TypeKind::Var(TVar { constraint, .. }) => match constraint {
             Some(constraint) => infer_property_type(constraint, prop, ctx),
-            None => Err(
-                Report::new(TypeError::PossiblyNotAnObject(Box::from(obj_t.to_owned())))
-                    .attach_printable("Cannot read property on unconstrained type param"),
-            ),
+            None => Err(vec![TypeError::PossiblyNotAnObject(Box::from(
+                obj_t.to_owned(),
+            ))]),
         },
         TypeKind::Object(obj) => get_prop_value(obj, prop, ctx),
         TypeKind::Ref(_) => {
@@ -779,51 +764,27 @@ fn infer_property_type(
                     let (prop_s, prop_t) = infer_expr(ctx, expr)?;
 
                     match &prop_t.kind {
-                        TypeKind::Keyword(keyword) => match keyword {
-                            TKeyword::Number => {
-                                // TODO: remove duplicate types
-                                let mut elem_types = elem_types.to_owned();
-                                elem_types.push(Type::from(TypeKind::Keyword(TKeyword::Undefined)));
-                                let t = Type::from(TypeKind::Union(elem_types));
-                                Ok((prop_s, t))
+                        TypeKind::Keyword(TKeyword::Number) => {
+                            // TODO: remove duplicate types
+                            let mut elem_types = elem_types.to_owned();
+                            elem_types.push(Type::from(TypeKind::Keyword(TKeyword::Undefined)));
+                            let t = Type::from(TypeKind::Union(elem_types));
+                            Ok((prop_s, t))
+                        }
+                        TypeKind::Lit(types::TLit::Num(index)) => {
+                            let index: usize = index.parse().unwrap();
+                            match elem_types.get(index) {
+                                Some(t) => Ok((prop_s, t.to_owned())),
+                                None => Err(vec![TypeError::IndexOutOfBounds(
+                                    Box::from(obj_t.to_owned()),
+                                    Box::from(prop_t.to_owned()),
+                                )]),
                             }
-                            _ => Err(Report::new(TypeError::InvalidIndex(
-                                Box::from(obj_t.to_owned()),
-                                Box::from(prop_t.to_owned()),
-                            ))
-                            .attach_printable(format!(
-                                "{keyword} is an invalid indexer for tuple types"
-                            ))),
-                        },
-                        TypeKind::Lit(lit) => match lit {
-                            types::TLit::Num(index) => {
-                                let index: usize = index.parse().unwrap();
-                                match elem_types.get(index) {
-                                    Some(t) => Ok((prop_s, t.to_owned())),
-                                    None => Err(Report::new(TypeError::IndexOutOfBounds(
-                                        Box::from(obj_t.to_owned()),
-                                        Box::from(prop_t.to_owned()),
-                                    ))
-                                    .attach_printable(format!(
-                                        "{index} is out of bounds for {obj_t}"
-                                    ))),
-                                }
-                            }
-                            _ => Err(Report::new(TypeError::InvalidIndex(
-                                Box::from(obj_t.to_owned()),
-                                Box::from(prop_t.to_owned()),
-                            ))
-                            .attach_printable(format!(
-                                "{lit} is an invalid indexer for tuple types"
-                            ))),
-                        },
-                        _ => Err(Report::new(TypeError::InvalidIndex(
+                        }
+                        _ => Err(vec![TypeError::InvalidIndex(
                             Box::from(obj_t.to_owned()),
                             Box::from(prop_t.to_owned()),
-                        ))
-                        .attach_printable(format!(
-                            "{prop_t} is an invalid indexer for tuple types"
-                        ))),
+                        )]),
                     }
                 }
             }
@@ -838,7 +799,7 @@ fn get_prop_value(
     obj: &TObject,
     prop: &mut MemberProp,
     ctx: &mut Context,
-) -> Result<(Subst, Type), TypeError> {
+) -> Result<(Subst, Type), Vec<TypeError>> {
     let elems = &obj.elems;
     match prop {
         MemberProp::Ident(Ident { name, .. }) => {
@@ -860,8 +821,7 @@ fn get_prop_value(
                     let t = get_property_type(prop);
                     Ok((Subst::default(), t))
                 }
-                None => Err(Report::new(TypeError::MissingKey(name.to_owned()))
-                    .attach_printable(format!("Object type doesn't contain key {name}."))),
+                None => Err(vec![TypeError::MissingKey(name.to_owned())]),
             }
         }
         MemberProp::Computed(ComputedPropName { expr, .. }) => {
@@ -871,73 +831,53 @@ fn get_prop_value(
             let prop_s_clone = prop_s.clone();
 
             let result = match &prop_t.kind {
-                TypeKind::Keyword(keyword) => match keyword {
-                    TKeyword::String => {
-                        let mut value_types: Vec<Type> = elems
-                            .iter()
-                            .filter_map(|elem| match elem {
-                                // TODO: include index types in the future
-                                // Call signatures aren't included because they can't be accessed
-                                // as members.  What about .constructor?
-                                types::TObjElem::Call(_) => None,
-                                types::TObjElem::Constructor(_) => None,
-                                types::TObjElem::Index(_) => None,
-                                types::TObjElem::Prop(prop) => {
-                                    // TODO: handle generic object properties
-                                    Some(prop.t.to_owned())
-                                }
-                            })
-                            .collect();
-
-                        // We can't tell if the property is in the object or not because the
-                        // key is a string whose exact value is unknown at compile time.
-                        value_types.push(Type::from(TypeKind::Keyword(TKeyword::Undefined)));
-                        let t = Type::from(TypeKind::Union(value_types));
-
-                        Ok((prop_s, t))
-                    }
-                    _ => Err(
-                        Report::new(TypeError::InvalidKey(Box::from(prop_t.to_owned())))
-                            .attach_printable(format!(
-                                "{keyword} is an invalid key for object types"
-                            )),
-                    ),
-                },
-                TypeKind::Lit(lit) => match lit {
-                    types::TLit::Str(key) => {
-                        let prop = elems.iter().find_map(|elem| match elem {
+                TypeKind::Keyword(TKeyword::String) => {
+                    let mut value_types: Vec<Type> = elems
+                        .iter()
+                        .filter_map(|elem| match elem {
+                            // TODO: include index types in the future
+                            // Call signatures aren't included because they can't be accessed
+                            // as members.  What about .constructor?
                             types::TObjElem::Call(_) => None,
                             types::TObjElem::Constructor(_) => None,
                             types::TObjElem::Index(_) => None,
                             types::TObjElem::Prop(prop) => {
-                                if prop.name == TPropKey::StringKey(key.to_owned()) {
-                                    Some(prop)
-                                } else {
-                                    None
-                                }
-                            }
-                        });
-
-                        match prop {
-                            Some(prop) => {
                                 // TODO: handle generic object properties
-                                Ok((Subst::default(), prop.t.to_owned()))
+                                Some(prop.t.to_owned())
                             }
-                            None => Err(Report::new(TypeError::MissingKey(key.to_owned()))
-                                .attach_printable(format!(
-                                    "Object type doesn't contain key {key}."
-                                ))),
+                        })
+                        .collect();
+
+                    // We can't tell if the property is in the object or not because the
+                    // key is a string whose exact value is unknown at compile time.
+                    value_types.push(Type::from(TypeKind::Keyword(TKeyword::Undefined)));
+                    let t = Type::from(TypeKind::Union(value_types));
+
+                    Ok((prop_s, t))
+                }
+                TypeKind::Lit(types::TLit::Str(key)) => {
+                    let prop = elems.iter().find_map(|elem| match elem {
+                        types::TObjElem::Call(_) => None,
+                        types::TObjElem::Constructor(_) => None,
+                        types::TObjElem::Index(_) => None,
+                        types::TObjElem::Prop(prop) => {
+                            if prop.name == TPropKey::StringKey(key.to_owned()) {
+                                Some(prop)
+                            } else {
+                                None
+                            }
                         }
+                    });
+
+                    match prop {
+                        Some(prop) => {
+                            // TODO: handle generic object properties
+                            Ok((Subst::default(), prop.t.to_owned()))
+                        }
+                        None => Err(TypeError::MissingKey(key.to_owned())),
                     }
-                    _ => Err(
-                        Report::new(TypeError::InvalidKey(Box::from(prop_t.to_owned())))
-                            .attach_printable(format!("{lit} is an invalid key for object types")),
-                    ),
-                },
-                _ => Err(
-                    Report::new(TypeError::InvalidKey(Box::from(prop_t.to_owned())))
-                        .attach_printable(format!("{prop_t} is an invalid key for object types")),
-                ),
+                }
+                _ => Err(TypeError::InvalidKey(Box::from(prop_t.to_owned()))),
             };
 
             match result {
@@ -952,7 +892,7 @@ fn get_prop_value(
                         .collect();
 
                     if indexers.is_empty() {
-                        Err(err)
+                        Err(vec![err])
                     } else {
                         for indexer in indexers {
                             let result = unify(&prop_t_clone, &indexer.key.t, ctx);
@@ -967,11 +907,7 @@ fn get_prop_value(
                                 return Ok((s, t));
                             }
                         }
-                        Err(
-                            Report::new(TypeError::InvalidKey(Box::from(prop_t))).attach_printable(
-                                format!("{prop_t_clone} is an invalid key for object types"),
-                            ),
-                        )
+                        Err(vec![TypeError::InvalidKey(Box::from(prop_t))])
                     }
                 }
             }

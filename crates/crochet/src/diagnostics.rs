@@ -1,12 +1,12 @@
 use ariadne::{Config, Label, Report as AriadneReport, ReportKind, Source};
-use crochet_infer::TypeError;
-use error_stack::Report;
 
-use crate::compile_error::CompileError;
 use crochet_ast::{
     types::{Type, TypeKind},
     values::{ExprKind, Span},
 };
+use crochet_infer::TypeError;
+
+use crate::compile_error::CompileError;
 
 fn get_provenance_spans(t1: &Type, t2: &Type) -> Option<(Span, Span)> {
     let prov1 = t1.provenance.as_ref().unwrap();
@@ -41,77 +41,81 @@ fn get_diagnostic_string(
     None
 }
 
-pub fn get_diagnostics(report: Report<CompileError>, src: &str) -> Vec<String> {
-    let diagnostics: Vec<_> = report
-        .frames()
-        .filter_map(|frame| match frame.downcast_ref::<TypeError>() {
-            Some(context) => match context {
-                TypeError::UnificationError(t1, t2) => get_diagnostic_string(
-                    t1,
-                    t2,
-                    src,
-                    "Incompatible types",
-                    &format!("{t1}"),
-                    &format!("{t2}"),
-                ),
-                TypeError::TooFewArguments(app_t, lam_t) => {
-                    let provided = if let TypeKind::App(app) = &app_t.kind {
-                        app.args.len()
-                    } else {
-                        0
-                    };
-                    let expected = if let TypeKind::Lam(lam) = &lam_t.kind {
-                        lam.params.len()
-                    } else {
-                        0
-                    };
-                    let expr = if let Some(prov) = &lam_t.provenance {
-                        prov.get_expr()
-                    } else {
-                        None
-                    };
-                    if let Some(expr) = expr {
-                        if let ExprKind::Lambda(lam) = &expr.kind {
-                            // TODO: Add a span to lam.params so that we don't
-                            // have to compute it here.
-                            println!("params = {:#?}", lam.params)
+pub fn get_diagnostics(report: CompileError, src: &str) -> Vec<String> {
+    let diagnostics = match report {
+        CompileError::TypeError(errors) => {
+            errors
+                .iter()
+                .filter_map(|error| {
+                    match error {
+                        TypeError::UnificationError(t1, t2) => get_diagnostic_string(
+                            t1,
+                            t2,
+                            src,
+                            "Incompatible types",
+                            &format!("{t1}"),
+                            &format!("{t2}"),
+                        ),
+                        TypeError::TooFewArguments(app_t, lam_t) => {
+                            let provided = if let TypeKind::App(app) = &app_t.kind {
+                                app.args.len()
+                            } else {
+                                0
+                            };
+                            let expected = if let TypeKind::Lam(lam) = &lam_t.kind {
+                                lam.params.len()
+                            } else {
+                                0
+                            };
+                            let expr = if let Some(prov) = &lam_t.provenance {
+                                prov.get_expr()
+                            } else {
+                                None
+                            };
+                            if let Some(expr) = expr {
+                                if let ExprKind::Lambda(lam) = &expr.kind {
+                                    // TODO: Add a span to lam.params so that we don't
+                                    // have to compute it here.
+                                    println!("params = {:#?}", lam.params)
+                                }
+                            }
+                            // TODO: figure out how to get a span for just the function
+                            // signature or just the param list.
+                            get_diagnostic_string(
+                                app_t,
+                                lam_t,
+                                src,
+                                "Not enough args provided",
+                                &format!("was passed {provided} args"),
+                                &format!("expected {expected} args"),
+                            )
+                        }
+                        TypeError::IndexOutOfBounds(obj_t, prop_t) => get_diagnostic_string(
+                            obj_t,
+                            prop_t,
+                            src,
+                            "Index out of bounds",
+                            "for this tuple",
+                            &format!("{prop_t} is out of bounds"),
+                        ),
+                        TypeError::InvalidIndex(obj_t, prop_t) => get_diagnostic_string(
+                            obj_t,
+                            prop_t,
+                            src,
+                            "Invalid Index",
+                            "for tuples",
+                            &format!("{prop_t} is not a valid index"),
+                        ),
+                        error => {
+                            println!("TODO: handle {error}");
+                            None
                         }
                     }
-                    // TODO: figure out how to get a span for just the function
-                    // signature or just the param list.
-                    get_diagnostic_string(
-                        app_t,
-                        lam_t,
-                        src,
-                        "Not enough args provided",
-                        &format!("was passed {provided} args"),
-                        &format!("expected {expected} args"),
-                    )
-                }
-                TypeError::IndexOutOfBounds(obj_t, prop_t) => get_diagnostic_string(
-                    obj_t,
-                    prop_t,
-                    src,
-                    "Index out of bounds",
-                    "for this tuple",
-                    &format!("{prop_t} is out of bounds"),
-                ),
-                TypeError::InvalidIndex(obj_t, prop_t) => get_diagnostic_string(
-                    obj_t,
-                    prop_t,
-                    src,
-                    "Invalid Index",
-                    "for tuples",
-                    &format!("{prop_t} is not a valid index"),
-                ),
-                error => {
-                    println!("TODO: handle {error}");
-                    None
-                }
-            },
-            None => None,
-        })
-        .collect();
+                })
+                .collect::<Vec<String>>()
+        }
+        CompileError::ParseError(error) => vec![error.to_string()],
+    };
 
     diagnostics
 }

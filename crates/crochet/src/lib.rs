@@ -1,5 +1,3 @@
-use core::panic::Location;
-use error_stack::{Report, Result, ResultExt};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
 use std::str;
@@ -49,18 +47,18 @@ pub unsafe extern "C" fn deallocate(ptr: *mut c_void, length: usize) {
 }
 
 fn _compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
-    let mut program = match crochet_parser::parse(input).change_context(CompileError) {
+    let mut program = match crochet_parser::parse(input) {
         Ok(program) => program,
-        Err(error) => return Err(error),
+        Err(error) => return Err(CompileError::ParseError(error)),
     };
 
     let js = crochet_codegen::js::codegen_js(&program);
 
     // TODO: return errors as part of CompileResult
     let mut ctx = parse_dts(lib).unwrap();
-    let ctx = match infer_prog(&mut program, &mut ctx).change_context(CompileError) {
+    let ctx = match infer_prog(&mut program, &mut ctx) {
         Ok(ctx) => ctx,
-        Err(error) => return Err(error),
+        Err(error) => return Err(CompileError::TypeError(error)),
     };
     let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
 
@@ -78,11 +76,6 @@ unsafe fn string_to_wasm_string(input: &str) -> WasmString {
 ///
 #[no_mangle]
 pub unsafe extern "C" fn compile(input: *const c_char, lib: *const c_char) -> *const CompileResult {
-    Report::install_debug_hook::<Location>(|_location, _context| {
-        // This function doesn't do anything b/c we want to override the default
-        // behavior of Locations being printed.
-    });
-
     let input = CStr::from_ptr(input).to_str().unwrap();
     let lib = CStr::from_ptr(lib).to_str().unwrap();
 
