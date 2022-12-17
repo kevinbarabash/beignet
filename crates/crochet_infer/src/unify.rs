@@ -1,4 +1,3 @@
-use error_stack::{Report, Result};
 use std::cmp;
 use std::collections::BTreeSet;
 
@@ -14,7 +13,7 @@ use crate::unify_mut::unify_mut;
 use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
-pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
+pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, Vec<TypeError>> {
     // All binding must be done first
     match (&t1.kind, &t2.kind) {
         (TypeKind::Var(tv), _) => return bind(tv, t2, Relation::SubType, ctx),
@@ -49,8 +48,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
         };
 
         // It's NOT okay to use an immutable in place of a mutable one
-        return Err(Report::new(TypeError::UnexpectedImutableValue)
-            .attach_printable("Cannot use immutable type where a mutable type was expected"));
+        return Err(vec![TypeError::UnexpectedImutableValue]);
     }
     // It's okay to use a mutable type in place of an immutable one so it's fine
     // to continue with the non-mutable unify() call if t1 is mutable as long as
@@ -67,11 +65,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             if b {
                 Ok(Subst::default())
             } else {
-                Err(Report::new(TypeError::UnificationError(
+                Err(vec![TypeError::UnificationError(
                     Box::from(t1.to_owned()),
                     Box::from(t2.to_owned()),
-                ))
-                .attach_printable("Unification failure"))
+                )])
             }
         }
         (TypeKind::App(app1), TypeKind::App(app2)) => {
@@ -88,10 +85,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 let s1 = unify(&app1.ret.apply(&s), &app2.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
             } else {
-                Err(Report::new(TypeError::UnificationError(
+                Err(vec![TypeError::UnificationError(
                     Box::from(t1.to_owned()),
                     Box::from(t2.to_owned()),
-                )))
+                )])
             }
         }
         (TypeKind::Lam(lam1), TypeKind::Lam(lam2)) => {
@@ -113,11 +110,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 let s1 = unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
                 Ok(compose_subs(&s, &s1))
             } else {
-                Err(Report::new(TypeError::UnificationError(
+                Err(vec![TypeError::UnificationError(
                     Box::from(t1.to_owned()),
                     Box::from(t2.to_owned()),
-                ))
-                .attach_printable("Couldn't unify lambdas"))
+                )])
             }
         }
         // NOTE: this arm is only hit by the `infer_skk` test case
@@ -149,9 +145,9 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 .collect();
 
             if callables.is_empty() {
-                Err(Report::new(TypeError::ObjectIsNotCallable(Box::from(
+                Err(vec![TypeError::ObjectIsNotCallable(Box::from(
                     t1.to_owned(),
-                ))))
+                ))])
             } else {
                 for callable in callables {
                     let result = unify(t1, &callable, ctx);
@@ -160,7 +156,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     }
                 }
                 // TODO: include a report of which callable signatures were tried
-                Err(Report::new(TypeError::NoValidCallable))
+                Err(vec![TypeError::NoValidCallable])
             }
         }
         (TypeKind::App(app), TypeKind::Lam(lam)) => {
@@ -200,7 +196,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 match &arg.kind {
                     TypeKind::Rest(spread) => match &spread.as_ref().kind {
                         TypeKind::Tuple(types) => args.append(&mut types.to_owned()),
-                        _ => return Err(Report::new(TypeError::InvalidSpread(spread.to_owned()))),
+                        _ => return Err(vec![TypeError::InvalidSpread(spread.to_owned())]),
                     },
                     _ => args.push(arg.to_owned()),
                 }
@@ -216,11 +212,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                         let max_regular_arg_count = lam.params.len() - 1;
 
                         if args.len() < max_regular_arg_count - optional_count {
-                            return Err(Report::new(TypeError::TooFewArguments(
+                            return Err(vec![TypeError::TooFewArguments(
                                 Box::from(t1.to_owned()),
                                 Box::from(t2.to_owned()),
-                            ))
-                            .attach_printable("Not enough args provided"));
+                            )]);
                         }
 
                         let regular_arg_count = cmp::min(max_regular_arg_count, args.len());
@@ -271,11 +266,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                         params.extend(tuple.to_owned()); // Add each type from the tuple type
 
                         if args.len() < params.len() {
-                            return Err(Report::new(TypeError::TooFewArguments(
+                            return Err(vec![TypeError::TooFewArguments(
                                 Box::from(t1.to_owned()),
                                 Box::from(t2.to_owned()),
-                            ))
-                            .attach_printable("Not enough args provided"));
+                            )]);
                         }
 
                         // NOTE: Any extra args are ignored.
@@ -287,11 +281,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     let params = lam.params.iter().map(|p| p.get_type()).collect();
 
                     if args.len() < lam.params.len() - optional_count {
-                        return Err(Report::new(TypeError::TooFewArguments(
+                        return Err(vec![TypeError::TooFewArguments(
                             Box::from(t1.to_owned()),
                             Box::from(t2.to_owned()),
-                        ))
-                        .attach_printable("Not enough args provided"));
+                        )]);
                     }
 
                     // NOTE: Any extra args are ignored.
@@ -300,7 +293,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             };
 
             // Unify args with params
-            let mut reports: Vec<Report<TypeError>> = vec![];
+            let mut reports: Vec<TypeError> = vec![];
             for (p1, p2) in args.iter().zip(params) {
                 let arg = p1.apply(&s);
                 let param = p2.apply(&s);
@@ -308,12 +301,12 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 // Each argument must be a subtype of the corresponding param.
                 match unify(&arg, &param, ctx) {
                     Ok(s1) => s = compose_subs(&s, &s1),
-                    Err(report) => reports.push(report),
+                    Err(mut report) => reports.append(&mut report),
                 }
             }
 
-            if let Some(report) = merge_reports(reports) {
-                return Err(report);
+            if !reports.is_empty() {
+                return Err(reports);
             }
 
             // Unify return types
@@ -329,11 +322,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     return result;
                 }
             }
-            Err(Report::new(TypeError::NoValidOverload))
+            Err(vec![TypeError::NoValidOverload])
         }
         (TypeKind::Object(obj1), TypeKind::Object(obj2)) => {
             // It's okay if t1 has extra properties, but it has to have all of t2's properties.
-            let result: Result<Vec<_>, TypeError> = obj2
+            let result: Result<Vec<_>, Vec<TypeError>> = obj2
                 .elems
                 .iter()
                 .map(|e2| {
@@ -383,11 +376,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
 
                     // TODO: track which properties t1 is missing from t2 so that
                     // we can report a more specific error.
-                    Err(Report::new(TypeError::UnificationError(
+                    Err(vec![TypeError::UnificationError(
                         Box::from(t1.to_owned()),
                         Box::from(t2.to_owned()),
-                    ))
-                    .attach_printable("Unification failure"))
+                    )])
                 })
                 .collect();
 
@@ -403,7 +395,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 match &t.kind {
                     TypeKind::Rest(rest_type) => {
                         if maybe_rest2.is_some() {
-                            return Err(Report::new(TypeError::MoreThanOneRestPattern));
+                            return Err(vec![TypeError::MoreThanOneRestPattern]);
                         }
                         maybe_rest2 = Some(rest_type.as_ref().to_owned());
                     }
@@ -420,8 +412,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             // If it doesn't, we return an error.
             if types1.len() < min_len {
                 // TODO: include the types in the error message
-                return Err(Report::new(TypeError::NotEnoughElementsToUnpack)
-                    .attach_printable("not enough elements to unpack"));
+                return Err(vec![TypeError::NotEnoughElementsToUnpack]);
             }
 
             let mut types1 = types1.to_owned();
@@ -431,11 +422,11 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
 
             let mut ss: Vec<Subst> = vec![];
 
-            let mut reports: Vec<_> = vec![];
+            let mut reports: Vec<TypeError> = vec![];
             for (t1, t2) in before1.iter().zip(before2.iter()) {
                 match unify(t1, t2, ctx) {
                     Ok(s) => ss.push(s),
-                    Err(report) => reports.push(report),
+                    Err(mut report) => reports.append(&mut report),
                 }
             }
 
@@ -449,14 +440,15 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 for (t1, t2) in after1.iter().zip(after2.iter()) {
                     match unify(t1, t2, ctx) {
                         Ok(s) => ss.push(s),
-                        Err(report) => reports.push(report),
+                        Err(mut report) => reports.append(&mut report),
                     }
                 }
             }
 
-            match merge_reports(reports) {
-                Some(report) => Err(report),
-                None => Ok(compose_many_subs(&ss)),
+            if reports.is_empty() {
+                Ok(compose_many_subs(&ss))
+            } else {
+                Err(reports)
             }
         }
         (TypeKind::Tuple(tuple_types), TypeKind::Array(array_type)) => {
@@ -498,11 +490,10 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
 
             match b {
                 true => Ok(compose_many_subs(&ss)),
-                false => Err(Report::new(TypeError::UnificationError(
+                false => Err(vec![TypeError::UnificationError(
                     Box::from(t1.to_owned()),
                     Box::from(t2.to_owned()),
-                ))
-                .attach_printable("Unification failure")),
+                )]),
             }
         }
         (TypeKind::Object(obj), TypeKind::Intersection(types)) => {
@@ -555,8 +546,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     let s = compose_subs(&s2, &s1);
                     Ok(s)
                 }
-                _ => Err(Report::new(TypeError::UnificationIsUndecidable)
-                    .attach_printable("Unification is undecidable")),
+                _ => Err(vec![TypeError::UnificationIsUndecidable]),
             }
         }
         (TypeKind::Intersection(types), TypeKind::Object(obj)) => {
@@ -609,8 +599,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                     let s = compose_subs(&s_rest, &s_obj);
                     Ok(s)
                 }
-                _ => Err(Report::new(TypeError::UnificationIsUndecidable)
-                    .attach_printable("Unification is undecidable")),
+                _ => Err(vec![TypeError::UnificationIsUndecidable]),
             }
         }
         (TypeKind::Ref(alias1), TypeKind::Ref(alias2)) => {
@@ -626,7 +615,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                         Ok(compose_many_subs_with_context(&ss))
                     }
                     (None, None) => Ok(Subst::default()),
-                    _ => Err(Report::new(TypeError::AliasTypeMismatch)),
+                    _ => Err(vec![TypeError::AliasTypeMismatch]),
                 }
             } else {
                 todo!("unify(): handle aliases that point to another alias")
@@ -661,21 +650,19 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
             (TKeyword::Undefined, TKeyword::Undefined) => Ok(Subst::new()),
             // Is 'never' a subtype of all types?
             (TKeyword::Never, TKeyword::Null) => Ok(Subst::new()),
-            _ => Err(Report::new(TypeError::UnificationError(
+            _ => Err(vec![TypeError::UnificationError(
                 Box::from(t1.to_owned()),
                 Box::from(t2.to_owned()),
-            ))
-            .attach_printable(format!("Can't unify {t1} with {t2}"))),
+            )]),
         },
         (v1, v2) => {
             if v1 == v2 {
                 Ok(Subst::new())
             } else {
-                Err(Report::new(TypeError::UnificationError(
+                Err(vec![TypeError::UnificationError(
                     Box::from(t1.to_owned()),
                     Box::from(t2.to_owned()),
-                ))
-                .attach_printable("Unification failure"))
+                )])
             }
         }
     };
@@ -691,7 +678,7 @@ enum Relation {
     SuperType,
 }
 
-fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, TypeError> {
+fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Vec<TypeError>> {
     // | t == TVar a     = return nullSubst
     // | occursCheck a t = throwError $ InfiniteType a t
     // | otherwise       = return $ Map.singleton a t
@@ -731,7 +718,7 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &Context) -> Result<Subst, Type
                     }
                 }
 
-                Err(Report::new(TypeError::InfiniteType).attach_printable("InfiniteType"))
+                Err(vec![TypeError::InfiniteType])
             } else {
                 if let Some(c) = &tv.constraint {
                     // We only care whether the `unify()` call fails or not.  If it succeeds,
@@ -768,16 +755,6 @@ fn occurs_check(tv: &TVar, t: &Type) -> bool {
     t.ftv().contains(tv)
 }
 
-fn merge_reports(reports: Vec<Report<TypeError>>) -> Option<Report<TypeError>> {
-    reports.into_iter().fold(None, |accum, report| match accum {
-        Some(mut accum) => {
-            accum.extend_one(report);
-            Some(accum)
-        }
-        None => Some(report),
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -797,7 +774,7 @@ mod tests {
     }
 
     #[test]
-    fn literals_are_subtypes_of_corresponding_keywords() -> Result<(), TypeError> {
+    fn literals_are_subtypes_of_corresponding_keywords() -> Result<(), Vec<TypeError>> {
         let ctx = Context::default();
 
         let result = unify(
@@ -825,7 +802,7 @@ mod tests {
     }
 
     #[test]
-    fn object_subtypes() -> Result<(), TypeError> {
+    fn object_subtypes() -> Result<(), Vec<TypeError>> {
         let ctx = Context::default();
 
         let elems = vec![

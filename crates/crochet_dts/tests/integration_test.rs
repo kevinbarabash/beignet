@@ -1,38 +1,12 @@
-use error_stack::Report;
 use std::fs;
 
 use crochet_ast::values::Program;
 use crochet_dts::parse_dts::*;
-use crochet_infer::expand_type;
+use crochet_infer::{expand_type, TypeError};
 use crochet_parser::parse;
 
-use core::{any::TypeId, panic::Location};
-use error_stack::{AttachmentKind, FrameKind};
-
-pub fn messages<E>(report: &Report<E>) -> Vec<String> {
-    report
-        .frames()
-        .map(|frame| match frame.kind() {
-            FrameKind::Context(context) => context.to_string(),
-            FrameKind::Attachment(AttachmentKind::Printable(attachment)) => attachment.to_string(),
-            FrameKind::Attachment(AttachmentKind::Opaque(_)) => {
-                #[cfg(all(rust_1_65, feature = "std"))]
-                if frame.type_id() == TypeId::of::<Backtrace>() {
-                    return String::from("Backtrace");
-                }
-                #[cfg(feature = "spantrace")]
-                if frame.type_id() == TypeId::of::<SpanTrace>() {
-                    return String::from("SpanTrace");
-                }
-                if frame.type_id() == TypeId::of::<Location>() {
-                    String::from("Location")
-                } else {
-                    String::from("opaque")
-                }
-            }
-            FrameKind::Attachment(_) => panic!("attachment was not covered"),
-        })
-        .collect()
+pub fn messages(report: &[TypeError]) -> Vec<String> {
+    report.iter().map(|error| error.to_string()).collect()
 }
 
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
@@ -49,9 +23,17 @@ fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
             panic!("Error parsing expression");
         }
     };
-    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
-
-    (prog, ctx)
+    match crochet_infer::infer_prog(&mut prog, &mut ctx) {
+        Ok(ctx) => (prog, ctx),
+        Err(error) => {
+            let message = error
+                .iter()
+                .map(|error| error.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+            panic!("{message}");
+        }
+    }
 }
 
 fn infer_prog_with_type_error(lib: &str, src: &str) -> Vec<String> {
@@ -98,7 +80,7 @@ fn infer_method_on_readonly_array() {
 }
 
 #[test]
-#[should_panic = "Object type doesn't contain key splice."]
+#[should_panic = "TypeError::MissingKey: object doesn't have a splice property"]
 fn infer_mutable_method_on_readonly_array_errors() {
     let src = r#"
     declare let arr: string[];
@@ -301,11 +283,7 @@ fn infer_index_with_incorrect_key_type_on_interface() {
 
     assert_eq!(
         error_messages,
-        vec![
-            "\"hello\" is an invalid key for object types",
-            "Location",
-            "TypeError::InvalidKey: \"hello\" is not a valid key"
-        ]
+        vec!["TypeError::InvalidKey: \"hello\" is not a valid key"]
     );
 }
 

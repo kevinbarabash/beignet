@@ -1,5 +1,3 @@
-use core::panic::Location;
-use error_stack::{Report, Result, ResultExt};
 use pretty_assertions::assert_eq;
 use std::env;
 use std::fs;
@@ -59,11 +57,6 @@ fn pass(in_path: PathBuf) {
 
 #[testing_macros::fixture("tests/errors/*.crochet")]
 fn fail(in_path: PathBuf) {
-    Report::install_debug_hook::<Location>(|_location, _context| {
-        // This function doesn't do anything b/c we want to override the default
-        // behavior of Locations being printed.
-    });
-
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
 
     let mode = match env::var("UPDATE") {
@@ -99,18 +92,18 @@ fn fail(in_path: PathBuf) {
 }
 
 fn compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
-    let mut program = match crochet_parser::parse(input).change_context(CompileError) {
+    let mut program = match crochet_parser::parse(input) {
         Ok(program) => program,
-        Err(error) => return Err(error),
+        Err(error) => return Err(CompileError::ParseError(error)),
     };
 
     let js = crochet_codegen::js::codegen_js(&program);
 
     // TODO: return errors as part of CompileResult
     let mut ctx = parse_dts(lib).unwrap();
-    let ctx = match infer_prog(&mut program, &mut ctx).change_context(CompileError) {
+    let ctx = match infer_prog(&mut program, &mut ctx) {
         Ok(ctx) => ctx,
-        Err(error) => return Err(error),
+        Err(error) => return Err(CompileError::TypeError(error)),
     };
     let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
 

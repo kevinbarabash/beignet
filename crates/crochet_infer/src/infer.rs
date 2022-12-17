@@ -1,6 +1,5 @@
 use crochet_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
 use crochet_ast::values::*;
-use error_stack::{Report, Result};
 
 use crate::context::Context;
 use crate::infer_expr::infer_expr as infer_expr_rec;
@@ -10,7 +9,7 @@ use crate::type_error::TypeError;
 use crate::update::*;
 use crate::util::*;
 
-pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, TypeError> {
+pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<TypeError>> {
     // TODO: replace with Class type once it exists
     // We use {_name: "Promise"} to differentiate it from other
     // object types.
@@ -38,7 +37,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
     // module definitions.
     ctx.push_scope(false);
 
-    let mut reports: Vec<Report<TypeError>> = vec![];
+    let mut reports: Vec<TypeError> = vec![];
 
     // TODO: figure out how report multiple errors
     for stmt in &mut prog.body {
@@ -68,14 +67,14 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
                                                 update_type_ann(type_ann, &s);
                                                 update_pattern(pattern, &s);
                                             }
-                                            Err(report) => reports.push(report),
+                                            Err(mut report) => reports.append(&mut report),
                                         }
                                     }
                                     None => {
                                         // A type annotation should always be provided when using `declare`
-                                        return Err(Report::new(TypeError::MissingTypeAnnotation(
+                                        return Err(vec![TypeError::MissingTypeAnnotation(
                                             Box::from(stmt.to_owned()),
-                                        )));
+                                        )]);
                                     }
                                 }
                             }
@@ -105,7 +104,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
                                 update_expr(init, &s);
                                 update_pattern(pattern, &s);
                             }
-                            Err(report) => reports.push(report),
+                            Err(mut report) => reports.append(&mut report),
                         }
                     }
                 };
@@ -122,36 +121,27 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Type
 
                     update_type_ann(type_ann, &s);
                 }
-                Err(report) => reports.push(report),
+                Err(mut report) => reports.append(&mut report),
             },
             Statement::Expr { expr, .. } => {
                 match infer_expr_rec(ctx, expr) {
                     // We ignore the type that was inferred, we only care that
                     // it succeeds since we aren't assigning it to variable.
                     Ok((s, _)) => update_expr(expr, &s),
-                    Err(report) => reports.push(report),
+                    Err(mut report) => reports.append(&mut report),
                 }
             }
         };
     }
 
     if reports.is_empty() {
-        return Ok(ctx.to_owned());
+        Ok(ctx.to_owned())
+    } else {
+        Err(reports)
     }
-
-    let report: Option<Report<TypeError>> =
-        reports.into_iter().fold(None, |accum, report| match accum {
-            Some(mut accum) => {
-                accum.extend_one(report);
-                Some(accum)
-            }
-            None => Some(report),
-        });
-
-    Err(report.unwrap())
 }
 
-pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<Type, TypeError> {
+pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<Type, Vec<TypeError>> {
     let (s, t) = infer_expr_rec(ctx, expr)?;
     Ok(close_over(&s, &t, ctx))
 }
