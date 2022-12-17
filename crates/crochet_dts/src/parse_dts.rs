@@ -650,10 +650,5 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
 
     module.visit_with(&mut collector);
 
-    // let values = collector.ctx.scopes.last().unwrap().values.keys();
-    // println!("values = {values:#?}");
-    // let types = collector.ctx.scopes.last().unwrap().types.keys();
-    // println!("types = {types:#?}");
-
     Ok(collector.ctx)
 }

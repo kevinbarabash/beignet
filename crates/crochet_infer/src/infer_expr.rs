@@ -9,7 +9,7 @@ use crochet_ast::values::*;
 
 use types::TObjElem;
 
-use crate::context::Context;
+use crate::context::{Context, Env};
 use crate::expand_type::get_obj_type;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
@@ -86,31 +86,30 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
             let mut results = vec![];
             if let TypeKind::Object(TObject { elems }) = t.kind {
                 for elem in elems {
-                    match elem {
+                    match &elem {
                         TObjElem::Call(_) => (),
                         TObjElem::Constructor(TCallable {
                             params,
                             ret,
-                            type_params,
+                            type_params: _, // TODO: handle constructors with type params
                         }) => {
                             let ret_type = ctx.fresh_var();
                             let call_type = Type::from(TypeKind::App(types::TApp {
                                 args: arg_types.clone(),
                                 ret: Box::from(ret_type.clone()),
                             }));
-                            // TODO: set provenance
 
                             let lam_type = Type::from(TypeKind::Lam(types::TLam {
                                 params: params.clone(),
                                 ret: ret.clone(),
                             }));
 
-                            // NOTE: We don't have to bother with instantiation here
-                            // because we're cloning the all of the types.
-                            // TODO: We really should be instantiating things here
-                            // anyways so that we maintain the uniqueness of type
-                            // parameter IDs.
-                            let lam_type = set_type_params(&lam_type, &type_params);
+                            // We generalize first b/c lam_type isn't generic and
+                            // we need it to be before we can instantiate it.
+                            let t = generalize(&Env::default(), &lam_type);
+                            let mut lam_type = ctx.instantiate(&t);
+                            lam_type.provenance =
+                                Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
 
                             if let Ok(s3) = unify(&call_type, &lam_type, ctx) {
                                 ss.push(s3);

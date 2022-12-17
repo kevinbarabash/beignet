@@ -1,4 +1,4 @@
-use crate::types::Type;
+use crate::types::{TObjElem, Type};
 use crate::values::{Expr, Pattern, Span, TypeAnn};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -6,6 +6,7 @@ pub enum Provenance {
     Expr(Box<Expr>),
     Pattern(Box<Pattern>),
     Type(Box<Type>),
+    TObjElem(Box<TObjElem>),
     TypeAnn(Box<TypeAnn>),
 }
 
@@ -26,6 +27,7 @@ impl Provenance {
                 Some(prov) => prov.get_span(),
                 None => None,
             },
+            Provenance::TObjElem(_) => None, // TODO: add provenance to TObjElem
             Provenance::TypeAnn(type_ann) => Some(type_ann.span.to_owned()),
         }
     }
@@ -46,6 +48,7 @@ impl Provenance {
                 Some(prov) => prov.get_expr(),
                 None => None,
             },
+            Provenance::TObjElem(_) => None,
             Provenance::TypeAnn(_) => None,
         }
     }

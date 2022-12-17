@@ -42,6 +42,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &Context) -> Result<Subst, TypeError> {
                 },
                 types::Provenance::Pattern(_) => (),
                 types::Provenance::Type(_) => (),
+                types::Provenance::TObjElem(_) => (),
                 types::Provenance::TypeAnn(_) => (),
             },
             None => (),
