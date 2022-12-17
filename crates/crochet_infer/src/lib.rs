@@ -37,14 +37,33 @@ mod tests {
     fn infer(input: &str) -> String {
         let mut ctx = Context::default();
         let mut prog = parse(&format!("let x = {input};")).unwrap();
-        let ctx = infer::infer_prog(&mut prog, &mut ctx).unwrap();
-        get_value_type("x", &ctx)
+        match infer::infer_prog(&mut prog, &mut ctx) {
+            Ok(ctx) => get_value_type("x", &ctx),
+            Err(error) => {
+                let message = error
+                    .iter()
+                    .map(|error| error.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                panic!("{message}");
+            }
+        }
     }
 
     fn infer_prog(input: &str) -> Context {
         let mut prog = parse(input).unwrap();
         let mut ctx: Context = Context::default();
-        infer::infer_prog(&mut prog, &mut ctx).unwrap()
+        match infer::infer_prog(&mut prog, &mut ctx) {
+            Ok(ctx) => ctx,
+            Err(error) => {
+                let message = error
+                    .iter()
+                    .map(|error| error.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                panic!("{message}");
+            }
+        }
     }
 
     fn infer_prog_with_type_error(src: &str) -> Vec<String> {
@@ -255,7 +274,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Duplicate identifier in pattern"]
+    #[should_panic = "TypeError::DuplicateIdentInPat: a"]
     fn infer_destructuring_tuple_reused_identifier() {
         let src = r#"
         let [a, a] = [5, true];
@@ -304,7 +323,7 @@ mod tests {
     // }
 
     #[test]
-    #[should_panic = "not enough elements to unpack"]
+    #[should_panic = "TypeError::NotEnoughElementsToUnpack"]
     fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack() {
         let src = r#"
         let [a, b, c, d] = [5, true, "hello"];
@@ -325,7 +344,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = r#"TypeError::UnificationError: "hello", boolean,TypeError::UnificationError: true, string"#]
     fn infer_destructuring_tuple_with_incorrect_type_annotation() {
         let src = r#"
         let [a, b, c]: [number, boolean, string] = [5, "hello", true];
@@ -349,7 +368,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "not enough elements to unpack"]
+    #[should_panic = "TypeError::NotEnoughElementsToUnpack"]
     fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack_with_type_annotation()
     {
         let src = r#"
@@ -424,7 +443,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Duplicate identifier in pattern"]
+    #[should_panic = "TypeError::DuplicateIdentInPat: a"]
     fn infer_destructuring_obj_reused_identifier() {
         let src = "let {x: a, y: a} = {x: 5, y: 10};";
         infer_prog(src);
@@ -492,7 +511,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "TypeError::UnificationError: {x: 5, y: 10}, {foo: t1}"]
     fn missing_property_when_destructuring() {
         infer_prog("let {foo} = {x: 5, y: 10};");
     }
@@ -542,7 +561,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "TypeError::UnificationError: {x: 5}, {x: number, y: number}"]
     fn obj_assignment_with_type_annotation_missing_properties() {
         infer_prog("let p: {x: number, y: number} = {x: 5};");
     }
@@ -592,7 +611,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "TypeError::UnificationError: {a: string, b: boolean}, {c: t2}"]
     fn obj_destructuring_with_type_annotation_missing_param() {
         infer("({c}: {a: string, b: boolean}) => c");
     }
@@ -738,7 +757,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't unify string with number"]
+    #[should_panic = "TypeError::UnificationError: string, number"]
     fn infer_if_let_refutable_is_unification_failure() {
         let src = r#"
         declare let a: string | number;
@@ -770,7 +789,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = r#"TypeError::UnificationError: string, "hello""#]
     fn infer_if_let_is_string_with_literal() {
         // NOTE: This doesn't unify because `string` is not a subtype
         // of the string literal "hello".
@@ -789,7 +808,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "TypeError::UnificationError: {bar: number}, {bar: string}"]
     fn infer_if_let_refutable_is_inside_obj_incorrect_type() {
         let src = r#"
         declare let foo: {bar: string};
@@ -846,7 +865,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = r#"TypeError::UnificationError: {type: "bar", num: t2}, {type: "bar", str: string} | {type: "foo", num: number}"#]
     fn infer_if_let_disjoint_union_no_matches() {
         let src = r#"
         declare let action: {type: "foo", num: number} | {type: "bar", str: string};
@@ -861,7 +880,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't unify string with number"]
+    #[should_panic = "TypeError::UnificationError: string, number"]
     fn infer_if_let_disjoint_union_incorrect_match() {
         let src = r#"
         declare let action: {type: "foo", num: number} | {type: "bar", str: string};
@@ -1008,7 +1027,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "TypeError::UnificationError: true, 5,TypeError::UnificationError: false, 10,TypeError::CantFindIdent: run"]
     fn calling_generic_lambda_inside_lambda() {
         let src = r#"
         let run = () => {
@@ -1107,7 +1126,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Not enough args provided"]
+    #[should_panic = "TypeError::TooFewArguments"]
     fn call_fn_with_rest_param_with_too_few_args() {
         let src = r#"
         let add = (a, b, ...c: number[]) => a + b;
@@ -1170,7 +1189,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't unify number with string"]
+    #[should_panic = "TypeError::UnificationError: number, string"]
     fn lambda_with_incorrect_return_type() {
         let src = r#"
         let add = (a: number, b: number): string => {
@@ -1183,7 +1202,7 @@ mod tests {
 
     // TODO: make this test case return an error
     #[test]
-    #[should_panic = "Can't unify string with number"]
+    #[should_panic = "TypeError::UnificationError: string, number"]
     fn lambda_with_incorrect_param_type() {
         let src = r#"
         let add = (a: number, b: string): number => {
@@ -1207,7 +1226,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = r#"TypeError::UnificationError: "hello", number,TypeError::UnificationError: true, number"#]
     fn call_lam_with_wrong_types() {
         let src = r#"
         declare let add: (a: number, b: number) => number;
@@ -1230,7 +1249,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Not enough args provided"]
+    #[should_panic = "TypeError::TooFewArguments"]
     fn call_lam_with_too_few_params() {
         let src = r#"
         declare let add: (a: number, b: number) => number;
@@ -1265,7 +1284,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Couldn't unify lambdas"]
+    #[should_panic = "TypeError::UnificationError: (x: t2, y: t3, z: t4) => true, (a: number, b: number) => boolean"]
     fn pass_callback_with_too_many_params() {
         // This is not allowed because `fold_num` can't provide all of the params
         // that the callback is expecting and it would result in partial application
@@ -1355,7 +1374,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = r#"TypeError::UnificationError: "hello", number,TypeError::UnificationError: true, number"#]
     fn spread_param_tuples_with_incorrect_types() {
         let src = r#"
         declare let add: (a: number, b: number) => number;
@@ -1397,7 +1416,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = r#"TypeError::UnificationError: "hello", number"#]
     fn rest_param_with_arg_spread_and_incorrect_type() {
         // TODO: handle the spread directly in infer_expr()
         let src = r#"
@@ -1422,7 +1441,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = r#"TypeError::UnificationError: "hello", number"#]
     fn rest_param_with_incorrect_arg_type() {
         let src = r#"
         let fst = (a: number, ...b: number[]) => a;
@@ -1540,7 +1559,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Object type doesn't contain key z."]
+    #[should_panic = r#"TypeError::MissingKey: object doesn't have a z property"#]
     fn infer_missing_member() {
         let src = r#"
         let p = {x: 5, y: 10};
@@ -1551,7 +1570,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Object type doesn't contain key z."]
+    #[should_panic = r#"TypeError::MissingKey: object doesn't have a z property"#]
     fn infer_missing_member_str_lit() {
         let src = r#"
         let p = {x: 5, y: 10};
@@ -1562,7 +1581,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "true is an invalid key for object types"]
+    #[should_panic = "TypeError::InvalidKey: true is not a valid key"]
     fn infer_member_with_invalid_literal_key() {
         let src = r#"
         let p = {x: 5, y: 10};
@@ -1573,7 +1592,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "boolean is an invalid key for object types"]
+    #[should_panic = "TypeError::InvalidKey: boolean is not a valid key"]
     fn infer_member_with_invalid_primitive_key() {
         let src = r#"
         let p = {x: 5, y: 10};
@@ -1585,7 +1604,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "{x: 5, y: 10} is an invalid key for object types"]
+    #[should_panic = "TypeError::InvalidKey: {x: 5, y: 10} is not a valid key"]
     fn infer_member_with_invalid_key_of_other_type() {
         let src = r#"
         let p = {x: 5, y: 10};
@@ -1636,16 +1655,12 @@ mod tests {
 
         assert_eq!(
             error_messages,
-            vec![
-                "4 is out of bounds for [5, \"hello\", true]",
-                "Location",
-                "TypeError::IndexOutOfBounds: 4 out of bounds for [5, \"hello\", true]"
-            ]
+            vec!["TypeError::IndexOutOfBounds: 4 out of bounds for [5, \"hello\", true]"]
         );
     }
 
     #[test]
-    #[should_panic = "true is an invalid indexer for tuple types"]
+    #[should_panic = r#"TypeError::InvalidIndex: true is not a valid index on [5, "hello", true]"#]
     fn infer_invalid_literal_index_on_tuple() {
         let src = r#"
         let tuple = [5, "hello", true];
@@ -1656,7 +1671,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "boolean is an invalid indexer for tuple types"]
+    #[should_panic = r#"TypeError::InvalidIndex: boolean is not a valid index on [5, "hello", true]"#]
     fn infer_invalid_primitive_index_on_tuple() {
         let src = r#"
         let tuple = [5, "hello", true];
@@ -1679,8 +1694,6 @@ mod tests {
         assert_eq!(
             error_messages,
             vec![
-                "[5, \"hello\", true] is an invalid indexer for tuple types",
-                "Location",
                 "TypeError::InvalidIndex: [5, \"hello\", true] is not a valid index on [5, \"hello\", true]"
             ]
         );
@@ -1786,7 +1799,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification is undecidable"]
+    #[should_panic = "TypeError::UnificationIsUndecidable"]
     fn infer_obj_from_spread_undecidable() {
         let src = r#"
         type Point = {x: number, y: number, z: number};
@@ -1849,7 +1862,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "not enough elements to unpack"]
+    #[should_panic = "TypeError::NotEnoughElementsToUnpack"]
     fn infer_tuple_rest_no_enough_elements_to_unpack() {
         let src = r#"
         let tuple = [5];
@@ -1868,10 +1881,7 @@ mod tests {
 
         let error_messages = infer_prog_with_type_error(src);
 
-        assert_eq!(
-            error_messages,
-            vec!["Location", "TypeError::MoreThanOneRestPattern"]
-        );
+        assert_eq!(error_messages, vec!["TypeError::MoreThanOneRestPattern"]);
     }
 
     #[test]
@@ -1959,7 +1969,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can only spread tuple types inside a tuple"]
+    #[should_panic = "TypeError::TupleSpreadOutsideTuple"]
     fn spread_non_tuple_type_should_fail() {
         let src = r#"
         let p = {x: 5, y: 10};
@@ -1991,10 +2001,7 @@ mod tests {
 
         let error_messages = infer_prog_with_type_error(src);
 
-        assert_eq!(
-            error_messages,
-            vec!["Location", "TypeError::NoValidOverload"]
-        );
+        assert_eq!(error_messages, vec!["TypeError::NoValidOverload"]);
     }
 
     #[test]
@@ -2026,7 +2033,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't use `await` inside non-async lambda"]
+    #[should_panic = "TypeError::AwaitOutsideOfAsync"]
     fn await_only_works_in_async_functions() {
         let src = r#"
         let add_async = (a, b) => {
@@ -2038,7 +2045,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't use `await` inside non-async lambda"]
+    #[should_panic = "TypeError::AwaitOutsideOfAsync"]
     fn await_only_works_in_async_functions_nested() {
         let src = r#"
         let add_async = async (a, b) => {
@@ -2117,7 +2124,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "TypeError::UnificationError: {msg: 5}, {msg: string}"]
     fn jsx_custom_element_with_incorrect_props() {
         let src = r#"
         type Props = {msg: string};
@@ -2129,7 +2136,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "TypeError::UnificationError: {}, {msg: string}"]
     fn jsx_custom_element_with_missing_prop() {
         let src = r#"
         type Props = {msg: string};
@@ -2141,7 +2148,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't find value: Bar"]
+    #[should_panic = "TypeError::CantFindIdent: Bar"]
     fn jsx_custom_element_not_found() {
         let src = r#"
         let Foo = () => <div>Hello, world!</div>;
@@ -2152,7 +2159,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Component must be a function"]
+    #[should_panic = "TypeError::InvalidComponent"]
     fn jsx_custom_element_not_a_function() {
         let src = r#"
         let Foo = "hello, world";
@@ -2163,7 +2170,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = r#"TypeError::UnificationError: {_name: "JSXElement"}, {x: 5, y: 10}"#]
     fn jsx_custom_element_incorrect_return() {
         let src = r#"
         let Foo = () => {x: 5, y: 10};
@@ -2201,7 +2208,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "TypeError::UnificationError: true, number"]
     fn detect_type_errors_inside_template_literal_expressions() {
         let src = r#"let str = `hello, ${5 + true}!`;"#;
 
@@ -2236,7 +2243,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unification failure"]
+    #[should_panic = "TypeError::UnificationError: 5, string"]
     fn assign_tuple_with_to_array_with_incompatible_types() {
         let src = r#"let arr: string[] = ["hello", 5];"#;
 
@@ -2279,7 +2286,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't unify number with string"]
+    #[should_panic = "TypeError::UnificationError: number, string"]
     fn pattern_matching_with_disjoint_union_incorrect_result_type() {
         // The return type of a `match` expression is the union of all of the return types of
         // each of the arms.  If you want to ensure that all arms return a common type then you'll
@@ -2298,7 +2305,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't unify number with string"]
+    #[should_panic = "TypeError::UnificationError: number, string"]
     fn pattern_matching_with_disjoint_union_does_not_match_fn_return_type() {
         // The return type of a `match` expression is the union of all of the return types of
         // each of the arms.  If you want to ensure that all arms return a common type then you'll
@@ -2511,7 +2518,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't unify string with number"]
+    #[should_panic = "TypeError::UnificationError: string, number,TypeError::UnificationError: string, number"]
     fn test_constrained_generic_function_failed_constraint() {
         let src = r#"
         let add = <T extends number>(a: T, b: T): T => a + b;
@@ -2524,7 +2531,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't unify number with string"]
+    #[should_panic = "TypeError::UnificationError: number, string,TypeError::UnificationError: number, string"]
     fn test_constrained_generic_function_failed_constraint_external_decl() {
         let src = r#"
         declare let add: <T extends string>(a: T, b: T) => T;
@@ -2553,7 +2560,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Cannot read property on unconstrained type param"]
+    #[should_panic = "TypeError::PossiblyNotAnObject: t3 might not be an object"]
     fn test_type_param_member_access_errors() {
         let src = r#"
         let getBar = <T>(obj: T): T => {
@@ -2565,7 +2572,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't find value: console"]
+    #[should_panic = "TypeError::CantFindIdent: console"]
     fn test_call_undefined_method() {
         let src = r#"
         console.log("hello, world!");
@@ -2575,7 +2582,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Can't find value: console"]
+    #[should_panic = "TypeError::CantFindIdent: console"]
     fn test_call_undefined_method_inside_function() {
         let src = r#"
         let log = (msg) => {
@@ -2650,7 +2657,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Cannot use immutable type where a mutable type was expected"]
+    #[should_panic = "TypeError::UnexpectedImutableValue"]
     fn test_mutable_array_cannot_be_assigned_immutable_tuple() {
         let src = r#"
         let tuple = [1, 2, 3];
@@ -2695,7 +2702,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Couldn't unify mut number[] and mut number | string[]"]
+    #[should_panic = "TypeError::UnificationError: mut number[], mut number | string[]"]
     fn test_mutable_array_cannot_be_assigned_to_mutable_subtype() {
         let src = r#"
         declare let arr1: mut number[];
@@ -2706,7 +2713,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Couldn't unify mut string[] and mut number[]"]
+    #[should_panic = "TypeError::UnificationError: mut string[], mut number[]"]
     fn test_mutable_arrays_wrong_types() {
         let src = r#"
         declare let sort: (num_arr: mut number[]) => undefined;
@@ -2718,7 +2725,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Cannot use immutable type where a mutable type was expected"]
+    #[should_panic = "TypeError::UnexpectedImutableValue"]
     fn test_mutable_array_error() {
         // TODO: How do we differentiate assigning a literal vs. a variable?
         let src = r#"
@@ -2758,7 +2765,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "can't assign to non-mutable binder 'x'"]
+    #[should_panic = "TypeError::NonMutableBindingAssignment"]
     fn test_updating_immutable_variables_fails() {
         let src = r#"
         let x: number = 5;
@@ -2769,7 +2776,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "can't assign to non-mutable binder 'x'"]
+    #[should_panic = "TypeError::NonMutableBindingAssignment"]
     fn test_updating_immutable_variables_inside_functions() {
         let src = r#"
         let foo = () => {
@@ -2833,8 +2840,10 @@ mod tests {
 
     // TODO: re-enable once we've update object pattern properties in the AST
     // to look more like babel's properties
+    // This should not panic since it's like the previous test case.  The only
+    // difference is that we're using shorthand.
     #[test]
-    #[should_panic = "can't assign to non-mutable binder 'bar'"]
+    #[should_panic = "TypeError::NonMutableBindingAssignment"]
     fn test_updating_mutable_destructured_shorthand_obj_member() {
         let src = r#"
             let {mut bar}: {bar: number} = {bar: 5};
@@ -2847,7 +2856,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "can't assign to non-mutable binder 'bar'"]
+    #[should_panic = "TypeError::NonMutableBindingAssignment"]
     fn test_updating_immutable_destructured_obj_member() {
         let src = r#"
             let {bar}: {bar: number} = {bar: 5};
@@ -2907,11 +2916,8 @@ mod tests {
                 assert_eq!(
                     messages,
                     vec![
-                        "Location",
                         "TypeError::PrimitivesCantBeMutable: string",
-                        "Location",
                         "TypeError::PrimitivesCantBeMutable: boolean",
-                        "Location",
                         "TypeError::PrimitivesCantBeMutable: number"
                     ]
                 );
@@ -2934,10 +2940,7 @@ mod tests {
                 let messages = messages(&report);
                 assert_eq!(
                     messages,
-                    vec![
-                        "Location",
-                        "TypeError::TuplesCantBeMutable: [string, boolean, number]",
-                    ]
+                    vec!["TypeError::TuplesCantBeMutable: [string, boolean, number]",]
                 );
             }
         }

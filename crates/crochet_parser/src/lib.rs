@@ -1972,7 +1972,10 @@ mod tests {
         match parse("(...a, ...b) => true") {
             Ok(_) => panic!("expected test parse() to return an error"),
             Err(report) => {
-                assert_eq!(messages(&report), "ParseError");
+                assert_eq!(
+                    messages(&report),
+                    "ParseError: failed to parse: '(...a, ...b) => true'"
+                );
             }
         }
     }

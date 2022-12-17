@@ -147,76 +147,74 @@ fn infer_pattern_rec(
         // TODO: infer type_params
         PatternKind::Object(ObjectPat { props, .. }) => {
             let mut rest_opt_ty: Option<Type> = None;
-            let elems: Vec<types::TObjElem> = props
-                .iter_mut()
-                .filter_map(|prop| {
-                    match prop {
-                        // re-assignment, e.g. {x: new_x, y: new_y} = point
-                        ObjectPatProp::KeyValue(KeyValuePatProp {
-                            key,
-                            value,
-                            init: _,
-                            span: _,
-                        }) => {
-                            // We ignore `init` for now, we can come back later to handle
-                            // default values.
-                            // TODO: handle default values
+            let mut elems: Vec<types::TObjElem> = vec![];
 
-                            // TODO: bubble the error up from infer_patter_rec() if there is one.
-                            let value_type = infer_pattern_rec(value, ctx, assump).unwrap();
+            for prop in props {
+                match prop {
+                    // re-assignment, e.g. {x: new_x, y: new_y} = point
+                    ObjectPatProp::KeyValue(KeyValuePatProp {
+                        key,
+                        value,
+                        init: _,
+                        span: _,
+                    }) => {
+                        // We ignore `init` for now, we can come back later to handle
+                        // default values.
+                        // TODO: handle default values
 
-                            Some(types::TObjElem::Prop(types::TProp {
-                                name: TPropKey::StringKey(key.name.to_owned()),
-                                optional: false,
-                                mutable: false,
-                                t: value_type,
-                            }))
-                        }
-                        ObjectPatProp::Shorthand(ShorthandPatProp {
-                            ident,
-                            init: _,
-                            span: _,
-                        }) => {
-                            // We ignore `init` for now, we can come back later to handle
-                            // default values.
-                            // TODO: handle default values
+                        // TODO: bubble the error up from infer_patter_rec() if there is one.
+                        let value_type = infer_pattern_rec(value, ctx, assump)?;
 
-                            let tv = ctx.fresh_var();
-                            if assump
-                                .insert(
-                                    ident.name.to_owned(),
-                                    Binding {
-                                        mutable: false,
-                                        t: tv.clone(),
-                                    },
-                                )
-                                .is_some()
-                            {
-                                todo!("return an error");
-                            }
-
-                            Some(types::TObjElem::Prop(types::TProp {
-                                name: TPropKey::StringKey(ident.name.to_owned()),
-                                optional: false,
-                                mutable: false,
-                                t: tv,
-                            }))
-                        }
-                        ObjectPatProp::Rest(rest) => {
-                            if rest_opt_ty.is_some() {
-                                // TODO: return an Err() instead of panicking.
-                                panic!("Maximum one rest pattern allowed in object patterns")
-                            }
-                            // TypeScript doesn't support spreading/rest in types so instead we
-                            // do the following conversion:
-                            // {x, y, ...rest} -> {x: A, y: B} & C
-                            // TODO: bubble the error up from infer_patter_rec() if there is one.
-                            rest_opt_ty = infer_pattern_rec(&mut rest.arg, ctx, assump).ok();
-                            None
-                        }
+                        elems.push(types::TObjElem::Prop(types::TProp {
+                            name: TPropKey::StringKey(key.name.to_owned()),
+                            optional: false,
+                            mutable: false,
+                            t: value_type,
+                        }))
                     }
-                })
-                .collect();
+                    ObjectPatProp::Shorthand(ShorthandPatProp {
+                        ident,
+                        init: _,
+                        span: _,
+                    }) => {
+                        // We ignore `init` for now, we can come back later to handle
+                        // default values.
+                        // TODO: handle default values
+
+                        let tv = ctx.fresh_var();
+                        if assump
+                            .insert(
+                                ident.name.to_owned(),
+                                Binding {
+                                    mutable: false,
+                                    t: tv.clone(),
+                                },
+                            )
+                            .is_some()
+                        {
+                            todo!("return an error");
+                        }
+
+                        elems.push(types::TObjElem::Prop(types::TProp {
+                            name: TPropKey::StringKey(ident.name.to_owned()),
+                            optional: false,
+                            mutable: false,
+                            t: tv,
+                        }))
+                    }
+                    ObjectPatProp::Rest(rest) => {
+                        if rest_opt_ty.is_some() {
+                            // TODO: return an Err() instead of panicking.
+                            panic!("Maximum one rest pattern allowed in object patterns")
+                        }
+                        // TypeScript doesn't support spreading/rest in types so instead we
+                        // do the following conversion:
+                        // {x, y, ...rest} -> {x: A, y: B} & C
+                        // TODO: bubble the error up from infer_patter_rec() if there is one.
+                        rest_opt_ty = Some(infer_pattern_rec(&mut rest.arg, ctx, assump)?);
+                    }
+                }
+            }
 
             let obj_type = Type::from(TypeKind::Object(TObject { elems }));
 

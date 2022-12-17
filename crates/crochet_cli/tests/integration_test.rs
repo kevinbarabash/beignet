@@ -19,7 +19,17 @@ fn infer(input: &str) -> String {
         }
         _ => Err(vec![TypeError::Unspecified]),
     };
-    format!("{}", result.unwrap())
+    match result {
+        Ok(t) => t.to_string(),
+        Err(error) => {
+            let message = error
+                .iter()
+                .map(|error| error.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+            panic!("{message}");
+        }
+    }
 }
 
 fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
@@ -33,9 +43,18 @@ fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
     };
     // println!("prog = {:#?}", &prog);
     let mut ctx = crochet_infer::Context::default();
-    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
-    (prog, ctx)
+    match crochet_infer::infer_prog(&mut prog, &mut ctx) {
+        Ok(ctx) => (prog, ctx),
+        Err(error) => {
+            let message = error
+                .iter()
+                .map(|error| error.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+            panic!("{message}");
+        }
+    }
 }
 
 fn infer_prog_with_type_error(src: &str) -> Vec<String> {
@@ -98,13 +117,13 @@ fn infer_let_fn_with_param_types() {
 }
 
 #[test]
-#[should_panic = "Can't unify string with number"]
+#[should_panic = "TypeError::UnificationError: string, number"]
 fn infer_fn_with_incorrect_param_types() {
     infer("(a: string, b: boolean) => a + b;");
 }
 
 #[test]
-#[should_panic = "Can't unify string with number"]
+#[should_panic = "TypeError::UnificationError: string, number"]
 fn infer_let_fn_with_incorrect_param_types() {
     let src = "let add = (a: string, b: boolean) => a + b;";
     infer_prog(src);
@@ -471,8 +490,6 @@ fn infer_let_decl_with_incorrect_type_ann() {
     assert_eq!(
         error_messages,
         vec![
-            "Unification failure",
-            "Location",
             // Ideally we'd want the error message to be something like:
             // "can't assign '10' to 'string'"
             "TypeError::UnificationError: 10, string"
@@ -538,7 +555,7 @@ fn calling_a_fn_with_an_obj_subtype() {
 }
 
 #[test]
-#[should_panic = "Unification failure"]
+#[should_panic = "TypeError::UnificationError: {x: 5}, {x: number, y: number}"]
 fn calling_a_fn_with_an_obj_missing_a_property() {
     let src = r#"
     declare let mag: (p: {x: number, y: number}) => number;
@@ -584,16 +601,12 @@ fn infer_tuple_with_type_annotation_and_incorrect_element() {
 
     assert_eq!(
         error_messages,
-        vec![
-            "Unification failure",
-            "Location",
-            "TypeError::UnificationError: 3, boolean"
-        ]
+        vec!["TypeError::UnificationError: 3, boolean"]
     );
 }
 
 #[test]
-#[should_panic = "not enough elements to unpack"]
+#[should_panic = "TypeError::NotEnoughElementsToUnpack"]
 fn infer_tuple_with_not_enough_elements() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two"];"#;
     infer_prog(src);
@@ -799,10 +812,7 @@ fn infer_function_overloading_with_incorrect_args() {
     "#;
     let error_messages = infer_prog_with_type_error(src);
 
-    assert_eq!(
-        error_messages,
-        vec!["Location", "TypeError::NoValidOverload"]
-    );
+    assert_eq!(error_messages, vec!["TypeError::NoValidOverload"]);
 }
 
 #[test]
@@ -1160,7 +1170,7 @@ fn infer_destructure_tuple() {
 }
 
 #[test]
-#[should_panic = "not enough elements to unpack"]
+#[should_panic = "TypeError::NotEnoughElementsToUnpack"]
 fn infer_destructure_tuple_too_many_identifiers() {
     let src = r#"
     let [a, b, c] = ["hello", 5];
@@ -1221,7 +1231,7 @@ fn infer_jsx() {
 }
 
 #[test]
-#[should_panic = "Unification failure"]
+#[should_panic = r#"TypeError::UnificationError: "hello", number,TypeError::UnificationError: "world", number"#]
 fn incorrect_args() {
     let src = r#"
     let add = (a, b) => a + b;
@@ -1367,7 +1377,7 @@ fn codegen_if_let_with_rename() {
 }
 
 #[test]
-#[should_panic = "Unification failure"]
+#[should_panic = r#"TypeError::UnificationError: "hello", number"#]
 fn infer_if_let_with_type_error() {
     let src = r#"
     let p = {x: "hello", y: "world"};

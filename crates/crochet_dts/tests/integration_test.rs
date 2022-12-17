@@ -23,9 +23,17 @@ fn infer_prog(src: &str) -> (Program, crochet_infer::Context) {
             panic!("Error parsing expression");
         }
     };
-    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
-
-    (prog, ctx)
+    match crochet_infer::infer_prog(&mut prog, &mut ctx) {
+        Ok(ctx) => (prog, ctx),
+        Err(error) => {
+            let message = error
+                .iter()
+                .map(|error| error.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+            panic!("{message}");
+        }
+    }
 }
 
 fn infer_prog_with_type_error(lib: &str, src: &str) -> Vec<String> {
@@ -72,7 +80,7 @@ fn infer_method_on_readonly_array() {
 }
 
 #[test]
-#[should_panic = "Object type doesn't contain key splice."]
+#[should_panic = "TypeError::MissingKey: object doesn't have a splice property"]
 fn infer_mutable_method_on_readonly_array_errors() {
     let src = r#"
     declare let arr: string[];
@@ -275,11 +283,7 @@ fn infer_index_with_incorrect_key_type_on_interface() {
 
     assert_eq!(
         error_messages,
-        vec![
-            "\"hello\" is an invalid key for object types",
-            "Location",
-            "TypeError::InvalidKey: \"hello\" is not a valid key"
-        ]
+        vec!["TypeError::InvalidKey: \"hello\" is not a valid key"]
     );
 }
 
