@@ -382,6 +382,7 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsTyp
                 types::TKeyword::Symbol => TsKeywordTypeKind::TsSymbolKeyword,
                 types::TKeyword::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
                 types::TKeyword::Never => TsKeywordTypeKind::TsNeverKeyword,
+                types::TKeyword::Object => TsKeywordTypeKind::TsObjectKeyword,
             };
 
             TsType::TsKeywordType(TsKeywordType {

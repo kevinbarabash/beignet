@@ -17,7 +17,6 @@ use crate::util::{
 // `expand_type` is used to expand types that `unify` doesn't know how to unify
 // into something that it does know how to unify.
 pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
-    println!("expand_type t = {t}");
     match &t.kind {
         TypeKind::Var(_) => Ok(t.to_owned()),
         TypeKind::App(_) => Ok(t.to_owned()),
@@ -406,6 +405,15 @@ pub fn get_obj_type(t: &Type, ctx: &Context) -> Result<Type, TypeError> {
                 TKeyword::Boolean => ctx.lookup_type_and_instantiate("Boolean", false)?,
                 TKeyword::String => ctx.lookup_type_and_instantiate("String", false)?,
                 TKeyword::Symbol => ctx.lookup_type_and_instantiate("Symbol", false)?,
+                TKeyword::Object => {
+                    // NOTE: Structural typing allows for extra elems in any object
+                    // so this should be a good equivalent for the `object` keyword.
+                    // There might be an issue with mutable objects since in those
+                    // situations the elements have to match exactly.  This can
+                    // likely be addressed by special-casing unification with `object`
+                    // types.
+                    Type::from(TypeKind::Object(TObject { elems: vec![] }))
+                }
                 // TODO: return TypeError::NotAnObject here
                 TKeyword::Null => return Ok(NEVER_TYPE),
                 TKeyword::Undefined => return Ok(NEVER_TYPE),

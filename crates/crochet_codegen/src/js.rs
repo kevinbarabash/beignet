@@ -289,6 +289,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         values::ExprKind::App(values::App { lam, args, .. }) => {
             let callee = Callee::Expr(Box::from(build_expr(lam.as_ref(), stmts, ctx)));
 
+            // TODO: get rid of `_` for partial functions
             let is_partial = args.iter().any(|arg| match &arg.expr.kind {
                 values::ExprKind::Ident(bi) => bi.name == "_",
                 _ => false,
@@ -380,6 +381,28 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 span: DUMMY_SP,
                 callee,
                 args,
+                type_args: None,
+            })
+        }
+        values::ExprKind::New(values::New { expr, args, .. }) => {
+            let callee = Box::from(build_expr(expr.as_ref(), stmts, ctx));
+
+            let args: Vec<ExprOrSpread> = args
+                .iter()
+                .map(|arg| ExprOrSpread {
+                    spread: if arg.spread.is_some() {
+                        Some(DUMMY_SP)
+                    } else {
+                        None
+                    },
+                    expr: Box::from(build_expr(arg.expr.as_ref(), stmts, ctx)),
+                })
+                .collect();
+
+            Expr::New(NewExpr {
+                span: DUMMY_SP,
+                callee,
+                args: Some(args), // JavaScript allows `new Array`, but we don't
                 type_args: None,
             })
         }

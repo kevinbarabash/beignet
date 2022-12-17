@@ -78,6 +78,13 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
                 update_expr(&mut arg_or_spread.expr, s);
             });
         }
+        ExprKind::New(New { expr, args }) => {
+            update_expr(expr, s);
+            args.iter_mut().for_each(|arg_or_spread| {
+                // TODO: rework args to be less awkward
+                update_expr(&mut arg_or_spread.expr, s);
+            });
+        }
         ExprKind::Fix(Fix { expr }) => {
             update_expr(expr, s);
         }

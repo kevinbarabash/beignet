@@ -42,6 +42,7 @@ pub fn replace_aliases(
         })
         .collect::<Result<HashMap<String, Type>, String>>()?;
 
+    // Why does `type_params` contain different `TVar`s from what's in `type_param_map`?
     for mut param in &mut type_params {
         if let Some(constraint) = &param.constraint {
             param.constraint = Some(Box::from(replace_aliases_rec(

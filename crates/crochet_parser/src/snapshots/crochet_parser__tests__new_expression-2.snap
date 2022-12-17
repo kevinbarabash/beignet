@@ -1,0 +1,78 @@
+---
+source: crates/crochet_parser/src/lib.rs
+expression: "parse(\"new Array(1, 2, 3);\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                span: 0..19,
+                expr: Expr {
+                    span: 0..18,
+                    kind: New(
+                        New {
+                            expr: Expr {
+                                span: 4..9,
+                                kind: Ident(
+                                    Ident {
+                                        span: 4..9,
+                                        name: "Array",
+                                    },
+                                ),
+                                inferred_type: None,
+                            },
+                            args: [
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Expr {
+                                        span: 10..11,
+                                        kind: Lit(
+                                            Num(
+                                                Num {
+                                                    span: 10..11,
+                                                    value: "1",
+                                                },
+                                            ),
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                },
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Expr {
+                                        span: 13..14,
+                                        kind: Lit(
+                                            Num(
+                                                Num {
+                                                    span: 13..14,
+                                                    value: "2",
+                                                },
+                                            ),
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                },
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Expr {
+                                        span: 16..17,
+                                        kind: Lit(
+                                            Num(
+                                                Num {
+                                                    span: 16..17,
+                                                    value: "3",
+                                                },
+                                            ),
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                },
+                            ],
+                        },
+                    ),
+                    inferred_type: None,
+                },
+            },
+        ],
+    },
+)

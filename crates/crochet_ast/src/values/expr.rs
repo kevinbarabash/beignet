@@ -262,8 +262,15 @@ pub struct Arm {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct New {
+    pub expr: Box<Expr>, // should resolve to an object with a constructor signature
+    pub args: Vec<ExprOrSpread>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
     App(App),
+    New(New), // like App but for calling constructors to create a new instance
     Fix(Fix),
     Ident(Ident),
     IfElse(IfElse),

@@ -2,13 +2,14 @@ use error_stack::{Report, Result};
 use std::collections::HashMap;
 
 use crochet_ast::types::{
-    self as types, Provenance, TFnParam, TKeyword, TObject, TPat, TPropKey, TVar, Type, TypeKind,
+    self as types, Provenance, TCallable, TFnParam, TKeyword, TObject, TPat, TPropKey, TVar, Type,
+    TypeKind,
 };
 use crochet_ast::values::*;
 
 use types::TObjElem;
 
-use crate::context::Context;
+use crate::context::{Context, Env};
 use crate::expand_type::get_obj_type;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
@@ -60,6 +61,89 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), T
 
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
             Ok((s, t))
+        }
+        ExprKind::New(New { expr, args }) => {
+            let mut ss: Vec<Subst> = vec![];
+            let mut arg_types: Vec<Type> = vec![];
+
+            let (s1, t) = infer_expr(ctx, expr)?;
+            ss.push(s1);
+            let t = get_obj_type(&t, ctx)?;
+
+            for arg in args {
+                let (arg_s, mut arg_t) = infer_expr(ctx, &mut arg.expr)?;
+                ss.push(arg_s);
+                if arg.spread.is_some() {
+                    match &mut arg_t.kind {
+                        TypeKind::Tuple(types) => arg_types.append(types),
+                        _ => arg_types.push(Type::from(TypeKind::Rest(Box::from(arg_t)))),
+                    }
+                } else {
+                    arg_types.push(arg_t);
+                }
+            }
+
+            let mut results = vec![];
+            if let TypeKind::Object(TObject { elems }) = t.kind {
+                for elem in elems {
+                    match &elem {
+                        TObjElem::Call(_) => (),
+                        TObjElem::Constructor(TCallable {
+                            params,
+                            ret,
+                            type_params: _, // TODO: handle constructors with type params
+                        }) => {
+                            let ret_type = ctx.fresh_var();
+                            let call_type = Type::from(TypeKind::App(types::TApp {
+                                args: arg_types.clone(),
+                                ret: Box::from(ret_type.clone()),
+                            }));
+
+                            let lam_type = Type::from(TypeKind::Lam(types::TLam {
+                                params: params.clone(),
+                                ret: ret.clone(),
+                            }));
+
+                            // We generalize first b/c lam_type isn't generic and
+                            // we need it to be before we can instantiate it.
+                            let t = generalize(&Env::default(), &lam_type);
+                            let mut lam_type = ctx.instantiate(&t);
+                            lam_type.provenance =
+                                Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
+
+                            if let Ok(s3) = unify(&call_type, &lam_type, ctx) {
+                                ss.push(s3);
+
+                                let s = compose_many_subs(&ss.clone());
+                                let t = ret_type.apply(&s);
+
+                                // return (s3 `compose` s2 `compose` s1, apply s3 tv)
+                                results.push((s, t));
+                            }
+                        }
+                        TObjElem::Index(_) => (),
+                        TObjElem::Prop(_) => (),
+                    }
+                }
+            }
+
+            // Sorts the results based on number of free type variables in
+            // ascending order.
+            results.sort_by(|a, b| {
+                let a_len = a.1.ftv().len();
+                let b_len = b.1.ftv().len();
+                a_len.cmp(&b_len)
+            });
+
+            // Pick the result with the lowest number of of free type variables
+            match results.get(0) {
+                Some(result) => Ok(result.to_owned()),
+                None => {
+                    // TODO: update this to communicate that we couldn't find a
+                    // valid constructor for the given arguments
+                    Err(Report::new(TypeError::Unspecified))
+                }
+            }
         }
         ExprKind::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer_expr(ctx, expr)?;
