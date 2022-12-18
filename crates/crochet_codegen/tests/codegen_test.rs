@@ -495,6 +495,8 @@ fn generic_function() {
     let mut ctx = Context::default();
     infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
+    let fst = ctx.lookup_value("fst").unwrap();
+    println!("fst = {fst}");
 
     insta::assert_snapshot!(result, @"export declare const fst: <A>(a: A, b: A) => A;
 ");

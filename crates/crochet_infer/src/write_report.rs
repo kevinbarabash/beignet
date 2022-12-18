@@ -13,9 +13,6 @@ pub fn write_report(report: Report<TypeError>, src: &str) -> Vec<String> {
                 let prov1 = t1.provenance.as_ref().unwrap();
                 let prov2 = t2.provenance.as_ref().unwrap();
 
-                // println!("prov1 = {prov1:#?}");
-                // println!("prov2 = {prov2:#?}");
-
                 // TODO: figure out how we want to determine what the primary
                 // source of the error is.  In this case it's the function call,
                 // but in order to determine that we need look at its ancestors

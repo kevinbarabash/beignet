@@ -90,7 +90,8 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
     };
 
     // Updates type variables for type params to match t1
-    let t2 = t2.apply(&subs);
+    let mut t2 = t2.to_owned();
+    t2.apply(&subs);
 
     let type_params = tp1;
     let t = match (&t1.kind, &t2.kind) {

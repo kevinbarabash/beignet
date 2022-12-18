@@ -56,7 +56,7 @@ fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>
             .map(|arg| expand_type(arg, ctx))
             .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
-        let t = unwrap_generic(&t);
+        let mut t = unwrap_generic(&t);
         if let TypeKind::ConditionalType(TConditionalType { check_type, .. }) = &t.kind {
             // When conditional types act on a generic type, they
             // become distributive when given a union type.  In particular,
@@ -86,8 +86,11 @@ fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>
                         .map(|check_arg| {
                             type_args[index_of_check_type] = check_arg.to_owned();
                             let subs: Subst = ids.clone().zip(type_args.iter().cloned()).collect();
-                            let inner_t = t.apply(&subs);
-                            expand_type(&inner_t, ctx)
+                            // We make a copy of the Generic's inner type so that
+                            // we don't mutate the original.
+                            let mut t = t.clone();
+                            t.apply(&subs);
+                            expand_type(&t, ctx)
                         })
                         .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
@@ -100,7 +103,8 @@ fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>
         // Handle the default case by replacing type variables that match type
         // params with the corresponding type args.
         let subs: Subst = ids.zip(type_args.iter().cloned()).collect();
-        expand_type(&t.apply(&subs), ctx)
+        t.apply(&subs);
+        expand_type(&t, ctx)
     } else if !type_params.is_empty() {
         Err(vec![TypeError::TypeInstantiationFailure])
     } else {
@@ -116,7 +120,9 @@ fn expand_conditional_type(cond: &TConditionalType, ctx: &Context) -> Result<Typ
         false_type,
     } = cond;
 
-    let t = match unify(check_type, extends_type, ctx) {
+    let mut check_type = check_type.clone();
+    let mut extends_type = extends_type.clone();
+    let t = match unify(&mut check_type, &mut extends_type, ctx) {
         Ok(_) => true_type,
         Err(_) => false_type,
     };
@@ -383,7 +389,7 @@ fn expand_keyof(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     }
 }
 
-pub fn get_obj_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
+pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     match &t.kind {
         TypeKind::Generic(TGeneric { t, type_params: _ }) => get_obj_type(t, ctx),
         TypeKind::Var(_) => Err(vec![TypeError::CantInferTypeFromItKeys]),
@@ -466,7 +472,8 @@ pub fn get_obj_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
             // the lookup call first and then instantiate the method.
             let s: Subst =
                 Subst::from([(type_params[0].id.to_owned(), type_param.as_ref().to_owned())]);
-            let t = t.apply(&s);
+            let mut t = unwrap_generic(&t);
+            t.apply(&s);
 
             Ok(t)
         }
