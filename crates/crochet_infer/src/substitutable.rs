@@ -1,5 +1,6 @@
 use array_tool::vec::*;
 use std::collections::{BTreeSet, HashMap};
+use std::iter::IntoIterator;
 
 use crochet_ast::types::*;
 
@@ -42,35 +43,17 @@ impl Substitutable for Type {
                         self.kind = replacement.kind.to_owned();
                         self.mutable = replacement.mutable;
                         self.provenance = provenance;
-
-                        // norm_type(self);
-                        // return norm_type(Type {
-                        //     kind: replacement.kind.to_owned(),
-                        //     provenance,
-                        //     mutable: replacement.mutable,
-                        // });
                     }
                     None => {
                         if let Some(constraint) = &mut tv.constraint {
                             constraint.apply(sub);
                         }
-                        // TypeKind::Var(TVar {
-                        //     id: tv.id.to_owned(),
-                        //     constraint: tv
-                        //         .constraint
-                        //         .as_ref()
-                        //         .map(|constraint| Box::from(constraint.apply(sub))),
-                        // })
                     }
                 }
             }
             TypeKind::App(app) => {
                 app.args.apply(sub);
                 app.ret.apply(sub);
-                // TypeKind::App(TApp {
-                //     args: app.args.iter().map(|param| param.apply(sub)).collect(),
-                //     ret: Box::from(app.ret.apply(sub)),
-                // })
             }
             // TODO: handle widening of lambdas
             TypeKind::Lam(lam) => lam.apply(sub),
@@ -217,10 +200,6 @@ impl Substitutable for TRef {
         self.type_args
             .iter_mut()
             .for_each(|type_arg| type_arg.apply(sub));
-        // TRef {
-        //     type_args: self.type_args.apply(sub),
-        //     ..self.to_owned()
-        // }
     }
     fn ftv(&self) -> Vec<TVar> {
         match &self.type_args {
@@ -244,11 +223,6 @@ impl Substitutable for TCallable {
         self.params.iter_mut().for_each(|param| param.apply(sub));
         self.ret.apply(sub);
         self.type_params = type_params;
-        // Self {
-        //     params: self.params.iter().map(|param| param.apply(sub)).collect(),
-        //     ret: Box::from(self.ret.apply(sub)),
-        //     type_params,
-        // }
     }
     fn ftv(&self) -> Vec<TVar> {
         let mut result = self.params.ftv();
@@ -336,35 +310,32 @@ impl Substitutable for Binding {
     }
 }
 
-fn norm_type(t: &'_ mut Type) {
+fn uniq(types: &[Type]) -> Vec<Type> {
+    // Removes duplicates
+    let types: BTreeSet<Type> = types.iter().cloned().collect();
+    // Converts set back to an array
+    types.into_iter().collect()
+}
+
+fn norm_type(t: &mut Type) {
     match &t.kind {
         TypeKind::Union(types) => {
-            // Removes duplicates
-            let types: BTreeSet<Type> = types.clone().into_iter().collect();
-            // Converts set back to an array
-            let types: Vec<Type> = types.into_iter().collect();
+            let types = uniq(types);
 
-            if types.len() == 1 {
-                t.kind = types.get(0).unwrap().kind.clone();
-                // types.get(0).unwrap().to_owned()
+            t.kind = if types.len() == 1 {
+                types.get(0).unwrap().kind.clone()
             } else {
-                t.kind = TypeKind::Union(types);
-                // Type::from(TypeKind::Union(types))
-            }
+                TypeKind::Union(types)
+            };
         }
         TypeKind::Intersection(types) => {
-            // Removes duplicates
-            let types: BTreeSet<Type> = types.clone().into_iter().collect();
-            // Converts set back to an array
-            let types: Vec<Type> = types.into_iter().collect();
+            let types = uniq(types);
 
-            if types.len() == 1 {
-                t.kind = types.get(0).unwrap().kind.clone();
-                // types.get(0).unwrap().to_owned()
+            t.kind = if types.len() == 1 {
+                types.get(0).unwrap().kind.clone()
             } else {
-                t.kind = TypeKind::Intersection(types);
-                // Type::from(TypeKind::Intersection(types))
-            }
+                TypeKind::Intersection(types)
+            };
         }
         _ => (),
     }

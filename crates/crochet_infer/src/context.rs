@@ -67,17 +67,6 @@ impl Context {
         let current_scope = self.scopes.last_mut().unwrap();
         for (_, b) in current_scope.values.iter_mut() {
             b.apply(s);
-            // We need to re-insert the binding since we can't gaurantee that it
-            // wasn't cloned.
-            // current_scope.values.insert(k.to_owned(), b);
-            // Should we be apply substitions to types as well?
-            // current_scope.values.insert(
-            //     k.to_owned(),
-            //     Binding {
-            //         mutable: b.mutable,
-            //         t: b.t.apply(s),
-            //     },
-            // );
         }
     }
 

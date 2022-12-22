@@ -518,10 +518,10 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                 .collect();
             // TODO: check for other variants, if there are we should error
 
-            let mut obj_type = simplify_intersection(&obj_types);
+            let obj_type = &mut simplify_intersection(&obj_types);
 
             match rest_types.len() {
-                0 => unify(t1, &mut obj_type, ctx),
+                0 => unify(t1, obj_type, ctx),
                 1 => {
                     let all_obj_elems = match &obj_type.kind {
                         TypeKind::Object(obj) => obj.elems.to_owned(),
@@ -540,7 +540,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
 
                     let s1 = unify(
                         &mut Type::from(TypeKind::Object(TObject { elems: obj_elems })),
-                        &mut obj_type,
+                        obj_type,
                         ctx,
                     )?;
 
@@ -571,10 +571,10 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                 .collect();
             // TODO: check for other variants, if there are we should error
 
-            let mut obj_type = simplify_intersection(&obj_types);
+            let obj_type = &mut simplify_intersection(&obj_types);
 
             match rest_types.len() {
-                0 => unify(&mut obj_type, t2, ctx),
+                0 => unify(obj_type, t2, ctx),
                 1 => {
                     let all_obj_elems = match &obj_type.kind {
                         TypeKind::Object(obj) => obj.elems.to_owned(),
@@ -592,7 +592,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                         });
 
                     let s_obj = unify(
-                        &mut obj_type,
+                        obj_type,
                         &mut Type::from(TypeKind::Object(TObject { elems: obj_elems })),
                         ctx,
                     )?;
@@ -686,9 +686,9 @@ enum Relation {
     SuperType,
 }
 
-fn bind<'a>(
+fn bind(
     tv: &mut TVar,
-    t: &'a mut Type,
+    t: &mut Type,
     rel: Relation,
     ctx: &Context,
 ) -> Result<Subst, Vec<TypeError>> {
@@ -733,13 +733,13 @@ fn bind<'a>(
 
                 Err(vec![TypeError::InfiniteType])
             } else {
-                if let Some(c) = &tv.constraint {
-                    let mut c = c.clone();
+                if let Some(constraint) = &mut tv.constraint {
+                    let constraint = constraint.as_mut();
                     // We only care whether the `unify()` call fails or not.  If it succeeds,
                     // that indicates that type `t` is a subtype of constraint `c`.
                     match rel {
-                        Relation::SubType => unify(&mut c, t, ctx)?,
-                        Relation::SuperType => unify(t, &mut c, ctx)?,
+                        Relation::SubType => unify(constraint, t, ctx)?,
+                        Relation::SuperType => unify(t, constraint, ctx)?,
                     };
 
                     // If the `t` is a type variable, but has no constraints then return a

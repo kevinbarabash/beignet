@@ -361,34 +361,28 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
 
             let (mut ss, mut t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-            let (rs_1, rt_1) = infer_expr(ctx, body)?;
-            ss.push(rs_1);
+            let (body_s, mut body_t) = infer_expr(ctx, body)?;
+            ss.push(body_s);
 
             ctx.pop_scope();
 
-            let mut rt_1 = if *is_async && !is_promise(&rt_1) {
-                Type::from(TypeKind::Ref(types::TRef {
+            if *is_async && !is_promise(&body_t) {
+                body_t = Type::from(TypeKind::Ref(types::TRef {
                     name: String::from("Promise"),
-                    type_args: Some(vec![rt_1]),
+                    type_args: Some(vec![body_t]),
                 }))
-            } else {
-                rt_1
-            };
+            }
 
-            let s = match rt_type_ann {
-                Some(rt_type_ann) => {
-                    let (rs_2, mut rt_2) =
-                        infer_type_ann_with_params(rt_type_ann, ctx, &type_params_map)?;
-                    ss.push(rs_2);
+            if let Some(rt_type_ann) = rt_type_ann {
+                let (ret_s, mut ret_t) =
+                    infer_type_ann_with_params(rt_type_ann, ctx, &type_params_map)?;
+                ss.push(ret_s);
+                ss.push(unify(&mut body_t, &mut ret_t, ctx)?);
+            }
 
-                    unify(&mut rt_1, &mut rt_2, ctx)?
-                }
-                None => Subst::default(),
-            };
-            ss.push(s);
             let mut t = Type::from(TypeKind::Lam(types::TLam {
                 params: t_params.clone(),
-                ret: Box::from(rt_1.clone()),
+                ret: Box::from(body_t.clone()),
             }));
 
             let s = compose_many_subs(&ss);
@@ -573,18 +567,16 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             }
 
             let (s1, mut t1) = infer_expr(ctx, expr)?;
-            let wrapped_type = ctx.fresh_var();
-            let mut promise_type = Type::from(TypeKind::Ref(types::TRef {
+            let inner_t = ctx.fresh_var();
+            let mut promise_t = Type::from(TypeKind::Ref(types::TRef {
                 name: String::from("Promise"),
-                type_args: Some(vec![wrapped_type.clone()]),
+                type_args: Some(vec![inner_t.clone()]),
             }));
 
-            let s2 = unify(&mut t1, &mut promise_type, ctx)?;
-
+            let s2 = unify(&mut t1, &mut promise_t, ctx)?;
             let s = compose_subs(&s2, &s1);
-            let t = wrapped_type;
 
-            Ok((s, t))
+            Ok((s, inner_t))
         }
         ExprKind::Tuple(Tuple { elems, .. }) => {
             let mut ss: Vec<Subst> = vec![];
@@ -959,7 +951,7 @@ impl Visitor for ReplaceVisitor {
     }
 }
 
-fn replace_this(t: &'_ mut Type, rep: &Type) {
+fn replace_this(t: &mut Type, rep: &Type) {
     let mut rep_visitor = ReplaceVisitor::new(rep);
     rep_visitor.visit_children(t);
 }
