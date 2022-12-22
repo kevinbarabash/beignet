@@ -311,7 +311,7 @@ fn infer_type_ann_rec(
                 // QUESTION: Do we need to apply `constraint_s` to `type_ann_t`?
                 type_ann.inferred_type = Some(type_ann_t.clone());
 
-                let t = Type::from(TypeKind::MappedType(TMappedType {
+                let mut t = Type::from(TypeKind::MappedType(TMappedType {
                     type_param: types::TypeParam {
                         name: type_param.name.name.to_owned(),
                         constraint: Some(Box::from(constraint_t)),
@@ -329,7 +329,7 @@ fn infer_type_ann_rec(
                 }));
 
                 let s = compose_subs(&type_ann_s, &constraint_s);
-                let t = t.apply(&s); // I think we can skip this
+                t.apply(&s); // I think we can skip this
 
                 Ok((s, t))
             } else {

@@ -6,9 +6,9 @@ use crate::substitutable::{Subst, Substitutable};
 pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
     // Since we process the node first, if `expr` is a leaf node we
     // ignore it in the match statement below.
-    if let Some(t) = &pattern.inferred_type {
+    if let Some(t) = &mut pattern.inferred_type {
         if let TypeKind::Var(_) = &t.kind {
-            pattern.inferred_type = Some(t.apply(s));
+            t.apply(s)
         }
     }
 
@@ -64,9 +64,9 @@ pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
 pub fn update_expr(expr: &mut Expr, s: &Subst) {
     // Since we process the node first, if `expr` is a leaf node we
     // ignore it in the match statement below.
-    if let Some(t) = &expr.inferred_type {
+    if let Some(t) = &mut expr.inferred_type {
         if let TypeKind::Var(_) = &t.kind {
-            expr.inferred_type = Some(t.apply(s));
+            t.apply(s);
         }
     }
 
@@ -268,9 +268,9 @@ fn update_fn_param_pat(pat: &mut Pattern, s: &Subst) {
 pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
     // Since we process the node first, if `expr` is a leaf node we
     // ignore it in the match statement below.
-    if let Some(t) = &type_ann.inferred_type {
+    if let Some(t) = &mut type_ann.inferred_type {
         if let TypeKind::Var(_) = &t.kind {
-            type_ann.inferred_type = Some(t.apply(s));
+            t.apply(s);
         }
     }
 

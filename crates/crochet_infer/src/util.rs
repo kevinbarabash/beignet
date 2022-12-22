@@ -41,7 +41,9 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
 
 pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
     let empty_env = Env::default();
-    normalize(&generalize(&empty_env, &t.to_owned().apply(s)), ctx)
+    let mut t = t.clone();
+    t.apply(s);
+    normalize(&generalize(&empty_env, &t), ctx)
 }
 
 pub fn normalize(t: &Type, ctx: &Context) -> Type {
@@ -411,8 +413,14 @@ pub fn union_many_types(ts: &[Type]) -> Type {
 pub fn compose_subs(s2: &Subst, s1: &Subst) -> Subst {
     let mut result: Subst = s1
         .iter()
-        .map(|(tv, t)| (tv.to_owned(), t.apply(s2)))
+        .map(|(tv, t)| {
+            let mut t = t.clone();
+            t.apply(s2);
+            (*tv, t)
+        })
         .collect();
+
+    // TODO: detect any entries with a TVar that points to itself and remove them.
     result.extend(s2.to_owned());
     result
 }
@@ -429,15 +437,19 @@ pub fn compose_many_subs(subs: &[Subst]) -> Subst {
 fn compose_subs_with_context(s1: &Subst, s2: &Subst) -> Subst {
     let mut result: Subst = s2
         .iter()
-        .map(|(tv, t)| (tv.to_owned(), t.apply(s1)))
+        .map(|(tv, t)| {
+            let mut t = t.clone();
+            t.apply(s1);
+            (*tv, t)
+        })
         .collect();
     for (tv, t) in s1 {
         match result.get(tv) {
             Some(t1) => {
                 let t = union_types(t, t1);
-                result.insert(tv.to_owned(), t)
+                result.insert(*tv, t)
             }
-            None => result.insert(tv.to_owned(), t.to_owned()),
+            None => result.insert(*tv, t.to_owned()),
         };
     }
     result
@@ -679,5 +691,43 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
     Type {
         kind,
         ..t.to_owned()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compose_subs() {
+        let mut s2 = Subst::new();
+        let mut s1 = Subst::new();
+
+        s2.insert(
+            3,
+            Type::from(TypeKind::Var(TVar {
+                id: 5,
+                constraint: None,
+            })),
+        );
+        s2.insert(
+            2,
+            Type::from(TypeKind::Var(TVar {
+                id: 4,
+                constraint: None,
+            })),
+        );
+
+        s1.insert(
+            4,
+            Type::from(TypeKind::Var(TVar {
+                id: 2,
+                constraint: None,
+            })),
+        );
+
+        let s = compose_subs(&s2, &s1);
+
+        println!("s = {s:#?}");
     }
 }

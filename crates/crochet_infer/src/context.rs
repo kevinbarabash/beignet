@@ -65,15 +65,8 @@ impl Context {
 
     pub fn apply(&mut self, s: &Subst) {
         let current_scope = self.scopes.last_mut().unwrap();
-        for (k, b) in current_scope.values.clone() {
-            // Should we be apply substitions to types as well?
-            current_scope.values.insert(
-                k.to_owned(),
-                Binding {
-                    mutable: b.mutable,
-                    t: b.t.apply(s),
-                },
-            );
+        for (_, b) in current_scope.values.iter_mut() {
+            b.apply(s);
         }
     }
 
@@ -108,7 +101,8 @@ impl Context {
     pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, Vec<TypeError>> {
         for scope in self.scopes.iter().rev() {
             if let Some(binding) = scope.values.get(name) {
-                return Ok(self.instantiate(&binding.t));
+                let t = binding.t.clone();
+                return Ok(self.instantiate(&t));
             }
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
@@ -184,8 +178,9 @@ impl Context {
                     }))
                 });
                 let subs: Subst = ids.zip(fresh_params).collect();
-
-                t.apply(&subs)
+                let mut t = t.as_ref().to_owned();
+                t.apply(&subs);
+                t
             }
             _ => t.to_owned(),
         }

@@ -51,7 +51,7 @@ pub struct TGeneric {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TVar {
-    pub id: i32,
+    pub id: i32, // This should never be mutated
     pub constraint: Option<Box<Type>>,
 }
 

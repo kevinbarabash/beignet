@@ -23,7 +23,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             let mut ss: Vec<Subst> = vec![];
             let mut arg_types: Vec<Type> = vec![];
 
-            let (s1, lam_type) = infer_expr(ctx, lam)?;
+            let (s1, mut lam_type) = infer_expr(ctx, lam)?;
             ss.push(s1);
 
             for arg in args {
@@ -39,7 +39,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                 }
             }
 
-            let ret_type = ctx.fresh_var();
+            let mut ret_type = ctx.fresh_var();
             // Are we missing an `apply()` call here?
             // Maybe, I could see us needing an apply to handle generic functions properly
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
@@ -49,15 +49,15 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             }));
             call_type.provenance = Some(Box::from(Provenance::Expr(Box::from(expr.to_owned()))));
 
-            let s3 = unify(&call_type, &lam_type, ctx)?;
+            let s3 = unify(&mut call_type, &mut lam_type, ctx)?;
 
             ss.push(s3);
 
             let s = compose_many_subs(&ss);
-            let t = ret_type.apply(&s);
+            ret_type.apply(&s);
 
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
-            Ok((s, t))
+            Ok((s, ret_type))
         }
         ExprKind::New(New { expr, args }) => {
             let mut ss: Vec<Subst> = vec![];
@@ -90,8 +90,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                             ret,
                             type_params: _, // TODO: handle constructors with type params
                         }) => {
-                            let ret_type = ctx.fresh_var();
-                            let call_type = Type::from(TypeKind::App(types::TApp {
+                            let mut ret_type = ctx.fresh_var();
+                            let mut call_type = Type::from(TypeKind::App(types::TApp {
                                 args: arg_types.clone(),
                                 ret: Box::from(ret_type.clone()),
                             }));
@@ -108,14 +108,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                             lam_type.provenance =
                                 Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
 
-                            if let Ok(s3) = unify(&call_type, &lam_type, ctx) {
+                            if let Ok(s3) = unify(&mut call_type, &mut lam_type, ctx) {
                                 ss.push(s3);
 
                                 let s = compose_many_subs(&ss.clone());
-                                let t = ret_type.apply(&s);
+                                ret_type.apply(&s);
 
                                 // return (s3 `compose` s2 `compose` s1, apply s3 tv)
-                                results.push((s, t));
+                                results.push((s, ret_type));
                             }
                         }
                         TObjElem::Index(_) => (),
@@ -143,7 +143,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             }
         }
         ExprKind::Fix(Fix { expr, .. }) => {
-            let (s1, t) = infer_expr(ctx, expr)?;
+            let (s1, mut t) = infer_expr(ctx, expr)?;
             let tv = ctx.fresh_var();
             let param = TFnParam {
                 pat: TPat::Ident(types::BindingIdent {
@@ -154,11 +154,11 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                 optional: false,
             };
             let s2 = unify(
-                &Type::from(TypeKind::Lam(types::TLam {
+                &mut Type::from(TypeKind::Lam(types::TLam {
                     params: vec![param],
                     ret: Box::from(tv),
                 })),
-                &t,
+                &mut t,
                 ctx,
             )?;
 
@@ -197,11 +197,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                         Ok((s, t))
                     }
                     _ => {
-                        let (s1, t1) = infer_expr(ctx, cond)?;
+                        let (s1, mut t1) = infer_expr(ctx, cond)?;
                         let (s2, t2) = infer_expr(ctx, consequent)?;
                         let (s3, t3) = infer_expr(ctx, alternate)?;
-                        let s4 =
-                            unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
+                        let s4 = unify(
+                            &mut t1,
+                            &mut Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                            ctx,
+                        )?;
 
                         let s = compose_many_subs(&[s1, s2, s3, s4]);
                         let t = union_types(&t2, &t3);
@@ -221,9 +224,13 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                     Ok((s, t))
                 }
                 _ => {
-                    let (s1, t1) = infer_expr(ctx, cond)?;
+                    let (s1, mut t1) = infer_expr(ctx, cond)?;
                     let (s2, t2) = infer_expr(ctx, consequent)?;
-                    let s3 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
+                    let s3 = unify(
+                        &mut t1,
+                        &mut Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                        ctx,
+                    )?;
 
                     let s = compose_many_subs(&[s1, s2, s3]);
 
@@ -243,7 +250,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             let first_char = name.chars().next().unwrap();
             // JSXElement's starting with an uppercase char are user defined.
             if first_char.is_uppercase() {
-                let t = ctx.lookup_value_and_instantiate(name)?;
+                let mut t = ctx.lookup_value_and_instantiate(name)?;
                 match &t.kind {
                     TypeKind::Lam(_) => {
                         let mut ss: Vec<_> = vec![];
@@ -279,13 +286,13 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                             type_args: None,
                         }));
 
-                        let call_type = Type::from(TypeKind::App(types::TApp {
+                        let mut call_type = Type::from(TypeKind::App(types::TApp {
                             args: vec![Type::from(TypeKind::Object(TObject { elems }))],
                             ret: Box::from(ret_type.clone()),
                         }));
 
                         let s1 = compose_many_subs(&ss);
-                        let s2 = unify(&call_type, &t, ctx)?;
+                        let s2 = unify(&mut call_type, &mut t, ctx)?;
 
                         let s = compose_subs(&s2, &s1);
                         let t = ret_type;
@@ -352,40 +359,36 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                 })
                 .collect();
 
-            let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
+            let (mut ss, mut t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-            let (rs_1, rt_1) = infer_expr(ctx, body)?;
-            ss.push(rs_1);
+            let (body_s, mut body_t) = infer_expr(ctx, body)?;
+            ss.push(body_s);
 
             ctx.pop_scope();
 
-            let rt_1 = if *is_async && !is_promise(&rt_1) {
-                Type::from(TypeKind::Ref(types::TRef {
+            if *is_async && !is_promise(&body_t) {
+                body_t = Type::from(TypeKind::Ref(types::TRef {
                     name: String::from("Promise"),
-                    type_args: Some(vec![rt_1]),
+                    type_args: Some(vec![body_t]),
                 }))
-            } else {
-                rt_1
-            };
+            }
 
-            let s = match rt_type_ann {
-                Some(rt_type_ann) => {
-                    let (rs_2, rt_2) =
-                        infer_type_ann_with_params(rt_type_ann, ctx, &type_params_map)?;
-                    ss.push(rs_2);
+            if let Some(rt_type_ann) = rt_type_ann {
+                let (ret_s, mut ret_t) =
+                    infer_type_ann_with_params(rt_type_ann, ctx, &type_params_map)?;
+                ss.push(ret_s);
+                ss.push(unify(&mut body_t, &mut ret_t, ctx)?);
+            }
 
-                    unify(&rt_1, &rt_2, ctx)?
-                }
-                None => Subst::default(),
-            };
-            ss.push(s);
-            let t = Type::from(TypeKind::Lam(types::TLam {
-                params: t_params,
-                ret: Box::from(rt_1),
+            let mut t = Type::from(TypeKind::Lam(types::TLam {
+                params: t_params.clone(),
+                ret: Box::from(body_t.clone()),
             }));
 
             let s = compose_many_subs(&ss);
-            let t = t.apply(&s);
+
+            t_params.apply(&s);
+            t.apply(&s);
 
             Ok((s, t))
         }
@@ -404,12 +407,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                     println!("WARNING: {init_t} was not assigned");
                 }
 
-                let (body_s, body_t) = infer_expr(ctx, body)?;
+                let (body_s, mut body_t) = infer_expr(ctx, body)?;
 
-                let t = body_t.apply(&init_s);
+                body_t.apply(&init_s);
                 let s = compose_subs(&body_s, &init_s);
 
-                Ok((s, t))
+                Ok((s, body_t))
             }
         },
         ExprKind::Assign(assign) => {
@@ -428,14 +431,14 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
 
             // This is similar to infer let, but without the type annotation and
             // with pat being an expression instead of a pattern.
-            let (rs, rt) = infer_expr(ctx, &mut assign.right)?;
-            let (ls, lt) = infer_expr(ctx, &mut assign.left)?;
+            let (rs, mut rt) = infer_expr(ctx, &mut assign.right)?;
+            let (ls, mut lt) = infer_expr(ctx, &mut assign.left)?;
 
             if assign.op != AssignOp::Eq {
                 todo!("handle update assignment operators");
             }
 
-            let s = unify(&rt, &lt, ctx)?;
+            let s = unify(&mut rt, &mut lt, ctx)?;
 
             let s = compose_many_subs(&[rs, ls, s]);
             let t = rt; // This is JavaScript's behavior
@@ -464,10 +467,18 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             // differently from arithmetic operators
             // TODO: if both are literals, compute the result at compile
             // time and set the result to be appropriate number literal.
-            let (s1, t1) = infer_expr(ctx, left)?;
-            let (s2, t2) = infer_expr(ctx, right)?;
-            let s3 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
-            let s4 = unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
+            let (s1, mut t1) = infer_expr(ctx, left)?;
+            let (s2, mut t2) = infer_expr(ctx, right)?;
+            let s3 = unify(
+                &mut t1,
+                &mut Type::from(TypeKind::Keyword(TKeyword::Number)),
+                ctx,
+            )?;
+            let s4 = unify(
+                &mut t2,
+                &mut Type::from(TypeKind::Keyword(TKeyword::Number)),
+                ctx,
+            )?;
 
             let s = compose_many_subs(&[s1, s2, s3, s4]);
             let t = match op {
@@ -486,8 +497,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             Ok((s, t))
         }
         ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
-            let (s1, t1) = infer_expr(ctx, arg)?;
-            let s2 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
+            let (s1, mut t1) = infer_expr(ctx, arg)?;
+            let s2 = unify(
+                &mut t1,
+                &mut Type::from(TypeKind::Keyword(TKeyword::Number)),
+                ctx,
+            )?;
 
             let s = compose_many_subs(&[s1, s2]);
             let t = match op {
@@ -551,19 +566,17 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                 return Err(vec![TypeError::AwaitOutsideOfAsync]);
             }
 
-            let (s1, t1) = infer_expr(ctx, expr)?;
-            let wrapped_type = ctx.fresh_var();
-            let promise_type = Type::from(TypeKind::Ref(types::TRef {
+            let (s1, mut t1) = infer_expr(ctx, expr)?;
+            let inner_t = ctx.fresh_var();
+            let mut promise_t = Type::from(TypeKind::Ref(types::TRef {
                 name: String::from("Promise"),
-                type_args: Some(vec![wrapped_type.clone()]),
+                type_args: Some(vec![inner_t.clone()]),
             }));
 
-            let s2 = unify(&t1, &promise_type, ctx)?;
-
+            let s2 = unify(&mut t1, &mut promise_t, ctx)?;
             let s = compose_subs(&s2, &s1);
-            let t = wrapped_type;
 
-            Ok((s, t))
+            Ok((s, inner_t))
         }
         ExprKind::Tuple(Tuple { elems, .. }) => {
             let mut ss: Vec<Subst> = vec![];
@@ -596,8 +609,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             Ok((s, t))
         }
         ExprKind::Member(Member { obj, prop, .. }) => {
-            let (obj_s, obj_t) = infer_expr(ctx, obj)?;
-            let (prop_s, prop_t) = infer_property_type(&obj_t, prop, ctx)?;
+            let (obj_s, mut obj_t) = infer_expr(ctx, obj)?;
+            let (prop_s, prop_t) = infer_property_type(&mut obj_t, prop, ctx)?;
 
             let s = compose_subs(&prop_s, &obj_s);
             let t = prop_t;
@@ -697,18 +710,18 @@ fn is_promise(t: &Type) -> bool {
 
 // TODO: update this function to make use of get_obj_type
 fn infer_property_type(
-    obj_t: &Type,
+    obj_t: &mut Type,
     prop: &mut MemberProp,
     ctx: &mut Context,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
-    match &obj_t.kind {
+    match &mut obj_t.kind {
         TypeKind::Generic(_) => {
             // TODO: Improve performance by getting the property type first and
             // then instantiating it instead of instantiating the whole object type.
             // NOTE: This is what introduces new type variables when getting the property
             // on a generic object type.
-            let t = ctx.instantiate(obj_t);
-            infer_property_type(&t, prop, ctx)
+            let mut t = ctx.instantiate(obj_t);
+            infer_property_type(&mut t, prop, ctx)
         }
         TypeKind::Var(TVar { constraint, .. }) => match constraint {
             Some(constraint) => infer_property_type(constraint, prop, ctx),
@@ -718,24 +731,26 @@ fn infer_property_type(
         },
         TypeKind::Object(obj) => get_prop_value(obj, prop, ctx),
         TypeKind::Ref(_) => {
-            let t = get_obj_type(obj_t, ctx)?;
-            infer_property_type(&t, prop, ctx)
+            let mut t = get_obj_type(obj_t, ctx)?;
+            infer_property_type(&mut t, prop, ctx)
         }
         TypeKind::Lit(_) => {
-            let t = get_obj_type(obj_t, ctx)?;
-            infer_property_type(&t, prop, ctx)
+            let mut t = get_obj_type(obj_t, ctx)?;
+            infer_property_type(&mut t, prop, ctx)
         }
         TypeKind::Keyword(_) => {
-            let t = get_obj_type(obj_t, ctx)?;
-            infer_property_type(&t, prop, ctx)
+            let mut t = get_obj_type(obj_t, ctx)?;
+            infer_property_type(&mut t, prop, ctx)
         }
         TypeKind::Array(type_param) => {
-            let t = get_obj_type(obj_t, ctx)?;
-            let (s, mut t) = infer_property_type(&t, prop, ctx)?;
+            let type_param = type_param.clone();
+
+            let mut t = get_obj_type(obj_t, ctx)?;
+            let (s, mut t) = infer_property_type(&mut t, prop, ctx)?;
 
             // Replaces `this` with `mut <type_param>[]`
             let rep_t = Type {
-                kind: TypeKind::Array(type_param.to_owned()),
+                kind: TypeKind::Array(type_param),
                 provenance: None,
                 mutable: true,
             };
@@ -749,7 +764,7 @@ fn infer_property_type(
             match prop {
                 // TODO: lookup methods on Array.prototype
                 MemberProp::Ident(_) => {
-                    let t = ctx.lookup_type("Array", obj_t.mutable)?;
+                    let mut t = ctx.lookup_type("Array", obj_t.mutable)?;
                     // TODO: Instead of instantiating the whole interface for one method, do
                     // the lookup call first and then instantiate the method.
                     // TODO: remove duplicate types
@@ -757,8 +772,8 @@ fn infer_property_type(
                     let type_params = get_type_params(&t); // ReadonlyArray type params
 
                     let s: Subst = Subst::from([(type_params[0].id.to_owned(), type_param)]);
-                    let t = t.apply(&s);
-                    infer_property_type(&t, prop, ctx)
+                    t.apply(&s);
+                    infer_property_type(&mut t, prop, ctx)
                 }
                 MemberProp::Computed(ComputedPropName { expr, .. }) => {
                     let (prop_s, prop_t) = infer_expr(ctx, expr)?;
@@ -827,7 +842,7 @@ fn get_prop_value(
         MemberProp::Computed(ComputedPropName { expr, .. }) => {
             let (prop_s, prop_t) = infer_expr(ctx, expr)?;
 
-            let prop_t_clone = prop_t.clone();
+            let mut prop_t_clone = prop_t.clone();
             let prop_s_clone = prop_s.clone();
 
             let result = match &prop_t.kind {
@@ -895,7 +910,8 @@ fn get_prop_value(
                         Err(vec![err])
                     } else {
                         for indexer in indexers {
-                            let result = unify(&prop_t_clone, &indexer.key.t, ctx);
+                            let mut key_clone = indexer.key.t.clone();
+                            let result = unify(&mut prop_t_clone, &mut key_clone, ctx);
                             if result.is_ok() {
                                 let key_s = result?;
                                 let s = compose_subs(&key_s, &prop_s_clone);
