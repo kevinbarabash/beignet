@@ -5,6 +5,7 @@ mod infer_expr;
 mod infer_fn_param;
 mod infer_pattern;
 mod infer_type_ann;
+mod scheme;
 mod substitutable;
 mod type_error;
 mod unify;

@@ -62,6 +62,24 @@ pub struct TypeParam {
     pub default: Option<Box<Type>>,
 }
 
+impl fmt::Display for TypeParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self {
+            name,
+            constraint,
+            default,
+        } = self;
+        write!(f, "{name}")?;
+        if let Some(constraint) = constraint {
+            write!(f, " : {constraint}")?;
+        };
+        if let Some(default) = default {
+            write!(f, " = {default}")?;
+        };
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TMappedType {
     pub type_param: TypeParam,

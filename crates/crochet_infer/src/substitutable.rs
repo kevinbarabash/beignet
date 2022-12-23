@@ -5,6 +5,7 @@ use std::iter::IntoIterator;
 use crochet_ast::types::*;
 
 use crate::context::Binding;
+use crate::scheme::Scheme;
 
 pub type Subst = HashMap<i32, Type>;
 
@@ -161,6 +162,39 @@ impl Substitutable for Type {
                 result
             }
         }
+    }
+}
+
+impl Substitutable for Scheme {
+    fn apply(&mut self, s: &Subst) {
+        self.t.apply(s);
+        self.type_params.apply(s);
+    }
+    fn ftv(&self) -> Vec<TVar> {
+        let mut result = self.t.ftv();
+        result.append(&mut self.type_params.ftv());
+        result
+    }
+}
+
+impl Substitutable for TypeParam {
+    fn apply(&mut self, s: &Subst) {
+        if let Some(constraint) = &mut self.constraint {
+            constraint.apply(s);
+        }
+        if let Some(default) = &mut self.default {
+            default.apply(s);
+        }
+    }
+    fn ftv(&self) -> Vec<TVar> {
+        let mut result = vec![];
+        if let Some(constraint) = &self.constraint {
+            result.append(&mut constraint.ftv());
+        }
+        if let Some(default) = &self.default {
+            result.append(&mut default.ftv());
+        }
+        result
     }
 }
 
