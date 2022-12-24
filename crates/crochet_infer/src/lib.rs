@@ -19,6 +19,7 @@ pub mod infer;
 pub use context::*;
 pub use expand_type::expand_type;
 pub use infer::*;
+pub use scheme::get_sub_and_type_params;
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
 pub use util::{

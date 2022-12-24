@@ -1,12 +1,13 @@
 use std::cmp;
 use std::collections::BTreeSet;
 
-use crochet_ast::types::{self as types, TGeneric, TLam, TObjElem, TObject, TVar, Type, TypeKind};
+use crochet_ast::types::{self as types, TLam, TObjElem, TObject, TVar, Type, TypeKind};
 use crochet_ast::values::ExprKind;
 use types::TKeyword;
 
 use crate::context::Context;
 use crate::expand_type::expand_type;
+use crate::scheme::instantiate_callable;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify_mut::unify_mut;
@@ -136,6 +137,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                 .iter()
                 .filter_map(|elem| match elem {
                     TObjElem::Call(call) => {
+                        println!("handling callable");
                         let lam = Type::from(TypeKind::Lam(TLam {
                             params: call.params.to_owned(),
                             ret: call.ret.to_owned(),
@@ -143,11 +145,9 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                         let t = if call.type_params.is_empty() {
                             lam
                         } else {
-                            Type::from(TypeKind::Generic(TGeneric {
-                                t: Box::from(lam),
-                                type_params: call.type_params.to_owned(),
-                            }))
+                            instantiate_callable(ctx, call)
                         };
+                        println!("callable instantiated as {t}");
                         Some(t)
                     }
                     TObjElem::Constructor(_) => None,

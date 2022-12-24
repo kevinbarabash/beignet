@@ -26,7 +26,7 @@ impl fmt::Display for Scheme {
     }
 }
 
-fn get_sub_and_type_params(tvars: &[TVar]) -> (Subst, Vec<TypeParam>) {
+pub fn get_sub_and_type_params(tvars: &[TVar]) -> (Subst, Vec<TypeParam>) {
     let mut sub = Subst::new();
     let mut type_params: Vec<TypeParam> = vec![];
 
@@ -121,6 +121,22 @@ pub fn instantiate_gen_lam(ctx: &Context, gen_lam: &TGenLam) -> Type {
 
     let type_param_map = get_type_param_map(ctx, type_params);
     let t = Type::from(TypeKind::Lam(lam.as_ref().to_owned()));
+
+    replace_aliases_rec(&t, &type_param_map)
+}
+
+pub fn instantiate_callable(ctx: &Context, callable: &TCallable) -> Type {
+    let TCallable {
+        type_params,
+        params,
+        ret,
+    } = callable;
+
+    let type_param_map = get_type_param_map(ctx, type_params);
+    let t = Type::from(TypeKind::Lam(TLam {
+        params: params.to_owned(),
+        ret: ret.to_owned(),
+    }));
 
     replace_aliases_rec(&t, &type_param_map)
 }

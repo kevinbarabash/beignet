@@ -1,14 +1,14 @@
 use itertools::join;
 use std::fmt;
 
-use crate::types::r#type::{TVar, Type};
 use crate::types::TFnParam;
+use crate::types::{Type, TypeParam};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TCallable {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
-    pub type_params: Vec<TVar>,
+    pub type_params: Vec<TypeParam>,
 }
 
 impl fmt::Display for TCallable {
@@ -22,10 +22,14 @@ impl fmt::Display for TCallable {
             write!(f, "({}) => {}", join(params, ", "), ret)
         } else {
             let type_params = type_params.iter().map(|tp| {
-                let TVar { id, constraint } = tp;
+                let TypeParam {
+                    name,
+                    constraint,
+                    default: _, // TODO
+                } = tp;
                 match constraint {
-                    Some(constraint) => format!("t{id} extends {constraint}"),
-                    None => format!("t{id}"),
+                    Some(constraint) => format!("{name} extends {constraint}"),
+                    None => name.to_string(),
                 }
             });
             write!(

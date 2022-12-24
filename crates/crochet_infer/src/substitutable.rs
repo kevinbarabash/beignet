@@ -253,23 +253,15 @@ impl Substitutable for TRef {
 
 impl Substitutable for TCallable {
     fn apply(&mut self, sub: &Subst) {
-        // QUESTION: Do we really need to be filtering out type_params from
-        // substitutions?
-        let type_params = self
-            .type_params
-            .iter()
-            .filter(|tp| !sub.contains_key(&tp.id))
-            .cloned()
-            .collect();
-
         self.params.iter_mut().for_each(|param| param.apply(sub));
         self.ret.apply(sub);
-        self.type_params = type_params;
+        self.type_params.apply(sub);
     }
     fn ftv(&self) -> Vec<TVar> {
         let mut result = self.params.ftv();
         result.append(&mut self.ret.ftv());
-        result.uniq(self.type_params.to_owned())
+        result.append(&mut self.type_params.ftv());
+        result
     }
 }
 

@@ -49,6 +49,7 @@ fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>
     if let Some(type_args) = &alias.type_args {
         if type_args.len() != type_params.len() {
             // TODO: rename this TypeParamTypeArgCountMismatch
+            println!("type_args.len() != type_params.len()");
             return Err(vec![TypeError::TypeInstantiationFailure]);
         }
         let ids = type_params.iter().map(|tv| tv.id.to_owned());
