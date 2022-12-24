@@ -58,6 +58,12 @@ impl Substitutable for Type {
             }
             // TODO: handle widening of lambdas
             TypeKind::Lam(lam) => lam.apply(sub),
+            TypeKind::GenLam(TGenLam { lam, type_params }) => {
+                // TypeParams can have constraints and defaults which are types
+                // so we apply the substitution to those here.
+                type_params.apply(sub);
+                lam.apply(sub)
+            }
             TypeKind::Lit(_) => norm_type(self),
             TypeKind::Keyword(_) => norm_type(self),
             TypeKind::Union(types) => types.apply(sub),
@@ -121,6 +127,8 @@ impl Substitutable for Type {
                 result.unique_via(|a, b| a.id == b.id)
             }
             TypeKind::Lam(lam) => lam.ftv(),
+            // QUESTION: Is it okay to not instantiate this type here?
+            TypeKind::GenLam(TGenLam { lam, .. }) => lam.ftv(),
             TypeKind::Lit(_) => vec![],
             TypeKind::Keyword(_) => vec![],
             TypeKind::Union(types) => types.ftv(),

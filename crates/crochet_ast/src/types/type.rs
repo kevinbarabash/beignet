@@ -3,7 +3,7 @@ use itertools::{join, Itertools};
 use std::fmt;
 
 use crate::types::keyword::TKeyword;
-use crate::types::lam::TLam;
+use crate::types::lam::{TGenLam, TLam};
 use crate::types::lit::TLit;
 use crate::types::obj::TObjElem;
 use crate::types::provenance::Provenance;
@@ -107,6 +107,7 @@ pub enum TypeKind {
     Var(TVar),
     App(TApp),
     Lam(TLam),
+    GenLam(TGenLam),
     Lit(TLit),
     Keyword(TKeyword),
     Union(Vec<Type>),
@@ -194,6 +195,9 @@ impl fmt::Display for Type {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }
             TypeKind::Lam(lam) => write!(f, "{lam}"),
+            TypeKind::GenLam(_) => {
+                todo!();
+            }
             TypeKind::Lit(lit) => write!(f, "{}", lit),
             TypeKind::Keyword(keyword) => write!(f, "{}", keyword),
             TypeKind::Union(types) => {

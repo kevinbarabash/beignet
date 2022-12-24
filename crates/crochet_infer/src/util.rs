@@ -114,6 +114,9 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 let ret = Box::from(norm_type(&lam.ret, mapping, _ctx));
                 TypeKind::Lam(TLam { params, ret })
             }
+            TypeKind::GenLam(_) => {
+                todo!();
+            }
             TypeKind::Lit(_) => return t.to_owned(),
             TypeKind::Keyword(_) => return t.to_owned(),
             TypeKind::Union(types) => {
@@ -548,6 +551,16 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
                 .collect(),
             ret: Box::from(replace_aliases_rec(ret, type_param_map)),
         }),
+        TypeKind::GenLam(TGenLam {
+            lam: _,
+            type_params: _,
+        }) => {
+            // TODO:
+            // - create a new type_param_map that excludes the generic lambda's
+            //   type params
+            // - apply that to the inner lambda
+            todo!()
+        }
         TypeKind::Lit(_) => return t.to_owned(),
         TypeKind::Keyword(_) => return t.to_owned(),
         TypeKind::Union(types) => TypeKind::Union(

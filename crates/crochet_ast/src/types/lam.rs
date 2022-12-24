@@ -4,6 +4,7 @@ use std::fmt;
 use crate::types::keyword::TKeyword;
 use crate::types::pat::TPat;
 use crate::types::r#type::{Type, TypeKind};
+use crate::types::TypeParam;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TLam {
@@ -15,6 +16,22 @@ impl fmt::Display for TLam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { params, ret } = self;
         write!(f, "({}) => {}", join(params, ", "), ret)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TGenLam {
+    pub type_params: Vec<TypeParam>,
+    pub lam: Box<TLam>,
+}
+
+impl fmt::Display for TGenLam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self { type_params, lam } = self;
+
+        let type_params: Vec<_> = type_params.iter().map(|tp| tp.to_string()).collect();
+        write!(f, "<{}>", type_params.join(", "))?;
+        write!(f, "{lam}")
     }
 }
 

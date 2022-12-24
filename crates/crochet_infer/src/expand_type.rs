@@ -20,6 +20,7 @@ pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
         TypeKind::Var(_) => Ok(t.to_owned()),
         TypeKind::App(_) => Ok(t.to_owned()),
         TypeKind::Lam(_) => Ok(t.to_owned()),
+        TypeKind::GenLam(_) => Ok(t.to_owned()),
         TypeKind::Lit(_) => Ok(t.to_owned()),
         TypeKind::Keyword(_) => Ok(t.to_owned()),
         TypeKind::Union(_) => Ok(t.to_owned()),
@@ -478,6 +479,7 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
             Ok(t)
         }
         TypeKind::Lam(_) => ctx.lookup_type_and_instantiate("Function", false),
+        TypeKind::GenLam(_) => ctx.lookup_type_and_instantiate("Function", false),
         TypeKind::App(_) => todo!(), // What does this even mean?
         TypeKind::Union(_) => todo!(),
         TypeKind::Intersection(_) => {

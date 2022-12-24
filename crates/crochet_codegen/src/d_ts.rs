@@ -420,6 +420,16 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsTyp
         TypeKind::Lam(types::TLam { params, ret, .. }) => {
             build_ts_fn_type_with_params(params, ret, type_params)
         }
+        TypeKind::GenLam(types::TGenLam {
+            type_params: _,
+            lam: _,
+        }) => {
+            // TODO: combine the return value from the `build_type_params()` call
+            // with the `type_params` passed into this function.
+            // let _ = build_type_params(t);
+            // build_type(t, type_params);
+            todo!()
+        }
         TypeKind::Union(types) => {
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
                 span: DUMMY_SP,

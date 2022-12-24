@@ -5,7 +5,6 @@ use std::fmt;
 use std::iter::Iterator;
 
 use crochet_ast::types::*;
-use crochet_ast::types::{Type, TypeParam};
 
 use crate::context::{Context, Env};
 use crate::replace_aliases_rec;
@@ -27,9 +26,7 @@ impl fmt::Display for Scheme {
     }
 }
 
-pub fn generalize(env: &Env, t: &Type) -> Scheme {
-    let tvars: Vec<TVar> = t.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id);
-
+fn get_sub_and_type_params(tvars: &[TVar]) -> (Subst, Vec<TypeParam>) {
     let mut sub = Subst::new();
     let mut type_params: Vec<TypeParam> = vec![];
 
@@ -51,10 +48,18 @@ pub fn generalize(env: &Env, t: &Type) -> Scheme {
                     type_args: None,
                 }),
                 provenance: None,
-                mutable: t.mutable,
+                mutable: false,
             },
         );
     }
+
+    (sub, type_params)
+}
+
+pub fn generalize(env: &Env, t: &Type) -> Scheme {
+    let tvars: Vec<TVar> = t.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id);
+
+    let (sub, type_params) = get_sub_and_type_params(&tvars);
 
     // TODO: Consider not cloning here once we have some tests in place
     let mut t = t.clone();
@@ -66,10 +71,25 @@ pub fn generalize(env: &Env, t: &Type) -> Scheme {
     }
 }
 
-pub fn instantiate(ctx: &Context, sc: &Scheme) -> Type {
+pub fn generalize_gen_lam(env: &Env, lam: &TLam) -> TGenLam {
+    let tvars: Vec<TVar> = lam.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id);
+
+    let (sub, type_params) = get_sub_and_type_params(&tvars);
+
+    // TODO: Consider not cloning here once we have some tests in place
+    let mut lam = lam.clone();
+    lam.apply(&sub);
+
+    TGenLam {
+        lam: Box::from(lam),
+        type_params,
+    }
+}
+
+fn get_type_param_map(ctx: &Context, type_params: &[TypeParam]) -> HashMap<String, Type> {
     let mut type_param_map = HashMap::new();
 
-    for type_param in &sc.type_params {
+    for type_param in type_params {
         let TypeParam {
             name,
             constraint,
@@ -85,9 +105,24 @@ pub fn instantiate(ctx: &Context, sc: &Scheme) -> Type {
         type_param_map.insert(name.to_owned(), t);
     }
 
+    type_param_map
+}
+
+pub fn instantiate(ctx: &Context, sc: &Scheme) -> Type {
+    let type_param_map = get_type_param_map(ctx, &sc.type_params);
+
     // TODO: name functions so it's more obvious when a function is mutating
     // it's args.
     replace_aliases_rec(&sc.t, &type_param_map)
+}
+
+pub fn instantiate_gen_lam(ctx: &Context, gen_lam: &TGenLam) -> Type {
+    let TGenLam { type_params, lam } = gen_lam;
+
+    let type_param_map = get_type_param_map(ctx, type_params);
+    let t = Type::from(TypeKind::Lam(lam.as_ref().to_owned()));
+
+    replace_aliases_rec(&t, &type_param_map)
 }
 
 #[cfg(test)]
@@ -173,6 +208,75 @@ mod tests {
         let sc = generalize(&env, &t);
 
         assert_eq!(sc.to_string(), "{a: number, b: string}");
+    }
+
+    #[test]
+    fn test_generalize_lam_to_gen_lam() {
+        let ctx = Context::default();
+
+        let tv = ctx.fresh_var();
+
+        let lam = TLam {
+            params: vec![
+                TFnParam {
+                    pat: TPat::Ident(BindingIdent {
+                        name: "a".to_string(),
+                        mutable: false,
+                    }),
+                    t: tv.clone(),
+                    optional: false,
+                },
+                TFnParam {
+                    pat: TPat::Ident(BindingIdent {
+                        name: "b".to_string(),
+                        mutable: false,
+                    }),
+                    t: ctx.fresh_var(),
+                    optional: false,
+                },
+            ],
+            ret: Box::from(tv),
+        };
+
+        let env = Env::new();
+        let gen_lam = generalize_gen_lam(&env, &lam);
+
+        assert_eq!(gen_lam.to_string(), "<A, B>(a: A, b: B) => A");
+    }
+
+    #[test]
+    fn test_generalize_lam_to_scheme() {
+        let ctx = Context::default();
+
+        let tv = ctx.fresh_var();
+
+        let lam = TLam {
+            params: vec![
+                TFnParam {
+                    pat: TPat::Ident(BindingIdent {
+                        name: "a".to_string(),
+                        mutable: false,
+                    }),
+                    t: tv.clone(),
+                    optional: false,
+                },
+                TFnParam {
+                    pat: TPat::Ident(BindingIdent {
+                        name: "b".to_string(),
+                        mutable: false,
+                    }),
+                    t: ctx.fresh_var(),
+                    optional: false,
+                },
+            ],
+            ret: Box::from(tv),
+        };
+        let t = Type::from(TypeKind::Lam(lam));
+
+        let env = Env::new();
+        let gen_lam = generalize(&env, &t);
+
+        assert_eq!(gen_lam.to_string(), "<A, B>(a: A, b: B) => A");
     }
 
     #[test]
@@ -337,5 +441,59 @@ mod tests {
         let t = instantiate(&ctx, &sc);
 
         insta::assert_debug_snapshot!(t);
+    }
+
+    #[test]
+    fn test_instantiate_gen_lam() {
+        let ctx = Context::default();
+
+        let gen_lam = TGenLam {
+            type_params: vec![
+                TypeParam {
+                    name: "A".to_string(),
+                    constraint: None,
+                    default: None,
+                },
+                TypeParam {
+                    name: "B".to_string(),
+                    constraint: Some(Box::from(Type::from(TypeKind::Keyword(TKeyword::String)))),
+                    default: None,
+                },
+            ],
+            lam: Box::from(TLam {
+                params: vec![
+                    TFnParam {
+                        pat: TPat::Ident(BindingIdent {
+                            name: "a".to_string(),
+                            mutable: false,
+                        }),
+                        t: Type::from(TypeKind::Ref(TRef {
+                            name: "A".to_string(),
+                            type_args: None,
+                        })),
+                        optional: false,
+                    },
+                    TFnParam {
+                        pat: TPat::Ident(BindingIdent {
+                            name: "b".to_string(),
+                            mutable: false,
+                        }),
+                        t: Type::from(TypeKind::Ref(TRef {
+                            name: "B".to_string(),
+                            type_args: None,
+                        })),
+                        optional: false,
+                    },
+                ],
+                ret: Box::from(Type::from(TypeKind::Ref(TRef {
+                    name: "A".to_string(),
+                    type_args: None,
+                }))),
+            }),
+        };
+
+        let lam = instantiate_gen_lam(&ctx, &gen_lam);
+
+        assert_eq!(lam.to_string(), "(a: t1, b: t2) => t1");
     }
 }

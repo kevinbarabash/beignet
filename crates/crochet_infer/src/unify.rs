@@ -640,6 +640,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
         // yet.  This handles cases like `[1, 2, 3].map((x) => x * x)` where the
         // `map` method is generic.
         // TODO: Consider instantiating properties when we look them up.
+        // TODO: handle TypeKind::GenLam
         (TypeKind::Generic(_), TypeKind::Generic(_)) => {
             unify(&mut ctx.instantiate(t1), &mut ctx.instantiate(t2), ctx)
         }
