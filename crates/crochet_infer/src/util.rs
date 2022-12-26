@@ -558,14 +558,12 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
             ret: Box::from(replace_aliases_rec(ret, type_param_map)),
         }),
         TypeKind::GenLam(TGenLam { lam, type_params }) => {
-            // TODO:
-            // - create a new type_param_map that excludes the generic lambda's
-            //   type params
-            // - apply that to the inner lambda
+            // Removes any shadowed type variables.
             let mut type_param_map = type_param_map.clone();
             for type_param in type_params {
                 type_param_map.remove(&type_param.name);
             }
+
             let params: Vec<_> = lam
                 .params
                 .iter()

@@ -1,8 +1,7 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 use types::{
     TCallable, TConditionalType, TIndex, TIndexAccess, TIndexKey, TMappedType, TObjElem, TObject,
-    TPropKey, TypeKind,
+    TPropKey, TRef, TypeKind,
 };
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
@@ -17,7 +16,7 @@ use crochet_ast::types::{
 };
 use crochet_ast::values::Lit;
 use crochet_infer::{
-    generalize, get_sub_and_type_params, normalize, Context, Env, Scheme, Substitutable,
+    generalize, get_sub_and_type_params, normalize, Context, Env, Scheme, Subst, Substitutable,
 };
 
 #[derive(Debug, Clone)]
@@ -64,17 +63,9 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
         TsType::TsThisType(_) => Ok(Type::from(TypeKind::This)),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
-                let params: Vec<TFnParam> = infer_fn_params(&fn_type.params, ctx)?;
-                let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?;
-
-                // let t = Type::from(TypeKind::Lam(types::TLam {
-                //     params,
-                //     ret: Box::from(ret),
-                // }));
-
                 let lam = types::TLam {
-                    params,
-                    ret: Box::from(ret),
+                    params: infer_fn_params(&fn_type.params, ctx)?,
+                    ret: Box::from(infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?),
                 };
 
                 match &fn_type.type_params {
@@ -434,129 +425,101 @@ fn get_key_name(key: &Expr) -> Result<String, String> {
     }
 }
 
+fn get_type_params(
+    type_params: &Option<Box<TsTypeParamDecl>>,
+    ctx: &Context,
+) -> Result<Vec<TypeParam>, String> {
+    match type_params {
+        Some(type_params) => type_params
+            .params
+            .iter()
+            .map(|type_param| {
+                let constraint = match &type_param.constraint {
+                    Some(constraint) => {
+                        let t = infer_ts_type_ann(constraint, ctx)?;
+                        Some(Box::from(t))
+                    }
+                    None => None,
+                };
+
+                let default = match &type_param.default {
+                    Some(default) => {
+                        let t = infer_ts_type_ann(default, ctx)?;
+                        Some(Box::from(t))
+                    }
+                    None => None,
+                };
+
+                Ok(TypeParam {
+                    name: type_param.name.sym.to_string(),
+                    constraint,
+                    default,
+                })
+            })
+            .collect(),
+        None => Ok(vec![]),
+    }
+}
+
+fn infer_callable(
+    params: &[TsFnParam],
+    type_ann: &TsType,
+    type_params: &Option<Box<TsTypeParamDecl>>,
+    ctx: &Context,
+) -> Result<TCallable, String> {
+    let mut params = infer_fn_params(params, ctx)?;
+    let mut ret = infer_ts_type_ann(type_ann, ctx)?;
+    let mut type_params = get_type_params(type_params, ctx)?;
+
+    let mut tvars = params.ftv();
+    tvars.append(&mut ret.ftv());
+
+    let (sub, mut more_type_params) = get_sub_and_type_params(&tvars);
+    type_params.append(&mut more_type_params);
+
+    params.apply(&sub);
+    ret.apply(&sub);
+
+    Ok(TCallable {
+        params,
+        ret: Box::from(ret),
+        type_params,
+    })
+}
+
 fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem, String> {
     match elem {
         TsTypeElement::TsCallSignatureDecl(decl) => match &decl.type_ann {
-            Some(type_ann) => {
-                let mut params = infer_fn_params(&decl.params, ctx)?;
-                let mut ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
-                let mut type_params = match &decl.type_params {
-                    Some(type_params) => type_params
-                        .params
-                        .iter()
-                        .map(|type_param| {
-                            let constraint = match &type_param.constraint {
-                                Some(constraint) => {
-                                    let t = infer_ts_type_ann(constraint, ctx)?;
-                                    Some(Box::from(t))
-                                }
-                                None => None,
-                            };
-
-                            let default = match &type_param.default {
-                                Some(default) => {
-                                    let t = infer_ts_type_ann(default, ctx)?;
-                                    Some(Box::from(t))
-                                }
-                                None => None,
-                            };
-
-                            Ok(TypeParam {
-                                name: type_param.name.sym.to_string(),
-                                constraint,
-                                default,
-                            })
-                        })
-                        .collect::<Result<Vec<TypeParam>, String>>()?,
-                    None => vec![],
-                };
-
-                let mut tvars = params.ftv();
-                tvars.append(&mut ret.ftv());
-
-                let (sub, mut more_type_params) = get_sub_and_type_params(&tvars);
-                type_params.append(&mut more_type_params);
-
-                params.apply(&sub);
-                ret.apply(&sub);
-
-                Ok(TObjElem::Call(TCallable {
-                    params,
-                    ret: Box::from(ret),
-                    type_params,
-                }))
-            }
+            Some(type_ann) => Ok(TObjElem::Call(infer_callable(
+                &decl.params,
+                &type_ann.type_ann,
+                &decl.type_params,
+                ctx,
+            )?)),
             None => Err(String::from("Property is missing type annotation")),
         },
         TsTypeElement::TsConstructSignatureDecl(decl) => match &decl.type_ann {
+            Some(type_ann) => Ok(TObjElem::Constructor(infer_callable(
+                &decl.params,
+                &type_ann.type_ann,
+                &decl.type_params,
+                ctx,
+            )?)),
+            None => Err(String::from("Property is missing type annotation")),
+        },
+        TsTypeElement::TsPropertySignature(sig) => match &sig.type_ann {
             Some(type_ann) => {
-                let mut params = infer_fn_params(&decl.params, ctx)?;
-                let mut ret = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
-                let mut type_params = match &decl.type_params {
-                    Some(type_params) => type_params
-                        .params
-                        .iter()
-                        .map(|type_param| {
-                            let constraint = match &type_param.constraint {
-                                Some(constraint) => {
-                                    let t = infer_ts_type_ann(constraint, ctx)?;
-                                    Some(Box::from(t))
-                                }
-                                None => None,
-                            };
-
-                            let default = match &type_param.default {
-                                Some(default) => {
-                                    let t = infer_ts_type_ann(default, ctx)?;
-                                    Some(Box::from(t))
-                                }
-                                None => None,
-                            };
-
-                            Ok(TypeParam {
-                                name: type_param.name.sym.to_string(),
-                                constraint,
-                                default,
-                            })
-                        })
-                        .collect::<Result<Vec<TypeParam>, String>>()?,
-                    None => vec![],
-                };
-
-                let mut tvars = params.ftv();
-                tvars.append(&mut ret.ftv());
-
-                let (sub, mut more_type_params) = get_sub_and_type_params(&tvars);
-                type_params.append(&mut more_type_params);
-
-                params.apply(&sub);
-                ret.apply(&sub);
-
-                Ok(TObjElem::Constructor(TCallable {
-                    params,
-                    ret: Box::from(ret),
-                    type_params,
+                let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
+                let name = get_key_name(sig.key.as_ref())?;
+                Ok(TObjElem::Prop(TProp {
+                    name: TPropKey::StringKey(name),
+                    optional: sig.optional,
+                    mutable: !sig.readonly,
+                    t,
                 }))
             }
             None => Err(String::from("Property is missing type annotation")),
         },
-        TsTypeElement::TsPropertySignature(sig) => {
-            match &sig.type_ann {
-                Some(type_ann) => {
-                    // TODO: do a better job of handling this
-                    let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
-                    let gen_t = generalize(&HashMap::default(), &t);
-                    let name = get_key_name(sig.key.as_ref())?;
-                    Ok(TObjElem::Prop(TProp {
-                        name: TPropKey::StringKey(name),
-                        optional: sig.optional,
-                        mutable: !sig.readonly,
-                        t: gen_t,
-                    }))
-                }
-                None => Err(String::from("Property is missing type annotation")),
-            }
-        }
         TsTypeElement::TsGetterSignature(sig) => {
             let key = get_key_name(sig.key.as_ref())?;
             Err(format!("TsGetterSignature: {key}"))
@@ -567,14 +530,79 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
         }
         TsTypeElement::TsMethodSignature(sig) => {
             let t = infer_method_sig(sig, ctx)?;
-            let gen_t = generalize(&HashMap::default(), &t);
-            // println!("t = {t}, gen_t = {gen_t}");
+            let tvs = t.ftv();
             let name = get_key_name(sig.key.as_ref())?;
+
+            let t = if tvs.is_empty() {
+                t
+            } else {
+                match &t.kind {
+                    TypeKind::Lam(lam) => {
+                        let mut type_params: Vec<TypeParam> = vec![];
+                        let mut sub: Subst = Subst::default();
+                        let mut char_code: u32 = 65;
+                        for tv in tvs {
+                            let c = char::from_u32(char_code).unwrap();
+                            let t = Type::from(TypeKind::Ref(TRef {
+                                name: c.to_string(),
+                                type_args: None,
+                            }));
+                            sub.insert(tv.id, t);
+                            type_params.push(TypeParam {
+                                name: c.to_string(),
+                                constraint: None,
+                                default: None,
+                            });
+                            char_code += 1;
+                        }
+
+                        let mut t = Type::from(TypeKind::GenLam(TGenLam {
+                            lam: Box::from(lam.to_owned()),
+                            type_params,
+                        }));
+                        t.apply(&sub);
+
+                        t
+                    }
+                    TypeKind::GenLam(gen_lam) => {
+                        let TGenLam { type_params, lam } = gen_lam;
+                        let mut type_params = type_params.clone();
+
+                        let mut sub: Subst = Subst::default();
+                        let mut char_code: u32 = 65;
+                        for tv in tvs {
+                            // TODO: avoid collisions with existing type params
+                            let c = char::from_u32(char_code).unwrap();
+                            let t = Type::from(TypeKind::Ref(TRef {
+                                name: c.to_string(),
+                                type_args: None,
+                            }));
+                            sub.insert(tv.id, t);
+                            type_params.push(TypeParam {
+                                name: c.to_string(),
+                                constraint: None,
+                                default: None,
+                            });
+                            char_code += 1;
+                        }
+
+                        let mut t = Type::from(TypeKind::GenLam(TGenLam {
+                            lam: lam.to_owned(),
+                            type_params,
+                        }));
+                        t.apply(&sub);
+
+                        t
+                    }
+                    _ => panic!("methods can only be a Lam or GenLam"),
+                }
+            };
+
             Ok(TObjElem::Prop(TProp {
                 name: TPropKey::StringKey(name),
                 optional: sig.optional,
                 mutable: false, // All methods on interfaces are readonly
-                t: gen_t,
+                t,
             }))
         }
         TsTypeElement::TsIndexSignature(sig) => match &sig.type_ann {

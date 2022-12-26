@@ -75,7 +75,7 @@ fn infer_method_on_readonly_array() {
     let result = format!("{}", ctx.lookup_value("map").unwrap());
     assert_eq!(
         result,
-        "<t0><U>(callbackfn: (value: string, index: number, array: mut string[]) => U, thisArg?: t0) => mut U[]"
+        "<U, A>(callbackfn: (value: string, index: number, array: mut string[]) => U, thisArg?: A) => mut U[]"
     );
 }
 
@@ -103,12 +103,12 @@ fn infer_method_on_readonly_arrays_of_different_things() {
     let result = format!("{}", ctx.lookup_value("map1").unwrap());
     assert_eq!(
         result,
-        "<t0><U>(callbackfn: (value: string, index: number, array: mut string[]) => U, thisArg?: t0) => mut U[]"
+        "<U, A>(callbackfn: (value: string, index: number, array: mut string[]) => U, thisArg?: A) => mut U[]"
     );
     let result = format!("{}", ctx.lookup_value("map2").unwrap());
     assert_eq!(
         result,
-        "<t0><U>(callbackfn: (value: number, index: number, array: mut number[]) => U, thisArg?: t0) => mut U[]"
+        "<U, A>(callbackfn: (value: number, index: number, array: mut number[]) => U, thisArg?: A) => mut U[]"
     );
 }
 
@@ -147,7 +147,7 @@ fn infer_array_method_on_tuple() {
     assert_eq!(
         result,
         // TODO: add parens around a union when it's the child of an arry
-        "<t0><U>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: mut \"hello\" | 5 | true[]) => U, thisArg?: t0) => mut U[]"
+        "<U, A>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: mut \"hello\" | 5 | true[]) => U, thisArg?: A) => mut U[]"
     );
 }
 
@@ -312,7 +312,7 @@ fn instantiating_generic_interfaces() {
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("bar").unwrap());
-    assert_eq!(result, "<t0>(x: number) => t0");
+    assert_eq!(result, "<A>(x: number) => A");
 }
 
 #[test]
