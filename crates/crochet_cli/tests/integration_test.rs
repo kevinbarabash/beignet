@@ -81,7 +81,7 @@ fn infer_number_literal() {
 
 #[test]
 fn infer_lam() {
-    insta::assert_snapshot!(infer("(x) => x;"), @"<t0>(x: t0) => t0");
+    insta::assert_snapshot!(infer("(x) => x;"), @"<A>(x: A) => A");
 }
 
 #[test]
@@ -133,7 +133,7 @@ fn infer_let_fn_with_incorrect_param_types() {
 fn infer_fn_param_used_with_multiple_other_params() {
     insta::assert_snapshot!(
         infer("(f, x, y) => f(x) + f(y);"),
-        @"<t0>(f: (t0) => number, x: t0, y: t0) => number"
+        @"<A>(f: (A) => number, x: A, y: A) => number"
     );
 }
 
@@ -141,14 +141,14 @@ fn infer_fn_param_used_with_multiple_other_params() {
 fn infer_i_combinator() {
     let (_, ctx) = infer_prog("let I = (x) => x;");
     let result = format!("{}", ctx.lookup_value("I").unwrap());
-    insta::assert_snapshot!(result, @"<t0>(x: t0) => t0");
+    insta::assert_snapshot!(result, @"<A>(x: A) => A");
 }
 
 #[test]
 fn infer_k_combinator_not_curried() {
     let (program, ctx) = infer_prog("let K = (x, y) => x;");
     let result = format!("{}", ctx.lookup_value("K").unwrap());
-    insta::assert_snapshot!(result, @"<t0, t1>(x: t0, y: t1) => t0");
+    insta::assert_snapshot!(result, @"<A, B>(x: A, y: B) => A");
 
     let result = codegen_d_ts(&program, &ctx);
     insta::assert_snapshot!(result, @"export declare const K: <A, B>(x: A, y: B) => A;\n");
@@ -158,14 +158,14 @@ fn infer_k_combinator_not_curried() {
 fn infer_s_combinator_not_curried() {
     let (_, ctx) = infer_prog("let S = (f, g, x) => f(x, g(x));");
     let result = format!("{}", ctx.lookup_value("S").unwrap());
-    insta::assert_snapshot!(result, @"<t0, t1, t2>(f: (t0, t1) => t2, g: (t0) => t1, x: t0) => t2");
+    insta::assert_snapshot!(result, @"<A, B, C>(f: (A, B) => C, g: (A) => B, x: A) => C");
 }
 
 #[test]
 fn infer_k_combinator_curried() {
     let (_, ctx) = infer_prog("let K = (x) => (y) => x;");
     let result = format!("{}", ctx.lookup_value("K").unwrap());
-    insta::assert_snapshot!(result, @"<t0, t1>(x: t0) => (y: t1) => t0");
+    insta::assert_snapshot!(result, @"<A, B>(x: A) => (y: B) => A");
 }
 
 #[test]
@@ -174,7 +174,7 @@ fn infer_s_combinator_curried() {
     let result = format!("{}", ctx.lookup_value("S").unwrap());
     insta::assert_snapshot!(
         result,
-        @"<t0, t1, t2>(f: (t0) => (t1) => t2) => (g: (t0) => t1) => (x: t0) => t2"
+        @"<A, B, C>(f: (A) => (B) => C) => (g: (A) => B) => (x: A) => C"
     );
 }
 
@@ -187,7 +187,7 @@ fn infer_skk() {
     "#;
     let (_, ctx) = infer_prog(src);
     let result = format!("{}", ctx.lookup_value("I").unwrap());
-    insta::assert_snapshot!(result, @"<t0>(x: t0) => t0");
+    insta::assert_snapshot!(result, @"<A>(x: A) => A");
 }
 
 #[test]
@@ -334,7 +334,7 @@ fn infer_let_rec_until() {
     let src = "let rec until = (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) };";
     let (program, ctx) = infer_prog(src);
     let result = format!("{}", ctx.lookup_value("until").unwrap());
-    insta::assert_snapshot!(result, @"<t0>(p: (t0) => boolean, f: (t0) => t0, x: t0) => t0");
+    insta::assert_snapshot!(result, @"<A>(p: (A) => boolean, f: (A) => A, x: A) => A");
 
     let result = codegen_d_ts(&program, &ctx);
     insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A;
@@ -922,7 +922,7 @@ fn infer_fn_param_with_type_alias_with_param_2() {
 
     let result = format!("{}", ctx.lookup_value("get_bar").unwrap());
     // TODO: normalize the type before inserting it into the context
-    insta::assert_snapshot!(result, @"<t0>(foo: Foo<t0>) => t0");
+    insta::assert_snapshot!(result, @"<A>(foo: Foo<A>) => A");
 }
 
 #[test]
@@ -948,7 +948,7 @@ fn infer_fn_param_with_type_alias_with_param_4() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.lookup_value("get_bar").unwrap());
-    insta::assert_snapshot!(result, @"<t0>(foo: Foo<t0>) => t0");
+    insta::assert_snapshot!(result, @"<A>(foo: Foo<A>) => A");
 
     let result = format!("{}", ctx.lookup_value("bar").unwrap());
     assert_eq!(result, "\"hello\"");
@@ -969,7 +969,7 @@ fn infer_with_constrained_polymorphism_success() {
 
 #[test]
 // TODO: figure out how to get the type constraints in the error message
-#[should_panic = r#"TypeError::UnificationError: {bar: "hello"}, {bar: t4}"#]
+#[should_panic = r#"TypeError::UnificationError: {bar: "hello"}, {bar: t5}"#]
 fn infer_with_constrained_polymorphism_failiure() {
     let src = r#"
     type Foo<T> = {bar: T};

@@ -550,7 +550,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                             sub.insert(tv.id, t);
                             type_params.push(TypeParam {
                                 name: c.to_string(),
-                                constraint: None,
+                                constraint: tv.constraint,
                                 default: None,
                             });
                             char_code += 1;
@@ -580,7 +580,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                             sub.insert(tv.id, t);
                             type_params.push(TypeParam {
                                 name: c.to_string(),
-                                constraint: None,
+                                constraint: tv.constraint,
                                 default: None,
                             });
                             char_code += 1;

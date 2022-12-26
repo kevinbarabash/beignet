@@ -102,16 +102,13 @@ mod tests {
     #[test]
     fn infer_i_combinator() {
         let ctx = infer_prog("let I = (x) => x;");
-        assert_eq!(get_value_type("I", &ctx), "<t0>(x: t0) => t0");
+        assert_eq!(get_value_type("I", &ctx), "<A>(x: A) => A");
     }
 
     #[test]
     fn infer_k_combinator() {
         let ctx = infer_prog("let K = (x) => (y) => x;");
-        assert_eq!(
-            get_value_type("K", &ctx),
-            "<t0, t1>(x: t0) => (y: t1) => t0"
-        );
+        assert_eq!(get_value_type("K", &ctx), "<A, B>(x: A) => (y: B) => A");
     }
 
     #[test]
@@ -119,7 +116,7 @@ mod tests {
         let ctx = infer_prog("let S = (f) => (g) => (x) => f(x)(g(x));");
         assert_eq!(
             get_value_type("S", &ctx),
-            "<t0, t1, t2>(f: (t0) => (t1) => t2) => (g: (t0) => t1) => (x: t0) => t2"
+            "<A, B, C>(f: (A) => (B) => C) => (g: (A) => B) => (x: A) => C"
         );
     }
 
@@ -131,15 +128,12 @@ mod tests {
         let I = S(K)(K);
         "#;
         let ctx = infer_prog(src);
-        assert_eq!(
-            get_value_type("K", &ctx),
-            "<t0, t1>(x: t0) => (y: t1) => t0"
-        );
+        assert_eq!(get_value_type("K", &ctx), "<A, B>(x: A) => (y: B) => A");
         assert_eq!(
             get_value_type("S", &ctx),
-            "<t0, t1, t2>(f: (t0) => (t1) => t2) => (g: (t0) => t1) => (x: t0) => t2"
+            "<A, B, C>(f: (A) => (B) => C) => (g: (A) => B) => (x: A) => C"
         );
-        assert_eq!(get_value_type("I", &ctx), "<t0>(x: t0) => t0");
+        assert_eq!(get_value_type("I", &ctx), "<A>(x: A) => A");
     }
 
     #[test]
@@ -985,7 +979,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_value_type("fst", &ctx), "<t0>(a: t0, b: t0) => t0");
+        assert_eq!(get_value_type("fst", &ctx), "<A>(a: A, b: A) => A");
     }
 
     #[test]
@@ -997,7 +991,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_value_type("fst", &ctx), "<t0, t1>(a: t0, b: t1) => t0");
+        assert_eq!(get_value_type("fst", &ctx), "<A, B>(a: A, b: B) => A");
     }
 
     #[test]
@@ -1023,7 +1017,7 @@ mod tests {
         "#;
         let ctx = infer_prog(src);
 
-        assert_eq!(get_value_type("fst", &ctx), "<t0, t1>(a: t0, b: t1) => t0");
+        assert_eq!(get_value_type("fst", &ctx), "<A, B>(a: A, b: B) => A");
         assert_eq!(get_value_type("x", &ctx), "5");
         assert_eq!(get_value_type("y", &ctx), "true");
     }
@@ -1054,7 +1048,7 @@ mod tests {
         assert_eq!(get_value_type("result", &ctx), "number");
         assert_eq!(
             get_value_type("plus_one", &ctx),
-            "<t0>(a: number, b?: t0) => number"
+            "<A>(a: number, b?: A) => number"
         );
     }
 
@@ -1108,7 +1102,7 @@ mod tests {
         assert_eq!(get_value_type("result", &ctx), "number");
         assert_eq!(
             get_value_type("plus_one", &ctx),
-            "<t0, t1>(a: number, b?: t0, ...c: t1[]) => number"
+            "<A, B>(a: number, b?: A, ...c: B[]) => number"
         );
     }
 
@@ -2192,7 +2186,7 @@ mod tests {
 
         assert_eq!(
             get_value_type("h", &ctx),
-            "<t0>(f: (t0) => number, x: t0, y: t0) => number"
+            "<A>(f: (A) => number, x: A, y: A) => number"
         );
     }
 
@@ -2478,7 +2472,7 @@ mod tests {
 
         assert_eq!(
             get_value_type("add", &ctx),
-            "<t0 extends number | string>(a: t0, b: t0) => t0"
+            "<A : number | string>(a: A, b: A) => A"
         );
         assert_eq!(get_value_type("num_sum", &ctx), "number");
         assert_eq!(get_value_type("str_sum", &ctx), "string");
@@ -2518,7 +2512,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_value_type("fst", &ctx), "<t0>(a: t0, b: t0) => t0");
+        assert_eq!(get_value_type("fst", &ctx), "<A>(a: A, b: A) => A");
         assert_eq!(get_value_type("fst_num", &ctx), "number");
     }
 
@@ -2560,7 +2554,7 @@ mod tests {
 
         assert_eq!(
             get_value_type("getBar", &ctx),
-            "<t0 extends {bar: string}>(obj: t0) => string"
+            "<A : {bar: string}>(obj: A) => string"
         );
     }
 
@@ -3026,10 +3020,10 @@ mod tests {
         let ctx = infer_prog(src);
 
         let fst = ctx.lookup_value("fst").unwrap();
-        assert_eq!(format!("{fst}"), "<t0>(a: t0, b: t0) => t0");
+        assert_eq!(format!("{fst}"), "<A>(a: A, b: A) => A");
 
         // TODO(#390): make this second assertion pass as well, it currently doesn't.
         // let snd = ctx.lookup_value("snd").unwrap();
-        // assert_eq!(format!("{snd}"), "<t0>(a: t0, b: t0) => t0");
+        // assert_eq!(format!("{snd}"), "<A>(a: A, b: A) => A");
     }
 }

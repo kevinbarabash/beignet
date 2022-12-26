@@ -40,10 +40,55 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
 }
 
 pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
-    let empty_env = Env::default();
     let mut t = t.clone();
     t.apply(s);
-    normalize(&generalize(&empty_env, &t), ctx)
+
+    let tvs = t.ftv();
+
+    let t = if tvs.is_empty() {
+        t
+    } else {
+        match &t.kind {
+            TypeKind::Lam(lam) => {
+                let mut type_params: Vec<TypeParam> = vec![];
+                let mut sub: Subst = Subst::default();
+                let mut char_code: u32 = 65;
+                for tv in tvs {
+                    let c = char::from_u32(char_code).unwrap();
+                    let t = Type::from(TypeKind::Ref(TRef {
+                        name: c.to_string(),
+                        type_args: None,
+                    }));
+                    sub.insert(tv.id, t);
+                    type_params.push(TypeParam {
+                        name: c.to_string(),
+                        constraint: tv.constraint,
+                        default: None,
+                    });
+                    char_code += 1;
+                }
+
+                let mut t = Type::from(TypeKind::GenLam(TGenLam {
+                    lam: Box::from(lam.to_owned()),
+                    type_params,
+                }));
+
+                t.apply(&sub);
+
+                t
+            }
+            TypeKind::GenLam(_) => {
+                panic!("We shouldn't be closing over TypeKind::GenLam");
+            }
+            _ => {
+                panic!("We shouldn't have any free type variables when closing over non-lambdas")
+            }
+        }
+    };
+
+    println!("close_over - t = {t}");
+
+    normalize(&t, ctx)
 }
 
 pub fn normalize(t: &Type, ctx: &Context) -> Type {

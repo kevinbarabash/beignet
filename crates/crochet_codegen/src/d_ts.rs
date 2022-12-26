@@ -9,7 +9,7 @@ use swc_ecma_codegen::*;
 
 use crochet_ast::types::{
     TConditionalType, TFnParam, TGeneric, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey,
-    TVar, Type, TypeKind,
+    TVar, Type, TypeKind, TypeParam,
 };
 use crochet_ast::{types, values};
 use crochet_infer::{get_type_params, Context};
@@ -36,39 +36,40 @@ fn print_d_ts(program: &Program) -> String {
     String::from_utf8_lossy(&buf).to_string()
 }
 
+fn build_type_params_from_type_params(type_params: &[TypeParam]) -> Option<Box<TsTypeParamDecl>> {
+    if type_params.is_empty() {
+        None
+    } else {
+        Some(Box::from(TsTypeParamDecl {
+            span: DUMMY_SP,
+            params: type_params
+                .iter()
+                .map(|type_param| {
+                    let constraint = type_param
+                        .constraint
+                        .as_ref()
+                        .map(|constraint| Box::from(build_type(constraint, &None)));
+                    TsTypeParam {
+                        span: DUMMY_SP,
+                        name: build_ident(&type_param.name),
+                        is_in: false,
+                        is_out: false,
+                        constraint,
+                        default: None, // TODO
+                    }
+                })
+                .collect(),
+        }))
+    }
+}
+
 fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
     let current_scope = ctx.scopes.last().unwrap();
 
     let mut body: Vec<ModuleItem> = vec![];
 
     for (name, scheme) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
-        let type_params = if scheme.type_params.is_empty() {
-            None
-        } else {
-            Some(Box::from(TsTypeParamDecl {
-                span: DUMMY_SP,
-                params: scheme
-                    .type_params
-                    .iter()
-                    .map(|type_param| {
-                        let constraint = type_param
-                            .constraint
-                            .as_ref()
-                            .map(|constraint| Box::from(build_type(constraint, &None)));
-                        TsTypeParam {
-                            span: DUMMY_SP,
-                            name: build_ident(&type_param.name),
-                            is_in: false,
-                            is_out: false,
-                            constraint,
-                            default: None, // TODO
-                        }
-                    })
-                    .collect(),
-            }))
-        };
-
-        // let t = instantiate(ctx, scheme);
+        let type_params = build_type_params_from_type_params(&scheme.type_params);
         let decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(TsTypeAliasDecl {
             span: DUMMY_SP,
             declare: true,
@@ -448,15 +449,10 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsTyp
         TypeKind::Lam(types::TLam { params, ret, .. }) => {
             build_ts_fn_type_with_params(params, ret, type_params)
         }
-        TypeKind::GenLam(types::TGenLam {
-            type_params: _,
-            lam: _,
-        }) => {
-            // TODO: combine the return value from the `build_type_params()` call
-            // with the `type_params` passed into this function.
-            // let _ = build_type_params(t);
-            // build_type(t, type_params);
-            todo!()
+        TypeKind::GenLam(types::TGenLam { type_params, lam }) => {
+            let type_params = build_type_params_from_type_params(type_params);
+            let types::TLam { params, ret } = lam.as_ref();
+            build_ts_fn_type_with_params(params, ret, &type_params)
         }
         TypeKind::Union(types) => {
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
