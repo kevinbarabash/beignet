@@ -770,15 +770,6 @@ fn infer_property_type(
 
                     let mut t = replace_aliases_rec(&scheme.t, &type_param_map);
 
-                    // let mut t = ctx.lookup_type("Array", obj_t.mutable)?;
-                    // // TODO: Instead of instantiating the whole interface for one method, do
-                    // // the lookup call first and then instantiate the method.
-                    // // TODO: remove duplicate types
-                    // let type_param = Type::from(TypeKind::Union(elem_types.to_owned()));
-                    // let type_params = get_type_params(&t); // ReadonlyArray type params
-
-                    // let s: Subst = Subst::from([(type_params[0].id.to_owned(), type_param)]);
-                    // t.apply(&s);
                     infer_property_type(&mut t, prop, ctx)
                 }
                 MemberProp::Computed(ComputedPropName { expr, .. }) => {

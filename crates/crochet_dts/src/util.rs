@@ -1,44 +1,22 @@
-use crochet_ast::types::{TGeneric, TObject, Type, TypeKind};
-use crochet_infer::{get_type_params, Subst, Substitutable};
+use crochet_ast::types::{TObject, Type, TypeKind};
+use crochet_infer::Scheme;
 
-// TODO: rename to merge_interface_types
-pub fn merge_types(t1: &Type, t2: &Type) -> Type {
-    let tp1 = get_type_params(t1);
-    let tp2 = get_type_params(t2);
+pub fn merge_schemes(scheme1: &Scheme, scheme2: &Scheme) -> Scheme {
+    let type_params_1 = &scheme1.type_params;
+    let type_params_2 = &scheme2.type_params;
 
-    if tp1.len() != tp2.len() {
+    if type_params_1.len() != type_params_2.len() {
         panic!("Mismatch in type param count when attempting to merge type");
     }
 
-    // Creates a mapping from type params in t2 to those in t1
-    let subs: Subst = tp2
-        .into_iter()
-        .map(|tv| tv.id.to_owned())
-        .zip(
-            tp1.iter()
-                .map(|tv| Type::from(TypeKind::Var(tv.to_owned()))),
-        )
-        .collect();
+    // TODO: check if the type params are in the same order
+    for (type_param_1, type_param_2) in type_params_1.iter().zip(type_params_2.iter()) {
+        if type_param_1.name != type_param_2.name {
+            panic!("Type params must have the same names when merging schemes");
+        }
+    }
 
-    // Unwrap qualified types since we return a qualified
-    // type if there are any type qualifiers.
-    let t1 = if let TypeKind::Generic(TGeneric { t, .. }) = &t1.kind {
-        t
-    } else {
-        t1
-    };
-    let t2 = if let TypeKind::Generic(TGeneric { t, .. }) = &t2.kind {
-        t
-    } else {
-        t2
-    };
-
-    // Updates type variables for type params to match t1
-    let mut t2 = t2.to_owned();
-    t2.apply(&subs);
-
-    let type_params = tp1;
-    let t = match (&t1.kind, &t2.kind) {
+    let t = match (&scheme1.t.kind, &scheme2.t.kind) {
         (TypeKind::Object(obj1), TypeKind::Object(obj2)) => {
             let elems: Vec<_> = obj1
                 .elems
@@ -52,12 +30,8 @@ pub fn merge_types(t1: &Type, t2: &Type) -> Type {
         (_, _) => todo!(),
     };
 
-    if type_params.is_empty() {
-        t
-    } else {
-        Type::from(TypeKind::Generic(TGeneric {
-            t: Box::from(t),
-            type_params,
-        }))
+    Scheme {
+        t: Box::from(t),
+        type_params: type_params_1.clone(),
     }
 }

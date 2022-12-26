@@ -1,15 +1,14 @@
-use array_tool::vec::*;
 use defaultmap::*;
 use std::collections::{BTreeSet, HashMap};
 use std::iter::Iterator;
 
 use crochet_ast::types::*;
 
-use crate::context::{Context, Env};
+use crate::context::Context;
 use crate::substitutable::{Subst, Substitutable};
 
 fn get_mapping(t: &Type) -> HashMap<i32, Type> {
-    let mut mapping: HashMap<i32, Type> = t
+    let mapping: HashMap<i32, Type> = t
         .ftv()
         .iter()
         .enumerate()
@@ -23,18 +22,6 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
             )
         })
         .collect();
-
-    let type_params = get_type_params(t);
-    let offset = mapping.len();
-    for (index, tp) in type_params.iter().enumerate() {
-        mapping.insert(
-            tp.id,
-            Type::from(TypeKind::Var(TVar {
-                id: (offset + index) as i32,
-                constraint: tp.constraint.clone(),
-            })),
-        );
-    }
 
     mapping
 }
@@ -311,20 +298,6 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     norm_type(t, &mapping, ctx)
 }
 
-pub fn generalize(env: &Env, t: &Type) -> Type {
-    let mut type_params = get_type_params(t);
-
-    // We do this to account for type params from the environment.
-    // QUESTION: Why is it okay to ignore the keys of env?
-    type_params.append(&mut t.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id));
-
-    if type_params.is_empty() {
-        return t.to_owned();
-    }
-
-    set_type_params(t, &type_params)
-}
-
 // TODO: make this recursive
 // TODO: handle optional properties correctly
 // Maybe we can have a function that will canonicalize objects by converting
@@ -530,38 +503,6 @@ pub fn get_property_type(prop: &TProp) -> Type {
             Type::from(TypeKind::Keyword(TKeyword::Undefined)),
         ])),
         false => t,
-    }
-}
-
-pub fn get_type_params(t: &Type) -> Vec<TVar> {
-    match &t.kind {
-        TypeKind::Generic(gen) => gen.type_params.to_owned(),
-        _ => vec![],
-    }
-}
-
-pub fn set_type_params(t: &Type, type_params: &[TVar]) -> Type {
-    // If there are no type params then the returned type shouldn't be
-    // a qualified type.
-    if type_params.is_empty() {
-        return t.to_owned();
-    }
-
-    match &t.kind {
-        TypeKind::Var(_) => t.to_owned(),
-        TypeKind::Generic(TGeneric {
-            t,
-            // NOTE: `generalize_type` is responsible for merge type params so
-            // it's safe to ignore `type_params` here.
-            type_params: _,
-        }) => Type::from(TypeKind::Generic(TGeneric {
-            t: t.to_owned(),
-            type_params: type_params.to_owned(),
-        })),
-        _ => Type::from(TypeKind::Generic(TGeneric {
-            t: Box::from(t.to_owned()),
-            type_params: type_params.to_owned(),
-        })),
     }
 }
 

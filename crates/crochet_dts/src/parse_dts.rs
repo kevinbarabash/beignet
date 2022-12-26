@@ -15,9 +15,7 @@ use crochet_ast::types::{
     TypeParam,
 };
 use crochet_ast::values::Lit;
-use crochet_infer::{
-    generalize, get_sub_and_type_params, normalize, Context, Env, Scheme, Subst, Substitutable,
-};
+use crochet_infer::{get_sub_and_type_params, Context, Scheme, Subst, Substitutable};
 
 #[derive(Debug, Clone)]
 pub struct InterfaceCollector {
@@ -413,8 +411,6 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
     };
 
     Ok(t)
-    // TODO: maintain param names
-    // Ok(generalize(&HashMap::default(), &t))
 }
 
 fn get_key_name(key: &Expr) -> Result<String, String> {
@@ -751,13 +747,7 @@ impl Visit for InterfaceCollector {
             Ok(scheme) => {
                 match self.ctx.lookup_scheme(&name).ok() {
                     Some(existing_scheme) => {
-                        let merged_t = util::merge_types(&existing_scheme.t, &scheme.t);
-                        let merged_scheme = Scheme {
-                            t: Box::from(normalize(&merged_t, &self.ctx)),
-                            // TODO: check if the type_params match
-                            type_params: existing_scheme.type_params,
-                        };
-                        // let merged_t = normalize(&merged_t, &self.ctx);
+                        let merged_scheme = util::merge_schemes(&existing_scheme, &scheme);
                         self.ctx.insert_scheme(name, merged_scheme);
                     }
                     None => self.ctx.insert_scheme(name, scheme),
@@ -791,7 +781,6 @@ impl Visit for InterfaceCollector {
                         Some(type_ann) => {
                             // TODO: capture errors and store them in self.errors
                             let t = infer_ts_type_ann(&type_ann.type_ann, &self.ctx).unwrap();
-                            let t = generalize(&Env::new(), &t);
                             let name = bi.id.sym.to_string();
                             self.ctx.insert_value(name, t)
                         }
