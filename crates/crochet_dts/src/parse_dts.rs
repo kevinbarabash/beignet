@@ -12,7 +12,8 @@ use swc_ecma_visit::*;
 
 use crate::util;
 use crochet_ast::types::{
-    self as types, RestPat, TFnParam, TKeyword, TMappedTypeChangeProp, TPat, TProp, Type, TypeParam,
+    self as types, RestPat, TFnParam, TGenLam, TKeyword, TMappedTypeChangeProp, TPat, TProp, Type,
+    TypeParam,
 };
 use crochet_ast::values::Lit;
 use crochet_infer::{
@@ -66,14 +67,54 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                 let params: Vec<TFnParam> = infer_fn_params(&fn_type.params, ctx)?;
                 let ret = infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?;
 
-                let t = Type::from(TypeKind::Lam(types::TLam {
+                // let t = Type::from(TypeKind::Lam(types::TLam {
+                //     params,
+                //     ret: Box::from(ret),
+                // }));
+
+                let lam = types::TLam {
                     params,
                     ret: Box::from(ret),
-                }));
+                };
 
                 match &fn_type.type_params {
-                    Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx),
-                    None => Ok(t),
+                    Some(type_param_decl) => {
+                        let type_params = type_param_decl
+                            .params
+                            .iter()
+                            .map(|type_param| {
+                                let constraint = match &type_param.constraint {
+                                    Some(constraint) => {
+                                        let t = infer_ts_type_ann(constraint, ctx)?;
+                                        Some(Box::from(t))
+                                    }
+                                    None => None,
+                                };
+
+                                let default = match &type_param.default {
+                                    Some(default) => {
+                                        let t = infer_ts_type_ann(default, ctx)?;
+                                        Some(Box::from(t))
+                                    }
+                                    None => None,
+                                };
+
+                                Ok(TypeParam {
+                                    name: type_param.name.sym.to_string(),
+                                    constraint,
+                                    default,
+                                })
+                            })
+                            .collect::<Result<Vec<TypeParam>, String>>()?;
+
+                        let t = Type::from(TypeKind::GenLam(TGenLam {
+                            lam: Box::from(lam),
+                            type_params,
+                        }));
+
+                        Ok(t)
+                    }
+                    None => Ok(Type::from(TypeKind::Lam(lam))),
                 }
             }
             TsFnOrConstructorType::TsConstructorType(_) => {
@@ -337,18 +378,52 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
         None => Err(String::from("method has no return type")),
     };
 
-    let t = Type::from(TypeKind::Lam(types::TLam {
+    let lam = types::TLam {
         params,
         ret: Box::from(ret?),
-    }));
-
-    let t = match &sig.type_params {
-        Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,
-        None => t,
     };
 
+    let t = match &sig.type_params {
+        Some(type_param_decl) => {
+            let type_params = type_param_decl
+                .params
+                .iter()
+                .map(|type_param| {
+                    let constraint = match &type_param.constraint {
+                        Some(constraint) => {
+                            let t = infer_ts_type_ann(constraint, ctx)?;
+                            Some(Box::from(t))
+                        }
+                        None => None,
+                    };
+
+                    let default = match &type_param.default {
+                        Some(default) => {
+                            let t = infer_ts_type_ann(default, ctx)?;
+                            Some(Box::from(t))
+                        }
+                        None => None,
+                    };
+
+                    Ok(TypeParam {
+                        name: type_param.name.sym.to_string(),
+                        constraint,
+                        default,
+                    })
+                })
+                .collect::<Result<Vec<TypeParam>, String>>()?;
+
+            Type::from(TypeKind::GenLam(TGenLam {
+                lam: Box::from(lam),
+                type_params,
+            }))
+        }
+        None => Type::from(TypeKind::Lam(lam)),
+    };
+
+    Ok(t)
     // TODO: maintain param names
-    Ok(generalize(&HashMap::default(), &t))
+    // Ok(generalize(&HashMap::default(), &t))
 }
 
 fn get_key_name(key: &Expr) -> Result<String, String> {

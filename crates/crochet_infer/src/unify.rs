@@ -7,7 +7,7 @@ use types::TKeyword;
 
 use crate::context::Context;
 use crate::expand_type::expand_type;
-use crate::scheme::instantiate_callable;
+use crate::scheme::{instantiate_callable, instantiate_gen_lam};
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify_mut::unify_mut;
@@ -646,6 +646,15 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
         }
         (_, TypeKind::Generic(_)) => unify(t1, &mut ctx.instantiate(t2), ctx),
         (TypeKind::Generic(_), _) => unify(&mut ctx.instantiate(t1), t2, ctx),
+
+        (_, TypeKind::GenLam(gen_lam)) => {
+            let mut lam = instantiate_gen_lam(ctx, gen_lam);
+            unify(t1, &mut lam, ctx)
+        }
+        (TypeKind::GenLam(gen_lam), _) => {
+            let mut lam = instantiate_gen_lam(ctx, gen_lam);
+            unify(&mut lam, t2, ctx)
+        }
 
         (TypeKind::Array(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_mut(), ctx),
         (TypeKind::Tuple(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_mut(), ctx),

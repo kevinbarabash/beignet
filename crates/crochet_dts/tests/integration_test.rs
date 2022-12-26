@@ -75,7 +75,7 @@ fn infer_method_on_readonly_array() {
     let result = format!("{}", ctx.lookup_value("map").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: string, index: number, array: mut string[]) => t0, thisArg?: t1) => mut t0[]"
+        "<t0><U>(callbackfn: (value: string, index: number, array: mut string[]) => U, thisArg?: t0) => mut U[]"
     );
 }
 
@@ -103,12 +103,12 @@ fn infer_method_on_readonly_arrays_of_different_things() {
     let result = format!("{}", ctx.lookup_value("map1").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: string, index: number, array: mut string[]) => t0, thisArg?: t1) => mut t0[]"
+        "<t0><U>(callbackfn: (value: string, index: number, array: mut string[]) => U, thisArg?: t0) => mut U[]"
     );
     let result = format!("{}", ctx.lookup_value("map2").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: number, index: number, array: mut number[]) => t0, thisArg?: t1) => mut t0[]"
+        "<t0><U>(callbackfn: (value: number, index: number, array: mut number[]) => U, thisArg?: t0) => mut U[]"
     );
 }
 
@@ -147,7 +147,7 @@ fn infer_array_method_on_tuple() {
     assert_eq!(
         result,
         // TODO: add parens around a union when it's the child of an arry
-        "<t0, t1>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: mut \"hello\" | 5 | true[]) => t0, thisArg?: t1) => mut t0[]"
+        "<t0><U>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: mut \"hello\" | 5 | true[]) => U, thisArg?: t0) => mut U[]"
     );
 }
 
@@ -260,7 +260,7 @@ fn infer_generic_index_value_on_interface() {
     let result = format!("{}", ctx.lookup_value("id").unwrap());
     // NOTE: The type variables aren't normalized.  See comment inside
     // norm_type() in crochet_infer/src/util.rs.
-    assert_eq!(result, "<t1>(arg: t1) => t1 | undefined");
+    assert_eq!(result, "<T>(arg: T) => T | undefined");
 }
 
 #[test]
@@ -340,7 +340,7 @@ fn interface_with_generic_method() {
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("bar").unwrap());
-    assert_eq!(result, "<t0>(x: t0) => t0");
+    assert_eq!(result, "<U>(x: U) => U");
 }
 
 #[test]

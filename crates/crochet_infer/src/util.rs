@@ -114,8 +114,21 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 let ret = Box::from(norm_type(&lam.ret, mapping, _ctx));
                 TypeKind::Lam(TLam { params, ret })
             }
-            TypeKind::GenLam(_) => {
-                todo!();
+            TypeKind::GenLam(TGenLam { type_params, lam }) => {
+                let params: Vec<_> = lam
+                    .params
+                    .iter()
+                    .map(|param| TFnParam {
+                        t: norm_type(&param.t, mapping, _ctx),
+                        ..param.to_owned()
+                    })
+                    .collect();
+                let ret = Box::from(norm_type(&lam.ret, mapping, _ctx));
+
+                TypeKind::GenLam(TGenLam {
+                    lam: Box::from(TLam { params, ret }),
+                    type_params: type_params.to_owned(),
+                })
             }
             TypeKind::Lit(_) => return t.to_owned(),
             TypeKind::Keyword(_) => return t.to_owned(),
@@ -544,15 +557,32 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
                 .collect(),
             ret: Box::from(replace_aliases_rec(ret, type_param_map)),
         }),
-        TypeKind::GenLam(TGenLam {
-            lam: _,
-            type_params: _,
-        }) => {
+        TypeKind::GenLam(TGenLam { lam, type_params }) => {
             // TODO:
             // - create a new type_param_map that excludes the generic lambda's
             //   type params
             // - apply that to the inner lambda
-            todo!()
+            let mut type_param_map = type_param_map.clone();
+            for type_param in type_params {
+                type_param_map.remove(&type_param.name);
+            }
+            let params: Vec<_> = lam
+                .params
+                .iter()
+                .map(|param| TFnParam {
+                    t: replace_aliases_rec(&param.t, &type_param_map),
+                    ..param.to_owned()
+                })
+                .collect();
+            let ret = replace_aliases_rec(&lam.ret, &type_param_map);
+
+            TypeKind::GenLam(TGenLam {
+                lam: Box::from(TLam {
+                    params,
+                    ret: Box::from(ret),
+                }),
+                type_params: type_params.to_owned(),
+            })
         }
         TypeKind::Lit(_) => return t.to_owned(),
         TypeKind::Keyword(_) => return t.to_owned(),
