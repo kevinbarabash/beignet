@@ -94,6 +94,11 @@ impl Context {
         current_scope.types.insert(name, scheme);
     }
 
+    pub fn insert_scheme(&mut self, name: String, scheme: Scheme) {
+        let current_scope = self.scopes.last_mut().unwrap();
+        current_scope.types.insert(name, scheme);
+    }
+
     pub fn insert_namespace(&mut self, name: String, namespace: Scope) {
         let current_scope = self.scopes.last_mut().unwrap();
         current_scope.namespaces.insert(name, Box::from(namespace));
@@ -134,6 +139,16 @@ impl Context {
     ) -> Result<Type, Vec<TypeError>> {
         let t = self.lookup_type(name, mutable)?;
         Ok(self.instantiate(&t))
+    }
+
+    // TODO: handle ReadonlyArray, etc.
+    pub fn lookup_scheme(&self, name: &str) -> Result<Scheme, Vec<TypeError>> {
+        for scope in self.scopes.iter().rev() {
+            if let Some(scheme) = scope.types.get(name) {
+                return Ok(scheme.to_owned());
+            }
+        }
+        Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
     // This method gets confused by

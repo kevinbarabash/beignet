@@ -16,7 +16,7 @@ use crochet_ast::types::{
 };
 use crochet_ast::values::Lit;
 use crochet_infer::{
-    close_over, generalize, get_sub_and_type_params, normalize, Context, Env, Subst, Substitutable,
+    generalize, get_sub_and_type_params, normalize, Context, Env, Scheme, Substitutable,
 };
 
 #[derive(Debug, Clone)]
@@ -526,21 +526,49 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
     }
 }
 
-fn infer_type_alias_decl(decl: &TsTypeAliasDecl, ctx: &Context) -> Result<Type, String> {
+fn infer_type_alias_decl(decl: &TsTypeAliasDecl, ctx: &Context) -> Result<Scheme, String> {
     let t = infer_ts_type_ann(&decl.type_ann, ctx)?;
 
-    // If there are any type params, they will be replaced and the returned type
-    // be of kind, TypeKind::Generic.
-    let t = match &decl.type_params {
-        Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,
-        None => t,
+    let type_params = match &decl.type_params {
+        Some(type_params) => type_params
+            .params
+            .iter()
+            .map(|type_param| {
+                let constraint = match &type_param.constraint {
+                    Some(constraint) => {
+                        let t = infer_ts_type_ann(constraint, ctx)?;
+                        Some(Box::from(t))
+                    }
+                    None => None,
+                };
+
+                let default = match &type_param.default {
+                    Some(default) => {
+                        let t = infer_ts_type_ann(default, ctx)?;
+                        Some(Box::from(t))
+                    }
+                    None => None,
+                };
+
+                Ok(TypeParam {
+                    name: type_param.name.sym.to_string(),
+                    constraint,
+                    default,
+                })
+            })
+            .collect::<Result<Vec<TypeParam>, String>>()?,
+        None => vec![],
     };
 
-    let empty_s = Subst::default();
-    Ok(close_over(&empty_s, &t, ctx))
+    let scheme = Scheme {
+        t: Box::from(t),
+        type_params,
+    };
+
+    Ok(scheme)
 }
 
-fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, String> {
+fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Scheme, String> {
     // TODO: skip properties we don't know how to deal with instead of return an error for the whole map
     let elems: Vec<TObjElem> = decl
         .body
@@ -561,24 +589,52 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Type, S
 
     let t = Type::from(TypeKind::Object(TObject { elems }));
 
-    // If there are any type params, they will be replaced and the returned type
-    // be of kind, TypeKind::Generic.
-    let t = match &decl.type_params {
-        Some(type_param_decl) => util::replace_aliases(&t, type_param_decl, ctx)?,
-        None => t,
+    let type_params = match &decl.type_params {
+        Some(type_params) => type_params
+            .params
+            .iter()
+            .map(|type_param| {
+                let constraint = match &type_param.constraint {
+                    Some(constraint) => {
+                        let t = infer_ts_type_ann(constraint, ctx)?;
+                        Some(Box::from(t))
+                    }
+                    None => None,
+                };
+
+                let default = match &type_param.default {
+                    Some(default) => {
+                        let t = infer_ts_type_ann(default, ctx)?;
+                        Some(Box::from(t))
+                    }
+                    None => None,
+                };
+
+                Ok(TypeParam {
+                    name: type_param.name.sym.to_string(),
+                    constraint,
+                    default,
+                })
+            })
+            .collect::<Result<Vec<TypeParam>, String>>()?,
+        None => vec![],
     };
 
-    let empty_s = Subst::default();
-    Ok(close_over(&empty_s, &t, ctx))
+    let scheme = Scheme {
+        t: Box::from(t),
+        type_params,
+    };
+
+    Ok(scheme)
 }
 
 impl Visit for InterfaceCollector {
     fn visit_ts_type_alias_decl(&mut self, decl: &TsTypeAliasDecl) {
         let name = decl.id.sym.to_string();
         match infer_type_alias_decl(decl, &self.ctx) {
-            Ok(t) => {
+            Ok(scheme) => {
                 // println!("inferring: {name} as type: {t}");
-                self.ctx.insert_type(name, t)
+                self.ctx.insert_scheme(name, scheme)
             }
             Err(_err) => {
                 // println!("couldn't infer {name}, {err:#?}")
@@ -589,18 +645,19 @@ impl Visit for InterfaceCollector {
     fn visit_ts_interface_decl(&mut self, decl: &TsInterfaceDecl) {
         let name = decl.id.sym.to_string();
         match infer_interface_decl(decl, &self.ctx) {
-            Ok(t) => {
-                // HACK(kevinb): Passing true bypasses logic to check if there's
-                // a type called "Readonly{name}".  Since the types coming from
-                // .d.ts files are already prefixed with "Readonly", we can skip
-                // adding the prefix a second time.
-                match self.ctx.lookup_type(&name, true).ok() {
-                    Some(existing_t) => {
-                        let merged_t = util::merge_types(&existing_t, &t);
-                        let merged_t = normalize(&merged_t, &self.ctx);
-                        self.ctx.insert_type(name, merged_t)
+            Ok(scheme) => {
+                match self.ctx.lookup_scheme(&name).ok() {
+                    Some(existing_scheme) => {
+                        let merged_t = util::merge_types(&existing_scheme.t, &scheme.t);
+                        let merged_scheme = Scheme {
+                            t: Box::from(normalize(&merged_t, &self.ctx)),
+                            // TODO: check if the type_params match
+                            type_params: existing_scheme.type_params,
+                        };
+                        // let merged_t = normalize(&merged_t, &self.ctx);
+                        self.ctx.insert_scheme(name, merged_scheme);
                     }
-                    None => self.ctx.insert_type(name, t),
+                    None => self.ctx.insert_scheme(name, scheme),
                 };
             }
             Err(_) => println!("couldn't infer {name}"),

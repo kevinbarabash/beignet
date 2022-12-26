@@ -12,7 +12,7 @@ use crochet_ast::types::{
     TVar, Type, TypeKind,
 };
 use crochet_ast::{types, values};
-use crochet_infer::{get_type_params, instantiate, Context};
+use crochet_infer::{get_type_params, Context};
 
 pub fn codegen_d_ts(program: &values::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -42,13 +42,39 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
     let mut body: Vec<ModuleItem> = vec![];
 
     for (name, scheme) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
-        let t = instantiate(ctx, scheme);
+        let type_params = if scheme.type_params.is_empty() {
+            None
+        } else {
+            Some(Box::from(TsTypeParamDecl {
+                span: DUMMY_SP,
+                params: scheme
+                    .type_params
+                    .iter()
+                    .map(|type_param| {
+                        let constraint = type_param
+                            .constraint
+                            .as_ref()
+                            .map(|constraint| Box::from(build_type(constraint, &None)));
+                        TsTypeParam {
+                            span: DUMMY_SP,
+                            name: build_ident(&type_param.name),
+                            is_in: false,
+                            is_out: false,
+                            constraint,
+                            default: None, // TODO
+                        }
+                    })
+                    .collect(),
+            }))
+        };
+
+        // let t = instantiate(ctx, scheme);
         let decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(TsTypeAliasDecl {
             span: DUMMY_SP,
             declare: true,
             id: build_ident(name),
-            type_params: build_type_params(&t),
-            type_ann: Box::from(build_type(&t, &None)),
+            type_params,
+            type_ann: Box::from(build_type(&scheme.t, &None)),
         }))));
 
         body.push(decl);
@@ -347,6 +373,7 @@ pub fn build_type_params(t: &Type) -> Option<Box<TsTypeParamDecl>> {
 /// `expr` should be the original expression that `t` was inferred
 /// from if it exists.
 pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsType {
+    println!("build_type - t = {t}");
     let mutable = t.mutable;
     match &t.kind {
         TypeKind::Generic(TGeneric { t, .. }) => {

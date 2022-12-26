@@ -991,13 +991,13 @@ fn infer_generic_type_aliases() {
     "#;
     let (_, ctx) = infer_prog(src);
 
-    let result = format!("{}", ctx.lookup_type("Identity1", false).unwrap());
+    let result = format!("{}", ctx.lookup_scheme("Identity1").unwrap());
     // TODO: normalize the type before inserting it into the context
-    insta::assert_snapshot!(result, @"<t0>(foo: t0) => t0");
+    insta::assert_snapshot!(result, @"<A>(foo: A) => A");
 
-    let result = format!("{}", ctx.lookup_type("Identity2", false).unwrap());
+    let result = format!("{}", ctx.lookup_scheme("Identity2").unwrap());
     // TODO: normalize the type before inserting it into the context
-    insta::assert_snapshot!(result, @"<t0>(foo: t0) => t0");
+    insta::assert_snapshot!(result, @"<A>(foo: A) => A");
 }
 
 #[test]

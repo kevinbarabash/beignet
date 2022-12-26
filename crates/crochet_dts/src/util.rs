@@ -52,7 +52,6 @@ pub fn replace_aliases(
         }
     }
 
-    // QUESTION: Do we need to call `set_type_params` before calling `replace_aliases_rec`
     let t = set_type_params(t, &type_params);
     Ok(replace_aliases_rec(&t, &type_param_map))
 }

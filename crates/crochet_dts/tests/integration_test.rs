@@ -369,11 +369,8 @@ fn merging_generic_interfaces() {
     };
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
-    let result = format!("{}", ctx.lookup_type("Foo", false).unwrap());
-    assert_eq!(
-        result,
-        "<t0>{bar: (x: t0) => number, baz: (x: t0) => string}"
-    );
+    let result = format!("{}", ctx.lookup_scheme("Foo").unwrap());
+    assert_eq!(result, "<T>{bar: (x: T) => number, baz: (x: T) => string}");
 }
 
 #[test]

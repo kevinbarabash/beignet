@@ -482,13 +482,6 @@ pub fn get_type_params(t: &Type) -> Vec<TVar> {
     }
 }
 
-pub fn unwrap_generic(t: &Type) -> Type {
-    match &t.kind {
-        TypeKind::Generic(TGeneric { t, .. }) => t.as_ref().to_owned(),
-        _ => t.to_owned(),
-    }
-}
-
 pub fn set_type_params(t: &Type, type_params: &[TVar]) -> Type {
     // If there are no type params then the returned type shouldn't be
     // a qualified type.
