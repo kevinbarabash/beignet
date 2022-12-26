@@ -1,13 +1,15 @@
 use crochet_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
 use crochet_ast::values::*;
 
-use crate::context::Context;
+use crate::context::{Context, Env};
 use crate::infer_expr::infer_expr as infer_expr_rec;
 use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
+use crate::scheme::generalize;
+use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
 use crate::update::*;
-use crate::util::*;
+use crate::util::close_over;
 
 pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<TypeError>> {
     // TODO: replace with Class type once it exists
@@ -116,8 +118,13 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
                 ..
             } => match infer_type_ann(type_ann, ctx, type_params) {
                 Ok((s, t)) => {
-                    let t = close_over(&s, &t, ctx);
-                    ctx.insert_type(name.to_owned(), t);
+                    let mut t = t.clone();
+                    t.apply(&s);
+
+                    let empty_env = Env::default();
+                    let scheme = generalize(&empty_env, &t);
+
+                    ctx.insert_scheme(name.to_owned(), scheme);
 
                     update_type_ann(type_ann, &s);
                 }

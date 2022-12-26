@@ -6,12 +6,9 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 use crate::context::Context;
-use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify::unify;
-use crate::util::{
-    get_type_params, replace_aliases_rec, union_many_types, union_types, unwrap_generic,
-};
+use crate::util::{replace_aliases_rec, union_many_types, union_types};
 
 // `expand_type` is used to expand types that `unify` doesn't know how to unify
 // into something that it does know how to unify.
@@ -20,6 +17,7 @@ pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
         TypeKind::Var(_) => Ok(t.to_owned()),
         TypeKind::App(_) => Ok(t.to_owned()),
         TypeKind::Lam(_) => Ok(t.to_owned()),
+        TypeKind::GenLam(_) => Ok(t.to_owned()),
         TypeKind::Lit(_) => Ok(t.to_owned()),
         TypeKind::Keyword(_) => Ok(t.to_owned()),
         TypeKind::Union(_) => Ok(t.to_owned()),
@@ -34,40 +32,45 @@ pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
         TypeKind::IndexAccess(access) => expand_index_access(access, ctx),
         TypeKind::MappedType(mapped) => expand_mapped_type(mapped, ctx),
         TypeKind::ConditionalType(cond) => expand_conditional_type(cond, ctx),
-        TypeKind::Generic(_) => todo!(),
     }
 }
 
 fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     let name = &alias.name;
-    let t = ctx._lookup_type(name)?;
-    let type_params = get_type_params(&t);
+    let scheme = ctx.lookup_scheme(name)?;
+    println!("scheme = {scheme}");
+
+    let type_params = scheme.type_params;
 
     // Replaces qualifiers in the type with the corresponding type params
     // from the alias type.
     if let Some(type_args) = &alias.type_args {
         if type_args.len() != type_params.len() {
             // TODO: rename this TypeParamTypeArgCountMismatch
+            println!("type_args.len() != type_params.len()");
             return Err(vec![TypeError::TypeInstantiationFailure]);
         }
-        let ids = type_params.iter().map(|tv| tv.id.to_owned());
+
         let type_args = type_args
             .iter()
             .map(|arg| expand_type(arg, ctx))
             .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
-        let mut t = unwrap_generic(&t);
-        if let TypeKind::ConditionalType(TConditionalType { check_type, .. }) = &t.kind {
+        let mut type_param_map: HashMap<String, Type> = HashMap::new();
+        for (param, arg) in type_params.iter().zip(type_args.iter()) {
+            type_param_map.insert(param.name.to_owned(), arg.to_owned());
+        }
+
+        if let TypeKind::ConditionalType(TConditionalType { check_type, .. }) = &scheme.t.kind {
             // When conditional types act on a generic type, they
             // become distributive when given a union type.  In particular,
             // if the `check_type` of the conditional type is a union, then
             // we evaluate the conditional type for each element in the union
             // and return the union of those results.
-            // TypeKind::ConditionalType(TConditionalType { check_type, .. }) => {
-            if let TypeKind::Var(tvar) = &check_type.kind {
+            if let TypeKind::Ref(tref) = &check_type.kind {
                 if let Some((index_of_check_type, _)) = type_params
                     .iter()
-                    .find_position(|t_param| t_param.id == tvar.id)
+                    .find_position(|param| param.name == tref.name)
                 {
                     let check_args = match &type_args[index_of_check_type].kind {
                         TypeKind::Union(types) => types.to_owned(),
@@ -80,16 +83,11 @@ fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>
                     // The `Subst` used is slightly different from the normal
                     // one in that we're replacing the type arg corresponding to
                     // the `check_type` with each element in the union.
-                    let mut type_args = type_args;
                     let types = check_args
                         .iter()
                         .map(|check_arg| {
-                            type_args[index_of_check_type] = check_arg.to_owned();
-                            let subs: Subst = ids.clone().zip(type_args.iter().cloned()).collect();
-                            // We make a copy of the Generic's inner type so that
-                            // we don't mutate the original.
-                            let mut t = t.clone();
-                            t.apply(&subs);
+                            type_param_map.insert(tref.name.to_owned(), check_arg.to_owned());
+                            let t = replace_aliases_rec(&scheme.t, &type_param_map);
                             expand_type(&t, ctx)
                         })
                         .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
@@ -102,13 +100,12 @@ fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>
 
         // Handle the default case by replacing type variables that match type
         // params with the corresponding type args.
-        let subs: Subst = ids.zip(type_args.iter().cloned()).collect();
-        t.apply(&subs);
+        let t = replace_aliases_rec(&scheme.t, &type_param_map);
         expand_type(&t, ctx)
     } else if !type_params.is_empty() {
         Err(vec![TypeError::TypeInstantiationFailure])
     } else {
-        expand_type(&t, ctx)
+        expand_type(&scheme.t, ctx)
     }
 }
 
@@ -391,7 +388,6 @@ fn expand_keyof(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
 
 pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     match &t.kind {
-        TypeKind::Generic(TGeneric { t, type_params: _ }) => get_obj_type(t, ctx),
         TypeKind::Var(_) => Err(vec![TypeError::CantInferTypeFromItKeys]),
         TypeKind::Ref(alias) => {
             let t = expand_alias_type(alias, ctx)?;
@@ -400,18 +396,18 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
         TypeKind::Object(_) => Ok(t.to_owned()),
         TypeKind::Lit(lit) => {
             let t = match lit {
-                TLit::Num(_) => ctx.lookup_type_and_instantiate("Number", false)?,
-                TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean", false)?,
-                TLit::Str(_) => ctx.lookup_type_and_instantiate("String", false)?,
+                TLit::Num(_) => ctx.lookup_type("Number", false)?,
+                TLit::Bool(_) => ctx.lookup_type("Boolean", false)?,
+                TLit::Str(_) => ctx.lookup_type("String", false)?,
             };
             Ok(t)
         }
         TypeKind::Keyword(keyword) => {
             let t = match keyword {
-                TKeyword::Number => ctx.lookup_type_and_instantiate("Number", false)?,
-                TKeyword::Boolean => ctx.lookup_type_and_instantiate("Boolean", false)?,
-                TKeyword::String => ctx.lookup_type_and_instantiate("String", false)?,
-                TKeyword::Symbol => ctx.lookup_type_and_instantiate("Symbol", false)?,
+                TKeyword::Number => ctx.lookup_type("Number", false)?,
+                TKeyword::Boolean => ctx.lookup_type("Boolean", false)?,
+                TKeyword::String => ctx.lookup_type("String", false)?,
+                TKeyword::Symbol => ctx.lookup_type("Symbol", false)?,
                 TKeyword::Object => {
                     // NOTE: Structural typing allows for extra elems in any object
                     // so this should be a good equivalent for the `object` keyword.
@@ -446,8 +442,11 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
 
             // TODO: Provide a type arg when instantiating "Array".  It should
             // be the union of all element types in the tuple.
-            let array_t = ctx.lookup_type_and_instantiate("Array", t.mutable)?;
-            if let TypeKind::Object(TObject { elems: array_elems }) = &array_t.kind {
+            let name = if t.mutable { "Array" } else { "ReadonlyArray" };
+            let scheme = ctx.lookup_scheme(name)?;
+
+            // let array_t = ctx.lookup_type("Array", t.mutable)?;
+            if let TypeKind::Object(TObject { elems: array_elems }) = &scheme.t.kind {
                 for array_elem in array_elems {
                     match array_elem {
                         TObjElem::Call(_) => (),
@@ -464,20 +463,23 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
             Ok(t)
         }
         TypeKind::Array(type_param) => {
-            // TODO: Update lookup_type_and_instantiate() to take type args so
+            // TODO: Update lookup_type() to take type args so
             // that we don't have to handle them here manually.
-            let t = ctx.lookup_type("Array", t.mutable)?;
-            let type_params = get_type_params(&t);
-            // TODO: Instead of instantiating the whole interface for one method, do
-            // the lookup call first and then instantiate the method.
-            let s: Subst =
-                Subst::from([(type_params[0].id.to_owned(), type_param.as_ref().to_owned())]);
-            let mut t = unwrap_generic(&t);
-            t.apply(&s);
+            let name = if t.mutable { "Array" } else { "ReadonlyArray" };
+            let scheme = ctx.lookup_scheme(name)?;
+
+            let mut type_param_map: HashMap<String, Type> = HashMap::new();
+            type_param_map.insert(
+                scheme.type_params[0].name.to_owned(),
+                type_param.as_ref().to_owned(),
+            );
+
+            let t = replace_aliases_rec(&scheme.t, &type_param_map);
 
             Ok(t)
         }
-        TypeKind::Lam(_) => ctx.lookup_type_and_instantiate("Function", false),
+        TypeKind::Lam(_) => ctx.lookup_type("Function", false),
+        TypeKind::GenLam(_) => ctx.lookup_type("Function", false),
         TypeKind::App(_) => todo!(), // What does this even mean?
         TypeKind::Union(_) => todo!(),
         TypeKind::Intersection(_) => {
@@ -536,6 +538,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_intersection() {
         let src = r#"
         type t = {a: number, b: boolean} & {b: string, c: number};

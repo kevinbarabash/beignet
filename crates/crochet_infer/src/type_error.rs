@@ -126,7 +126,7 @@ impl fmt::Display for TypeError {
             }
             TypeError::AliasTypeMismatch => write!(fmt, "AliasTypeMismatch"),
             TypeError::CantInferTypeFromItKeys => write!(fmt, "CantInferTypeFromItKeys"),
-            TypeError::Unspecified => write!(fmt, "Unhandled"),
+            TypeError::Unspecified => write!(fmt, "Unspecified"),
             TypeError::PrimitivesCantBeMutable(t) => write!(fmt, "PrimitivesCantBeMutable: {t}"),
             TypeError::TuplesCantBeMutable(t) => write!(fmt, "TuplesCantBeMutable: {t}"),
         }

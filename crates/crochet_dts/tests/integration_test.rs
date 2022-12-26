@@ -75,7 +75,7 @@ fn infer_method_on_readonly_array() {
     let result = format!("{}", ctx.lookup_value("map").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: string, index: number, array: mut string[]) => t0, thisArg?: t1) => mut t0[]"
+        "<U, A>(callbackfn: (value: string, index: number, array: mut string[]) => U, thisArg?: A) => mut U[]"
     );
 }
 
@@ -103,12 +103,12 @@ fn infer_method_on_readonly_arrays_of_different_things() {
     let result = format!("{}", ctx.lookup_value("map1").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: string, index: number, array: mut string[]) => t0, thisArg?: t1) => mut t0[]"
+        "<U, A>(callbackfn: (value: string, index: number, array: mut string[]) => U, thisArg?: A) => mut U[]"
     );
     let result = format!("{}", ctx.lookup_value("map2").unwrap());
     assert_eq!(
         result,
-        "<t0, t1>(callbackfn: (value: number, index: number, array: mut number[]) => t0, thisArg?: t1) => mut t0[]"
+        "<U, A>(callbackfn: (value: number, index: number, array: mut number[]) => U, thisArg?: A) => mut U[]"
     );
 }
 
@@ -147,7 +147,7 @@ fn infer_array_method_on_tuple() {
     assert_eq!(
         result,
         // TODO: add parens around a union when it's the child of an arry
-        "<t0, t1>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: mut \"hello\" | 5 | true[]) => t0, thisArg?: t1) => mut t0[]"
+        "<U, A>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: mut \"hello\" | 5 | true[]) => U, thisArg?: A) => mut U[]"
     );
 }
 
@@ -260,7 +260,7 @@ fn infer_generic_index_value_on_interface() {
     let result = format!("{}", ctx.lookup_value("id").unwrap());
     // NOTE: The type variables aren't normalized.  See comment inside
     // norm_type() in crochet_infer/src/util.rs.
-    assert_eq!(result, "<t1>(arg: t1) => t1 | undefined");
+    assert_eq!(result, "<T>(arg: T) => T | undefined");
 }
 
 #[test]
@@ -312,7 +312,7 @@ fn instantiating_generic_interfaces() {
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("bar").unwrap());
-    assert_eq!(result, "<t0>(x: number) => t0");
+    assert_eq!(result, "<A>(x: number) => A");
 }
 
 #[test]
@@ -340,7 +340,7 @@ fn interface_with_generic_method() {
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let result = format!("{}", ctx.lookup_value("bar").unwrap());
-    assert_eq!(result, "<t0>(x: t0) => t0");
+    assert_eq!(result, "<U>(x: U) => U");
 }
 
 #[test]
@@ -369,11 +369,8 @@ fn merging_generic_interfaces() {
     };
     let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
-    let result = format!("{}", ctx.lookup_type("Foo", false).unwrap());
-    assert_eq!(
-        result,
-        "<t0>{bar: (x: t0) => number, baz: (x: t0) => string}"
-    );
+    let result = format!("{}", ctx.lookup_scheme("Foo").unwrap());
+    assert_eq!(result, "<T>{bar: (x: T) => number, baz: (x: T) => string}");
 }
 
 #[test]
@@ -489,13 +486,15 @@ fn tuple_mapping() {
     let sqr_fn = (x) => x * x;
     let squares2 = [1, 2, 3].map(sqr_fn);
     let squares3 = [1, 2, 3].map((x) => x * x);
+    let strings = [1, 2, 3].map((x) => `x = ${x}`);
     "#;
 
     let (_, ctx) = infer_prog(src);
 
     let t = ctx.lookup_value("squares").unwrap();
-    let result = format!("{}", t);
-    assert_eq!(result, "mut number[]");
+    assert_eq!(t.to_string(), "mut number[]");
+    let t = ctx.lookup_value("strings").unwrap();
+    assert_eq!(t.to_string(), "mut string[]");
 }
 
 #[test]

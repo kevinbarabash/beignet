@@ -1,16 +1,17 @@
 use std::collections::HashMap;
 
 use crochet_ast::types::{
-    self as types, Provenance, TCallable, TFnParam, TKeyword, TObjElem, TObject, TPat, TPropKey,
-    TVar, Type, TypeKind,
+    self as types, Provenance, TFnParam, TKeyword, TObjElem, TObject, TPat, TPropKey, TVar, Type,
+    TypeKind,
 };
 use crochet_ast::values::*;
 
-use crate::context::{Context, Env};
+use crate::context::Context;
 use crate::expand_type::get_obj_type;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
+use crate::scheme::instantiate_callable;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify::unify;
@@ -85,26 +86,18 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                 for elem in elems {
                     match &elem {
                         TObjElem::Call(_) => (),
-                        TObjElem::Constructor(TCallable {
-                            params,
-                            ret,
-                            type_params: _, // TODO: handle constructors with type params
-                        }) => {
+                        TObjElem::Constructor(callable) => {
                             let mut ret_type = ctx.fresh_var();
                             let mut call_type = Type::from(TypeKind::App(types::TApp {
                                 args: arg_types.clone(),
                                 ret: Box::from(ret_type.clone()),
                             }));
 
-                            let lam_type = Type::from(TypeKind::Lam(types::TLam {
-                                params: params.clone(),
-                                ret: ret.clone(),
-                            }));
-
                             // We generalize first b/c lam_type isn't generic and
                             // we need it to be before we can instantiate it.
-                            let t = generalize(&Env::default(), &lam_type);
-                            let mut lam_type = ctx.instantiate(&t);
+                            let mut lam_type = instantiate_callable(ctx, callable);
+                            // let t = generalize(&Env::default(), &lam_type);
+                            // let mut lam_type = ctx.instantiate(&t);
                             lam_type.provenance =
                                 Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
 
@@ -715,14 +708,6 @@ fn infer_property_type(
     ctx: &mut Context,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
     match &mut obj_t.kind {
-        TypeKind::Generic(_) => {
-            // TODO: Improve performance by getting the property type first and
-            // then instantiating it instead of instantiating the whole object type.
-            // NOTE: This is what introduces new type variables when getting the property
-            // on a generic object type.
-            let mut t = ctx.instantiate(obj_t);
-            infer_property_type(&mut t, prop, ctx)
-        }
         TypeKind::Var(TVar { constraint, .. }) => match constraint {
             Some(constraint) => infer_property_type(constraint, prop, ctx),
             None => Err(vec![TypeError::PossiblyNotAnObject(Box::from(
@@ -764,15 +749,19 @@ fn infer_property_type(
             match prop {
                 // TODO: lookup methods on Array.prototype
                 MemberProp::Ident(_) => {
-                    let mut t = ctx.lookup_type("Array", obj_t.mutable)?;
-                    // TODO: Instead of instantiating the whole interface for one method, do
-                    // the lookup call first and then instantiate the method.
-                    // TODO: remove duplicate types
-                    let type_param = Type::from(TypeKind::Union(elem_types.to_owned()));
-                    let type_params = get_type_params(&t); // ReadonlyArray type params
+                    let name = if obj_t.mutable {
+                        "Array"
+                    } else {
+                        "ReadonlyArray"
+                    };
+                    let scheme = ctx.lookup_scheme(name)?;
 
-                    let s: Subst = Subst::from([(type_params[0].id.to_owned(), type_param)]);
-                    t.apply(&s);
+                    let mut type_param_map: HashMap<String, Type> = HashMap::new();
+                    let type_param = Type::from(TypeKind::Union(elem_types.to_owned()));
+                    type_param_map.insert(scheme.type_params[0].name.to_owned(), type_param);
+
+                    let mut t = replace_aliases_rec(&scheme.t, &type_param_map);
+
                     infer_property_type(&mut t, prop, ctx)
                 }
                 MemberProp::Computed(ComputedPropName { expr, .. }) => {

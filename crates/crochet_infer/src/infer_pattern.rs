@@ -10,7 +10,7 @@ use crate::infer_type_ann::*;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify::unify;
-use crate::util::*;
+use crate::util::{compose_many_subs, compose_subs};
 
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
@@ -95,10 +95,6 @@ fn infer_pattern_rec(
                 }),
             };
             let t = Type::from(kind);
-            // TODO: we need a method on Context to get all types that currently in
-            // scope so that we can pass them to generalize()
-            let all_types = ctx.get_all_types();
-            let t = generalize(&all_types, &t);
             if assump
                 .insert(
                     ident.name.to_owned(),

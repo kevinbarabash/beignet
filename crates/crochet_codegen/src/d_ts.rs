@@ -8,11 +8,11 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast::types::{
-    TConditionalType, TFnParam, TGeneric, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey,
-    TVar, Type, TypeKind,
+    TConditionalType, TFnParam, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey, TVar, Type,
+    TypeKind, TypeParam,
 };
 use crochet_ast::{types, values};
-use crochet_infer::{get_type_params, Context};
+use crochet_infer::Context;
 
 pub fn codegen_d_ts(program: &values::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -36,30 +36,57 @@ fn print_d_ts(program: &Program) -> String {
     String::from_utf8_lossy(&buf).to_string()
 }
 
+fn build_type_params_from_type_params(type_params: &[TypeParam]) -> Option<Box<TsTypeParamDecl>> {
+    if type_params.is_empty() {
+        None
+    } else {
+        Some(Box::from(TsTypeParamDecl {
+            span: DUMMY_SP,
+            params: type_params
+                .iter()
+                .map(|type_param| {
+                    let constraint = type_param
+                        .constraint
+                        .as_ref()
+                        .map(|constraint| Box::from(build_type(constraint, &None)));
+                    TsTypeParam {
+                        span: DUMMY_SP,
+                        name: build_ident(&type_param.name),
+                        is_in: false,
+                        is_out: false,
+                        constraint,
+                        default: None, // TODO
+                    }
+                })
+                .collect(),
+        }))
+    }
+}
+
 fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
     let current_scope = ctx.scopes.last().unwrap();
 
     let mut body: Vec<ModuleItem> = vec![];
 
-    for (name, t) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+    for (name, scheme) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+        let type_params = build_type_params_from_type_params(&scheme.type_params);
         let decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(TsTypeAliasDecl {
             span: DUMMY_SP,
             declare: true,
             id: build_ident(name),
-            type_params: build_type_params(t),
-            type_ann: Box::from(build_type(t, &None)),
+            type_params,
+            type_ann: Box::from(build_type(&scheme.t, &None)),
         }))));
 
         body.push(decl);
     }
 
     for (name, b) in current_scope.values.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
-        let type_params = build_type_params(&b.t);
         let pat = Pat::Ident(BindingIdent {
             id: build_ident(name),
             type_ann: Some(Box::from(TsTypeAnn {
                 span: DUMMY_SP,
-                type_ann: Box::from(build_type(&b.t, &type_params)),
+                type_ann: Box::from(build_type(&b.t, &None)),
             })),
         });
 
@@ -307,40 +334,6 @@ pub fn build_ts_fn_type_with_args(
     }))
 }
 
-pub fn build_type_params(t: &Type) -> Option<Box<TsTypeParamDecl>> {
-    let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-        .chars()
-        .collect();
-
-    let type_params = get_type_params(t);
-
-    if !type_params.is_empty() {
-        Some(Box::from(TsTypeParamDecl {
-            span: DUMMY_SP,
-            params: type_params
-                .iter()
-                .map(|tv| {
-                    let id = chars.get(tv.id.to_owned() as usize).unwrap();
-
-                    TsTypeParam {
-                        span: DUMMY_SP,
-                        name: build_ident(&id.to_string()),
-                        is_in: false,
-                        is_out: false,
-                        constraint: tv
-                            .constraint
-                            .as_ref()
-                            .map(|t| Box::from(build_type(t, &None))),
-                        default: None,
-                    }
-                })
-                .collect(),
-        }))
-    } else {
-        None
-    }
-}
-
 /// Converts an internal Type to a TsType for eventual export to .d.ts.
 ///
 /// `expr` should be the original expression that `t` was inferred
@@ -348,12 +341,6 @@ pub fn build_type_params(t: &Type) -> Option<Box<TsTypeParamDecl>> {
 pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsType {
     let mutable = t.mutable;
     match &t.kind {
-        TypeKind::Generic(TGeneric { t, .. }) => {
-            // TODO: combine the return value from the `build_type_params()` call
-            // with the `type_params` passed into this function.
-            let _ = build_type_params(t);
-            build_type(t, type_params)
-        }
         TypeKind::Var(TVar { id, constraint: _ }) => {
             // TODO: handle constraints on type variables
             // This will likely be easier if we stop using type variables for
@@ -419,6 +406,11 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsTyp
         }
         TypeKind::Lam(types::TLam { params, ret, .. }) => {
             build_ts_fn_type_with_params(params, ret, type_params)
+        }
+        TypeKind::GenLam(types::TGenLam { type_params, lam }) => {
+            let type_params = build_type_params_from_type_params(type_params);
+            let types::TLam { params, ret } = lam.as_ref();
+            build_ts_fn_type_with_params(params, ret, &type_params)
         }
         TypeKind::Union(types) => {
             TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {

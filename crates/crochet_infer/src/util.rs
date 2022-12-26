@@ -1,15 +1,14 @@
-use array_tool::vec::*;
 use defaultmap::*;
 use std::collections::{BTreeSet, HashMap};
 use std::iter::Iterator;
 
 use crochet_ast::types::*;
 
-use crate::context::{Context, Env};
+use crate::context::Context;
 use crate::substitutable::{Subst, Substitutable};
 
 fn get_mapping(t: &Type) -> HashMap<i32, Type> {
-    let mut mapping: HashMap<i32, Type> = t
+    let mapping: HashMap<i32, Type> = t
         .ftv()
         .iter()
         .enumerate()
@@ -24,26 +23,57 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
         })
         .collect();
 
-    let type_params = get_type_params(t);
-    let offset = mapping.len();
-    for (index, tp) in type_params.iter().enumerate() {
-        mapping.insert(
-            tp.id,
-            Type::from(TypeKind::Var(TVar {
-                id: (offset + index) as i32,
-                constraint: tp.constraint.clone(),
-            })),
-        );
-    }
-
     mapping
 }
 
 pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
-    let empty_env = Env::default();
     let mut t = t.clone();
     t.apply(s);
-    normalize(&generalize(&empty_env, &t), ctx)
+
+    let tvs = t.ftv();
+
+    let t = if tvs.is_empty() {
+        t
+    } else {
+        match &t.kind {
+            TypeKind::Lam(lam) => {
+                let mut type_params: Vec<TypeParam> = vec![];
+                let mut sub: Subst = Subst::default();
+                let mut char_code: u32 = 65;
+                for tv in tvs {
+                    let c = char::from_u32(char_code).unwrap();
+                    let t = Type::from(TypeKind::Ref(TRef {
+                        name: c.to_string(),
+                        type_args: None,
+                    }));
+                    sub.insert(tv.id, t);
+                    type_params.push(TypeParam {
+                        name: c.to_string(),
+                        constraint: tv.constraint,
+                        default: None,
+                    });
+                    char_code += 1;
+                }
+
+                let mut t = Type::from(TypeKind::GenLam(TGenLam {
+                    lam: Box::from(lam.to_owned()),
+                    type_params,
+                }));
+
+                t.apply(&sub);
+
+                t
+            }
+            TypeKind::GenLam(_) => {
+                panic!("We shouldn't be closing over TypeKind::GenLam");
+            }
+            _ => {
+                panic!("We shouldn't have any free type variables when closing over non-lambdas")
+            }
+        }
+    };
+
+    normalize(&t, ctx)
 }
 
 pub fn normalize(t: &Type, ctx: &Context) -> Type {
@@ -54,31 +84,6 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     // type variables that are bound to the object element as opposed to the encompassing object type.
     fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, _ctx: &Context) -> Type {
         let kind = match &t.kind {
-            TypeKind::Generic(TGeneric {
-                t: inner_t,
-                type_params,
-            }) => {
-                // NOTE: For now we don't bother normalizing qualified types since
-                // mappings from higher up may cause type variables to be reassigned
-                // to the incorrect type.  In order to fix this, we'd have to run
-                // `normalize` itself on each qualified type in the tree.
-                TypeKind::Generic(TGeneric {
-                    t: Box::from(norm_type(inner_t, mapping, _ctx)),
-                    type_params: type_params
-                        .iter()
-                        .map(|tp| match mapping.get(&tp.id) {
-                            Some(t) => {
-                                if let TypeKind::Var(tv) = &t.kind {
-                                    tv.to_owned()
-                                } else {
-                                    panic!("Expected a type variable in mapping when update type_params");
-                                }
-                            },
-                            None => tp.to_owned(),
-                        })
-                        .collect(),
-                })
-            }
             TypeKind::Var(tv) => {
                 match mapping.get(&tv.id) {
                     Some(t) => return t.to_owned(),
@@ -113,6 +118,22 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     .collect();
                 let ret = Box::from(norm_type(&lam.ret, mapping, _ctx));
                 TypeKind::Lam(TLam { params, ret })
+            }
+            TypeKind::GenLam(TGenLam { type_params, lam }) => {
+                let params: Vec<_> = lam
+                    .params
+                    .iter()
+                    .map(|param| TFnParam {
+                        t: norm_type(&param.t, mapping, _ctx),
+                        ..param.to_owned()
+                    })
+                    .collect();
+                let ret = Box::from(norm_type(&lam.ret, mapping, _ctx));
+
+                TypeKind::GenLam(TGenLam {
+                    lam: Box::from(TLam { params, ret }),
+                    type_params: type_params.to_owned(),
+                })
             }
             TypeKind::Lit(_) => return t.to_owned(),
             TypeKind::Keyword(_) => return t.to_owned(),
@@ -248,20 +269,6 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     // NOTE: normalize() is usually called on a type that's already been generalized so we
     // don't need to re-generalize the result type here.
     norm_type(t, &mapping, ctx)
-}
-
-pub fn generalize(env: &Env, t: &Type) -> Type {
-    let mut type_params = get_type_params(t);
-
-    // We do this to account for type params from the environment.
-    // QUESTION: Why is it okay to ignore the keys of env?
-    type_params.append(&mut t.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id));
-
-    if type_params.is_empty() {
-        return t.to_owned();
-    }
-
-    set_type_params(t, &type_params)
 }
 
 // TODO: make this recursive
@@ -472,58 +479,12 @@ pub fn get_property_type(prop: &TProp) -> Type {
     }
 }
 
-pub fn get_type_params(t: &Type) -> Vec<TVar> {
-    match &t.kind {
-        TypeKind::Generic(gen) => gen.type_params.to_owned(),
-        _ => vec![],
-    }
-}
-
-pub fn unwrap_generic(t: &Type) -> Type {
-    match &t.kind {
-        TypeKind::Generic(TGeneric { t, .. }) => t.as_ref().to_owned(),
-        _ => t.to_owned(),
-    }
-}
-
-pub fn set_type_params(t: &Type, type_params: &[TVar]) -> Type {
-    // If there are no type params then the returned type shouldn't be
-    // a qualified type.
-    if type_params.is_empty() {
-        return t.to_owned();
-    }
-
-    match &t.kind {
-        TypeKind::Var(_) => t.to_owned(),
-        TypeKind::Generic(TGeneric {
-            t,
-            // NOTE: `generalize_type` is responsible for merge type params so
-            // it's safe to ignore `type_params` here.
-            type_params: _,
-        }) => Type::from(TypeKind::Generic(TGeneric {
-            t: t.to_owned(),
-            type_params: type_params.to_owned(),
-        })),
-        _ => Type::from(TypeKind::Generic(TGeneric {
-            t: Box::from(t.to_owned()),
-            type_params: type_params.to_owned(),
-        })),
-    }
-}
-
 // TODO: update this to use Visitor from crochet_infer, which should probably
 // be moved into the crochet_ast crate.
 // TODO: rename this replace_refs_rec
 // NOTE: This is only used externally by replace_aliases_rec.
 pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> Type {
     let kind = match &t.kind {
-        TypeKind::Generic(TGeneric { t, type_params }) => {
-            // TODO: create a new `map` that adds in `type_params`
-            TypeKind::Generic(TGeneric {
-                t: Box::from(replace_aliases_rec(t, type_param_map)),
-                type_params: type_params.to_owned(),
-            })
-        }
         TypeKind::Var(tvar) => match &tvar.constraint {
             Some(constraint) => TypeKind::Var(TVar {
                 constraint: Some(Box::from(replace_aliases_rec(constraint, type_param_map))),
@@ -548,6 +509,31 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
                 .collect(),
             ret: Box::from(replace_aliases_rec(ret, type_param_map)),
         }),
+        TypeKind::GenLam(TGenLam { lam, type_params }) => {
+            // Removes any shadowed type variables.
+            let mut type_param_map = type_param_map.clone();
+            for type_param in type_params {
+                type_param_map.remove(&type_param.name);
+            }
+
+            let params: Vec<_> = lam
+                .params
+                .iter()
+                .map(|param| TFnParam {
+                    t: replace_aliases_rec(&param.t, &type_param_map),
+                    ..param.to_owned()
+                })
+                .collect();
+            let ret = replace_aliases_rec(&lam.ret, &type_param_map);
+
+            TypeKind::GenLam(TGenLam {
+                lam: Box::from(TLam {
+                    params,
+                    ret: Box::from(ret),
+                }),
+                type_params: type_params.to_owned(),
+            })
+        }
         TypeKind::Lit(_) => return t.to_owned(),
         TypeKind::Keyword(_) => return t.to_owned(),
         TypeKind::Union(types) => TypeKind::Union(

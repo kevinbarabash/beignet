@@ -5,6 +5,7 @@ use std::iter::IntoIterator;
 use crochet_ast::types::*;
 
 use crate::context::Binding;
+use crate::scheme::Scheme;
 
 pub type Subst = HashMap<i32, Type>;
 
@@ -17,18 +18,6 @@ pub trait Substitutable {
 impl Substitutable for Type {
     fn apply(&mut self, sub: &Subst) {
         match &mut self.kind {
-            TypeKind::Generic(TGeneric { t, type_params: _ }) => {
-                // QUESTION: Do we really need to be filtering out type_params from
-                // substitutions?
-                // let type_params: Vec<_> = type_params
-                //     .iter()
-                //     .filter(|tp| !sub.contains_key(&tp.id))
-                //     .cloned()
-                //     .collect();
-
-                t.apply(sub);
-            }
-
             TypeKind::Var(tv) => {
                 match sub.get(&tv.id) {
                     Some(replacement) => {
@@ -57,6 +46,12 @@ impl Substitutable for Type {
             }
             // TODO: handle widening of lambdas
             TypeKind::Lam(lam) => lam.apply(sub),
+            TypeKind::GenLam(TGenLam { lam, type_params }) => {
+                // TypeParams can have constraints and defaults which are types
+                // so we apply the substitution to those here.
+                type_params.apply(sub);
+                lam.apply(sub)
+            }
             TypeKind::Lit(_) => norm_type(self),
             TypeKind::Keyword(_) => norm_type(self),
             TypeKind::Union(types) => types.apply(sub),
@@ -94,19 +89,10 @@ impl Substitutable for Type {
             }
         };
 
-        if let TypeKind::Generic(TGeneric { t, type_params }) = &self.kind {
-            if type_params.is_empty() {
-                self.kind = t.kind.clone();
-            }
-        }
-
         norm_type(self)
     }
     fn ftv(&self) -> Vec<TVar> {
         match &self.kind {
-            TypeKind::Generic(TGeneric { t, type_params }) => t
-                .ftv()
-                .uniq_via(type_params.to_owned(), |a, b| a.id == b.id),
             TypeKind::Var(tv) => {
                 let mut result = vec![tv.to_owned()];
                 if let Some(constraint) = &tv.constraint {
@@ -120,6 +106,8 @@ impl Substitutable for Type {
                 result.unique_via(|a, b| a.id == b.id)
             }
             TypeKind::Lam(lam) => lam.ftv(),
+            // QUESTION: Is it okay to not instantiate this type here?
+            TypeKind::GenLam(TGenLam { lam, .. }) => lam.ftv(),
             TypeKind::Lit(_) => vec![],
             TypeKind::Keyword(_) => vec![],
             TypeKind::Union(types) => types.ftv(),
@@ -161,6 +149,39 @@ impl Substitutable for Type {
                 result
             }
         }
+    }
+}
+
+impl Substitutable for Scheme {
+    fn apply(&mut self, s: &Subst) {
+        self.t.apply(s);
+        self.type_params.apply(s);
+    }
+    fn ftv(&self) -> Vec<TVar> {
+        let mut result = self.t.ftv();
+        result.append(&mut self.type_params.ftv());
+        result
+    }
+}
+
+impl Substitutable for TypeParam {
+    fn apply(&mut self, s: &Subst) {
+        if let Some(constraint) = &mut self.constraint {
+            constraint.apply(s);
+        }
+        if let Some(default) = &mut self.default {
+            default.apply(s);
+        }
+    }
+    fn ftv(&self) -> Vec<TVar> {
+        let mut result = vec![];
+        if let Some(constraint) = &self.constraint {
+            result.append(&mut constraint.ftv());
+        }
+        if let Some(default) = &self.default {
+            result.append(&mut default.ftv());
+        }
+        result
     }
 }
 
@@ -211,23 +232,15 @@ impl Substitutable for TRef {
 
 impl Substitutable for TCallable {
     fn apply(&mut self, sub: &Subst) {
-        // QUESTION: Do we really need to be filtering out type_params from
-        // substitutions?
-        let type_params = self
-            .type_params
-            .iter()
-            .filter(|tp| !sub.contains_key(&tp.id))
-            .cloned()
-            .collect();
-
         self.params.iter_mut().for_each(|param| param.apply(sub));
         self.ret.apply(sub);
-        self.type_params = type_params;
+        self.type_params.apply(sub);
     }
     fn ftv(&self) -> Vec<TVar> {
         let mut result = self.params.ftv();
         result.append(&mut self.ret.ftv());
-        result.uniq(self.type_params.to_owned())
+        result.append(&mut self.type_params.ftv());
+        result
     }
 }
 

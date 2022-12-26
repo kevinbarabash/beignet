@@ -1,12 +1,13 @@
 use std::cmp;
 use std::collections::BTreeSet;
 
-use crochet_ast::types::{self as types, TGeneric, TLam, TObjElem, TObject, TVar, Type, TypeKind};
+use crochet_ast::types::{self as types, TLam, TObjElem, TObject, TVar, Type, TypeKind};
 use crochet_ast::values::ExprKind;
 use types::TKeyword;
 
 use crate::context::Context;
 use crate::expand_type::expand_type;
+use crate::scheme::{instantiate_callable, instantiate_gen_lam};
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify_mut::unify_mut;
@@ -136,6 +137,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                 .iter()
                 .filter_map(|elem| match elem {
                     TObjElem::Call(call) => {
+                        println!("handling callable");
                         let lam = Type::from(TypeKind::Lam(TLam {
                             params: call.params.to_owned(),
                             ret: call.ret.to_owned(),
@@ -143,11 +145,9 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                         let t = if call.type_params.is_empty() {
                             lam
                         } else {
-                            Type::from(TypeKind::Generic(TGeneric {
-                                t: Box::from(lam),
-                                type_params: call.type_params.to_owned(),
-                            }))
+                            instantiate_callable(ctx, call)
                         };
+                        println!("callable instantiated as {t}");
                         Some(t)
                     }
                     TObjElem::Constructor(_) => None,
@@ -636,15 +636,14 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
         (_, TypeKind::IndexAccess(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),
         (TypeKind::IndexAccess(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
 
-        // We instantiate any generic types that haven't already been instantiated
-        // yet.  This handles cases like `[1, 2, 3].map((x) => x * x)` where the
-        // `map` method is generic.
-        // TODO: Consider instantiating properties when we look them up.
-        (TypeKind::Generic(_), TypeKind::Generic(_)) => {
-            unify(&mut ctx.instantiate(t1), &mut ctx.instantiate(t2), ctx)
+        (_, TypeKind::GenLam(gen_lam)) => {
+            let mut lam = instantiate_gen_lam(ctx, gen_lam);
+            unify(t1, &mut lam, ctx)
         }
-        (_, TypeKind::Generic(_)) => unify(t1, &mut ctx.instantiate(t2), ctx),
-        (TypeKind::Generic(_), _) => unify(&mut ctx.instantiate(t1), t2, ctx),
+        (TypeKind::GenLam(gen_lam), _) => {
+            let mut lam = instantiate_gen_lam(ctx, gen_lam);
+            unify(&mut lam, t2, ctx)
+        }
 
         (TypeKind::Array(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_mut(), ctx),
         (TypeKind::Tuple(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_mut(), ctx),
