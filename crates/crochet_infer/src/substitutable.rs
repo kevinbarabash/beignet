@@ -18,18 +18,6 @@ pub trait Substitutable {
 impl Substitutable for Type {
     fn apply(&mut self, sub: &Subst) {
         match &mut self.kind {
-            TypeKind::Generic(TGeneric { t, type_params: _ }) => {
-                // QUESTION: Do we really need to be filtering out type_params from
-                // substitutions?
-                // let type_params: Vec<_> = type_params
-                //     .iter()
-                //     .filter(|tp| !sub.contains_key(&tp.id))
-                //     .cloned()
-                //     .collect();
-
-                t.apply(sub);
-            }
-
             TypeKind::Var(tv) => {
                 match sub.get(&tv.id) {
                     Some(replacement) => {
@@ -101,19 +89,10 @@ impl Substitutable for Type {
             }
         };
 
-        if let TypeKind::Generic(TGeneric { t, type_params }) = &self.kind {
-            if type_params.is_empty() {
-                self.kind = t.kind.clone();
-            }
-        }
-
         norm_type(self)
     }
     fn ftv(&self) -> Vec<TVar> {
         match &self.kind {
-            TypeKind::Generic(TGeneric { t, type_params }) => t
-                .ftv()
-                .uniq_via(type_params.to_owned(), |a, b| a.id == b.id),
             TypeKind::Var(tv) => {
                 let mut result = vec![tv.to_owned()];
                 if let Some(constraint) = &tv.constraint {

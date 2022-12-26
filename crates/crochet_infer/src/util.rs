@@ -86,31 +86,6 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
     // type variables that are bound to the object element as opposed to the encompassing object type.
     fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, _ctx: &Context) -> Type {
         let kind = match &t.kind {
-            TypeKind::Generic(TGeneric {
-                t: inner_t,
-                type_params,
-            }) => {
-                // NOTE: For now we don't bother normalizing qualified types since
-                // mappings from higher up may cause type variables to be reassigned
-                // to the incorrect type.  In order to fix this, we'd have to run
-                // `normalize` itself on each qualified type in the tree.
-                TypeKind::Generic(TGeneric {
-                    t: Box::from(norm_type(inner_t, mapping, _ctx)),
-                    type_params: type_params
-                        .iter()
-                        .map(|tp| match mapping.get(&tp.id) {
-                            Some(t) => {
-                                if let TypeKind::Var(tv) = &t.kind {
-                                    tv.to_owned()
-                                } else {
-                                    panic!("Expected a type variable in mapping when update type_params");
-                                }
-                            },
-                            None => tp.to_owned(),
-                        })
-                        .collect(),
-                })
-            }
             TypeKind::Var(tv) => {
                 match mapping.get(&tv.id) {
                     Some(t) => return t.to_owned(),
@@ -512,13 +487,6 @@ pub fn get_property_type(prop: &TProp) -> Type {
 // NOTE: This is only used externally by replace_aliases_rec.
 pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> Type {
     let kind = match &t.kind {
-        TypeKind::Generic(TGeneric { t, type_params }) => {
-            // TODO: create a new `map` that adds in `type_params`
-            TypeKind::Generic(TGeneric {
-                t: Box::from(replace_aliases_rec(t, type_param_map)),
-                type_params: type_params.to_owned(),
-            })
-        }
         TypeKind::Var(tvar) => match &tvar.constraint {
             Some(constraint) => TypeKind::Var(TVar {
                 constraint: Some(Box::from(replace_aliases_rec(constraint, type_param_map))),

@@ -44,12 +44,6 @@ pub struct TIndexAccess {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TGeneric {
-    pub t: Box<Type>,
-    pub type_params: Vec<TVar>, // TODO: update to use TypeParam
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TVar {
     pub id: i32, // This should never be mutated
     pub constraint: Option<Box<Type>>,
@@ -125,11 +119,6 @@ pub enum TypeKind {
     MappedType(TMappedType),
     ConditionalType(TConditionalType),
     // Query, // use for typed holes
-
-    // We encapsulate type polymorphism in a wrapper type instead of a separate
-    // data structure like a `Scheme`.  This allows us to nest polymorphic types
-    // with independent type parameters which isn't possible when using `Scheme`.
-    Generic(TGeneric),
 }
 
 #[derive(Derivative)]
@@ -166,21 +155,6 @@ impl fmt::Display for Type {
             write!(f, "mut ")?;
         }
         match &self.kind {
-            TypeKind::Generic(TGeneric { t, type_params }) => {
-                if type_params.is_empty() {
-                    write!(f, "{t}")
-                } else {
-                    let type_params = type_params.iter().map(|tp| {
-                        let TVar { id, constraint } = tp;
-                        match constraint {
-                            Some(constraint) => format!("t{id} extends {constraint}"),
-                            None => format!("t{id}"),
-                        }
-                    });
-                    // e.g. <T extends number | string>(a: T, b: T) => T
-                    write!(f, "<{}>{t}", join(type_params, ", "))
-                }
-            }
             TypeKind::Var(tv) => {
                 write!(f, "t{}", tv.id)?;
                 // TODO: Figure out how to only print the constraints when

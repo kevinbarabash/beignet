@@ -636,17 +636,6 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
         (_, TypeKind::IndexAccess(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),
         (TypeKind::IndexAccess(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
 
-        // We instantiate any generic types that haven't already been instantiated
-        // yet.  This handles cases like `[1, 2, 3].map((x) => x * x)` where the
-        // `map` method is generic.
-        // TODO: Consider instantiating properties when we look them up.
-        // TODO: handle TypeKind::GenLam
-        (TypeKind::Generic(_), TypeKind::Generic(_)) => {
-            unify(&mut ctx.instantiate(t1), &mut ctx.instantiate(t2), ctx)
-        }
-        (_, TypeKind::Generic(_)) => unify(t1, &mut ctx.instantiate(t2), ctx),
-        (TypeKind::Generic(_), _) => unify(&mut ctx.instantiate(t1), t2, ctx),
-
         (_, TypeKind::GenLam(gen_lam)) => {
             let mut lam = instantiate_gen_lam(ctx, gen_lam);
             unify(t1, &mut lam, ctx)

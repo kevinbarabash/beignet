@@ -708,14 +708,6 @@ fn infer_property_type(
     ctx: &mut Context,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
     match &mut obj_t.kind {
-        TypeKind::Generic(_) => {
-            // TODO: Improve performance by getting the property type first and
-            // then instantiating it instead of instantiating the whole object type.
-            // NOTE: This is what introduces new type variables when getting the property
-            // on a generic object type.
-            let mut t = ctx.instantiate(obj_t);
-            infer_property_type(&mut t, prop, ctx)
-        }
         TypeKind::Var(TVar { constraint, .. }) => match constraint {
             Some(constraint) => infer_property_type(constraint, prop, ctx),
             None => Err(vec![TypeError::PossiblyNotAnObject(Box::from(

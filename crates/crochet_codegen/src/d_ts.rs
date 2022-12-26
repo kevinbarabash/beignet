@@ -8,8 +8,8 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast::types::{
-    TConditionalType, TFnParam, TGeneric, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey,
-    TVar, Type, TypeKind, TypeParam,
+    TConditionalType, TFnParam, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey, TVar, Type,
+    TypeKind, TypeParam,
 };
 use crochet_ast::{types, values};
 use crochet_infer::Context;
@@ -339,14 +339,8 @@ pub fn build_ts_fn_type_with_args(
 /// `expr` should be the original expression that `t` was inferred
 /// from if it exists.
 pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsType {
-    println!("build_type - t = {t}");
     let mutable = t.mutable;
     match &t.kind {
-        TypeKind::Generic(TGeneric { t, .. }) => {
-            // TODO: combine the return value from the `build_type_params()` call
-            // with the `type_params` passed into this function.
-            build_type(t, type_params)
-        }
         TypeKind::Var(TVar { id, constraint: _ }) => {
             // TODO: handle constraints on type variables
             // This will likely be easier if we stop using type variables for

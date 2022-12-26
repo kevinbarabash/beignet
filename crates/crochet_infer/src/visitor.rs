@@ -69,9 +69,6 @@ pub trait Visitor {
                 self.visit_children(true_type);
                 self.visit_children(false_type);
             }
-            TypeKind::Generic(gen) => {
-                self.visit_children(&mut gen.t);
-            }
         }
 
         self.visit_type(t);

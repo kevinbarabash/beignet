@@ -104,11 +104,11 @@ impl Context {
         current_scope.namespaces.insert(name, Box::from(namespace));
     }
 
+    // TODO: update to instantiate GenLam -> Lam
     pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, Vec<TypeError>> {
         for scope in self.scopes.iter().rev() {
             if let Some(binding) = scope.values.get(name) {
-                let t = binding.t.clone();
-                return Ok(self.instantiate(&t));
+                return Ok(binding.t.to_owned());
             }
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
@@ -130,15 +130,6 @@ impl Context {
             }
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
-    }
-
-    pub fn lookup_type_and_instantiate(
-        &self,
-        name: &str,
-        mutable: bool,
-    ) -> Result<Type, Vec<TypeError>> {
-        let t = self.lookup_type(name, mutable)?;
-        Ok(self.instantiate(&t))
     }
 
     // TODO: handle ReadonlyArray, etc.
@@ -173,34 +164,15 @@ impl Context {
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    pub fn lookup_namespace(&self, name: &str) -> Result<Box<Scope>, TypeError> {
-        for scope in self.scopes.iter().rev() {
-            if let Some(namespace) = scope.namespaces.get(name) {
-                return Ok(namespace.to_owned());
-            }
-        }
-        // TODO: Add a CantFindNamespace error
-        Err(TypeError::CantFindIdent(name.to_owned()))
-    }
-
-    pub fn instantiate(&self, t: &Type) -> Type {
-        match &t.kind {
-            TypeKind::Generic(TGeneric { t, type_params }) => {
-                let ids = type_params.iter().map(|tv| tv.id.to_owned());
-                let fresh_params = type_params.iter().map(|tp| {
-                    Type::from(TypeKind::Var(TVar {
-                        id: self.fresh_id(),
-                        constraint: tp.constraint.to_owned(),
-                    }))
-                });
-                let subs: Subst = ids.zip(fresh_params).collect();
-                let mut t = t.as_ref().to_owned();
-                t.apply(&subs);
-                t
-            }
-            _ => t.to_owned(),
-        }
-    }
+    // pub fn lookup_namespace(&self, name: &str) -> Result<Box<Scope>, TypeError> {
+    //     for scope in self.scopes.iter().rev() {
+    //         if let Some(namespace) = scope.namespaces.get(name) {
+    //             return Ok(namespace.to_owned());
+    //         }
+    //     }
+    //     // TODO: Add a CantFindNamespace error
+    //     Err(TypeError::CantFindIdent(name.to_owned()))
+    // }
 
     pub fn fresh_id(&self) -> i32 {
         let id = self.state.count.get() + 1;

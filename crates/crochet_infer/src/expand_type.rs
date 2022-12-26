@@ -32,7 +32,6 @@ pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
         TypeKind::IndexAccess(access) => expand_index_access(access, ctx),
         TypeKind::MappedType(mapped) => expand_mapped_type(mapped, ctx),
         TypeKind::ConditionalType(cond) => expand_conditional_type(cond, ctx),
-        TypeKind::Generic(_) => todo!(),
     }
 }
 
@@ -389,7 +388,6 @@ fn expand_keyof(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
 
 pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     match &t.kind {
-        TypeKind::Generic(TGeneric { t, type_params: _ }) => get_obj_type(t, ctx),
         TypeKind::Var(_) => Err(vec![TypeError::CantInferTypeFromItKeys]),
         TypeKind::Ref(alias) => {
             let t = expand_alias_type(alias, ctx)?;
@@ -398,18 +396,18 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
         TypeKind::Object(_) => Ok(t.to_owned()),
         TypeKind::Lit(lit) => {
             let t = match lit {
-                TLit::Num(_) => ctx.lookup_type_and_instantiate("Number", false)?,
-                TLit::Bool(_) => ctx.lookup_type_and_instantiate("Boolean", false)?,
-                TLit::Str(_) => ctx.lookup_type_and_instantiate("String", false)?,
+                TLit::Num(_) => ctx.lookup_type("Number", false)?,
+                TLit::Bool(_) => ctx.lookup_type("Boolean", false)?,
+                TLit::Str(_) => ctx.lookup_type("String", false)?,
             };
             Ok(t)
         }
         TypeKind::Keyword(keyword) => {
             let t = match keyword {
-                TKeyword::Number => ctx.lookup_type_and_instantiate("Number", false)?,
-                TKeyword::Boolean => ctx.lookup_type_and_instantiate("Boolean", false)?,
-                TKeyword::String => ctx.lookup_type_and_instantiate("String", false)?,
-                TKeyword::Symbol => ctx.lookup_type_and_instantiate("Symbol", false)?,
+                TKeyword::Number => ctx.lookup_type("Number", false)?,
+                TKeyword::Boolean => ctx.lookup_type("Boolean", false)?,
+                TKeyword::String => ctx.lookup_type("String", false)?,
+                TKeyword::Symbol => ctx.lookup_type("Symbol", false)?,
                 TKeyword::Object => {
                     // NOTE: Structural typing allows for extra elems in any object
                     // so this should be a good equivalent for the `object` keyword.
@@ -447,7 +445,7 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
             let name = if t.mutable { "Array" } else { "ReadonlyArray" };
             let scheme = ctx.lookup_scheme(name)?;
 
-            // let array_t = ctx.lookup_type_and_instantiate("Array", t.mutable)?;
+            // let array_t = ctx.lookup_type("Array", t.mutable)?;
             if let TypeKind::Object(TObject { elems: array_elems }) = &scheme.t.kind {
                 for array_elem in array_elems {
                     match array_elem {
@@ -465,7 +463,7 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
             Ok(t)
         }
         TypeKind::Array(type_param) => {
-            // TODO: Update lookup_type_and_instantiate() to take type args so
+            // TODO: Update lookup_type() to take type args so
             // that we don't have to handle them here manually.
             let name = if t.mutable { "Array" } else { "ReadonlyArray" };
             let scheme = ctx.lookup_scheme(name)?;
@@ -480,8 +478,8 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
 
             Ok(t)
         }
-        TypeKind::Lam(_) => ctx.lookup_type_and_instantiate("Function", false),
-        TypeKind::GenLam(_) => ctx.lookup_type_and_instantiate("Function", false),
+        TypeKind::Lam(_) => ctx.lookup_type("Function", false),
+        TypeKind::GenLam(_) => ctx.lookup_type("Function", false),
         TypeKind::App(_) => todo!(), // What does this even mean?
         TypeKind::Union(_) => todo!(),
         TypeKind::Intersection(_) => {
