@@ -12,7 +12,7 @@ use crochet_ast::types::{
     TVar, Type, TypeKind,
 };
 use crochet_ast::{types, values};
-use crochet_infer::{get_type_params, Context};
+use crochet_infer::{get_type_params, instantiate, Context};
 
 pub fn codegen_d_ts(program: &values::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -41,13 +41,14 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
 
     let mut body: Vec<ModuleItem> = vec![];
 
-    for (name, t) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+    for (name, scheme) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+        let t = instantiate(ctx, scheme);
         let decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(TsTypeAliasDecl {
             span: DUMMY_SP,
             declare: true,
             id: build_ident(name),
-            type_params: build_type_params(t),
-            type_ann: Box::from(build_type(t, &None)),
+            type_params: build_type_params(&t),
+            type_ann: Box::from(build_type(&t, &None)),
         }))));
 
         body.push(decl);

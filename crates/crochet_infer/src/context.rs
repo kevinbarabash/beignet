@@ -2,11 +2,11 @@ use crochet_ast::types::*;
 use std::cell::Cell;
 use std::collections::HashMap;
 
+use crate::scheme::{generalize, instantiate, Scheme};
 use crate::substitutable::*;
 use crate::type_error::TypeError;
 
-// NOTE: This is the same as the Assump type in assump.rs
-pub type Env = HashMap<String, Type>;
+pub type Env = HashMap<String, Scheme>;
 
 #[derive(Clone, Debug)]
 pub struct State {
@@ -90,7 +90,8 @@ impl Context {
 
     pub fn insert_type(&mut self, name: String, t: Type) {
         let current_scope = self.scopes.last_mut().unwrap();
-        current_scope.types.insert(name, t);
+        let scheme = generalize(&current_scope.types, &t);
+        current_scope.types.insert(name, scheme);
     }
 
     pub fn insert_namespace(&mut self, name: String, namespace: Scope) {
@@ -150,8 +151,8 @@ impl Context {
 
     pub fn _lookup_type(&self, name: &str) -> Result<Type, Vec<TypeError>> {
         for scope in self.scopes.iter().rev() {
-            if let Some(t) = scope.types.get(name) {
-                return Ok(t.to_owned());
+            if let Some(scheme) = scope.types.get(name) {
+                return Ok(instantiate(self, scheme));
             }
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
