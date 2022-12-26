@@ -73,8 +73,6 @@ pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
         }
     };
 
-    println!("close_over - t = {t}");
-
     normalize(&t, ctx)
 }
 

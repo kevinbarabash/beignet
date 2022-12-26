@@ -486,13 +486,15 @@ fn tuple_mapping() {
     let sqr_fn = (x) => x * x;
     let squares2 = [1, 2, 3].map(sqr_fn);
     let squares3 = [1, 2, 3].map((x) => x * x);
+    let strings = [1, 2, 3].map((x) => `x = ${x}`);
     "#;
 
     let (_, ctx) = infer_prog(src);
 
     let t = ctx.lookup_value("squares").unwrap();
-    let result = format!("{}", t);
-    assert_eq!(result, "mut number[]");
+    assert_eq!(t.to_string(), "mut number[]");
+    let t = ctx.lookup_value("strings").unwrap();
+    assert_eq!(t.to_string(), "mut string[]");
 }
 
 #[test]
