@@ -9,6 +9,7 @@ on:
       - "**.crochet"
       - "**.js"
       - "**.rs"
+      - ".github/workflows/ci.yml"
 
 jobs:
   clippy:
