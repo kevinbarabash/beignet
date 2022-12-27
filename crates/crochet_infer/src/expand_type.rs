@@ -538,12 +538,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_intersection() {
         let src = r#"
         type t = {a: number, b: boolean} & {b: string, c: number};
         "#;
         let ctx = infer_prog(src);
+        let foo = "hello, world!";
 
         assert_eq!(get_keyof("t", &ctx), r#""a" | "b" | "c""#);
     }
