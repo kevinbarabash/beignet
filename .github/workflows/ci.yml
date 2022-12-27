@@ -155,6 +155,9 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-coverage
 
       - name: Install grcov
+        run: cargo install grcov
+
+      - name: Install llvm-tools-preview
         run: rustup component add llvm-tools-preview
 
       - name: Test
