@@ -505,6 +505,16 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
     }
 }
 
+pub fn bad() -> bool {
+    let foo = Some("hello, world!");
+    let bar = match foo {
+        Some(foo) => Some(foo.len()),
+        None => None,
+    };
+
+    1 <= 1
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -543,7 +553,6 @@ mod tests {
         type t = {a: number, b: boolean} & {b: string, c: number};
         "#;
         let ctx = infer_prog(src);
-        let foo = "hello, world!";
 
         assert_eq!(get_keyof("t", &ctx), r#""a" | "b" | "c""#);
     }
