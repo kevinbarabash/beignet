@@ -505,16 +505,6 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
     }
 }
 
-pub fn bad() -> bool {
-    let foo = Some("hello, world!");
-    let bar = match foo {
-        Some(foo) => Some(foo.len()),
-        None => None,
-    };
-
-    1 <= 1
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
