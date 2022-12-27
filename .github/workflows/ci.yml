@@ -31,10 +31,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-clippy
 
       - name: Clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --no-deps
+        run: cargo clippy --all-features --no-deps
 
   tree-sitter-test:
     name: Test tree-sitter Parser
@@ -72,10 +69,7 @@ jobs:
           echo "$WASI_SDK_PATH/bin" >> $GITHUB_PATH
 
       - name: Install wasm32-wasi target for rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: wasm32-wasi
+        run: rustup target add wasm32-wasi
 
       - name: Install node_modules
         run: yarn install --frozen-lockfile
@@ -123,9 +117,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-test
 
       - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+        run: cargo test
 
   coverage:
     name: Coverage
