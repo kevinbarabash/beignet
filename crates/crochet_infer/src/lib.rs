@@ -2557,7 +2557,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::PossiblyNotAnObject: t3 might not be an object"]
+    #[should_panic = "TypeError::PossiblyNotAnObject: t2 might not be an object"]
     fn test_type_param_member_access_errors() {
         let src = r#"
         let getBar = <T>(obj: T): T => {
@@ -3020,8 +3020,7 @@ mod tests {
         let fst = ctx.lookup_value("fst").unwrap();
         assert_eq!(format!("{fst}"), "<A>(a: A, b: A) => A");
 
-        // TODO(#390): make this second assertion pass as well, it currently doesn't.
-        // let snd = ctx.lookup_value("snd").unwrap();
-        // assert_eq!(format!("{snd}"), "<A>(a: A, b: A) => A");
+        let snd = ctx.lookup_value("snd").unwrap();
+        assert_eq!(format!("{snd}"), "<A>(a: A, b: A) => A");
     }
 }

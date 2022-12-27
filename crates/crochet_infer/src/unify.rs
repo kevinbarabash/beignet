@@ -1,8 +1,10 @@
 use std::cmp;
 use std::collections::BTreeSet;
 
-use crochet_ast::types::{self as types, TLam, TObjElem, TObject, TVar, Type, TypeKind};
-use crochet_ast::values::ExprKind;
+use crochet_ast::types::{
+    self as types, Provenance, TLam, TObjElem, TObject, TVar, Type, TypeKind,
+};
+use crochet_ast::values::{ExprKind, TypeAnn, TypeAnnKind};
 use types::TKeyword;
 
 use crate::context::Context;
@@ -17,8 +19,44 @@ use crate::util::*;
 pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<TypeError>> {
     // All binding must be done first
     match (&mut t1.kind, &mut t2.kind) {
-        (TypeKind::Var(tv), _) => return bind(tv, t2, Relation::SubType, ctx),
-        (_, TypeKind::Var(tv)) => return bind(tv, t1, Relation::SuperType, ctx),
+        // If both are type variables...
+        (TypeKind::Var(tv1), TypeKind::Var(tv2)) => {
+            // ...and one of them was inferred from a type reference, e.g. T,
+            if let Some(provenance) = &t1.provenance {
+                if let Provenance::TypeAnn(type_ann) = provenance.as_ref() {
+                    if let TypeAnn {
+                        kind: TypeAnnKind::TypeRef(_),
+                        ..
+                    } = type_ann.as_ref()
+                    {
+                        // then we want to make sure that substitution we create
+                        // has the other type variable pointing to the one that
+                        // was inferred from the type reference.
+                        return bind(tv2, t1, Relation::SuperType, ctx);
+                    }
+                }
+            }
+
+            if let Some(provenance) = &t2.provenance {
+                if let Provenance::TypeAnn(type_ann) = provenance.as_ref() {
+                    if let TypeAnn {
+                        kind: TypeAnnKind::TypeRef(_),
+                        ..
+                    } = type_ann.as_ref()
+                    {
+                        return bind(tv1, t2, Relation::SubType, ctx);
+                    }
+                }
+            }
+
+            return bind(tv1, t2, Relation::SubType, ctx);
+        }
+        (TypeKind::Var(tv), _) => {
+            return bind(tv, t2, Relation::SubType, ctx);
+        }
+        (_, TypeKind::Var(tv)) => {
+            return bind(tv, t1, Relation::SuperType, ctx);
+        }
         _ => (),
     };
 
