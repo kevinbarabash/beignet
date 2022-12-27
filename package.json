@@ -6,7 +6,10 @@
     "build-wasm": "cd crates/crochet && cargo build --target wasm32-wasi --release",
     "watch-wasm": "cargo watch -- cargo build --target wasm32-wasi --release",
     "build": "webpack && cp scarf.png build && cp index.css build",
-    "serve": "webpack serve"
+    "serve": "webpack serve",
+    "coverage:test": "CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' LLVM_PROFILE_FILE='profiles/cargo-test-%p-%m.profraw' cargo test",
+    "coverage:html": "mkdir -p target/coverage && grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore-not-existing --ignore '../*' --ignore '/*' -o target/coverage/html",
+    "coverage:lcov": "mkdir -p target/coverage && grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore '/*' -o target/coverage/tests.lcov"
   },
   "devDependencies": {
     "@types/react": "^18.0.6",
