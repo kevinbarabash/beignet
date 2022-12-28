@@ -71,7 +71,7 @@ impl From<&Lit> for swc_ecma_ast::Expr {
             Lit::Num(n) => {
                 let span = swc_common::Span {
                     lo: BytePos(n.span.start as u32 + 1),
-                    hi: BytePos(n.span.end as u32),
+                    hi: BytePos(n.span.end as u32 + 1),
                     ctxt: SyntaxContext::empty(),
                 };
 
@@ -88,7 +88,7 @@ impl From<&Lit> for swc_ecma_ast::Expr {
             Lit::Bool(b) => {
                 let span = swc_common::Span {
                     lo: BytePos(b.span.start as u32 + 1),
-                    hi: BytePos(b.span.end as u32),
+                    hi: BytePos(b.span.end as u32 + 1),
                     ctxt: SyntaxContext::empty(),
                 };
 
@@ -101,7 +101,7 @@ impl From<&Lit> for swc_ecma_ast::Expr {
             Lit::Str(s) => {
                 let span = swc_common::Span {
                     lo: BytePos(s.span.start as u32 + 1),
-                    hi: BytePos(s.span.end as u32),
+                    hi: BytePos(s.span.end as u32 + 1),
                     ctxt: SyntaxContext::empty(),
                 };
 

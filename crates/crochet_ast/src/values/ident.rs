@@ -17,7 +17,7 @@ impl From<&Ident> for swc_ecma_ast::Ident {
     fn from(ident: &Ident) -> Self {
         let span = swc_common::Span {
             lo: BytePos(ident.span.start as u32 + 1),
-            hi: BytePos(ident.span.end as u32),
+            hi: BytePos(ident.span.end as u32 + 1),
             ctxt: SyntaxContext::empty(),
         };
 
@@ -33,7 +33,7 @@ impl From<&BindingIdent> for swc_ecma_ast::Ident {
     fn from(binding: &BindingIdent) -> Self {
         let span = swc_common::Span {
             lo: BytePos(binding.span.start as u32 + 1),
-            hi: BytePos(binding.span.end as u32),
+            hi: BytePos(binding.span.end as u32 + 1),
             ctxt: SyntaxContext::empty(),
         };
 

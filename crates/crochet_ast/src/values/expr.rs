@@ -158,7 +158,6 @@ pub enum UnaryOp {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Obj {
-    // TODO: update this to include a .span field so that we can track it's location
     pub props: Vec<PropOrSpread>,
 }
 
@@ -181,7 +180,7 @@ pub enum Prop {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyValueProp {
-    pub name: String, // TODO: update this be an Ident so that we can track it's location
+    pub key: Ident,
     pub value: Box<Expr>,
 }
 

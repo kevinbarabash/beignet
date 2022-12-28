@@ -33,7 +33,6 @@ Ok(
                                         span: 4..8,
                                         kind: Rest(
                                             RestPat {
-                                                span: 4..8,
                                                 arg: Pattern {
                                                     span: 7..8,
                                                     kind: Ident(

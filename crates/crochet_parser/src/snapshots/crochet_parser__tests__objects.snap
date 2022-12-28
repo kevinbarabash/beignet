@@ -15,7 +15,10 @@ Ok(
                                 Prop(
                                     KeyValue(
                                         KeyValueProp {
-                                            name: "x",
+                                            key: Ident {
+                                                span: 1..2,
+                                                name: "x",
+                                            },
                                             value: Expr {
                                                 span: 4..5,
                                                 kind: Lit(
@@ -34,7 +37,10 @@ Ok(
                                 Prop(
                                     KeyValue(
                                         KeyValueProp {
-                                            name: "y",
+                                            key: Ident {
+                                                span: 7..8,
+                                                name: "y",
+                                            },
                                             value: Expr {
                                                 span: 10..12,
                                                 kind: Lit(

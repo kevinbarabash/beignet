@@ -270,7 +270,6 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseEr
                         let pattern = parse_pattern(&pattern, src)?;
 
                         Ok(ObjectPatProp::Rest(RestPat {
-                            span: node.byte_range(),
                             arg: Box::from(pattern),
                         }))
                     }
@@ -378,7 +377,6 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseEr
             let arg = parse_pattern(&arg, src)?;
 
             PatternKind::Rest(RestPat {
-                span: node.byte_range(),
                 arg: Box::from(arg),
             })
         }
@@ -834,16 +832,15 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
                         // ),
                         // TODO: handle more than just "identifier"
                         let key_node = child.child_by_field_name("key").unwrap();
-                        // let key = Ident {
-                        //     span: key_node.byte_range(),
-                        //     name: text_for_node(&key_node, src),
-                        // };
-                        let name = text_for_node(&key_node, src)?;
+                        let key = Ident {
+                            span: key_node.byte_range(),
+                            name: text_for_node(&key_node, src)?,
+                        };
                         let value = child.child_by_field_name("value").unwrap();
                         let value = parse_expression(&value, src)?;
                         Ok(PropOrSpread::Prop(Box::from(Prop::KeyValue(
                             KeyValueProp {
-                                name,
+                                key,
                                 value: Box::from(value),
                             },
                         ))))
@@ -1119,7 +1116,6 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                         let arg = parse_refutable_pattern(&arg, src)?;
 
                         Ok(ObjectPatProp::Rest(RestPat {
-                            span: prop.byte_range(),
                             arg: Box::from(arg),
                         }))
                     }
@@ -1149,7 +1145,6 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
             let arg = parse_refutable_pattern(&arg, src)?;
 
             PatternKind::Rest(RestPat {
-                span: child.byte_range(),
                 arg: Box::from(arg),
             })
         }
