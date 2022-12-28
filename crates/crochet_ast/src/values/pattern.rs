@@ -51,6 +51,7 @@ pub struct IsPat {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RestPat {
+    pub span: Span,
     pub arg: Box<Pattern>,
 }
 
@@ -183,6 +184,7 @@ mod tests {
     fn rest_is_irrefutable() {
         let ident = ident_pattern("foo");
         let kind = PatternKind::Rest(RestPat {
+            span: 0..0,
             arg: Box::from(ident),
         });
         let rest = Pattern {

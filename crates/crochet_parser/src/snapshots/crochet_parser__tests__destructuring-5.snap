@@ -34,6 +34,7 @@ Ok(
                                             span: 10..27,
                                             kind: Rest(
                                                 RestPat {
+                                                    span: 10..27,
                                                     arg: Pattern {
                                                         span: 13..27,
                                                         kind: Array(
@@ -61,6 +62,7 @@ Ok(
                                                                                 span: 19..26,
                                                                                 kind: Rest(
                                                                                     RestPat {
+                                                                                        span: 19..26,
                                                                                         arg: Pattern {
                                                                                             span: 22..26,
                                                                                             kind: Ident(

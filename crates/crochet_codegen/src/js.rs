@@ -6,7 +6,7 @@ use swc_common::hygiene::Mark;
 use swc_common::source_map::{
     self, DefaultSourceMapGenConfig, FilePathMapping, Globals, DUMMY_SP, GLOBALS,
 };
-use swc_common::FileName;
+use swc_common::{self, BytePos, FileName, SyntaxContext};
 use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 use swc_ecma_transforms_react::{react, Options, Runtime};
@@ -171,11 +171,21 @@ fn build_pattern(
             id: Ident::from(binding_ident),
             type_ann: None,
         })),
-        values::PatternKind::Rest(values::RestPat { arg }) => {
+        values::PatternKind::Rest(values::RestPat { arg, span }) => {
+            let dot3_token = swc_common::Span {
+                lo: BytePos(span.start as u32 + 1),
+                hi: BytePos(span.start as u32 + 4),
+                ctxt: SyntaxContext::empty(),
+            };
+            let span = swc_common::Span {
+                lo: BytePos(span.start as u32 + 1),
+                hi: BytePos(span.end as u32),
+                ctxt: SyntaxContext::empty(),
+            };
             let arg = build_pattern(arg, stmts, ctx).unwrap();
             Some(Pat::Rest(RestPat {
-                span: DUMMY_SP,
-                dot3_token: DUMMY_SP,
+                span,
+                dot3_token,
                 type_ann: None,
                 arg: Box::from(arg),
             }))
@@ -205,10 +215,20 @@ fn build_pattern(
                             .clone()
                             .map(|value| Box::from(build_expr(&value, stmts, ctx))),
                     })),
-                    values::ObjectPatProp::Rest(values::RestPat { arg }) => {
+                    values::ObjectPatProp::Rest(values::RestPat { arg, span }) => {
+                        let dot3_token = swc_common::Span {
+                            lo: BytePos(span.start as u32 + 1),
+                            hi: BytePos(span.start as u32 + 4),
+                            ctxt: SyntaxContext::empty(),
+                        };
+                        let span = swc_common::Span {
+                            lo: BytePos(span.start as u32 + 1),
+                            hi: BytePos(span.end as u32),
+                            ctxt: SyntaxContext::empty(),
+                        };
                         Some(ObjectPatProp::Rest(RestPat {
-                            span: DUMMY_SP,
-                            dot3_token: DUMMY_SP,
+                            span,
+                            dot3_token,
                             arg: Box::from(build_pattern(arg, stmts, ctx)?),
                             type_ann: None,
                         }))
@@ -579,12 +599,8 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 .iter()
                 .map(|prop| match prop {
                     values::PropOrSpread::Prop(prop) => match prop.as_ref() {
-                        values::Prop::Shorthand(values::ident::Ident { name, .. }) => {
-                            PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
-                                span: DUMMY_SP,
-                                sym: JsWord::from(name.clone()),
-                                optional: false,
-                            })))
+                        values::Prop::Shorthand(ident) => {
+                            PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident::from(ident))))
                         }
                         values::Prop::KeyValue(values::KeyValueProp { name, value, .. }) => {
                             PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {

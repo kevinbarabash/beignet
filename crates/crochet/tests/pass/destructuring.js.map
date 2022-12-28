@@ -1,1 +1,1 @@
-{"version":3,"sources":["<anon>"],"sourcesContent":["let [x, _, z] = [1, 2, 3];\nlet {a, b: _, e: f, ...rest} = {a: 1, b: 2, c: 3, d: 4, e: 5};\n"],"names":[],"mappings":"cAAK,YAAM;IAAM;IAAG;IAAG;;eAClB,IAAG,WAAA,EAAM,GAAG,EAAA,KAAM;OAAY;OAAM;OAAM;OAAM;OAAM"}
+{"version":3,"sources":["<anon>"],"sourcesContent":["let [x, _, z] = [1, 2, 3];\nlet {a, b: _, e: f, ...rest} = {a: 1, b: 2, c: 3, d: 4, e: 5};\n"],"names":[],"mappings":"cAAK,YAAM;IAAM;IAAG;IAAG;;eAClB,IAAG,WAAA,EAAM,GAAG,EAAA,EAAb,GAAG,AAAgB;OAAY;OAAM;OAAM;OAAM;OAAM"}

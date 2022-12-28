@@ -14,7 +14,7 @@ pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
 
     match &mut pattern.kind {
         PatternKind::Ident(_) => (), // leaf node
-        PatternKind::Rest(RestPat { arg }) => {
+        PatternKind::Rest(RestPat { arg, .. }) => {
             update_pattern(arg, s);
         }
         PatternKind::Object(ObjectPat { props, optional: _ }) => {
@@ -43,7 +43,7 @@ pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
                         update_expr(init, s)
                     }
                 }
-                ObjectPatProp::Rest(RestPat { arg }) => {
+                ObjectPatProp::Rest(RestPat { arg, .. }) => {
                     update_pattern(arg, s);
                 }
             })
@@ -222,7 +222,7 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
 fn update_fn_param_pat(pat: &mut Pattern, s: &Subst) {
     match &mut pat.kind {
         PatternKind::Ident(_) => (), // leaf node
-        PatternKind::Rest(RestPat { arg }) => update_fn_param_pat(arg, s),
+        PatternKind::Rest(RestPat { arg, .. }) => update_fn_param_pat(arg, s),
         PatternKind::Object(ObjectPat { props, optional: _ }) => {
             props.iter_mut().for_each(|prop| match prop {
                 ObjectPatProp::KeyValue(KeyValuePatProp {
@@ -249,7 +249,7 @@ fn update_fn_param_pat(pat: &mut Pattern, s: &Subst) {
                         update_expr(init, s)
                     }
                 }
-                ObjectPatProp::Rest(RestPat { arg }) => {
+                ObjectPatProp::Rest(RestPat { arg, .. }) => {
                     update_fn_param_pat(arg, s);
                 }
             });

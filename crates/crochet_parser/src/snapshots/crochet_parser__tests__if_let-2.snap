@@ -144,6 +144,7 @@ Ok(
                                                                                         span: 125..132,
                                                                                         kind: Rest(
                                                                                             RestPat {
+                                                                                                span: 125..132,
                                                                                                 arg: Pattern {
                                                                                                     span: 128..132,
                                                                                                     kind: Ident(
