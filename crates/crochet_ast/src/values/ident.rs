@@ -1,7 +1,7 @@
 use derivative::*;
 use std::fmt;
 use swc_atoms::JsWord;
-use swc_common::source_map::DUMMY_SP;
+use swc_common::{self, BytePos, SyntaxContext};
 use swc_ecma_ast;
 
 use crate::values::span::Span;
@@ -15,8 +15,14 @@ pub struct Ident {
 // TODO: add implementations of From for more nodes
 impl From<&Ident> for swc_ecma_ast::Ident {
     fn from(ident: &Ident) -> Self {
+        let span = swc_common::Span {
+            lo: BytePos(ident.span.start as u32 + 1),
+            hi: BytePos(ident.span.end as u32),
+            ctxt: SyntaxContext::empty(),
+        };
+
         swc_ecma_ast::Ident {
-            span: DUMMY_SP,
+            span,
             sym: JsWord::from(ident.name.to_owned()),
             optional: false,
         }
@@ -25,8 +31,14 @@ impl From<&Ident> for swc_ecma_ast::Ident {
 
 impl From<&BindingIdent> for swc_ecma_ast::Ident {
     fn from(binding: &BindingIdent) -> Self {
+        let span = swc_common::Span {
+            lo: BytePos(binding.span.start as u32 + 1),
+            hi: BytePos(binding.span.end as u32),
+            ctxt: SyntaxContext::empty(),
+        };
+
         swc_ecma_ast::Ident {
-            span: DUMMY_SP,
+            span,
             sym: JsWord::from(binding.name.to_owned()),
             optional: false,
         }

@@ -1,6 +1,6 @@
 use std::fmt;
 use swc_atoms::{Atom, JsWord};
-use swc_common::source_map::DUMMY_SP;
+use swc_common::{self, BytePos, SyntaxContext};
 use swc_ecma_ast;
 
 use crate::types::{TLit, Type, TypeKind};
@@ -69,8 +69,14 @@ impl From<&Lit> for swc_ecma_ast::Expr {
     fn from(lit: &Lit) -> Self {
         match lit {
             Lit::Num(n) => {
+                let span = swc_common::Span {
+                    lo: BytePos(n.span.start as u32 + 1),
+                    hi: BytePos(n.span.end as u32),
+                    ctxt: SyntaxContext::empty(),
+                };
+
                 let lit = swc_ecma_ast::Lit::Num(swc_ecma_ast::Number {
-                    span: DUMMY_SP,
+                    span,
                     // TODO: include the parsed value in the source AST node
                     value: n.value.parse().unwrap(),
                     // Use `None` value only for transformations to avoid recalculate
@@ -80,15 +86,27 @@ impl From<&Lit> for swc_ecma_ast::Expr {
                 swc_ecma_ast::Expr::Lit(lit)
             }
             Lit::Bool(b) => {
+                let span = swc_common::Span {
+                    lo: BytePos(b.span.start as u32 + 1),
+                    hi: BytePos(b.span.end as u32),
+                    ctxt: SyntaxContext::empty(),
+                };
+
                 let lit = swc_ecma_ast::Lit::Bool(swc_ecma_ast::Bool {
-                    span: DUMMY_SP,
+                    span,
                     value: b.value,
                 });
                 swc_ecma_ast::Expr::Lit(lit)
             }
             Lit::Str(s) => {
+                let span = swc_common::Span {
+                    lo: BytePos(s.span.start as u32 + 1),
+                    hi: BytePos(s.span.end as u32),
+                    ctxt: SyntaxContext::empty(),
+                };
+
                 let lit = swc_ecma_ast::Lit::Str(swc_ecma_ast::Str {
-                    span: DUMMY_SP,
+                    span,
                     value: JsWord::from(s.value.clone()),
                     // Use `None` value only for transformations to avoid recalculate escaped
                     // characters in strings

@@ -3,14 +3,16 @@ use crochet_codegen::js::codegen_js;
 use crochet_infer::{infer_prog, Context};
 use crochet_parser::parse;
 
-fn compile(input: &str) -> String {
+fn compile(input: &str) -> (String, String) {
     let program = parse(input).unwrap();
     codegen_js(&program)
 }
 
 #[test]
 fn js_print_multiple_decls() {
-    insta::assert_snapshot!(compile("let foo = \"hello\";\nlet bar = \"world\";"), @r###"
+    let (js, _) = compile("let foo = \"hello\";\nlet bar = \"world\";");
+
+    insta::assert_snapshot!(js, @r###"
     export const foo = "hello";
     export const bar = "world";
     "###);
@@ -22,7 +24,9 @@ fn unary_minus() {
     let negate = (x) => -x;
     "#;
 
-    insta::assert_snapshot!(compile(src), @"export const negate = (x)=>-x;
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @"export const negate = (x)=>-x;
 ");
 }
 
@@ -33,7 +37,9 @@ fn template_literals() {
     let p = {x: 5, y: 10};
     console.log(`p = (${p.x}, ${p.y})`);
     "#;
-    insta::assert_snapshot!(compile(src), @r###"
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
     export const a = `hello, world`;
     export const p = {
         x: 5,
@@ -49,7 +55,9 @@ fn tagged_template_literals() {
     let id = "12345";
     let query = sql`SELECT * FROM users WHERE id = "${id}"`;
     "#;
-    insta::assert_snapshot!(compile(src), @r###"
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
     export const id = "12345";
     export const query = sql`SELECT * FROM users WHERE id = "${id}"`;
     "###);
@@ -72,7 +80,9 @@ fn pattern_matching() {
         }
     };
     "#;
-    insta::assert_snapshot!(compile(src), @r###"
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
     let $temp_0;
     const $temp_1 = count + 1;
     if ($temp_1 === 0) {
@@ -104,7 +114,9 @@ fn pattern_matching_with_disjoint_union() {
         {type: "keydown", key} if (key != "Escape") -> key
     };
     "#;
-    insta::assert_snapshot!(compile(src), @r###"
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
     ;
     ;
     let $temp_0;
@@ -156,8 +168,9 @@ fn simple_if_else() {
         10
     };
     "#;
+    let (js, src_map) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     let $temp_0;
     if (cond) {
         console.log("true");
@@ -168,6 +181,7 @@ fn simple_if_else() {
     }
     export const result = $temp_0;
     "###);
+    insta::assert_snapshot!(src_map, @r###"{"version":3,"sources":["<anon>"],"sourcesContent":["\n    let result = if (cond) {\n        console.log(\"true\");\n        5\n    } else {\n        console.log(\"false\");\n        10\n    };\n    "],"names":[],"mappings":";IACqB;IACb,QAAQ,IAAI;cACZ;;IAEA,QAAQ,IAAI;cACZ;;aALA"}"###);
 }
 
 #[test]
@@ -184,8 +198,9 @@ fn simple_if_else_inside_fn() {
         result
     };
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const foo = ()=>{
         let $temp_0;
         if (cond) {
@@ -212,8 +227,9 @@ fn simple_if_else_inside_fn_as_expr() {
         10
     };
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const foo = ()=>{
         let $temp_0;
         if (cond) {
@@ -245,8 +261,9 @@ fn nested_if_else() {
         }
     };
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     let $temp_0;
     if (c1) {
         let $temp_1;
@@ -279,8 +296,9 @@ fn multiple_lets_inside_a_function() {
         result
     };
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const do_math = ()=>{
         const x = 5;
         const y = 10;
@@ -298,8 +316,9 @@ fn codegen_if_let_with_rename() {
         a + b
     };
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     let $temp_0;
     const $temp_1 = {
         x: 5,
@@ -320,8 +339,9 @@ fn codegen_if_let_refutable_pattern_nested_obj() {
         x + y
     };
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const action = {
         type: "moveto",
         point: {
@@ -351,8 +371,9 @@ fn codegen_if_let_with_else() {
         true
     };
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     ;
     let $temp_0;
     const $temp_1 = a;
@@ -377,8 +398,9 @@ fn codegen_if_let_with_else() {
 #[test]
 fn codegen_block_with_multiple_non_let_lines() {
     let src = "let result = do {let x = 5; x + 0; x};";
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     let $temp_0;
     {
         const x = 5;
@@ -393,8 +415,9 @@ fn destructuring_function_object_params() {
     let src = r#"
     let foo = ({x, y: b}) => x + b;
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @"export const foo = ({ x , y: b  })=>x + b;
+    insta::assert_snapshot!(js, @"export const foo = ({ x , y: b  })=>x + b;
 ");
 
     let mut program = parse(src).unwrap();
@@ -415,8 +438,9 @@ fn destructuring_function_array_params() {
     let src = r#"
     let foo = ([a, b]) => a + b;
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @"export const foo = ([a, b])=>a + b;
+    insta::assert_snapshot!(js, @"export const foo = ([a, b])=>a + b;
 ");
 
     let mut program = parse(src).unwrap();
@@ -433,8 +457,9 @@ fn function_with_rest_param() {
     let src = r#"
     let foo = (x: number, ...y: number[]) => x;
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @"export const foo = (x, ...y)=>x;
+    insta::assert_snapshot!(js, @"export const foo = (x, ...y)=>x;
 ");
 
     let mut program = parse(src).unwrap();
@@ -451,8 +476,9 @@ fn function_with_optional_param() {
     let src = r#"
     let foo = (x: number, y?: number) => x;
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @"export const foo = (x, y)=>x;
+    insta::assert_snapshot!(js, @"export const foo = (x, y)=>x;
 ");
 
     let mut program = parse(src).unwrap();
@@ -469,8 +495,9 @@ fn function_with_optional_param_and_rest_param() {
     let src = r#"
     let foo = (x?: number, ...y: number[]) => x;
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @"export const foo = (x, ...y)=>x;
+    insta::assert_snapshot!(js, @"export const foo = (x, ...y)=>x;
 ");
 
     let mut program = parse(src).unwrap();
@@ -487,8 +514,9 @@ fn generic_function() {
     let src = r#"
     let fst = <T>(a: T, b: T) => a;
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @"export const fst = (a, b)=>a;
+    insta::assert_snapshot!(js, @"export const fst = (a, b)=>a;
 ");
 
     let mut program = parse(src).unwrap();
@@ -505,8 +533,9 @@ fn constrained_generic_function() {
     let src = r#"
     let fst = <T extends number | string>(a: T, b: T) => a;
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @"export const fst = (a, b)=>a;
+    insta::assert_snapshot!(js, @"export const fst = (a, b)=>a;
 ");
 
     let mut program = parse(src).unwrap();
@@ -523,8 +552,9 @@ fn variable_declaration_with_destructuring() {
     let src = r#"
     let [x, y] = [5, 10];
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const [x, y] = [
         5,
         10
@@ -551,7 +581,9 @@ fn computed_property() {
     let q = [5, 10];
     let y = q[1];
     "#;
-    insta::assert_snapshot!(compile(src), @r###"
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
     export const p = {
         x: 5,
         y: 10
@@ -572,8 +604,9 @@ fn partial_application() {
     let add5 = add(5, _);
     let sum = add5(10);
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const add = (a, b)=>a + b;
     export const add5 = ($arg0)=>add(5, $arg0);
     export const sum = add5(10);
@@ -587,6 +620,7 @@ fn partial_application_with_spread() {
     let add5 = add(5, ..._);
     let sum = add5(10, 15);
     "#;
+    let (js, _) = compile(src);
 
     // Instead of treating ..._ like a spread operation, it should just expand
     // to add(5, _, _)
@@ -595,7 +629,7 @@ fn partial_application_with_spread() {
     // The output should be:
     // export const add5 = ($arg0, $arg1)=>add(5, $arg0, $arg1);
     // This requires having type information in the expression tree
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const add = (a, b, c)=>a + b + c;
     export const add5 = ($arg0)=>add(5, $arg0);
     export const sum = add5(10, 15);
@@ -608,8 +642,9 @@ fn spread_args() {
     let add = (a, b) => a + b;
     let sum = add(...[5, 10]);
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const add = (a, b)=>a + b;
     export const sum = add(...[
         5,
@@ -623,8 +658,9 @@ fn mutable_array() {
     let src = r#"
     let arr: mut number[] = [1, 2, 3];
     "#;
+    let (js, _) = compile(src);
 
-    insta::assert_snapshot!(compile(src), @r###"
+    insta::assert_snapshot!(js, @r###"
     export const arr = [
         1,
         2,

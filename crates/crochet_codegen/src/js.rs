@@ -3,7 +3,10 @@ use std::rc::Rc;
 use swc_atoms::*;
 use swc_common::comments::SingleThreadedComments;
 use swc_common::hygiene::Mark;
-use swc_common::source_map::{Globals, SourceMap, DUMMY_SP, GLOBALS};
+use swc_common::source_map::{
+    self, DefaultSourceMapGenConfig, FilePathMapping, Globals, DUMMY_SP, GLOBALS,
+};
+use swc_common::FileName;
 use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 use swc_ecma_transforms_react::{react, Options, Runtime};
@@ -28,11 +31,11 @@ impl Context {
     }
 }
 
-pub fn codegen_js(program: &values::Program) -> String {
+pub fn codegen_js(program: &values::Program) -> (String, String) {
     let mut ctx = Context { temp_id: 0 };
     let program = build_js(program, &mut ctx);
 
-    let cm = Rc::new(SourceMap::default());
+    let cm = Rc::new(source_map::SourceMap::default());
     let comments: Option<SingleThreadedComments> = None;
     let options = Options {
         runtime: Some(Runtime::Automatic),
@@ -49,22 +52,43 @@ pub fn codegen_js(program: &values::Program) -> String {
     })
 }
 
-fn print_js(program: &Program) -> String {
+fn print_js(program: &Program) -> (String, String) {
     let mut buf = vec![];
-    let cm = Rc::new(SourceMap::default());
+    let mut src_map = vec![];
+    let cm = Rc::new(source_map::SourceMap::new(FilePathMapping::empty()));
 
-    let mut emitter = Emitter {
-        cfg: swc_ecma_codegen::Config {
-            ..Default::default()
-        },
-        cm: cm.clone(),
-        comments: None,
-        wr: text_writer::JsWriter::new(cm, "\n", &mut buf, None),
+    let src = r#"
+    let result = if (cond) {
+        console.log("true");
+        5
+    } else {
+        console.log("false");
+        10
     };
+    "#;
 
-    emitter.emit_program(program).unwrap();
+    cm.new_source_file(FileName::Anon, String::from(src));
 
-    String::from_utf8_lossy(&buf).to_string()
+    {
+        let wr = text_writer::JsWriter::new(cm.clone(), "\n", &mut buf, Some(&mut src_map));
+        let mut emitter = Emitter {
+            cfg: swc_ecma_codegen::Config {
+                ..Default::default()
+            },
+            cm: cm.clone(),
+            comments: None,
+            wr,
+        };
+        emitter.emit_program(program).unwrap();
+    }
+
+    let output_code = String::from_utf8_lossy(&buf).to_string();
+    let source_map = cm.build_source_map_with_config(&src_map, None, DefaultSourceMapGenConfig);
+
+    let mut source_map_buf: Vec<u8> = vec![];
+    source_map.to_writer(&mut source_map_buf).unwrap();
+
+    (output_code, String::from_utf8(source_map_buf).unwrap())
 }
 
 fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
@@ -153,12 +177,8 @@ fn build_pattern(
         })),
 
         // assignable patterns
-        values::PatternKind::Ident(values::BindingIdent {
-            name,
-            mutable: _,
-            span: _,
-        }) => Some(Pat::Ident(BindingIdent {
-            id: build_ident(name),
+        values::PatternKind::Ident(binding_ident) => Some(Pat::Ident(BindingIdent {
+            id: Ident::from(binding_ident),
             type_ann: None,
         })),
         values::PatternKind::Rest(values::RestPat { arg }) => {
@@ -234,7 +254,7 @@ fn build_pattern(
             }))
         }
         values::PatternKind::Is(values::IsPat { ident, .. }) => Some(Pat::Ident(BindingIdent {
-            id: build_ident(&ident.name),
+            id: Ident::from(ident),
             type_ann: None,
         })),
     }
@@ -406,7 +426,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 type_args: None,
             })
         }
-        values::ExprKind::Ident(ident) => Expr::from(build_ident(&ident.name)),
+        values::ExprKind::Ident(ident) => Expr::from(Ident::from(ident)),
         values::ExprKind::Lambda(values::Lambda {
             params: args,
             body,
@@ -617,7 +637,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         }),
         values::ExprKind::Member(values::Member { obj, prop, .. }) => {
             let prop = match prop {
-                values::MemberProp::Ident(ident) => MemberProp::Ident(build_ident(&ident.name)),
+                values::MemberProp::Ident(ident) => MemberProp::Ident(Ident::from(ident)),
                 values::MemberProp::Computed(values::ComputedPropName { expr, .. }) => {
                     MemberProp::Computed(ComputedPropName {
                         span: DUMMY_SP,
@@ -648,7 +668,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         }) => {
             Expr::TaggedTpl(TaggedTpl {
                 span: DUMMY_SP,
-                tag: Box::from(Expr::Ident(build_ident(&tag.name))),
+                tag: Box::from(Expr::Ident(Ident::from(tag))),
                 type_params: None, // TODO: support type params on tagged templates
 
                 tpl: build_template_literal(template, stmts, ctx),
@@ -1019,14 +1039,6 @@ fn build_template_literal(
                 }
             })
             .collect(),
-    }
-}
-
-fn build_ident(name: &str) -> Ident {
-    Ident {
-        span: DUMMY_SP,
-        sym: JsWord::from(name.to_owned()),
-        optional: false,
     }
 }
 
