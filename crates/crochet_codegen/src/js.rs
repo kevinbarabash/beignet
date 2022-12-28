@@ -31,7 +31,7 @@ impl Context {
     }
 }
 
-pub fn codegen_js(program: &values::Program) -> (String, String) {
+pub fn codegen_js(src: &str, program: &values::Program) -> (String, String) {
     let mut ctx = Context { temp_id: 0 };
     let program = build_js(program, &mut ctx);
 
@@ -48,24 +48,14 @@ pub fn codegen_js(program: &values::Program) -> (String, String) {
         let top_level_mark = Mark::new();
         let mut v = react(cm, comments, options, top_level_mark);
         let program = program.fold_with(&mut v);
-        print_js(&program)
+        print_js(src, &program)
     })
 }
 
-fn print_js(program: &Program) -> (String, String) {
+fn print_js(src: &str, program: &Program) -> (String, String) {
     let mut buf = vec![];
     let mut src_map = vec![];
     let cm = Rc::new(source_map::SourceMap::new(FilePathMapping::empty()));
-
-    let src = r#"
-    let result = if (cond) {
-        console.log("true");
-        5
-    } else {
-        console.log("false");
-        10
-    };
-    "#;
 
     cm.new_source_file(FileName::Anon, String::from(src));
 

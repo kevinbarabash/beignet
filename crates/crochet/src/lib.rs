@@ -52,7 +52,7 @@ fn _compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
         Err(error) => return Err(CompileError::ParseError(error)),
     };
 
-    let (js, _) = crochet_codegen::js::codegen_js(&program);
+    let (js, _) = crochet_codegen::js::codegen_js(input, &program);
 
     // TODO: return errors as part of CompileResult
     let mut ctx = parse_dts(lib).unwrap();

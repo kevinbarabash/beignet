@@ -5,7 +5,7 @@ use crochet_parser::parse;
 
 fn compile(input: &str) -> (String, String) {
     let program = parse(input).unwrap();
-    codegen_js(&program)
+    codegen_js(input, &program)
 }
 
 #[test]
