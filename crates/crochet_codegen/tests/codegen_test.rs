@@ -600,14 +600,14 @@ fn computed_property() {
 fn partial_application() {
     let src = r#"
     let add = (a, b) => a + b;
-    let add5 = add(5, _);
+    let add5 = (b) => add(5, b);
     let sum = add5(10);
     "#;
     let (js, _) = compile(src);
 
     insta::assert_snapshot!(js, @r###"
     export const add = (a, b)=>a + b;
-    export const add5 = ($arg0)=>add(5, $arg0);
+    export const add5 = (b)=>add(5, b);
     export const sum = add5(10);
     "###);
 }
@@ -616,21 +616,14 @@ fn partial_application() {
 fn partial_application_with_spread() {
     let src = r#"
     let add = (a, b, c) => a + b + c;
-    let add5 = add(5, ..._);
+    let add5 = (...arg) => add(5, ...args);
     let sum = add5(10, 15);
     "#;
     let (js, _) = compile(src);
 
-    // Instead of treating ..._ like a spread operation, it should just expand
-    // to add(5, _, _)
-
-    // TODO: handle spreading a wildcard
-    // The output should be:
-    // export const add5 = ($arg0, $arg1)=>add(5, $arg0, $arg1);
-    // This requires having type information in the expression tree
     insta::assert_snapshot!(js, @r###"
     export const add = (a, b, c)=>a + b + c;
-    export const add5 = ($arg0)=>add(5, $arg0);
+    export const add5 = (...arg)=>add(5, ...args);
     export const sum = add5(10, 15);
     "###);
 }
