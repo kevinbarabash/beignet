@@ -37,7 +37,10 @@ export type Result<TData, TError> =
   | { type: "ok"; data: TData }
   | { type: "err"; error: TError };
 
-export type CompilerResult = Result<{ js: string; dts: string }, string>;
+export type CompilerResult = Result<
+  { js: string; srcmap: string; dts: string; ast: string },
+  string
+>;
 
 export interface Compiler {
   compile(input: string): CompilerResult;
@@ -92,8 +95,10 @@ export const loadWasm = async (
       const outPtr = compile(input.ptr, lib.ptr);
 
       const js = decodeString(memory, outPtr);
-      const dts = decodeString(memory, outPtr + 8);
-      const error = decodeString(memory, outPtr + 16);
+      const srcmap = decodeString(memory, outPtr + 8);
+      const dts = decodeString(memory, outPtr + 16);
+      const ast = decodeString(memory, outPtr + 24);
+      const error = decodeString(memory, outPtr + 32);
 
       deallocate(input.ptr, input.size);
 
@@ -101,7 +106,7 @@ export const loadWasm = async (
         return { type: "err", error };
       }
 
-      return { type: "ok", data: { js, dts } };
+      return { type: "ok", data: { js, srcmap, dts, ast } };
     },
   };
 };
