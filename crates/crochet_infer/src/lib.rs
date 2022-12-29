@@ -1284,11 +1284,7 @@ mod tests {
     #[should_panic = "TypeError::UnificationError: (x: t2, y: t3, z: t4) => true, (a: number, b: number) => boolean"]
     fn pass_callback_with_too_many_params() {
         // This is not allowed because `fold_num` can't provide all of the params
-        // that the callback is expecting and it would result in partial application
-        // when the `fold_num` is not expecting it.  While it's possible to conceive
-        // of a scenario where a callback returns a function and a partially applied
-        // calback results in correct function, allowing this in the type checker
-        // is bound to result in confusing and hard to understand code.
+        // that the callback is expecting.
         let src = r#"
         declare let fold_num: (cb: (a: number, b: number) => boolean, seed: number) => number;
         let result = fold_num((x, y, z) => true, 0);
