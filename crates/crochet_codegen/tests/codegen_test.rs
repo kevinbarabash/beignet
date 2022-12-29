@@ -168,7 +168,7 @@ fn simple_if_else() {
         10
     };
     "#;
-    let (js, src_map) = compile(src);
+    let (js, _) = compile(src);
 
     insta::assert_snapshot!(js, @r###"
     let $temp_0;
@@ -181,7 +181,6 @@ fn simple_if_else() {
     }
     export const result = $temp_0;
     "###);
-    insta::assert_snapshot!(src_map, @r###"{"version":3,"sources":["<anon>"],"sourcesContent":["\n    let result = if (cond) {\n        console.log(\"true\");\n        5\n    } else {\n        console.log(\"false\");\n        10\n    };\n    "],"names":[],"mappings":";IACqB;IACb,QAAQ,IAAI;cACZ;;IAEA,QAAQ,IAAI;cACZ;;aALA"}"###);
 }
 
 #[test]

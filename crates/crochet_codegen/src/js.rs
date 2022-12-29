@@ -484,7 +484,20 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             })
         }
         values::ExprKind::Lit(lit) => Expr::from(lit),
-        values::ExprKind::Keyword(keyword) => Expr::from(keyword),
+        values::ExprKind::Keyword(keyword) => match keyword {
+            values::Keyword::Null => {
+                swc_ecma_ast::Expr::Lit(swc_ecma_ast::Lit::Null(swc_ecma_ast::Null { span }))
+            }
+            values::Keyword::Undefined => {
+                // NOTE: `undefined` is actually an identifier in JavaScript.
+                swc_ecma_ast::Expr::Ident(swc_ecma_ast::Ident {
+                    span,
+                    sym: swc_atoms::JsWord::from(String::from("undefined")),
+                    optional: false,
+                })
+            }
+            _ => panic!("{keyword} should only be used as a type"),
+        },
         values::ExprKind::BinaryExpr(values::BinaryExpr {
             op, left, right, ..
         }) => {
