@@ -3,7 +3,10 @@ use std::rc::Rc;
 use swc_atoms::*;
 use swc_common::comments::SingleThreadedComments;
 use swc_common::hygiene::Mark;
-use swc_common::source_map::{Globals, SourceMap, DUMMY_SP, GLOBALS};
+use swc_common::source_map::{
+    self, DefaultSourceMapGenConfig, FilePathMapping, Globals, DUMMY_SP, GLOBALS,
+};
+use swc_common::{self, BytePos, FileName, SyntaxContext};
 use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 use swc_ecma_transforms_react::{react, Options, Runtime};
@@ -28,11 +31,11 @@ impl Context {
     }
 }
 
-pub fn codegen_js(program: &values::Program) -> String {
+pub fn codegen_js(src: &str, program: &values::Program) -> (String, String) {
     let mut ctx = Context { temp_id: 0 };
     let program = build_js(program, &mut ctx);
 
-    let cm = Rc::new(SourceMap::default());
+    let cm = Rc::new(source_map::SourceMap::default());
     let comments: Option<SingleThreadedComments> = None;
     let options = Options {
         runtime: Some(Runtime::Automatic),
@@ -45,26 +48,37 @@ pub fn codegen_js(program: &values::Program) -> String {
         let top_level_mark = Mark::new();
         let mut v = react(cm, comments, options, top_level_mark);
         let program = program.fold_with(&mut v);
-        print_js(&program)
+        print_js(src, &program)
     })
 }
 
-fn print_js(program: &Program) -> String {
+fn print_js(src: &str, program: &Program) -> (String, String) {
     let mut buf = vec![];
-    let cm = Rc::new(SourceMap::default());
+    let mut src_map = vec![];
+    let cm = Rc::new(source_map::SourceMap::new(FilePathMapping::empty()));
 
-    let mut emitter = Emitter {
-        cfg: swc_ecma_codegen::Config {
-            ..Default::default()
-        },
-        cm: cm.clone(),
-        comments: None,
-        wr: text_writer::JsWriter::new(cm, "\n", &mut buf, None),
-    };
+    cm.new_source_file(FileName::Anon, String::from(src));
 
-    emitter.emit_program(program).unwrap();
+    {
+        let wr = text_writer::JsWriter::new(cm.clone(), "\n", &mut buf, Some(&mut src_map));
+        let mut emitter = Emitter {
+            cfg: swc_ecma_codegen::Config {
+                ..Default::default()
+            },
+            cm: cm.clone(),
+            comments: None,
+            wr,
+        };
+        emitter.emit_program(program).unwrap();
+    }
 
-    String::from_utf8_lossy(&buf).to_string()
+    let output_code = String::from_utf8_lossy(&buf).to_string();
+    let source_map = cm.build_source_map_with_config(&src_map, None, DefaultSourceMapGenConfig);
+
+    let mut source_map_buf: Vec<u8> = vec![];
+    source_map.to_writer(&mut source_map_buf).unwrap();
+
+    (output_code, String::from_utf8(source_map_buf).unwrap())
 }
 
 fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
@@ -140,6 +154,12 @@ fn build_pattern(
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> Option<Pat> {
+    let span = swc_common::Span {
+        lo: BytePos(pattern.span.start as u32 + 1),
+        hi: BytePos(pattern.span.end as u32 + 1),
+        ctxt: SyntaxContext::empty(),
+    };
+
     match &pattern.kind {
         // unassignable patterns
         values::PatternKind::Lit(_) => None,
@@ -153,26 +173,25 @@ fn build_pattern(
         })),
 
         // assignable patterns
-        values::PatternKind::Ident(values::BindingIdent {
-            name,
-            mutable: _,
-            span: _,
-        }) => Some(Pat::Ident(BindingIdent {
-            id: build_ident(name),
+        values::PatternKind::Ident(binding_ident) => Some(Pat::Ident(BindingIdent {
+            id: Ident::from(binding_ident),
             type_ann: None,
         })),
         values::PatternKind::Rest(values::RestPat { arg }) => {
+            let dot3_token = swc_common::Span {
+                lo: BytePos(pattern.span.start as u32 + 1),
+                hi: BytePos(pattern.span.start as u32 + 4),
+                ctxt: SyntaxContext::empty(),
+            };
             let arg = build_pattern(arg, stmts, ctx).unwrap();
             Some(Pat::Rest(RestPat {
-                span: DUMMY_SP,
-                dot3_token: DUMMY_SP,
+                span,
+                dot3_token,
                 type_ann: None,
                 arg: Box::from(arg),
             }))
         }
-        values::PatternKind::Object(values::ObjectPat {
-            props, optional, ..
-        }) => {
+        values::PatternKind::Object(values::ObjectPat { props, optional }) => {
             let props: Vec<ObjectPatProp> = props
                 .iter()
                 .filter_map(|p| match p {
@@ -196,9 +215,19 @@ fn build_pattern(
                             .map(|value| Box::from(build_expr(&value, stmts, ctx))),
                     })),
                     values::ObjectPatProp::Rest(values::RestPat { arg }) => {
+                        let dot3_token = swc_common::Span {
+                            lo: BytePos(pattern.span.start as u32 + 1),
+                            hi: BytePos(pattern.span.start as u32 + 4),
+                            ctxt: SyntaxContext::empty(),
+                        };
+                        let span = swc_common::Span {
+                            lo: BytePos(pattern.span.start as u32 + 1),
+                            hi: BytePos(pattern.span.end as u32 + 1),
+                            ctxt: SyntaxContext::empty(),
+                        };
                         Some(ObjectPatProp::Rest(RestPat {
-                            span: DUMMY_SP,
-                            dot3_token: DUMMY_SP,
+                            span,
+                            dot3_token,
                             arg: Box::from(build_pattern(arg, stmts, ctx)?),
                             type_ann: None,
                         }))
@@ -207,15 +236,13 @@ fn build_pattern(
                 .collect();
 
             Some(Pat::Object(ObjectPat {
-                span: DUMMY_SP,
+                span,
                 optional: optional.to_owned(),
                 type_ann: None, // because we're generating .js
                 props,
             }))
         }
-        values::PatternKind::Array(values::ArrayPat {
-            elems, optional, ..
-        }) => {
+        values::PatternKind::Array(values::ArrayPat { elems, optional }) => {
             let elems: Vec<Option<Pat>> = elems
                 .iter()
                 .map(|elem| match elem {
@@ -225,16 +252,15 @@ fn build_pattern(
                 .collect();
 
             // TODO: If all elems are None, we can drop the array pattern.
-
             Some(Pat::Array(ArrayPat {
-                span: DUMMY_SP,
+                span,
                 elems,
                 optional: optional.to_owned(),
                 type_ann: None, // because we're generating .js.
             }))
         }
         values::PatternKind::Is(values::IsPat { ident, .. }) => Some(Pat::Ident(BindingIdent {
-            id: build_ident(&ident.name),
+            id: Ident::from(ident),
             type_ann: None,
         })),
     }
@@ -285,6 +311,11 @@ fn build_expr_in_new_scope(expr: &values::Expr, temp_id: &Ident, ctx: &mut Conte
 }
 
 fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
+    let span = swc_common::Span {
+        lo: BytePos(expr.span.start as u32 + 1),
+        hi: BytePos(expr.span.end as u32 + 1),
+        ctxt: SyntaxContext::empty(),
+    };
     match &expr.kind {
         values::ExprKind::App(values::App { lam, args, .. }) => {
             let callee = Callee::Expr(Box::from(build_expr(lam.as_ref(), stmts, ctx)));
@@ -378,7 +409,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 .collect();
 
             Expr::Call(CallExpr {
-                span: DUMMY_SP,
+                span,
                 callee,
                 args,
                 type_args: None,
@@ -400,13 +431,13 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 .collect();
 
             Expr::New(NewExpr {
-                span: DUMMY_SP,
+                span,
                 callee,
                 args: Some(args), // JavaScript allows `new Array`, but we don't
                 type_args: None,
             })
         }
-        values::ExprKind::Ident(ident) => Expr::from(build_ident(&ident.name)),
+        values::ExprKind::Ident(ident) => Expr::from(Ident::from(ident)),
         values::ExprKind::Lambda(values::Lambda {
             params: args,
             body,
@@ -421,7 +452,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             let body = build_fn_body(body.as_ref(), ctx);
 
             Expr::Arrow(ArrowExpr {
-                span: DUMMY_SP,
+                span,
                 params,
                 body,
                 is_async: is_async.to_owned(),
@@ -446,14 +477,27 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         values::ExprKind::Assign(values::Assign { left, right, op: _ }) => {
             // TODO: handle other operators
             Expr::Assign(AssignExpr {
-                span: DUMMY_SP,
+                span,
                 left: PatOrExpr::Expr(Box::from(build_expr(left, stmts, ctx))),
                 right: Box::from(build_expr(right, stmts, ctx)),
                 op: AssignOp::Assign,
             })
         }
         values::ExprKind::Lit(lit) => Expr::from(lit),
-        values::ExprKind::Keyword(keyword) => Expr::from(keyword),
+        values::ExprKind::Keyword(keyword) => match keyword {
+            values::Keyword::Null => {
+                swc_ecma_ast::Expr::Lit(swc_ecma_ast::Lit::Null(swc_ecma_ast::Null { span }))
+            }
+            values::Keyword::Undefined => {
+                // NOTE: `undefined` is actually an identifier in JavaScript.
+                swc_ecma_ast::Expr::Ident(swc_ecma_ast::Ident {
+                    span,
+                    sym: swc_atoms::JsWord::from(String::from("undefined")),
+                    optional: false,
+                })
+            }
+            _ => panic!("{keyword} should only be used as a type"),
+        },
         values::ExprKind::BinaryExpr(values::BinaryExpr {
             op, left, right, ..
         }) => {
@@ -489,7 +533,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             };
 
             Expr::Bin(BinExpr {
-                span: DUMMY_SP,
+                span,
                 op,
                 left: if wrap_left {
                     Box::from(Expr::Paren(ParenExpr {
@@ -515,7 +559,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             };
 
             Expr::Unary(UnaryExpr {
-                span: DUMMY_SP,
+                span,
                 op,
                 arg: Box::from(build_expr(arg, stmts, ctx)),
             })
@@ -554,7 +598,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                     )))
                 });
                 stmts.push(Stmt::If(IfStmt {
-                    span: DUMMY_SP,
+                    span,
                     test,
                     cons,
                     alt,
@@ -564,25 +608,17 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 Expr::Ident(temp_id)
             }
         },
-        values::ExprKind::Obj(values::Obj { props, .. }) => {
+        values::ExprKind::Obj(values::Obj { props }) => {
             let props: Vec<PropOrSpread> = props
                 .iter()
                 .map(|prop| match prop {
                     values::PropOrSpread::Prop(prop) => match prop.as_ref() {
-                        values::Prop::Shorthand(values::ident::Ident { name, .. }) => {
-                            PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
-                                span: DUMMY_SP,
-                                sym: JsWord::from(name.clone()),
-                                optional: false,
-                            })))
+                        values::Prop::Shorthand(ident) => {
+                            PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident::from(ident))))
                         }
-                        values::Prop::KeyValue(values::KeyValueProp { name, value, .. }) => {
+                        values::Prop::KeyValue(values::KeyValueProp { key, value, .. }) => {
                             PropOrSpread::Prop(Box::from(Prop::KeyValue(KeyValueProp {
-                                key: PropName::from(Ident {
-                                    span: DUMMY_SP,
-                                    sym: JsWord::from(name.clone()),
-                                    optional: false,
-                                }),
+                                key: PropName::from(Ident::from(key)),
                                 value: Box::from(build_expr(value, stmts, ctx)),
                             })))
                         }
@@ -591,20 +627,17 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 })
                 .collect();
 
-            Expr::Object(ObjectLit {
-                span: DUMMY_SP,
-                props,
-            })
+            Expr::Object(ObjectLit { span, props })
         }
         values::ExprKind::Await(values::Await { expr, .. }) => Expr::Await(AwaitExpr {
-            span: DUMMY_SP,
+            span,
             arg: Box::from(build_expr(expr.as_ref(), stmts, ctx)),
         }),
         values::ExprKind::JSXElement(elem) => {
             Expr::JSXElement(Box::from(build_jsx_element(elem, stmts, ctx)))
         }
-        values::ExprKind::Tuple(values::Tuple { elems, .. }) => Expr::Array(ArrayLit {
-            span: DUMMY_SP,
+        values::ExprKind::Tuple(values::Tuple { elems }) => Expr::Array(ArrayLit {
+            span,
             elems: elems
                 .iter()
                 .map(|values::ExprOrSpread { spread, expr }| {
@@ -617,7 +650,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         }),
         values::ExprKind::Member(values::Member { obj, prop, .. }) => {
             let prop = match prop {
-                values::MemberProp::Ident(ident) => MemberProp::Ident(build_ident(&ident.name)),
+                values::MemberProp::Ident(ident) => MemberProp::Ident(Ident::from(ident)),
                 values::MemberProp::Computed(values::ComputedPropName { expr, .. }) => {
                     MemberProp::Computed(ComputedPropName {
                         span: DUMMY_SP,
@@ -626,13 +659,13 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 }
             };
             Expr::Member(MemberExpr {
-                span: DUMMY_SP,
+                span,
                 obj: Box::from(build_expr(obj, stmts, ctx)),
                 prop,
             })
         }
         values::ExprKind::Empty => Expr::from(Ident {
-            span: DUMMY_SP,
+            span,
             sym: JsWord::from("undefined"),
             optional: false,
         }),
@@ -647,8 +680,8 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             template,
         }) => {
             Expr::TaggedTpl(TaggedTpl {
-                span: DUMMY_SP,
-                tag: Box::from(Expr::Ident(build_ident(&tag.name))),
+                span,
+                tag: Box::from(Expr::Ident(Ident::from(tag))),
                 type_params: None, // TODO: support type params on tagged templates
 
                 tpl: build_template_literal(template, stmts, ctx),
@@ -704,7 +737,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
 
             let if_else = iter.fold(first, |prev, (cond, block)| {
                 Stmt::If(IfStmt {
-                    span: DUMMY_SP,
+                    span,
                     test: Box::from(cond.to_owned().unwrap()),
                     cons: Box::from(Stmt::Block(block.to_owned())),
                     alt: Some(Box::from(prev)),
@@ -1019,14 +1052,6 @@ fn build_template_literal(
                 }
             })
             .collect(),
-    }
-}
-
-fn build_ident(name: &str) -> Ident {
-    Ident {
-        span: DUMMY_SP,
-        sym: JsWord::from(name.to_owned()),
-        optional: false,
     }
 }
 

@@ -180,7 +180,7 @@ pub enum Prop {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyValueProp {
-    pub name: String,
+    pub key: Ident,
     pub value: Box<Expr>,
 }
 

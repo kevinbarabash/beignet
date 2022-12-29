@@ -25,6 +25,8 @@ fn pass(in_path: PathBuf) {
 
     let mut js_path = in_path.clone();
     js_path.set_extension("js");
+    let mut srcmap_path = in_path.clone();
+    srcmap_path.set_extension("js.map");
     let mut d_ts_path = in_path.clone();
     d_ts_path.set_extension("d.ts");
 
@@ -32,16 +34,21 @@ fn pass(in_path: PathBuf) {
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
 
     match compile(&input, &lib) {
-        Ok((js_output, d_ts_output)) => match mode {
+        Ok((js_output, srcmap_output, d_ts_output)) => match mode {
             Mode::Check => {
                 let js_fixture = fs::read_to_string(js_path).unwrap();
                 assert_eq!(js_fixture, js_output);
+                let srcmap_fixture = fs::read_to_string(srcmap_path).unwrap();
+                assert_eq!(srcmap_fixture, srcmap_output);
                 let d_ts_fixture = fs::read_to_string(d_ts_path).unwrap();
                 assert_eq!(d_ts_fixture, d_ts_output);
             }
             Mode::Write => {
                 let mut file = fs::File::create(js_path).unwrap();
                 file.write_all(js_output.as_bytes())
+                    .expect("unable to write data");
+                let mut file = fs::File::create(srcmap_path).unwrap();
+                file.write_all(srcmap_output.as_bytes())
                     .expect("unable to write data");
                 let mut file = fs::File::create(d_ts_path).unwrap();
                 file.write_all(d_ts_output.as_bytes())
@@ -91,13 +98,13 @@ fn fail(in_path: PathBuf) {
     };
 }
 
-fn compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
+fn compile(input: &str, lib: &str) -> Result<(String, String, String), CompileError> {
     let mut program = match crochet_parser::parse(input) {
         Ok(program) => program,
         Err(error) => return Err(CompileError::ParseError(error)),
     };
 
-    let js = crochet_codegen::js::codegen_js(&program);
+    let (js, srcmap) = crochet_codegen::js::codegen_js(input, &program);
 
     // TODO: return errors as part of CompileResult
     let mut ctx = parse_dts(lib).unwrap();
@@ -107,7 +114,7 @@ fn compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
     };
     let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
 
-    Ok((js, dts))
+    Ok((js, srcmap, dts))
 }
 
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";

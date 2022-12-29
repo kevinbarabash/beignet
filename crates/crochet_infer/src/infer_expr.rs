@@ -521,13 +521,13 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                                     t,
                                 }));
                             }
-                            Prop::KeyValue(KeyValueProp { name, value, .. }) => {
+                            Prop::KeyValue(KeyValueProp { key, value, .. }) => {
                                 let (s, t) = infer_expr(ctx, value)?;
                                 ss.push(s);
                                 // TODO: check if the inferred type is T | undefined and use that
                                 // determine the value of optional
                                 elems.push(types::TObjElem::Prop(types::TProp {
-                                    name: TPropKey::StringKey(name.to_owned()),
+                                    name: TPropKey::StringKey(key.name.to_owned()),
                                     optional: false,
                                     mutable: false,
                                     t,

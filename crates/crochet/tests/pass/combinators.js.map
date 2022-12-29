@@ -1,0 +1,1 @@
+{"version":3,"sources":["<anon>"],"sourcesContent":["let i = (x) => x;\nlet k = (x) => (y) => x;\nlet s = (f) => (g) => (x) => f(x)(g(x));\n\nlet skk = s(k)(k);\n"],"names":[],"mappings":"aAAI,IAAI,CAAC,IAAM;aACX,IAAI,CAAC,IAAM,CAAC,IAAM;aAClB,IAAI,CAAC,IAAM,CAAC,IAAM,CAAC,IAAM,EAAE,GAAG,EAAE;aAEhC,MAAM,EAAE,GAAG"}

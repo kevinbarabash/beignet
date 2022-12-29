@@ -394,7 +394,7 @@ fn infer_async_math() {
 fn codegen_let_rec() {
     let src = "let rec f = () => f();";
     let (program, ctx) = infer_prog(src);
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
 
     insta::assert_snapshot!(js, @"export const f = ()=>f();
 ");
@@ -412,7 +412,7 @@ fn codegen_if_else() {
     "#;
     let (program, ctx) = infer_prog(src);
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
     export const cond = true;
     let $temp_0;
@@ -436,7 +436,7 @@ fn codegen_if_else() {
 fn codegen_object() {
     let src = "let point = {x: 5, y: 10};";
     let (program, ctx) = infer_prog(src);
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
 
     insta::assert_snapshot!(js, @r###"
     export const point = {
@@ -460,7 +460,7 @@ fn codegen_async_math() {
     let src = "let add = async (a, b) => await a() + await b();";
     let (program, ctx) = infer_prog(src);
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
 
     insta::assert_snapshot!(js, @"export const add = async (a, b)=>await a() + await b();
 ");
@@ -723,7 +723,7 @@ fn codegen_code_with_type_delcarations() {
     let point: Point = {x: 5, y: 10};
     "#;
     let (program, ctx) = infer_prog(src);
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
 
     insta::assert_snapshot!(js, @r###"
     ;
@@ -822,7 +822,7 @@ fn codegen_object_type_with_optional_property() {
     let point: Point = {y: 10};
     "#;
     let (program, ctx) = infer_prog(src);
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
 
     insta::assert_snapshot!(js, @r###"
     ;
@@ -869,7 +869,7 @@ fn infer_block_with_multiple_non_let_lines() {
 fn codegen_block_with_multiple_non_let_lines() {
     let src = "let result = do {let x = 5; x + 0; x };";
     let (program, ctx) = infer_prog(src);
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
 
     insta::assert_snapshot!(js, @r###"
     let $temp_0;
@@ -1317,7 +1317,7 @@ fn codegen_if_let() {
 
     let (program, ctx) = infer_prog(src);
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
     export const p = {
         x: 5,
@@ -1352,7 +1352,7 @@ fn codegen_if_let_with_rename() {
 
     let (program, ctx) = infer_prog(src);
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
     export const p = {
         x: 5,
@@ -1405,7 +1405,7 @@ fn infer_if_let_refutable_pattern_obj() {
         "{x: 5, y: 10}"
     );
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
     export const p = {
         x: 5,
@@ -1441,7 +1441,7 @@ fn infer_if_let_refutable_pattern_nested_obj() {
 
     let (program, ctx) = infer_prog(src);
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
     export const action = {
         type: "moveto",
@@ -1485,7 +1485,7 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
 
     let (program, ctx) = infer_prog(src);
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
     ;
     ;
@@ -1530,7 +1530,7 @@ fn infer_if_let_refutable_pattern_array() {
 
     assert_eq!(format!("{}", ctx.lookup_value("p").unwrap()), "[5, 10]");
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
     export const p = [
         5,
@@ -1562,7 +1562,7 @@ fn infer_if_let_refutable_pattern_nested_array() {
 
     let (program, ctx) = infer_prog(src);
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
     export const action = [
         "moveto",
@@ -1597,7 +1597,7 @@ fn codegen_if_let_with_is_prim() {
 
     let (program, ctx) = infer_prog(src);
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
     ;
     let $temp_0;
@@ -1649,7 +1649,7 @@ fn codegen_if_let_with_is_class() {
         }
     };
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
     ;
     ;
@@ -1680,7 +1680,7 @@ fn codegen_array() {
 
     let (program, ctx) = infer_prog(src);
 
-    let js = codegen_js(&program);
+    let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
     export const arr = [
         "hello",
