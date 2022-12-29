@@ -21,7 +21,9 @@ export const App = () => {
     return hash ? window.atob(hash) : DEFAULT_CODE.trim();
   });
   let [crochet, setCrochet] = React.useState<Compiler | null>(null);
-  let [outputTab, setOutputTab] = React.useState<"js" | "dts">("js");
+  let [outputTab, setOutputTab] = React.useState<
+    "js" | "dts" | "srcmap" | "ast"
+  >("js");
 
   React.useEffect(() => {
     fetch(libPath)
@@ -54,7 +56,7 @@ export const App = () => {
       if (crochet) {
         return crochet.compile(source);
       } else {
-        return { type: "ok", data: { js: "", dts: "" } };
+        return { type: "ok", data: { js: "", dts: "", srcmap: "", ast: "" } };
       }
     } catch (e) {
       return { type: "err", error: (e as Error).message };
@@ -140,11 +142,25 @@ export const App = () => {
             .js
           </button>
           <button
+            style={outputTab === "srcmap" ? activeTabStyle : {}}
+            className="button-reset tab"
+            onClick={() => setOutputTab("srcmap")}
+          >
+            .js.map
+          </button>
+          <button
             style={outputTab === "dts" ? activeTabStyle : {}}
             className="button-reset tab"
             onClick={() => setOutputTab("dts")}
           >
             .d.ts
+          </button>
+          <button
+            style={outputTab === "ast" ? activeTabStyle : {}}
+            className="button-reset tab"
+            onClick={() => setOutputTab("ast")}
+          >
+            AST
           </button>
         </div>
         <textarea

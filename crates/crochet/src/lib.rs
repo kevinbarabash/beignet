@@ -20,7 +20,9 @@ pub struct WasmString {
 #[repr(C)]
 pub struct CompileResult {
     js: WasmString,
+    srcmap: WasmString,
     dts: WasmString,
+    ast: WasmString,
     error: WasmString,
 }
 
@@ -46,13 +48,14 @@ pub unsafe extern "C" fn deallocate(ptr: *mut c_void, length: usize) {
     std::mem::drop(Vec::from_raw_parts(ptr, 0, length));
 }
 
-fn _compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
+fn _compile(input: &str, lib: &str) -> Result<(String, String, String, String), CompileError> {
     let mut program = match crochet_parser::parse(input) {
         Ok(program) => program,
         Err(error) => return Err(CompileError::ParseError(error)),
     };
+    let ast = format!("{program:#?}");
 
-    let (js, _) = crochet_codegen::js::codegen_js(input, &program);
+    let (js, srcmap) = crochet_codegen::js::codegen_js(input, &program);
 
     // TODO: return errors as part of CompileResult
     let mut ctx = parse_dts(lib).unwrap();
@@ -62,7 +65,7 @@ fn _compile(input: &str, lib: &str) -> Result<(String, String), CompileError> {
     };
     let dts = crochet_codegen::d_ts::codegen_d_ts(&program, &ctx);
 
-    Ok((js, dts))
+    Ok((js, srcmap, dts, ast))
 }
 
 unsafe fn string_to_wasm_string(input: &str) -> WasmString {
@@ -80,10 +83,12 @@ pub unsafe extern "C" fn compile(input: *const c_char, lib: *const c_char) -> *c
     let lib = CStr::from_ptr(lib).to_str().unwrap();
 
     match _compile(input, lib) {
-        Ok((js, dts)) => {
+        Ok((js, srcmap, dts, ast)) => {
             let result = CompileResult {
                 js: string_to_wasm_string(&js),
+                srcmap: string_to_wasm_string(&srcmap),
                 dts: string_to_wasm_string(&dts),
+                ast: string_to_wasm_string(&ast),
                 error: string_to_wasm_string(""),
             };
             Box::into_raw(Box::new(result))
@@ -92,7 +97,9 @@ pub unsafe extern "C" fn compile(input: *const c_char, lib: *const c_char) -> *c
             let diagnostics = get_diagnostics(report, input);
             let result = CompileResult {
                 js: string_to_wasm_string(""),
+                srcmap: string_to_wasm_string(""),
                 dts: string_to_wasm_string(""),
+                ast: string_to_wasm_string(""),
                 // TODO: update report to exclude Crochet source code locations
                 error: string_to_wasm_string(&diagnostics.join("\n")),
             };
