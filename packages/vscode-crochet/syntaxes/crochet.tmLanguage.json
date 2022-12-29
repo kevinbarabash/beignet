@@ -1,0 +1,75 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Crochet",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#booleans"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#types"
+		},
+		{
+			"include": "#modifiers"
+		},
+		{
+			"include": "#variables"
+		}
+	],
+	"repository": {
+		"comments": {
+			"name": "comment.line.double-slash",
+			"begin": "//",
+			"end": "$"
+		},
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.crochet",
+				"match": "\\b(if|while|for|return|let|await|async|type|extends|new)\\b"
+			}]
+		},
+		"numbers": {
+			"name": "constant.numeric.decimal.crochet",
+			"match": "\\b([1-9][0-9]*(\\.[0-9]*)?|0?\\.[0-9]*)\\b"
+		},
+		"booleans": {
+			"name": "constant.language.crochet",
+			"match": "\\b(true|false)\\b"
+		},
+		"strings": {
+			"name": "string.quoted.double.crochet",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.crochet",
+					"match": "\\\\."
+				}
+			]
+		},
+		"variables": {
+            "name": "variable.other.crochet",
+            "match": "[A-Za-z]\\w*"
+        },
+		"types": {
+			"name": "storage.type.crochet",
+			"match": "\\b(number|string|boolean|symbol|undefined|null|void)\\b"
+		},
+		"modifiers": {
+			"name": "storage.modifier.crochet",
+			"match": "\\b(mut)\\b"
+		}
+	},
+	"scopeName": "source.crochet"
+}
