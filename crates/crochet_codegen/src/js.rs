@@ -154,6 +154,12 @@ fn build_pattern(
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> Option<Pat> {
+    let span = swc_common::Span {
+        lo: BytePos(pattern.span.start as u32 + 1),
+        hi: BytePos(pattern.span.end as u32 + 1),
+        ctxt: SyntaxContext::empty(),
+    };
+
     match &pattern.kind {
         // unassignable patterns
         values::PatternKind::Lit(_) => None,
@@ -175,11 +181,6 @@ fn build_pattern(
             let dot3_token = swc_common::Span {
                 lo: BytePos(pattern.span.start as u32 + 1),
                 hi: BytePos(pattern.span.start as u32 + 4),
-                ctxt: SyntaxContext::empty(),
-            };
-            let span = swc_common::Span {
-                lo: BytePos(pattern.span.start as u32 + 1),
-                hi: BytePos(pattern.span.end as u32 + 1),
                 ctxt: SyntaxContext::empty(),
             };
             let arg = build_pattern(arg, stmts, ctx).unwrap();
@@ -234,11 +235,6 @@ fn build_pattern(
                 })
                 .collect();
 
-            let span = swc_common::Span {
-                lo: BytePos(pattern.span.start as u32 + 1),
-                hi: BytePos(pattern.span.end as u32 + 1),
-                ctxt: SyntaxContext::empty(),
-            };
             Some(Pat::Object(ObjectPat {
                 span,
                 optional: optional.to_owned(),
@@ -256,12 +252,6 @@ fn build_pattern(
                 .collect();
 
             // TODO: If all elems are None, we can drop the array pattern.
-
-            let span = swc_common::Span {
-                lo: BytePos(pattern.span.start as u32 + 1),
-                hi: BytePos(pattern.span.end as u32 + 1),
-                ctxt: SyntaxContext::empty(),
-            };
             Some(Pat::Array(ArrayPat {
                 span,
                 elems,
@@ -321,6 +311,11 @@ fn build_expr_in_new_scope(expr: &values::Expr, temp_id: &Ident, ctx: &mut Conte
 }
 
 fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
+    let span = swc_common::Span {
+        lo: BytePos(expr.span.start as u32 + 1),
+        hi: BytePos(expr.span.end as u32 + 1),
+        ctxt: SyntaxContext::empty(),
+    };
     match &expr.kind {
         values::ExprKind::App(values::App { lam, args, .. }) => {
             let callee = Callee::Expr(Box::from(build_expr(lam.as_ref(), stmts, ctx)));
@@ -414,7 +409,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 .collect();
 
             Expr::Call(CallExpr {
-                span: DUMMY_SP,
+                span,
                 callee,
                 args,
                 type_args: None,
@@ -436,7 +431,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 .collect();
 
             Expr::New(NewExpr {
-                span: DUMMY_SP,
+                span,
                 callee,
                 args: Some(args), // JavaScript allows `new Array`, but we don't
                 type_args: None,
@@ -457,7 +452,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             let body = build_fn_body(body.as_ref(), ctx);
 
             Expr::Arrow(ArrowExpr {
-                span: DUMMY_SP,
+                span,
                 params,
                 body,
                 is_async: is_async.to_owned(),
@@ -482,7 +477,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         values::ExprKind::Assign(values::Assign { left, right, op: _ }) => {
             // TODO: handle other operators
             Expr::Assign(AssignExpr {
-                span: DUMMY_SP,
+                span,
                 left: PatOrExpr::Expr(Box::from(build_expr(left, stmts, ctx))),
                 right: Box::from(build_expr(right, stmts, ctx)),
                 op: AssignOp::Assign,
@@ -525,7 +520,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             };
 
             Expr::Bin(BinExpr {
-                span: DUMMY_SP,
+                span,
                 op,
                 left: if wrap_left {
                     Box::from(Expr::Paren(ParenExpr {
@@ -551,7 +546,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             };
 
             Expr::Unary(UnaryExpr {
-                span: DUMMY_SP,
+                span,
                 op,
                 arg: Box::from(build_expr(arg, stmts, ctx)),
             })
@@ -590,7 +585,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                     )))
                 });
                 stmts.push(Stmt::If(IfStmt {
-                    span: DUMMY_SP,
+                    span,
                     test,
                     cons,
                     alt,
@@ -619,39 +614,27 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 })
                 .collect();
 
-            let span = swc_common::Span {
-                lo: BytePos(expr.span.start as u32 + 1),
-                hi: BytePos(expr.span.end as u32 + 1),
-                ctxt: SyntaxContext::empty(),
-            };
             Expr::Object(ObjectLit { span, props })
         }
         values::ExprKind::Await(values::Await { expr, .. }) => Expr::Await(AwaitExpr {
-            span: DUMMY_SP,
+            span,
             arg: Box::from(build_expr(expr.as_ref(), stmts, ctx)),
         }),
         values::ExprKind::JSXElement(elem) => {
             Expr::JSXElement(Box::from(build_jsx_element(elem, stmts, ctx)))
         }
-        values::ExprKind::Tuple(values::Tuple { elems }) => {
-            let span = swc_common::Span {
-                lo: BytePos(expr.span.start as u32 + 1),
-                hi: BytePos(expr.span.end as u32 + 1),
-                ctxt: SyntaxContext::empty(),
-            };
-            Expr::Array(ArrayLit {
-                span,
-                elems: elems
-                    .iter()
-                    .map(|values::ExprOrSpread { spread, expr }| {
-                        Some(ExprOrSpread {
-                            spread: spread.to_owned().map(|_| DUMMY_SP),
-                            expr: Box::from(build_expr(expr.as_ref(), stmts, ctx)),
-                        })
+        values::ExprKind::Tuple(values::Tuple { elems }) => Expr::Array(ArrayLit {
+            span,
+            elems: elems
+                .iter()
+                .map(|values::ExprOrSpread { spread, expr }| {
+                    Some(ExprOrSpread {
+                        spread: spread.to_owned().map(|_| DUMMY_SP),
+                        expr: Box::from(build_expr(expr.as_ref(), stmts, ctx)),
                     })
-                    .collect(),
-            })
-        }
+                })
+                .collect(),
+        }),
         values::ExprKind::Member(values::Member { obj, prop, .. }) => {
             let prop = match prop {
                 values::MemberProp::Ident(ident) => MemberProp::Ident(Ident::from(ident)),
@@ -663,13 +646,13 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 }
             };
             Expr::Member(MemberExpr {
-                span: DUMMY_SP,
+                span,
                 obj: Box::from(build_expr(obj, stmts, ctx)),
                 prop,
             })
         }
         values::ExprKind::Empty => Expr::from(Ident {
-            span: DUMMY_SP,
+            span,
             sym: JsWord::from("undefined"),
             optional: false,
         }),
@@ -684,7 +667,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             template,
         }) => {
             Expr::TaggedTpl(TaggedTpl {
-                span: DUMMY_SP,
+                span,
                 tag: Box::from(Expr::Ident(Ident::from(tag))),
                 type_params: None, // TODO: support type params on tagged templates
 
@@ -741,7 +724,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
 
             let if_else = iter.fold(first, |prev, (cond, block)| {
                 Stmt::If(IfStmt {
-                    span: DUMMY_SP,
+                    span,
                     test: Box::from(cond.to_owned().unwrap()),
                     cons: Box::from(Stmt::Block(block.to_owned())),
                     alt: Some(Box::from(prev)),
