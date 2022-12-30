@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fs;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use lsp_server::{Connection, ExtractError, Message, Request, RequestId, Response};
 use lsp_types::{
@@ -57,15 +58,9 @@ fn main_loop(
                 match cast::<HoverRequest>(req) {
                     Ok((id, params)) => {
                         eprintln!("got hoverRequest request #{id}: {params:?}");
-                        let in_path = params
-                            .text_document_position_params
-                            .text_document
-                            .uri
-                            .to_file_path()
-                            .unwrap(); // TODO: generate a real error if the path doesn't exist
-                        eprintln!("reading {}", in_path.to_string_lossy());
-                        let input = fs::read_to_string(in_path).unwrap();
                         eprintln!("parsing .d.ts");
+                        // NOTE: This is slow so we'll want to do this once once
+                        // on startup and re-use the results.
                         let mut ctx = match parse_dts(&lib) {
                             Ok(ctx) => {
                                 eprintln!("success");
@@ -76,14 +71,30 @@ fn main_loop(
                                 panic!("parsing .d.ts file failed");
                             }
                         };
-                        eprintln!("parsed lib");
+
+                        let start = SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .expect("Time went backwards");
+                        let in_path = params
+                            .text_document_position_params
+                            .text_document
+                            .uri
+                            .to_file_path()
+                            .unwrap(); // TODO: generate a real error if the path doesn't exist
+                        eprintln!("reading {}", in_path.to_string_lossy());
+                        let input = fs::read_to_string(in_path).unwrap();
                         // Update ParseError to implement Error + Sync + Send
+                        eprintln!("parsing input");
                         let mut prog = parse(&input).unwrap();
-                        eprintln!("parsed input");
                         // Update TypeError to implement Error + Sync + Send
+                        eprintln!("inferring types");
                         crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
-                        eprintln!("inferred prog");
                         // eprintln!("prog = {prog:#?}");
+                        let end = SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .expect("Time went backwards");
+                        let elapsed = end - start;
+                        eprintln!("request took {}ms", elapsed.as_millis());
 
                         let result = Some(Hover {
                             contents: HoverContents::Scalar(MarkedString::String(String::from(
