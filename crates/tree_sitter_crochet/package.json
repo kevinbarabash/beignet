@@ -1,5 +1,5 @@
 {
-  "name": "crochet_tree_sitter",
+  "name": "tree-sitter-crochet",
   "version": "0.0.1",
   "main": "bindings/node",
   "license": "MIT",
