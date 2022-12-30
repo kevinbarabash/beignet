@@ -1,4 +1,4 @@
-let foo = (a: Array<A, B>, b?: number, ...c: number[]) => a;
+let foo = (a: number, b?: number, ...c: number[]) => a;
 foo(5);
 foo(5, 10);
 foo(5, 10, 15);
