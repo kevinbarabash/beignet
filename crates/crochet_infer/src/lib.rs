@@ -71,7 +71,7 @@ mod tests {
         let mut prog = match result {
             Ok(prog) => prog,
             Err(err) => {
-                println!("err = {:?}", err);
+                eprintln!("err = {:?}", err);
                 panic!("Error parsing expression");
             }
         };
@@ -2904,7 +2904,7 @@ mod tests {
         match infer::infer_prog(&mut prog, &mut ctx) {
             Ok(_) => panic!("expected an error"),
             Err(report) => {
-                println!("{report:#?}");
+                eprintln!("{report:#?}");
                 let messages = messages(&report);
                 assert_eq!(
                     messages,
@@ -2929,7 +2929,7 @@ mod tests {
         match infer::infer_prog(&mut prog, &mut ctx) {
             Ok(_) => panic!("expected an error"),
             Err(report) => {
-                println!("{report:#?}");
+                eprintln!("{report:#?}");
                 let messages = messages(&report);
                 assert_eq!(
                     messages,

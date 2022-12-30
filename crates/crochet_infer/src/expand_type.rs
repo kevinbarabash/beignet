@@ -38,7 +38,7 @@ pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
 fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     let name = &alias.name;
     let scheme = ctx.lookup_scheme(name)?;
-    println!("scheme = {scheme}");
+    eprintln!("scheme = {scheme}");
 
     let type_params = scheme.type_params;
 
@@ -47,7 +47,7 @@ fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>
     if let Some(type_args) = &alias.type_args {
         if type_args.len() != type_params.len() {
             // TODO: rename this TypeParamTypeArgCountMismatch
-            println!("type_args.len() != type_params.len()");
+            eprintln!("type_args.len() != type_params.len()");
             return Err(vec![TypeError::TypeInstantiationFailure]);
         }
 

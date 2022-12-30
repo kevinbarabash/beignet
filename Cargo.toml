@@ -7,6 +7,7 @@ members = [
     "crates/crochet_codegen",
     "crates/crochet_dts",
     "crates/crochet_infer",
+    "crates/crochet_lsp",
     "crates/crochet_parser",
     "crates/tree_sitter_crochet",
 ]
