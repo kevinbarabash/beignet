@@ -6,19 +6,48 @@ Ok(
     Program {
         body: [
             TypeDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 23,
+                    },
+                },
                 span: 0..23,
                 declare: false,
                 id: Ident {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 8,
+                        },
+                    },
                     span: 5..8,
                     name: "Foo",
                 },
                 type_ann: TypeAnn {
                     kind: Object(
                         ObjectType {
-                            span: 14..22,
                             elems: [
                                 Prop(
                                     TProp {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 15,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 21,
+                                            },
+                                        },
                                         span: 15..21,
                                         name: "bar",
                                         optional: false,
@@ -26,11 +55,20 @@ Ok(
                                         type_ann: TypeAnn {
                                             kind: TypeRef(
                                                 TypeRef {
-                                                    span: 20..21,
                                                     name: "T",
                                                     type_args: None,
                                                 },
                                             ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 20,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 21,
+                                                },
+                                            },
                                             span: 20..21,
                                             inferred_type: None,
                                         },
@@ -39,6 +77,16 @@ Ok(
                             ],
                         },
                     ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 14,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 22,
+                        },
+                    },
                     span: 14..22,
                     inferred_type: None,
                 },
@@ -47,6 +95,16 @@ Ok(
                         TypeParam {
                             span: 9..10,
                             name: Ident {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 9,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 10,
+                                    },
+                                },
                                 span: 9..10,
                                 name: "T",
                             },

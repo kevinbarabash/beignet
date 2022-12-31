@@ -6,14 +6,44 @@ Ok(
     Program {
         body: [
             VarDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 28,
+                    },
+                },
                 span: 0..28,
                 pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 4,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 7,
+                        },
+                    },
                     span: 4..7,
                     kind: Ident(
                         BindingIdent {
                             name: "obj",
                             mutable: false,
                             span: 4..7,
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 7,
+                                },
+                            },
                         },
                     ),
                     inferred_type: None,
@@ -21,6 +51,16 @@ Ok(
                 type_ann: None,
                 init: Some(
                     Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 10,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 27,
+                            },
+                        },
                         span: 10..27,
                         kind: Obj(
                             Obj {
@@ -28,7 +68,17 @@ Ok(
                                     Prop(
                                         Shorthand(
                                             Ident {
-                                                span: 10..27,
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 11,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 12,
+                                                    },
+                                                },
+                                                span: 11..12,
                                                 name: "a",
                                             },
                                         ),
@@ -36,7 +86,17 @@ Ok(
                                     Prop(
                                         Shorthand(
                                             Ident {
-                                                span: 10..27,
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 14,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 15,
+                                                    },
+                                                },
+                                                span: 14..15,
                                                 name: "b",
                                             },
                                         ),
@@ -44,9 +104,29 @@ Ok(
                                     Spread(
                                         SpreadElement {
                                             expr: Expr {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 20,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 26,
+                                                    },
+                                                },
                                                 span: 20..26,
                                                 kind: Ident(
                                                     Ident {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 20,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 26,
+                                                            },
+                                                        },
                                                         span: 20..26,
                                                         name: "others",
                                                     },

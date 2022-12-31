@@ -6,11 +6,41 @@ Ok(
     Program {
         body: [
             Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 11,
+                    },
+                },
                 span: 0..11,
                 expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 11,
+                        },
+                    },
                     span: 0..11,
                     kind: JSXElement(
                         JSXElement {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 11,
+                                },
+                            },
                             span: 0..11,
                             name: "Foo",
                             attrs: [],

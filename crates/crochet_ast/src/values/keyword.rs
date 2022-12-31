@@ -1,22 +1,6 @@
 use std::fmt;
 
 use crate::types::{TKeyword, Type, TypeKind};
-use crate::values::span::Span;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Null {
-    pub span: Span,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Symbol {
-    pub span: Span,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Undefined {
-    pub span: Span,
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Keyword {

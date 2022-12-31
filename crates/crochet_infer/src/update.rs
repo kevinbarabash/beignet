@@ -22,10 +22,9 @@ pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
                 ObjectPatProp::KeyValue(KeyValuePatProp {
                     // TODO: figure out how to attach inferred_types to idents
                     // We can do this by updating `BindingIdent` to have an `inferred_type` property
-                    key: _,
                     value,
                     init,
-                    span: _,
+                    ..
                 }) => {
                     update_pattern(value, s);
                     if let Some(init) = init {
@@ -35,9 +34,8 @@ pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
                 ObjectPatProp::Shorthand(ShorthandPatProp {
                     // TODO: figure out how to attach inferred_types to idents
                     // We can do this by updating `BindingIdent` to have an `inferred_type` property
-                    ident: _,
                     init,
-                    span: _,
+                    ..
                 }) => {
                     if let Some(init) = init {
                         update_expr(init, s)
@@ -101,15 +99,12 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
             }
         }
         ExprKind::JSXElement(JSXElement {
-            span: _,
-            name: _,
-            attrs,
-            children,
+            attrs, children, ..
         }) => {
             attrs.iter_mut().for_each(|attr| {
                 match &mut attr.value {
                     JSXAttrValue::Lit(_) => (), // leaf node
-                    JSXAttrValue::JSXExprContainer(JSXExprContainer { expr, span: _ }) => {
+                    JSXAttrValue::JSXExprContainer(JSXExprContainer { expr, .. }) => {
                         update_expr(expr, s);
                     }
                 }
@@ -200,10 +195,10 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
             update_expr(expr, s);
             arms.iter_mut().for_each(|arm| {
                 let Arm {
-                    span: _,
                     pattern,
                     guard,
                     body,
+                    ..
                 } = arm;
                 update_pattern(pattern, s);
                 if let Some(guard) = guard {
@@ -228,10 +223,9 @@ fn update_fn_param_pat(pat: &mut Pattern, s: &Subst) {
                 ObjectPatProp::KeyValue(KeyValuePatProp {
                     // TODO: figure out how to attach inferred_types to idents
                     // We can do this by updating `BindingIdent` to have an `inferred_type` property
-                    key: _,
                     value,
                     init,
-                    span: _,
+                    ..
                 }) => {
                     update_pattern(value, s);
                     if let Some(init) = init {
@@ -241,9 +235,8 @@ fn update_fn_param_pat(pat: &mut Pattern, s: &Subst) {
                 ObjectPatProp::Shorthand(ShorthandPatProp {
                     // TODO: figure out how to attach inferred_types to idents
                     // We can do this by updating `BindingIdent` to have an `inferred_type` property
-                    ident: _,
                     init,
-                    span: _,
+                    ..
                 }) => {
                     if let Some(init) = init {
                         update_expr(init, s)
@@ -276,10 +269,10 @@ pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
 
     match &mut type_ann.kind {
         TypeAnnKind::Lam(LamType {
-            span: _,
             params,
             ret,
             type_params,
+            ..
         }) => {
             params
                 .iter_mut()
@@ -299,7 +292,7 @@ pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
         TypeAnnKind::Lit(_) => (), // leaf node
         // We should be able to fill some of these correctly as part of infer_type_ann()
         TypeAnnKind::Keyword(_) => (), // leaf node
-        TypeAnnKind::Object(ObjectType { span: _, elems }) => {
+        TypeAnnKind::Object(ObjectType { elems, .. }) => {
             elems.iter_mut().for_each(|elem| match elem {
                 TObjElem::Index(TIndex { type_ann, .. }) => {
                     update_type_ann(type_ann, s);
@@ -310,41 +303,39 @@ pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
             })
         }
         TypeAnnKind::TypeRef(_) => (),
-        TypeAnnKind::Union(UnionType { span: _, types }) => {
+        TypeAnnKind::Union(UnionType { types, .. }) => {
             types.iter_mut().for_each(|t| update_type_ann(t, s));
         }
-        TypeAnnKind::Intersection(IntersectionType { span: _, types }) => {
+        TypeAnnKind::Intersection(IntersectionType { types, .. }) => {
             types.iter_mut().for_each(|t| update_type_ann(t, s));
         }
-        TypeAnnKind::Tuple(TupleType { span: _, types }) => {
+        TypeAnnKind::Tuple(TupleType { types, .. }) => {
             types.iter_mut().for_each(|t| update_type_ann(t, s));
         }
-        TypeAnnKind::Array(ArrayType { span: _, elem_type }) => {
+        TypeAnnKind::Array(ArrayType { elem_type, .. }) => {
             update_type_ann(elem_type, s);
         }
-        TypeAnnKind::KeyOf(KeyOfType { span: _, type_ann }) => {
+        TypeAnnKind::KeyOf(KeyOfType { type_ann, .. }) => {
             update_type_ann(type_ann, s);
         }
-        TypeAnnKind::Query(QueryType { span: _, expr }) => {
+        TypeAnnKind::Query(QueryType { expr, .. }) => {
             update_expr(expr, s);
         }
-        TypeAnnKind::Mutable(MutableType { span: _, type_ann }) => {
+        TypeAnnKind::Mutable(MutableType { type_ann, .. }) => {
             update_type_ann(type_ann, s);
         }
         TypeAnnKind::IndexedAccess(IndexedAccessType {
-            span: _,
             obj_type,
             index_type,
+            ..
         }) => {
             update_type_ann(obj_type, s);
             update_type_ann(index_type, s);
         }
         TypeAnnKind::Mapped(MappedType {
-            span: _,
             type_param,
-            optional: _,
-            mutable: _,
             type_ann,
+            ..
         }) => {
             if let Some(constraint) = &mut type_param.constraint {
                 update_type_ann(constraint, s);
@@ -355,11 +346,11 @@ pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
             update_type_ann(type_ann, s);
         }
         TypeAnnKind::Conditional(ConditionalType {
-            span: _,
             check_type: left,
             extends_type: right,
             true_type: consequent,
             false_type: alternate,
+            ..
         }) => {
             update_type_ann(left, s);
             update_type_ann(right, s);
@@ -372,15 +363,15 @@ pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
 fn update_member_prop(prop: &mut MemberProp, s: &Subst) {
     match prop {
         // TODO: figure out how to attach inferred_types to idents
-        MemberProp::Ident(Ident { span: _, name: _ }) => (),
-        MemberProp::Computed(ComputedPropName { span: _, expr }) => update_expr(expr, s),
+        MemberProp::Ident(Ident { name: _, .. }) => (),
+        MemberProp::Computed(ComputedPropName { expr, .. }) => update_expr(expr, s),
     }
 }
 
 fn update_jsx_element_child(jsx_elem: &mut JSXElementChild, s: &Subst) {
     match jsx_elem {
         JSXElementChild::JSXText(_) => (), // leaf node (type is always string)
-        JSXElementChild::JSXExprContainer(JSXExprContainer { span: _, expr }) => {
+        JSXElementChild::JSXExprContainer(JSXExprContainer { expr, .. }) => {
             update_expr(expr, s);
         }
         JSXElementChild::JSXElement(jsx_elem) => {
@@ -390,7 +381,7 @@ fn update_jsx_element_child(jsx_elem: &mut JSXElementChild, s: &Subst) {
                 .iter_mut()
                 .for_each(|attr| match &mut attr.value {
                     JSXAttrValue::Lit(_) => (), // leaf node (type is just the value itself)
-                    JSXAttrValue::JSXExprContainer(JSXExprContainer { span: _, expr }) => {
+                    JSXAttrValue::JSXExprContainer(JSXExprContainer { expr, .. }) => {
                         update_expr(expr, s);
                     }
                 });

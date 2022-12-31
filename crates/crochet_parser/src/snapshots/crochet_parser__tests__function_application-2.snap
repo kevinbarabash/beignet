@@ -6,15 +6,55 @@ Ok(
     Program {
         body: [
             Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 10,
+                    },
+                },
                 span: 0..10,
                 expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 9,
+                        },
+                    },
                     span: 0..9,
                     kind: App(
                         App {
                             lam: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 3,
+                                    },
+                                },
                                 span: 0..3,
                                 kind: Ident(
                                     Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 3,
+                                            },
+                                        },
                                         span: 0..3,
                                         name: "foo",
                                     },
@@ -25,9 +65,29 @@ Ok(
                                 ExprOrSpread {
                                     spread: None,
                                     expr: Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 4,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 5,
+                                            },
+                                        },
                                         span: 4..5,
                                         kind: Ident(
                                             Ident {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 4,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 5,
+                                                    },
+                                                },
                                                 span: 4..5,
                                                 name: "a",
                                             },
@@ -38,9 +98,29 @@ Ok(
                                 ExprOrSpread {
                                     spread: None,
                                     expr: Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 7,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 8,
+                                            },
+                                        },
                                         span: 7..8,
                                         kind: Ident(
                                             Ident {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 7,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 8,
+                                                    },
+                                                },
                                                 span: 7..8,
                                                 name: "b",
                                             },

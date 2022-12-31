@@ -206,7 +206,7 @@ fn build_pattern(
                     values::ObjectPatProp::Shorthand(values::ShorthandPatProp {
                         ident,
                         init,
-                        span: _,
+                        ..
                     }) => Some(ObjectPatProp::Assign(AssignPatProp {
                         span: DUMMY_SP,
                         key: Ident::from(ident),

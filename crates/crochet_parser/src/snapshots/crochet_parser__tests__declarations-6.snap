@@ -6,14 +6,44 @@ Ok(
     Program {
         body: [
             VarDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 12,
+                    },
+                    end: Position {
+                        line: 4,
+                        column: 14,
+                    },
+                },
                 span: 13..119,
                 pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 16,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 19,
+                        },
+                    },
                     span: 17..20,
                     kind: Ident(
                         BindingIdent {
                             name: "foo",
                             mutable: false,
                             span: 17..20,
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 16,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 19,
+                                },
+                            },
                         },
                     ),
                     inferred_type: None,
@@ -21,22 +51,62 @@ Ok(
                 type_ann: None,
                 init: Some(
                     Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 22,
+                            },
+                            end: Position {
+                                line: 4,
+                                column: 13,
+                            },
+                        },
                         span: 23..118,
                         kind: Lambda(
                             Lambda {
                                 params: [],
                                 body: Expr {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 2,
+                                            column: 16,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 53,
+                                        },
+                                    },
                                     span: 47..84,
                                     kind: Let(
                                         Let {
                                             pattern: Some(
                                                 Pattern {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 2,
+                                                            column: 20,
+                                                        },
+                                                        end: Position {
+                                                            line: 2,
+                                                            column: 27,
+                                                        },
+                                                    },
                                                     span: 51..58,
                                                     kind: Ident(
                                                         BindingIdent {
                                                             name: "msg",
                                                             mutable: true,
                                                             span: 51..58,
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 2,
+                                                                    column: 20,
+                                                                },
+                                                                end: Position {
+                                                                    line: 2,
+                                                                    column: 27,
+                                                                },
+                                                            },
                                                         },
                                                     ),
                                                     inferred_type: None,
@@ -46,19 +116,48 @@ Ok(
                                                 TypeAnn {
                                                     kind: Keyword(
                                                         KeywordType {
-                                                            span: 60..66,
                                                             keyword: String,
                                                         },
                                                     ),
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 2,
+                                                            column: 29,
+                                                        },
+                                                        end: Position {
+                                                            line: 2,
+                                                            column: 35,
+                                                        },
+                                                    },
                                                     span: 60..66,
                                                     inferred_type: None,
                                                 },
                                             ),
                                             init: Expr {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 2,
+                                                        column: 38,
+                                                    },
+                                                    end: Position {
+                                                        line: 2,
+                                                        column: 52,
+                                                    },
+                                                },
                                                 span: 69..83,
                                                 kind: Lit(
                                                     Str(
                                                         Str {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 2,
+                                                                    column: 38,
+                                                                },
+                                                                end: Position {
+                                                                    line: 2,
+                                                                    column: 52,
+                                                                },
+                                                            },
                                                             span: 69..83,
                                                             value: "hello, world",
                                                         },
@@ -67,9 +166,29 @@ Ok(
                                                 inferred_type: None,
                                             },
                                             body: Expr {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 3,
+                                                        column: 16,
+                                                    },
+                                                    end: Position {
+                                                        line: 3,
+                                                        column: 19,
+                                                    },
+                                                },
                                                 span: 101..104,
                                                 kind: Ident(
                                                     Ident {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 3,
+                                                                column: 16,
+                                                            },
+                                                            end: Position {
+                                                                line: 3,
+                                                                column: 19,
+                                                            },
+                                                        },
                                                         span: 101..104,
                                                         name: "msg",
                                                     },

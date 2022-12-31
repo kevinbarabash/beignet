@@ -6,14 +6,44 @@ Ok(
     Program {
         body: [
             VarDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 18,
+                    },
+                },
                 span: 0..18,
                 pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 4,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 5,
+                        },
+                    },
                     span: 4..5,
                     kind: Ident(
                         BindingIdent {
                             name: "x",
                             mutable: false,
                             span: 4..5,
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 5,
+                                },
+                            },
                         },
                     ),
                     inferred_type: None,
@@ -22,20 +52,49 @@ Ok(
                     TypeAnn {
                         kind: Keyword(
                             KeywordType {
-                                span: 7..13,
                                 keyword: Number,
                             },
                         ),
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 7,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 13,
+                            },
+                        },
                         span: 7..13,
                         inferred_type: None,
                     },
                 ),
                 init: Some(
                     Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 16,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 17,
+                            },
+                        },
                         span: 16..17,
                         kind: Lit(
                             Num(
                                 Num {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 16,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 17,
+                                        },
+                                    },
                                     span: 16..17,
                                     value: "5",
                                 },

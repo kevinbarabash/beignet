@@ -14,7 +14,7 @@ use crochet_ast::types::{
     self as types, RestPat, TFnParam, TGenLam, TKeyword, TMappedTypeChangeProp, TPat, TProp, Type,
     TypeParam,
 };
-use crochet_ast::values::Lit;
+use crochet_ast::values::{Lit, DUMMY_LOC};
 use crochet_infer::{get_sub_and_type_params, Context, Scheme, Subst, Substitutable};
 
 #[derive(Debug, Clone)]
@@ -294,9 +294,13 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
             Ok(t)
         }
         TsType::TsLitType(lit) => match &lit.lit {
-            TsLit::Number(num) => Ok(Type::from(Lit::num(format!("{}", num.value), 0..0))),
-            TsLit::Str(str) => Ok(Type::from(Lit::str(str.value.to_string(), 0..0))),
-            TsLit::Bool(b) => Ok(Type::from(Lit::bool(b.value, 0..0))),
+            TsLit::Number(num) => Ok(Type::from(Lit::num(
+                format!("{}", num.value),
+                0..0,
+                DUMMY_LOC,
+            ))),
+            TsLit::Str(str) => Ok(Type::from(Lit::str(str.value.to_string(), 0..0, DUMMY_LOC))),
+            TsLit::Bool(b) => Ok(Type::from(Lit::bool(b.value, 0..0, DUMMY_LOC))),
             TsLit::BigInt(_) => Err(String::from("can't parse BigInt literal yet")),
             TsLit::Tpl(_) => Err(String::from("can't parse Tpl literal yet")),
         },

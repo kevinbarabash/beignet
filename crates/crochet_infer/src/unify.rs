@@ -810,18 +810,18 @@ fn occurs_check(tv: &TVar, t: &Type) -> bool {
 mod tests {
     use super::*;
     use crochet_ast::types::TPropKey;
-    use crochet_ast::values::Lit;
+    use crochet_ast::values::{Lit, DUMMY_LOC};
 
     fn num(val: &str) -> Lit {
-        Lit::num(val.to_owned(), 0..0)
+        Lit::num(val.to_owned(), 0..0, DUMMY_LOC)
     }
 
     fn str(val: &str) -> Lit {
-        Lit::str(val.to_owned(), 0..0)
+        Lit::str(val.to_owned(), 0..0, DUMMY_LOC)
     }
 
     fn bool(val: &bool) -> Lit {
-        Lit::bool(val.to_owned(), 0..0)
+        Lit::bool(val.to_owned(), 0..0, DUMMY_LOC)
     }
 
     #[test]

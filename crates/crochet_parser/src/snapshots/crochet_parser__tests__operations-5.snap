@@ -6,16 +6,56 @@ Ok(
     Program {
         body: [
             Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 7,
+                    },
+                },
                 span: 0..7,
                 expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 6,
+                        },
+                    },
                     span: 0..6,
                     kind: BinaryExpr(
                         BinaryExpr {
                             op: NotEq,
                             left: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 1,
+                                    },
+                                },
                                 span: 0..1,
                                 kind: Ident(
                                     Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 1,
+                                            },
+                                        },
                                         span: 0..1,
                                         name: "a",
                                     },
@@ -23,9 +63,29 @@ Ok(
                                 inferred_type: None,
                             },
                             right: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 5,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 6,
+                                    },
+                                },
                                 span: 5..6,
                                 kind: Ident(
                                     Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 5,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 6,
+                                            },
+                                        },
                                         span: 5..6,
                                         name: "b",
                                     },

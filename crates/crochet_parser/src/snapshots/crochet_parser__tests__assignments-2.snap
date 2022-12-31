@@ -6,19 +6,69 @@ Ok(
     Program {
         body: [
             Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 8,
+                    },
+                },
                 span: 0..8,
                 expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 7,
+                        },
+                    },
                     span: 0..7,
                     kind: Assign(
                         Assign {
                             left: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 3,
+                                    },
+                                },
                                 span: 0..3,
                                 kind: Member(
                                     Member {
                                         obj: Expr {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 1,
+                                                },
+                                            },
                                             span: 0..1,
                                             kind: Ident(
                                                 Ident {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 0,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 1,
+                                                        },
+                                                    },
                                                     span: 0..1,
                                                     name: "a",
                                                 },
@@ -27,6 +77,16 @@ Ok(
                                         },
                                         prop: Ident(
                                             Ident {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 2,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 3,
+                                                    },
+                                                },
                                                 span: 2..3,
                                                 name: "b",
                                             },
@@ -36,9 +96,29 @@ Ok(
                                 inferred_type: None,
                             },
                             right: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 6,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 7,
+                                    },
+                                },
                                 span: 6..7,
                                 kind: Ident(
                                     Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 6,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 7,
+                                            },
+                                        },
                                         span: 6..7,
                                         name: "c",
                                     },

@@ -6,22 +6,72 @@ Ok(
     Program {
         body: [
             Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 10,
+                    },
+                },
                 span: 0..10,
                 expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 9,
+                        },
+                    },
                     span: 0..9,
                     kind: BinaryExpr(
                         BinaryExpr {
                             op: Sub,
                             left: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 5,
+                                    },
+                                },
                                 span: 0..5,
                                 kind: BinaryExpr(
                                     BinaryExpr {
                                         op: Add,
                                         left: Expr {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 1,
+                                                },
+                                            },
                                             span: 0..1,
                                             kind: Lit(
                                                 Num(
                                                     Num {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 0,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 1,
+                                                            },
+                                                        },
                                                         span: 0..1,
                                                         value: "1",
                                                     },
@@ -30,10 +80,30 @@ Ok(
                                             inferred_type: None,
                                         },
                                         right: Expr {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 4,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 5,
+                                                },
+                                            },
                                             span: 4..5,
                                             kind: Lit(
                                                 Num(
                                                     Num {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 4,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 5,
+                                                            },
+                                                        },
                                                         span: 4..5,
                                                         value: "2",
                                                     },
@@ -46,10 +116,30 @@ Ok(
                                 inferred_type: None,
                             },
                             right: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 8,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 9,
+                                    },
+                                },
                                 span: 8..9,
                                 kind: Lit(
                                     Num(
                                         Num {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 8,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 9,
+                                                },
+                                            },
                                             span: 8..9,
                                             value: "3",
                                         },

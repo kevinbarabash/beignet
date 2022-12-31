@@ -126,11 +126,7 @@ pub fn build_ident(name: &str) -> Ident {
 
 pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
     match &pattern.kind {
-        values::PatternKind::Ident(values::BindingIdent {
-            name,
-            mutable: _,
-            span: _,
-        }) => Pat::Ident(BindingIdent {
+        values::PatternKind::Ident(values::BindingIdent { name, .. }) => Pat::Ident(BindingIdent {
             id: build_ident(name),
             type_ann,
         }),
@@ -150,11 +146,7 @@ pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTyp
                             value: Box::from(build_param_pat_rec(kv.value.as_ref(), None)),
                         })
                     }
-                    values::ObjectPatProp::Shorthand(ShorthandPatProp {
-                        ident,
-                        init: _,
-                        span: _,
-                    }) => {
+                    values::ObjectPatProp::Shorthand(ShorthandPatProp { ident, .. }) => {
                         ObjectPatProp::Assign(AssignPatProp {
                             span: DUMMY_SP,
                             key: build_ident(&ident.name),

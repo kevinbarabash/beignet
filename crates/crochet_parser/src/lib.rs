@@ -77,6 +77,7 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>
             let expr = node.named_child(0).unwrap();
             let expr = parse_expression(&expr, src)?;
             Ok(vec![Statement::Expr {
+                loc: SourceLocation::from(node),
                 span: node.byte_range(),
                 expr: Box::from(expr),
             }])
@@ -88,6 +89,7 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>
         "type_alias_declaration" => {
             let name = node.child_by_field_name("name").unwrap();
             let id = Ident {
+                loc: SourceLocation::from(&name),
                 span: name.byte_range(),
                 name: text_for_node(&name, src)?,
             };
@@ -97,6 +99,7 @@ fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>
             let type_params = parse_type_params_for_node(node, src)?;
 
             Ok(vec![Statement::TypeDecl {
+                loc: SourceLocation::from(node),
                 span: node.byte_range(),
                 declare: false,
                 id,
@@ -179,6 +182,7 @@ fn parse_declaration(
         // TODO: Fix always wraps a lambda
 
         let lambda_expr = Expr {
+            loc: SourceLocation::from(&decl),
             span: decl.byte_range(),
             kind: ExprKind::Lambda(Lambda {
                 params: vec![EFnParam {
@@ -196,6 +200,7 @@ fn parse_declaration(
         };
 
         let fix = Expr {
+            loc: SourceLocation::from(&decl),
             span: decl.byte_range(),
             kind: ExprKind::Fix(Fix {
                 expr: Box::from(lambda_expr),
@@ -204,6 +209,7 @@ fn parse_declaration(
         };
 
         Statement::VarDecl {
+            loc: SourceLocation::from(node),
             span: node.byte_range(),
             pattern,
             type_ann,
@@ -212,6 +218,7 @@ fn parse_declaration(
         }
     } else {
         Statement::VarDecl {
+            loc: SourceLocation::from(node),
             span: node.byte_range(),
             pattern,
             type_ann,
@@ -234,9 +241,10 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseEr
             let name = src.get(name.byte_range()).unwrap().to_owned();
             let mutable = node.child_by_field_name("mut").is_some();
             PatternKind::Ident(BindingIdent {
+                loc: SourceLocation::from(node),
+                span: node.byte_range(),
                 name,
                 mutable,
-                span: node.byte_range(),
             })
         }
         "object_pattern" => {
@@ -248,6 +256,7 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseEr
                     "pair_pattern" => {
                         let key_node = child.child_by_field_name("key").unwrap();
                         let key = Ident {
+                            loc: SourceLocation::from(&key_node),
                             span: key_node.byte_range(),
                             name: text_for_node(&key_node, src)?,
                         };
@@ -259,10 +268,11 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseEr
 
                         // TODO: include `span` in this node
                         Ok(ObjectPatProp::KeyValue(KeyValuePatProp {
+                            loc: SourceLocation::from(&child),
+                            span: child.byte_range(),
                             key,
                             value,
                             init: None,
-                            span: child.byte_range(),
                         }))
                     }
                     "rest_pattern" => {
@@ -284,18 +294,21 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseEr
                                 let mutable = left.child_by_field_name("mut").is_some();
 
                                 Ok(ObjectPatProp::Shorthand(ShorthandPatProp {
+                                    loc: SourceLocation::from(&left),
+                                    span: left.byte_range(),
                                     ident: BindingIdent {
+                                        loc: SourceLocation::from(&name_node),
                                         span: name_node.byte_range(),
                                         name,
                                         mutable,
                                     },
                                     init: Some(Box::from(init)),
-                                    span: left.byte_range(),
                                 }))
                             },
                             "pair_pattern" => {
                                 let key_node = left.child_by_field_name("key").unwrap();
                                 let key = Ident {
+                                    loc: SourceLocation::from(&key_node),
                                     span: key_node.byte_range(),
                                     name: text_for_node(&key_node, src)?,
                                 };
@@ -307,10 +320,11 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseEr
 
                                 // TODO: include `span` in this node
                                 Ok(ObjectPatProp::KeyValue(KeyValuePatProp {
+                                    loc: SourceLocation::from(&left),
+                                    span: left.byte_range(),
                                     key,
                                     value,
                                     init: Some(Box::from(init)),
-                                    span: left.byte_range(),
                                 }))
                             },
                             kind => panic!("unexpected .right property on object_assignment_pattern of type {kind}"),
@@ -321,13 +335,15 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseEr
                         let name = src.get(name_node.byte_range()).unwrap().to_owned();
                         let mutable = child.child_by_field_name("mut").is_some();
                         Ok(ObjectPatProp::Shorthand(ShorthandPatProp {
+                            loc: SourceLocation::from(&child),
+                            span: child.byte_range(),
                             ident: BindingIdent {
+                                loc: SourceLocation::from(&name_node),
                                 span: name_node.byte_range(),
                                 name,
                                 mutable,
                             },
                             init: None,
-                            span: child.byte_range(),
                         }))
                     }
                     kind => panic!("Unexpected object property kind: '{kind}'"),
@@ -388,6 +404,7 @@ fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseEr
     };
 
     Ok(Pattern {
+        loc: SourceLocation::from(node),
         span: node.byte_range(),
         kind,
         inferred_type: None,
@@ -445,6 +462,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
                 let expr = child.named_child(0).unwrap();
                 let expr = parse_expression(&expr, src)?;
                 stmts.push(Statement::Expr {
+                    loc: SourceLocation::from(&child),
                     span: child.byte_range(),
                     expr: Box::from(expr),
                 })
@@ -464,12 +482,14 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
         Some(term) => match term {
             // TODO: warn that the variable introduced here will go unused.
             Statement::VarDecl {
+                loc,
                 span,
                 pattern,
                 init,
                 type_ann,
                 ..
             } => Expr {
+                loc: loc.to_owned(),
                 span: span.to_owned(),
                 kind: ExprKind::Let(Let {
                     pattern: Some(pattern.to_owned()),
@@ -482,6 +502,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
                     init: init.as_ref().unwrap().to_owned(),
                     type_ann: type_ann.to_owned(),
                     body: Box::from(Expr {
+                        loc: DUMMY_LOC,
                         span: 0..0,
                         kind: ExprKind::Empty,
                         inferred_type: None,
@@ -495,6 +516,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
             Statement::Expr { expr, .. } => *expr.to_owned(),
         },
         None => Expr {
+            loc: DUMMY_LOC,
             span: 0..0,
             kind: ExprKind::Empty,
             inferred_type: None,
@@ -504,6 +526,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
     let result: Expr = iter.fold(last, |body, stmt| {
         match stmt {
             Statement::VarDecl {
+                loc,
                 span,
                 pattern,
                 type_ann,
@@ -518,6 +541,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
                     body: Box::new(body),
                 });
                 Expr {
+                    loc: loc.to_owned(),
                     span: span.to_owned(),
                     kind,
                     inferred_type: None,
@@ -526,7 +550,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
             Statement::TypeDecl { .. } => {
                 todo!("decide how to handle type decls within BlockStatements")
             }
-            Statement::Expr { span, expr } => {
+            Statement::Expr { loc, span, expr } => {
                 let kind = ExprKind::Let(Let {
                     pattern: None,
                     type_ann: None,
@@ -534,6 +558,7 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
                     body: Box::new(body),
                 });
                 Expr {
+                    loc: loc.to_owned(),
                     span: span.to_owned(),
                     kind,
                     inferred_type: None,
@@ -568,28 +593,40 @@ fn parse_template_string(
 
         let end = child.byte_range().start;
         let span = start..end;
+        let loc = SourceLocation::from(&child);
 
         let raw = src.get(span.clone()).unwrap().to_owned();
         let cooked = unescape(&raw).unwrap();
 
-        let raw = Lit::str(raw, span.clone());
-        let cooked = Lit::str(cooked, span.clone());
+        let raw = Lit::str(raw, span.clone(), loc);
+        let cooked = Lit::str(cooked, span.clone(), loc);
 
-        quasis.push(TemplateElem { span, raw, cooked });
+        quasis.push(TemplateElem {
+            loc,
+            span,
+            raw,
+            cooked,
+        });
 
         start = child.byte_range().end;
     }
 
     let end = node.byte_range().end - 1;
     let span = start..end;
+    let loc = SourceLocation::from(node);
 
     let raw = src.get(span.clone()).unwrap().to_owned();
     let cooked = unescape(&raw).unwrap();
 
-    let raw = Lit::str(raw, span.clone());
-    let cooked = Lit::str(cooked, span.clone());
+    let raw = Lit::str(raw, span.clone(), loc);
+    let cooked = Lit::str(cooked, span.clone(), loc);
 
-    quasis.push(TemplateElem { span, raw, cooked });
+    quasis.push(TemplateElem {
+        loc,
+        span,
+        raw,
+        cooked,
+    });
 
     Ok(TemplateLiteral { exprs, quasis })
 }
@@ -731,6 +768,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
                     });
 
                     return Ok(Expr {
+                        loc: SourceLocation::from(node),
                         span: node.byte_range(),
                         kind,
                         inferred_type: None,
@@ -803,8 +841,9 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
         }
         "identifier" => {
             let span = node.byte_range();
+            let loc = SourceLocation::from(node);
             let name = src.get(span.clone()).unwrap().to_owned();
-            ExprKind::Ident(Ident { span, name })
+            ExprKind::Ident(Ident { loc, span, name })
         }
         "number" | "string" | "true" | "false" => {
             let lit = parse_literal(node, src)?;
@@ -833,6 +872,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
                         // TODO: handle more than just "identifier"
                         let key_node = child.child_by_field_name("key").unwrap();
                         let key = Ident {
+                            loc: SourceLocation::from(&key_node),
                             span: key_node.byte_range(),
                             name: text_for_node(&key_node, src)?,
                         };
@@ -856,7 +896,8 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
                         // choice($.identifier, $._reserved_identifier),
                         let name = text_for_node(&child, src)?;
                         Ok(PropOrSpread::Prop(Box::from(Prop::Shorthand(Ident {
-                            span: node.byte_range(),
+                            loc: SourceLocation::from(&child),
+                            span: child.byte_range(),
                             name,
                         }))))
                     }
@@ -902,6 +943,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
             ExprKind::Member(Member {
                 obj: Box::from(obj),
                 prop: MemberProp::Ident(Ident {
+                    loc: SourceLocation::from(&prop),
                     span: prop.byte_range(),
                     name,
                 }),
@@ -916,6 +958,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
             ExprKind::Member(Member {
                 obj: Box::from(obj),
                 prop: MemberProp::Computed(ComputedPropName {
+                    loc: SourceLocation::from(&index),
                     span: index.byte_range(),
                     expr: Box::from(expr),
                 }),
@@ -974,6 +1017,7 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
     };
 
     Ok(Expr {
+        loc: SourceLocation::from(node),
         span: node.byte_range(),
         kind,
         inferred_type: None,
@@ -1037,6 +1081,7 @@ fn parse_arm(node: &tree_sitter::Node, src: &str) -> Result<Arm, ParseError> {
     };
 
     Ok(Arm {
+        loc: SourceLocation::from(node),
         span: node.byte_range(),
         pattern: parse_refutable_pattern(&pat, src)?,
         guard,
@@ -1064,9 +1109,10 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                     PatternKind::Lit(LitPat { lit })
                 }
                 _ => PatternKind::Ident(BindingIdent {
+                    loc: SourceLocation::from(&child),
+                    span: child.byte_range(),
                     name,
                     mutable: false,
-                    span: child.byte_range(),
                 }),
             }
         }
@@ -1102,13 +1148,15 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                         let value = parse_refutable_pattern(&value, src)?;
 
                         Ok(ObjectPatProp::KeyValue(KeyValuePatProp {
+                            loc: SourceLocation::from(&prop),
+                            span: prop.byte_range(),
                             key: Ident {
+                                loc: SourceLocation::from(&key_node),
                                 span: key_node.byte_range(),
                                 name: key,
                             },
                             value: Box::from(value),
                             init: None,
-                            span: prop.byte_range(),
                         }))
                     }
                     "refutable_rest_pattern" => {
@@ -1122,13 +1170,15 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
                     "shorthand_property_identifier_pattern" => {
                         let mutable = prop.child_by_field_name("mut").is_some();
                         Ok(ObjectPatProp::Shorthand(ShorthandPatProp {
+                            loc: SourceLocation::from(&prop),
+                            span: prop.byte_range(),
                             ident: BindingIdent {
+                                loc: SourceLocation::from(&prop),
                                 span: prop.byte_range(),
                                 name: text_for_node(&prop, src)?,
                                 mutable,
                             },
                             init: None,
-                            span: prop.byte_range(),
                         }))
                     }
                     kind => panic!("Unexected prop.kind() = {kind}"),
@@ -1154,11 +1204,13 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
 
             PatternKind::Is(IsPat {
                 ident: BindingIdent {
+                    loc: SourceLocation::from(&left),
                     span: left.byte_range(),
                     name: text_for_node(&left, src)?,
                     mutable: false,
                 },
                 is_id: Ident {
+                    loc: SourceLocation::from(&right),
                     span: right.byte_range(),
                     name: text_for_node(&right, src)?,
                 },
@@ -1169,6 +1221,7 @@ fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Patter
     };
 
     Ok(Pattern {
+        loc: SourceLocation::from(&child),
         span: child.byte_range(),
         kind,
         inferred_type: None,
@@ -1207,6 +1260,7 @@ fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pars
     });
 
     Ok(Expr {
+        loc: SourceLocation::from(node),
         span: node.byte_range(),
         kind,
         inferred_type: None,
@@ -1218,6 +1272,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing type annotation"));
     }
+
     let node = if node.kind() == "type_annotation"
         || node.kind() == "constraint"
         // TODO: write some tests that verify default types work, e.g.
@@ -1228,6 +1283,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
     } else {
         node.to_owned()
     };
+
     let kind = match node.kind() {
         // Primary types
         "parenthesized_type" => {
@@ -1237,15 +1293,12 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
         "predefined_type" => match text_for_node(&node, src)?.as_str() {
             "any" => todo!("remove support for 'any'"),
             "number" => TypeAnnKind::Keyword(KeywordType {
-                span: node.byte_range(),
                 keyword: Keyword::Number,
             }),
             "boolean" => TypeAnnKind::Keyword(KeywordType {
-                span: node.byte_range(),
                 keyword: Keyword::Boolean,
             }),
             "string" => TypeAnnKind::Keyword(KeywordType {
-                span: node.byte_range(),
                 keyword: Keyword::String,
             }),
             "symbol" => todo!(),
@@ -1256,7 +1309,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             name => panic!("Unkwnown predefined_type: '{name}'"),
         },
         "type_identifier" => TypeAnnKind::TypeRef(TypeRef {
-            span: node.byte_range(),
             name: text_for_node(&node, src)?,
             type_args: None,
         }),
@@ -1272,7 +1324,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
             TypeAnnKind::TypeRef(TypeRef {
-                span: node.byte_range(),
                 name: text_for_node(&name, src)?,
                 type_args: Some(type_params),
             })
@@ -1280,7 +1331,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
         "object_type" => {
             let mut cursor = node.walk();
             let elem_count = node.named_child_count();
-            let span = node.byte_range();
 
             if elem_count == 1 {
                 let child = node.named_child(0).unwrap();
@@ -1346,10 +1396,10 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                         // TODO: handle optional 'as AliasT' after "type"
 
                         let kind = TypeAnnKind::Mapped(MappedType {
-                            span: child.byte_range(),
                             type_param: TypeParam {
                                 span: mapped_type_clause.byte_range(),
                                 name: Ident {
+                                    loc: SourceLocation::from(&name_node),
                                     span: name_node.byte_range(),
                                     name,
                                 },
@@ -1362,7 +1412,8 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                         });
 
                         return Ok(TypeAnn {
-                            span,
+                            loc: SourceLocation::from(&node),
+                            span: node.byte_range(),
                             kind,
                             inferred_type: None,
                         });
@@ -1408,6 +1459,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                             }
 
                             let elem = TObjElem::Prop(TProp {
+                                loc: SourceLocation::from(&prop),
                                 span: prop.byte_range(),
                                 name,
                                 optional,
@@ -1446,16 +1498,19 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                             }
 
                             let pat: Pattern = Pattern {
+                                loc: SourceLocation::from(&name_node),
                                 span: name_node.byte_range(),
                                 kind: PatternKind::Ident(BindingIdent {
+                                    loc: SourceLocation::from(&name_node),
+                                    span: name_node.byte_range(),
                                     name,
                                     mutable: false,
-                                    span: name_node.byte_range(),
                                 }),
                                 inferred_type: None,
                             };
 
                             let elem = TObjElem::Index(TIndex {
+                                loc: SourceLocation::from(&prop),
                                 span: prop.byte_range(),
                                 key: Box::from(TypeAnnFnParam {
                                     pat,
@@ -1476,17 +1531,13 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                 })
                 .collect::<Result<Vec<TObjElem>, ParseError>>()?;
 
-            TypeAnnKind::Object(ObjectType {
-                span: node.byte_range(),
-                elems,
-            })
+            TypeAnnKind::Object(ObjectType { elems })
         }
         "array_type" => {
             let elem_type = node.named_child(0).unwrap();
             let elem_type = parse_type_ann(&elem_type, src)?;
 
             TypeAnnKind::Array(ArrayType {
-                span: node.byte_range(),
                 elem_type: Box::from(elem_type),
             })
         }
@@ -1501,10 +1552,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                 })
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
-            TypeAnnKind::Tuple(TupleType {
-                span: node.byte_range(),
-                types,
-            })
+            TypeAnnKind::Tuple(TupleType { types })
         }
         "flow_maybe_type" => todo!(),
         "type_query" => {
@@ -1512,7 +1560,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             let expr = parse_expression(&expr, src)?;
 
             TypeAnnKind::Query(QueryType {
-                span: node.byte_range(),
                 expr: Box::from(expr),
             })
         }
@@ -1521,7 +1568,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             let type_ann = parse_type_ann(&type_ann, src)?;
 
             TypeAnnKind::KeyOf(KeyOfType {
-                span: node.byte_range(),
                 type_ann: Box::from(type_ann),
             })
         }
@@ -1531,11 +1577,9 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             let child = node.named_child(0).unwrap();
             match child.kind() {
                 "undefined" => TypeAnnKind::Keyword(KeywordType {
-                    span: node.byte_range(),
                     keyword: Keyword::Undefined,
                 }),
                 "null" => TypeAnnKind::Keyword(KeywordType {
-                    span: node.byte_range(),
                     keyword: Keyword::Null,
                 }),
                 _ => {
@@ -1550,7 +1594,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             let index_type = node.named_child(1).unwrap();
             let index_type = parse_type_ann(&index_type, src)?;
             TypeAnnKind::IndexedAccess(IndexedAccessType {
-                span: node.byte_range(),
                 obj_type: Box::from(obj_type),
                 index_type: Box::from(index_type),
             })
@@ -1566,7 +1609,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             let alternate = parse_type_ann(&alternate, src)?;
 
             TypeAnnKind::Conditional(ConditionalType {
-                span: node.byte_range(),
                 check_type: Box::from(left),
                 extends_type: Box::from(right),
                 true_type: Box::from(consequent),
@@ -1590,10 +1632,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                 }
             }
 
-            TypeAnnKind::Intersection(IntersectionType {
-                span: node.byte_range(),
-                types,
-            })
+            TypeAnnKind::Intersection(IntersectionType { types })
         }
         "union_type" => {
             let mut cursor = node.walk();
@@ -1611,10 +1650,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                 }
             }
 
-            TypeAnnKind::Union(UnionType {
-                span: node.byte_range(),
-                types,
-            })
+            TypeAnnKind::Union(UnionType { types })
         }
 
         // Non-primary types
@@ -1648,7 +1684,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             let type_params = parse_type_params_for_node(&node, src)?;
 
             TypeAnnKind::Lam(LamType {
-                span: node.byte_range(),
                 params,
                 ret: Box::from(return_type),
                 type_params,
@@ -1658,7 +1693,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             let type_ann = node.named_child(0).unwrap();
 
             TypeAnnKind::Mutable(MutableType {
-                span: node.byte_range(),
                 type_ann: Box::from(parse_type_ann(&type_ann, src)?),
             })
         }
@@ -1669,6 +1703,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
     };
 
     Ok(TypeAnn {
+        loc: SourceLocation::from(&node),
         span: node.byte_range(),
         kind,
         inferred_type: None,
@@ -1715,10 +1750,11 @@ fn parse_type_params_for_node(
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|type_param| {
-                    let name = type_param.child_by_field_name("name").unwrap();
+                    let name_node = type_param.child_by_field_name("name").unwrap();
                     let name = Ident {
-                        span: name.byte_range(),
-                        name: text_for_node(&name, src)?,
+                        loc: SourceLocation::from(&name_node),
+                        span: name_node.byte_range(),
+                        name: text_for_node(&name_node, src)?,
                     };
 
                     let constraint =
@@ -1755,6 +1791,7 @@ fn parse_literal(node: &tree_sitter::Node, src: &str) -> Result<Lit, ParseError>
         "number" => Ok(Lit::num(
             src.get(node.byte_range()).unwrap().to_owned(),
             node.byte_range(),
+            SourceLocation::from(node),
         )),
         "string" => {
             let mut cursor = node.walk();
@@ -1767,10 +1804,22 @@ fn parse_literal(node: &tree_sitter::Node, src: &str) -> Result<Lit, ParseError>
             );
 
             let cooked = unescape(&raw).unwrap();
-            Ok(Lit::str(cooked, node.byte_range()))
+            Ok(Lit::str(
+                cooked,
+                node.byte_range(),
+                SourceLocation::from(node),
+            ))
         }
-        "true" => Ok(Lit::bool(true, node.byte_range())),
-        "false" => Ok(Lit::bool(false, node.byte_range())),
+        "true" => Ok(Lit::bool(
+            true,
+            node.byte_range(),
+            SourceLocation::from(node),
+        )),
+        "false" => Ok(Lit::bool(
+            false,
+            node.byte_range(),
+            SourceLocation::from(node),
+        )),
         "null" => todo!(),
         "undefined" => todo!(),
         kind => panic!("Unexpected literal kind: '{kind}'"),
@@ -1783,10 +1832,11 @@ fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr>, 
     attrs
         .into_iter()
         .map(|attr| {
-            let ident = attr.named_child(0).unwrap();
+            let ident_node = attr.named_child(0).unwrap();
             let ident = Ident {
-                span: ident.byte_range(),
-                name: text_for_node(&ident, src)?,
+                loc: SourceLocation::from(&ident_node),
+                span: ident_node.byte_range(),
+                name: text_for_node(&ident_node, src)?,
             };
             // TODO: handle JSX attr shorthand
             let value = attr.named_child(1).unwrap();
@@ -1796,6 +1846,7 @@ fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr>, 
                     let expr = value.named_child(0).unwrap();
                     let expr = parse_expression(&expr, src)?;
                     JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                        loc: SourceLocation::from(&value),
                         span: value.byte_range(),
                         expr: Box::from(expr),
                     })
@@ -1807,6 +1858,7 @@ fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr>, 
                 kind => panic!("Unexpected JSX attr value with kind: '{kind}'"),
             };
             Ok(JSXAttr {
+                loc: SourceLocation::from(&attr),
                 span: attr.byte_range(),
                 ident,
                 value,
@@ -1827,6 +1879,7 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, 
                 })
                 .map(|child| match child.kind() {
                     "jsx_text" => Ok(JSXElementChild::JSXText(JSXText {
+                        loc: SourceLocation::from(&child),
                         span: child.byte_range(),
                         value: text_for_node(&child, src)?,
                     })),
@@ -1839,6 +1892,7 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, 
                         let expr = child.named_child(0).unwrap();
                         let expr = parse_expression(&expr, src)?;
                         Ok(JSXElementChild::JSXExprContainer(JSXExprContainer {
+                            loc: SourceLocation::from(&child),
                             span: child.byte_range(),
                             expr: Box::from(expr),
                         }))
@@ -1851,6 +1905,7 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, 
             let name = open_tag.child_by_field_name("name").unwrap();
 
             Ok(JSXElement {
+                loc: SourceLocation::from(node),
                 span: node.byte_range(),
                 name: text_for_node(&name, src)?,
                 attrs: parse_jsx_attrs(&open_tag, src)?,
@@ -1860,6 +1915,7 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, 
         "jsx_self_closing_element" => {
             let name = node.child_by_field_name("name").unwrap();
             Ok(JSXElement {
+                loc: SourceLocation::from(node),
                 span: node.byte_range(),
                 name: text_for_node(&name, src)?,
                 attrs: parse_jsx_attrs(node, src)?,
