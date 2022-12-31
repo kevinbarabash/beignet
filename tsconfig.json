@@ -10,5 +10,9 @@
     "strict": true,
     "lib": ["dom", "esnext"]
   },
-  "exclude": ["build/**/*", "crates/crochet/tests/**/*"]
+  "exclude": [
+    "build/**/*",
+    "crates/crochet/tests/**/*",
+    "packages/vscode-crochet/**/*"
+  ]
 }
