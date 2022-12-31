@@ -149,7 +149,7 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                     match prop {
                         Ok(prop) => Some(prop),
                         Err(msg) => {
-                            println!("Err: {msg}");
+                            eprintln!("Err: {msg}");
                             None
                         }
                     }
@@ -324,7 +324,7 @@ fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>,
             }
             TsFnParam::Array(_) => {
                 // TODO: create a tuple pattern
-                println!("skipping TsFnParam::Array(_)");
+                eprintln!("skipping TsFnParam::Array(_)");
                 None
             }
             TsFnParam::Rest(rest) => {
@@ -347,7 +347,7 @@ fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>,
             }
             TsFnParam::Object(_) => {
                 // TODO: create an object pattern
-                println!("skipping TsFnParam::Object(_)");
+                eprintln!("skipping TsFnParam::Object(_)");
                 None
             }
         })
@@ -679,7 +679,7 @@ fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Scheme,
             match prop {
                 Ok(prop) => Some(prop),
                 Err(msg) => {
-                    println!("Err: {msg}");
+                    eprintln!("Err: {msg}");
                     None
                 }
             }
@@ -732,11 +732,11 @@ impl Visit for InterfaceCollector {
         let name = decl.id.sym.to_string();
         match infer_type_alias_decl(decl, &self.ctx) {
             Ok(scheme) => {
-                // println!("inferring: {name} as type: {t}");
+                eprintln!("inferring: {name} as scheme: {scheme}");
                 self.ctx.insert_scheme(name, scheme)
             }
-            Err(_err) => {
-                // println!("couldn't infer {name}, {err:#?}")
+            Err(err) => {
+                eprintln!("couldn't infer {name}, {err:#?}")
             }
         }
     }
@@ -753,7 +753,7 @@ impl Visit for InterfaceCollector {
                     None => self.ctx.insert_scheme(name, scheme),
                 };
             }
-            Err(_) => println!("couldn't infer {name}"),
+            Err(_) => eprintln!("couldn't infer {name}"),
         }
     }
 
@@ -761,7 +761,7 @@ impl Visit for InterfaceCollector {
         match &decl.id {
             TsModuleName::Ident(id) => {
                 let name = id.sym.to_string();
-                println!("module: {name}");
+                eprintln!("module: {name}");
                 self.namespace.push(name);
                 decl.visit_children_with(self);
                 self.namespace.pop();
@@ -820,6 +820,8 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
         &mut errors,
     )?;
 
+    eprintln!("after parse_file_as_module");
+
     let mut collector = InterfaceCollector {
         ctx: Context::default(),
         comments,
@@ -827,6 +829,8 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
     };
 
     module.visit_with(&mut collector);
+
+    eprintln!("after visit_with");
 
     Ok(collector.ctx)
 }

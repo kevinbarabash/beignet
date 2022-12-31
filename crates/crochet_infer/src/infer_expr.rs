@@ -383,6 +383,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             t_params.apply(&s);
             t.apply(&s);
 
+            // TODO: Update the inferred_type on each param to equal the
+            // corresponding type from t_params.
+
             Ok((s, t))
         }
         ExprKind::Let(Let {
@@ -397,7 +400,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                 let (init_s, init_t) = infer_expr(ctx, init)?;
 
                 if init_t.kind != TypeKind::Keyword(TKeyword::Undefined) {
-                    println!("WARNING: {init_t} was not assigned");
+                    eprintln!("WARNING: {init_t} was not assigned");
                 }
 
                 let (body_s, mut body_t) = infer_expr(ctx, body)?;

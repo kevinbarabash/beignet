@@ -714,6 +714,6 @@ mod tests {
 
         let s = compose_subs(&s2, &s1);
 
-        println!("s = {s:#?}");
+        eprintln!("s = {s:#?}");
     }
 }

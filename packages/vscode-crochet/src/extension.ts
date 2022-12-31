@@ -1,7 +1,13 @@
 import * as path from "path";
 import * as vscode from "vscode";
 import * as Parser from "web-tree-sitter";
-// import Crochet from "tree-sitter-crochet";
+
+import {
+  LanguageClient,
+  LanguageClientOptions,
+  ServerOptions,
+  TransportKind,
+} from "vscode-languageclient/node";
 
 // See https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#standard-token-types-and-modifiers
 const tokenTypes = ["variable", "keyword", "class", "parameter", "type"];
@@ -87,10 +93,47 @@ const getProvider = (parser: Parser): vscode.DocumentSemanticTokensProvider => {
   };
 };
 
+let client: LanguageClient;
+
 export function activate(context: vscode.ExtensionContext) {
   console.log("hello, world");
 
-  const selector = { language: "crochet" };
+  const selector = { scheme: "file", language: "crochet" };
+
+  const command = path.join(
+    __dirname,
+    "..",
+    "..",
+    "..",
+    "target",
+    "debug",
+    "crochet_lsp"
+  );
+
+  const serverOptions: ServerOptions = {
+    run: { command, transport: TransportKind.stdio },
+    debug: { command, transport: TransportKind.stdio },
+  };
+
+  const clientOptions: LanguageClientOptions = {
+    documentSelector: [selector],
+    synchronize: {
+      // Notify the server about file changes to '.clientrc files contained in the workspace
+      // fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
+    },
+  };
+
+  client = new LanguageClient(
+    "languageServerExample",
+    "Language Server Example",
+    serverOptions,
+    clientOptions
+  );
+
+  client.outputChannel.show(true);
+
+  // Start the client. This will also launch the server
+  client.start();
 
   const action = async () => {
     await Parser.init();
@@ -117,4 +160,11 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   action();
+}
+
+export function deactivate(): Thenable<void> | undefined {
+  if (!client) {
+    return undefined;
+  }
+  return client.stop();
 }

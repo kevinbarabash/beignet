@@ -61,6 +61,7 @@
     "typescript": "^4.9.3"
   },
   "dependencies": {
+    "vscode-languageclient": "^8.0.2",
     "web-tree-sitter": "^0.20.7"
   }
 }

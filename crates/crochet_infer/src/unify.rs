@@ -175,7 +175,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                 .iter()
                 .filter_map(|elem| match elem {
                     TObjElem::Call(call) => {
-                        println!("handling callable");
+                        eprintln!("handling callable");
                         let lam = Type::from(TypeKind::Lam(TLam {
                             params: call.params.to_owned(),
                             ret: call.ret.to_owned(),
@@ -185,7 +185,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                         } else {
                             instantiate_callable(ctx, call)
                         };
-                        println!("callable instantiated as {t}");
+                        eprintln!("callable instantiated as {t}");
                         Some(t)
                     }
                     TObjElem::Constructor(_) => None,
@@ -712,7 +712,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
         }
     };
     if result.is_err() {
-        println!("Can't unify {t1} with {t2}");
+        eprintln!("Can't unify {t1} with {t2}");
     }
     result
 }
@@ -734,7 +734,7 @@ fn bind(
     // | otherwise       = return $ Map.singleton a t
     match &t.kind {
         TypeKind::Var(other_tv) if other_tv == tv => {
-            println!("other_tv = {other_tv:#?}, tv = {tv:#?}");
+            eprintln!("other_tv = {other_tv:#?}, tv = {tv:#?}");
             Ok(Subst::default())
         }
         _ => {

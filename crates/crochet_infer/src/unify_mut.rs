@@ -6,7 +6,7 @@ use crate::type_error::TypeError;
 
 pub fn unify_mut(t1: &Type, t2: &Type, _ctx: &Context) -> Result<Subst, Vec<TypeError>> {
     if t1 == t2 {
-        println!("unify_mut: {t1} == {t2}");
+        eprintln!("unify_mut: {t1} == {t2}");
         Ok(Subst::new())
     } else {
         Err(vec![TypeError::UnificationError(

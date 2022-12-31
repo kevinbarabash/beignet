@@ -37,7 +37,7 @@ fn log(str: &str) {
 
 #[cfg(target_family = "unix")]
 fn log(str: &str) {
-    println!("{}", str);
+    eprintln!("{}", str);
 }
 
 pub fn parse(src: &str) -> Result<Program, ParseError> {
@@ -1496,7 +1496,7 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|elem| {
-                    println!("parsing elem: {elem:#?}");
+                    eprintln!("parsing elem: {elem:#?}");
                     parse_type_ann(&elem, src)
                 })
                 .collect::<Result<Vec<_>, ParseError>>()?;
