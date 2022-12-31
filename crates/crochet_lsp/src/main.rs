@@ -3,13 +3,20 @@ use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use lsp_server::{Connection, ExtractError, Message, Request, RequestId, Response};
+use lsp_types::HoverParams;
 use lsp_types::{
     request::HoverRequest, Hover, HoverContents, HoverProviderCapability, InitializeParams,
     MarkedString, ServerCapabilities,
 };
 
+use crochet_ast::types::Type;
+use crochet_ast::values::{Position, Program, SourceLocation};
 use crochet_dts::parse_dts::parse_dts;
 use crochet_parser::parse;
+
+mod visitor;
+
+use visitor::Visitor;
 
 static LIB_ES5_D_TS: &str = "../../../node_modules/typescript/lib/lib.es5.d.ts";
 
@@ -57,58 +64,7 @@ fn main_loop(
                 eprintln!("got request: {req:?}");
                 match cast::<HoverRequest>(req) {
                     Ok((id, params)) => {
-                        eprintln!("got hoverRequest request #{id}: {params:?}");
-                        eprintln!("parsing .d.ts");
-                        // NOTE: This is slow so we'll want to do this once once
-                        // on startup and re-use the results.
-                        let mut ctx = match parse_dts(&lib) {
-                            Ok(ctx) => {
-                                eprintln!("success");
-                                ctx
-                            }
-                            Err(_) => {
-                                eprintln!("error");
-                                panic!("parsing .d.ts file failed");
-                            }
-                        };
-
-                        let start = SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Time went backwards");
-                        let in_path = params
-                            .text_document_position_params
-                            .text_document
-                            .uri
-                            .to_file_path()
-                            .unwrap(); // TODO: generate a real error if the path doesn't exist
-                        eprintln!("reading {}", in_path.to_string_lossy());
-                        let input = fs::read_to_string(in_path).unwrap();
-                        // Update ParseError to implement Error + Sync + Send
-                        eprintln!("parsing input");
-                        let mut prog = parse(&input).unwrap();
-                        // Update TypeError to implement Error + Sync + Send
-                        eprintln!("inferring types");
-                        crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
-                        // eprintln!("prog = {prog:#?}");
-                        let end = SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Time went backwards");
-                        let elapsed = end - start;
-                        eprintln!("request took {}ms", elapsed.as_millis());
-
-                        let result = Some(Hover {
-                            contents: HoverContents::Scalar(MarkedString::String(String::from(
-                                "Hello, world!",
-                            ))),
-                            range: None,
-                        });
-                        let result = serde_json::to_value(&result).unwrap();
-                        let resp = Response {
-                            id,
-                            result: Some(result),
-                            error: None,
-                        };
-                        connection.sender.send(Message::Response(resp))?;
+                        handle_hover_request(&connection, &lib, id, params)?;
                         continue;
                     }
                     Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
@@ -125,6 +81,146 @@ fn main_loop(
         }
     }
     Ok(())
+}
+
+fn handle_hover_request(
+    connection: &Connection,
+    lib: &str,
+    id: RequestId,
+    params: HoverParams,
+) -> Result<(), Box<dyn Error + Sync + Send>> {
+    eprintln!("Handling HoverRequest");
+
+    // NOTE: This is slow so we'll want to do this once once
+    // on startup and re-use the results.
+    eprintln!("parsing .d.ts");
+    let mut ctx = match parse_dts(lib) {
+        Ok(ctx) => {
+            eprintln!("success");
+            ctx
+        }
+        Err(_) => {
+            eprintln!("error");
+            panic!("parsing .d.ts file failed");
+        }
+    };
+
+    let start = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+
+    let in_path = params
+        .text_document_position_params
+        .text_document
+        .uri
+        .to_file_path()
+        .unwrap(); // TODO: generate a real error if the path doesn't exist
+
+    eprintln!("reading {}", in_path.to_string_lossy());
+    let input = fs::read_to_string(in_path).unwrap();
+
+    // Update ParseError to implement Error + Sync + Send
+    eprintln!("parsing input");
+    let mut prog = parse(&input).unwrap();
+
+    // Update TypeError to implement Error + Sync + Send
+    eprintln!("inferring types");
+    crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
+
+    let end = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    let elapsed = end - start;
+    eprintln!("request took {}ms", elapsed.as_millis());
+
+    // TODO: create a From impl to convert from one Position to another.
+    let cursor_loc = Position {
+        line: params.text_document_position_params.position.line,
+        column: params.text_document_position_params.position.character,
+    };
+
+    let message = match get_type_at_location(&mut prog, &cursor_loc) {
+        Some(t) => t.to_string(),
+        None => String::from("no type info"),
+    };
+
+    let result = Some(Hover {
+        contents: HoverContents::Scalar(MarkedString::String(message)),
+        range: None,
+    });
+    let resp = Response {
+        id,
+        result: Some(serde_json::to_value(&result).unwrap()),
+        error: None,
+    };
+    connection.sender.send(Message::Response(resp))?;
+
+    Ok(())
+}
+
+struct GetTypeVisitor {
+    cursor_pos: Position,
+    t: Option<Type>,
+}
+
+fn is_pos_in_source_loc(pos: &Position, src_loc: &SourceLocation) -> bool {
+    let is_after_start = pos.line > src_loc.start.line
+        || (pos.line == src_loc.start.line && pos.column >= src_loc.start.column);
+    let is_before_end = pos.line < src_loc.end.line
+        || (pos.line == src_loc.end.line && pos.column < src_loc.end.column);
+
+    is_after_start && is_before_end
+}
+
+// TODO: use is_pos_in_source_loc to terminate certain branches of the visitor
+impl Visitor for GetTypeVisitor {
+    fn visit_program(&mut self, _: &crochet_ast::values::Program) {
+        eprintln!("visit_program");
+        // Do nothing b/c Program doesn't have an .inferred_type field
+    }
+
+    fn visit_statement(&mut self, _stmt: &crochet_ast::values::Statement) {
+        eprintln!("visit_program");
+        // Do nothing b/c Statement doesn't have an .inferred_type field (yet)
+    }
+
+    fn visit_pattern(&mut self, pat: &crochet_ast::values::Pattern) {
+        if is_pos_in_source_loc(&self.cursor_pos, &pat.loc) {
+            if let Some(t) = &pat.inferred_type {
+                self.t = Some(t.to_owned())
+            }
+        }
+    }
+
+    fn visit_type_ann(&mut self, type_ann: &crochet_ast::values::TypeAnn) {
+        if is_pos_in_source_loc(&self.cursor_pos, &type_ann.loc) {
+            if let Some(t) = &type_ann.inferred_type {
+                self.t = Some(t.to_owned())
+            }
+        }
+    }
+
+    fn visit_expr(&mut self, expr: &crochet_ast::values::Expr) {
+        eprintln!(
+            "visit_expr - start, line {} col {} - end, line {} col {}",
+            expr.loc.start.line, expr.loc.start.column, expr.loc.end.line, expr.loc.end.column
+        );
+        if is_pos_in_source_loc(&self.cursor_pos, &expr.loc) {
+            if let Some(t) = &expr.inferred_type {
+                self.t = Some(t.to_owned())
+            }
+        }
+    }
+}
+
+fn get_type_at_location(program: &mut Program, cursor_pos: &Position) -> Option<Type> {
+    let mut visitor = GetTypeVisitor {
+        cursor_pos: cursor_pos.to_owned(),
+        t: None,
+    };
+    visitor.visit(program);
+
+    visitor.t
 }
 
 fn cast<R>(req: Request) -> Result<(RequestId, R::Params), ExtractError<Request>>

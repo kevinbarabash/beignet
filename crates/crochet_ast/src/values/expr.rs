@@ -13,6 +13,7 @@ pub struct Program {
 }
 
 // TODO: Update Statement to mimic structure of Expr/ExprKind
+// TODO: Update Statement to have an .inferred_type field like Expr
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     VarDecl {
@@ -197,6 +198,7 @@ pub struct Tuple {
     pub elems: Vec<ExprOrSpread>,
 }
 
+// TODO: make this a enum instead of a struct
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExprOrSpread {
     pub spread: Option<Span>,
