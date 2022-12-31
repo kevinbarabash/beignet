@@ -1,10 +1,10 @@
 use crate::types::Type;
+use crate::values::common::{SourceLocation, Span};
 use crate::values::expr::Expr;
 use crate::values::ident::Ident;
 use crate::values::keyword::Keyword;
 use crate::values::lit::Lit;
 use crate::values::pattern::Pattern;
-use crate::values::span::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAnnFnParam {
@@ -15,7 +15,6 @@ pub struct TypeAnnFnParam {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LamType {
-    pub span: Span,
     pub params: Vec<TypeAnnFnParam>,
     pub ret: Box<TypeAnn>,
     pub type_params: Option<Vec<TypeParam>>,
@@ -23,13 +22,11 @@ pub struct LamType {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeywordType {
-    pub span: Span,
     pub keyword: Keyword,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeRef {
-    pub span: Span,
     pub name: String,
     // TODO: drop the Option
     pub type_args: Option<Vec<TypeAnn>>,
@@ -37,7 +34,6 @@ pub struct TypeRef {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ObjectType {
-    pub span: Span,
     // TODO: update this to support indexers and callables as well.
     pub elems: Vec<TObjElem>,
 }
@@ -55,6 +51,7 @@ pub enum TObjElem {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TProp {
+    pub loc: SourceLocation,
     pub span: Span,
     pub name: String,
     pub optional: bool,
@@ -64,13 +61,13 @@ pub struct TProp {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TIndexKey {
-    pub span: Span,
     pub name: String,
     pub type_ann: Box<TypeAnn>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TIndex {
+    pub loc: SourceLocation,
     pub span: Span,
     // TODO: update this to only allow `<ident>: string` or `<ident>: number`
     pub key: Box<TypeAnnFnParam>,
@@ -80,37 +77,31 @@ pub struct TIndex {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UnionType {
-    pub span: Span,
     pub types: Vec<TypeAnn>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IntersectionType {
-    pub span: Span,
     pub types: Vec<TypeAnn>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TupleType {
-    pub span: Span,
     pub types: Vec<TypeAnn>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ArrayType {
-    pub span: Span,
     pub elem_type: Box<TypeAnn>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeyOfType {
-    pub span: Span,
     pub type_ann: Box<TypeAnn>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QueryType {
-    pub span: Span,
     // TypeScript only supports typeof on (qualified) identifiers.
     // We could modify the parser if we wanted to support taking
     // the type of arbitrary expressions.
@@ -119,14 +110,12 @@ pub struct QueryType {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IndexedAccessType {
-    pub span: Span,
     pub obj_type: Box<TypeAnn>,
     pub index_type: Box<TypeAnn>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MappedType {
-    pub span: Span,
     pub type_param: TypeParam, // default is always None for MappedType
     pub optional: Option<TMappedTypeChange>,
     pub mutable: Option<TMappedTypeChange>,
@@ -147,7 +136,6 @@ pub enum TMappedTypeChangeProp {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConditionalType {
-    pub span: Span,
     pub check_type: Box<TypeAnn>,
     pub extends_type: Box<TypeAnn>,
     pub true_type: Box<TypeAnn>,
@@ -156,7 +144,6 @@ pub struct ConditionalType {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MutableType {
-    pub span: Span,
     pub type_ann: Box<TypeAnn>,
 }
 
@@ -182,6 +169,7 @@ pub enum TypeAnnKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeAnn {
     pub kind: TypeAnnKind,
+    pub loc: SourceLocation,
     pub span: Span,
     pub inferred_type: Option<Type>,
 }

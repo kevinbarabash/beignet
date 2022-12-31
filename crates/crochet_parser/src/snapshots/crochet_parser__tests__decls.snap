@@ -6,14 +6,44 @@ Ok(
     Program {
         body: [
             VarDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 10,
+                    },
+                },
                 span: 0..10,
                 pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 4,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 5,
+                        },
+                    },
                     span: 4..5,
                     kind: Ident(
                         BindingIdent {
                             name: "x",
                             mutable: false,
                             span: 4..5,
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 5,
+                                },
+                            },
                         },
                     ),
                     inferred_type: None,
@@ -21,10 +51,30 @@ Ok(
                 type_ann: None,
                 init: Some(
                     Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 8,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 9,
+                            },
+                        },
                         span: 8..9,
                         kind: Lit(
                             Num(
                                 Num {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 8,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 9,
+                                        },
+                                    },
                                     span: 8..9,
                                     value: "5",
                                 },

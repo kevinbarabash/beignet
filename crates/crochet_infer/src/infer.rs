@@ -19,7 +19,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
         name: TPropKey::StringKey(String::from("_name")),
         optional: false,
         mutable: false,
-        t: Type::from(Lit::str(String::from("Promise"), 0..0)),
+        t: Type::from(Lit::str(String::from("Promise"), 0..0, DUMMY_LOC)),
     })];
     let promise_type = Type::from(TypeKind::Object(TObject { elems }));
     ctx.insert_type(String::from("Promise"), promise_type);
@@ -30,7 +30,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
         name: TPropKey::StringKey(String::from("_name")),
         optional: false,
         mutable: false,
-        t: Type::from(Lit::str(String::from("JSXElement"), 0..0)),
+        t: Type::from(Lit::str(String::from("JSXElement"), 0..0, DUMMY_LOC)),
     })];
     let jsx_element_type = Type::from(TypeKind::Object(TObject { elems }));
     ctx.insert_type(String::from("JSXElement"), jsx_element_type);
@@ -54,11 +54,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
                 match declare {
                     true => {
                         match &mut pattern.kind {
-                            PatternKind::Ident(BindingIdent {
-                                name,
-                                mutable: _,
-                                span: _,
-                            }) => {
+                            PatternKind::Ident(BindingIdent { name, .. }) => {
                                 match type_ann {
                                     Some(type_ann) => {
                                         match infer_type_ann(type_ann, ctx, &mut None) {

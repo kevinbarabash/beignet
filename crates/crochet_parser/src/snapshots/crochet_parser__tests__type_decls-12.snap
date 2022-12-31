@@ -6,23 +6,51 @@ Ok(
     Program {
         body: [
             TypeDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 43,
+                    },
+                },
                 span: 0..43,
                 declare: false,
                 id: Ident {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 13,
+                        },
+                    },
                     span: 5..13,
                     name: "MutPoint",
                 },
                 type_ann: TypeAnn {
                     kind: Mutable(
                         MutableType {
-                            span: 16..42,
                             type_ann: TypeAnn {
                                 kind: Object(
                                     ObjectType {
-                                        span: 20..42,
                                         elems: [
                                             Prop(
                                                 TProp {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 21,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 30,
+                                                        },
+                                                    },
                                                     span: 21..30,
                                                     name: "x",
                                                     optional: false,
@@ -30,10 +58,19 @@ Ok(
                                                     type_ann: TypeAnn {
                                                         kind: Keyword(
                                                             KeywordType {
-                                                                span: 24..30,
                                                                 keyword: Number,
                                                             },
                                                         ),
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 24,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 30,
+                                                            },
+                                                        },
                                                         span: 24..30,
                                                         inferred_type: None,
                                                     },
@@ -41,6 +78,16 @@ Ok(
                                             ),
                                             Prop(
                                                 TProp {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 32,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 41,
+                                                        },
+                                                    },
                                                     span: 32..41,
                                                     name: "y",
                                                     optional: false,
@@ -48,10 +95,19 @@ Ok(
                                                     type_ann: TypeAnn {
                                                         kind: Keyword(
                                                             KeywordType {
-                                                                span: 35..41,
                                                                 keyword: Number,
                                                             },
                                                         ),
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 35,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 41,
+                                                            },
+                                                        },
                                                         span: 35..41,
                                                         inferred_type: None,
                                                     },
@@ -60,11 +116,31 @@ Ok(
                                         ],
                                     },
                                 ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 20,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 42,
+                                    },
+                                },
                                 span: 20..42,
                                 inferred_type: None,
                             },
                         },
                     ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 16,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 42,
+                        },
+                    },
                     span: 16..42,
                     inferred_type: None,
                 },

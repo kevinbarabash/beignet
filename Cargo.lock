@@ -185,6 +185,7 @@ dependencies = [
  "swc_atoms",
  "swc_common",
  "swc_ecma_ast",
+ "tree-sitter",
 ]
 
 [[package]]

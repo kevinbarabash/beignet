@@ -6,17 +6,57 @@ Ok(
     Program {
         body: [
             Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 16,
+                    },
+                },
                 span: 0..16,
                 expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 16,
+                        },
+                    },
                     span: 0..16,
                     kind: JSXElement(
                         JSXElement {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 16,
+                                },
+                            },
                             span: 0..16,
                             name: "Foo",
                             attrs: [],
                             children: [
                                 JSXText(
                                     JSXText {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 5,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 10,
+                                            },
+                                        },
                                         span: 5..10,
                                         value: "Hello",
                                     },

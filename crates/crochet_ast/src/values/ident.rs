@@ -4,10 +4,11 @@ use swc_atoms::JsWord;
 use swc_common::{self, BytePos, SyntaxContext};
 use swc_ecma_ast;
 
-use crate::values::span::Span;
+use crate::values::common::{SourceLocation, Span};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ident {
+    pub loc: SourceLocation,
     pub span: Span,
     pub name: String,
 }
@@ -55,17 +56,15 @@ pub struct BindingIdent {
     pub mutable: bool,
     #[derivative(PartialOrd = "ignore")]
     #[derivative(Ord = "ignore")]
-    // #[derivative(PartialEq = "ignore")]
     pub span: Span,
+    #[derivative(PartialOrd = "ignore")]
+    #[derivative(Ord = "ignore")]
+    pub loc: SourceLocation,
 }
 
 impl fmt::Display for BindingIdent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self {
-            name,
-            mutable,
-            span: _,
-        } = self;
+        let Self { name, mutable, .. } = self;
         if *mutable {
             write!(f, "mut ")?;
         }

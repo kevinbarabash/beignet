@@ -1,10 +1,10 @@
 use crate::types::Type;
+use crate::values::common::{SourceLocation, Span};
 use crate::values::ident::*;
 use crate::values::jsx::JSXElement;
 use crate::values::keyword::Keyword;
 use crate::values::lit::Lit;
 use crate::values::pattern::{Pattern, PatternKind};
-use crate::values::span::Span;
 use crate::values::type_ann::{TypeAnn, TypeParam};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,6 +16,7 @@ pub struct Program {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     VarDecl {
+        loc: SourceLocation,
         span: Span,
         pattern: Pattern,
         type_ann: Option<TypeAnn>,
@@ -23,6 +24,7 @@ pub enum Statement {
         declare: bool,
     },
     TypeDecl {
+        loc: SourceLocation,
         span: Span,
         declare: bool,
         id: Ident,
@@ -30,6 +32,7 @@ pub enum Statement {
         type_params: Option<Vec<TypeParam>>,
     },
     Expr {
+        loc: SourceLocation,
         span: Span,
         expr: Box<Expr>,
     }, // NOTE: does not include Expr::Let
@@ -223,12 +226,14 @@ impl MemberProp {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ComputedPropName {
+    pub loc: SourceLocation,
     pub span: Span, // includes enclosing []
     pub expr: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TemplateElem {
+    pub loc: SourceLocation,
     pub span: Span,
     pub raw: Lit,
     pub cooked: Lit,
@@ -255,6 +260,7 @@ pub struct Match {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Arm {
+    pub loc: SourceLocation,
     pub span: Span,
     pub pattern: Pattern,
     pub guard: Option<Expr>,
@@ -295,6 +301,7 @@ pub enum ExprKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Expr {
+    pub loc: SourceLocation,
     pub span: Span,
     pub kind: ExprKind,
     pub inferred_type: Option<Type>,

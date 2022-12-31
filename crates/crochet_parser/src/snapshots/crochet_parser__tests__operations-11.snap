@@ -6,16 +6,56 @@ Ok(
     Program {
         body: [
             Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 3,
+                    },
+                },
                 span: 0..3,
                 expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 2,
+                        },
+                    },
                     span: 0..2,
                     kind: UnaryExpr(
                         UnaryExpr {
                             op: Minus,
                             arg: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 1,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 2,
+                                    },
+                                },
                                 span: 1..2,
                                 kind: Ident(
                                     Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 1,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 2,
+                                            },
+                                        },
                                         span: 1..2,
                                         name: "a",
                                     },

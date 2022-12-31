@@ -6,14 +6,44 @@ Ok(
     Program {
         body: [
             VarDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 8,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 37,
+                    },
+                },
                 span: 8..37,
                 pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 19,
+                        },
+                    },
                     span: 12..19,
                     kind: Ident(
                         BindingIdent {
                             name: "get_bar",
                             mutable: false,
                             span: 12..19,
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 12,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 19,
+                                },
+                            },
                         },
                     ),
                     inferred_type: None,
@@ -22,16 +52,35 @@ Ok(
                     TypeAnn {
                         kind: Lam(
                             LamType {
-                                span: 21..36,
                                 params: [
                                     TypeAnnFnParam {
                                         pat: Pattern {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 22,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 25,
+                                                },
+                                            },
                                             span: 22..25,
                                             kind: Ident(
                                                 BindingIdent {
                                                     name: "foo",
                                                     mutable: false,
                                                     span: 22..25,
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 22,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 25,
+                                                        },
+                                                    },
                                                 },
                                             ),
                                             inferred_type: None,
@@ -39,11 +88,20 @@ Ok(
                                         type_ann: TypeAnn {
                                             kind: TypeRef(
                                                 TypeRef {
-                                                    span: 27..30,
                                                     name: "Foo",
                                                     type_args: None,
                                                 },
                                             ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 27,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 30,
+                                                },
+                                            },
                                             span: 27..30,
                                             inferred_type: None,
                                         },
@@ -53,17 +111,36 @@ Ok(
                                 ret: TypeAnn {
                                     kind: TypeRef(
                                         TypeRef {
-                                            span: 35..36,
                                             name: "T",
                                             type_args: None,
                                         },
                                     ),
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 35,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 36,
+                                        },
+                                    },
                                     span: 35..36,
                                     inferred_type: None,
                                 },
                                 type_params: None,
                             },
                         ),
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 21,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 36,
+                            },
+                        },
                         span: 21..36,
                         inferred_type: None,
                     },

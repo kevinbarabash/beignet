@@ -1,7 +1,7 @@
 use crate::types::Type;
+use crate::values::common::{SourceLocation, Span};
 use crate::values::expr::Expr;
 use crate::values::ident::*;
-use crate::values::span::Span;
 use crate::values::Lit;
 
 // TODO: split this into separate patterns:
@@ -24,6 +24,7 @@ pub enum PatternKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pattern {
+    pub loc: SourceLocation,
     pub span: Span,
     pub kind: PatternKind,
     pub inferred_type: Option<Type>,
@@ -83,17 +84,19 @@ pub enum ObjectPatProp {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyValuePatProp {
+    pub loc: SourceLocation,
+    pub span: Span,
     pub key: Ident,
     pub value: Box<Pattern>,
     pub init: Option<Box<Expr>>,
-    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ShorthandPatProp {
+    pub loc: SourceLocation,
+    pub span: Span,
     pub ident: BindingIdent,
     pub init: Option<Box<Expr>>,
-    pub span: Span,
 }
 
 pub fn is_refutable(pat: &Pattern) -> bool {
@@ -133,9 +136,11 @@ pub fn is_irrefutable(pat: &Pattern) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::values::common::DUMMY_LOC;
 
     fn ident(name: &str) -> Ident {
         Ident {
+            loc: DUMMY_LOC,
             span: 0..0,
             name: name.to_owned(),
         }
@@ -143,6 +148,7 @@ mod tests {
 
     fn binding_ident(name: &str) -> BindingIdent {
         BindingIdent {
+            loc: DUMMY_LOC,
             span: 0..0,
             name: name.to_owned(),
             mutable: false,
@@ -151,11 +157,13 @@ mod tests {
 
     fn ident_pattern(name: &str) -> Pattern {
         let kind = PatternKind::Ident(BindingIdent {
+            loc: DUMMY_LOC,
             name: name.to_owned(),
             mutable: false,
             span: 0..0,
         });
         Pattern {
+            loc: DUMMY_LOC,
             span: 0..0,
             kind,
             inferred_type: None,
@@ -164,9 +172,10 @@ mod tests {
 
     fn num_lit_pat(value: &str) -> Pattern {
         let kind = PatternKind::Lit(LitPat {
-            lit: Lit::num(String::from(value), 0..0),
+            lit: Lit::num(String::from(value), 0..0, DUMMY_LOC),
         });
         Pattern {
+            loc: DUMMY_LOC,
             span: 0..0,
             kind,
             inferred_type: None,
@@ -186,6 +195,7 @@ mod tests {
             arg: Box::from(ident),
         });
         let rest = Pattern {
+            loc: DUMMY_LOC,
             span: 0..0,
             kind,
             inferred_type: None,
@@ -200,11 +210,13 @@ mod tests {
                 key: ident("foo"),
                 value: Box::from(ident_pattern("foo")),
                 init: None,
+                loc: DUMMY_LOC,
                 span: 0..0,
             })],
             optional: false,
         });
         let obj = Pattern {
+            loc: DUMMY_LOC,
             span: 0..0,
             kind,
             inferred_type: None,
@@ -220,18 +232,21 @@ mod tests {
                     key: ident("foo"),
                     value: Box::from(ident_pattern("foo")),
                     init: None,
+                    loc: DUMMY_LOC,
                     span: 0..0,
                 }),
                 ObjectPatProp::KeyValue(KeyValuePatProp {
                     key: ident("bar"),
                     value: Box::from(num_lit_pat("5")),
                     init: None,
+                    loc: DUMMY_LOC,
                     span: 0..0,
                 }),
             ],
             optional: false,
         });
         let obj = Pattern {
+            loc: DUMMY_LOC,
             span: 0..0,
             kind,
             inferred_type: None,
@@ -249,6 +264,7 @@ mod tests {
             optional: false,
         });
         let array = Pattern {
+            loc: DUMMY_LOC,
             span: 0..0,
             kind,
             inferred_type: None,
@@ -272,6 +288,7 @@ mod tests {
             optional: false,
         });
         let array = Pattern {
+            loc: DUMMY_LOC,
             span: 0..0,
             kind,
             inferred_type: None,
@@ -291,6 +308,7 @@ mod tests {
             is_id: ident("string"),
         });
         let is_pat = Pattern {
+            loc: DUMMY_LOC,
             span: 0..0,
             kind,
             inferred_type: None,

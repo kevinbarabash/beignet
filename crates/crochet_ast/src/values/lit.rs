@@ -4,22 +4,25 @@ use swc_common::{self, BytePos, SyntaxContext};
 use swc_ecma_ast;
 
 use crate::types::{TLit, Type, TypeKind};
-use crate::values::span::Span;
+use crate::values::common::{SourceLocation, Span};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Num {
+    pub loc: SourceLocation,
     pub span: Span,
     pub value: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Bool {
+    pub loc: SourceLocation,
     pub span: Span,
     pub value: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Str {
+    pub loc: SourceLocation,
     pub span: Span,
     pub value: String,
 }
@@ -34,16 +37,16 @@ pub enum Lit {
 }
 
 impl Lit {
-    pub fn bool(value: bool, span: Span) -> Self {
-        Lit::Bool(Bool { value, span })
+    pub fn bool(value: bool, span: Span, loc: SourceLocation) -> Self {
+        Lit::Bool(Bool { value, span, loc })
     }
 
-    pub fn str(value: String, span: Span) -> Self {
-        Lit::Str(Str { value, span })
+    pub fn str(value: String, span: Span, loc: SourceLocation) -> Self {
+        Lit::Str(Str { value, span, loc })
     }
 
-    pub fn num(value: String, span: Span) -> Self {
-        Lit::Num(Num { value, span })
+    pub fn num(value: String, span: Span, loc: SourceLocation) -> Self {
+        Lit::Num(Num { value, span, loc })
     }
 
     pub fn span(&self) -> Span {
@@ -51,6 +54,14 @@ impl Lit {
             Lit::Num(n) => n.span.to_owned(),
             Lit::Bool(b) => b.span.to_owned(),
             Lit::Str(s) => s.span.to_owned(),
+        }
+    }
+
+    pub fn loc(&self) -> SourceLocation {
+        match &self {
+            Lit::Num(n) => n.loc.to_owned(),
+            Lit::Bool(b) => b.loc.to_owned(),
+            Lit::Str(s) => s.loc.to_owned(),
         }
     }
 }
@@ -135,11 +146,12 @@ impl From<Lit> for Type {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::values::common::DUMMY_LOC;
 
     #[test]
     fn boolean() {
-        let t = Lit::bool(true, 0..4);
-        let f = Lit::bool(false, 0..5);
+        let t = Lit::bool(true, 0..4, DUMMY_LOC);
+        let f = Lit::bool(false, 0..5, DUMMY_LOC);
         assert_eq!(format!("{}", t), "true");
         assert_eq!(format!("{}", f), "false");
         assert_eq!(t.span(), 0..4);
@@ -147,14 +159,14 @@ mod tests {
 
     #[test]
     fn number() {
-        let num = Lit::num(String::from("1.23"), 0..4);
+        let num = Lit::num(String::from("1.23"), 0..4, DUMMY_LOC);
         assert_eq!(format!("{}", num), "1.23");
         assert_eq!(num.span(), 0..4);
     }
 
     #[test]
     fn string() {
-        let s = Lit::str(String::from("hello"), 0..5);
+        let s = Lit::str(String::from("hello"), 0..5, DUMMY_LOC);
         assert_eq!(format!("{}", s), "\"hello\"");
         assert_eq!(s.span(), 0..5);
     }

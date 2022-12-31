@@ -6,12 +6,42 @@ Ok(
     Program {
         body: [
             Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 20,
+                    },
+                },
                 span: 0..20,
                 expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 19,
+                        },
+                    },
                     span: 0..19,
                     kind: Lit(
                         Str(
                             Str {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 19,
+                                    },
+                                },
                                 span: 0..19,
                                 value: "hello, \"world\"!",
                             },

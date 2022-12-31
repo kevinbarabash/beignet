@@ -6,14 +6,44 @@ Ok(
     Program {
         body: [
             VarDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 8,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 22,
+                    },
+                },
                 span: 8..22,
                 pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 13,
+                        },
+                    },
                     span: 12..13,
                     kind: Ident(
                         BindingIdent {
                             name: "x",
                             mutable: false,
                             span: 12..13,
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 12,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 13,
+                                },
+                            },
                         },
                     ),
                     inferred_type: None,
@@ -22,10 +52,19 @@ Ok(
                     TypeAnn {
                         kind: Keyword(
                             KeywordType {
-                                span: 15..21,
                                 keyword: Number,
                             },
                         ),
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 15,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 21,
+                            },
+                        },
                         span: 15..21,
                         inferred_type: None,
                     },

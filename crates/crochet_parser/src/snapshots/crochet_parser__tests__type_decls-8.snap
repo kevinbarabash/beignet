@@ -6,20 +6,59 @@ Ok(
     Program {
         body: [
             TypeDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 22,
+                    },
+                },
                 span: 0..22,
                 declare: false,
                 id: Ident {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 8,
+                        },
+                    },
                     span: 5..8,
                     name: "Foo",
                 },
                 type_ann: TypeAnn {
                     kind: Query(
                         QueryType {
-                            span: 11..21,
                             expr: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 18,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 21,
+                                    },
+                                },
                                 span: 18..21,
                                 kind: Ident(
                                     Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 18,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 21,
+                                            },
+                                        },
                                         span: 18..21,
                                         name: "foo",
                                     },
@@ -28,6 +67,16 @@ Ok(
                             },
                         },
                     ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 11,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 21,
+                        },
+                    },
                     span: 11..21,
                     inferred_type: None,
                 },

@@ -6,14 +6,44 @@ Ok(
     Program {
         body: [
             VarDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 32,
+                    },
+                },
                 span: 0..32,
                 pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 4,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 14,
+                        },
+                    },
                     span: 4..14,
                     kind: Ident(
                         BindingIdent {
                             name: "nested_arr",
                             mutable: false,
                             span: 4..14,
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 14,
+                                },
+                            },
                         },
                     ),
                     inferred_type: None,
@@ -22,34 +52,71 @@ Ok(
                     TypeAnn {
                         kind: Array(
                             ArrayType {
-                                span: 16..26,
                                 elem_type: TypeAnn {
                                     kind: Array(
                                         ArrayType {
-                                            span: 16..24,
                                             elem_type: TypeAnn {
                                                 kind: Keyword(
                                                     KeywordType {
-                                                        span: 16..22,
                                                         keyword: String,
                                                     },
                                                 ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 16,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 22,
+                                                    },
+                                                },
                                                 span: 16..22,
                                                 inferred_type: None,
                                             },
                                         },
                                     ),
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 16,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 24,
+                                        },
+                                    },
                                     span: 16..24,
                                     inferred_type: None,
                                 },
                             },
                         ),
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 16,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 26,
+                            },
+                        },
                         span: 16..26,
                         inferred_type: None,
                     },
                 ),
                 init: Some(
                     Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 29,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 31,
+                            },
+                        },
                         span: 29..31,
                         kind: Tuple(
                             Tuple {

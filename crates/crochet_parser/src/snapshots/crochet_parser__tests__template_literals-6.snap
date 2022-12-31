@@ -6,23 +6,73 @@ Ok(
     Program {
         body: [
             Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 24,
+                    },
+                },
                 span: 0..24,
                 expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 24,
+                        },
+                    },
                     span: 0..24,
                     kind: TemplateLiteral(
                         TemplateLiteral {
                             exprs: [],
                             quasis: [
                                 TemplateElem {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 24,
+                                        },
+                                    },
                                     span: 1..23,
                                     raw: Str(
                                         Str {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 24,
+                                                },
+                                            },
                                             span: 1..23,
                                             value: "line 1\\nline 2\\nline 3",
                                         },
                                     ),
                                     cooked: Str(
                                         Str {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 24,
+                                                },
+                                            },
                                             span: 1..23,
                                             value: "line 1\nline 2\nline 3",
                                         },

@@ -6,14 +6,44 @@ Ok(
     Program {
         body: [
             VarDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 17,
+                    },
+                },
                 span: 0..17,
                 pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 4,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 7,
+                        },
+                    },
                     span: 4..7,
                     kind: Ident(
                         BindingIdent {
                             name: "obj",
                             mutable: false,
                             span: 4..7,
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 7,
+                                },
+                            },
                         },
                     ),
                     inferred_type: None,
@@ -21,6 +51,16 @@ Ok(
                 type_ann: None,
                 init: Some(
                     Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 10,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 16,
+                            },
+                        },
                         span: 10..16,
                         kind: Obj(
                             Obj {
@@ -28,7 +68,17 @@ Ok(
                                     Prop(
                                         Shorthand(
                                             Ident {
-                                                span: 10..16,
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 11,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 12,
+                                                    },
+                                                },
+                                                span: 11..12,
                                                 name: "x",
                                             },
                                         ),
@@ -36,7 +86,17 @@ Ok(
                                     Prop(
                                         Shorthand(
                                             Ident {
-                                                span: 10..16,
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 14,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 15,
+                                                    },
+                                                },
+                                                span: 14..15,
                                                 name: "y",
                                             },
                                         ),

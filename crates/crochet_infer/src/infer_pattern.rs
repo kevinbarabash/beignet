@@ -54,11 +54,7 @@ fn infer_pattern_rec(
     assump: &mut Assump,
 ) -> Result<Type, Vec<TypeError>> {
     let result: Result<Type, Vec<TypeError>> = match &mut pat.kind {
-        PatternKind::Ident(values::BindingIdent {
-            name,
-            mutable,
-            span: _,
-        }) => {
+        PatternKind::Ident(values::BindingIdent { name, mutable, .. }) => {
             let tv = ctx.fresh_var();
             if assump
                 .insert(
@@ -148,12 +144,7 @@ fn infer_pattern_rec(
             for prop in props {
                 match prop {
                     // re-assignment, e.g. {x: new_x, y: new_y} = point
-                    ObjectPatProp::KeyValue(KeyValuePatProp {
-                        key,
-                        value,
-                        init: _,
-                        span: _,
-                    }) => {
+                    ObjectPatProp::KeyValue(KeyValuePatProp { key, value, .. }) => {
                         // We ignore `init` for now, we can come back later to handle
                         // default values.
                         // TODO: handle default values
@@ -168,11 +159,7 @@ fn infer_pattern_rec(
                             t: value_type,
                         }))
                     }
-                    ObjectPatProp::Shorthand(ShorthandPatProp {
-                        ident,
-                        init: _,
-                        span: _,
-                    }) => {
+                    ObjectPatProp::Shorthand(ShorthandPatProp { ident, .. }) => {
                         // We ignore `init` for now, we can come back later to handle
                         // default values.
                         // TODO: handle default values

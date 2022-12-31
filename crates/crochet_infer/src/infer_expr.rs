@@ -253,6 +253,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                                 JSXAttrValue::Lit(lit) => {
                                     let kind = ExprKind::Lit(lit.to_owned());
                                     let mut expr = Expr {
+                                        loc: lit.loc(),
                                         span: lit.span(),
                                         kind,
                                         inferred_type: None,
