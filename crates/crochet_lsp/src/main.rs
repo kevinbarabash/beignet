@@ -55,6 +55,8 @@ fn main_loop(
     // We use `dyn Error` here b/c we're mixing different APIs when generate
     // different error structs
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
+    // TODO: store the content of LIB_ES5_D_TS in the file cache as well.
+    // We need to figure out how to generate a Url from the &str.
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
     let _params: InitializeParams = serde_json::from_value(params).unwrap();
 
@@ -67,16 +69,17 @@ fn main_loop(
                 if connection.handle_shutdown(&req)? {
                     return Ok(());
                 }
+
                 eprintln!("got request: {req:?}");
                 match req.method.as_str() {
                     "textDocument/hover" => {
                         let (id, params) = cast_req::<HoverRequest>(req)?;
                         handle_hover_request(&connection, &lib, &file_cache, id, params)?;
+
                         continue;
                     }
-                    _ => {
-                        // log unrecognized method
-                        todo!()
+                    method => {
+                        eprintln!("Unhandled request method: {method}");
                     }
                 }
             }
@@ -115,9 +118,8 @@ fn main_loop(
 
                         continue;
                     }
-                    _ => {
-                        // log unrecognized method
-                        todo!()
+                    method => {
+                        eprintln!("Unhandled notification method: {method}");
                     }
                 }
             }
