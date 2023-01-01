@@ -1,12 +1,16 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use lsp_server::{Connection, ExtractError, Message, Request, RequestId, Response};
+use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId, Response};
 use lsp_types::HoverParams;
 use lsp_types::{
-    request::HoverRequest, Hover, HoverContents, HoverProviderCapability, InitializeParams,
-    MarkedString, ServerCapabilities,
+    notification::{DidChangeTextDocument, DidOpenTextDocument},
+    request::HoverRequest,
+    Hover, HoverContents, HoverProviderCapability, InitializeParams, MarkedString,
+    ServerCapabilities, TextDocumentItem, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
+    VersionedTextDocumentIdentifier,
 };
 
 use crochet_ast::types::Type;
@@ -31,6 +35,7 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
     let server_capabilities = serde_json::to_value(&ServerCapabilities {
         hover_provider: Some(HoverProviderCapability::Simple(true)),
+        text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         ..Default::default()
     })
     .unwrap();
@@ -53,30 +58,68 @@ fn main_loop(
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
     let _params: InitializeParams = serde_json::from_value(params).unwrap();
 
+    let mut file_cache: HashMap<Url, String> = HashMap::new();
+
     eprintln!("starting example main loop");
     for msg in &connection.receiver {
-        eprintln!("got msg: {msg:?}");
         match msg {
             Message::Request(req) => {
                 if connection.handle_shutdown(&req)? {
                     return Ok(());
                 }
                 eprintln!("got request: {req:?}");
-                match cast::<HoverRequest>(req) {
-                    Ok((id, params)) => {
-                        handle_hover_request(&connection, &lib, id, params)?;
+                match req.method.as_str() {
+                    "textDocument/hover" => {
+                        let (id, params) = cast_req::<HoverRequest>(req)?;
+                        handle_hover_request(&connection, &lib, &file_cache, id, params)?;
                         continue;
                     }
-                    Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
-                    Err(ExtractError::MethodMismatch(req)) => req,
-                };
-                // ...
+                    _ => {
+                        // log unrecognized method
+                        todo!()
+                    }
+                }
             }
             Message::Response(resp) => {
                 eprintln!("got response: {resp:?}");
             }
-            Message::Notification(not) => {
-                eprintln!("got notification: {not:?}");
+            Message::Notification(note) => {
+                eprintln!("got notification: {note:?}");
+                match note.method.as_str() {
+                    "textDocument/didOpen" => {
+                        let params = cast_note::<DidOpenTextDocument>(note)?;
+                        let TextDocumentItem {
+                            uri,
+                            version: _,
+                            text,
+                            language_id: _,
+                        } = params.text_document;
+
+                        file_cache.insert(uri, text);
+
+                        continue;
+                    }
+                    "textDocument/didChange" => {
+                        let params = cast_note::<DidChangeTextDocument>(note)?;
+                        let VersionedTextDocumentIdentifier { uri, version: _ } =
+                            params.text_document;
+
+                        for change in params.content_changes {
+                            match change.range {
+                                Some(_) => todo!(),
+                                None => {
+                                    file_cache.insert(uri.to_owned(), change.text);
+                                }
+                            }
+                        }
+
+                        continue;
+                    }
+                    _ => {
+                        // log unrecognized method
+                        todo!()
+                    }
+                }
             }
         }
     }
@@ -86,6 +129,7 @@ fn main_loop(
 fn handle_hover_request(
     connection: &Connection,
     lib: &str,
+    file_cache: &HashMap<Url, String>,
     id: RequestId,
     params: HoverParams,
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
@@ -109,19 +153,13 @@ fn handle_hover_request(
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
 
-    let in_path = params
-        .text_document_position_params
-        .text_document
-        .uri
-        .to_file_path()
-        .unwrap(); // TODO: generate a real error if the path doesn't exist
-
-    eprintln!("reading {}", in_path.to_string_lossy());
-    let input = fs::read_to_string(in_path).unwrap();
+    let input = file_cache
+        .get(&params.text_document_position_params.text_document.uri)
+        .unwrap();
 
     // Update ParseError to implement Error + Sync + Send
     eprintln!("parsing input");
-    let mut prog = parse(&input).unwrap();
+    let mut prog = parse(input).unwrap();
 
     // Update TypeError to implement Error + Sync + Send
     eprintln!("inferring types");
@@ -219,10 +257,18 @@ fn get_type_at_location(program: &mut Program, cursor_pos: &Position) -> Option<
     visitor.t
 }
 
-fn cast<R>(req: Request) -> Result<(RequestId, R::Params), ExtractError<Request>>
+fn cast_req<R>(req: Request) -> Result<(RequestId, R::Params), ExtractError<Request>>
 where
     R: lsp_types::request::Request,
     R::Params: serde::de::DeserializeOwned,
 {
     req.extract(R::METHOD)
+}
+
+fn cast_note<R>(note: Notification) -> Result<R::Params, ExtractError<Notification>>
+where
+    R: lsp_types::notification::Notification,
+    R::Params: serde::de::DeserializeOwned,
+{
+    note.extract(R::METHOD)
 }
