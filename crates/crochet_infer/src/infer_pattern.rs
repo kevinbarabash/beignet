@@ -211,6 +211,7 @@ fn infer_pattern_rec(
     };
     let mut t = result?;
 
+    pat.inferred_type = Some(t.clone());
     t.provenance = Some(Box::from(Provenance::Pattern(Box::from(pat.to_owned()))));
 
     Ok(t)

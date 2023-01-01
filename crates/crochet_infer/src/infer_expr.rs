@@ -15,6 +15,7 @@ use crate::scheme::instantiate_callable;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify::unify;
+use crate::update::update_pattern;
 use crate::util::*;
 use crate::visitor::Visitor;
 
@@ -691,6 +692,8 @@ fn infer_let(
     for (name, binding) in pa {
         ctx.insert_binding(name.to_owned(), binding.to_owned());
     }
+
+    update_pattern(pat, &s1);
 
     let (s2, t2) = infer_expr(ctx, body)?;
 

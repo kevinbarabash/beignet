@@ -201,10 +201,6 @@ impl Visitor for GetTypeVisitor {
     }
 
     fn visit_expr(&mut self, expr: &crochet_ast::values::Expr) {
-        eprintln!(
-            "visit_expr - start, line {} col {} - end, line {} col {}",
-            expr.loc.start.line, expr.loc.start.column, expr.loc.end.line, expr.loc.end.column
-        );
         if is_pos_in_source_loc(&self.cursor_pos, &expr.loc) {
             if let Some(t) = &expr.inferred_type {
                 self.t = Some(t.to_owned())
