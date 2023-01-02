@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId, Response};
 use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
-use lsp_types::request::HoverRequest;
+use lsp_types::request::{HoverRequest, SemanticTokensFullRequest};
 use lsp_types::*;
 
 use crochet_ast::types::Type;
@@ -12,6 +12,7 @@ use crochet_ast::values::{Position, Program, SourceLocation};
 use crochet_dts::parse_dts::parse_dts;
 use crochet_parser::parse;
 
+use crate::semantic_tokens::get_semantic_tokens;
 use crate::visitor::Visitor;
 
 pub struct LanguageServer {
@@ -115,6 +116,38 @@ impl LanguageServer {
                 };
                 connection.sender.send(Message::Response(resp))?;
             }
+            "textDocument/semanticTokens/full" => {
+                let (id, params) = cast_req::<SemanticTokensFullRequest>(req)?;
+
+                // TODO:
+                // - step 1: figure out all of the tokens
+                // - step 2: sort them (they have to be since delta_line and
+                //           delta_line and delta_start are both u32)
+                // - step 3: compute delta_line and delta_start from the sorted tokens
+
+                // let token = SemanticToken {
+                //     delta_line: 0,
+                //     delta_start: 0,
+                //     length: 3,                 // `let`
+                //     token_type: 0,             // token_types[0] == TYPE
+                //     token_modifiers_bitset: 0, // no modifiers
+                // };
+
+                let input = self.file_cache.get(&params.text_document.uri).unwrap();
+
+                let mut prog = parse(input).unwrap();
+                let result = Some(SemanticTokensPartialResult {
+                    data: get_semantic_tokens(&mut prog),
+                });
+
+                let resp = Response {
+                    id,
+                    result: Some(serde_json::to_value(&result).unwrap()),
+                    error: None,
+                };
+
+                connection.sender.send(Message::Response(resp))?;
+            }
             method => {
                 eprintln!("Unhandled request method: {method}");
             }
@@ -184,7 +217,7 @@ impl Visitor for GetTypeVisitor {
     }
 
     fn visit_statement(&mut self, _stmt: &crochet_ast::values::Statement) {
-        eprintln!("visit_program");
+        eprintln!("visit_statement");
         // Do nothing b/c Statement doesn't have an .inferred_type field (yet)
     }
 

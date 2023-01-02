@@ -56,7 +56,27 @@ pub trait Visitor {
     fn _visit_type_ann(&mut self, type_ann: &mut TypeAnn) {
         self.visit_type_ann(type_ann);
 
-        // TODO: traverse children
+        match &mut type_ann.kind {
+            TypeAnnKind::Lam(_) => (),
+            TypeAnnKind::Lit(_) => (),
+            TypeAnnKind::Keyword(_) => (),
+            TypeAnnKind::Object(_) => (),
+            TypeAnnKind::TypeRef(_) => (),
+            TypeAnnKind::Union(_) => (),
+            TypeAnnKind::Intersection(_) => (),
+            TypeAnnKind::Tuple(TupleType { types }) => {
+                types.iter_mut().for_each(|t| self._visit_type_ann(t))
+            }
+            TypeAnnKind::Array(ArrayType { elem_type }) => {
+                self._visit_type_ann(elem_type);
+            }
+            TypeAnnKind::KeyOf(_) => (),
+            TypeAnnKind::Query(_) => (),
+            TypeAnnKind::IndexedAccess(_) => (),
+            TypeAnnKind::Mapped(_) => (),
+            TypeAnnKind::Conditional(_) => (),
+            TypeAnnKind::Mutable(_) => (),
+        }
     }
 
     fn _visit_expr(&mut self, expr: &mut Expr) {

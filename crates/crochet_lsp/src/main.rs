@@ -5,6 +5,7 @@ use std::fs;
 use lsp_server::Connection;
 use lsp_types::*;
 
+mod semantic_tokens;
 mod server;
 mod visitor;
 
@@ -24,6 +25,32 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     let server_capabilities = serde_json::to_value(&ServerCapabilities {
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
+        semantic_tokens_provider: Some(SemanticTokensServerCapabilities::SemanticTokensOptions(
+            SemanticTokensOptions {
+                work_done_progress_options: WorkDoneProgressOptions::default(),
+                legend: SemanticTokensLegend {
+                    token_types: vec![
+                        SemanticTokenType::TYPE,
+                        SemanticTokenType::CLASS,
+                        SemanticTokenType::TYPE_PARAMETER,
+                        SemanticTokenType::PARAMETER,
+                        SemanticTokenType::VARIABLE,
+                        SemanticTokenType::PROPERTY,
+                        SemanticTokenType::FUNCTION,
+                        SemanticTokenType::METHOD,
+                        SemanticTokenType::KEYWORD,
+                        SemanticTokenType::MODIFIER,
+                        SemanticTokenType::STRING,
+                        SemanticTokenType::NUMBER,
+                        SemanticTokenType::REGEXP,
+                        SemanticTokenType::OPERATOR,
+                    ],
+                    token_modifiers: vec![],
+                },
+                range: None, // Is None the same as false in this context?
+                full: Some(SemanticTokensFullOptions::Bool(true)),
+            },
+        )),
         ..Default::default()
     })
     .unwrap();
