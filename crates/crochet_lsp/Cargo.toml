@@ -14,3 +14,7 @@ crochet_ast = { version = "0.1.0", path = "../crochet_ast" }
 crochet_dts = { version = "0.1.0", path = "../crochet_dts" }
 crochet_infer = { version = "0.1.0", path = "../crochet_infer" }
 crochet_parser = { version = "0.1.0", path = "../crochet_parser" }
+
+[dev-dependencies]
+crossbeam = "0.8.2"
+insta = "1.13.0"
