@@ -4,14 +4,9 @@ use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId, Response};
-use lsp_types::HoverParams;
-use lsp_types::{
-    notification::{DidChangeTextDocument, DidOpenTextDocument},
-    request::HoverRequest,
-    Hover, HoverContents, HoverProviderCapability, InitializeParams, MarkedString,
-    ServerCapabilities, TextDocumentItem, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
-    VersionedTextDocumentIdentifier,
-};
+use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
+use lsp_types::request::HoverRequest;
+use lsp_types::*;
 
 use crochet_ast::types::Type;
 use crochet_ast::values::{Position, Program, SourceLocation};
@@ -41,7 +36,14 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     .unwrap();
 
     let initialization_params = connection.initialize(server_capabilities)?;
-    main_loop(connection, initialization_params)?;
+    let _params: InitializeParams = serde_json::from_value(initialization_params).unwrap();
+
+    let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
+    let file_cache: HashMap<Url, String> = HashMap::new();
+    let mut server = LanguageServer { lib, file_cache };
+
+    server.main_loop(&connection)?;
+
     io_threads.join()?;
 
     // Shut down gracefully.
@@ -49,153 +51,152 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     Ok(())
 }
 
-fn main_loop(
-    connection: Connection,
-    params: serde_json::Value,
-    // We use `dyn Error` here b/c we're mixing different APIs when generate
-    // different error structs
-) -> Result<(), Box<dyn Error + Sync + Send>> {
-    // TODO: store the content of LIB_ES5_D_TS in the file cache as well.
-    // We need to figure out how to generate a Url from the &str.
-    let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
-    let _params: InitializeParams = serde_json::from_value(params).unwrap();
-
-    let mut file_cache: HashMap<Url, String> = HashMap::new();
-
-    eprintln!("starting example main loop");
-    for msg in &connection.receiver {
-        match msg {
-            Message::Request(req) => {
-                if connection.handle_shutdown(&req)? {
-                    return Ok(());
-                }
-
-                eprintln!("got request: {req:?}");
-                match req.method.as_str() {
-                    "textDocument/hover" => {
-                        let (id, params) = cast_req::<HoverRequest>(req)?;
-                        handle_hover_request(&connection, &lib, &file_cache, id, params)?;
-
-                        continue;
-                    }
-                    method => {
-                        eprintln!("Unhandled request method: {method}");
-                    }
-                }
-            }
-            Message::Response(resp) => {
-                eprintln!("got response: {resp:?}");
-            }
-            Message::Notification(note) => {
-                eprintln!("got notification: {note:?}");
-                match note.method.as_str() {
-                    "textDocument/didOpen" => {
-                        let params = cast_note::<DidOpenTextDocument>(note)?;
-                        let TextDocumentItem {
-                            uri,
-                            version: _,
-                            text,
-                            language_id: _,
-                        } = params.text_document;
-
-                        file_cache.insert(uri, text);
-
-                        continue;
-                    }
-                    "textDocument/didChange" => {
-                        let params = cast_note::<DidChangeTextDocument>(note)?;
-                        let VersionedTextDocumentIdentifier { uri, version: _ } =
-                            params.text_document;
-
-                        for change in params.content_changes {
-                            match change.range {
-                                Some(_) => todo!(),
-                                None => {
-                                    file_cache.insert(uri.to_owned(), change.text);
-                                }
-                            }
-                        }
-
-                        continue;
-                    }
-                    method => {
-                        eprintln!("Unhandled notification method: {method}");
-                    }
-                }
-            }
-        }
-    }
-    Ok(())
+struct LanguageServer {
+    pub lib: String,
+    pub file_cache: HashMap<Url, String>,
 }
 
-fn handle_hover_request(
-    connection: &Connection,
-    lib: &str,
-    file_cache: &HashMap<Url, String>,
-    id: RequestId,
-    params: HoverParams,
-) -> Result<(), Box<dyn Error + Sync + Send>> {
-    eprintln!("Handling HoverRequest");
-
-    // NOTE: This is slow so we'll want to do this once once
-    // on startup and re-use the results.
-    eprintln!("parsing .d.ts");
-    let mut ctx = match parse_dts(lib) {
-        Ok(ctx) => {
-            eprintln!("success");
-            ctx
+impl LanguageServer {
+    pub fn main_loop(
+        &mut self,
+        connection: &Connection,
+    ) -> Result<(), Box<dyn Error + Sync + Send>> {
+        for msg in &connection.receiver {
+            match msg {
+                Message::Request(req) => {
+                    self.handle_request(connection, req)?;
+                }
+                Message::Response(resp) => {
+                    eprintln!("got response: {resp:?}");
+                }
+                Message::Notification(note) => {
+                    self.handle_notification(note)?;
+                }
+            }
         }
-        Err(_) => {
-            eprintln!("error");
-            panic!("parsing .d.ts file failed");
+        Ok(())
+    }
+
+    pub fn handle_request(
+        &self,
+        connection: &Connection,
+        req: Request,
+    ) -> Result<(), Box<dyn Error + Sync + Send>> {
+        if connection.handle_shutdown(&req)? {
+            return Ok(());
         }
-    };
 
-    let start = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
+        eprintln!("got request: {req:?}");
+        match req.method.as_str() {
+            "textDocument/hover" => {
+                let (id, params) = cast_req::<HoverRequest>(req)?;
 
-    let input = file_cache
-        .get(&params.text_document_position_params.text_document.uri)
-        .unwrap();
+                eprintln!("Handling HoverRequest");
 
-    // Update ParseError to implement Error + Sync + Send
-    eprintln!("parsing input");
-    let mut prog = parse(input).unwrap();
+                // NOTE: This is slow so we'll want to do this once once
+                // on startup and re-use the results.
+                eprintln!("parsing .d.ts");
+                let mut ctx = match parse_dts(&self.lib) {
+                    Ok(ctx) => {
+                        eprintln!("success");
+                        ctx
+                    }
+                    Err(_) => {
+                        eprintln!("error");
+                        panic!("parsing .d.ts file failed");
+                    }
+                };
 
-    // Update TypeError to implement Error + Sync + Send
-    eprintln!("inferring types");
-    crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
+                let start = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Time went backwards");
 
-    let end = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
-    let elapsed = end - start;
-    eprintln!("request took {}ms", elapsed.as_millis());
+                let input = self
+                    .file_cache
+                    .get(&params.text_document_position_params.text_document.uri)
+                    .unwrap();
 
-    // TODO: create a From impl to convert from one Position to another.
-    let cursor_loc = Position {
-        line: params.text_document_position_params.position.line,
-        column: params.text_document_position_params.position.character,
-    };
+                // Update ParseError to implement Error + Sync + Send
+                eprintln!("parsing input");
+                let mut prog = parse(input).unwrap();
 
-    let message = match get_type_at_location(&mut prog, &cursor_loc) {
-        Some(t) => t.to_string(),
-        None => String::from("no type info"),
-    };
+                // Update TypeError to implement Error + Sync + Send
+                eprintln!("inferring types");
+                crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
-    let result = Some(Hover {
-        contents: HoverContents::Scalar(MarkedString::String(message)),
-        range: None,
-    });
-    let resp = Response {
-        id,
-        result: Some(serde_json::to_value(&result).unwrap()),
-        error: None,
-    };
-    connection.sender.send(Message::Response(resp))?;
+                let end = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Time went backwards");
+                let elapsed = end - start;
+                eprintln!("request took {}ms", elapsed.as_millis());
 
-    Ok(())
+                // TODO: create a From impl to convert from one Position to another.
+                let cursor_loc = Position {
+                    line: params.text_document_position_params.position.line,
+                    column: params.text_document_position_params.position.character,
+                };
+
+                let message = match get_type_at_location(&mut prog, &cursor_loc) {
+                    Some(t) => t.to_string(),
+                    None => String::from("no type info"),
+                };
+
+                let result = Some(Hover {
+                    contents: HoverContents::Scalar(MarkedString::String(message)),
+                    range: None,
+                });
+                let resp = Response {
+                    id,
+                    result: Some(serde_json::to_value(&result).unwrap()),
+                    error: None,
+                };
+                connection.sender.send(Message::Response(resp))?;
+            }
+            method => {
+                eprintln!("Unhandled request method: {method}");
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn handle_notification(
+        &mut self,
+        note: Notification,
+    ) -> Result<(), Box<dyn Error + Sync + Send>> {
+        eprintln!("got notification: {note:?}");
+        match note.method.as_str() {
+            "textDocument/didOpen" => {
+                let params = cast_note::<DidOpenTextDocument>(note)?;
+                let TextDocumentItem {
+                    uri,
+                    version: _,
+                    text,
+                    language_id: _,
+                } = params.text_document;
+
+                self.file_cache.insert(uri, text);
+            }
+            "textDocument/didChange" => {
+                let params = cast_note::<DidChangeTextDocument>(note)?;
+                let VersionedTextDocumentIdentifier { uri, version: _ } = params.text_document;
+
+                for change in params.content_changes {
+                    match change.range {
+                        Some(_) => todo!(),
+                        None => {
+                            self.file_cache.insert(uri.to_owned(), change.text);
+                        }
+                    }
+                }
+            }
+            method => {
+                eprintln!("Unhandled notification method: {method}");
+            }
+        }
+
+        Ok(())
+    }
 }
 
 struct GetTypeVisitor {
@@ -273,4 +274,142 @@ where
     R::Params: serde::de::DeserializeOwned,
 {
     note.extract(R::METHOD)
+}
+
+#[cfg(test)]
+mod tests {
+    use crossbeam::channel::unbounded;
+    use lsp_types::Position;
+    use serde_json::*;
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn test_handle_notification_did_open() {
+        let file_cache = HashMap::new();
+
+        let mut server = LanguageServer {
+            file_cache,
+            lib: String::from(""),
+        };
+
+        let uri = Url::from_str("file://path/to/file.crochet").unwrap();
+        let params = DidOpenTextDocumentParams {
+            text_document: TextDocumentItem {
+                uri: uri.to_owned(),
+                language_id: String::from("crochet"),
+                version: 123,
+                text: String::from("let a = 5;"),
+            },
+        };
+
+        let note = Notification {
+            method: String::from("textDocument/didOpen"),
+            params: to_value(params).unwrap(),
+        };
+
+        server.handle_notification(note).unwrap();
+
+        assert!(server.file_cache.contains_key(&uri));
+        assert_eq!(server.file_cache.get(&uri).unwrap(), "let a = 5;");
+    }
+
+    #[test]
+    fn test_handle_notification_did_change() {
+        let uri = Url::from_str("file://path/to/file.crochet").unwrap();
+        let mut file_cache = HashMap::new();
+        file_cache.insert(uri.to_owned(), String::from("let a = 5;"));
+
+        let mut server = LanguageServer {
+            file_cache,
+            lib: String::from(""),
+        };
+
+        let params = DidChangeTextDocumentParams {
+            text_document: VersionedTextDocumentIdentifier {
+                uri: uri.to_owned(),
+                version: 456,
+            },
+            content_changes: vec![TextDocumentContentChangeEvent {
+                range: None,
+                range_length: None, // deprecated
+                text: String::from("let a = 10;"),
+            }],
+        };
+
+        let note = Notification {
+            method: String::from("textDocument/didChange"),
+            params: to_value(params).unwrap(),
+        };
+
+        server.handle_notification(note).unwrap();
+
+        assert!(server.file_cache.contains_key(&uri));
+        assert_eq!(server.file_cache.get(&uri).unwrap(), "let a = 10;");
+    }
+
+    #[test]
+    fn test_handle_hover_request() {
+        let uri = Url::from_str("file://path/to/file.crochet").unwrap();
+        let mut file_cache = HashMap::new();
+        file_cache.insert(uri.to_owned(), String::from("let a = 5;"));
+
+        let server = LanguageServer {
+            file_cache,
+            lib: String::from(""),
+        };
+
+        let params = HoverParams {
+            text_document_position_params: TextDocumentPositionParams {
+                text_document: TextDocumentIdentifier { uri },
+                position: Position {
+                    line: 0,
+                    character: 4,
+                },
+            },
+            work_done_progress_params: WorkDoneProgressParams {
+                work_done_token: None,
+            },
+        };
+
+        let req = Request {
+            id: RequestId::from(3),
+            method: String::from("textDocument/hover"),
+            params: to_value(params).unwrap(),
+        };
+
+        let (writer_sender, writer_receiver) = unbounded();
+        let (_, reader_receiver) = unbounded();
+
+        let connection = Connection {
+            sender: writer_sender,
+            receiver: reader_receiver,
+        };
+
+        server.handle_request(&connection, req).unwrap();
+
+        let msg: Message = writer_receiver.recv().unwrap();
+
+        let mut map = Map::new();
+        map.insert(String::from("contents"), Value::String(String::from("5")));
+
+        insta::assert_snapshot!(format!("{msg:#?}"), @r###"
+        Response(
+            Response {
+                id: RequestId(
+                    I32(
+                        3,
+                    ),
+                ),
+                result: Some(
+                    Object {
+                        "contents": String("5"),
+                    },
+                ),
+                error: None,
+            },
+        )
+        "###);
+    }
 }

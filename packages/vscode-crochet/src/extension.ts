@@ -130,6 +130,7 @@ export function activate(context: vscode.ExtensionContext) {
     clientOptions
   );
 
+  // Output `eprintln!()` messages from the crochet_lsp in the `output` tab.
   client.outputChannel.show(true);
 
   // Start the client. This will also launch the server
