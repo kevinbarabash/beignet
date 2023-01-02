@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId, Response};
+use lsp_server::{
+    Connection, ErrorCode, ExtractError, Message, Notification, Request, RequestId, Response,
+    ResponseError,
+};
 use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
 use lsp_types::request::{HoverRequest, SemanticTokensFullRequest};
 use lsp_types::*;
@@ -118,33 +121,7 @@ impl LanguageServer {
             }
             "textDocument/semanticTokens/full" => {
                 let (id, params) = cast_req::<SemanticTokensFullRequest>(req)?;
-
-                // TODO:
-                // - step 1: figure out all of the tokens
-                // - step 2: sort them (they have to be since delta_line and
-                //           delta_line and delta_start are both u32)
-                // - step 3: compute delta_line and delta_start from the sorted tokens
-
-                // let token = SemanticToken {
-                //     delta_line: 0,
-                //     delta_start: 0,
-                //     length: 3,                 // `let`
-                //     token_type: 0,             // token_types[0] == TYPE
-                //     token_modifiers_bitset: 0, // no modifiers
-                // };
-
-                let input = self.file_cache.get(&params.text_document.uri).unwrap();
-
-                let mut prog = parse(input).unwrap();
-                let result = Some(SemanticTokensPartialResult {
-                    data: get_semantic_tokens(&mut prog),
-                });
-
-                let resp = Response {
-                    id,
-                    result: Some(serde_json::to_value(&result).unwrap()),
-                    error: None,
-                };
+                let resp = self.handle_semantic_tokens(id, params);
 
                 connection.sender.send(Message::Response(resp))?;
             }
@@ -192,6 +169,65 @@ impl LanguageServer {
         }
 
         Ok(())
+    }
+
+    fn handle_semantic_tokens(&self, id: RequestId, params: SemanticTokensParams) -> Response {
+        // TODO: if it isn't in the cache yet, we should load it from disk
+        // TODO: if we can't load it from disk then we should report an error
+        let input = match self.file_cache.get(&params.text_document.uri) {
+            Some(input) => input,
+            None => {
+                return Response {
+                    id,
+                    result: None,
+                    error: Some(ResponseError {
+                        code: ErrorCode::InternalError as i32,
+                        message: String::from("Couldn't find file in cache"),
+                        data: None,
+                    }),
+                }
+            }
+        };
+
+        let mut prog = match parse(input) {
+            Ok(prog) => prog,
+            Err(_) => {
+                return Response {
+                    id,
+                    result: None,
+                    error: Some(ResponseError {
+                        code: ErrorCode::ParseError as i32,
+                        message: String::from("Failed to parse file"),
+                        data: None,
+                    }),
+                }
+            }
+        };
+
+        let result = Some(SemanticTokensPartialResult {
+            data: get_semantic_tokens(&mut prog),
+        });
+
+        let value = match serde_json::to_value(&result) {
+            Ok(value) => value,
+            Err(_) => {
+                return Response {
+                    id,
+                    result: None,
+                    error: Some(ResponseError {
+                        code: ErrorCode::InternalError as i32,
+                        message: String::from("Failed to convert result to Value"),
+                        data: None,
+                    }),
+                }
+            }
+        };
+
+        Response {
+            id,
+            result: Some(value),
+            error: None,
+        }
     }
 }
 
