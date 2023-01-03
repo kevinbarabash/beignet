@@ -71,8 +71,25 @@ impl Visitor for SemanticTokenVisitor {
         eprintln!("visit_program");
     }
 
-    fn visit_statement(&mut self, _stmt: &crochet_ast::values::Statement) {
+    fn visit_statement(&mut self, stmt: &crochet_ast::values::Statement) {
         eprintln!("visit_statement");
+        if let Statement::TypeDecl {
+            id,
+            type_ann: _,
+            type_params: _,
+            ..
+        } = stmt
+        {
+            let Ident { loc, .. } = id;
+            self.raw_tokens.push(RawSemanticToken {
+                line: loc.start.line,
+                start: loc.start.column,
+                // assumes that tokens don't span multiple lines
+                length: loc.end.column - loc.start.column,
+                token_type: 0, // TYPE
+                token_modifiers_bitset: 0,
+            })
+        }
     }
 
     fn visit_pattern(&mut self, _pat: &crochet_ast::values::Pattern) {
@@ -89,12 +106,20 @@ impl Visitor for SemanticTokenVisitor {
             crochet_ast::values::TypeAnnKind::Lam(_) => None,
             crochet_ast::values::TypeAnnKind::Lit(lit) => match lit {
                 Lit::Num(_) => Some(11),
-                Lit::Bool(_) => Some(0),
+                Lit::Bool(_) => None,
                 Lit::Str(_) => Some(10),
             },
             crochet_ast::values::TypeAnnKind::Keyword(_) => Some(0),
             crochet_ast::values::TypeAnnKind::Object(_) => None,
-            crochet_ast::values::TypeAnnKind::TypeRef(_) => Some(0),
+            crochet_ast::values::TypeAnnKind::TypeRef(TypeRef {
+                name: _,
+                type_args: _,
+            }) => {
+                // TODO: have separate tokens for `name` and `type_args`
+                // Right now `Baz<number>` in `let baz: Baz<number> = true;`
+                // is solid green.
+                Some(0)
+            }
             crochet_ast::values::TypeAnnKind::Union(_) => None,
             crochet_ast::values::TypeAnnKind::Intersection(_) => None,
             crochet_ast::values::TypeAnnKind::Tuple(_) => None,
@@ -111,16 +136,14 @@ impl Visitor for SemanticTokenVisitor {
 
         let TypeAnn { loc, .. } = type_ann;
         if let Some(token_type) = token_type {
-            let raw_token = RawSemanticToken {
+            self.raw_tokens.push(RawSemanticToken {
                 line: loc.start.line,
                 start: loc.start.column,
                 // assumes that tokens don't span multiple lines
                 length: loc.end.column - loc.start.column,
                 token_type,
                 token_modifiers_bitset: 0,
-            };
-            eprintln!("{raw_token:#?}");
-            self.raw_tokens.push(raw_token)
+            })
         }
     }
 
@@ -145,7 +168,7 @@ impl Visitor for SemanticTokenVisitor {
             crochet_ast::values::ExprKind::LetExpr(_) => None,
             crochet_ast::values::ExprKind::Lit(lit) => match lit {
                 Lit::Num(_) => Some(11),
-                Lit::Bool(_) => Some(8),
+                Lit::Bool(_) => None,
                 Lit::Str(_) => Some(10),
             },
             crochet_ast::values::ExprKind::Keyword(_) => None,
