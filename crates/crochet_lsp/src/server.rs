@@ -2,9 +2,12 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId, Response};
+use lsp_server::{
+    Connection, ErrorCode, ExtractError, Message, Notification, Request, RequestId, Response,
+    ResponseError,
+};
 use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
-use lsp_types::request::HoverRequest;
+use lsp_types::request::{HoverRequest, SemanticTokensFullRequest};
 use lsp_types::*;
 
 use crochet_ast::types::Type;
@@ -12,6 +15,7 @@ use crochet_ast::values::{Position, Program, SourceLocation};
 use crochet_dts::parse_dts::parse_dts;
 use crochet_parser::parse;
 
+use crate::semantic_tokens::get_semantic_tokens;
 use crate::visitor::Visitor;
 
 pub struct LanguageServer {
@@ -115,6 +119,12 @@ impl LanguageServer {
                 };
                 connection.sender.send(Message::Response(resp))?;
             }
+            "textDocument/semanticTokens/full" => {
+                let (id, params) = cast_req::<SemanticTokensFullRequest>(req)?;
+                let resp = self.handle_semantic_tokens(id, params);
+
+                connection.sender.send(Message::Response(resp))?;
+            }
             method => {
                 eprintln!("Unhandled request method: {method}");
             }
@@ -160,6 +170,65 @@ impl LanguageServer {
 
         Ok(())
     }
+
+    fn handle_semantic_tokens(&self, id: RequestId, params: SemanticTokensParams) -> Response {
+        // TODO: if it isn't in the cache yet, we should load it from disk
+        // TODO: if we can't load it from disk then we should report an error
+        let input = match self.file_cache.get(&params.text_document.uri) {
+            Some(input) => input,
+            None => {
+                return Response {
+                    id,
+                    result: None,
+                    error: Some(ResponseError {
+                        code: ErrorCode::InternalError as i32,
+                        message: String::from("Couldn't find file in cache"),
+                        data: None,
+                    }),
+                }
+            }
+        };
+
+        let mut prog = match parse(input) {
+            Ok(prog) => prog,
+            Err(_) => {
+                return Response {
+                    id,
+                    result: None,
+                    error: Some(ResponseError {
+                        code: ErrorCode::ParseError as i32,
+                        message: String::from("Failed to parse file"),
+                        data: None,
+                    }),
+                }
+            }
+        };
+
+        let result = Some(SemanticTokensPartialResult {
+            data: get_semantic_tokens(&mut prog),
+        });
+
+        let value = match serde_json::to_value(&result) {
+            Ok(value) => value,
+            Err(_) => {
+                return Response {
+                    id,
+                    result: None,
+                    error: Some(ResponseError {
+                        code: ErrorCode::InternalError as i32,
+                        message: String::from("Failed to convert result to Value"),
+                        data: None,
+                    }),
+                }
+            }
+        };
+
+        Response {
+            id,
+            result: Some(value),
+            error: None,
+        }
+    }
 }
 
 struct GetTypeVisitor {
@@ -184,7 +253,7 @@ impl Visitor for GetTypeVisitor {
     }
 
     fn visit_statement(&mut self, _stmt: &crochet_ast::values::Statement) {
-        eprintln!("visit_program");
+        eprintln!("visit_statement");
         // Do nothing b/c Statement doesn't have an .inferred_type field (yet)
     }
 
