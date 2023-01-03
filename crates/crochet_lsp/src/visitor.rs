@@ -50,7 +50,49 @@ pub trait Visitor {
     fn _visit_pattern(&mut self, pat: &mut Pattern) {
         self.visit_pattern(pat);
 
-        // TODO: traverse children
+        match &mut pat.kind {
+            PatternKind::Ident(_) => (), // leaf node
+            PatternKind::Rest(RestPat { arg }) => {
+                self._visit_pattern(arg);
+            }
+            PatternKind::Object(ObjectPat { props, optional: _ }) => {
+                props.iter_mut().for_each(|prop| match prop {
+                    ObjectPatProp::KeyValue(KeyValuePatProp {
+                        key: _,
+                        value,
+                        init,
+                        ..
+                    }) => {
+                        self._visit_pattern(value);
+                        if let Some(init) = init {
+                            self._visit_expr(init);
+                        }
+                    }
+                    ObjectPatProp::Shorthand(ShorthandPatProp { ident: _, init, .. }) => {
+                        if let Some(init) = init {
+                            self._visit_expr(init);
+                        }
+                    }
+                    ObjectPatProp::Rest(RestPat { arg }) => {
+                        self._visit_pattern(arg);
+                    }
+                });
+            }
+            PatternKind::Array(ArrayPat { elems, optional: _ }) => {
+                elems.iter_mut().for_each(|elem| {
+                    if let Some(elem) = elem {
+                        let ArrayPatElem { pattern, init } = elem;
+                        self._visit_pattern(pattern);
+                        if let Some(init) = init {
+                            self._visit_expr(init);
+                        }
+                    }
+                });
+            }
+            PatternKind::Lit(_) => (),   // leaf node
+            PatternKind::Is(_) => (),    // leaf node
+            PatternKind::Wildcard => (), // leaf node
+        }
     }
 
     fn _visit_type_ann(&mut self, type_ann: &mut TypeAnn) {
@@ -88,8 +130,14 @@ pub trait Visitor {
                 args.iter_mut()
                     .for_each(|arg| self._visit_expr(&mut arg.expr));
             }
-            ExprKind::New(_) => todo!(),
-            ExprKind::Fix(_) => todo!(),
+            ExprKind::New(New { expr, args }) => {
+                self._visit_expr(expr);
+                args.iter_mut()
+                    .for_each(|arg| self._visit_expr(&mut arg.expr));
+            }
+            ExprKind::Fix(Fix { expr }) => {
+                self._visit_expr(expr);
+            }
             ExprKind::Ident(_) => (), // leaf node
             ExprKind::IfElse(IfElse {
                 cond,
@@ -107,9 +155,20 @@ pub trait Visitor {
                 params,
                 body,
                 return_type,
-                type_params: _, // TODO
+                type_params,
                 ..
             }) => {
+                if let Some(type_params) = type_params {
+                    type_params.iter_mut().for_each(|type_param| {
+                        // TODO: add visit_type_param() method
+                        if let Some(constraint) = &mut type_param.constraint {
+                            self._visit_type_ann(constraint);
+                        }
+                        if let Some(default) = &mut type_param.default {
+                            self._visit_type_ann(default);
+                        }
+                    });
+                };
                 params.iter_mut().for_each(|param| {
                     // TODO: add visit_fn_param() method
                     let EFnParam { pat, type_ann, .. } = param;
@@ -175,11 +234,33 @@ pub trait Visitor {
                     .iter_mut()
                     .for_each(|elem| self._visit_expr(&mut elem.expr));
             }
-            ExprKind::Member(_) => todo!(),
+            ExprKind::Member(Member { obj, prop: _ }) => {
+                self._visit_expr(obj);
+            }
             ExprKind::Empty => (), // leaf node
-            ExprKind::TemplateLiteral(_) => todo!(),
-            ExprKind::TaggedTemplateLiteral(_) => todo!(),
-            ExprKind::Match(_) => todo!(),
+            ExprKind::TemplateLiteral(TemplateLiteral { exprs, quasis: _ }) => {
+                exprs.iter_mut().for_each(|expr| self._visit_expr(expr));
+            }
+            ExprKind::TaggedTemplateLiteral(TaggedTemplateLiteral { tag: _, template }) => {
+                let TemplateLiteral { exprs, quasis: _ } = template;
+                exprs.iter_mut().for_each(|expr| self._visit_expr(expr));
+            }
+            ExprKind::Match(Match { expr, arms }) => {
+                self._visit_expr(expr);
+                arms.iter_mut().for_each(|arm| {
+                    let Arm {
+                        pattern,
+                        guard,
+                        body,
+                        ..
+                    } = arm;
+                    self._visit_pattern(pattern);
+                    if let Some(guard) = guard {
+                        self._visit_expr(guard);
+                    }
+                    self._visit_expr(body);
+                })
+            }
         }
     }
 }
