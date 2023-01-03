@@ -693,14 +693,15 @@ fn infer_let(
         ctx.insert_binding(name.to_owned(), binding.to_owned());
     }
 
-    update_pattern(pat, &s1);
-
     let (s2, t2) = infer_expr(ctx, body)?;
 
     ctx.pop_scope();
 
     let s = compose_subs(&s2, &s1);
     let t = t2;
+
+    update_pattern(pat, &s);
+
     Ok((s, t))
 }
 
