@@ -663,6 +663,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
 
             Ok((s, t))
         }
+        ExprKind::Class(_) => todo!(),
     };
 
     let (s, mut t) = result?;

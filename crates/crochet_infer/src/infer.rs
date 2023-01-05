@@ -134,6 +134,15 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
                     Err(mut report) => reports.append(&mut report),
                 }
             }
+            Statement::ClassDecl {
+                loc: _,
+                span: _,
+                ident: _,
+                class: _,
+            } => {
+                // TODO: implement this
+                todo!()
+            }
         };
     }
 

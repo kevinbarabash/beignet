@@ -207,6 +207,7 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
                 update_expr(body, s);
             })
         }
+        ExprKind::Class(_) => todo!(),
     }
 }
 

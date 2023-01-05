@@ -20,6 +20,11 @@ pub trait Visitor {
         self.visit_statement(stmt);
 
         match stmt {
+            Statement::ClassDecl {
+                ident: _, class: _, ..
+            } => {
+                // TODO: add `visit_class()` method
+            }
             Statement::VarDecl {
                 pattern,
                 type_ann,
@@ -180,10 +185,6 @@ pub trait Visitor {
                 if let Some(return_type) = return_type {
                     self._visit_type_ann(return_type);
                 }
-                // TODO: revisit how we store the body in the AST, maybe we can
-                // defer converting it to `let-in` until later in the process.
-                // The problem with the `let-in` form is that it results in a
-                // of nesting that we could do with out.
                 self._visit_expr(body);
             }
             ExprKind::Let(Let {
@@ -260,6 +261,43 @@ pub trait Visitor {
                     }
                     self._visit_expr(body);
                 })
+            }
+            ExprKind::Class(Class { ident: _, body }) => {
+                for member in body {
+                    match member {
+                        ClassMember::Constructor(Constructor { params, body }) => {
+                            params.iter_mut().for_each(|param| {
+                                // TODO: add visit_fn_param() method
+                                let EFnParam { pat, type_ann, .. } = param;
+                                self._visit_pattern(pat);
+                                if let Some(type_ann) = type_ann {
+                                    self._visit_type_ann(type_ann);
+                                }
+                            });
+                            self._visit_expr(body);
+                        }
+                        ClassMember::Method(ClassMethod {
+                            key: _,
+                            kind: _,
+                            lambda,
+                        }) => {
+                            lambda.params.iter_mut().for_each(|param| {
+                                // TODO: add visit_fn_param() method
+                                let EFnParam { pat, type_ann, .. } = param;
+                                self._visit_pattern(pat);
+                                if let Some(type_ann) = type_ann {
+                                    self._visit_type_ann(type_ann);
+                                }
+                            });
+                            self._visit_expr(&mut lambda.body);
+                        }
+                        ClassMember::Prop(ClassProp { key: _, value, .. }) => {
+                            if let Some(value) = value {
+                                self._visit_expr(value);
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -478,9 +478,49 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
 
     let mut iter = stmts.iter().rev();
 
+    let empty_expr = Box::from(Expr {
+        loc: DUMMY_LOC,
+        span: 0..0,
+        kind: ExprKind::Empty,
+        inferred_type: None,
+    });
+
+    // NOTE: If a declaration appears last it will go unused.  This is because
+    // only expressions can be returned from blocks.
+    // TODO: add a warning when that happens.
     let last: Expr = match iter.next() {
         Some(term) => match term {
-            // TODO: warn that the variable introduced here will go unused.
+            Statement::ClassDecl {
+                loc,
+                span,
+                ident,
+                class,
+            } => Expr {
+                loc: loc.to_owned(),
+                span: span.to_owned(),
+                kind: ExprKind::Let(Let {
+                    pattern: Some(Pattern {
+                        loc: ident.loc.to_owned(),
+                        span: ident.span.to_owned(),
+                        kind: PatternKind::Ident(BindingIdent {
+                            loc: ident.loc.to_owned(),
+                            span: ident.span.to_owned(),
+                            name: ident.name.to_owned(),
+                            mutable: false,
+                        }),
+                        inferred_type: None,
+                    }),
+                    init: Box::from(Expr {
+                        loc: loc.to_owned(),
+                        span: span.to_owned(),
+                        kind: ExprKind::Class(class.as_ref().to_owned()),
+                        inferred_type: None,
+                    }),
+                    type_ann: None,
+                    body: empty_expr,
+                }),
+                inferred_type: None,
+            },
             Statement::VarDecl {
                 loc,
                 span,
@@ -501,16 +541,16 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
                     // for `declare let`.
                     init: init.as_ref().unwrap().to_owned(),
                     type_ann: type_ann.to_owned(),
-                    body: Box::from(Expr {
-                        loc: DUMMY_LOC,
-                        span: 0..0,
-                        kind: ExprKind::Empty,
-                        inferred_type: None,
-                    }),
+                    body: empty_expr,
                 }),
                 inferred_type: None,
             },
             Statement::TypeDecl { .. } => {
+                // We can't convert this `let` expression so we can't include it
+                // in the `body`.  I think we'll want move the conversion of block
+                // statements to lambdas later in the process.  This will allow us
+                // to handle type declarations within the body of a function.  It
+                // will also help with handling statements like loops.
                 todo!("decide how to handle type decls within BlockStatements")
             }
             Statement::Expr { expr, .. } => *expr.to_owned(),
@@ -525,6 +565,37 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
 
     let result: Expr = iter.fold(last, |body, stmt| {
         match stmt {
+            Statement::ClassDecl {
+                loc,
+                span,
+                ident,
+                class,
+            } => Expr {
+                loc: loc.to_owned(),
+                span: span.to_owned(),
+                kind: ExprKind::Let(Let {
+                    pattern: Some(Pattern {
+                        loc: ident.loc.to_owned(),
+                        span: ident.span.to_owned(),
+                        kind: PatternKind::Ident(BindingIdent {
+                            loc: ident.loc.to_owned(),
+                            span: ident.span.to_owned(),
+                            name: ident.name.to_owned(),
+                            mutable: false,
+                        }),
+                        inferred_type: None,
+                    }),
+                    init: Box::from(Expr {
+                        loc: loc.to_owned(),
+                        span: span.to_owned(),
+                        kind: ExprKind::Class(class.as_ref().to_owned()),
+                        inferred_type: None,
+                    }),
+                    type_ann: None,
+                    body: Box::new(body),
+                }),
+                inferred_type: None,
+            },
             Statement::VarDecl {
                 loc,
                 span,

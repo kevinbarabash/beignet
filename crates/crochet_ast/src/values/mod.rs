@@ -1,3 +1,4 @@
+pub mod class;
 pub mod common;
 pub mod expr;
 pub mod ident;
@@ -7,6 +8,7 @@ pub mod lit;
 pub mod pattern;
 pub mod type_ann;
 
+pub use class::*;
 pub use common::*;
 pub use expr::*;
 pub use ident::*;
