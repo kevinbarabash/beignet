@@ -468,11 +468,11 @@ Property signatures with accessibility modifiers
 ================================================================================
 
 export interface IAppState {
-  public mut users: ReadonlyArray<User>;
+  public users: ReadonlyArray<User>;
 }
 
 export class CloningRepository {
-  public readonly id = CloningRepositoryID++;
+  public id = CloningRepositoryID++;
 }
 
 
@@ -894,9 +894,9 @@ Classes with property names as strings or numbers
 class Foo {
   static 2: string;
   public static 2: string = 'string';
-  public static readonly 'hello'?: int = 'string';
-  static readonly 'hello'?: int = 'string';
-  readonly 'hello'?: int = 'string';
+  public static 'hello'?: int = 'string';
+  static 'hello'?: int = 'string';
+  'hello'?: int = 'string';
 }
 
 --------------------------------------------------------------------------------
@@ -946,7 +946,7 @@ Classes with decorators
 @baz @bam class Foo {
   @foo static 2: string;
   @bar.buzz(grue) public static 2: string = 'string';
-  @readonly readonly 'hello'?: int = 'string';
+  @readonly 'hello'?: int = 'string';
   @readonly fooBar(@required param: any, @optional param2?: any) {
   }
 }
@@ -1081,8 +1081,7 @@ abstract class Foo {
 }
 
 abstract class Animal {
-    readonly abstract prop: string;
-    requiredProp!: string;
+    abstract prop: string;
     abstract makeSound(): void;
     abstract get readonlyProp(): string;
     protected abstract readonlyProp?(): string;
@@ -1104,10 +1103,6 @@ abstract class Foo {
   (abstract_class_declaration
     name: (type_identifier)
     body: (class_body
-      (public_field_definition
-        name: (property_identifier)
-        type: (type_annotation
-          (predefined_type)))
       (public_field_definition
         name: (property_identifier)
         type: (type_annotation

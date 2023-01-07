@@ -71,8 +71,12 @@ pub fn parse(src: &str) -> Result<Program, ParseError> {
 }
 
 fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, ParseError> {
+    let kind = node.kind();
+    println!("parse_statement: kind = {kind}");
+
     match node.kind() {
         "lexical_declaration" => parse_declaration(node, false, src),
+        "class_declaration" => parse_class_decl(node, src),
         "expression_statement" => {
             let expr = node.named_child(0).unwrap();
             let expr = parse_expression(&expr, src)?;
@@ -154,6 +158,7 @@ fn parse_declaration(
     declare: bool,
     src: &str,
 ) -> Result<Vec<Statement>, ParseError> {
+    println!("node.kind = {}", node.kind());
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing declaration"));
@@ -225,6 +230,129 @@ fn parse_declaration(
             init,
             declare,
         }
+    };
+
+    Ok(vec![stmt])
+}
+
+fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, ParseError> {
+    println!("node.kind = {}", node.kind());
+    if node.has_error() {
+        // TODO: get actual error node so that we can report where the error is
+        return Err(ParseError::from("Error parsing declaration"));
+    }
+
+    let name_node = node.child_by_field_name("name").unwrap();
+    let body_node = node.child_by_field_name("body").unwrap();
+
+    let mut class_members: Vec<ClassMember> = vec![];
+    let mut cursor = body_node.walk();
+    for child in body_node.named_children(&mut cursor) {
+        let kind = child.kind();
+
+        println!("child.kind() = {kind}");
+
+        match kind {
+            "method_definition" => {
+                let name_node = child.child_by_field_name("name").unwrap();
+                let key = Ident {
+                    loc: SourceLocation::from(&name_node),
+                    span: name_node.byte_range(),
+                    name: text_for_node(&name_node, src)?,
+                };
+
+                let params = parse_formal_parameters(
+                    &child.child_by_field_name("parameters").unwrap(),
+                    src,
+                )?;
+                let body = parse_block_statement(&child.child_by_field_name("body").unwrap(), src)?;
+                let return_type = match child.child_by_field_name("return_type") {
+                    Some(type_ann) => Some(parse_type_ann(&type_ann, src)?),
+                    None => None,
+                };
+
+                let kind = match child.child_by_field_name("kind") {
+                    Some(kind) => match text_for_node(&kind, src)?.as_str() {
+                        "get" => MethodKind::Getter,
+                        "set" => MethodKind::Setter,
+                        "*" => todo!(),
+                        _ => panic!("Invalid method kind"), // TODO: report an error
+                    },
+                    None => MethodKind::Method,
+                };
+
+                // TODO: add support to the AST for these
+                let _is_static = child.child_by_field_name("static").is_some();
+                let _mutable = child.child_by_field_name("mut").is_some();
+
+                if key.name.as_str() == "constructor" {
+                    class_members.push(ClassMember::Constructor(Constructor {
+                        params,
+                        body: Box::from(body),
+                    }));
+                } else {
+                    class_members.push(ClassMember::Method(ClassMethod {
+                        key,
+                        kind,
+                        lambda: Lambda {
+                            params,
+                            body: Box::from(body),
+                            is_async: child.child_by_field_name("async").is_some(),
+                            return_type,
+                            type_params: None, // TODO
+                        },
+                    }))
+                }
+            }
+            "public_field_definition" => {
+                // TODO: add support to the AST for this
+                let _mutable = child.child_by_field_name("mut").is_some();
+
+                let name_node = child.child_by_field_name("name").unwrap();
+                let key = Ident {
+                    loc: SourceLocation::from(&name_node),
+                    span: name_node.byte_range(),
+                    name: text_for_node(&name_node, src)?,
+                };
+
+                let value = match child.child_by_field_name("value") {
+                    Some(value) => Some(Box::from(parse_expression(&value, src)?)),
+                    None => None,
+                };
+                let type_ann = match child.child_by_field_name("type") {
+                    Some(type_ann) => Some(Box::from(parse_type_ann(&type_ann, src)?)),
+                    None => None,
+                };
+
+                class_members.push(ClassMember::Prop(ClassProp {
+                    key,
+                    value,
+                    type_ann,
+                    is_static: child.child_by_field_name("static").is_some(),
+                    is_optional: child.child_by_field_name("optional").is_some(),
+                }))
+            }
+            "private_field_definition" => todo!(),
+            _ => todo!(),
+        }
+    }
+
+    let stmt = Statement::ClassDecl {
+        loc: SourceLocation::from(node),
+        span: node.byte_range(),
+        ident: Ident {
+            loc: SourceLocation::from(&name_node),
+            span: name_node.byte_range(),
+            name: text_for_node(&name_node, src)?,
+        },
+        class: Box::from(Class {
+            ident: Ident {
+                loc: SourceLocation::from(&name_node),
+                span: name_node.byte_range(),
+                name: text_for_node(&name_node, src)?,
+            },
+            body: class_members,
+        }),
     };
 
     Ok(vec![stmt])
@@ -2423,6 +2551,31 @@ mod tests {
             } else {
                 "other"
             };              
+            "#
+        ));
+    }
+
+    #[test]
+    fn class() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            class Foo {
+                static a: string;
+                static b: boolean = true;
+                c: number;
+                d: string = "hello";
+                
+                get foo() {}
+                set foo(c) {
+                    // this.c = c;
+                }
+                static Foo() {}
+                
+                constructor(c, d) {
+                   // this.c = c;
+                   // this.d = d;
+                }
+            }              
             "#
         ));
     }

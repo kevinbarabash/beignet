@@ -1,0 +1,540 @@
+---
+source: crates/crochet_parser/src/lib.rs
+assertion_line: 2560
+expression: "parse(r#\"\n            class Foo {\n                static a: string;\n                static b: boolean = true;\n                c: number;\n                d: string = \"hello\";\n                \n                get foo() {}\n                set foo(c) {\n                    // this.c = c;\n                }\n                static Foo() {}\n                \n                constructor(c, d) {\n                   // this.c = c;\n                   // this.d = d;\n                }\n            }              \n            \"#)"
+---
+Ok(
+    Program {
+        body: [
+            ClassDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 12,
+                    },
+                    end: Position {
+                        line: 17,
+                        column: 13,
+                    },
+                },
+                span: 13..477,
+                ident: Ident {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 18,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 21,
+                        },
+                    },
+                    span: 19..22,
+                    name: "Foo",
+                },
+                class: Class {
+                    ident: Ident {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 18,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 21,
+                            },
+                        },
+                        span: 19..22,
+                        name: "Foo",
+                    },
+                    body: [
+                        Prop(
+                            ClassProp {
+                                key: Ident {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 2,
+                                            column: 23,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 24,
+                                        },
+                                    },
+                                    span: 48..49,
+                                    name: "a",
+                                },
+                                value: None,
+                                type_ann: Some(
+                                    TypeAnn {
+                                        kind: Keyword(
+                                            KeywordType {
+                                                keyword: String,
+                                            },
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 2,
+                                                column: 26,
+                                            },
+                                            end: Position {
+                                                line: 2,
+                                                column: 32,
+                                            },
+                                        },
+                                        span: 51..57,
+                                        inferred_type: None,
+                                    },
+                                ),
+                                is_static: true,
+                                is_optional: false,
+                            },
+                        ),
+                        Prop(
+                            ClassProp {
+                                key: Ident {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 3,
+                                            column: 23,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 24,
+                                        },
+                                    },
+                                    span: 82..83,
+                                    name: "b",
+                                },
+                                value: Some(
+                                    Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 3,
+                                                column: 36,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 40,
+                                            },
+                                        },
+                                        span: 95..99,
+                                        kind: Lit(
+                                            Bool(
+                                                Bool {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 3,
+                                                            column: 36,
+                                                        },
+                                                        end: Position {
+                                                            line: 3,
+                                                            column: 40,
+                                                        },
+                                                    },
+                                                    span: 95..99,
+                                                    value: true,
+                                                },
+                                            ),
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                ),
+                                type_ann: Some(
+                                    TypeAnn {
+                                        kind: Keyword(
+                                            KeywordType {
+                                                keyword: Boolean,
+                                            },
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 3,
+                                                column: 26,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 33,
+                                            },
+                                        },
+                                        span: 85..92,
+                                        inferred_type: None,
+                                    },
+                                ),
+                                is_static: true,
+                                is_optional: false,
+                            },
+                        ),
+                        Prop(
+                            ClassProp {
+                                key: Ident {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 4,
+                                            column: 16,
+                                        },
+                                        end: Position {
+                                            line: 4,
+                                            column: 17,
+                                        },
+                                    },
+                                    span: 117..118,
+                                    name: "c",
+                                },
+                                value: None,
+                                type_ann: Some(
+                                    TypeAnn {
+                                        kind: Keyword(
+                                            KeywordType {
+                                                keyword: Number,
+                                            },
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 4,
+                                                column: 19,
+                                            },
+                                            end: Position {
+                                                line: 4,
+                                                column: 25,
+                                            },
+                                        },
+                                        span: 120..126,
+                                        inferred_type: None,
+                                    },
+                                ),
+                                is_static: false,
+                                is_optional: false,
+                            },
+                        ),
+                        Prop(
+                            ClassProp {
+                                key: Ident {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 5,
+                                            column: 16,
+                                        },
+                                        end: Position {
+                                            line: 5,
+                                            column: 17,
+                                        },
+                                    },
+                                    span: 144..145,
+                                    name: "d",
+                                },
+                                value: Some(
+                                    Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 5,
+                                                column: 28,
+                                            },
+                                            end: Position {
+                                                line: 5,
+                                                column: 35,
+                                            },
+                                        },
+                                        span: 156..163,
+                                        kind: Lit(
+                                            Str(
+                                                Str {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 5,
+                                                            column: 28,
+                                                        },
+                                                        end: Position {
+                                                            line: 5,
+                                                            column: 35,
+                                                        },
+                                                    },
+                                                    span: 156..163,
+                                                    value: "hello",
+                                                },
+                                            ),
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                ),
+                                type_ann: Some(
+                                    TypeAnn {
+                                        kind: Keyword(
+                                            KeywordType {
+                                                keyword: String,
+                                            },
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 5,
+                                                column: 19,
+                                            },
+                                            end: Position {
+                                                line: 5,
+                                                column: 25,
+                                            },
+                                        },
+                                        span: 147..153,
+                                        inferred_type: None,
+                                    },
+                                ),
+                                is_static: false,
+                                is_optional: false,
+                            },
+                        ),
+                        Method(
+                            ClassMethod {
+                                key: Ident {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 7,
+                                            column: 20,
+                                        },
+                                        end: Position {
+                                            line: 7,
+                                            column: 23,
+                                        },
+                                    },
+                                    span: 202..205,
+                                    name: "foo",
+                                },
+                                kind: Getter,
+                                lambda: Lambda {
+                                    params: [],
+                                    body: Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                        },
+                                        span: 0..0,
+                                        kind: Empty,
+                                        inferred_type: None,
+                                    },
+                                    is_async: false,
+                                    return_type: None,
+                                    type_params: None,
+                                },
+                            },
+                        ),
+                        Method(
+                            ClassMethod {
+                                key: Ident {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 8,
+                                            column: 20,
+                                        },
+                                        end: Position {
+                                            line: 8,
+                                            column: 23,
+                                        },
+                                    },
+                                    span: 231..234,
+                                    name: "foo",
+                                },
+                                kind: Setter,
+                                lambda: Lambda {
+                                    params: [
+                                        EFnParam {
+                                            pat: Pattern {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 8,
+                                                        column: 24,
+                                                    },
+                                                    end: Position {
+                                                        line: 8,
+                                                        column: 25,
+                                                    },
+                                                },
+                                                span: 235..236,
+                                                kind: Ident(
+                                                    BindingIdent {
+                                                        name: "c",
+                                                        mutable: false,
+                                                        span: 235..236,
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 8,
+                                                                column: 24,
+                                                            },
+                                                            end: Position {
+                                                                line: 8,
+                                                                column: 25,
+                                                            },
+                                                        },
+                                                    },
+                                                ),
+                                                inferred_type: None,
+                                            },
+                                            type_ann: None,
+                                            optional: false,
+                                            mutable: false,
+                                        },
+                                    ],
+                                    body: Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                        },
+                                        span: 0..0,
+                                        kind: Empty,
+                                        inferred_type: None,
+                                    },
+                                    is_async: false,
+                                    return_type: None,
+                                    type_params: None,
+                                },
+                            },
+                        ),
+                        Method(
+                            ClassMethod {
+                                key: Ident {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 11,
+                                            column: 23,
+                                        },
+                                        end: Position {
+                                            line: 11,
+                                            column: 26,
+                                        },
+                                    },
+                                    span: 316..319,
+                                    name: "Foo",
+                                },
+                                kind: Method,
+                                lambda: Lambda {
+                                    params: [],
+                                    body: Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                        },
+                                        span: 0..0,
+                                        kind: Empty,
+                                        inferred_type: None,
+                                    },
+                                    is_async: false,
+                                    return_type: None,
+                                    type_params: None,
+                                },
+                            },
+                        ),
+                        Constructor(
+                            Constructor {
+                                params: [
+                                    EFnParam {
+                                        pat: Pattern {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 13,
+                                                    column: 28,
+                                                },
+                                                end: Position {
+                                                    line: 13,
+                                                    column: 29,
+                                                },
+                                            },
+                                            span: 370..371,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "c",
+                                                    mutable: false,
+                                                    span: 370..371,
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 13,
+                                                            column: 28,
+                                                        },
+                                                        end: Position {
+                                                            line: 13,
+                                                            column: 29,
+                                                        },
+                                                    },
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
+                                        type_ann: None,
+                                        optional: false,
+                                        mutable: false,
+                                    },
+                                    EFnParam {
+                                        pat: Pattern {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 13,
+                                                    column: 31,
+                                                },
+                                                end: Position {
+                                                    line: 13,
+                                                    column: 32,
+                                                },
+                                            },
+                                            span: 373..374,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "d",
+                                                    mutable: false,
+                                                    span: 373..374,
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 13,
+                                                            column: 31,
+                                                        },
+                                                        end: Position {
+                                                            line: 13,
+                                                            column: 32,
+                                                        },
+                                                    },
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
+                                        type_ann: None,
+                                        optional: false,
+                                        mutable: false,
+                                    },
+                                ],
+                                body: Expr {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                    },
+                                    span: 0..0,
+                                    kind: Empty,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                    ],
+                },
+            },
+        ],
+    },
+)

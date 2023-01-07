@@ -20,7 +20,7 @@ pub enum Statement {
     ClassDecl {
         loc: SourceLocation,
         span: Span,
-        ident: Ident,
+        ident: Ident, // Why do have `ident` here an in `Class`?
         class: Box<Class>,
     },
     VarDecl {
