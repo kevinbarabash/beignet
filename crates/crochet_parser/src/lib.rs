@@ -282,13 +282,14 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
                 };
 
                 // TODO: add support to the AST for these
-                let _is_static = child.child_by_field_name("static").is_some();
-                let _mutable = child.child_by_field_name("mut").is_some();
+                let is_static = child.child_by_field_name("static").is_some();
+                let is_mutating = child.child_by_field_name("mut").is_some();
 
                 if key.name.as_str() == "constructor" {
                     class_members.push(ClassMember::Constructor(Constructor {
                         params,
                         body: Box::from(body),
+                        type_params: None, // TODO
                     }));
                 } else {
                     class_members.push(ClassMember::Method(ClassMethod {
@@ -301,6 +302,8 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
                             return_type,
                             type_params: None, // TODO
                         },
+                        is_static,
+                        is_mutating,
                     }))
                 }
             }

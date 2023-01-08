@@ -2,6 +2,7 @@ use crochet_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
 use crochet_ast::values::*;
 
 use crate::context::{Context, Env};
+use crate::infer_class::infer_class;
 use crate::infer_expr::infer_expr as infer_expr_rec;
 use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
@@ -137,11 +138,15 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
             Statement::ClassDecl {
                 loc: _,
                 span: _,
-                ident: _,
-                class: _,
+                ident,
+                class,
             } => {
-                // TODO: implement this
-                todo!()
+                let (s, t) = infer_class(ctx, class)?;
+
+                let t = close_over(&s, &t, ctx);
+                ctx.insert_value(ident.name.to_owned(), t);
+
+                // TODO: update `class` with the returned substitutions, `s`
             }
         };
     }

@@ -1,6 +1,7 @@
 mod assump;
 mod context;
 mod expand_type;
+mod infer_class;
 mod infer_expr;
 mod infer_fn_param;
 mod infer_pattern;

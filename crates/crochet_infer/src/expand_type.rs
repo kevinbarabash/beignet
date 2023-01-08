@@ -132,11 +132,16 @@ fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Vec
 
     match &index.kind {
         TypeKind::Lit(lit) => {
+            // TODO: collect all candidate values and return the best one, for
+            // instance methods should trump an index element.
             if let TypeKind::Object(obj) = &obj.kind {
                 for elem in &obj.elems {
                     match elem {
                         TObjElem::Call(_) => (),
                         TObjElem::Constructor(_) => (),
+                        TObjElem::Method(_) => todo!(),
+                        TObjElem::Getter(_) => todo!(),
+                        TObjElem::Setter(_) => todo!(),
                         TObjElem::Index(index) => match &index.key.t.kind {
                             TypeKind::Keyword(keyword) => match (keyword, lit) {
                                 (TKeyword::Number, TLit::Num(_)) => {
@@ -322,20 +327,19 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, Vec<T
     Ok(t)
 }
 
+// NOTE: This should only be used by `expand_mapped_type` since it only returns
+// Result<TProp, _>.  This is fine for that usage since it doesn't make sense to
+// change is_mutating on methods and it doesn't make sense for callables and methods
+// to be optional.
 fn get_prop_by_name(elems: &[TObjElem], name: &str) -> Result<TProp, Vec<TypeError>> {
     for elem in elems {
-        match elem {
-            TObjElem::Call(_) => (),
-            TObjElem::Constructor(_) => (),
-            TObjElem::Index(_) => (),
-            TObjElem::Prop(prop) => {
-                let key = match &prop.name {
-                    TPropKey::StringKey(key) => key,
-                    TPropKey::NumberKey(key) => key,
-                };
-                if key == name {
-                    return Ok(prop.to_owned());
-                }
+        if let TObjElem::Prop(prop) = elem {
+            let key = match &prop.name {
+                TPropKey::StringKey(key) => key,
+                TPropKey::NumberKey(key) => key,
+            };
+            if key == name {
+                return Ok(prop.to_owned());
             }
         }
     }
@@ -369,6 +373,30 @@ fn expand_keyof(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
                             ..
                         }) => Some(t.as_ref().to_owned()),
                         TObjElem::Prop(prop) => match &prop.name {
+                            crochet_ast::types::TPropKey::StringKey(str) => {
+                                Some(Type::from(TypeKind::Lit(TLit::Str(str.to_owned()))))
+                            }
+                            crochet_ast::types::TPropKey::NumberKey(num) => {
+                                Some(Type::from(TypeKind::Lit(TLit::Num(num.to_owned()))))
+                            }
+                        },
+                        TObjElem::Method(method) => match &method.name {
+                            crochet_ast::types::TPropKey::StringKey(str) => {
+                                Some(Type::from(TypeKind::Lit(TLit::Str(str.to_owned()))))
+                            }
+                            crochet_ast::types::TPropKey::NumberKey(num) => {
+                                Some(Type::from(TypeKind::Lit(TLit::Num(num.to_owned()))))
+                            }
+                        },
+                        TObjElem::Getter(getter) => match &getter.name {
+                            crochet_ast::types::TPropKey::StringKey(str) => {
+                                Some(Type::from(TypeKind::Lit(TLit::Str(str.to_owned()))))
+                            }
+                            crochet_ast::types::TPropKey::NumberKey(num) => {
+                                Some(Type::from(TypeKind::Lit(TLit::Num(num.to_owned()))))
+                            }
+                        },
+                        TObjElem::Setter(setter) => match &setter.name {
                             crochet_ast::types::TPropKey::StringKey(str) => {
                                 Some(Type::from(TypeKind::Lit(TLit::Str(str.to_owned()))))
                             }
@@ -451,6 +479,9 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
                     match array_elem {
                         TObjElem::Call(_) => (),
                         TObjElem::Constructor(_) => (),
+                        TObjElem::Method(_) => todo!(),
+                        TObjElem::Getter(_) => todo!(),
+                        TObjElem::Setter(_) => todo!(),
                         // We intentionally ignore index elements since we only
                         // want to include valid indexes which is done above
                         TObjElem::Index(_) => (),

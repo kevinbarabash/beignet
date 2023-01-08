@@ -85,6 +85,8 @@ Ok(
                                     return_type: None,
                                     type_params: None,
                                 },
+                                is_static: false,
+                                is_mutating: false,
                             },
                         ),
                     ],

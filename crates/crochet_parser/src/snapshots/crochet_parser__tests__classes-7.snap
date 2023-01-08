@@ -105,6 +105,8 @@ Ok(
                                     ),
                                     type_params: None,
                                 },
+                                is_static: true,
+                                is_mutating: false,
                             },
                         ),
                     ],

@@ -192,6 +192,9 @@ impl Substitutable for TObjElem {
             TObjElem::Constructor(qlam) => qlam.apply(sub),
             TObjElem::Index(index) => index.apply(sub),
             TObjElem::Prop(prop) => prop.apply(sub),
+            TObjElem::Method(_) => todo!(),
+            TObjElem::Getter(_) => todo!(),
+            TObjElem::Setter(_) => todo!(),
         }
     }
     fn ftv(&self) -> Vec<TVar> {
@@ -200,6 +203,9 @@ impl Substitutable for TObjElem {
             TObjElem::Constructor(qlam) => qlam.ftv(),
             TObjElem::Index(index) => index.ftv(),
             TObjElem::Prop(prop) => prop.t.ftv(),
+            TObjElem::Method(_) => todo!(),
+            TObjElem::Getter(_) => todo!(),
+            TObjElem::Setter(_) => todo!(),
         }
     }
 }

@@ -191,6 +191,9 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                     TObjElem::Constructor(_) => None,
                     TObjElem::Index(_) => None,
                     TObjElem::Prop(_) => None,
+                    TObjElem::Method(_) => todo!(),
+                    TObjElem::Getter(_) => todo!(),
+                    TObjElem::Setter(_) => todo!(),
                 })
                 .collect();
 

@@ -44,13 +44,35 @@ impl fmt::Display for TCallable {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TMethod {
+    pub name: TPropKey,
+    pub mutating: bool,
+    pub params: Vec<TFnParam>,
+    pub ret: Box<Type>,
+    pub type_params: Vec<TypeParam>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TGetter {
+    pub name: TPropKey,
+    pub ret: Box<Type>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TSetter {
+    pub name: TPropKey,
+    pub param: TFnParam,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TObjElem {
     Call(TCallable),
     Constructor(TCallable),
+    Method(TMethod),
+    Getter(TGetter),
+    Setter(TSetter),
     Index(TIndex),
     Prop(TProp),
-    // Getter
-    // Setter
     // RestSpread - we can use this instead of converting {a, ...x} to {a} & tvar
 }
 
@@ -59,6 +81,9 @@ impl fmt::Display for TObjElem {
         match self {
             TObjElem::Call(lam) => write!(f, "{lam}"),
             TObjElem::Constructor(lam) => write!(f, "new {lam}"),
+            TObjElem::Method(_) => todo!(),
+            TObjElem::Getter(_) => todo!(),
+            TObjElem::Setter(_) => todo!(),
             TObjElem::Index(index) => write!(f, "{index}"),
             TObjElem::Prop(prop) => write!(f, "{prop}"),
         }

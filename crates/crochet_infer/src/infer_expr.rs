@@ -85,35 +85,30 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             let mut results = vec![];
             if let TypeKind::Object(TObject { elems }) = t.kind {
                 for elem in elems {
-                    match &elem {
-                        TObjElem::Call(_) => (),
-                        TObjElem::Constructor(callable) => {
-                            let mut ret_type = ctx.fresh_var();
-                            let mut call_type = Type::from(TypeKind::App(types::TApp {
-                                args: arg_types.clone(),
-                                ret: Box::from(ret_type.clone()),
-                            }));
+                    if let TObjElem::Constructor(callable) = &elem {
+                        let mut ret_type = ctx.fresh_var();
+                        let mut call_type = Type::from(TypeKind::App(types::TApp {
+                            args: arg_types.clone(),
+                            ret: Box::from(ret_type.clone()),
+                        }));
 
-                            // We generalize first b/c lam_type isn't generic and
-                            // we need it to be before we can instantiate it.
-                            let mut lam_type = instantiate_callable(ctx, callable);
-                            // let t = generalize(&Env::default(), &lam_type);
-                            // let mut lam_type = ctx.instantiate(&t);
-                            lam_type.provenance =
-                                Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
+                        // We generalize first b/c lam_type isn't generic and
+                        // we need it to be before we can instantiate it.
+                        let mut lam_type = instantiate_callable(ctx, callable);
+                        // let t = generalize(&Env::default(), &lam_type);
+                        // let mut lam_type = ctx.instantiate(&t);
+                        lam_type.provenance =
+                            Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
 
-                            if let Ok(s3) = unify(&mut call_type, &mut lam_type, ctx) {
-                                ss.push(s3);
+                        if let Ok(s3) = unify(&mut call_type, &mut lam_type, ctx) {
+                            ss.push(s3);
 
-                                let s = compose_many_subs(&ss.clone());
-                                ret_type.apply(&s);
+                            let s = compose_many_subs(&ss.clone());
+                            ret_type.apply(&s);
 
-                                // return (s3 `compose` s2 `compose` s1, apply s3 tv)
-                                results.push((s, ret_type));
-                            }
+                            // return (s3 `compose` s2 `compose` s1, apply s3 tv)
+                            results.push((s, ret_type));
                         }
-                        TObjElem::Index(_) => (),
-                        TObjElem::Prop(_) => (),
                     }
                 }
             }
@@ -382,7 +377,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
 
             let s = compose_many_subs(&ss);
 
-            t_params.apply(&s);
+            t_params.apply(&s); // Do we need to do this since t_params is part of t?
             t.apply(&s);
 
             // TODO: Update the inferred_type on each param to equal the
@@ -817,9 +812,6 @@ fn get_prop_value(
     match prop {
         MemberProp::Ident(Ident { name, .. }) => {
             let prop = elems.iter().find_map(|elem| match elem {
-                types::TObjElem::Call(_) => None,
-                types::TObjElem::Constructor(_) => None,
-                types::TObjElem::Index(_) => None,
                 types::TObjElem::Prop(prop) => {
                     if prop.name == TPropKey::StringKey(name.to_owned()) {
                         Some(prop)
@@ -827,6 +819,9 @@ fn get_prop_value(
                         None
                     }
                 }
+                TObjElem::Getter(_) => todo!(),
+                TObjElem::Method(_) => todo!(),
+                _ => None,
             });
 
             match prop {
@@ -849,15 +844,14 @@ fn get_prop_value(
                         .iter()
                         .filter_map(|elem| match elem {
                             // TODO: include index types in the future
-                            // Call signatures aren't included because they can't be accessed
-                            // as members.  What about .constructor?
-                            types::TObjElem::Call(_) => None,
-                            types::TObjElem::Constructor(_) => None,
-                            types::TObjElem::Index(_) => None,
+                            types::TObjElem::Index(_) => todo!(),
                             types::TObjElem::Prop(prop) => {
                                 // TODO: handle generic object properties
                                 Some(prop.t.to_owned())
                             }
+                            types::TObjElem::Getter(_) => todo!(),
+                            types::TObjElem::Method(_) => todo!(),
+                            _ => None,
                         })
                         .collect();
 
@@ -868,10 +862,11 @@ fn get_prop_value(
 
                     Ok((prop_s, t))
                 }
+                // TODO: handle index types where the computed property key is
+                // a number instead of string.
                 TypeKind::Lit(types::TLit::Str(key)) => {
                     let prop = elems.iter().find_map(|elem| match elem {
-                        types::TObjElem::Call(_) => None,
-                        types::TObjElem::Constructor(_) => None,
+                        // TODO: include index types in the future
                         types::TObjElem::Index(_) => None,
                         types::TObjElem::Prop(prop) => {
                             if prop.name == TPropKey::StringKey(key.to_owned()) {
@@ -880,6 +875,9 @@ fn get_prop_value(
                                 None
                             }
                         }
+                        types::TObjElem::Getter(_) => todo!(),
+                        types::TObjElem::Method(_) => todo!(),
+                        _ => None,
                     });
 
                     match prop {

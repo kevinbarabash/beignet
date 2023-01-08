@@ -203,6 +203,9 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                             mutable: prop.mutable,
                             t: norm_type(&prop.t, mapping, _ctx),
                         }),
+                        TObjElem::Method(_) => todo!(),
+                        TObjElem::Getter(_) => todo!(),
+                        TObjElem::Setter(_) => todo!(),
                     })
                     .collect();
                 TypeKind::Object(TObject { elems })
@@ -292,6 +295,9 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
                 // What do we do with Call and Index signatures
                 TObjElem::Call(_) => todo!(),
                 TObjElem::Constructor(_) => todo!(),
+                TObjElem::Method(_) => todo!(),
+                TObjElem::Getter(_) => todo!(),
+                TObjElem::Setter(_) => todo!(),
                 TObjElem::Index(_) => todo!(),
                 TObjElem::Prop(prop) => {
                     let key = match &prop.name {
@@ -328,6 +334,9 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     elems.sort_by_key(|elem| match elem {
         TObjElem::Call(_) => todo!(),
         TObjElem::Constructor(_) => todo!(),
+        TObjElem::Method(_) => todo!(),
+        TObjElem::Getter(_) => todo!(),
+        TObjElem::Setter(_) => todo!(),
         TObjElem::Index(_) => todo!(),
         TObjElem::Prop(prop) => prop.name.clone(),
     }); // ensure a stable order
@@ -587,6 +596,9 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
                             type_params: lam.type_params.to_owned(),
                         })
                     }
+                    TObjElem::Method(_) => todo!(),
+                    TObjElem::Getter(_) => todo!(),
+                    TObjElem::Setter(_) => todo!(),
                     TObjElem::Index(index) => {
                         let t = replace_aliases_rec(&index.t, type_param_map);
                         TObjElem::Index(TIndex {

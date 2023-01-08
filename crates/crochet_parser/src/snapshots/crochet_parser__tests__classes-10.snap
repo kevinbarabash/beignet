@@ -102,6 +102,7 @@ Ok(
                                     kind: Empty,
                                     inferred_type: None,
                                 },
+                                type_params: None,
                             },
                         ),
                     ],

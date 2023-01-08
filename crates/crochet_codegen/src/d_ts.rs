@@ -429,6 +429,9 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsTyp
                 .map(|elem| match elem {
                     TObjElem::Call(_) => todo!(),
                     TObjElem::Constructor(_) => todo!(),
+                    TObjElem::Method(_) => todo!(),
+                    TObjElem::Getter(_) => todo!(),
+                    TObjElem::Setter(_) => todo!(),
                     TObjElem::Index(index) => TsTypeElement::TsIndexSignature(TsIndexSignature {
                         span: DUMMY_SP,
                         readonly: !index.mutable && !t.mutable,

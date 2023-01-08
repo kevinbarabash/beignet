@@ -1,6 +1,6 @@
 use crate::values::expr::{EFnParam, Expr, Lambda};
 use crate::values::ident::Ident;
-use crate::values::type_ann::TypeAnn;
+use crate::values::type_ann::{TypeAnn, TypeParam};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Class {
@@ -19,7 +19,7 @@ pub enum ClassMember {
 pub struct Constructor {
     pub params: Vec<EFnParam>,
     pub body: Box<Expr>,
-    // TODO: add type_params
+    pub type_params: Option<Vec<TypeParam>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,6 +27,8 @@ pub struct ClassMethod {
     pub key: Ident,
     pub kind: MethodKind,
     pub lambda: Lambda,
+    pub is_static: bool,
+    pub is_mutating: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

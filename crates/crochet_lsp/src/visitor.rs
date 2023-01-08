@@ -262,10 +262,15 @@ pub trait Visitor {
                     self._visit_expr(body);
                 })
             }
+            // TODO: finish implementing this
             ExprKind::Class(Class { ident: _, body }) => {
                 for member in body {
                     match member {
-                        ClassMember::Constructor(Constructor { params, body }) => {
+                        ClassMember::Constructor(Constructor {
+                            params,
+                            body,
+                            type_params: _,
+                        }) => {
                             params.iter_mut().for_each(|param| {
                                 // TODO: add visit_fn_param() method
                                 let EFnParam { pat, type_ann, .. } = param;
@@ -280,6 +285,8 @@ pub trait Visitor {
                             key: _,
                             kind: _,
                             lambda,
+                            is_mutating: _,
+                            is_static: _,
                         }) => {
                             lambda.params.iter_mut().for_each(|param| {
                                 // TODO: add visit_fn_param() method
