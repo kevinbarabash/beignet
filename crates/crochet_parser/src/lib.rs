@@ -2556,28 +2556,17 @@ mod tests {
     }
 
     #[test]
-    fn class() {
-        insta::assert_debug_snapshot!(parse(
-            r#"
-            class Foo {
-                static a: string;
-                static b: boolean = true;
-                c: number;
-                d: string = "hello";
-                
-                get foo() {}
-                set foo(c) {
-                    // this.c = c;
-                }
-                static Foo() {}
-                
-                constructor(c, d) {
-                   // this.c = c;
-                   // this.d = d;
-                }
-            }              
-            "#
-        ));
+    fn classes() {
+        insta::assert_debug_snapshot!(parse("class Foo { a: number; }"));
+        insta::assert_debug_snapshot!(parse("class Foo { a: number = 5; }"));
+        insta::assert_debug_snapshot!(parse("class Foo { a = 5; }"));
+        insta::assert_debug_snapshot!(parse("class Foo { static a: number; }"));
+        insta::assert_debug_snapshot!(parse("class Foo { foo() {} }"));
+        insta::assert_debug_snapshot!(parse("class Foo { foo(): string {} }"));
+        insta::assert_debug_snapshot!(parse("class Foo { static foo(): string {} }"));
+        insta::assert_debug_snapshot!(parse("class Foo { get foo() {} }"));
+        insta::assert_debug_snapshot!(parse("class Foo { set foo(x) {} }"));
+        insta::assert_debug_snapshot!(parse("class Foo { constructor(x) {} }"));
     }
 
     // #[test]
