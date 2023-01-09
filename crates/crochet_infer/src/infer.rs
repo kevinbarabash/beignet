@@ -4,13 +4,13 @@ use crochet_ast::values::*;
 use crate::context::{Context, Env};
 use crate::infer_class::infer_class;
 use crate::infer_expr::infer_expr as infer_expr_rec;
+use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
 use crate::scheme::generalize;
 use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
 use crate::update::*;
 use crate::util::close_over;
-use crate::{infer_pattern::*, normalize};
 
 pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<TypeError>> {
     // TODO: replace with Class type once it exists

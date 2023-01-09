@@ -811,26 +811,29 @@ fn get_prop_value(
     let elems = &obj.elems;
     match prop {
         MemberProp::Ident(Ident { name, .. }) => {
-            let prop = elems.iter().find_map(|elem| match elem {
-                types::TObjElem::Prop(prop) => {
-                    if prop.name == TPropKey::StringKey(name.to_owned()) {
-                        Some(prop)
-                    } else {
-                        None
+            for elem in elems {
+                match elem {
+                    types::TObjElem::Prop(prop) => {
+                        if prop.name == TPropKey::StringKey(name.to_owned()) {
+                            let t = get_property_type(prop);
+                            return Ok((Subst::default(), t));
+                        }
                     }
+                    TObjElem::Getter(_) => todo!(),
+                    TObjElem::Method(method) => {
+                        if method.name == TPropKey::StringKey(name.to_owned()) {
+                            let t = Type::from(TypeKind::Lam(types::TLam {
+                                params: method.params.to_owned(),
+                                ret: method.ret.to_owned(),
+                            }));
+                            return Ok((Subst::default(), t));
+                        }
+                    }
+                    _ => (),
                 }
-                TObjElem::Getter(_) => todo!(),
-                TObjElem::Method(_) => todo!(),
-                _ => None,
-            });
-
-            match prop {
-                Some(prop) => {
-                    let t = get_property_type(prop);
-                    Ok((Subst::default(), t))
-                }
-                None => Err(vec![TypeError::MissingKey(name.to_owned())]),
             }
+
+            Err(vec![TypeError::MissingKey(name.to_owned())])
         }
         MemberProp::Computed(ComputedPropName { expr, .. }) => {
             let (prop_s, prop_t) = infer_expr(ctx, expr)?;

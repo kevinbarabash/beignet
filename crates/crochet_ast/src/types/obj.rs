@@ -52,6 +52,37 @@ pub struct TMethod {
     pub type_params: Vec<TypeParam>,
 }
 
+impl fmt::Display for TMethod {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self {
+            name,
+            mutating,
+            params,
+            ret,
+            type_params,
+        } = self;
+        if *mutating {
+            write!(f, "mut ")?;
+        }
+        write!(f, "{name}")?;
+        if !type_params.is_empty() {
+            let type_params = type_params.iter().map(|tp| {
+                let TypeParam {
+                    name,
+                    constraint,
+                    default: _, // TODO
+                } = tp;
+                match constraint {
+                    Some(constraint) => format!("{name} extends {constraint}"),
+                    None => name.to_string(),
+                }
+            });
+            write!(f, "<{}>", join(type_params, ", "))?;
+        }
+        write!(f, "({}): {}", join(params, ", "), ret)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TGetter {
     pub name: TPropKey,
@@ -81,7 +112,7 @@ impl fmt::Display for TObjElem {
         match self {
             TObjElem::Call(lam) => write!(f, "{lam}"),
             TObjElem::Constructor(lam) => write!(f, "new {lam}"),
-            TObjElem::Method(_) => todo!(),
+            TObjElem::Method(method) => write!(f, "{method}"),
             TObjElem::Getter(_) => todo!(),
             TObjElem::Setter(_) => todo!(),
             TObjElem::Index(index) => write!(f, "{index}"),

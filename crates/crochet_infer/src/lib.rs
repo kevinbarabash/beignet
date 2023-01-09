@@ -3020,4 +3020,109 @@ mod tests {
         let snd = ctx.lookup_value("snd").unwrap();
         assert_eq!(format!("{snd}"), "<A>(a: A, b: A) => A");
     }
+
+    #[test]
+    fn infer_class_method() {
+        let src = r#"
+        class Foo {
+            constructor() {}
+            add(x, y) { x + y; }
+        }
+
+        let foo = new Foo();
+        let sum = foo.add(5, 10);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        let sum = ctx.lookup_value("sum").unwrap();
+        assert_eq!(format!("{sum}"), "number");
+    }
+
+    #[test]
+    fn infer_class_property() {
+        let src = r#"
+        class Foo {
+            msg: string;
+            constructor() {}
+        }
+
+        let foo = new Foo();
+        let msg = foo.msg;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        let msg = ctx.lookup_value("msg").unwrap();
+        assert_eq!(format!("{msg}"), "string");
+    }
+
+    #[test]
+    fn infer_class_property_with_destructuring() {
+        let src = r#"
+        class Foo {
+            msg: string;
+            constructor() {}
+        }
+
+        let foo = new Foo();
+        let {msg} = foo;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        let msg = ctx.lookup_value("msg").unwrap();
+        assert_eq!(format!("{msg}"), "string");
+    }
+
+    #[test]
+    fn infer_class_instance_types() {
+        let src = r#"
+        class Foo {
+            msg: string;
+            constructor() {}
+            add(x, y) { x + y; }
+            mut set_msg(msg: string) {}
+        }
+        "#;
+
+        let ctx = infer_prog(src);
+
+        let it = ctx.lookup_type("Foo", false).unwrap();
+        assert_eq!(
+            format!("{it}"),
+            "{msg: string, add(x: number, y: number): number}"
+        );
+
+        let mut_it = ctx.lookup_type("Foo", true).unwrap();
+        assert_eq!(
+            format!("{mut_it}"),
+            "{msg: string, add(x: number, y: number): number, mut set_msg(msg: string): undefined}"
+        );
+    }
+
+    #[test]
+    fn infer_class_static_property() {
+        let src = r#"
+        class Foo {
+            static msg: string;
+            constructor() {}
+            static add(x, y) { x + y; }
+        }
+
+        let {msg} = Foo;
+        let sum = Foo.add(5, 10);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        let msg = ctx.lookup_value("msg").unwrap();
+        assert_eq!(format!("{msg}"), "string");
+
+        let sum = ctx.lookup_value("sum").unwrap();
+        assert_eq!(format!("{sum}"), "number");
+
+        let cls = ctx.lookup_value("Foo").unwrap();
+        assert_eq!(format!("{cls}"), "FooConstructor");
+    }
 }
