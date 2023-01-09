@@ -16,6 +16,8 @@ enum Mode {
     Write,
 }
 
+// foo
+
 #[testing_macros::fixture("tests/pass/*.crochet")]
 fn pass(in_path: PathBuf) {
     let mode = match env::var("UPDATE") {

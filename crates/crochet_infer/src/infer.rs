@@ -1,16 +1,16 @@
-use crochet_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
+use crochet_ast::types::{TObjElem, TObject, TProp, TPropKey, TRef, Type, TypeKind};
 use crochet_ast::values::*;
 
 use crate::context::{Context, Env};
 use crate::infer_class::infer_class;
 use crate::infer_expr::infer_expr as infer_expr_rec;
-use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
 use crate::scheme::generalize;
 use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
 use crate::update::*;
 use crate::util::close_over;
+use crate::{infer_pattern::*, normalize};
 
 pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<TypeError>> {
     // TODO: replace with Class type once it exists
@@ -143,10 +143,19 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
             } => {
                 let (s, t) = infer_class(ctx, class)?;
 
-                let t = close_over(&s, &t, ctx);
-                ctx.insert_value(ident.name.to_owned(), t);
+                let mut t = t.clone();
+                t.apply(&s);
 
-                // TODO: update `class` with the returned substitutions, `s`
+                // This follows the same pattern found in lib.es5.d.ts.
+                let name = ident.name.to_owned();
+                ctx.insert_type(format!("{name}Constructor"), t);
+                ctx.insert_value(
+                    name.to_owned(),
+                    Type::from(TypeKind::Ref(TRef {
+                        name: format!("{name}Constructor"),
+                        type_args: None,
+                    })),
+                );
             }
         };
     }

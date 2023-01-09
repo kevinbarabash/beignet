@@ -185,6 +185,20 @@ impl Substitutable for TypeParam {
     }
 }
 
+impl Substitutable for TMethod {
+    fn apply(&mut self, sub: &Subst) {
+        self.params.iter_mut().for_each(|param| param.apply(sub));
+        self.ret.apply(sub);
+        self.type_params.apply(sub);
+    }
+    fn ftv(&self) -> Vec<TVar> {
+        let mut result = self.params.ftv();
+        result.append(&mut self.ret.ftv());
+        result.append(&mut self.type_params.ftv());
+        result
+    }
+}
+
 impl Substitutable for TObjElem {
     fn apply(&mut self, sub: &Subst) {
         match self {
@@ -192,7 +206,7 @@ impl Substitutable for TObjElem {
             TObjElem::Constructor(qlam) => qlam.apply(sub),
             TObjElem::Index(index) => index.apply(sub),
             TObjElem::Prop(prop) => prop.apply(sub),
-            TObjElem::Method(_) => todo!(),
+            TObjElem::Method(method) => method.apply(sub),
             TObjElem::Getter(_) => todo!(),
             TObjElem::Setter(_) => todo!(),
         }
@@ -203,7 +217,7 @@ impl Substitutable for TObjElem {
             TObjElem::Constructor(qlam) => qlam.ftv(),
             TObjElem::Index(index) => index.ftv(),
             TObjElem::Prop(prop) => prop.t.ftv(),
-            TObjElem::Method(_) => todo!(),
+            TObjElem::Method(method) => method.ftv(),
             TObjElem::Getter(_) => todo!(),
             TObjElem::Setter(_) => todo!(),
         }

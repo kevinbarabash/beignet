@@ -17,6 +17,8 @@ fn is_promise(t: &Type) -> bool {
 }
 
 pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type), Vec<TypeError>> {
+    let class_name = class.ident.name.to_owned();
+
     let mut statics_elems: Vec<TObjElem> = vec![];
     let mut instance_elems: Vec<TObjElem> = vec![];
     let mut mut_instance_elems: Vec<TObjElem> = vec![];
@@ -76,8 +78,11 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
 
                 let mut elem = TObjElem::Constructor(TCallable {
                     params: t_params,
-                    ret: Box::from(ctx.fresh_var()), // This should be a TRef to the name of the class
-                    type_params: vec![],             // TODO
+                    ret: Box::from(Type::from(TypeKind::Ref(TRef {
+                        name: class_name.to_owned(),
+                        type_args: None,
+                    }))),
+                    type_params: vec![], // TODO
                 });
 
                 let s = compose_many_subs(&ss);
@@ -252,14 +257,13 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
         elems: mut_instance_elems,
     }));
 
-    let name = class.ident.name.to_owned();
     let empty_env = Env::default();
 
     ctx.insert_scheme(
-        format!("Readonly{name}"),
+        format!("Readonly{class_name}"),
         generalize(&empty_env, &instance_t),
     );
-    ctx.insert_scheme(name, generalize(&empty_env, &mut_instance_t));
+    ctx.insert_scheme(class_name, generalize(&empty_env, &mut_instance_t));
 
     // TODO: capture all of the subsitutions and return them
     let s = Subst::default();

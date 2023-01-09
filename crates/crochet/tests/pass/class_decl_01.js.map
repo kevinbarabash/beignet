@@ -1,0 +1,1 @@
+{"version":3,"sources":["<anon>"],"sourcesContent":["class Foo {\n    msg: string;\n    tag = \"Foo\";\n\n    constructor() {}\n\n    bar() {\n        \"hello\";\n    }\n\n    add(x, y) {\n        x + y;\n    }\n}\n"],"names":[],"mappings":"MAAM;IAEF,MAAM;;eAFV;;IAMI;eACI;;IAGJ,IAAI,GAAG;eACH,IAAI"}

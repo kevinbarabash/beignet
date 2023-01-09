@@ -1,0 +1,14 @@
+class Foo {
+    msg: string;
+    tag = "Foo";
+
+    constructor() {}
+
+    bar() {
+        "hello";
+    }
+
+    add(x, y) {
+        x + y;
+    }
+}

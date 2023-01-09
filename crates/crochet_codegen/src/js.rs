@@ -923,7 +923,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
     let body: Vec<ClassMember> = class
         .body
         .iter()
-        .map(|member| match member {
+        .filter_map(|member| match member {
             values::ClassMember::Constructor(constructor) => {
                 let body = build_fn_body(&constructor.body, ctx);
                 let params: Vec<ParamOrTsParamProp> = constructor
@@ -939,7 +939,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
                     })
                     .collect();
 
-                ClassMember::Constructor(Constructor {
+                Some(ClassMember::Constructor(Constructor {
                     span: DUMMY_SP, // TODO
                     key: PropName::Ident(Ident {
                         span: DUMMY_SP, // TODO
@@ -950,7 +950,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
                     body: Some(body),
                     accessibility: None,
                     is_optional: false,
-                })
+                }))
             }
             values::ClassMember::Method(method) => {
                 let body = build_fn_body(&method.lambda.body, ctx);
@@ -968,7 +968,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
                     })
                     .collect();
 
-                ClassMember::Method(ClassMethod {
+                Some(ClassMember::Method(ClassMethod {
                     span: DUMMY_SP, // TODO
                     key: PropName::Ident(Ident::from(&method.key)),
                     function: Box::from(Function {
@@ -987,26 +987,32 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
                     is_abstract: false,
                     is_optional: false,
                     is_override: false,
-                })
+                }))
             }
-            values::ClassMember::Prop(prop) => ClassMember::ClassProp(ClassProp {
-                span: DUMMY_SP, // TODO
-                value: prop
-                    .value
-                    .as_ref()
-                    .map(|value| Box::from(build_expr(value, stmts, ctx))),
-                key: PropName::Ident(Ident::from(&prop.key)),
-                type_ann: None,
-                is_static: prop.is_static,
-                decorators: vec![],
-                accessibility: None,
-                is_abstract: false,
-                is_optional: prop.is_optional,
-                is_override: false,
-                readonly: false, // TODO
-                declare: false,
-                definite: false,
-            }),
+            values::ClassMember::Prop(prop) => {
+                if prop.value.is_some() {
+                    Some(ClassMember::ClassProp(ClassProp {
+                        span: DUMMY_SP, // TODO
+                        value: prop
+                            .value
+                            .as_ref()
+                            .map(|value| Box::from(build_expr(value, stmts, ctx))),
+                        key: PropName::Ident(Ident::from(&prop.key)),
+                        type_ann: None,
+                        is_static: prop.is_static,
+                        decorators: vec![],
+                        accessibility: None,
+                        is_abstract: false,
+                        is_optional: prop.is_optional,
+                        is_override: false,
+                        readonly: false, // TODO
+                        declare: false,
+                        definite: false,
+                    }))
+                } else {
+                    None
+                }
+            }
         })
         .collect();
 
