@@ -3125,4 +3125,44 @@ mod tests {
         let cls = ctx.lookup_value("Foo").unwrap();
         assert_eq!(format!("{cls}"), "FooConstructor");
     }
+
+    #[test]
+    fn infer_class_getter() {
+        let src = r#"
+        class Foo {
+            constructor() {}
+            get msg() { "hello"; }
+            get num(): number { 5; }
+        }
+
+        let foo = new Foo();
+        let msg = foo.msg;
+        let num = foo.num;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        let msg = ctx.lookup_value("msg").unwrap();
+        assert_eq!(format!("{msg}"), "\"hello\"");
+
+        let num = ctx.lookup_value("num").unwrap();
+        assert_eq!(format!("{num}"), "5");
+    }
+
+    // TODO: figure out how to get the type of a setter
+    #[test]
+    #[ignore]
+    fn infer_class_setter() {
+        let src = r#"
+        class Foo {
+            constructor() {}
+            set msg(value: string) {}
+        }
+
+        let foo = new Foo();
+        foo.msg = "hello";
+        "#;
+
+        infer_prog(src);
+    }
 }

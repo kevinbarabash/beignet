@@ -1,16 +1,18 @@
 declare type Foo = {
     readonly msg: string;
-    readonly tag: "Foo";
     bar(): "hello";
-    add(x: number, y: number): number;
+    get baz(): "world!";
+    set qux(msg: string);
 };
 declare type FooConstructor = {
+    readonly tag: "Foo";
     new(): Foo;
+    add(x: number, y: number): number;
 };
 declare type ReadonlyFoo = {
     readonly msg: string;
-    readonly tag: "Foo";
     bar(): "hello";
-    add(x: number, y: number): number;
+    get baz(): "world!";
+    set qux(msg: string);
 };
 export declare const Foo: FooConstructor;

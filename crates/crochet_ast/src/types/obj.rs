@@ -89,10 +89,24 @@ pub struct TGetter {
     pub ret: Box<Type>,
 }
 
+impl fmt::Display for TGetter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self { name, ret } = self;
+        write!(f, "get {name}(): {ret}")
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TSetter {
     pub name: TPropKey,
     pub param: TFnParam,
+}
+
+impl fmt::Display for TSetter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self { name, param } = self;
+        write!(f, "set {name}({param})")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -113,8 +127,8 @@ impl fmt::Display for TObjElem {
             TObjElem::Call(lam) => write!(f, "{lam}"),
             TObjElem::Constructor(lam) => write!(f, "new {lam}"),
             TObjElem::Method(method) => write!(f, "{method}"),
-            TObjElem::Getter(_) => todo!(),
-            TObjElem::Setter(_) => todo!(),
+            TObjElem::Getter(getter) => write!(f, "{getter}"),
+            TObjElem::Setter(setter) => write!(f, "{setter}"),
             TObjElem::Index(index) => write!(f, "{index}"),
             TObjElem::Prop(prop) => write!(f, "{prop}"),
         }

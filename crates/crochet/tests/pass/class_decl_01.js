@@ -1,5 +1,5 @@
 class Foo {
-    tag = "Foo";
+    static tag = "Foo";
     constructor(){
         return undefined;
     }
@@ -8,5 +8,11 @@ class Foo {
     }
     add(x, y) {
         return x + y;
+    }
+    baz() {
+        return "world!";
+    }
+    qux(msg) {
+        return undefined;
     }
 }

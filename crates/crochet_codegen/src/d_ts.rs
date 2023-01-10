@@ -8,8 +8,8 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast::types::{
-    TConditionalType, TFnParam, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey, TVar, Type,
-    TypeKind, TypeParam,
+    TConditionalType, TFnParam, TGetter, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey,
+    TSetter, TVar, Type, TypeKind, TypeParam,
 };
 use crochet_ast::{types, values};
 use crochet_infer::Context;
@@ -521,8 +521,62 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsTyp
                             type_params,
                         })
                     }
-                    TObjElem::Getter(_) => todo!(),
-                    TObjElem::Setter(_) => todo!(),
+                    TObjElem::Getter(TGetter { name, ret }) => {
+                        let key = match name {
+                            TPropKey::StringKey(key) => key.to_owned(),
+                            TPropKey::NumberKey(key) => key.to_owned(),
+                        };
+                        TsTypeElement::TsGetterSignature(TsGetterSignature {
+                            span: DUMMY_SP,
+                            readonly: false,
+                            key: Box::from(Ident {
+                                span: DUMMY_SP,
+                                sym: JsWord::from(key),
+                                optional: false,
+                            }),
+                            computed: false,
+                            optional: false,
+                            type_ann: Some(Box::from(build_type_ann(ret))),
+                        })
+                    }
+                    TObjElem::Setter(TSetter { name, param }) => {
+                        let key = match name {
+                            TPropKey::StringKey(key) => key.to_owned(),
+                            TPropKey::NumberKey(key) => key.to_owned(),
+                        };
+
+                        let type_ann = Some(Box::from(build_type_ann(&param.t)));
+                        let pat = tpat_to_pat(&param.pat, type_ann);
+
+                        let param: TsFnParam = match pat {
+                            Pat::Ident(bi) => {
+                                let id = Ident {
+                                    optional: param.optional,
+                                    ..bi.id
+                                };
+                                TsFnParam::Ident(BindingIdent { id, ..bi })
+                            }
+                            Pat::Array(array) => TsFnParam::Array(array),
+                            Pat::Rest(rest) => TsFnParam::Rest(rest),
+                            Pat::Object(obj) => TsFnParam::Object(obj),
+                            Pat::Assign(_) => todo!(),
+                            Pat::Invalid(_) => todo!(),
+                            Pat::Expr(_) => todo!(),
+                        };
+
+                        TsTypeElement::TsSetterSignature(TsSetterSignature {
+                            span: DUMMY_SP,
+                            readonly: false,
+                            key: Box::from(Ident {
+                                span: DUMMY_SP,
+                                sym: JsWord::from(key),
+                                optional: false,
+                            }),
+                            param,
+                            computed: false,
+                            optional: false,
+                        })
+                    }
                     TObjElem::Index(index) => TsTypeElement::TsIndexSignature(TsIndexSignature {
                         span: DUMMY_SP,
                         readonly: !index.mutable && !t.mutable,

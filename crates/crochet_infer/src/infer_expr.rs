@@ -425,6 +425,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             // This is similar to infer let, but without the type annotation and
             // with pat being an expression instead of a pattern.
             let (rs, mut rt) = infer_expr(ctx, &mut assign.right)?;
+            // TODO: figure out how to get the type of a setter
             let (ls, mut lt) = infer_expr(ctx, &mut assign.left)?;
 
             if assign.op != AssignOp::Eq {
@@ -819,7 +820,12 @@ fn get_prop_value(
                             return Ok((Subst::default(), t));
                         }
                     }
-                    TObjElem::Getter(_) => todo!(),
+                    TObjElem::Getter(getter) => {
+                        if getter.name == TPropKey::StringKey(name.to_owned()) {
+                            // NOTE: We return just the return type since it's a getter.
+                            return Ok((Subst::default(), getter.ret.as_ref().to_owned()));
+                        }
+                    }
                     TObjElem::Method(method) => {
                         if method.name == TPropKey::StringKey(name.to_owned()) {
                             let t = Type::from(TypeKind::Lam(types::TLam {
