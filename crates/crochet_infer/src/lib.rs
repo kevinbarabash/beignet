@@ -3165,4 +3165,21 @@ mod tests {
 
         infer_prog(src);
     }
+
+    // TODO: figure out how to prevent setting of a getter
+    #[test]
+    #[ignore]
+    fn setting_a_getter_without_a_setter_should_fail() {
+        let src = r#"
+        class Foo {
+            constructor() {}
+            get msg(): string { "hello"; }
+        }
+
+        let foo = new Foo();
+        foo.msg = "world";
+        "#;
+
+        infer_prog(src);
+    }
 }
