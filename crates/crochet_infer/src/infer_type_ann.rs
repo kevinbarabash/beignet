@@ -254,7 +254,7 @@ fn infer_type_ann_rec(
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }
-        TypeAnnKind::Query(QueryType { expr, .. }) => infer_expr(ctx, expr),
+        TypeAnnKind::Query(QueryType { expr, .. }) => infer_expr(ctx, expr, false),
         TypeAnnKind::Mutable(MutableType { type_ann, .. }) => {
             let (s, mut t) = infer_type_ann_rec(type_ann, ctx, type_param_map)?;
 

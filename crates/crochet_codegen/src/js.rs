@@ -130,6 +130,16 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
                     span: DUMMY_SP,
                     expr: Box::from(build_expr(expr, &mut stmts, ctx)),
                 })),
+                values::Statement::ClassDecl { class, ident, .. } => {
+                    let ident = Ident::from(ident);
+                    let class = build_class(class, &mut stmts, ctx);
+
+                    ModuleItem::Stmt(Stmt::Decl(Decl::Class(ClassDecl {
+                        ident,
+                        class: Box::from(class),
+                        declare: false,
+                    })))
+                }
             };
 
             let mut items: Vec<ModuleItem> = stmts
@@ -149,6 +159,8 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
     })
 }
 
+// TODO: See if we can avoid returning an Option<> here so that we don't have
+// to unwrap() in when calling it from build_expr().
 fn build_pattern(
     pattern: &values::Pattern,
     stmts: &mut Vec<Stmt>,
@@ -316,6 +328,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         hi: BytePos(expr.span.end as u32 + 1),
         ctxt: SyntaxContext::empty(),
     };
+
     match &expr.kind {
         values::ExprKind::App(values::App { lam, args, .. }) => {
             let callee = Callee::Expr(Box::from(build_expr(lam.as_ref(), stmts, ctx)));
@@ -373,7 +386,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 .map(|arg| build_pattern(&arg.pat, stmts, ctx).unwrap())
                 .collect();
 
-            let body = build_fn_body(body.as_ref(), ctx);
+            let body = build_lambda_body(body.as_ref(), ctx);
 
             Expr::Arrow(ArrowExpr {
                 span,
@@ -673,6 +686,15 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             // $temp_n
             Expr::Ident(ret_temp_id)
         }
+        values::ExprKind::Class(class) => {
+            let ident = Some(Ident::from(&class.ident));
+            let class = build_class(class, stmts, ctx);
+
+            Expr::Class(ClassExpr {
+                ident,
+                class: Box::from(class),
+            })
+        }
     }
 }
 
@@ -875,7 +897,7 @@ fn build_lit(lit: &values::Lit) -> Lit {
 // TODO: have an intermediary from between the AST and what we used for
 // codegen that unwraps `Let` nodes into vectors before converting them
 // to statements.
-fn build_fn_body(body: &values::Expr, ctx: &mut Context) -> BlockStmtOrExpr {
+fn build_lambda_body(body: &values::Expr, ctx: &mut Context) -> BlockStmtOrExpr {
     let mut stmts: Vec<Stmt> = vec![];
 
     let ret_expr = _build_expr(body, &mut stmts, ctx);
@@ -894,6 +916,139 @@ fn build_fn_body(body: &values::Expr, ctx: &mut Context) -> BlockStmtOrExpr {
             span: DUMMY_SP,
             stmts,
         })
+    }
+}
+
+fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Class {
+    let body: Vec<ClassMember> = class
+        .body
+        .iter()
+        .filter_map(|member| match member {
+            values::ClassMember::Constructor(constructor) => {
+                let body = build_fn_body(&constructor.body, ctx);
+                let params: Vec<ParamOrTsParamProp> = constructor
+                    .params
+                    .iter()
+                    .map(|param| {
+                        let pat = build_pattern(&param.pat, stmts, ctx).unwrap();
+                        ParamOrTsParamProp::Param(Param {
+                            span: DUMMY_SP,
+                            decorators: vec![],
+                            pat,
+                        })
+                    })
+                    .collect();
+
+                Some(ClassMember::Constructor(Constructor {
+                    span: DUMMY_SP, // TODO
+                    key: PropName::Ident(Ident {
+                        span: DUMMY_SP, // TODO
+                        sym: swc_atoms::JsWord::from(String::from("constructor")),
+                        optional: false,
+                    }),
+                    params,
+                    body: Some(body),
+                    accessibility: None,
+                    is_optional: false,
+                }))
+            }
+            values::ClassMember::Method(method) => {
+                let body = build_fn_body(&method.lambda.body, ctx);
+                let params: Vec<Param> = method
+                    .lambda
+                    .params
+                    .iter()
+                    .map(|param| {
+                        let pat = build_pattern(&param.pat, stmts, ctx).unwrap();
+                        Param {
+                            span: DUMMY_SP,
+                            decorators: vec![],
+                            pat,
+                        }
+                    })
+                    .collect();
+
+                Some(ClassMember::Method(ClassMethod {
+                    span: DUMMY_SP, // TODO
+                    key: PropName::Ident(Ident::from(&method.key)),
+                    function: Box::from(Function {
+                        params,
+                        decorators: vec![],
+                        span: DUMMY_SP, // TODO
+                        body: Some(body),
+                        is_generator: false,
+                        is_async: false,   // TODO
+                        type_params: None, // TODO
+                        return_type: None,
+                    }),
+                    kind: MethodKind::Method,
+                    is_static: false,
+                    accessibility: None,
+                    is_abstract: false,
+                    is_optional: false,
+                    is_override: false,
+                }))
+            }
+            values::ClassMember::Prop(prop) => {
+                if prop.value.is_some() {
+                    Some(ClassMember::ClassProp(ClassProp {
+                        span: DUMMY_SP, // TODO
+                        value: prop
+                            .value
+                            .as_ref()
+                            .map(|value| Box::from(build_expr(value, stmts, ctx))),
+                        key: PropName::Ident(Ident::from(&prop.key)),
+                        type_ann: None,
+                        is_static: prop.is_static,
+                        decorators: vec![],
+                        accessibility: None,
+                        is_abstract: false,
+                        is_optional: prop.is_optional,
+                        is_override: false,
+                        readonly: false, // TODO
+                        declare: false,
+                        definite: false,
+                    }))
+                } else {
+                    None
+                }
+            }
+        })
+        .collect();
+
+    Class {
+        span: DUMMY_SP, // TODO
+        decorators: vec![],
+        super_class: None,
+        is_abstract: false,
+        super_type_params: None,
+        type_params: None,
+        implements: vec![],
+        body,
+    }
+}
+
+fn build_fn_body(body: &values::Expr, ctx: &mut Context) -> BlockStmt {
+    let mut stmts: Vec<Stmt> = vec![];
+
+    let ret_expr = _build_expr(body, &mut stmts, ctx);
+    let ret = Stmt::Return(ReturnStmt {
+        span: DUMMY_SP,
+        arg: Some(Box::from(ret_expr)),
+    });
+
+    if stmts.is_empty() {
+        BlockStmt {
+            span: DUMMY_SP,
+            stmts: vec![ret],
+        }
+    } else {
+        stmts.push(ret);
+
+        BlockStmt {
+            span: DUMMY_SP,
+            stmts,
+        }
     }
 }
 

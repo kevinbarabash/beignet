@@ -1,4 +1,5 @@
 use crate::types::Type;
+use crate::values::class::Class;
 use crate::values::common::{SourceLocation, Span};
 use crate::values::ident::*;
 use crate::values::jsx::JSXElement;
@@ -16,6 +17,12 @@ pub struct Program {
 // TODO: Update Statement to have an .inferred_type field like Expr
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
+    ClassDecl {
+        loc: SourceLocation,
+        span: Span,
+        ident: Ident, // Why do have `ident` here an in `Class`?
+        class: Box<Class>,
+    },
     VarDecl {
         loc: SourceLocation,
         span: Span,
@@ -32,11 +39,14 @@ pub enum Statement {
         type_ann: TypeAnn,
         type_params: Option<Vec<TypeParam>>,
     },
+    // TODO: Rename this to `ExprStmt`.
+    // NOTE: This will never contain a `let` expression since that case is
+    // covered by `VarDecl`.
     Expr {
         loc: SourceLocation,
         span: Span,
         expr: Box<Expr>,
-    }, // NOTE: does not include Expr::Let
+    },
 }
 
 // #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,13 +103,6 @@ impl EFnParam {
             _ => format!("arg{index}"),
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EFnParamAssignPatProp {
-    // TODO: span
-    pub key: Ident,
-    pub value: Option<Box<Expr>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -299,6 +302,7 @@ pub enum ExprKind {
     TemplateLiteral(TemplateLiteral),
     TaggedTemplateLiteral(TaggedTemplateLiteral),
     Match(Match),
+    Class(Class),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -147,41 +147,42 @@ impl Visitor for SemanticTokenVisitor {
         }
     }
 
-    fn visit_expr(&mut self, expr: &crochet_ast::values::Expr) {
+    fn visit_expr(&mut self, expr: &Expr) {
         // PARAMETER = 3
         // VARIABLE = 4
         // PROPERTY = 5
         // FUNCTION = 6
         // METHOD = 7
         let token_type: Option<u32> = match &expr.kind {
-            crochet_ast::values::ExprKind::App(_) => None,
-            crochet_ast::values::ExprKind::New(_) => None,
-            crochet_ast::values::ExprKind::Fix(_) => None,
+            ExprKind::App(_) => None,
+            ExprKind::New(_) => None,
+            ExprKind::Fix(_) => None,
             // TODO: Figure out how to differentiate identifiers used for different
             // purposes: e.g. parameters, varaibles, properties, etc.
-            crochet_ast::values::ExprKind::Ident(_) => Some(4),
-            crochet_ast::values::ExprKind::IfElse(_) => None,
-            crochet_ast::values::ExprKind::JSXElement(_) => None,
-            crochet_ast::values::ExprKind::Lambda(_) => None,
-            crochet_ast::values::ExprKind::Let(_) => None,
-            crochet_ast::values::ExprKind::Assign(_) => None,
-            crochet_ast::values::ExprKind::LetExpr(_) => None,
-            crochet_ast::values::ExprKind::Lit(lit) => match lit {
+            ExprKind::Ident(_) => Some(4),
+            ExprKind::IfElse(_) => None,
+            ExprKind::JSXElement(_) => None,
+            ExprKind::Lambda(_) => None,
+            ExprKind::Let(_) => None,
+            ExprKind::Assign(_) => None,
+            ExprKind::LetExpr(_) => None,
+            ExprKind::Lit(lit) => match lit {
                 Lit::Num(_) => Some(11),
                 Lit::Bool(_) => None,
                 Lit::Str(_) => Some(10),
             },
-            crochet_ast::values::ExprKind::Keyword(_) => None,
-            crochet_ast::values::ExprKind::BinaryExpr(_) => None,
-            crochet_ast::values::ExprKind::UnaryExpr(_) => None,
-            crochet_ast::values::ExprKind::Obj(_) => None,
-            crochet_ast::values::ExprKind::Await(_) => None,
-            crochet_ast::values::ExprKind::Tuple(_) => None,
-            crochet_ast::values::ExprKind::Member(_) => None,
-            crochet_ast::values::ExprKind::Empty => None,
-            crochet_ast::values::ExprKind::TemplateLiteral(_) => None,
-            crochet_ast::values::ExprKind::TaggedTemplateLiteral(_) => None,
-            crochet_ast::values::ExprKind::Match(_) => None,
+            ExprKind::Keyword(_) => None,
+            ExprKind::BinaryExpr(_) => None,
+            ExprKind::UnaryExpr(_) => None,
+            ExprKind::Obj(_) => None,
+            ExprKind::Await(_) => None,
+            ExprKind::Tuple(_) => None,
+            ExprKind::Member(_) => None,
+            ExprKind::Empty => None,
+            ExprKind::TemplateLiteral(_) => None,
+            ExprKind::TaggedTemplateLiteral(_) => None,
+            ExprKind::Match(_) => None,
+            ExprKind::Class(_) => None,
         };
 
         let Expr { loc, .. } = expr;

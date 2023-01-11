@@ -1,7 +1,8 @@
-use crochet_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
+use crochet_ast::types::{TObjElem, TObject, TProp, TPropKey, TRef, Type, TypeKind};
 use crochet_ast::values::*;
 
 use crate::context::{Context, Env};
+use crate::infer_class::infer_class;
 use crate::infer_expr::infer_expr as infer_expr_rec;
 use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
@@ -127,12 +128,34 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
                 Err(mut report) => reports.append(&mut report),
             },
             Statement::Expr { expr, .. } => {
-                match infer_expr_rec(ctx, expr) {
+                match infer_expr_rec(ctx, expr, false) {
                     // We ignore the type that was inferred, we only care that
                     // it succeeds since we aren't assigning it to variable.
                     Ok((s, _)) => update_expr(expr, &s),
                     Err(mut report) => reports.append(&mut report),
                 }
+            }
+            Statement::ClassDecl {
+                loc: _,
+                span: _,
+                ident,
+                class,
+            } => {
+                let (s, t) = infer_class(ctx, class)?;
+
+                let mut t = t.clone();
+                t.apply(&s);
+
+                // This follows the same pattern found in lib.es5.d.ts.
+                let name = ident.name.to_owned();
+                ctx.insert_type(format!("{name}Constructor"), t);
+                ctx.insert_value(
+                    name.to_owned(),
+                    Type::from(TypeKind::Ref(TRef {
+                        name: format!("{name}Constructor"),
+                        type_args: None,
+                    })),
+                );
             }
         };
     }
@@ -145,6 +168,6 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
 }
 
 pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<Type, Vec<TypeError>> {
-    let (s, t) = infer_expr_rec(ctx, expr)?;
+    let (s, t) = infer_expr_rec(ctx, expr, false)?;
     Ok(close_over(&s, &t, ctx))
 }

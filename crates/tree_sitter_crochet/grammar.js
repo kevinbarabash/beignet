@@ -119,23 +119,57 @@ module.exports = grammar(tsx, {
       return seq(...members);
     },
 
-    // Replaces `optional("readonly")` in sequence with `optional("mut")`
-    // TODO: Do the same for public_field_definition
-    // TODO: Create a function that can replace all nodes of a certain type
-    // in a rule declaration.
-    method_definition: ($, prev) => {
-      const members = prev.content.members.map((member) => {
-        if (
-          member.type === "CHOICE" &&
-          member.members[0].value === "readonly"
-        ) {
-          return optional("mut");
-        }
-        return member;
-      });
+    method_definition: ($) =>
+      prec.left(
+        seq(
+          // TODO: add support for accessibility modifiers
+          optional($.accessibility_modifier),
+          field("static", optional("static")),
+          // TODO(low-priority): I'm not sure we even want to bother with abstract base classes
+          optional($.override_modifier),
+          field("mut", optional("mut")),
+          field("async", optional("async")),
+          field("kind", optional(choice("get", "set", "*"))),
+          field("name", $._property_name),
+          // QUESTION: How could an optional method ever occur in JavaScript?!
+          optional("?"),
+          $._call_signature, // field('parameters', $.formal_parameters)
+          field("body", $.statement_block)
+        )
+      ),
 
-      return prec.left(seq(...members));
-    },
+    public_field_definition: ($) =>
+      seq(
+        // QUESTION: When would this ever be used?
+        optional("declare"),
+
+        // TODO: add support for accessibility modifiers
+        optional($.accessibility_modifier),
+
+        // NOTE: We don't bother marking individual fields as mutable.  Instead,
+        // we can have either mutable or immutable references to an instance with
+        // the default being immutable references.
+        // choice(
+        //   seq(
+        //     optional("static"),
+        //     // TODO: add support for accessibility modifiers
+        //     // optional($.override_modifier),
+        //     optional("readonly")
+        //   ),
+        //   seq(optional("abstract"), optional("readonly")),
+        //   seq(optional("readonly"), optional("abstract"))
+        // ),
+        choice(
+          field("abstract", optional("abstract")),
+          field("static", optional("static"))
+        ),
+        optional($.override_modifier),
+        field("name", $._property_name),
+        // optional(choice("?", "!")),
+        field("optional", optional("?")),
+        field("type", optional($.type_annotation)),
+        optional($._initializer) // seq('=', field('value', $.expression))
+      ),
 
     conditional_type: ($) =>
       prec.right(

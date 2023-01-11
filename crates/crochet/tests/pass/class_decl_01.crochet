@@ -1,0 +1,11 @@
+class Foo {
+    msg: string;
+    static tag = "Foo";
+
+    constructor() {}
+
+    bar() { "hello"; }
+    static add(x, y) { x + y; }
+    get baz() { "world!"; }
+    set qux(msg: string) {}
+}

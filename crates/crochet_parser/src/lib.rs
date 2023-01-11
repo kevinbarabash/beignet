@@ -71,8 +71,12 @@ pub fn parse(src: &str) -> Result<Program, ParseError> {
 }
 
 fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, ParseError> {
+    let kind = node.kind();
+    println!("parse_statement: kind = {kind}");
+
     match node.kind() {
         "lexical_declaration" => parse_declaration(node, false, src),
+        "class_declaration" => parse_class_decl(node, src),
         "expression_statement" => {
             let expr = node.named_child(0).unwrap();
             let expr = parse_expression(&expr, src)?;
@@ -154,6 +158,7 @@ fn parse_declaration(
     declare: bool,
     src: &str,
 ) -> Result<Vec<Statement>, ParseError> {
+    println!("node.kind = {}", node.kind());
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing declaration"));
@@ -225,6 +230,132 @@ fn parse_declaration(
             init,
             declare,
         }
+    };
+
+    Ok(vec![stmt])
+}
+
+fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, ParseError> {
+    println!("node.kind = {}", node.kind());
+    if node.has_error() {
+        // TODO: get actual error node so that we can report where the error is
+        return Err(ParseError::from("Error parsing declaration"));
+    }
+
+    let name_node = node.child_by_field_name("name").unwrap();
+    let body_node = node.child_by_field_name("body").unwrap();
+
+    let mut class_members: Vec<ClassMember> = vec![];
+    let mut cursor = body_node.walk();
+    for child in body_node.named_children(&mut cursor) {
+        let kind = child.kind();
+
+        println!("child.kind() = {kind}");
+
+        match kind {
+            "method_definition" => {
+                let name_node = child.child_by_field_name("name").unwrap();
+                let key = Ident {
+                    loc: SourceLocation::from(&name_node),
+                    span: name_node.byte_range(),
+                    name: text_for_node(&name_node, src)?,
+                };
+
+                let params = parse_formal_parameters(
+                    &child.child_by_field_name("parameters").unwrap(),
+                    src,
+                )?;
+                let body = parse_block_statement(&child.child_by_field_name("body").unwrap(), src)?;
+                let return_type = match child.child_by_field_name("return_type") {
+                    Some(type_ann) => Some(parse_type_ann(&type_ann, src)?),
+                    None => None,
+                };
+
+                let kind = match child.child_by_field_name("kind") {
+                    Some(kind) => match text_for_node(&kind, src)?.as_str() {
+                        "get" => MethodKind::Getter,
+                        "set" => MethodKind::Setter,
+                        "*" => todo!(),
+                        _ => panic!("Invalid method kind"), // TODO: report an error
+                    },
+                    None => MethodKind::Method,
+                };
+
+                // TODO: add support to the AST for these
+                let is_static = child.child_by_field_name("static").is_some();
+                let is_mutating = child.child_by_field_name("mut").is_some();
+
+                if key.name.as_str() == "constructor" {
+                    class_members.push(ClassMember::Constructor(Constructor {
+                        params,
+                        body: Box::from(body),
+                        type_params: None, // TODO
+                    }));
+                } else {
+                    class_members.push(ClassMember::Method(ClassMethod {
+                        key,
+                        kind,
+                        lambda: Lambda {
+                            params,
+                            body: Box::from(body),
+                            is_async: child.child_by_field_name("async").is_some(),
+                            return_type,
+                            type_params: None, // TODO
+                        },
+                        is_static,
+                        is_mutating,
+                    }))
+                }
+            }
+            "public_field_definition" => {
+                // TODO: add support to the AST for this
+                let _mutable = child.child_by_field_name("mut").is_some();
+
+                let name_node = child.child_by_field_name("name").unwrap();
+                let key = Ident {
+                    loc: SourceLocation::from(&name_node),
+                    span: name_node.byte_range(),
+                    name: text_for_node(&name_node, src)?,
+                };
+
+                let value = match child.child_by_field_name("value") {
+                    Some(value) => Some(Box::from(parse_expression(&value, src)?)),
+                    None => None,
+                };
+                let type_ann = match child.child_by_field_name("type") {
+                    Some(type_ann) => Some(Box::from(parse_type_ann(&type_ann, src)?)),
+                    None => None,
+                };
+
+                class_members.push(ClassMember::Prop(ClassProp {
+                    key,
+                    value,
+                    type_ann,
+                    is_static: child.child_by_field_name("static").is_some(),
+                    is_optional: child.child_by_field_name("optional").is_some(),
+                }))
+            }
+            "private_field_definition" => todo!(),
+            _ => todo!(),
+        }
+    }
+
+    let stmt = Statement::ClassDecl {
+        loc: SourceLocation::from(node),
+        span: node.byte_range(),
+        ident: Ident {
+            loc: SourceLocation::from(&name_node),
+            span: name_node.byte_range(),
+            name: text_for_node(&name_node, src)?,
+        },
+        class: Box::from(Class {
+            ident: Ident {
+                loc: SourceLocation::from(&name_node),
+                span: name_node.byte_range(),
+                name: text_for_node(&name_node, src)?,
+            },
+            body: class_members,
+        }),
     };
 
     Ok(vec![stmt])
@@ -478,9 +609,49 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
 
     let mut iter = stmts.iter().rev();
 
+    let empty_expr = Box::from(Expr {
+        loc: DUMMY_LOC,
+        span: 0..0,
+        kind: ExprKind::Empty,
+        inferred_type: None,
+    });
+
+    // NOTE: If a declaration appears last it will go unused.  This is because
+    // only expressions can be returned from blocks.
+    // TODO: add a warning when that happens.
     let last: Expr = match iter.next() {
         Some(term) => match term {
-            // TODO: warn that the variable introduced here will go unused.
+            Statement::ClassDecl {
+                loc,
+                span,
+                ident,
+                class,
+            } => Expr {
+                loc: loc.to_owned(),
+                span: span.to_owned(),
+                kind: ExprKind::Let(Let {
+                    pattern: Some(Pattern {
+                        loc: ident.loc.to_owned(),
+                        span: ident.span.to_owned(),
+                        kind: PatternKind::Ident(BindingIdent {
+                            loc: ident.loc.to_owned(),
+                            span: ident.span.to_owned(),
+                            name: ident.name.to_owned(),
+                            mutable: false,
+                        }),
+                        inferred_type: None,
+                    }),
+                    init: Box::from(Expr {
+                        loc: loc.to_owned(),
+                        span: span.to_owned(),
+                        kind: ExprKind::Class(class.as_ref().to_owned()),
+                        inferred_type: None,
+                    }),
+                    type_ann: None,
+                    body: empty_expr,
+                }),
+                inferred_type: None,
+            },
             Statement::VarDecl {
                 loc,
                 span,
@@ -501,16 +672,16 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
                     // for `declare let`.
                     init: init.as_ref().unwrap().to_owned(),
                     type_ann: type_ann.to_owned(),
-                    body: Box::from(Expr {
-                        loc: DUMMY_LOC,
-                        span: 0..0,
-                        kind: ExprKind::Empty,
-                        inferred_type: None,
-                    }),
+                    body: empty_expr,
                 }),
                 inferred_type: None,
             },
             Statement::TypeDecl { .. } => {
+                // We can't convert this `let` expression so we can't include it
+                // in the `body`.  I think we'll want move the conversion of block
+                // statements to lambdas later in the process.  This will allow us
+                // to handle type declarations within the body of a function.  It
+                // will also help with handling statements like loops.
                 todo!("decide how to handle type decls within BlockStatements")
             }
             Statement::Expr { expr, .. } => *expr.to_owned(),
@@ -525,6 +696,37 @@ fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pa
 
     let result: Expr = iter.fold(last, |body, stmt| {
         match stmt {
+            Statement::ClassDecl {
+                loc,
+                span,
+                ident,
+                class,
+            } => Expr {
+                loc: loc.to_owned(),
+                span: span.to_owned(),
+                kind: ExprKind::Let(Let {
+                    pattern: Some(Pattern {
+                        loc: ident.loc.to_owned(),
+                        span: ident.span.to_owned(),
+                        kind: PatternKind::Ident(BindingIdent {
+                            loc: ident.loc.to_owned(),
+                            span: ident.span.to_owned(),
+                            name: ident.name.to_owned(),
+                            mutable: false,
+                        }),
+                        inferred_type: None,
+                    }),
+                    init: Box::from(Expr {
+                        loc: loc.to_owned(),
+                        span: span.to_owned(),
+                        kind: ExprKind::Class(class.as_ref().to_owned()),
+                        inferred_type: None,
+                    }),
+                    type_ann: None,
+                    body: Box::new(body),
+                }),
+                inferred_type: None,
+            },
             Statement::VarDecl {
                 loc,
                 span,
@@ -2354,6 +2556,20 @@ mod tests {
             };              
             "#
         ));
+    }
+
+    #[test]
+    fn classes() {
+        insta::assert_debug_snapshot!(parse("class Foo { a: number; }"));
+        insta::assert_debug_snapshot!(parse("class Foo { a: number = 5; }"));
+        insta::assert_debug_snapshot!(parse("class Foo { a = 5; }"));
+        insta::assert_debug_snapshot!(parse("class Foo { static a: number; }"));
+        insta::assert_debug_snapshot!(parse("class Foo { foo() {} }"));
+        insta::assert_debug_snapshot!(parse("class Foo { foo(): string {} }"));
+        insta::assert_debug_snapshot!(parse("class Foo { static foo(): string {} }"));
+        insta::assert_debug_snapshot!(parse("class Foo { get foo() {} }"));
+        insta::assert_debug_snapshot!(parse("class Foo { set foo(x) {} }"));
+        insta::assert_debug_snapshot!(parse("class Foo { constructor(x) {} }"));
     }
 
     // #[test]

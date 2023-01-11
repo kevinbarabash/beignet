@@ -1,0 +1,1 @@
+{"version":3,"sources":["<anon>"],"sourcesContent":["class Foo {\n    msg: string;\n    static tag = \"Foo\";\n\n    constructor() {}\n\n    bar() { \"hello\"; }\n    static add(x, y) { x + y; }\n    get baz() { \"world!\"; }\n    set qux(msg: string) {}\n}\n"],"names":[],"mappings":"MAAM;WAEK,MAAM;;eAFjB;;IAMI;eAAQ;;IACD,IAAI,GAAG;eAAK,IAAI;;IACnB;eAAQ;;IACR,IAAI;eATZ"}

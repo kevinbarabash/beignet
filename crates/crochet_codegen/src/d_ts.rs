@@ -8,8 +8,8 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast::types::{
-    TConditionalType, TFnParam, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey, TVar, Type,
-    TypeKind, TypeParam,
+    TConditionalType, TFnParam, TGetter, TIndexAccess, TMappedType, TObjElem, TPat, TPropKey,
+    TSetter, TVar, Type, TypeKind, TypeParam,
 };
 use crochet_ast::{types, values};
 use crochet_infer::Context;
@@ -428,7 +428,155 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsTyp
                 .iter()
                 .map(|elem| match elem {
                     TObjElem::Call(_) => todo!(),
-                    TObjElem::Constructor(_) => todo!(),
+                    TObjElem::Constructor(types::TCallable {
+                        params,
+                        ret,
+                        type_params,
+                    }) => {
+                        let type_params = build_type_params_from_type_params(type_params);
+                        let params: Vec<TsFnParam> = params
+                            .iter()
+                            .map(|param| {
+                                let type_ann = Some(Box::from(build_type_ann(&param.t)));
+                                let pat = tpat_to_pat(&param.pat, type_ann);
+
+                                let result: TsFnParam = match pat {
+                                    Pat::Ident(bi) => {
+                                        let id = Ident {
+                                            optional: param.optional,
+                                            ..bi.id
+                                        };
+                                        TsFnParam::Ident(BindingIdent { id, ..bi })
+                                    }
+                                    Pat::Array(array) => TsFnParam::Array(array),
+                                    Pat::Rest(rest) => TsFnParam::Rest(rest),
+                                    Pat::Object(obj) => TsFnParam::Object(obj),
+                                    Pat::Assign(_) => todo!(),
+                                    Pat::Invalid(_) => todo!(),
+                                    Pat::Expr(_) => todo!(),
+                                };
+
+                                result
+                            })
+                            .collect();
+
+                        TsTypeElement::TsConstructSignatureDecl(TsConstructSignatureDecl {
+                            span: DUMMY_SP,
+                            params,
+                            type_ann: Some(Box::from(build_type_ann(ret))),
+                            type_params,
+                        })
+                    }
+                    TObjElem::Method(types::TMethod {
+                        name,
+                        mutating: _,
+                        params,
+                        ret,
+                        type_params,
+                    }) => {
+                        let key = match name {
+                            TPropKey::StringKey(key) => key.to_owned(),
+                            TPropKey::NumberKey(key) => key.to_owned(),
+                        };
+                        // TODO: dedupe with build_ts_fn_type_with_params
+                        let type_params = build_type_params_from_type_params(type_params);
+                        let params: Vec<TsFnParam> = params
+                            .iter()
+                            .map(|param| {
+                                let type_ann = Some(Box::from(build_type_ann(&param.t)));
+                                let pat = tpat_to_pat(&param.pat, type_ann);
+
+                                let result: TsFnParam = match pat {
+                                    Pat::Ident(bi) => {
+                                        let id = Ident {
+                                            optional: param.optional,
+                                            ..bi.id
+                                        };
+                                        TsFnParam::Ident(BindingIdent { id, ..bi })
+                                    }
+                                    Pat::Array(array) => TsFnParam::Array(array),
+                                    Pat::Rest(rest) => TsFnParam::Rest(rest),
+                                    Pat::Object(obj) => TsFnParam::Object(obj),
+                                    Pat::Assign(_) => todo!(),
+                                    Pat::Invalid(_) => todo!(),
+                                    Pat::Expr(_) => todo!(),
+                                };
+
+                                result
+                            })
+                            .collect();
+
+                        TsTypeElement::TsMethodSignature(TsMethodSignature {
+                            span: DUMMY_SP,
+                            readonly: false, // `readonly` modifier can't appear on methods
+                            key: Box::from(Ident {
+                                span: DUMMY_SP,
+                                sym: JsWord::from(key),
+                                optional: false,
+                            }),
+                            computed: false,
+                            optional: false,
+                            params,
+                            type_ann: Some(Box::from(build_type_ann(ret))),
+                            type_params,
+                        })
+                    }
+                    TObjElem::Getter(TGetter { name, ret }) => {
+                        let key = match name {
+                            TPropKey::StringKey(key) => key.to_owned(),
+                            TPropKey::NumberKey(key) => key.to_owned(),
+                        };
+                        TsTypeElement::TsGetterSignature(TsGetterSignature {
+                            span: DUMMY_SP,
+                            readonly: false,
+                            key: Box::from(Ident {
+                                span: DUMMY_SP,
+                                sym: JsWord::from(key),
+                                optional: false,
+                            }),
+                            computed: false,
+                            optional: false,
+                            type_ann: Some(Box::from(build_type_ann(ret))),
+                        })
+                    }
+                    TObjElem::Setter(TSetter { name, param }) => {
+                        let key = match name {
+                            TPropKey::StringKey(key) => key.to_owned(),
+                            TPropKey::NumberKey(key) => key.to_owned(),
+                        };
+
+                        let type_ann = Some(Box::from(build_type_ann(&param.t)));
+                        let pat = tpat_to_pat(&param.pat, type_ann);
+
+                        let param: TsFnParam = match pat {
+                            Pat::Ident(bi) => {
+                                let id = Ident {
+                                    optional: param.optional,
+                                    ..bi.id
+                                };
+                                TsFnParam::Ident(BindingIdent { id, ..bi })
+                            }
+                            Pat::Array(array) => TsFnParam::Array(array),
+                            Pat::Rest(rest) => TsFnParam::Rest(rest),
+                            Pat::Object(obj) => TsFnParam::Object(obj),
+                            Pat::Assign(_) => todo!(),
+                            Pat::Invalid(_) => todo!(),
+                            Pat::Expr(_) => todo!(),
+                        };
+
+                        TsTypeElement::TsSetterSignature(TsSetterSignature {
+                            span: DUMMY_SP,
+                            readonly: false,
+                            key: Box::from(Ident {
+                                span: DUMMY_SP,
+                                sym: JsWord::from(key),
+                                optional: false,
+                            }),
+                            param,
+                            computed: false,
+                            optional: false,
+                        })
+                    }
                     TObjElem::Index(index) => TsTypeElement::TsIndexSignature(TsIndexSignature {
                         span: DUMMY_SP,
                         readonly: !index.mutable && !t.mutable,
