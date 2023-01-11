@@ -128,7 +128,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
                 Err(mut report) => reports.append(&mut report),
             },
             Statement::Expr { expr, .. } => {
-                match infer_expr_rec(ctx, expr) {
+                match infer_expr_rec(ctx, expr, false) {
                     // We ignore the type that was inferred, we only care that
                     // it succeeds since we aren't assigning it to variable.
                     Ok((s, _)) => update_expr(expr, &s),
@@ -168,6 +168,6 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
 }
 
 pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<Type, Vec<TypeError>> {
-    let (s, t) = infer_expr_rec(ctx, expr)?;
+    let (s, t) = infer_expr_rec(ctx, expr, false)?;
     Ok(close_over(&s, &t, ctx))
 }

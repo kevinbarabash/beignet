@@ -3149,9 +3149,7 @@ mod tests {
         assert_eq!(format!("{num}"), "5");
     }
 
-    // TODO: figure out how to get the type of a setter
     #[test]
-    #[ignore]
     fn infer_class_setter() {
         let src = r#"
         class Foo {
@@ -3166,9 +3164,8 @@ mod tests {
         infer_prog(src);
     }
 
-    // TODO: figure out how to prevent setting of a getter
     #[test]
-    #[ignore]
+    #[should_panic = "TypeError::MissingKey: object doesn't have a msg property"]
     fn setting_a_getter_without_a_setter_should_fail() {
         let src = r#"
         class Foo {
@@ -3178,6 +3175,22 @@ mod tests {
 
         let foo = new Foo();
         foo.msg = "world";
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "TypeError::MissingKey: object doesn't have a msg property"]
+    fn getting_a_setter_without_a_getter_should_fail() {
+        let src = r#"
+        class Foo {
+            constructor() {}
+            set msg(value: string) {}
+        }
+
+        let foo = new Foo();
+        let msg = foo.msg;
         "#;
 
         infer_prog(src);

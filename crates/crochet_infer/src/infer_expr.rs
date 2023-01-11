@@ -19,17 +19,21 @@ use crate::update::update_pattern;
 use crate::util::*;
 use crate::visitor::Visitor;
 
-pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), Vec<TypeError>> {
+pub fn infer_expr(
+    ctx: &mut Context,
+    expr: &mut Expr,
+    is_lvalue: bool,
+) -> Result<(Subst, Type), Vec<TypeError>> {
     let result = match &mut expr.kind {
         ExprKind::App(App { lam, args, .. }) => {
             let mut ss: Vec<Subst> = vec![];
             let mut arg_types: Vec<Type> = vec![];
 
-            let (s1, mut lam_type) = infer_expr(ctx, lam)?;
+            let (s1, mut lam_type) = infer_expr(ctx, lam, false)?;
             ss.push(s1);
 
             for arg in args {
-                let (arg_s, mut arg_t) = infer_expr(ctx, &mut arg.expr)?;
+                let (arg_s, mut arg_t) = infer_expr(ctx, &mut arg.expr, false)?;
                 ss.push(arg_s);
                 if arg.spread.is_some() {
                     match &mut arg_t.kind {
@@ -65,12 +69,12 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             let mut ss: Vec<Subst> = vec![];
             let mut arg_types: Vec<Type> = vec![];
 
-            let (s1, t) = infer_expr(ctx, expr)?;
+            let (s1, t) = infer_expr(ctx, expr, false)?;
             ss.push(s1);
             let t = get_obj_type(&t, ctx)?;
 
             for arg in args {
-                let (arg_s, mut arg_t) = infer_expr(ctx, &mut arg.expr)?;
+                let (arg_s, mut arg_t) = infer_expr(ctx, &mut arg.expr, false)?;
                 ss.push(arg_s);
                 if arg.spread.is_some() {
                     match &mut arg_t.kind {
@@ -132,7 +136,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             }
         }
         ExprKind::Fix(Fix { expr, .. }) => {
-            let (s1, mut t) = infer_expr(ctx, expr)?;
+            let (s1, mut t) = infer_expr(ctx, expr, false)?;
             let tv = ctx.fresh_var();
             let param = TFnParam {
                 pat: TPat::Ident(types::BindingIdent {
@@ -179,16 +183,16 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                         // TODO: warn if the pattern isn't refutable
                         let (s1, t1) =
                             infer_let(pat, &mut None, expr, consequent, ctx, &PatternUsage::Match)?;
-                        let (s2, t2) = infer_expr(ctx, alternate)?;
+                        let (s2, t2) = infer_expr(ctx, alternate, false)?;
 
                         let s = compose_many_subs(&[s1, s2]);
                         let t = union_types(&t1, &t2);
                         Ok((s, t))
                     }
                     _ => {
-                        let (s1, mut t1) = infer_expr(ctx, cond)?;
-                        let (s2, t2) = infer_expr(ctx, consequent)?;
-                        let (s3, t3) = infer_expr(ctx, alternate)?;
+                        let (s1, mut t1) = infer_expr(ctx, cond, false)?;
+                        let (s2, t2) = infer_expr(ctx, consequent, false)?;
+                        let (s3, t3) = infer_expr(ctx, alternate, false)?;
                         let s4 = unify(
                             &mut t1,
                             &mut Type::from(TypeKind::Keyword(TKeyword::Boolean)),
@@ -213,8 +217,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                     Ok((s, t))
                 }
                 _ => {
-                    let (s1, mut t1) = infer_expr(ctx, cond)?;
-                    let (s2, t2) = infer_expr(ctx, consequent)?;
+                    let (s1, mut t1) = infer_expr(ctx, cond, false)?;
+                    let (s2, t2) = infer_expr(ctx, consequent, false)?;
                     let s3 = unify(
                         &mut t1,
                         &mut Type::from(TypeKind::Keyword(TKeyword::Boolean)),
@@ -254,11 +258,11 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                                         kind,
                                         inferred_type: None,
                                     };
-                                    infer_expr(ctx, &mut expr)?
+                                    infer_expr(ctx, &mut expr, false)?
                                 }
                                 JSXAttrValue::JSXExprContainer(JSXExprContainer {
                                     expr, ..
-                                }) => infer_expr(ctx, expr)?,
+                                }) => infer_expr(ctx, expr, false)?,
                             };
                             ss.push(s);
 
@@ -351,7 +355,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
 
             let (mut ss, mut t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-            let (body_s, mut body_t) = infer_expr(ctx, body)?;
+            let (body_s, mut body_t) = infer_expr(ctx, body, false)?;
             ss.push(body_s);
 
             ctx.pop_scope();
@@ -394,13 +398,13 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
         }) => match pattern {
             Some(pat) => infer_let(pat, type_ann, init, body, ctx, &PatternUsage::Assign),
             None => {
-                let (init_s, init_t) = infer_expr(ctx, init)?;
+                let (init_s, init_t) = infer_expr(ctx, init, false)?;
 
                 if init_t.kind != TypeKind::Keyword(TKeyword::Undefined) {
                     eprintln!("WARNING: {init_t} was not assigned");
                 }
 
-                let (body_s, mut body_t) = infer_expr(ctx, body)?;
+                let (body_s, mut body_t) = infer_expr(ctx, body, false)?;
 
                 body_t.apply(&init_s);
                 let s = compose_subs(&body_s, &init_s);
@@ -424,9 +428,9 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
 
             // This is similar to infer let, but without the type annotation and
             // with pat being an expression instead of a pattern.
-            let (rs, mut rt) = infer_expr(ctx, &mut assign.right)?;
+            let (rs, mut rt) = infer_expr(ctx, &mut assign.right, false)?;
             // TODO: figure out how to get the type of a setter
-            let (ls, mut lt) = infer_expr(ctx, &mut assign.left)?;
+            let (ls, mut lt) = infer_expr(ctx, &mut assign.left, true)?;
 
             if assign.op != AssignOp::Eq {
                 todo!("handle update assignment operators");
@@ -461,8 +465,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             // differently from arithmetic operators
             // TODO: if both are literals, compute the result at compile
             // time and set the result to be appropriate number literal.
-            let (s1, mut t1) = infer_expr(ctx, left)?;
-            let (s2, mut t2) = infer_expr(ctx, right)?;
+            let (s1, mut t1) = infer_expr(ctx, left, false)?;
+            let (s2, mut t2) = infer_expr(ctx, right, false)?;
             let s3 = unify(
                 &mut t1,
                 &mut Type::from(TypeKind::Keyword(TKeyword::Number)),
@@ -491,7 +495,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             Ok((s, t))
         }
         ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
-            let (s1, mut t1) = infer_expr(ctx, arg)?;
+            let (s1, mut t1) = infer_expr(ctx, arg, false)?;
             let s2 = unify(
                 &mut t1,
                 &mut Type::from(TypeKind::Keyword(TKeyword::Number)),
@@ -523,7 +527,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                                 }));
                             }
                             Prop::KeyValue(KeyValueProp { key, value, .. }) => {
-                                let (s, t) = infer_expr(ctx, value)?;
+                                let (s, t) = infer_expr(ctx, value, false)?;
                                 ss.push(s);
                                 // TODO: check if the inferred type is T | undefined and use that
                                 // determine the value of optional
@@ -537,7 +541,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                         }
                     }
                     PropOrSpread::Spread(SpreadElement { expr, .. }) => {
-                        let (s, t) = infer_expr(ctx, expr)?;
+                        let (s, t) = infer_expr(ctx, expr, false)?;
                         ss.push(s);
                         spread_types.push(t);
                     }
@@ -560,7 +564,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                 return Err(vec![TypeError::AwaitOutsideOfAsync]);
             }
 
-            let (s1, mut t1) = infer_expr(ctx, expr)?;
+            let (s1, mut t1) = infer_expr(ctx, expr, false)?;
             let inner_t = ctx.fresh_var();
             let mut promise_t = Type::from(TypeKind::Ref(types::TRef {
                 name: String::from("Promise"),
@@ -580,7 +584,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                 let expr = elem.expr.as_mut();
                 match elem.spread {
                     Some(_) => {
-                        let (s, mut t) = infer_expr(ctx, expr)?;
+                        let (s, mut t) = infer_expr(ctx, expr, false)?;
                         ss.push(s);
                         match &mut t.kind {
                             TypeKind::Tuple(types) => ts.append(types),
@@ -590,7 +594,7 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
                         }
                     }
                     None => {
-                        let (s, t) = infer_expr(ctx, expr)?;
+                        let (s, t) = infer_expr(ctx, expr, false)?;
                         ss.push(s);
                         ts.push(t);
                     }
@@ -603,8 +607,8 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             Ok((s, t))
         }
         ExprKind::Member(Member { obj, prop, .. }) => {
-            let (obj_s, mut obj_t) = infer_expr(ctx, obj)?;
-            let (prop_s, prop_t) = infer_property_type(&mut obj_t, prop, ctx)?;
+            let (obj_s, mut obj_t) = infer_expr(ctx, obj, false)?;
+            let (prop_s, prop_t) = infer_property_type(&mut obj_t, prop, ctx, is_lvalue)?;
 
             let s = compose_subs(&prop_s, &obj_s);
             let t = prop_t;
@@ -621,8 +625,10 @@ pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<(Subst, Type), V
             exprs, quasis: _, ..
         }) => {
             let t = Type::from(TypeKind::Keyword(TKeyword::String));
-            let result: Result<Vec<(Subst, Type)>, Vec<TypeError>> =
-                exprs.iter_mut().map(|expr| infer_expr(ctx, expr)).collect();
+            let result: Result<Vec<(Subst, Type)>, Vec<TypeError>> = exprs
+                .iter_mut()
+                .map(|expr| infer_expr(ctx, expr, false))
+                .collect();
             // We ignore the types of expressions if there are any because any expression
             // in JavaScript has a string representation.
             let (ss, _): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
@@ -690,7 +696,7 @@ fn infer_let(
         ctx.insert_binding(name.to_owned(), binding.to_owned());
     }
 
-    let (s2, t2) = infer_expr(ctx, body)?;
+    let (s2, t2) = infer_expr(ctx, body, false)?;
 
     ctx.pop_scope();
 
@@ -711,32 +717,33 @@ fn infer_property_type(
     obj_t: &mut Type,
     prop: &mut MemberProp,
     ctx: &mut Context,
+    is_lvalue: bool,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
     match &mut obj_t.kind {
         TypeKind::Var(TVar { constraint, .. }) => match constraint {
-            Some(constraint) => infer_property_type(constraint, prop, ctx),
+            Some(constraint) => infer_property_type(constraint, prop, ctx, is_lvalue),
             None => Err(vec![TypeError::PossiblyNotAnObject(Box::from(
                 obj_t.to_owned(),
             ))]),
         },
-        TypeKind::Object(obj) => get_prop_value(obj, prop, ctx),
+        TypeKind::Object(obj) => get_prop_value(obj, prop, ctx, is_lvalue),
         TypeKind::Ref(_) => {
             let mut t = get_obj_type(obj_t, ctx)?;
-            infer_property_type(&mut t, prop, ctx)
+            infer_property_type(&mut t, prop, ctx, is_lvalue)
         }
         TypeKind::Lit(_) => {
             let mut t = get_obj_type(obj_t, ctx)?;
-            infer_property_type(&mut t, prop, ctx)
+            infer_property_type(&mut t, prop, ctx, is_lvalue)
         }
         TypeKind::Keyword(_) => {
             let mut t = get_obj_type(obj_t, ctx)?;
-            infer_property_type(&mut t, prop, ctx)
+            infer_property_type(&mut t, prop, ctx, is_lvalue)
         }
         TypeKind::Array(type_param) => {
             let type_param = type_param.clone();
 
             let mut t = get_obj_type(obj_t, ctx)?;
-            let (s, mut t) = infer_property_type(&mut t, prop, ctx)?;
+            let (s, mut t) = infer_property_type(&mut t, prop, ctx, is_lvalue)?;
 
             // Replaces `this` with `mut <type_param>[]`
             let rep_t = Type {
@@ -767,10 +774,10 @@ fn infer_property_type(
 
                     let mut t = replace_aliases_rec(&scheme.t, &type_param_map);
 
-                    infer_property_type(&mut t, prop, ctx)
+                    infer_property_type(&mut t, prop, ctx, is_lvalue)
                 }
                 MemberProp::Computed(ComputedPropName { expr, .. }) => {
-                    let (prop_s, prop_t) = infer_expr(ctx, expr)?;
+                    let (prop_s, prop_t) = infer_expr(ctx, expr, false)?;
 
                     match &prop_t.kind {
                         TypeKind::Keyword(TKeyword::Number) => {
@@ -808,8 +815,10 @@ fn get_prop_value(
     obj: &TObject,
     prop: &mut MemberProp,
     ctx: &mut Context,
+    is_lvalue: bool,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
     let elems = &obj.elems;
+
     match prop {
         MemberProp::Ident(Ident { name, .. }) => {
             for elem in elems {
@@ -820,13 +829,17 @@ fn get_prop_value(
                             return Ok((Subst::default(), t));
                         }
                     }
-                    TObjElem::Getter(getter) => {
+                    TObjElem::Getter(getter) if !is_lvalue => {
                         if getter.name == TPropKey::StringKey(name.to_owned()) {
-                            // NOTE: We return just the return type since it's a getter.
                             return Ok((Subst::default(), getter.ret.as_ref().to_owned()));
                         }
                     }
-                    TObjElem::Method(method) => {
+                    TObjElem::Setter(setter) if is_lvalue => {
+                        if setter.name == TPropKey::StringKey(name.to_owned()) {
+                            return Ok((Subst::default(), setter.param.t.to_owned()));
+                        }
+                    }
+                    TObjElem::Method(method) if !is_lvalue => {
                         if method.name == TPropKey::StringKey(name.to_owned()) {
                             let t = Type::from(TypeKind::Lam(types::TLam {
                                 params: method.params.to_owned(),
@@ -842,7 +855,7 @@ fn get_prop_value(
             Err(vec![TypeError::MissingKey(name.to_owned())])
         }
         MemberProp::Computed(ComputedPropName { expr, .. }) => {
-            let (prop_s, prop_t) = infer_expr(ctx, expr)?;
+            let (prop_s, prop_t) = infer_expr(ctx, expr, false)?;
 
             let mut prop_t_clone = prop_t.clone();
             let prop_s_clone = prop_s.clone();

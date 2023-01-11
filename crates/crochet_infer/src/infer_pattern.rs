@@ -231,7 +231,7 @@ pub fn infer_pattern_and_init(
 ) -> Result<(Assump, Subst), Vec<TypeError>> {
     let type_param_map = HashMap::new();
     let (ps, mut pa, mut pt) = infer_pattern(pat, type_ann, ctx, &type_param_map)?;
-    let (is, mut it) = infer_expr(ctx, init)?;
+    let (is, mut it) = infer_expr(ctx, init, false)?;
 
     // Unifies initializer and pattern.
     let s = match pu {

@@ -71,7 +71,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
                 // TODO: ensure that constructors don't have a return statement
-                let (body_s, _body_t) = infer_expr(ctx, body)?;
+                let (body_s, _body_t) = infer_expr(ctx, body, false)?;
                 ss.push(body_s);
 
                 ctx.pop_scope();
@@ -147,7 +147,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                     .collect();
                 let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-                let (body_s, mut body_t) = infer_expr(ctx, body)?;
+                let (body_s, mut body_t) = infer_expr(ctx, body, false)?;
                 ss.push(body_s);
 
                 ctx.pop_scope();
@@ -221,7 +221,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 let (_s, t) = if let Some(type_ann) = type_ann {
                     infer_type_ann(type_ann, ctx, &mut None)?
                 } else if let Some(value) = value {
-                    infer_expr(ctx, value)?
+                    infer_expr(ctx, value, false)?
                 } else {
                     (Subst::default(), ctx.fresh_var())
                 };
