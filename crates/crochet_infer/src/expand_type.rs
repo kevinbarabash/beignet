@@ -434,6 +434,7 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
             let t = match keyword {
                 TKeyword::Number => ctx.lookup_type("Number", false)?,
                 TKeyword::Boolean => ctx.lookup_type("Boolean", false)?,
+                TKeyword::Self_ => ctx.lookup_type("Self", false)?, // TODO: 
                 TKeyword::String => ctx.lookup_type("String", false)?,
                 TKeyword::Symbol => ctx.lookup_type("Symbol", false)?,
                 TKeyword::Object => {

@@ -3025,8 +3025,8 @@ mod tests {
     fn infer_class_method() {
         let src = r#"
         class Foo {
-            constructor() {}
-            add(x, y) { x + y; }
+            constructor(self) {}
+            add(self, x, y) { x + y; }
         }
 
         let foo = new Foo();
@@ -3044,7 +3044,7 @@ mod tests {
         let src = r#"
         class Foo {
             msg: string;
-            constructor() {}
+            constructor(self) {}
         }
 
         let foo = new Foo();
@@ -3062,7 +3062,7 @@ mod tests {
         let src = r#"
         class Foo {
             msg: string;
-            constructor() {}
+            constructor(self) {}
         }
 
         let foo = new Foo();
@@ -3081,8 +3081,8 @@ mod tests {
         class Foo {
             msg: string;
             constructor() {}
-            add(x, y) { x + y; }
-            mut set_msg(msg: string) {}
+            add(self, x, y) { x + y; }
+            set_msg(mut self, msg: string) {}
         }
         "#;
 
@@ -3097,7 +3097,7 @@ mod tests {
         let mut_it = ctx.lookup_type("Foo", true).unwrap();
         assert_eq!(
             format!("{mut_it}"),
-            "{msg: string, add(x: number, y: number): number, mut set_msg(msg: string): undefined}"
+            "{msg: string, add(x: number, y: number): number, set_msg(msg: string): undefined}"
         );
     }
 
@@ -3106,7 +3106,7 @@ mod tests {
         let src = r#"
         class Foo {
             static msg: string;
-            constructor() {}
+            constructor(self) {}
             static add(x, y) { x + y; }
         }
 
@@ -3131,8 +3131,8 @@ mod tests {
         let src = r#"
         class Foo {
             constructor() {}
-            get msg() { "hello"; }
-            get num(): number { 5; }
+            get msg(self) { "hello"; }
+            get num(self): number { 5; }
         }
 
         let foo = new Foo();
@@ -3154,7 +3154,7 @@ mod tests {
         let src = r#"
         class Foo {
             constructor() {}
-            set msg(value: string) {}
+            set msg(mut self, value: string) {}
         }
 
         let foo = new Foo();
@@ -3170,7 +3170,7 @@ mod tests {
         let src = r#"
         class Foo {
             constructor() {}
-            get msg(): string { "hello"; }
+            get msg(self): string { "hello"; }
         }
 
         let foo = new Foo();
@@ -3186,7 +3186,7 @@ mod tests {
         let src = r#"
         class Foo {
             constructor() {}
-            set msg(value: string) {}
+            set msg(mut self, value: string) {}
         }
 
         let foo = new Foo();

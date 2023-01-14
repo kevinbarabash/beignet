@@ -2,10 +2,10 @@ class Foo {
     msg: string;
     static tag = "Foo";
 
-    constructor() {}
+    constructor(self) {}
 
-    bar() { "hello"; }
+    bar(self) { "hello"; }
     static add(x, y) { x + y; }
-    get baz() { "world!"; }
-    set qux(msg: string) {}
+    get baz(self) { "world!"; }
+    set qux(mut self, msg: string) {}
 }

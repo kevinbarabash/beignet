@@ -231,7 +231,7 @@ module.exports = grammar(tsx, {
 
     binding_identifier: ($) =>
       seq(
-        optional(field("mut", "mut")),
+        field("mut", optional("mut")),
         field(
           "name",
           // NOTE: I thought about disallowing reserved identifiers here, but there
@@ -598,7 +598,6 @@ module.exports = grammar(tsx, {
         repeat(field("decorator", $.decorator)),
         optional($.accessibility_modifier),
         optional($.override_modifier),
-        optional("readonly"),
         field("pattern", choice($.pattern, $.this))
       ),
   },

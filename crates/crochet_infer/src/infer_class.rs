@@ -1,5 +1,5 @@
 use crochet_ast::types::*;
-use crochet_ast::values::{class::*, Lambda};
+use crochet_ast::values::{class::*, Lambda, PatternKind};
 use std::collections::HashMap;
 
 use crate::context::{Context, Env};
@@ -32,10 +32,13 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
             }) => {
                 ctx.push_scope(false); // Constructors cannot be async
 
+                // QUESTION: should we skip the first param when computing
+                // `type_params_map`?
                 let type_params_map: HashMap<String, Type> = match type_params {
-                    Some(params) => params
-                        .iter_mut()
-                        .map(|param| {
+                    Some(params) => {
+                        let mut iter = params.iter_mut();
+                        iter.next(); // skip `self`
+                        iter.map(|param| {
                             let tv = match &mut param.constraint {
                                 Some(type_ann) => {
                                     // TODO: push `s` on to `ss`
@@ -50,12 +53,14 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                             ctx.insert_type(param.name.name.clone(), tv.clone());
                             Ok((param.name.name.to_owned(), tv))
                         })
-                        .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
+                        .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?
+                    }
                     None => HashMap::default(),
                 };
 
-                let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = params
-                    .iter_mut()
+                let mut iter = params.iter_mut();
+                iter.next(); // skip `self`
+                let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = iter
                     .map(|e_param| {
                         let (ps, pa, t_param) = infer_fn_param(e_param, ctx, &type_params_map)?;
 
@@ -71,6 +76,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
                 // TODO: ensure that constructors don't have a return statement
+                // TODO: add `self` and `Self` to ctx
                 let (body_s, _body_t) = infer_expr(ctx, body, false)?;
                 ss.push(body_s);
 
@@ -95,7 +101,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 kind,
                 lambda,
                 is_static,
-                is_mutating,
+                is_mutating: _,
             }) => {
                 // TODO: dedupe with infer_expr's ExprKind::Lambda branch
 
@@ -109,6 +115,8 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
 
                 ctx.push_scope(is_async.to_owned());
 
+                // QUESTION: should we skip the first param when computing
+                // `type_params_map`?
                 let type_params_map: HashMap<String, Type> = match type_params {
                     Some(params) => params
                         .iter_mut()
@@ -131,8 +139,19 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                     None => HashMap::default(),
                 };
 
-                let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = params
-                    .iter_mut()
+                let mut iter = params.iter_mut();
+                let mut mutating = false;
+                if !*is_static {
+                    // TODO: raise an error if there's no first param
+                    let param = iter.next(); // skip `self`
+                    if let Some(param) = param {
+                        if let PatternKind::Ident(binding_ident) = &param.pat.kind {
+                            mutating = binding_ident.mutable;
+                            println!("is self mutating: {mutating}");
+                        }
+                    }
+                }
+                let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = iter
                     .map(|e_param| {
                         let (ps, pa, t_param) = infer_fn_param(e_param, ctx, &type_params_map)?;
 
@@ -147,6 +166,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                     .collect();
                 let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
+                // TODO: add `self` and `Self` to ctx
                 let (body_s, mut body_t) = infer_expr(ctx, body, false)?;
                 ss.push(body_s);
 
@@ -171,7 +191,6 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 let mut elem = match kind {
                     MethodKind::Method => TObjElem::Method(TMethod {
                         name,
-                        mutating: *is_mutating,
                         params: t_params,
                         ret: Box::from(body_t),
                         type_params: vec![], // TODO
@@ -187,7 +206,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                                 param: t_params[0].to_owned(),
                             })
                         } else {
-                            panic!("setters must have a single parameter")
+                            panic!("setters must be passed 'self' and one other parameter")
                         }
                     }
                 };
@@ -198,7 +217,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 if *is_static {
                     statics_elems.push(elem.clone());
                 } else {
-                    if !*is_mutating {
+                    if !mutating {
                         instance_elems.push(elem.clone());
                     }
                     mut_instance_elems.push(elem);

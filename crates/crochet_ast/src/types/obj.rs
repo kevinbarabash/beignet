@@ -46,7 +46,6 @@ impl fmt::Display for TCallable {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TMethod {
     pub name: TPropKey,
-    pub mutating: bool,
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
     pub type_params: Vec<TypeParam>,
@@ -56,14 +55,10 @@ impl fmt::Display for TMethod {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self {
             name,
-            mutating,
             params,
             ret,
             type_params,
         } = self;
-        if *mutating {
-            write!(f, "mut ")?;
-        }
         write!(f, "{name}")?;
         if !type_params.is_empty() {
             let type_params = type_params.iter().map(|tp| {

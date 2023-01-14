@@ -926,9 +926,12 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
         .filter_map(|member| match member {
             values::ClassMember::Constructor(constructor) => {
                 let body = build_fn_body(&constructor.body, ctx);
-                let params: Vec<ParamOrTsParamProp> = constructor
-                    .params
-                    .iter()
+                // In Crochet, `self` is always the first param in methods, but
+                // it represents `this` in JavaScript which is implicit so we
+                // ignore it here.
+                let mut iter = constructor.params.iter();
+                iter.next();
+                let params: Vec<ParamOrTsParamProp> = iter
                     .map(|param| {
                         let pat = build_pattern(&param.pat, stmts, ctx).unwrap();
                         ParamOrTsParamProp::Param(Param {
@@ -954,10 +957,14 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
             }
             values::ClassMember::Method(method) => {
                 let body = build_fn_body(&method.lambda.body, ctx);
-                let params: Vec<Param> = method
-                    .lambda
-                    .params
-                    .iter()
+                // In Crochet, `self` is always the first param in non-static
+                // methods, but it represents `this` in JavaScript which is
+                // implicit so we ignore it here.
+                let mut iter = method.lambda.params.iter();
+                if !method.is_static {
+                    iter.next();
+                }
+                let params: Vec<Param> = iter
                     .map(|param| {
                         let pat = build_pattern(&param.pat, stmts, ctx).unwrap();
                         Param {
