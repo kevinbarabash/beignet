@@ -119,7 +119,6 @@ Ok(
                                             },
                                         ),
                                         optional: false,
-                                        mutable: false,
                                     },
                                     EFnParam {
                                         pat: Pattern {
@@ -175,7 +174,6 @@ Ok(
                                             },
                                         ),
                                         optional: false,
-                                        mutable: false,
                                     },
                                 ],
                                 body: Expr {

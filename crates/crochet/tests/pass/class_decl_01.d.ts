@@ -13,6 +13,5 @@ declare type ReadonlyFoo = {
     readonly msg: string;
     bar(): "hello";
     get baz(): "world!";
-    set qux(msg: string);
 };
 export declare const Foo: FooConstructor;
