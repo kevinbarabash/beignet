@@ -613,8 +613,21 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
                             ..method.to_owned()
                         })
                     }
-                    TObjElem::Getter(_) => todo!(),
-                    TObjElem::Setter(_) => todo!(),
+                    TObjElem::Getter(getter) => {
+                        let ret = replace_aliases_rec(getter.ret.as_ref(), type_param_map);
+
+                        TObjElem::Getter(TGetter {
+                            ret: Box::from(ret),
+                            ..getter.to_owned()
+                        })
+                    }
+                    TObjElem::Setter(setter) => TObjElem::Setter(TSetter {
+                        param: TFnParam {
+                            t: replace_aliases_rec(&setter.param.t, type_param_map),
+                            ..setter.param.to_owned()
+                        },
+                        ..setter.to_owned()
+                    }),
                     TObjElem::Index(index) => {
                         let t = replace_aliases_rec(&index.t, type_param_map);
                         TObjElem::Index(TIndex {

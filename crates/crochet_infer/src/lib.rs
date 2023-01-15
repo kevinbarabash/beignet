@@ -3083,6 +3083,8 @@ mod tests {
             constructor() {}
             add(self, x, y) { x + y; }
             set_msg(mut self, msg: string) {}
+            get bar(self): boolean { true; }
+            set bar(mut self, value: boolean) {}
         }
         "#;
 
@@ -3091,13 +3093,13 @@ mod tests {
         let it = ctx.lookup_type("Foo", false).unwrap();
         assert_eq!(
             format!("{it}"),
-            "{msg: string, add(x: number, y: number): number}"
+            "{msg: string, add(x: number, y: number): number, get bar(): true}"
         );
 
         let mut_it = ctx.lookup_type("Foo", true).unwrap();
         assert_eq!(
             format!("{mut_it}"),
-            "{msg: string, add(x: number, y: number): number, set_msg(msg: string): undefined}"
+            "{msg: string, add(x: number, y: number): number, set_msg(msg: string): undefined, get bar(): true, set bar(value: boolean)}"
         );
     }
 

@@ -49,6 +49,7 @@ pub struct TMethod {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
     pub type_params: Vec<TypeParam>,
+    pub is_mutating: bool,
 }
 
 impl fmt::Display for TMethod {
@@ -58,8 +59,10 @@ impl fmt::Display for TMethod {
             params,
             ret,
             type_params,
+            is_mutating: _,
         } = self;
         write!(f, "{name}")?;
+        // TODO: include `self` or `mut self` in the signature
         if !type_params.is_empty() {
             let type_params = type_params.iter().map(|tp| {
                 let TypeParam {

@@ -20,7 +20,6 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
     let class_name = class.ident.name.to_owned();
 
     let mut statics_elems: Vec<TObjElem> = vec![];
-    let mut instance_elems: Vec<TObjElem> = vec![];
     let mut mut_instance_elems: Vec<TObjElem> = vec![];
 
     for member in &mut class.body {
@@ -140,14 +139,13 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 };
 
                 let mut iter = params.iter_mut();
-                let mut mutating = false;
+                let mut is_mutating = false;
                 if !*is_static {
                     // TODO: raise an error if there's no first param
                     let param = iter.next(); // skip `self`
                     if let Some(param) = param {
                         if let PatternKind::Ident(binding_ident) = &param.pat.kind {
-                            mutating = binding_ident.mutable;
-                            println!("is self mutating: {mutating}");
+                            is_mutating = binding_ident.mutable;
                         }
                     }
                 }
@@ -194,6 +192,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                         params: t_params,
                         ret: Box::from(body_t),
                         type_params: vec![], // TODO
+                        is_mutating,
                     }),
                     MethodKind::Getter => TObjElem::Getter(TGetter {
                         name,
@@ -217,9 +216,6 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 if *is_static {
                     statics_elems.push(elem.clone());
                 } else {
-                    if !mutating {
-                        instance_elems.push(elem.clone());
-                    }
                     mut_instance_elems.push(elem);
                 }
             }
@@ -255,9 +251,6 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 if *is_static {
                     statics_elems.push(elem);
                 } else {
-                    // Properties are accessible from both mutable and immutable
-                    // references, but can only be update from mutable ones.
-                    instance_elems.push(elem.clone());
                     mut_instance_elems.push(elem);
                 }
             }
@@ -269,20 +262,12 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
     }));
 
     let instance_t = Type::from(TypeKind::Object(TObject {
-        elems: instance_elems,
-    }));
-
-    let mut_instance_t = Type::from(TypeKind::Object(TObject {
         elems: mut_instance_elems,
     }));
 
     let empty_env = Env::default();
 
-    ctx.insert_scheme(
-        format!("Readonly{class_name}"),
-        generalize(&empty_env, &instance_t),
-    );
-    ctx.insert_scheme(class_name, generalize(&empty_env, &mut_instance_t));
+    ctx.insert_scheme(class_name, generalize(&empty_env, &instance_t));
 
     // TODO: capture all of the subsitutions and return them
     let s = Subst::default();
