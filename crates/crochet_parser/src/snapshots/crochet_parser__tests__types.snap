@@ -143,7 +143,6 @@ Ok(
                                             },
                                         ),
                                         optional: false,
-                                        mutable: false,
                                     },
                                 ],
                                 body: Expr {

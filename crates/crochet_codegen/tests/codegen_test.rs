@@ -717,3 +717,29 @@ fn mutable_indexer() {
     };
     "###);
 }
+
+#[test]
+fn class_with_methods() {
+    let src = r#"
+    class Foo {
+        constructor(self, x) {
+            self.x = x;
+        }
+        bar(self, y) {
+            self.x + y;
+        }
+    }
+    "#;
+
+    let (js, _srcmap) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
+    class Foo {
+        constructor(x){
+            return self.x = x;
+        }
+        bar(y) {
+            return self.x + y;
+        }
+    }"###);
+}

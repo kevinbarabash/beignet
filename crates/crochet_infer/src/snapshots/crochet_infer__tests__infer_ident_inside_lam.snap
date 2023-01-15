@@ -383,7 +383,6 @@ Program {
                                                     },
                                                     type_ann: None,
                                                     optional: false,
-                                                    mutable: false,
                                                 },
                                                 EFnParam {
                                                     pat: Pattern {
@@ -430,7 +429,6 @@ Program {
                                                     },
                                                     type_ann: None,
                                                     optional: false,
-                                                    mutable: false,
                                                 },
                                             ],
                                             body: Expr {
@@ -894,7 +892,6 @@ Program {
                                     },
                                     type_ann: None,
                                     optional: false,
-                                    mutable: false,
                                 },
                                 EFnParam {
                                     pat: Pattern {
@@ -941,7 +938,6 @@ Program {
                                     },
                                     type_ann: None,
                                     optional: false,
-                                    mutable: false,
                                 },
                             ],
                             body: Expr {

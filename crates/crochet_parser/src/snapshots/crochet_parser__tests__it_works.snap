@@ -99,7 +99,6 @@ Ok(
                                         },
                                         type_ann: None,
                                         optional: false,
-                                        mutable: false,
                                     },
                                     EFnParam {
                                         pat: Pattern {
@@ -135,7 +134,6 @@ Ok(
                                         },
                                         type_ann: None,
                                         optional: false,
-                                        mutable: false,
                                     },
                                 ],
                                 body: Expr {
@@ -321,7 +319,6 @@ Ok(
                                         },
                                         type_ann: None,
                                         optional: false,
-                                        mutable: false,
                                     },
                                     EFnParam {
                                         pat: Pattern {
@@ -357,7 +354,6 @@ Ok(
                                         },
                                         type_ann: None,
                                         optional: false,
-                                        mutable: false,
                                     },
                                 ],
                                 body: Expr {

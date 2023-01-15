@@ -8,6 +8,7 @@ pub enum Keyword {
     Boolean,
     String,
     Null,
+    Self_, // self is a replacement for this
     Symbol,
     Undefined,
 }
@@ -19,6 +20,7 @@ impl fmt::Display for Keyword {
             Keyword::Boolean => write!(f, "boolean"),
             Keyword::String => write!(f, "string"),
             Keyword::Null => write!(f, "null"),
+            Keyword::Self_ => write!(f, "self"),
             Keyword::Symbol => write!(f, "symbol"),
             Keyword::Undefined => write!(f, "undefined"),
         }
@@ -35,6 +37,7 @@ impl From<Keyword> for Type {
                 Keyword::Null => TKeyword::Null,
                 Keyword::Symbol => TKeyword::Symbol,
                 Keyword::Undefined => TKeyword::Undefined,
+                Keyword::Self_ => TKeyword::Self_,
             }),
             provenance: None,
             mutable: false,

@@ -362,6 +362,7 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsTyp
                 types::TKeyword::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
                 types::TKeyword::Never => TsKeywordTypeKind::TsNeverKeyword,
                 types::TKeyword::Object => TsKeywordTypeKind::TsObjectKeyword,
+                types::TKeyword::Self_ => return TsType::TsThisType(TsThisType { span: DUMMY_SP }),
             };
 
             TsType::TsKeywordType(TsKeywordType {
@@ -469,7 +470,6 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>) -> TsTyp
                     }
                     TObjElem::Method(types::TMethod {
                         name,
-                        mutating: _,
                         params,
                         ret,
                         type_params,

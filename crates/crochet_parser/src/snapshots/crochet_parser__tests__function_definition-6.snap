@@ -178,7 +178,6 @@ Ok(
                                     },
                                     type_ann: None,
                                     optional: false,
-                                    mutable: false,
                                 },
                             ],
                             body: Expr {

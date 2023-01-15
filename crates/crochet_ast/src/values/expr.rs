@@ -93,7 +93,6 @@ pub struct EFnParam {
     pub pat: Pattern,
     pub type_ann: Option<TypeAnn>,
     pub optional: bool,
-    pub mutable: bool,
 }
 
 impl EFnParam {

@@ -194,7 +194,6 @@ fn parse_declaration(
                     pat: pattern.clone(),
                     type_ann: type_ann.clone(),
                     optional: false,
-                    mutable: false,
                 }],
                 body: init.unwrap(),
                 is_async: false,
@@ -568,7 +567,6 @@ fn parse_formal_parameters(
                 pat: parse_pattern(&pattern, src)?,
                 type_ann,
                 optional,
-                mutable: false,
             })
         })
         .collect::<Result<Vec<_>, ParseError>>()
@@ -2570,6 +2568,18 @@ mod tests {
         insta::assert_debug_snapshot!(parse("class Foo { get foo() {} }"));
         insta::assert_debug_snapshot!(parse("class Foo { set foo(x) {} }"));
         insta::assert_debug_snapshot!(parse("class Foo { constructor(x) {} }"));
+
+        let src = r#"
+        class Foo {
+            constructor(self, x) {
+                self.x = x;
+            }
+            bar(self, y) {
+                self.x + y;
+            }
+        }
+        "#;
+        insta::assert_debug_snapshot!(parse(src));
     }
 
     // #[test]
