@@ -1,9 +1,10 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
-use crochet_ast::types::{TObjElem, TObject, TPropKey, Type, TypeKind};
+use crochet_ast::types::{TCallable, TIndex, TObjElem, TObject, TPropKey, Type, TypeKind};
 use crochet_infer::Scheme;
 
-pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme, _obj_is_mutating: bool) -> Scheme {
+// TODO: handle function overloads
+pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
     let type_params_1 = &old_scheme.type_params;
     let type_params_2 = &new_scheme.type_params;
 
@@ -20,11 +21,24 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme, _obj_is_mutating:
 
     let t = match (&old_scheme.t.kind, &new_scheme.t.kind) {
         (TypeKind::Object(old_obj), TypeKind::Object(new_obj)) => {
-            let mut map: HashMap<String, TObjElem> = HashMap::new();
+            let mut map: BTreeMap<String, TObjElem> = BTreeMap::new();
+
+            let mut calls: Vec<TCallable> = vec![];
+            let mut constructors: Vec<TCallable> = vec![];
+            let mut indexes: Vec<TIndex> = vec![];
+
             for elem in &old_obj.elems {
                 match elem {
-                    TObjElem::Call(_) => todo!(),
-                    TObjElem::Constructor(_) => todo!(),
+                    TObjElem::Call(call) => {
+                        calls.push(call.to_owned());
+                    }
+                    TObjElem::Constructor(constructor) => {
+                        constructors.push(constructor.to_owned());
+                    }
+                    TObjElem::Index(index) => {
+                        indexes.push(index.to_owned());
+                    }
+
                     TObjElem::Method(method) => {
                         let key = match &method.name {
                             TPropKey::StringKey(key) => key.to_owned(),
@@ -46,9 +60,6 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme, _obj_is_mutating:
                         };
                         map.insert(key, elem.to_owned());
                     }
-                    TObjElem::Index(_) => {
-                        // TODO
-                    }
                     TObjElem::Prop(prop) => {
                         let key = match &prop.name {
                             TPropKey::StringKey(key) => key.to_owned(),
@@ -59,18 +70,103 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme, _obj_is_mutating:
                 }
             }
 
+            for elem in &new_obj.elems {
+                match elem {
+                    TObjElem::Call(call) => {
+                        calls.push(call.to_owned());
+                    }
+                    TObjElem::Constructor(constructor) => {
+                        constructors.push(constructor.to_owned());
+                    }
+                    TObjElem::Index(index) => {
+                        indexes.push(index.to_owned());
+                    }
+
+                    TObjElem::Method(method) => {
+                        let key = match &method.name {
+                            TPropKey::StringKey(key) => key.to_owned(),
+                            TPropKey::NumberKey(key) => key.to_owned(),
+                        };
+                        match map.get(&key) {
+                            Some(old_elem) => {
+                                // NOTE: When an individual interface decl is
+                                // inferred we don't have enough info to know
+                                // whether individual methods are mutating so
+                                // we either infer all methods ad mutating or
+                                // not.  If one interface has a mutating version
+                                // and one doesn't, we can infer that the method
+                                // isn't mutating.
+                                if let TObjElem::Method(old_method) = old_elem {
+                                    if old_method.is_mutating && !method.is_mutating {
+                                        map.insert(key, elem.to_owned());
+                                    }
+                                }
+                            }
+                            None => {
+                                map.insert(key, elem.to_owned());
+                            }
+                        };
+                    }
+                    TObjElem::Getter(getter) => {
+                        let key = match &getter.name {
+                            TPropKey::StringKey(key) => key.to_owned(),
+                            TPropKey::NumberKey(key) => key.to_owned(),
+                        };
+                        // Even if there is a getter with the same name, it
+                        // should return the same type.
+                        map.insert(key, elem.to_owned());
+                    }
+                    TObjElem::Setter(setter) => {
+                        let key = match &setter.name {
+                            TPropKey::StringKey(key) => key.to_owned(),
+                            TPropKey::NumberKey(key) => key.to_owned(),
+                        };
+                        // In practice there should never be an existing setter
+                        // with the same name.
+                        map.insert(key, elem.to_owned());
+                    }
+                    TObjElem::Prop(prop) => {
+                        let key = match &prop.name {
+                            TPropKey::StringKey(key) => key.to_owned(),
+                            TPropKey::NumberKey(key) => key.to_owned(),
+                        };
+                        match map.get(&key) {
+                            Some(old_elem) => {
+                                // NOTE: Properties can be marked as `readonly`
+                                // in TS interfaces.  If the old properties is
+                                // not mutable, but the new one is, we use the
+                                // new one.
+                                if let TObjElem::Prop(old_prop) = old_elem {
+                                    if !old_prop.mutable && prop.mutable {
+                                        map.insert(key, elem.to_owned());
+                                    }
+                                }
+                            }
+                            None => {
+                                map.insert(key, elem.to_owned());
+                            }
+                        };
+                    }
+                }
+            }
+
             // TODO:
             // - loop through `new_elems` and update `map`
             // - generate output `elems` from `map`
 
             // NOTE: right now this results in duplicate methods appearing when
             // mergin `Array` and `ReadonlyArray`.
-            let elems: Vec<_> = old_obj
-                .elems
-                .iter()
-                .cloned()
-                .chain(new_obj.elems.iter().cloned())
-                .collect();
+            let mut elems: Vec<TObjElem> = vec![];
+
+            for (_, elem) in map {
+                elems.push(elem.to_owned());
+            }
+            // let elems: Vec<_> = old_obj
+            //     .elems
+            //     .iter()
+            //     .cloned()
+            //     .chain(new_obj.elems.iter().cloned())
+            //     .collect();
 
             Type::from(TypeKind::Object(TObject { elems }))
         }
@@ -81,4 +177,137 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme, _obj_is_mutating:
         t: Box::from(t),
         type_params: type_params_1.clone(),
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crochet_ast::types::{TKeyword, TMethod};
+
+    #[test]
+    fn if_obj_is_not_mutating_all_methods_are_not_mutating() {
+        let old_elems = vec![TObjElem::Method(TMethod {
+            name: TPropKey::StringKey(String::from("foo")),
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+            is_mutating: false,
+        })];
+        let old_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            type_params: vec![],
+        };
+        let new_elems = vec![TObjElem::Method(TMethod {
+            name: TPropKey::StringKey(String::from("bar")),
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+            is_mutating: false,
+        })];
+        let new_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            type_params: vec![],
+        };
+
+        let result = merge_schemes(&old_scheme, &new_scheme);
+        assert_eq!(
+            result.to_string(),
+            "{bar(self): boolean, foo(self): boolean}"
+        );
+    }
+
+    #[test]
+    fn new_is_mutating_and_old_is_mutating_with_different_method_names() {
+        let old_elems = vec![TObjElem::Method(TMethod {
+            name: TPropKey::StringKey(String::from("foo")),
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+            is_mutating: true,
+        })];
+        let old_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            type_params: vec![],
+        };
+        let new_elems = vec![TObjElem::Method(TMethod {
+            name: TPropKey::StringKey(String::from("bar")),
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+            is_mutating: true,
+        })];
+        let new_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            type_params: vec![],
+        };
+
+        let result = merge_schemes(&old_scheme, &new_scheme);
+        assert_eq!(
+            result.to_string(),
+            "{bar(mut self): boolean, foo(mut self): boolean}"
+        );
+    }
+
+    #[test]
+    fn old_is_mutating_and_new_is_not_mutating_with_same_method_names() {
+        let old_elems = vec![TObjElem::Method(TMethod {
+            name: TPropKey::StringKey(String::from("foo")),
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+            is_mutating: true,
+        })];
+        let old_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            type_params: vec![],
+        };
+        let new_elems = vec![TObjElem::Method(TMethod {
+            name: TPropKey::StringKey(String::from("foo")),
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+            is_mutating: false,
+        })];
+        let new_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            type_params: vec![],
+        };
+
+        let result = merge_schemes(&old_scheme, &new_scheme);
+        assert_eq!(result.to_string(), "{foo(self): boolean}");
+    }
+
+    #[test]
+    fn old_is_not_mutating_and_new_is_mutating_with_same_method_names() {
+        let old_elems = vec![TObjElem::Method(TMethod {
+            name: TPropKey::StringKey(String::from("foo")),
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+            is_mutating: false,
+        })];
+        let old_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            type_params: vec![],
+        };
+        let new_elems = vec![TObjElem::Method(TMethod {
+            name: TPropKey::StringKey(String::from("foo")),
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+            is_mutating: true,
+        })];
+        let new_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            type_params: vec![],
+        };
+
+        let result = merge_schemes(&old_scheme, &new_scheme);
+        assert_eq!(result.to_string(), "{foo(self): boolean}");
+    }
+
+    // TODO: add unit tests for
+    // - properties (since they behave differently from methods)
+    // - call, constructors, and indexes
 }

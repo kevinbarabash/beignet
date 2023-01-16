@@ -109,6 +109,9 @@ pub fn infer_expr(
 
                             let s = compose_many_subs(&ss.clone());
                             ret_type.apply(&s);
+                            // TODO: figure out how we want to differentiate
+                            // new-ing up mutable objects vs. immutable ones.
+                            ret_type.mutable = true;
 
                             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
                             results.push((s, ret_type));
@@ -719,6 +722,8 @@ fn infer_property_type(
     ctx: &mut Context,
     is_lvalue: bool,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
+    // TODO: figure out when we have to copy .mutable from `obj_t` to the `t`
+    // being returned.
     match &mut obj_t.kind {
         TypeKind::Var(TVar { constraint, .. }) => match constraint {
             Some(constraint) => infer_property_type(constraint, prop, ctx, is_lvalue),
@@ -726,9 +731,10 @@ fn infer_property_type(
                 obj_t.to_owned(),
             ))]),
         },
-        TypeKind::Object(obj) => get_prop_value(obj, prop, ctx, is_lvalue),
+        TypeKind::Object(obj) => get_prop_value(obj, prop, ctx, is_lvalue, obj_t.mutable),
         TypeKind::Ref(_) => {
             let mut t = get_obj_type(obj_t, ctx)?;
+            t.mutable = obj_t.mutable;
             infer_property_type(&mut t, prop, ctx, is_lvalue)
         }
         TypeKind::Lit(_) => {
@@ -743,6 +749,7 @@ fn infer_property_type(
             let type_param = type_param.clone();
 
             let mut t = get_obj_type(obj_t, ctx)?;
+            t.mutable = obj_t.mutable;
             let (s, mut t) = infer_property_type(&mut t, prop, ctx, is_lvalue)?;
 
             // Replaces `this` with `mut <type_param>[]`
@@ -814,6 +821,7 @@ fn get_prop_value(
     prop: &mut MemberProp,
     ctx: &mut Context,
     is_lvalue: bool,
+    obj_is_mutable: bool,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
     let elems = &obj.elems;
 
@@ -822,6 +830,7 @@ fn get_prop_value(
             for elem in elems {
                 match elem {
                     types::TObjElem::Prop(prop) => {
+                        // TODO: if `is_lvalue` is true and `obj_is_mutable`is false raise and error
                         if prop.name == TPropKey::StringKey(name.to_owned()) {
                             let t = get_property_type(prop);
                             return Ok((Subst::default(), t));
@@ -832,12 +841,15 @@ fn get_prop_value(
                             return Ok((Subst::default(), getter.ret.as_ref().to_owned()));
                         }
                     }
-                    TObjElem::Setter(setter) if is_lvalue => {
+                    TObjElem::Setter(setter) if is_lvalue && obj_is_mutable => {
                         if setter.name == TPropKey::StringKey(name.to_owned()) {
                             return Ok((Subst::default(), setter.param.t.to_owned()));
                         }
                     }
                     TObjElem::Method(method) if !is_lvalue => {
+                        if method.is_mutating && !obj_is_mutable {
+                            return Err(vec![TypeError::MissingKey(name.to_owned())]);
+                        }
                         // TODO: check if `method` has any type params and return
                         // a `GenLam` if it does
                         if method.name == TPropKey::StringKey(name.to_owned()) {

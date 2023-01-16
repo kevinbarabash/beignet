@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use types::{
     TCallable, TConditionalType, TIndex, TIndexAccess, TIndexKey, TMappedType, TObjElem, TObject,
@@ -22,6 +23,7 @@ pub struct InterfaceCollector {
     pub ctx: Context,
     pub comments: SingleThreadedComments,
     pub namespace: Vec<String>,
+    pub interfaces: HashMap<String, Vec<TsInterfaceDecl>>,
 }
 
 pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
@@ -712,25 +714,16 @@ impl Visit for InterfaceCollector {
 
     fn visit_ts_interface_decl(&mut self, decl: &TsInterfaceDecl) {
         let mut name = decl.id.sym.to_string();
-        let readonly = name.starts_with("Readonly")
-            || name == "Number"
-            || name == "String"
-            || name == "Boolean";
-        if readonly {
+        if name.starts_with("Readonly") {
             name = name.replace("Readonly", "");
-        };
-        match infer_interface_decl(decl, &self.ctx, !readonly) {
-            Ok(scheme) => {
-                match self.ctx.lookup_scheme(&name).ok() {
-                    Some(existing_scheme) => {
-                        let merged_scheme =
-                            util::merge_schemes(&existing_scheme, &scheme, !readonly);
-                        self.ctx.insert_scheme(name, merged_scheme);
-                    }
-                    None => self.ctx.insert_scheme(name, scheme),
-                };
+        }
+
+        match self.interfaces.get_mut(&name) {
+            Some(decls) => decls.push(decl.to_owned()),
+            None => {
+                self.interfaces
+                    .insert(name.to_owned(), vec![decl.to_owned()]);
             }
-            Err(_) => eprintln!("couldn't infer {name}"),
         }
     }
 
@@ -803,9 +796,39 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
         ctx: Context::default(),
         comments,
         namespace: vec![],
+        interfaces: HashMap::new(),
     };
 
     module.visit_with(&mut collector);
+
+    for (name, decls) in collector.interfaces {
+        let has_readonly = decls
+            .iter()
+            .any(|decl| decl.id.sym.to_string().starts_with("Readonly"));
+        for decl in decls {
+            let readonly = decl.id.sym.to_string().starts_with("Readonly");
+            // NOTE: If there is no interface prefixed with `Readonly` then we
+            // assume the interface is unsafe (since there's no way to know which
+            // methods are mutable or not).  In this situation we set `mutable`
+            // to `false` so that all methods are accessible from both mutable
+            // and immutable references.
+            let mutable = has_readonly && !readonly;
+
+            let name = name.to_owned();
+            match infer_interface_decl(&decl, &collector.ctx, mutable) {
+                Ok(new_scheme) => {
+                    match collector.ctx.lookup_scheme(&name).ok() {
+                        Some(old_scheme) => {
+                            let merged_scheme = util::merge_schemes(&old_scheme, &new_scheme);
+                            collector.ctx.insert_scheme(name, merged_scheme);
+                        }
+                        None => collector.ctx.insert_scheme(name, new_scheme),
+                    };
+                }
+                Err(_) => eprintln!("couldn't infer {name}"),
+            }
+        }
+    }
 
     eprintln!("after visit_with");
 

@@ -59,7 +59,7 @@ impl fmt::Display for TMethod {
             params,
             ret,
             type_params,
-            is_mutating: _,
+            is_mutating,
         } = self;
         write!(f, "{name}")?;
         // TODO: include `self` or `mut self` in the signature
@@ -77,7 +77,18 @@ impl fmt::Display for TMethod {
             });
             write!(f, "<{}>", join(type_params, ", "))?;
         }
-        write!(f, "({}): {}", join(params, ", "), ret)
+        write!(f, "(")?;
+        if *is_mutating {
+            write!(f, "mut self")?;
+        } else {
+            write!(f, "self")?;
+        }
+        if params.is_empty() {
+            write!(f, ")")?;
+        } else {
+            write!(f, ", {})", join(params, ", "))?;
+        }
+        write!(f, ": {}", ret)
     }
 }
 
@@ -90,7 +101,7 @@ pub struct TGetter {
 impl fmt::Display for TGetter {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { name, ret } = self;
-        write!(f, "get {name}(): {ret}")
+        write!(f, "get {name}(self): {ret}")
     }
 }
 
@@ -103,7 +114,7 @@ pub struct TSetter {
 impl fmt::Display for TSetter {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { name, param } = self;
-        write!(f, "set {name}({param})")
+        write!(f, "set {name}(mut self, {param})")
     }
 }
 
