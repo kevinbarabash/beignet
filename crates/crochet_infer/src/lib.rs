@@ -1696,7 +1696,7 @@ mod tests {
     #[test]
     fn infer_elem_access_on_array() {
         let src = r#"
-        type ReadonlyArray<T> = {
+        type Array<T> = {
             [key: number]: T;
         };
         let array: number[] = [1, 2, 3];
@@ -2428,7 +2428,7 @@ mod tests {
     #[test]
     fn test_indexed_access_on_tuples() {
         let src = r#"
-        type ReadonlyArray<T> = {[key: number]: T};
+        type Array<T> = {[key: number]: T};
         type Tuple = [string, boolean, number];
         let a: Tuple[0] = "hello";
         let b: Tuple[1] = true;

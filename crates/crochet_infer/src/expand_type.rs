@@ -434,7 +434,7 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
             let t = match keyword {
                 TKeyword::Number => ctx.lookup_type("Number", false)?,
                 TKeyword::Boolean => ctx.lookup_type("Boolean", false)?,
-                TKeyword::Self_ => ctx.lookup_type("Self", false)?, // TODO: 
+                TKeyword::Self_ => ctx.lookup_type("Self", false)?, // TODO:
                 TKeyword::String => ctx.lookup_type("String", false)?,
                 TKeyword::Symbol => ctx.lookup_type("Symbol", false)?,
                 TKeyword::Object => {
@@ -471,8 +471,7 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
 
             // TODO: Provide a type arg when instantiating "Array".  It should
             // be the union of all element types in the tuple.
-            let name = if t.mutable { "Array" } else { "ReadonlyArray" };
-            let scheme = ctx.lookup_scheme(name)?;
+            let scheme = ctx.lookup_scheme("Array")?;
 
             // let array_t = ctx.lookup_type("Array", t.mutable)?;
             if let TypeKind::Object(TObject { elems: array_elems }) = &scheme.t.kind {
@@ -492,13 +491,11 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
             };
 
             let t = Type::from(TypeKind::Object(TObject { elems }));
+
             Ok(t)
         }
         TypeKind::Array(type_param) => {
-            // TODO: Update lookup_type() to take type args so
-            // that we don't have to handle them here manually.
-            let name = if t.mutable { "Array" } else { "ReadonlyArray" };
-            let scheme = ctx.lookup_scheme(name)?;
+            let scheme = ctx.lookup_scheme("Array")?;
 
             let mut type_param_map: HashMap<String, Type> = HashMap::new();
             type_param_map.insert(
@@ -615,7 +612,7 @@ mod tests {
     #[test]
     fn test_array() {
         let src = r#"
-        type ReadonlyArray<T> = {
+        type Array<T> = {
             [key: number]: T;
             length: number;
             map: (item: T, index: number, array: ReadonlyArray<T>) => null;
@@ -649,7 +646,7 @@ mod tests {
     #[test]
     fn test_tuple() {
         let src = r#"
-        type ReadonlyArray<T> = {
+        type Array<T> = {
             length: number,
             map: (item: T, index: number, array: ReadonlyArray<T>) => null,
         };

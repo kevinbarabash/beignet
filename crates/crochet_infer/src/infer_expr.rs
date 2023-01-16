@@ -761,18 +761,16 @@ fn infer_property_type(
             match prop {
                 // TODO: lookup methods on Array.prototype
                 MemberProp::Ident(_) => {
-                    let name = if obj_t.mutable {
-                        "Array"
-                    } else {
-                        "ReadonlyArray"
-                    };
-                    let scheme = ctx.lookup_scheme(name)?;
+                    let scheme = ctx.lookup_scheme("Array")?;
 
                     let mut type_param_map: HashMap<String, Type> = HashMap::new();
                     let type_param = Type::from(TypeKind::Union(elem_types.to_owned()));
                     type_param_map.insert(scheme.type_params[0].name.to_owned(), type_param);
 
                     let mut t = replace_aliases_rec(&scheme.t, &type_param_map);
+                    if !obj_t.mutable {
+                        // TODO: convert to an immutable object type
+                    }
 
                     infer_property_type(&mut t, prop, ctx, is_lvalue)
                 }
@@ -840,11 +838,23 @@ fn get_prop_value(
                         }
                     }
                     TObjElem::Method(method) if !is_lvalue => {
+                        // TODO: check if `method` has any type params and return
+                        // a `GenLam` if it does
                         if method.name == TPropKey::StringKey(name.to_owned()) {
-                            let t = Type::from(TypeKind::Lam(types::TLam {
-                                params: method.params.to_owned(),
-                                ret: method.ret.to_owned(),
-                            }));
+                            let t = if method.type_params.is_empty() {
+                                Type::from(TypeKind::Lam(types::TLam {
+                                    params: method.params.to_owned(),
+                                    ret: method.ret.to_owned(),
+                                }))
+                            } else {
+                                Type::from(TypeKind::GenLam(types::TGenLam {
+                                    lam: Box::from(types::TLam {
+                                        params: method.params.to_owned(),
+                                        ret: method.ret.to_owned(),
+                                    }),
+                                    type_params: method.type_params.to_owned(),
+                                }))
+                            };
                             return Ok((Subst::default(), t));
                         }
                     }

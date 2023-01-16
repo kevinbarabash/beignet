@@ -132,7 +132,6 @@ impl Context {
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    // TODO: handle ReadonlyArray, etc.
     pub fn lookup_scheme(&self, name: &str) -> Result<Scheme, Vec<TypeError>> {
         for scope in self.scopes.iter().rev() {
             if let Some(scheme) = scope.types.get(name) {
