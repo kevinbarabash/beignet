@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crochet_ast::types::{TCallable, TIndex, TObjElem, TObject, TPropKey, Type, TypeKind};
+use crochet_ast::types::{TObjElem, TObject, TPropKey, Type, TypeKind};
 use crochet_infer::Scheme;
 
 pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
@@ -28,20 +28,20 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
             // passed `T[]` in the first on and `readonly T[]` in the second one.
             let mut map: BTreeMap<String, TObjElem> = BTreeMap::new();
 
-            let mut calls: Vec<TCallable> = vec![];
-            let mut constructors: Vec<TCallable> = vec![];
-            let mut indexes: Vec<TIndex> = vec![];
+            let mut calls: Vec<TObjElem> = vec![];
+            let mut constructors: Vec<TObjElem> = vec![];
+            let mut indexes: Vec<TObjElem> = vec![];
 
             for elem in &old_obj.elems {
                 match elem {
-                    TObjElem::Call(call) => {
-                        calls.push(call.to_owned());
+                    TObjElem::Call(_) => {
+                        calls.push(elem.to_owned());
                     }
-                    TObjElem::Constructor(constructor) => {
-                        constructors.push(constructor.to_owned());
+                    TObjElem::Constructor(_) => {
+                        constructors.push(elem.to_owned());
                     }
-                    TObjElem::Index(index) => {
-                        indexes.push(index.to_owned());
+                    TObjElem::Index(_) => {
+                        indexes.push(elem.to_owned());
                     }
 
                     TObjElem::Method(method) => {
@@ -77,14 +77,14 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
 
             for elem in &new_obj.elems {
                 match elem {
-                    TObjElem::Call(call) => {
-                        calls.push(call.to_owned());
+                    TObjElem::Call(_) => {
+                        calls.push(elem.to_owned());
                     }
-                    TObjElem::Constructor(constructor) => {
-                        constructors.push(constructor.to_owned());
+                    TObjElem::Constructor(_) => {
+                        constructors.push(elem.to_owned());
                     }
-                    TObjElem::Index(index) => {
-                        indexes.push(index.to_owned());
+                    TObjElem::Index(_) => {
+                        indexes.push(elem.to_owned());
                     }
 
                     TObjElem::Method(method) => {
@@ -156,11 +156,15 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
             }
 
             let mut elems: Vec<TObjElem> = vec![];
+
+            // TODO: Dedupe these while handling overloads.
+            elems.append(&mut calls);
+            elems.append(&mut constructors);
+            elems.append(&mut indexes);
+
             for (_, elem) in map {
                 elems.push(elem.to_owned());
             }
-
-            // TODO: merge calls, constructors, and indexes.
 
             Type::from(TypeKind::Object(TObject { elems }))
         }
@@ -177,7 +181,7 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
 mod tests {
     use super::*;
 
-    use crochet_ast::types::{TKeyword, TMethod};
+    use crochet_ast::types::{TCallable, TIndex, TIndexKey, TKeyword, TMethod};
 
     #[test]
     fn if_obj_is_not_mutating_all_methods_are_not_mutating() {
@@ -301,7 +305,121 @@ mod tests {
         assert_eq!(result.to_string(), "{foo(self): boolean}");
     }
 
-    // TODO: add unit tests for
-    // - properties (since they behave differently from methods)
-    // - call, constructors, and indexes
+    #[test]
+    fn old_index_mut_new_index_immut() {
+        let old_elems = vec![TObjElem::Index(TIndex {
+            key: TIndexKey {
+                name: "key".to_string(),
+                t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+            },
+            t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+            mutable: true,
+        })];
+        let old_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            type_params: vec![],
+        };
+        let new_elems = vec![TObjElem::Index(TIndex {
+            key: TIndexKey {
+                name: "key".to_string(),
+                t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+            },
+            t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+            mutable: false,
+        })];
+        let new_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            type_params: vec![],
+        };
+
+        let result = merge_schemes(&old_scheme, &new_scheme);
+        assert_eq!(
+            result.to_string(),
+            "{mut [key: number]: boolean, [key: number]: boolean}"
+        );
+    }
+
+    #[test]
+    fn old_index_immut_new_index_mut() {
+        let old_elems = vec![TObjElem::Index(TIndex {
+            key: TIndexKey {
+                name: "key".to_string(),
+                t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+            },
+            t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+            mutable: false,
+        })];
+        let old_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            type_params: vec![],
+        };
+        let new_elems = vec![TObjElem::Index(TIndex {
+            key: TIndexKey {
+                name: "key".to_string(),
+                t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+            },
+            t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+            mutable: true,
+        })];
+        let new_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            type_params: vec![],
+        };
+
+        let result = merge_schemes(&old_scheme, &new_scheme);
+        assert_eq!(
+            result.to_string(),
+            "{[key: number]: boolean, mut [key: number]: boolean}"
+        );
+    }
+
+    #[test]
+    fn callables() {
+        let old_elems = vec![TObjElem::Call(TCallable {
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+        })];
+        let old_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            type_params: vec![],
+        };
+        let new_elems = vec![TObjElem::Call(TCallable {
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+        })];
+        let new_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            type_params: vec![],
+        };
+
+        let result = merge_schemes(&old_scheme, &new_scheme);
+        assert_eq!(result.to_string(), "{() => boolean, () => boolean}");
+    }
+
+    #[test]
+    fn constructors() {
+        let old_elems = vec![TObjElem::Constructor(TCallable {
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+        })];
+        let old_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            type_params: vec![],
+        };
+        let new_elems = vec![TObjElem::Constructor(TCallable {
+            params: vec![],
+            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            type_params: vec![],
+        })];
+        let new_scheme = Scheme {
+            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            type_params: vec![],
+        };
+
+        let result = merge_schemes(&old_scheme, &new_scheme);
+        assert_eq!(result.to_string(), "{new () => boolean, new () => boolean}");
+    }
 }

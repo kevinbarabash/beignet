@@ -750,19 +750,22 @@ fn infer_property_type(
 
             let mut t = get_obj_type(obj_t, ctx)?;
             t.mutable = obj_t.mutable;
+
             let (s, mut t) = infer_property_type(&mut t, prop, ctx, is_lvalue)?;
 
             // Replaces `this` with `mut <type_param>[]`
             let rep_t = Type {
                 kind: TypeKind::Array(type_param),
                 provenance: None,
-                mutable: true,
+                mutable: obj_t.mutable,
             };
             replace_this(&mut t, &rep_t);
 
             Ok((s, t))
         }
         TypeKind::Tuple(elem_types) => {
+            // QUESTION: Why don't we need to call `replace_this` here as well?
+
             // If `prop` is a number literal then look up the index entry, if
             // not, treat it the same as a regular property look up on Array.
             match prop {
@@ -775,9 +778,7 @@ fn infer_property_type(
                     type_param_map.insert(scheme.type_params[0].name.to_owned(), type_param);
 
                     let mut t = replace_aliases_rec(&scheme.t, &type_param_map);
-                    if !obj_t.mutable {
-                        // TODO: convert to an immutable object type
-                    }
+                    t.mutable = obj_t.mutable;
 
                     infer_property_type(&mut t, prop, ctx, is_lvalue)
                 }
@@ -850,8 +851,7 @@ fn get_prop_value(
                         if method.is_mutating && !obj_is_mutable {
                             return Err(vec![TypeError::MissingKey(name.to_owned())]);
                         }
-                        // TODO: check if `method` has any type params and return
-                        // a `GenLam` if it does
+
                         if method.name == TPropKey::StringKey(name.to_owned()) {
                             let t = if method.type_params.is_empty() {
                                 Type::from(TypeKind::Lam(types::TLam {

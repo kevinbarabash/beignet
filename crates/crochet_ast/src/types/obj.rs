@@ -9,6 +9,7 @@ pub struct TCallable {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
     pub type_params: Vec<TypeParam>,
+    // TODO: support mutating callables?
 }
 
 impl fmt::Display for TCallable {
