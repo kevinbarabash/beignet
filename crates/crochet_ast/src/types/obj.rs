@@ -9,6 +9,7 @@ pub struct TCallable {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
     pub type_params: Vec<TypeParam>,
+    // TODO: support mutating callables?
 }
 
 impl fmt::Display for TCallable {
@@ -49,6 +50,7 @@ pub struct TMethod {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
     pub type_params: Vec<TypeParam>,
+    pub is_mutating: bool,
 }
 
 impl fmt::Display for TMethod {
@@ -58,6 +60,7 @@ impl fmt::Display for TMethod {
             params,
             ret,
             type_params,
+            is_mutating,
         } = self;
         write!(f, "{name}")?;
         if !type_params.is_empty() {
@@ -74,7 +77,18 @@ impl fmt::Display for TMethod {
             });
             write!(f, "<{}>", join(type_params, ", "))?;
         }
-        write!(f, "({}): {}", join(params, ", "), ret)
+        write!(f, "(")?;
+        if *is_mutating {
+            write!(f, "mut self")?;
+        } else {
+            write!(f, "self")?;
+        }
+        if params.is_empty() {
+            write!(f, ")")?;
+        } else {
+            write!(f, ", {})", join(params, ", "))?;
+        }
+        write!(f, ": {}", ret)
     }
 }
 
@@ -87,7 +101,7 @@ pub struct TGetter {
 impl fmt::Display for TGetter {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { name, ret } = self;
-        write!(f, "get {name}(): {ret}")
+        write!(f, "get {name}(self): {ret}")
     }
 }
 
@@ -100,7 +114,7 @@ pub struct TSetter {
 impl fmt::Display for TSetter {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { name, param } = self;
-        write!(f, "set {name}({param})")
+        write!(f, "set {name}(mut self, {param})")
     }
 }
 

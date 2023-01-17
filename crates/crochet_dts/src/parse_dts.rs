@@ -1,7 +1,8 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use types::{
     TCallable, TConditionalType, TIndex, TIndexAccess, TIndexKey, TMappedType, TObjElem, TObject,
-    TPropKey, TRef, TypeKind,
+    TPropKey, TypeKind,
 };
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
@@ -11,8 +12,8 @@ use swc_ecma_visit::*;
 
 use crate::util;
 use crochet_ast::types::{
-    self as types, RestPat, TFnParam, TGenLam, TKeyword, TMappedTypeChangeProp, TPat, TProp, Type,
-    TypeParam,
+    self as types, RestPat, TFnParam, TGenLam, TKeyword, TMappedTypeChangeProp, TPat, TProp, TRef,
+    Type, TypeParam,
 };
 use crochet_ast::values::{Lit, DUMMY_LOC};
 use crochet_infer::{get_sub_and_type_params, Context, Scheme, Subst, Substitutable};
@@ -22,6 +23,7 @@ pub struct InterfaceCollector {
     pub ctx: Context,
     pub comments: SingleThreadedComments,
     pub namespace: Vec<String>,
+    pub interfaces: HashMap<String, Vec<TsInterfaceDecl>>,
 }
 
 pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
@@ -144,7 +146,9 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
             let elems: Vec<TObjElem> = members
                 .iter()
                 .filter_map(|elem| {
-                    let prop = infer_ts_type_element(elem, ctx);
+                    // TODO: double check that this is correct
+                    let obj_is_mutable = false;
+                    let prop = infer_ts_type_element(elem, ctx, obj_is_mutable);
 
                     match prop {
                         Ok(prop) => Some(prop),
@@ -360,7 +364,11 @@ fn infer_fn_params(params: &[TsFnParam], ctx: &Context) -> Result<Vec<TFnParam>,
     Ok(params)
 }
 
-fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, String> {
+fn infer_method_sig(
+    sig: &TsMethodSignature,
+    ctx: &Context,
+    obj_is_mutable: bool,
+) -> Result<TObjElem, String> {
     if sig.computed {
         panic!("unexpected computed property in TypElement")
     }
@@ -369,52 +377,76 @@ fn infer_method_sig(sig: &TsMethodSignature, ctx: &Context) -> Result<Type, Stri
     let ret = match &sig.type_ann {
         Some(type_ann) => infer_ts_type_ann(&type_ann.type_ann, ctx),
         None => Err(String::from("method has no return type")),
-    };
+    }?;
 
-    let lam = types::TLam {
-        params,
-        ret: Box::from(ret?),
-    };
+    let mut type_params = match &sig.type_params {
+        Some(type_param_decl) => type_param_decl
+            .params
+            .iter()
+            .map(|type_param| {
+                let constraint = match &type_param.constraint {
+                    Some(constraint) => {
+                        let t = infer_ts_type_ann(constraint, ctx)?;
+                        Some(Box::from(t))
+                    }
+                    None => None,
+                };
 
-    let t = match &sig.type_params {
-        Some(type_param_decl) => {
-            let type_params = type_param_decl
-                .params
-                .iter()
-                .map(|type_param| {
-                    let constraint = match &type_param.constraint {
-                        Some(constraint) => {
-                            let t = infer_ts_type_ann(constraint, ctx)?;
-                            Some(Box::from(t))
-                        }
-                        None => None,
-                    };
+                let default = match &type_param.default {
+                    Some(default) => {
+                        let t = infer_ts_type_ann(default, ctx)?;
+                        Some(Box::from(t))
+                    }
+                    None => None,
+                };
 
-                    let default = match &type_param.default {
-                        Some(default) => {
-                            let t = infer_ts_type_ann(default, ctx)?;
-                            Some(Box::from(t))
-                        }
-                        None => None,
-                    };
-
-                    Ok(TypeParam {
-                        name: type_param.name.sym.to_string(),
-                        constraint,
-                        default,
-                    })
+                Ok(TypeParam {
+                    name: type_param.name.sym.to_string(),
+                    constraint,
+                    default,
                 })
-                .collect::<Result<Vec<TypeParam>, String>>()?;
-
-            Type::from(TypeKind::GenLam(TGenLam {
-                lam: Box::from(lam),
-                type_params,
-            }))
-        }
-        None => Type::from(TypeKind::Lam(lam)),
+            })
+            .collect::<Result<Vec<TypeParam>, String>>()?,
+        None => vec![],
     };
 
-    Ok(t)
+    let name = get_key_name(sig.key.as_ref())?;
+
+    // If there are any free type variables, add them to `type_params`.
+    let mut tvs = params.ftv();
+    tvs.append(&mut ret.ftv());
+
+    let mut sub: Subst = Subst::default();
+    let mut char_code: u32 = 65; // TODO: avoid naming collisions
+    for tv in tvs {
+        let c = char::from_u32(char_code).unwrap();
+        let t = Type::from(TypeKind::Ref(TRef {
+            name: c.to_string(),
+            type_args: None,
+        }));
+        sub.insert(tv.id, t);
+        type_params.push(TypeParam {
+            name: c.to_string(),
+            constraint: tv.constraint,
+            default: None,
+        });
+        char_code += 1;
+    }
+
+    let mut elem = types::TObjElem::Method(types::TMethod {
+        name: TPropKey::StringKey(name),
+        params,
+        ret: Box::from(ret),
+        type_params,
+        // Assume that all methods in mutable object can mutate the object.
+        // If there's a ReadonlyFoo and Foo pair, duplicates will be merged such
+        // that `is_mutating: false`.
+        is_mutating: obj_is_mutable,
+    });
+
+    elem.apply(&sub);
+
+    Ok(elem)
 }
 
 fn get_key_name(key: &Expr) -> Result<String, String> {
@@ -487,7 +519,11 @@ fn infer_callable(
     })
 }
 
-fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem, String> {
+fn infer_ts_type_element(
+    elem: &TsTypeElement,
+    ctx: &Context,
+    obj_is_mutable: bool,
+) -> Result<TObjElem, String> {
     match elem {
         TsTypeElement::TsCallSignatureDecl(decl) => match &decl.type_ann {
             Some(type_ann) => Ok(TObjElem::Call(infer_callable(
@@ -514,6 +550,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
                 Ok(TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(name),
                     optional: sig.optional,
+                    // TODO: warn about mutable props inside of a readonly object
                     mutable: !sig.readonly,
                     t,
                 }))
@@ -521,6 +558,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
             None => Err(String::from("Property is missing type annotation")),
         },
         TsTypeElement::TsGetterSignature(sig) => {
+            // TODO: warn about setters inside of a readonly object
             let key = get_key_name(sig.key.as_ref())?;
             Err(format!("TsGetterSignature: {key}"))
         }
@@ -528,83 +566,7 @@ fn infer_ts_type_element(elem: &TsTypeElement, ctx: &Context) -> Result<TObjElem
             let key = get_key_name(sig.key.as_ref())?;
             Err(format!("TsSetterSignature: {key}"))
         }
-        TsTypeElement::TsMethodSignature(sig) => {
-            let t = infer_method_sig(sig, ctx)?;
-            let tvs = t.ftv();
-            let name = get_key_name(sig.key.as_ref())?;
-
-            let t = if tvs.is_empty() {
-                t
-            } else {
-                match &t.kind {
-                    TypeKind::Lam(lam) => {
-                        let mut type_params: Vec<TypeParam> = vec![];
-                        let mut sub: Subst = Subst::default();
-                        let mut char_code: u32 = 65;
-                        for tv in tvs {
-                            let c = char::from_u32(char_code).unwrap();
-                            let t = Type::from(TypeKind::Ref(TRef {
-                                name: c.to_string(),
-                                type_args: None,
-                            }));
-                            sub.insert(tv.id, t);
-                            type_params.push(TypeParam {
-                                name: c.to_string(),
-                                constraint: tv.constraint,
-                                default: None,
-                            });
-                            char_code += 1;
-                        }
-
-                        let mut t = Type::from(TypeKind::GenLam(TGenLam {
-                            lam: Box::from(lam.to_owned()),
-                            type_params,
-                        }));
-                        t.apply(&sub);
-
-                        t
-                    }
-                    TypeKind::GenLam(gen_lam) => {
-                        let TGenLam { type_params, lam } = gen_lam;
-                        let mut type_params = type_params.clone();
-
-                        let mut sub: Subst = Subst::default();
-                        let mut char_code: u32 = 65;
-                        for tv in tvs {
-                            // TODO: avoid collisions with existing type params
-                            let c = char::from_u32(char_code).unwrap();
-                            let t = Type::from(TypeKind::Ref(TRef {
-                                name: c.to_string(),
-                                type_args: None,
-                            }));
-                            sub.insert(tv.id, t);
-                            type_params.push(TypeParam {
-                                name: c.to_string(),
-                                constraint: tv.constraint,
-                                default: None,
-                            });
-                            char_code += 1;
-                        }
-
-                        let mut t = Type::from(TypeKind::GenLam(TGenLam {
-                            lam: lam.to_owned(),
-                            type_params,
-                        }));
-                        t.apply(&sub);
-
-                        t
-                    }
-                    _ => panic!("methods can only be a Lam or GenLam"),
-                }
-            };
-
-            Ok(TObjElem::Prop(TProp {
-                name: TPropKey::StringKey(name),
-                optional: sig.optional,
-                mutable: false, // All methods on interfaces are readonly
-                t,
-            }))
-        }
+        TsTypeElement::TsMethodSignature(sig) => infer_method_sig(sig, ctx, obj_is_mutable),
         TsTypeElement::TsIndexSignature(sig) => match &sig.type_ann {
             Some(type_ann) => {
                 let t = infer_ts_type_ann(&type_ann.type_ann, ctx)?;
@@ -671,14 +633,18 @@ fn infer_type_alias_decl(decl: &TsTypeAliasDecl, ctx: &Context) -> Result<Scheme
     Ok(scheme)
 }
 
-fn infer_interface_decl(decl: &TsInterfaceDecl, ctx: &Context) -> Result<Scheme, String> {
+fn infer_interface_decl(
+    decl: &TsInterfaceDecl,
+    ctx: &Context,
+    obj_is_mutable: bool,
+) -> Result<Scheme, String> {
     // TODO: skip properties we don't know how to deal with instead of return an error for the whole map
     let elems: Vec<TObjElem> = decl
         .body
         .body
         .iter()
         .filter_map(|elem| {
-            let prop = infer_ts_type_element(elem, ctx);
+            let prop = infer_ts_type_element(elem, ctx, obj_is_mutable);
 
             match prop {
                 Ok(prop) => Some(prop),
@@ -746,18 +712,17 @@ impl Visit for InterfaceCollector {
     }
 
     fn visit_ts_interface_decl(&mut self, decl: &TsInterfaceDecl) {
-        let name = decl.id.sym.to_string();
-        match infer_interface_decl(decl, &self.ctx) {
-            Ok(scheme) => {
-                match self.ctx.lookup_scheme(&name).ok() {
-                    Some(existing_scheme) => {
-                        let merged_scheme = util::merge_schemes(&existing_scheme, &scheme);
-                        self.ctx.insert_scheme(name, merged_scheme);
-                    }
-                    None => self.ctx.insert_scheme(name, scheme),
-                };
+        let mut name = decl.id.sym.to_string();
+        if name.starts_with("Readonly") {
+            name = name.replace("Readonly", "");
+        }
+
+        match self.interfaces.get_mut(&name) {
+            Some(decls) => decls.push(decl.to_owned()),
+            None => {
+                self.interfaces
+                    .insert(name.to_owned(), vec![decl.to_owned()]);
             }
-            Err(_) => eprintln!("couldn't infer {name}"),
         }
     }
 
@@ -830,9 +795,39 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
         ctx: Context::default(),
         comments,
         namespace: vec![],
+        interfaces: HashMap::new(),
     };
 
     module.visit_with(&mut collector);
+
+    for (name, decls) in collector.interfaces {
+        let has_readonly = decls
+            .iter()
+            .any(|decl| decl.id.sym.to_string().starts_with("Readonly"));
+        for decl in decls {
+            let readonly = decl.id.sym.to_string().starts_with("Readonly");
+            // NOTE: If there is no interface prefixed with `Readonly` then we
+            // assume the interface is unsafe (since there's no way to know which
+            // methods are mutable or not).  In this situation we set `mutable`
+            // to `false` so that all methods are accessible from both mutable
+            // and immutable references.
+            let mutable = has_readonly && !readonly;
+
+            let name = name.to_owned();
+            match infer_interface_decl(&decl, &collector.ctx, mutable) {
+                Ok(new_scheme) => {
+                    match collector.ctx.lookup_scheme(&name).ok() {
+                        Some(old_scheme) => {
+                            let merged_scheme = util::merge_schemes(&old_scheme, &new_scheme);
+                            collector.ctx.insert_scheme(name, merged_scheme);
+                        }
+                        None => collector.ctx.insert_scheme(name, new_scheme),
+                    };
+                }
+                Err(_) => eprintln!("couldn't infer {name}"),
+            }
+        }
+    }
 
     eprintln!("after visit_with");
 

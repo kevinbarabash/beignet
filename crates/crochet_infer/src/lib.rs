@@ -23,7 +23,7 @@ pub use infer::*;
 pub use scheme::{generalize_gen_lam, get_sub_and_type_params, instantiate, Scheme};
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
-pub use util::{close_over, normalize, replace_aliases_rec};
+pub use util::{close_over, immutable_obj_type, normalize, replace_aliases_rec};
 
 #[cfg(test)]
 mod tests {
@@ -1696,7 +1696,7 @@ mod tests {
     #[test]
     fn infer_elem_access_on_array() {
         let src = r#"
-        type ReadonlyArray<T> = {
+        type Array<T> = {
             [key: number]: T;
         };
         let array: number[] = [1, 2, 3];
@@ -2428,7 +2428,7 @@ mod tests {
     #[test]
     fn test_indexed_access_on_tuples() {
         let src = r#"
-        type ReadonlyArray<T> = {[key: number]: T};
+        type Array<T> = {[key: number]: T};
         type Tuple = [string, boolean, number];
         let a: Tuple[0] = "hello";
         let b: Tuple[1] = true;
@@ -3083,6 +3083,8 @@ mod tests {
             constructor() {}
             add(self, x, y) { x + y; }
             set_msg(mut self, msg: string) {}
+            get bar(self): boolean { true; }
+            set bar(mut self, value: boolean) {}
         }
         "#;
 
@@ -3091,13 +3093,13 @@ mod tests {
         let it = ctx.lookup_type("Foo", false).unwrap();
         assert_eq!(
             format!("{it}"),
-            "{msg: string, add(x: number, y: number): number}"
+            "{msg: string, add(self, x: number, y: number): number, get bar(self): true}"
         );
 
         let mut_it = ctx.lookup_type("Foo", true).unwrap();
         assert_eq!(
             format!("{mut_it}"),
-            "{msg: string, add(x: number, y: number): number, set_msg(msg: string): undefined}"
+            "{msg: string, add(self, x: number, y: number): number, set_msg(mut self, msg: string): undefined, get bar(self): true, set bar(mut self, value: boolean)}"
         );
     }
 
@@ -3157,7 +3159,7 @@ mod tests {
             set msg(mut self, value: string) {}
         }
 
-        let foo = new Foo();
+        let foo: mut Foo = new Foo();
         foo.msg = "hello";
         "#;
 

@@ -2577,6 +2577,9 @@ mod tests {
             bar(self, y) {
                 self.x + y;
             }
+            baz(mut self, x) {
+                self.x = x;
+            }
         }
         "#;
         insta::assert_debug_snapshot!(parse(src));

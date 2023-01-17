@@ -1,3 +1,5 @@
+TODO: rework this document
+
 # 06 Mutability
 
 In order for Crochet to have tight interop with TypeScript, it needs to support
@@ -384,3 +386,113 @@ scale(point); // ERROR: variables pointing to non-mutable Point sub-types are no
 let point: mut Point = {x: 5, y: 10}; // OK: the object literal is a sub-type of Point
 let point: Point = {x: 5, y: 10};     // OK: because there are no other refrences to the object
 ```
+
+## Rethinking things a bit
+
+TypeScript code will have object types with a mix of `readonly` fields and those
+that are not. We need to be able to model that in Crochet.
+
+Given the following TypeScript type:
+
+```ts
+type SimpleObj = {
+  a: number;
+  readonly b: string;
+};
+```
+
+We should expect the corresponding Crochet type:
+
+```ts
+type SimpleObj = {
+  mut a: number;
+  b: string;
+}
+```
+
+### The `mut` modifier
+
+In TypeScript, the `readonly` keyword is different from the `Readonly<>` utility
+type. The utility type returns a modified type where all fields are marked as
+`readonly` whereas `readonly T[]` returns `ReadonlyArray<T>` which removes all
+methods that mutate, changes all `T[]`s to `readonly T[]`s in methods (e.g.
+`forEach`, `every`, `map`, etc.), and changes all fields to readonly (e.g.
+`length` and the indexer).
+
+We want `mut` to behave similar to `readonly`, but on all object types (arrays
+and tuples), and in the opposite direction.
+
+This means that if you have an `obj` typed as `SimpleObj`, it will not have
+access to any methods that mutate and all fields will not be writeable.
+
+Let's look at a more complicated type in Crochet:
+
+```ts
+type ComplexObj = {
+  mut a: number;
+  b: string;
+  foo(mut self) {}
+  bar(self) {}
+  get baz(self): bool {}
+  set baz(mut self, value: bool) {}
+}
+
+// Given the following declarations:
+let obj1: ComplexObj = ...;
+let obj2: mut ComplexObj = ...;
+
+// obj1 has type:
+{
+  a: number;
+  b: string;
+  bar(self) {}
+  get baz(self): bool {}
+}
+
+// obj2 has type:
+{
+  mut a: number;
+  b: string;
+  foo(mut self) {}
+  bar(self) {}
+  get baz(self): bool {}
+  set baz(mut self, value: bool) {}
+}
+```
+
+### What can `mut` be used with?
+
+```ts
+let a: T = ...
+let b: mut T = ...
+let c: T[] = ...
+let d: mut T[] = ...
+let e: [number, number] = ...
+let f: mut [number, number] = ...
+```
+
+NOTES:
+
+- For `a` and `b`, `T` has to resolve to an object type using `expand_type`
+- If `T` has no mutable fields and no methods that mutate the object, then
+  `mut T == T`. When this is the case, we should probably warn about the use
+  of `mut`, e.g. `mut string`, `mut string`, and `mut boolean`.
+- `mut` is distributive across unions and intersections.
+- `keyof (mut T) != mut (keyof T)`
+- `mut T != T` if and only if `keyof (mut T) != keyof T`
+- `mut` also affects the result of mapped types since it affects the results of
+  `keyof`
+- `mut T` should always be a subtype of `T` (verify this using `ReadonlyArray`
+  and `Array`).
+- `mut T` can also be used in conditional types.
+
+### Representation
+
+Since `mut` can be used with lots of different types, the `mutable` field should
+probably like on `Type` instead of individual `TypeKind`s.
+
+### Implementation
+
+We need helper functions that we return the immutable version of a type. The
+absence of `mut` results in a modified type (from what's stored in context)
+being returned.

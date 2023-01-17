@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use crate::scheme::{generalize, instantiate, Scheme};
 use crate::substitutable::*;
 use crate::type_error::TypeError;
+use crate::util::immutable_obj_type;
 
 pub type Env = HashMap<String, Scheme>;
 
@@ -132,7 +133,6 @@ impl Context {
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    // TODO: handle ReadonlyArray, etc.
     pub fn lookup_scheme(&self, name: &str) -> Result<Scheme, Vec<TypeError>> {
         for scope in self.scopes.iter().rev() {
             if let Some(scheme) = scope.types.get(name) {
@@ -142,17 +142,23 @@ impl Context {
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    // This method gets confused by
-    // type Obj = {[key: string]: boolean};
-    // type ReadonlyObj = Readonly<Obj>;
-    // TODO: Figure out to fix this so that we can use this method in `expand_alias_type`
     pub fn lookup_type(&self, name: &str, mutable: bool) -> Result<Type, Vec<TypeError>> {
+        let mut t = self._lookup_type(name)?;
+
         if !mutable {
-            if let Ok(t) = self._lookup_type(&format!("Readonly{name}")) {
-                return Ok(t);
+            if let TypeKind::Object(obj) = &t.kind {
+                if let Some(obj) = immutable_obj_type(obj) {
+                    t = Type {
+                        kind: TypeKind::Object(obj),
+                        mutable: false,
+                        provenance: t.provenance,
+                    }
+                }
             }
         }
-        self._lookup_type(name)
+        // TODO: convert mutable type to immutable type of `mutable` is true
+
+        Ok(t)
     }
 
     pub fn _lookup_type(&self, name: &str) -> Result<Type, Vec<TypeError>> {

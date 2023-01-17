@@ -613,8 +613,21 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
                             ..method.to_owned()
                         })
                     }
-                    TObjElem::Getter(_) => todo!(),
-                    TObjElem::Setter(_) => todo!(),
+                    TObjElem::Getter(getter) => {
+                        let ret = replace_aliases_rec(getter.ret.as_ref(), type_param_map);
+
+                        TObjElem::Getter(TGetter {
+                            ret: Box::from(ret),
+                            ..getter.to_owned()
+                        })
+                    }
+                    TObjElem::Setter(setter) => TObjElem::Setter(TSetter {
+                        param: TFnParam {
+                            t: replace_aliases_rec(&setter.param.t, type_param_map),
+                            ..setter.param.to_owned()
+                        },
+                        ..setter.to_owned()
+                    }),
                     TObjElem::Index(index) => {
                         let t = replace_aliases_rec(&index.t, type_param_map);
                         TObjElem::Index(TIndex {
@@ -705,6 +718,59 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
     Type {
         kind,
         ..t.to_owned()
+    }
+}
+
+pub fn immutable_obj_type(obj: &TObject) -> Option<TObject> {
+    let mut changed = false;
+    let elems: Vec<TObjElem> = obj
+        .elems
+        .iter()
+        .filter_map(|elem| match elem {
+            TObjElem::Call(_) => Some(elem.to_owned()),
+            TObjElem::Constructor(_) => Some(elem.to_owned()),
+            TObjElem::Method(method) => {
+                if method.is_mutating {
+                    changed = true;
+                    None
+                } else {
+                    Some(elem.to_owned())
+                }
+                // TODO: Convert any `mut Self` to `Self`.  This is going to be
+                // a little tricky b/c we need to know the name of the type and
+                // in the case of arrays, that it's an array and what its type
+                // argument is.
+            }
+            TObjElem::Getter(_) => Some(elem.to_owned()),
+            TObjElem::Setter(_) => {
+                changed = true;
+                None
+            }
+            TObjElem::Index(index) => {
+                if index.mutable {
+                    changed = true;
+                }
+                Some(TObjElem::Index(TIndex {
+                    mutable: false,
+                    ..index.to_owned()
+                }))
+            }
+            TObjElem::Prop(prop) => {
+                if prop.mutable {
+                    changed = true;
+                }
+                Some(TObjElem::Prop(TProp {
+                    mutable: false,
+                    ..prop.to_owned()
+                }))
+            }
+        })
+        .collect();
+
+    if changed {
+        Some(TObject { elems })
+    } else {
+        None
     }
 }
 

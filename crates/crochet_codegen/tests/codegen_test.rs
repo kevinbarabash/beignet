@@ -672,8 +672,7 @@ fn mutable_array() {
 #[test]
 fn mutable_obj() {
     let src = r#"
-    type Point = {x: number, y: number};
-    type MutablePoint = mut {x: number, y: number};
+    type Point = {mut x: number, mut y: number};
     "#;
 
     let mut program = parse(src).unwrap();
@@ -685,11 +684,11 @@ fn mutable_obj() {
     // declare type MutablePoint = {x: number; y: number};
     // declare type Point = Readonly<{x: number; y: number}>;
     insta::assert_snapshot!(result, @r###"
-    declare type MutablePoint = {
+    declare type Point = {
         x: number;
         y: number;
     };
-    declare type Point = {
+    declare type ReadonlyPoint = {
         readonly x: number;
         readonly y: number;
     };
@@ -699,8 +698,7 @@ fn mutable_obj() {
 #[test]
 fn mutable_indexer() {
     let src = r#"
-    type Dict = {[key: string]: string};
-    type MutableDict = mut {[key: string]: string};
+    type Dict = {mut [key: string]: string};
     "#;
 
     let mut program = parse(src).unwrap();
@@ -710,10 +708,10 @@ fn mutable_indexer() {
 
     insta::assert_snapshot!(result, @r###"
     declare type Dict = {
-        readonly [key: string]: string;
-    };
-    declare type MutableDict = {
         [key: string]: string;
+    };
+    declare type ReadonlyDict = {
+        readonly [key: string]: string;
     };
     "###);
 }
