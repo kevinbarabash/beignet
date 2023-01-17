@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use crochet_ast::types::{TCallable, TIndex, TObjElem, TObject, TPropKey, Type, TypeKind};
 use crochet_infer::Scheme;
 
-// TODO: handle function overloads
 pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
     let type_params_1 = &old_scheme.type_params;
     let type_params_2 = &new_scheme.type_params;
@@ -21,6 +20,12 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
 
     let t = match (&old_scheme.t.kind, &new_scheme.t.kind) {
         (TypeKind::Object(old_obj), TypeKind::Object(new_obj)) => {
+            // TODO: Handle function overloads.  `map` only allows a single entry
+            // per key which means that we end up with only the first declaration
+            // instead of all of them.  This is complicated by the fact that the
+            // Readonly variant may define the methods in slightly different ways.
+            // See `reduce` in `Array` and `ReadonlyArray`.  The callback is
+            // passed `T[]` in the first on and `readonly T[]` in the second one.
             let mut map: BTreeMap<String, TObjElem> = BTreeMap::new();
 
             let mut calls: Vec<TCallable> = vec![];
@@ -150,23 +155,12 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
                 }
             }
 
-            // TODO:
-            // - loop through `new_elems` and update `map`
-            // - generate output `elems` from `map`
-
-            // NOTE: right now this results in duplicate methods appearing when
-            // mergin `Array` and `ReadonlyArray`.
             let mut elems: Vec<TObjElem> = vec![];
-
             for (_, elem) in map {
                 elems.push(elem.to_owned());
             }
-            // let elems: Vec<_> = old_obj
-            //     .elems
-            //     .iter()
-            //     .cloned()
-            //     .chain(new_obj.elems.iter().cloned())
-            //     .collect();
+
+            // TODO: merge calls, constructors, and indexes.
 
             Type::from(TypeKind::Object(TObject { elems }))
         }

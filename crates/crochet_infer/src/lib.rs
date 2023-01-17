@@ -23,7 +23,7 @@ pub use infer::*;
 pub use scheme::{generalize_gen_lam, get_sub_and_type_params, instantiate, Scheme};
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
-pub use util::{close_over, normalize, replace_aliases_rec};
+pub use util::{close_over, immutable_obj_type, normalize, replace_aliases_rec};
 
 #[cfg(test)]
 mod tests {

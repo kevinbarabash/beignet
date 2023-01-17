@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use crate::scheme::{generalize, instantiate, Scheme};
 use crate::substitutable::*;
 use crate::type_error::TypeError;
+use crate::util::immutable_obj_type;
 
 pub type Env = HashMap<String, Scheme>;
 
@@ -141,16 +142,7 @@ impl Context {
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    // This method gets confused by
-    // type Obj = {[key: string]: boolean};
-    // type ReadonlyObj = Readonly<Obj>;
-    // TODO: Figure out to fix this so that we can use this method in `expand_alias_type`
     pub fn lookup_type(&self, name: &str, mutable: bool) -> Result<Type, Vec<TypeError>> {
-        // if !mutable {
-        //     if let Ok(t) = self._lookup_type(&format!("Readonly{name}")) {
-        //         return Ok(t);
-        //     }
-        // }
         let mut t = self._lookup_type(name)?;
 
         if !mutable {
@@ -199,48 +191,5 @@ impl Context {
             id: self.fresh_id(),
             constraint: None,
         }))
-    }
-}
-
-fn immutable_obj_type(obj: &TObject) -> Option<TObject> {
-    let mut changed = false;
-    let elems: Vec<TObjElem> = obj
-        .elems
-        .iter()
-        .filter_map(|elem| match elem {
-            TObjElem::Call(_) => Some(elem.to_owned()),
-            TObjElem::Constructor(_) => Some(elem.to_owned()),
-            TObjElem::Method(method) => {
-                if method.is_mutating {
-                    changed = true;
-                    None
-                } else {
-                    Some(elem.to_owned())
-                }
-                // TODO: Convert any `mut Self` to `Self`.  This is going to be
-                // a little tricky b/c we need to know the name of the type and
-                // in the case of arrays, that it's an array and what its type
-                // argument is.
-            }
-            TObjElem::Getter(_) => Some(elem.to_owned()),
-            TObjElem::Setter(_) => {
-                changed = true;
-                None
-            }
-            TObjElem::Index(index) => Some(TObjElem::Index(TIndex {
-                mutable: false,
-                ..index.to_owned()
-            })),
-            TObjElem::Prop(prop) => Some(TObjElem::Prop(TProp {
-                mutable: false,
-                ..prop.to_owned()
-            })),
-        })
-        .collect();
-
-    if changed {
-        Some(TObject { elems })
-    } else {
-        None
     }
 }

@@ -379,8 +379,6 @@ fn infer_method_sig(
         None => Err(String::from("method has no return type")),
     }?;
 
-    // TODO: add any other type references that aren't already accounted for by
-    // sig.type_params to the type_params we compute here.
     let mut type_params = match &sig.type_params {
         Some(type_param_decl) => type_param_decl
             .params
@@ -414,11 +412,12 @@ fn infer_method_sig(
 
     let name = get_key_name(sig.key.as_ref())?;
 
+    // If there are any free type variables, add them to `type_params`.
     let mut tvs = params.ftv();
     tvs.append(&mut ret.ftv());
 
     let mut sub: Subst = Subst::default();
-    let mut char_code: u32 = 65;
+    let mut char_code: u32 = 65; // TODO: avoid naming collisions
     for tv in tvs {
         let c = char::from_u32(char_code).unwrap();
         let t = Type::from(TypeKind::Ref(TRef {

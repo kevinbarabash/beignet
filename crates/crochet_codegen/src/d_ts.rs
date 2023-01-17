@@ -8,11 +8,11 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast::types::{
-    TConditionalType, TFnParam, TGetter, TIndex, TIndexAccess, TMappedType, TObjElem, TObject,
-    TPat, TProp, TPropKey, TSetter, TVar, Type, TypeKind, TypeParam,
+    TConditionalType, TFnParam, TGetter, TIndexAccess, TMappedType, TObjElem, TObject, TPat,
+    TPropKey, TSetter, TVar, Type, TypeKind, TypeParam,
 };
 use crochet_ast::{types, values};
-use crochet_infer::Context;
+use crochet_infer::{immutable_obj_type, Context};
 
 pub fn codegen_d_ts(program: &values::Program, ctx: &Context) -> String {
     print_d_ts(&build_d_ts(program, ctx))
@@ -465,13 +465,12 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
         }) => {
             let mut sym = JsWord::from(name.to_owned());
 
-            // TODO: Track which types should have Readonly interfaces.  This
-            // currently fails when using certain types like `String`, `Number`,
-            // etc. which don't have Readonly interfaces.
             if !mutable && !name.ends_with("Constructor") {
                 if let Ok(scheme) = ctx.lookup_scheme(name) {
-                    if let TypeKind::Object(_) = scheme.t.kind {
-                        sym = JsWord::from(format!("Readonly{name}"));
+                    if let TypeKind::Object(obj) = scheme.t.kind {
+                        if immutable_obj_type(&obj).is_some() {
+                            sym = JsWord::from(format!("Readonly{name}"));
+                        }
                     }
                 }
             }
@@ -595,59 +594,6 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
             true_type: Box::from(build_type(true_type.as_ref(), type_params, ctx)),
             false_type: Box::from(build_type(false_type.as_ref(), type_params, ctx)),
         }),
-    }
-}
-
-fn immutable_obj_type(obj: &TObject) -> Option<TObject> {
-    let mut changed = false;
-    let elems: Vec<TObjElem> = obj
-        .elems
-        .iter()
-        .filter_map(|elem| match elem {
-            TObjElem::Call(_) => Some(elem.to_owned()),
-            TObjElem::Constructor(_) => Some(elem.to_owned()),
-            TObjElem::Method(method) => {
-                if method.is_mutating {
-                    changed = true;
-                    None
-                } else {
-                    Some(elem.to_owned())
-                }
-                // TODO: Convert any `mut Self` to `Self`.  This is going to be
-                // a little tricky b/c we need to know the name of the type and
-                // in the case of arrays, that it's an array and what its type
-                // argument is.
-            }
-            TObjElem::Getter(_) => Some(elem.to_owned()),
-            TObjElem::Setter(_) => {
-                changed = true;
-                None
-            }
-            TObjElem::Index(index) => {
-                if index.mutable {
-                    changed = true;
-                }
-                Some(TObjElem::Index(TIndex {
-                    mutable: false,
-                    ..index.to_owned()
-                }))
-            }
-            TObjElem::Prop(prop) => {
-                if prop.mutable {
-                    changed = true;
-                }
-                Some(TObjElem::Prop(TProp {
-                    mutable: false,
-                    ..prop.to_owned()
-                }))
-            }
-        })
-        .collect();
-
-    if changed {
-        Some(TObject { elems })
-    } else {
-        None
     }
 }
 

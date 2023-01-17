@@ -62,7 +62,6 @@ impl fmt::Display for TMethod {
             is_mutating,
         } = self;
         write!(f, "{name}")?;
-        // TODO: include `self` or `mut self` in the signature
         if !type_params.is_empty() {
             let type_params = type_params.iter().map(|tp| {
                 let TypeParam {
