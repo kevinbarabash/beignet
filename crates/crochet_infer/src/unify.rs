@@ -16,7 +16,7 @@ use crate::unify_mut::unify_mut;
 use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
-pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<TypeError>> {
+pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, Vec<TypeError>> {
     // All binding must be done first
     match (&mut t1.kind, &mut t2.kind) {
         // If both are type variables...
@@ -730,7 +730,7 @@ fn bind(
     tv: &mut TVar,
     t: &mut Type,
     rel: Relation,
-    ctx: &Context,
+    ctx: &mut Context,
 ) -> Result<Subst, Vec<TypeError>> {
     // | t == TVar a     = return nullSubst
     // | occursCheck a t = throwError $ InfiniteType a t
@@ -829,26 +829,26 @@ mod tests {
 
     #[test]
     fn literals_are_subtypes_of_corresponding_keywords() -> Result<(), Vec<TypeError>> {
-        let ctx = Context::default();
+        let mut ctx = Context::default();
 
         let result = unify(
             &mut Type::from(num("5")),
             &mut Type::from(TypeKind::Keyword(TKeyword::Number)),
-            &ctx,
+            &mut ctx,
         )?;
         assert_eq!(result, Subst::default());
 
         let result = unify(
             &mut Type::from(str("hello")),
             &mut Type::from(TypeKind::Keyword(TKeyword::String)),
-            &ctx,
+            &mut ctx,
         )?;
         assert_eq!(result, Subst::default());
 
         let result = unify(
             &mut Type::from(bool(&true)),
             &mut Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-            &ctx,
+            &mut ctx,
         )?;
         assert_eq!(result, Subst::default());
 
@@ -857,7 +857,7 @@ mod tests {
 
     #[test]
     fn object_subtypes() -> Result<(), Vec<TypeError>> {
-        let ctx = Context::default();
+        let mut ctx = Context::default();
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
@@ -906,7 +906,7 @@ mod tests {
         ];
         let mut t2 = Type::from(TypeKind::Object(TObject { elems }));
 
-        let result = unify(&mut t1, &mut t2, &ctx)?;
+        let result = unify(&mut t1, &mut t2, &mut ctx)?;
         assert_eq!(result, Subst::default());
 
         Ok(())

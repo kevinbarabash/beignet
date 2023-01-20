@@ -12,7 +12,7 @@ use crate::util::{replace_aliases_rec, union_many_types, union_types};
 
 // `expand_type` is used to expand types that `unify` doesn't know how to unify
 // into something that it does know how to unify.
-pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
+pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
     match &t.kind {
         TypeKind::Var(_) => Ok(t.to_owned()),
         TypeKind::App(_) => Ok(t.to_owned()),
@@ -39,7 +39,7 @@ pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     }
 }
 
-fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>> {
+fn expand_alias_type(alias: &TRef, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
     let name = &alias.name;
     let scheme = ctx.lookup_scheme(name)?;
     eprintln!("scheme = {scheme}");
@@ -113,7 +113,10 @@ fn expand_alias_type(alias: &TRef, ctx: &Context) -> Result<Type, Vec<TypeError>
     }
 }
 
-fn expand_conditional_type(cond: &TConditionalType, ctx: &Context) -> Result<Type, Vec<TypeError>> {
+fn expand_conditional_type(
+    cond: &TConditionalType,
+    ctx: &mut Context,
+) -> Result<Type, Vec<TypeError>> {
     let TConditionalType {
         check_type,
         extends_type,
@@ -137,7 +140,7 @@ fn expand_conditional_type(cond: &TConditionalType, ctx: &Context) -> Result<Typ
     expand_type(t.as_ref(), ctx)
 }
 
-fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Vec<TypeError>> {
+fn expand_index_access(access: &TIndexAccess, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
     let obj = get_obj_type(access.object.as_ref(), ctx)?;
     let index = expand_type(access.index.as_ref(), ctx)?;
 
@@ -214,7 +217,7 @@ fn expand_index_access(access: &TIndexAccess, ctx: &Context) -> Result<Type, Vec
 
 fn get_obj_type_from_mapped_type(
     mapped: &TMappedType,
-    ctx: &Context,
+    ctx: &mut Context,
 ) -> Result<Type, Vec<TypeError>> {
     if let Some(constraint) = &mapped.type_param.constraint {
         if let TypeKind::KeyOf(t) = &constraint.kind {
@@ -233,7 +236,7 @@ fn get_obj_type_from_mapped_type(
 
 // TODO: This should only be used to process object types and arrays/tuples
 // all other types (number, string, etc.) should be passed through.
-fn expand_mapped_type(mapped: &TMappedType, ctx: &Context) -> Result<Type, Vec<TypeError>> {
+fn expand_mapped_type(mapped: &TMappedType, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
     let constraint = mapped.type_param.constraint.as_ref().unwrap();
     let keys = expand_type(constraint, ctx)?;
     let obj = get_obj_type_from_mapped_type(mapped, ctx)?;
@@ -364,7 +367,7 @@ const NEVER_TYPE: Type = Type {
     mutable: false,
 };
 
-fn expand_keyof(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
+fn expand_keyof(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
     if let TypeKind::KeyOf(t) = &t.kind {
         return expand_keyof(t, ctx);
     }
@@ -425,7 +428,7 @@ fn expand_keyof(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
     }
 }
 
-pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
+pub fn get_obj_type(t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
     match &t.kind {
         TypeKind::Var(_) => Err(vec![TypeError::CantInferTypeFromItKeys]),
         TypeKind::Ref(alias) => {
@@ -560,7 +563,7 @@ mod tests {
         infer::infer_prog(&mut prog, &mut ctx).unwrap()
     }
 
-    fn get_keyof(name: &str, ctx: &Context) -> String {
+    fn get_keyof(name: &str, ctx: &mut Context) -> String {
         match ctx.lookup_type(name, true) {
             Ok(t) => {
                 let t = expand_keyof(&t, ctx).unwrap();
@@ -575,9 +578,9 @@ mod tests {
         let src = r#"
         type t = {x: number, y: number};
         "#;
-        let ctx = infer_prog(src);
+        let mut ctx = infer_prog(src);
 
-        assert_eq!(get_keyof("t", &ctx), r#""x" | "y""#);
+        assert_eq!(get_keyof("t", &mut ctx), r#""x" | "y""#);
     }
 
     #[test]
@@ -586,9 +589,9 @@ mod tests {
         let src = r#"
         type t = {a: number, b: boolean} & {b: string, c: number};
         "#;
-        let ctx = infer_prog(src);
+        let mut ctx = infer_prog(src);
 
-        assert_eq!(get_keyof("t", &ctx), r#""a" | "b" | "c""#);
+        assert_eq!(get_keyof("t", &mut ctx), r#""a" | "b" | "c""#);
     }
 
     #[test]
@@ -600,9 +603,9 @@ mod tests {
         };
         type t = number;
         "#;
-        let ctx = infer_prog(src);
+        let mut ctx = infer_prog(src);
 
-        assert_eq!(get_keyof("t", &ctx), r#""toFixed" | "toString""#);
+        assert_eq!(get_keyof("t", &mut ctx), r#""toFixed" | "toString""#);
     }
 
     #[test]
@@ -615,10 +618,10 @@ mod tests {
         };
         type t = string;
         "#;
-        let ctx = infer_prog(src);
+        let mut ctx = infer_prog(src);
 
         assert_eq!(
-            get_keyof("t", &ctx),
+            get_keyof("t", &mut ctx),
             r#""length" | "toLowerCase" | "toUpperCase""#
         );
     }
@@ -633,9 +636,9 @@ mod tests {
         };
         type t = number[];
         "#;
-        let ctx = infer_prog(src);
+        let mut ctx = infer_prog(src);
 
-        assert_eq!(get_keyof("t", &ctx), r#""length" | "map" | number"#);
+        assert_eq!(get_keyof("t", &mut ctx), r#""length" | "map" | number"#);
     }
 
     #[test]
@@ -649,10 +652,10 @@ mod tests {
         };
         type t = mut number[];
         "#;
-        let ctx = infer_prog(src);
+        let mut ctx = infer_prog(src);
 
         assert_eq!(
-            get_keyof("t", &ctx),
+            get_keyof("t", &mut ctx),
             r#""length" | "map" | "sort" | number"#
         );
     }
@@ -666,9 +669,9 @@ mod tests {
         };
         type t = [1, 2, 3];
         "#;
-        let ctx = infer_prog(src);
+        let mut ctx = infer_prog(src);
 
-        assert_eq!(get_keyof("t", &ctx), r#""length" | "map" | 0 | 1 | 2"#);
+        assert_eq!(get_keyof("t", &mut ctx), r#""length" | "map" | 0 | 1 | 2"#);
     }
 
     #[test]
@@ -681,9 +684,9 @@ mod tests {
         };
         type t = () => boolean;
         "#;
-        let ctx = infer_prog(src);
+        let mut ctx = infer_prog(src);
 
-        assert_eq!(get_keyof("t", &ctx), r#""apply" | "bind" | "call""#);
+        assert_eq!(get_keyof("t", &mut ctx), r#""apply" | "bind" | "call""#);
     }
 
     #[test]
@@ -695,15 +698,15 @@ mod tests {
         type B = Obj[Key];
         let b: Obj[Key] = "hello";
         "#;
-        let ctx = infer_prog(src);
+        let mut ctx = infer_prog(src);
 
         let a = ctx.lookup_type("A", false).unwrap();
-        let a = expand_type(&a, &ctx).unwrap();
+        let a = expand_type(&a, &mut ctx).unwrap();
         let result = format!("{a}");
         assert_eq!(result, r#"number"#);
 
         let b = ctx.lookup_type("B", false).unwrap();
-        let b = expand_type(&b, &ctx).unwrap();
+        let b = expand_type(&b, &mut ctx).unwrap();
         let result = format!("{b}");
         assert_eq!(result, r#"string"#);
     }

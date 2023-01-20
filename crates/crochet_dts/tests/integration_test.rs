@@ -382,9 +382,9 @@ fn infer_partial() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type PartialObj = Partial<Obj>;
     "#;
-    let (_, ctx) = infer_prog(src);
+    let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("PartialObj", false).unwrap();
-    let t = expand_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -399,9 +399,9 @@ fn infer_required() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type RequiredObj = Required<Obj>;
     "#;
-    let (_, ctx) = infer_prog(src);
+    let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("RequiredObj", false).unwrap();
-    let t = expand_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -416,9 +416,9 @@ fn infer_readonly() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type ReadonlyObj = Readonly<Obj>;
     "#;
-    let (_, ctx) = infer_prog(src);
+    let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let t = expand_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{a: number, b?: string, c: boolean, d?: number}");
@@ -430,9 +430,9 @@ fn infer_readonly_with_indexer_only() {
     type Obj = {[key: string]: boolean};
     type ReadonlyObj = Readonly<Obj>;
     "#;
-    let (_, ctx) = infer_prog(src);
+    let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let t = expand_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{[key: string]: boolean}");
@@ -444,9 +444,9 @@ fn infer_readonly_with_indexer_and_other_properties() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number, [key: number]: boolean};
     type ReadonlyObj = Readonly<Obj>;
     "#;
-    let (_, ctx) = infer_prog(src);
+    let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let t = expand_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -461,9 +461,9 @@ fn infer_pick() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type PickObj = Pick<Obj, "a" | "b">;
     "#;
-    let (_, ctx) = infer_prog(src);
+    let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("PickObj", false).unwrap();
-    let t = expand_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{a: number, b?: string}");
@@ -505,13 +505,13 @@ fn infer_exclude() {
     let src = r#"
     type T1 = Exclude<"a" | "b" | "c", "a" | "b">;
     "#;
-    let (_, ctx) = infer_prog(src);
+    let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("T1", false).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "Exclude<\"a\" | \"b\" | \"c\", \"a\" | \"b\">");
 
-    let t = expand_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
 
     assert_eq!(result, "\"c\"");
@@ -535,10 +535,10 @@ fn infer_out_of_order_exclude() {
             panic!("Error parsing expression");
         }
     };
-    let ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
+    let mut ctx = crochet_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let t = ctx.lookup_type("T1", false).unwrap();
-    let t = expand_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "\"c\"");
 }
@@ -549,13 +549,13 @@ fn infer_omit() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type T1 = Omit<Obj, "b" | "c">;
     "#;
-    let (_, ctx) = infer_prog(src);
+    let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("T1", false).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "Omit<Obj, \"b\" | \"c\">");
 
-    let t = expand_type(&t, &ctx).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
 
     assert_eq!(result, "{a: number, mut d?: number}");
