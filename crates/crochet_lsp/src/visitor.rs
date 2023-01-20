@@ -104,25 +104,26 @@ pub trait Visitor {
         self.visit_type_ann(type_ann);
 
         match &mut type_ann.kind {
-            TypeAnnKind::Lam(_) => (),
-            TypeAnnKind::Lit(_) => (),
-            TypeAnnKind::Keyword(_) => (),
-            TypeAnnKind::Object(_) => (),
-            TypeAnnKind::TypeRef(_) => (),
-            TypeAnnKind::Union(_) => (),
-            TypeAnnKind::Intersection(_) => (),
+            TypeAnnKind::Lam(_) => (),          // TODO: visit
+            TypeAnnKind::Lit(_) => (),          // leaf node
+            TypeAnnKind::Keyword(_) => (),      // leaf node
+            TypeAnnKind::Object(_) => (),       // TODO: visit
+            TypeAnnKind::TypeRef(_) => (),      // leaf node
+            TypeAnnKind::Union(_) => (),        // TODO: visit
+            TypeAnnKind::Intersection(_) => (), // TODO: visit
             TypeAnnKind::Tuple(TupleType { types }) => {
                 types.iter_mut().for_each(|t| self._visit_type_ann(t))
             }
             TypeAnnKind::Array(ArrayType { elem_type }) => {
                 self._visit_type_ann(elem_type);
             }
-            TypeAnnKind::KeyOf(_) => (),
-            TypeAnnKind::Query(_) => (),
-            TypeAnnKind::IndexedAccess(_) => (),
-            TypeAnnKind::Mapped(_) => (),
-            TypeAnnKind::Conditional(_) => (),
-            TypeAnnKind::Mutable(_) => (),
+            TypeAnnKind::KeyOf(_) => (),         // TODO: visit
+            TypeAnnKind::Query(_) => (),         // leaf node
+            TypeAnnKind::IndexedAccess(_) => (), // TODO: visit
+            TypeAnnKind::Mapped(_) => (),        // ?
+            TypeAnnKind::Conditional(_) => (),   // TODO: visit
+            TypeAnnKind::Mutable(_) => (),       // TODO: visit
+            TypeAnnKind::Infer(_) => (),         // leaf node
         }
     }
 

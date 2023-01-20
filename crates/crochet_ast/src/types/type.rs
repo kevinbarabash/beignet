@@ -97,6 +97,11 @@ pub struct TConditionalType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TInferType {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TypeKind {
     Var(TVar),
     App(TApp),
@@ -118,6 +123,7 @@ pub enum TypeKind {
     IndexAccess(TIndexAccess),
     MappedType(TMappedType),
     ConditionalType(TConditionalType),
+    InferType(TInferType),
     // Query, // use for typed holes
 }
 
@@ -234,6 +240,7 @@ impl fmt::Display for Type {
                     "{check_type} extends {extends_type} ? {true_type} : {false_type}"
                 )
             }
+            TypeKind::InferType(TInferType { name }) => write!(f, "infer {name}"),
         }
     }
 }

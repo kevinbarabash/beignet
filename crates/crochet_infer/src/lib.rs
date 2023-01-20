@@ -3197,4 +3197,28 @@ mod tests {
 
         infer_prog(src);
     }
+
+    #[test]
+    fn infer_infer_type() {
+        let src = r#"
+        type Flatten<Type> = Type extends Array<infer Item> ? Item : Type;
+        type GetReturnType<Type> = Type extends (...args: never[]) => infer Return
+            ? Return
+            : never;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        let flatten = ctx.lookup_scheme("Flatten").unwrap();
+        assert_eq!(
+            format!("{flatten}"),
+            "<A>A extends Array<infer Item> ? Item : A"
+        );
+
+        let get_return = ctx.lookup_scheme("GetReturnType").unwrap();
+        assert_eq!(
+            format!("{get_return}"),
+            "<A>A extends (...args: never[]) => infer Return ? Return : never"
+        );
+    }
 }

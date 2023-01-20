@@ -129,6 +129,7 @@ impl Visitor for SemanticTokenVisitor {
             crochet_ast::values::TypeAnnKind::IndexedAccess(_) => None,
             crochet_ast::values::TypeAnnKind::Mapped(_) => None,
             crochet_ast::values::TypeAnnKind::Conditional(_) => None,
+            crochet_ast::values::TypeAnnKind::Infer(_) => None,
             // TODO: figure out how to get the SourceLocation for just the `mut`
             // modifier
             crochet_ast::values::TypeAnnKind::Mutable(_) => None,

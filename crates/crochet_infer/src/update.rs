@@ -358,6 +358,10 @@ pub fn update_type_ann(type_ann: &mut TypeAnn, s: &Subst) {
             update_type_ann(consequent, s);
             update_type_ann(alternate, s);
         }
+        // NOTE: "infer" types have no type annotation to update.  Their sole
+        // purpose is to introduce a type binding which is scoped to the containing
+        // conditional type.
+        TypeAnnKind::Infer(_) => (),
     }
 }
 

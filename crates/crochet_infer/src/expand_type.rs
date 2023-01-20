@@ -32,6 +32,10 @@ pub fn expand_type(t: &Type, ctx: &Context) -> Result<Type, Vec<TypeError>> {
         TypeKind::IndexAccess(access) => expand_index_access(access, ctx),
         TypeKind::MappedType(mapped) => expand_mapped_type(mapped, ctx),
         TypeKind::ConditionalType(cond) => expand_conditional_type(cond, ctx),
+        TypeKind::InferType(_infer) => {
+            // TODO: add a type binding to the current context
+            Ok(t.to_owned())
+        }
     }
 }
 
@@ -118,11 +122,18 @@ fn expand_conditional_type(cond: &TConditionalType, ctx: &Context) -> Result<Typ
     } = cond;
 
     let mut check_type = check_type.clone();
+
+    // TODO: make `ctx` a mutable reference
+    // ctx.push_scope(false);
+
     let mut extends_type = extends_type.clone();
     let t = match unify(&mut check_type, &mut extends_type, ctx) {
         Ok(_) => true_type,
         Err(_) => false_type,
     };
+
+    // ctx.pop_scope();
+
     expand_type(t.as_ref(), ctx)
 }
 
@@ -530,6 +541,9 @@ pub fn get_obj_type(t: &'_ Type, ctx: &Context) -> Result<Type, Vec<TypeError>> 
         }
         TypeKind::ConditionalType(_) => {
             todo!() // We have to evaluate the ConditionalType first
+        }
+        TypeKind::InferType(_) => {
+            todo!() // ?
         }
     }
 }

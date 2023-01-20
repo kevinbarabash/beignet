@@ -261,6 +261,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 true_type: Box::from(norm_type(true_type, mapping, _ctx)),
                 false_type: Box::from(norm_type(false_type, mapping, _ctx)),
             }),
+            TypeKind::InferType(_) => return t.to_owned(),
         };
 
         Type {
@@ -707,12 +708,17 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
             extends_type,
             true_type,
             false_type,
-        }) => TypeKind::ConditionalType(TConditionalType {
-            check_type: Box::from(replace_aliases_rec(check_type, type_param_map)),
-            extends_type: Box::from(replace_aliases_rec(extends_type, type_param_map)),
-            true_type: Box::from(replace_aliases_rec(true_type, type_param_map)),
-            false_type: Box::from(replace_aliases_rec(false_type, type_param_map)),
-        }),
+        }) => {
+            // TODO: check if extends_type introduces a new type, if it does, make
+            // sure it shadows the corresponding type reference in `type_param_map`.
+            TypeKind::ConditionalType(TConditionalType {
+                check_type: Box::from(replace_aliases_rec(check_type, type_param_map)),
+                extends_type: Box::from(replace_aliases_rec(extends_type, type_param_map)),
+                true_type: Box::from(replace_aliases_rec(true_type, type_param_map)),
+                false_type: Box::from(replace_aliases_rec(false_type, type_param_map)),
+            })
+        }
+        TypeKind::InferType(_) => return t.to_owned(),
     };
 
     Type {

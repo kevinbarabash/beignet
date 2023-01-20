@@ -3,7 +3,7 @@ use std::iter::Iterator;
 
 use crochet_ast::types::{
     self as types, Provenance, TConditionalType, TFnParam, TIndex, TIndexAccess, TIndexKey,
-    TMappedType, TObjElem, TObject, TProp, TPropKey, TVar, Type, TypeKind,
+    TInferType, TMappedType, TObjElem, TObject, TProp, TPropKey, TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
 
@@ -274,6 +274,14 @@ fn infer_type_ann_rec(
 
             t.mutable = true;
             type_ann.inferred_type = Some(t.clone());
+            Ok((s, t))
+        }
+        TypeAnnKind::Infer(InferType { name }) => {
+            let t = Type::from(TypeKind::InferType(TInferType {
+                name: name.to_owned(),
+            }));
+            let s = Subst::new();
+
             Ok((s, t))
         }
         TypeAnnKind::IndexedAccess(IndexedAccessType {
