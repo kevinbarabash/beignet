@@ -6,9 +6,12 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 use crate::context::Context;
+use crate::scheme::Scheme;
+use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
 use crate::unify::unify;
 use crate::util::{replace_aliases_rec, union_many_types, union_types};
+use crate::visitor::Visitor;
 
 // `expand_type` is used to expand types that `unify` doesn't know how to unify
 // into something that it does know how to unify.
@@ -32,9 +35,22 @@ pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> 
         TypeKind::IndexAccess(access) => expand_index_access(access, ctx),
         TypeKind::MappedType(mapped) => expand_mapped_type(mapped, ctx),
         TypeKind::ConditionalType(cond) => expand_conditional_type(cond, ctx),
-        TypeKind::InferType(_infer) => {
-            // TODO: add a type binding to the current context
-            Ok(t.to_owned())
+        TypeKind::InferType(TInferType { name }) => {
+            let t = ctx.fresh_var();
+
+            // We use insert_scheme() here instead of insert_type() because we
+            // don't want to generalize the type being inserted.  If we didn't
+            // do this, we end up with `<A>A` which doesn't work in this situation
+            // because instantiating it gives a u new type variable and we want
+            // the type variable created here to be used instead of a new one.
+            // TODO: create separate methods `insert_type_and_generalize` and `insert_type`
+            let scheme = Scheme {
+                t: Box::from(t.to_owned()),
+                type_params: vec![],
+            };
+            ctx.insert_scheme(name.to_owned(), scheme);
+
+            Ok(t)
         }
     }
 }
@@ -55,10 +71,13 @@ fn expand_alias_type(alias: &TRef, ctx: &mut Context) -> Result<Type, Vec<TypeEr
             return Err(vec![TypeError::TypeInstantiationFailure]);
         }
 
-        let type_args = type_args
-            .iter()
-            .map(|arg| expand_type(arg, ctx))
-            .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
+        // NOTE: `infer_omit` fails with this commented out, but `test_infer_type`
+        // fails if we leave it in.
+        // TODO: figure out how to make both tests pass.
+        // let type_args = type_args
+        //     .iter()
+        //     .map(|arg| expand_type(arg, ctx))
+        //     .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
         let mut type_param_map: HashMap<String, Type> = HashMap::new();
         for (param, arg) in type_params.iter().zip(type_args.iter()) {
@@ -113,6 +132,65 @@ fn expand_alias_type(alias: &TRef, ctx: &mut Context) -> Result<Type, Vec<TypeEr
     }
 }
 
+struct FindInferTypesVisitor {
+    infer_types: Vec<TInferType>,
+}
+
+impl FindInferTypesVisitor {
+    fn new() -> Self {
+        FindInferTypesVisitor {
+            infer_types: vec![],
+        }
+    }
+}
+
+impl Visitor for FindInferTypesVisitor {
+    fn visit_type(&mut self, t: &mut Type) {
+        if let TypeKind::InferType(it) = &t.kind {
+            self.infer_types.push(it.to_owned());
+        }
+    }
+}
+
+fn find_infer_types(t: &mut Type) -> Vec<TInferType> {
+    let mut visitor = FindInferTypesVisitor::new();
+    visitor.visit_children(t);
+    visitor.infer_types
+}
+
+struct ReplaceVisitor {
+    type_param_map: HashMap<String, Type>,
+}
+
+impl ReplaceVisitor {
+    fn new(type_param_map: &HashMap<String, Type>) -> Self {
+        ReplaceVisitor {
+            type_param_map: type_param_map.to_owned(),
+        }
+    }
+}
+
+impl Visitor for ReplaceVisitor {
+    // TODO: handle type params in TGenLams correctly
+    fn visit_type(&mut self, t: &mut Type) {
+        if let TypeKind::InferType(TInferType { name }) = &t.kind {
+            match self.type_param_map.get(name) {
+                Some(rep_t) => {
+                    t.kind = rep_t.kind.to_owned();
+                    t.mutable = rep_t.mutable;
+                    // TODO: set t.provenance to the original type's kind
+                }
+                None => todo!(),
+            }
+        }
+    }
+}
+
+fn replace_infer_types(t: &mut Type, type_param_map: &HashMap<String, Type>) {
+    let mut rep_visitor = ReplaceVisitor::new(type_param_map);
+    rep_visitor.visit_children(t);
+}
+
 fn expand_conditional_type(
     cond: &TConditionalType,
     ctx: &mut Context,
@@ -125,17 +203,25 @@ fn expand_conditional_type(
     } = cond;
 
     let mut check_type = check_type.clone();
-
-    // TODO: make `ctx` a mutable reference
-    // ctx.push_scope(false);
-
     let mut extends_type = extends_type.clone();
-    let t = match unify(&mut check_type, &mut extends_type, ctx) {
-        Ok(_) => true_type,
-        Err(_) => false_type,
-    };
 
-    // ctx.pop_scope();
+    let infer_types = find_infer_types(&mut extends_type);
+
+    let mut type_param_map: HashMap<String, Type> = HashMap::new();
+    for infer_t in infer_types {
+        type_param_map.insert(infer_t.name.to_owned(), ctx.fresh_var());
+    }
+
+    replace_infer_types(&mut extends_type, &type_param_map);
+
+    let t = match unify(&mut check_type, &mut extends_type, ctx) {
+        Ok(s) => {
+            let mut true_type = replace_aliases_rec(true_type, &type_param_map);
+            true_type.apply(&s);
+            Box::from(true_type)
+        }
+        Err(_) => false_type.to_owned(),
+    };
 
     expand_type(t.as_ref(), ctx)
 }

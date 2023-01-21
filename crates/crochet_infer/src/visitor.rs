@@ -1,5 +1,6 @@
 use crochet_ast::types::*;
 
+// TODO: rename this to VisitorMut and create a non-mutable Visitor
 pub trait Visitor {
     fn visit_type(&mut self, t: &mut Type);
 

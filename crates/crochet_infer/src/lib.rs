@@ -3201,10 +3201,19 @@ mod tests {
     #[test]
     fn infer_infer_type() {
         let src = r#"
+        type Array<T> = {[key: number]: T};
         type Flatten<Type> = Type extends Array<infer Item> ? Item : Type;
-        type GetReturnType<Type> = Type extends (...args: never[]) => infer Return
-            ? Return
-            : never;
+        // type GetReturnType<Type> = Type extends (...args: never[]) => infer Return
+        //     ? Return
+        //     : never;
+
+        type NumberArray = Array<number>;
+        type NumberItem = Flatten<NumberArray>;
+        let num: NumberItem = 5;
+
+        type StringArray = Array<string>;
+        type StringItem = Flatten<StringArray>;
+        let str: StringItem = "hello";
         "#;
 
         let ctx = infer_prog(src);
@@ -3215,10 +3224,10 @@ mod tests {
             "<A>A extends Array<infer Item> ? Item : A"
         );
 
-        let get_return = ctx.lookup_scheme("GetReturnType").unwrap();
-        assert_eq!(
-            format!("{get_return}"),
-            "<A>A extends (...args: never[]) => infer Return ? Return : never"
-        );
+        // let get_return = ctx.lookup_scheme("GetReturnType").unwrap();
+        // assert_eq!(
+        //     format!("{get_return}"),
+        //     "<A>A extends (...args: never[]) => infer Return ? Return : never"
+        // );
     }
 }

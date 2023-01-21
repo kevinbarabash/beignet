@@ -89,6 +89,8 @@ impl Context {
         current_scope.values.insert(name, b);
     }
 
+    // TODO: determine if we need to generalize the inserted type everywhere
+    // this is being called.
     pub fn insert_type(&mut self, name: String, t: Type) {
         let current_scope = self.scopes.last_mut().unwrap();
         let scheme = generalize(&current_scope.types, &t);

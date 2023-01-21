@@ -652,7 +652,22 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
             }
         }
         (TypeKind::Ref(alias1), TypeKind::Ref(alias2)) => {
+            // If `alias1` points to another TypeKind::Ref(_), unwrap that ref.
+            if let Ok(mut t) = ctx.lookup_type(&alias1.name, false) {
+                if let TypeKind::Ref(_) = &t.kind {
+                    return unify(&mut t, t2, ctx);
+                }
+            }
+
+            // If `alias2` points to another TypeKind::Ref(_), unwrap that ref.
+            if let Ok(mut t) = ctx.lookup_type(&alias2.name, false) {
+                if let TypeKind::Ref(_) = &t.kind {
+                    return unify(t1, &mut t, ctx);
+                }
+            }
+
             if alias1.name == alias2.name {
+                eprintln!("unifying aliases {alias1} with {alias2}");
                 match (&mut alias1.type_args, &mut alias2.type_args) {
                     (Some(tp1), Some(tp2)) => {
                         let result: Result<Vec<_>, _> = tp1
@@ -676,6 +691,8 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
         (TypeKind::MappedType(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
         (_, TypeKind::IndexAccess(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),
         (TypeKind::IndexAccess(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
+        (_, TypeKind::InferType(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),
+        (TypeKind::InferType(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
 
         (_, TypeKind::GenLam(gen_lam)) => {
             let mut lam = instantiate_gen_lam(ctx, gen_lam);
