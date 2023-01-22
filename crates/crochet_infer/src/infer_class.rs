@@ -187,17 +187,37 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 let name = TPropKey::StringKey(key.name.to_owned());
 
                 let mut elem = match kind {
-                    MethodKind::Method => TObjElem::Method(TMethod {
-                        name,
-                        params: t_params,
-                        ret: Box::from(body_t),
-                        type_params: vec![], // TODO
-                        is_mutating,
-                    }),
-                    MethodKind::Getter => TObjElem::Getter(TGetter {
-                        name,
-                        ret: Box::from(body_t),
-                    }),
+                    MethodKind::Method => {
+                        let ret_t = match &mut lambda.return_type {
+                            Some(type_ann) => {
+                                let (s, t) = infer_type_ann(type_ann, ctx, type_params)?;
+                                ss.push(s);
+                                t
+                            }
+                            None => body_t,
+                        };
+                        TObjElem::Method(TMethod {
+                            name,
+                            params: t_params,
+                            ret: Box::from(ret_t),
+                            type_params: vec![], // TODO
+                            is_mutating,
+                        })
+                    }
+                    MethodKind::Getter => {
+                        let ret_t = match &mut lambda.return_type {
+                            Some(type_ann) => {
+                                let (s, t) = infer_type_ann(type_ann, ctx, type_params)?;
+                                ss.push(s);
+                                t
+                            }
+                            None => body_t,
+                        };
+                        TObjElem::Getter(TGetter {
+                            name,
+                            ret: Box::from(ret_t),
+                        })
+                    }
                     MethodKind::Setter => {
                         if t_params.len() == 1 {
                             TObjElem::Setter(TSetter {

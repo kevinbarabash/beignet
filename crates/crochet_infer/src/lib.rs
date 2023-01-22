@@ -3093,13 +3093,13 @@ mod tests {
         let it = ctx.lookup_type("Foo", false).unwrap();
         assert_eq!(
             format!("{it}"),
-            "{msg: string, add(self, x: number, y: number): number, get bar(self): true}"
+            "{msg: string, add(self, x: number, y: number): number, get bar(self): boolean}"
         );
 
         let mut_it = ctx.lookup_type("Foo", true).unwrap();
         assert_eq!(
             format!("{mut_it}"),
-            "{msg: string, add(self, x: number, y: number): number, set_msg(mut self, msg: string): undefined, get bar(self): true, set bar(mut self, value: boolean)}"
+            "{msg: string, add(self, x: number, y: number): number, set_msg(mut self, msg: string): undefined, get bar(self): boolean, set bar(mut self, value: boolean)}"
         );
     }
 
@@ -3148,7 +3148,7 @@ mod tests {
         assert_eq!(format!("{msg}"), "\"hello\"");
 
         let num = ctx.lookup_value("num").unwrap();
-        assert_eq!(format!("{num}"), "5");
+        assert_eq!(format!("{num}"), "number");
     }
 
     #[test]
