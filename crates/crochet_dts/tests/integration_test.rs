@@ -561,9 +561,7 @@ fn infer_omit() {
     assert_eq!(result, "{a: number, mut d?: number}");
 }
 
-// TODO: make this test pass
 #[test]
-#[ignore]
 fn infer_omit_string() {
     let src = r#"
     type T1 = Omit<String, "length">;
@@ -577,7 +575,62 @@ fn infer_omit_string() {
     let t = expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
 
-    assert_eq!(result, "{a: number, mut d?: number}"); // TBD
+    assert!(!result.contains("length: number"));
+}
+
+#[test]
+fn infer_method_type_with_indexed_access() {
+    let src = r#"
+    type T1 = String["charAt"];
+    "#;
+    let (_, mut ctx) = infer_prog(src);
+    let t = ctx.lookup_type("T1", false).unwrap();
+
+    let t = expand_type(&t, &mut ctx).unwrap();
+    let result = format!("{}", t);
+
+    assert_eq!(result, "(pos: number) => string");
+}
+
+#[test]
+fn infer_getter_setter_types_with_indexed_access() {
+    let src = r#"
+    class Foo {
+        get bar(self): number { 5; }
+        set baz(mut self, value: string) {}
+    }
+    type T1 = Foo["bar"];
+    type T2 = Foo["baz"];
+    "#;
+    let (_, mut ctx) = infer_prog(src);
+
+    let t = ctx.lookup_type("T1", false).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "() => number");
+
+    let t = ctx.lookup_type("T2", false).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "(value: string) => undefined");
+}
+
+#[test]
+#[ignore]
+fn infer_getter_setter_types_with_indexed_access_for_the_same_property() {
+    let src = r#"
+    class Foo {
+        get bar(self): number { 5; }
+        set bar(mut self, value: number) {}
+    }
+    type T1 = Foo["bar"];
+    "#;
+    let (_, mut ctx) = infer_prog(src);
+
+    let t = ctx.lookup_type("T1", false).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "number");
 }
 
 #[test]

@@ -250,9 +250,58 @@ fn expand_index_access(access: &TIndexAccess, ctx: &mut Context) -> Result<Type,
                     match elem {
                         TObjElem::Call(_) => (),
                         TObjElem::Constructor(_) => (),
-                        TObjElem::Method(_) => todo!(),
-                        TObjElem::Getter(_) => todo!(),
-                        TObjElem::Setter(_) => todo!(),
+                        TObjElem::Method(method) => match (&method.name, lit) {
+                            (TPropKey::StringKey(key), TLit::Str(str)) if key == str => {
+                                // TODO: dedupe with infer_expr.rs and get_prop_by_name() below
+                                let t = if method.type_params.is_empty() {
+                                    Type::from(TypeKind::Lam(TLam {
+                                        params: method.params.to_owned(),
+                                        ret: method.ret.to_owned(),
+                                    }))
+                                } else {
+                                    Type::from(TypeKind::GenLam(TGenLam {
+                                        lam: Box::from(TLam {
+                                            params: method.params.to_owned(),
+                                            ret: method.ret.to_owned(),
+                                        }),
+                                        type_params: method.type_params.to_owned(),
+                                    }))
+                                };
+                                return Ok(t);
+                            }
+                            _ => (),
+                        },
+                        TObjElem::Getter(getter) => match (&getter.name, lit) {
+                            (TPropKey::StringKey(key), TLit::Str(str)) if key == str => {
+                                return Ok(Type::from(TypeKind::Lam(TLam {
+                                    params: vec![],
+                                    ret: getter.ret.to_owned(),
+                                })));
+                            }
+                            _ => (),
+                        },
+                        TObjElem::Setter(setter) => match (&setter.name, lit) {
+                            (TPropKey::StringKey(key), TLit::Str(str)) if key == str => {
+                                return Ok(Type::from(TypeKind::Lam(TLam {
+                                    params: vec![setter.param.to_owned()],
+                                    ret: Box::from(Type::from(TypeKind::Keyword(
+                                        TKeyword::Undefined,
+                                    ))),
+                                })));
+                            }
+                            _ => (),
+                        },
+                        TObjElem::Prop(prop) => match (&prop.name, lit) {
+                            (TPropKey::StringKey(key), TLit::Str(str)) if key == str => {
+                                return Ok(prop.t.to_owned());
+                            }
+                            // NOTE: `get_obj_type` add numeric keys for each element
+                            // in a tuple.
+                            (TPropKey::NumberKey(key), TLit::Num(num)) if key == num => {
+                                return Ok(prop.t.to_owned());
+                            }
+                            _ => (),
+                        },
                         TObjElem::Index(index) => match &index.key.t.kind {
                             TypeKind::Keyword(keyword) => match (keyword, lit) {
                                 (TKeyword::Number, TLit::Num(_)) => {
@@ -270,17 +319,6 @@ fn expand_index_access(access: &TIndexAccess, ctx: &mut Context) -> Result<Type,
                             _ => {
                                 todo!("Return an error that object indexer's key is invalid");
                             }
-                        },
-                        TObjElem::Prop(prop) => match (&prop.name, lit) {
-                            (TPropKey::StringKey(key), TLit::Str(str)) if key == str => {
-                                return Ok(prop.t.to_owned());
-                            }
-                            // NOTE: `get_obj_type` add numeric keys for each element
-                            // in a tuple.
-                            (TPropKey::NumberKey(key), TLit::Num(num)) if key == num => {
-                                return Ok(prop.t.to_owned());
-                            }
-                            _ => (),
                         },
                     }
                 }
@@ -453,14 +491,86 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &mut Context) -> Result<Type, V
 // and indexers as well.
 fn get_prop_by_name(elems: &[TObjElem], name: &str) -> Result<TProp, Vec<TypeError>> {
     for elem in elems {
-        if let TObjElem::Prop(prop) = elem {
-            let key = match &prop.name {
-                TPropKey::StringKey(key) => key,
-                TPropKey::NumberKey(key) => key,
-            };
-            if key == name {
-                return Ok(prop.to_owned());
+        match elem {
+            TObjElem::Method(method) => {
+                let key = match &method.name {
+                    TPropKey::StringKey(key) => key,
+                    TPropKey::NumberKey(key) => key,
+                };
+                // TODO: dedupe with infer_expr.rs and expand_index_access() above
+                let t = if method.type_params.is_empty() {
+                    Type::from(TypeKind::Lam(TLam {
+                        params: method.params.to_owned(),
+                        ret: method.ret.to_owned(),
+                    }))
+                } else {
+                    Type::from(TypeKind::GenLam(TGenLam {
+                        lam: Box::from(TLam {
+                            params: method.params.to_owned(),
+                            ret: method.ret.to_owned(),
+                        }),
+                        type_params: method.type_params.to_owned(),
+                    }))
+                };
+                if key == name {
+                    return Ok(TProp {
+                        name: method.name.to_owned(),
+                        optional: false,
+                        mutable: method.is_mutating,
+                        t,
+                    });
+                }
             }
+            TObjElem::Getter(getter) => {
+                let key = match &getter.name {
+                    TPropKey::StringKey(key) => key,
+                    TPropKey::NumberKey(key) => key,
+                };
+                if key == name {
+                    let t = Type::from(TypeKind::Lam(TLam {
+                        params: vec![],
+                        ret: getter.ret.to_owned(),
+                    }));
+                    return Ok(TProp {
+                        name: getter.name.to_owned(),
+                        optional: false,
+                        mutable: false,
+                        t,
+                    });
+                }
+            }
+            TObjElem::Setter(setter) => {
+                let key = match &setter.name {
+                    TPropKey::StringKey(key) => key,
+                    TPropKey::NumberKey(key) => key,
+                };
+                if key == name {
+                    let t = Type::from(TypeKind::Lam(TLam {
+                        params: vec![setter.param.to_owned()],
+                        ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Undefined))),
+                    }));
+                    return Ok(TProp {
+                        name: setter.name.to_owned(),
+                        optional: false,
+                        mutable: false,
+                        t,
+                    });
+                }
+            }
+            TObjElem::Prop(prop) => {
+                let key = match &prop.name {
+                    TPropKey::StringKey(key) => key,
+                    TPropKey::NumberKey(key) => key,
+                };
+                if key == name {
+                    return Ok(prop.to_owned());
+                }
+            }
+            TObjElem::Index(_) => (), // QUESTION: Do we need to handle this case?
+
+            // We skip over these b/c they have no name
+            TObjElem::Call(_) => (),
+            TObjElem::Constructor(_) => (),
         }
     }
 
