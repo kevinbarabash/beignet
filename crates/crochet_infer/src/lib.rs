@@ -3197,4 +3197,43 @@ mod tests {
 
         infer_prog(src);
     }
+
+    #[test]
+    #[should_panic = "TypeError::MethodsMustHaveTypes"]
+    fn methods_without_a_return_type_is_an_error() {
+        let src = r#"
+        class Foo {
+            constructor(self) {}
+            bar(self) {}
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "TypeError::MethodsMustHaveTypes"]
+    fn methods_without_a_param_types_is_an_error() {
+        let src = r#"
+        class Foo {
+            constructor(self) {}
+            bar(self, a, b): number {}
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "TypeError::PropertiesMustHaveTypes"]
+    fn properties_without_types_is_an_error() {
+        let src = r#"
+        class Foo {
+            bar;
+            constructor(self) {}
+        }
+        "#;
+
+        infer_prog(src);
+    }
 }
