@@ -705,9 +705,8 @@ fn infer_infer_type() {
     let src = r#"
     type Flatten<Type> = Type extends Array<infer Item> ? Item : Type;
 
-    type NumberArray = Array<number>;
-    type NumberItem = Flatten<NumberArray>;
-    let num: NumberItem = 5;
+    let num1: Flatten<Array<number>> = 5;
+    let num2: Flatten<number> = 10;
 
     type StringArray = Array<string>;
     type StringItem = Flatten<StringArray>;

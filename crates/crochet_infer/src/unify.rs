@@ -17,7 +17,6 @@ use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, Vec<TypeError>> {
-    eprintln!("Attempting to unify {t1} with {t2}");
     // All binding must be done first
     match (&mut t1.kind, &mut t2.kind) {
         // If both are type variables...
@@ -693,8 +692,8 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
                 todo!("unify(): handle aliases that point to another alias")
             }
         }
-        (_, TypeKind::Ref(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),
-        (TypeKind::Ref(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
+        (_, TypeKind::Ref(alias)) => unify(t1, &mut expand_alias_type(alias, ctx)?, ctx),
+        (TypeKind::Ref(alias), _) => unify(&mut expand_alias_type(alias, ctx)?, t2, ctx),
         (_, TypeKind::MappedType(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),
         (TypeKind::MappedType(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
         (_, TypeKind::IndexAccess(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),
