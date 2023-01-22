@@ -8,7 +8,7 @@ use crochet_ast::values::{ExprKind, TypeAnn, TypeAnnKind};
 use types::TKeyword;
 
 use crate::context::Context;
-use crate::expand_type::expand_type;
+use crate::expand_type::{expand_alias_type, expand_type};
 use crate::scheme::{instantiate_callable, instantiate_gen_lam};
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
@@ -17,6 +17,7 @@ use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, Vec<TypeError>> {
+    eprintln!("Attempting to unify {t1} with {t2}");
     // All binding must be done first
     match (&mut t1.kind, &mut t2.kind) {
         // If both are type variables...
@@ -662,6 +663,15 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
                 }
                 _ => Err(vec![TypeError::UnificationIsUndecidable]),
             }
+        }
+        // NOTE: `expand_alias` doesn't expand interfaces so if we want to
+        // destructure and object created from a class (which is modeled as an
+        // interface) we need call `expand_alias_type` directly.
+        (TypeKind::Object(_), TypeKind::Ref(alias)) => {
+            unify(t1, &mut expand_alias_type(alias, ctx)?, ctx)
+        }
+        (TypeKind::Ref(alias), TypeKind::Object(_)) => {
+            unify(&mut expand_alias_type(alias, ctx)?, t2, ctx)
         }
         (TypeKind::Ref(alias1), TypeKind::Ref(alias2)) => {
             if alias1.name == alias2.name {

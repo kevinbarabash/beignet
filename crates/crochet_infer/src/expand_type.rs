@@ -67,7 +67,7 @@ pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> 
     }
 }
 
-fn expand_alias_type(alias: &TRef, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
+pub fn expand_alias_type(alias: &TRef, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
     let name = &alias.name;
     let scheme = ctx.lookup_scheme(name)?;
 
