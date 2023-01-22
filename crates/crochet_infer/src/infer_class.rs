@@ -47,7 +47,10 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                                         constraint: Some(Box::from(t)),
                                     }))
                                 }
-                                None => ctx.fresh_var(),
+                                None => {
+                                    return Err(vec![TypeError::MethodsMustHaveTypes]);
+                                    // ctx.fresh_var()
+                                }
                             };
                             ctx.insert_type(param.name.name.clone(), tv.clone());
                             Ok((param.name.name.to_owned(), tv))
@@ -151,6 +154,10 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 }
                 let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = iter
                     .map(|e_param| {
+                        if e_param.type_ann.is_none() {
+                            return Err(vec![TypeError::MethodsMustHaveTypes]);
+                        }
+
                         let (ps, pa, t_param) = infer_fn_param(e_param, ctx, &type_params_map)?;
 
                         // Inserts any new variables introduced by infer_fn_param() into
@@ -182,6 +189,8 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                         infer_type_ann_with_params(ret_type_ann, ctx, &type_params_map)?;
                     ss.push(ret_s);
                     ss.push(unify(&mut body_t, &mut ret_t, ctx)?);
+                } else if kind != &MethodKind::Setter {
+                    return Err(vec![TypeError::MethodsMustHaveTypes]);
                 }
 
                 let name = TPropKey::StringKey(key.name.to_owned());
@@ -258,7 +267,8 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 } else if let Some(value) = value {
                     infer_expr(ctx, value, false)?
                 } else {
-                    (Subst::default(), ctx.fresh_var())
+                    return Err(vec![TypeError::PropertiesMustHaveTypes]);
+                    // (Subst::default(), ctx.fresh_var())
                 };
 
                 let elem = TObjElem::Prop(TProp {

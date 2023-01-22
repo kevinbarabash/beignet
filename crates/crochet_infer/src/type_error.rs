@@ -68,6 +68,10 @@ pub enum TypeError {
 
     // Objects
     CantInferTypeFromItKeys,
+
+    // Classes
+    MethodsMustHaveTypes,
+    PropertiesMustHaveTypes,
 }
 
 impl fmt::Display for TypeError {
@@ -129,6 +133,8 @@ impl fmt::Display for TypeError {
             TypeError::Unspecified => write!(fmt, "Unspecified"),
             TypeError::PrimitivesCantBeMutable(t) => write!(fmt, "PrimitivesCantBeMutable: {t}"),
             TypeError::TuplesCantBeMutable(t) => write!(fmt, "TuplesCantBeMutable: {t}"),
+            TypeError::MethodsMustHaveTypes => write!(fmt, "MethodsMustHaveTypes"),
+            TypeError::PropertiesMustHaveTypes => write!(fmt, "PropertiesMustHaveTypes"),
         }
     }
 }
