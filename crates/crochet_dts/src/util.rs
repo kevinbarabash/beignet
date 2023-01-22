@@ -166,7 +166,14 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
                 elems.push(elem.to_owned());
             }
 
-            Type::from(TypeKind::Object(TObject { elems }))
+            Type::from(TypeKind::Object(TObject {
+                elems,
+                // NOTE: This function is called from the code parsing interfaces
+                // so this should always be true.
+                // TODO: add a check to make sure since we shouldn't be trying to
+                // merge things that aren't interfaces.
+                is_interface: true,
+            }))
         }
         (_, _) => todo!(),
     };
@@ -193,7 +200,10 @@ mod tests {
             is_mutating: false,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: old_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
         let new_elems = vec![TObjElem::Method(TMethod {
@@ -204,7 +214,10 @@ mod tests {
             is_mutating: false,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: new_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
 
@@ -225,7 +238,10 @@ mod tests {
             is_mutating: true,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: old_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
         let new_elems = vec![TObjElem::Method(TMethod {
@@ -236,7 +252,10 @@ mod tests {
             is_mutating: true,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: new_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
 
@@ -257,7 +276,10 @@ mod tests {
             is_mutating: true,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: old_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
         let new_elems = vec![TObjElem::Method(TMethod {
@@ -268,7 +290,10 @@ mod tests {
             is_mutating: false,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: new_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
 
@@ -286,7 +311,10 @@ mod tests {
             is_mutating: false,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: old_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
         let new_elems = vec![TObjElem::Method(TMethod {
@@ -297,7 +325,10 @@ mod tests {
             is_mutating: true,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: new_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
 
@@ -316,7 +347,10 @@ mod tests {
             mutable: true,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: old_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
         let new_elems = vec![TObjElem::Index(TIndex {
@@ -328,7 +362,10 @@ mod tests {
             mutable: false,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: new_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
 
@@ -350,7 +387,10 @@ mod tests {
             mutable: false,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: old_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
         let new_elems = vec![TObjElem::Index(TIndex {
@@ -362,7 +402,10 @@ mod tests {
             mutable: true,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: new_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
 
@@ -381,7 +424,10 @@ mod tests {
             type_params: vec![],
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: old_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
         let new_elems = vec![TObjElem::Call(TCallable {
@@ -390,7 +436,10 @@ mod tests {
             type_params: vec![],
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: new_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
 
@@ -406,7 +455,10 @@ mod tests {
             type_params: vec![],
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: old_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: old_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
         let new_elems = vec![TObjElem::Constructor(TCallable {
@@ -415,7 +467,10 @@ mod tests {
             type_params: vec![],
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject { elems: new_elems }))),
+            t: Box::from(Type::from(TypeKind::Object(TObject {
+                elems: new_elems,
+                is_interface: true,
+            }))),
             type_params: vec![],
         };
 

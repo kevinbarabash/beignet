@@ -561,6 +561,25 @@ fn infer_omit() {
     assert_eq!(result, "{a: number, mut d?: number}");
 }
 
+// TODO: make this test pass
+#[test]
+#[ignore]
+fn infer_omit_string() {
+    let src = r#"
+    type T1 = Omit<String, "length">;
+    "#;
+    let (_, mut ctx) = infer_prog(src);
+    let t = ctx.lookup_type("T1", false).unwrap();
+
+    let result = format!("{}", t);
+    assert_eq!(result, "Omit<String, \"length\">");
+
+    let t = expand_type(&t, &mut ctx).unwrap();
+    let result = format!("{}", t);
+
+    assert_eq!(result, "{a: number, mut d?: number}"); // TBD
+}
+
 #[test]
 fn new_expressions() {
     let src = r#"
@@ -604,4 +623,33 @@ fn rest_fn() {
     let t = ctx.lookup_value("result").unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "string");
+}
+
+#[test]
+fn infer_infer_type() {
+    let src = r#"
+    type Flatten<Type> = Type extends Array<infer Item> ? Item : Type;
+
+    type NumberArray = Array<number>;
+    type NumberItem = Flatten<NumberArray>;
+    let num: NumberItem = 5;
+
+    type StringArray = Array<string>;
+    type StringItem = Flatten<StringArray>;
+    let str: StringItem = "hello";
+
+    type GetReturnType<Type> = Type extends (...args: never[]) => infer Return
+        ? Return
+        : never;
+
+    let foo = () => 5;
+    type RetType = GetReturnType<typeof foo>;
+    let retVal: RetType = 5;
+
+    let bar = () => "hello";
+    type RetType = GetReturnType<typeof bar>;
+    let retVal: RetType = "hello";
+    "#;
+
+    infer_prog(src);
 }

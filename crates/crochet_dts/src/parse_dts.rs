@@ -160,7 +160,10 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                 })
                 .collect();
 
-            let t = Type::from(TypeKind::Object(TObject { elems }));
+            let t = Type::from(TypeKind::Object(TObject {
+                elems,
+                is_interface: false,
+            }));
 
             Ok(t)
         }
@@ -656,7 +659,10 @@ fn infer_interface_decl(
         })
         .collect();
 
-    let t = Type::from(TypeKind::Object(TObject { elems }));
+    let t = Type::from(TypeKind::Object(TObject {
+        elems,
+        is_interface: false,
+    }));
 
     let type_params = match &decl.type_params {
         Some(type_params) => type_params

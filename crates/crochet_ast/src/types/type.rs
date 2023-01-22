@@ -35,6 +35,7 @@ impl fmt::Display for TRef {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TObject {
     pub elems: Vec<TObjElem>,
+    pub is_interface: bool, // Used for `interface` types and classes
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

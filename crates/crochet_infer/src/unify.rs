@@ -580,14 +580,20 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
                         });
 
                     let s1 = unify(
-                        &mut Type::from(TypeKind::Object(TObject { elems: obj_elems })),
+                        &mut Type::from(TypeKind::Object(TObject {
+                            elems: obj_elems,
+                            is_interface: false,
+                        })),
                         obj_type,
                         ctx,
                     )?;
 
                     let rest_type = rest_types.get_mut(0).unwrap();
                     let s2 = unify(
-                        &mut Type::from(TypeKind::Object(TObject { elems: rest_elems })),
+                        &mut Type::from(TypeKind::Object(TObject {
+                            elems: rest_elems,
+                            is_interface: false,
+                        })),
                         rest_type,
                         ctx,
                     )?;
@@ -634,14 +640,20 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
 
                     let s_obj = unify(
                         obj_type,
-                        &mut Type::from(TypeKind::Object(TObject { elems: obj_elems })),
+                        &mut Type::from(TypeKind::Object(TObject {
+                            elems: obj_elems,
+                            is_interface: false,
+                        })),
                         ctx,
                     )?;
 
                     let rest_type = rest_types.get_mut(0).unwrap();
                     let s_rest = unify(
                         rest_type,
-                        &mut Type::from(TypeKind::Object(TObject { elems: rest_elems })),
+                        &mut Type::from(TypeKind::Object(TObject {
+                            elems: rest_elems,
+                            is_interface: false,
+                        })),
                         ctx,
                     )?;
 
@@ -652,20 +664,6 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
             }
         }
         (TypeKind::Ref(alias1), TypeKind::Ref(alias2)) => {
-            // If `alias1` points to another TypeKind::Ref(_), unwrap that ref.
-            if let Ok(mut t) = ctx.lookup_type(&alias1.name, false) {
-                if let TypeKind::Ref(_) = &t.kind {
-                    return unify(&mut t, t2, ctx);
-                }
-            }
-
-            // If `alias2` points to another TypeKind::Ref(_), unwrap that ref.
-            if let Ok(mut t) = ctx.lookup_type(&alias2.name, false) {
-                if let TypeKind::Ref(_) = &t.kind {
-                    return unify(t1, &mut t, ctx);
-                }
-            }
-
             if alias1.name == alias2.name {
                 eprintln!("unifying aliases {alias1} with {alias2}");
                 match (&mut alias1.type_args, &mut alias2.type_args) {
@@ -897,7 +895,10 @@ mod tests {
                 t: Type::from(TypeKind::Keyword(TKeyword::String)),
             }),
         ];
-        let mut t1 = Type::from(TypeKind::Object(TObject { elems }));
+        let mut t1 = Type::from(TypeKind::Object(TObject {
+            elems,
+            is_interface: false,
+        }));
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
@@ -921,7 +922,10 @@ mod tests {
                 t: Type::from(TypeKind::Keyword(TKeyword::String)),
             }),
         ];
-        let mut t2 = Type::from(TypeKind::Object(TObject { elems }));
+        let mut t2 = Type::from(TypeKind::Object(TObject {
+            elems,
+            is_interface: false,
+        }));
 
         let result = unify(&mut t1, &mut t2, &mut ctx)?;
         assert_eq!(result, Subst::default());

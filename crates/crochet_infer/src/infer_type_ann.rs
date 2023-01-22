@@ -151,7 +151,10 @@ fn infer_type_ann_rec(
             }
 
             let s = compose_many_subs(&ss);
-            let t = Type::from(TypeKind::Object(TObject { elems }));
+            let t = Type::from(TypeKind::Object(TObject {
+                elems,
+                is_interface: false,
+            }));
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }

@@ -208,7 +208,10 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                         TObjElem::Setter(_) => todo!(),
                     })
                     .collect();
-                TypeKind::Object(TObject { elems })
+                TypeKind::Object(TObject {
+                    elems,
+                    is_interface: obj.is_interface,
+                })
             }
             TypeKind::Ref(TRef { name, type_args }) => {
                 let type_args = type_args
@@ -351,7 +354,10 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let mut out_types = vec![];
     out_types.append(&mut not_obj_types);
     if !elems.is_empty() {
-        out_types.push(Type::from(TypeKind::Object(TObject { elems })));
+        out_types.push(Type::from(TypeKind::Object(TObject {
+            elems,
+            is_interface: false,
+        })));
     }
     // TODO: figure out a consistent way to sort types
     // out_types.sort_by_key(|t| t.id); // ensure a stable order
@@ -645,7 +651,10 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
                     }
                 })
                 .collect();
-            TypeKind::Object(TObject { elems })
+            TypeKind::Object(TObject {
+                elems,
+                is_interface: obj.is_interface,
+            })
         }
         TypeKind::Ref(alias) => match type_param_map.get(&alias.name) {
             Some(t) => {
@@ -774,7 +783,10 @@ pub fn immutable_obj_type(obj: &TObject) -> Option<TObject> {
         .collect();
 
     if changed {
-        Some(TObject { elems })
+        Some(TObject {
+            elems,
+            is_interface: obj.is_interface,
+        })
     } else {
         None
     }

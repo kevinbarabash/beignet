@@ -26,7 +26,19 @@ pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> 
         TypeKind::Union(_) => Ok(t.to_owned()),
         TypeKind::Intersection(_) => Ok(t.to_owned()),
         TypeKind::Object(_) => Ok(t.to_owned()),
-        TypeKind::Ref(alias) => expand_alias_type(alias, ctx),
+        TypeKind::Ref(alias) => {
+            // We don't want to expand Array's and other interfaces since it
+            // would be we'd have to unify their underlying definitions which
+            // would be pretty bad for performance.
+            // TODO: Add a flag to track whether an object type is an interface
+            // or not, then update this code to check for it when looking up the
+            // alias.
+            let scheme = ctx.lookup_scheme(&alias.name)?;
+            match &scheme.t.kind {
+                TypeKind::Object(obj) if obj.is_interface => Ok(t.to_owned()),
+                _ => expand_alias_type(alias, ctx),
+            }
+        }
         TypeKind::Tuple(_) => Ok(t.to_owned()),
         TypeKind::Array(_) => Ok(t.to_owned()),
         TypeKind::Rest(_) => Ok(t.to_owned()),
@@ -58,7 +70,6 @@ pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> 
 fn expand_alias_type(alias: &TRef, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
     let name = &alias.name;
     let scheme = ctx.lookup_scheme(name)?;
-    eprintln!("scheme = {scheme}");
 
     let type_params = scheme.type_params;
 
@@ -74,10 +85,10 @@ fn expand_alias_type(alias: &TRef, ctx: &mut Context) -> Result<Type, Vec<TypeEr
         // NOTE: `infer_omit` fails with this commented out, but `test_infer_type`
         // fails if we leave it in.
         // TODO: figure out how to make both tests pass.
-        // let type_args = type_args
-        //     .iter()
-        //     .map(|arg| expand_type(arg, ctx))
-        //     .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
+        let type_args = type_args
+            .iter()
+            .map(|arg| expand_type(arg, ctx))
+            .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
         let mut type_param_map: HashMap<String, Type> = HashMap::new();
         for (param, arg) in type_params.iter().zip(type_args.iter()) {
@@ -328,7 +339,10 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &mut Context) -> Result<Type, V
     let obj = get_obj_type_from_mapped_type(mapped, ctx)?;
 
     let old_elems = match &obj.kind {
-        TypeKind::Object(TObject { elems }) => elems.to_owned(),
+        TypeKind::Object(TObject {
+            elems,
+            is_interface: _,
+        }) => elems.to_owned(),
         _ => vec![],
     };
 
@@ -418,8 +432,12 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &mut Context) -> Result<Type, V
         })
         .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
+    // NOTE: Applying a mapped type to a interface will return non-interface
     let t = Type {
-        kind: TypeKind::Object(TObject { elems: new_elems }),
+        kind: TypeKind::Object(TObject {
+            elems: new_elems,
+            is_interface: false,
+        }),
         mutable: false,
         provenance: None, // TODO: fill this in
     };
@@ -431,6 +449,8 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &mut Context) -> Result<Type, V
 // Result<TProp, _>.  This is fine for that usage since it doesn't make sense to
 // change is_mutating on methods and it doesn't make sense for callables and methods
 // to be optional.
+// TODO: Update this to return more than just props, we need it to handle methods
+// and indexers as well.
 fn get_prop_by_name(elems: &[TObjElem], name: &str) -> Result<TProp, Vec<TypeError>> {
     for elem in elems {
         if let TObjElem::Prop(prop) = elem {
@@ -461,7 +481,10 @@ fn expand_keyof(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
     let obj_t = get_obj_type(t, ctx)?;
 
     match &obj_t.kind {
-        TypeKind::Object(TObject { elems }) => {
+        TypeKind::Object(TObject {
+            elems,
+            is_interface: _,
+        }) => {
             let elems: Vec<_> = elems
                 .iter()
                 .filter_map(|elem| -> Option<Type> {
@@ -544,7 +567,10 @@ pub fn get_obj_type(t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeErro
                     // situations the elements have to match exactly.  This can
                     // likely be addressed by special-casing unification with `object`
                     // types.
-                    Type::from(TypeKind::Object(TObject { elems: vec![] }))
+                    Type::from(TypeKind::Object(TObject {
+                        elems: vec![],
+                        is_interface: false,
+                    }))
                 }
                 // TODO: return TypeError::NotAnObject here
                 TKeyword::Null => return Ok(NEVER_TYPE),
@@ -574,7 +600,11 @@ pub fn get_obj_type(t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeErro
             let scheme = ctx.lookup_scheme("Array")?;
 
             // let array_t = ctx.lookup_type("Array", t.mutable)?;
-            if let TypeKind::Object(TObject { elems: array_elems }) = &scheme.t.kind {
+            if let TypeKind::Object(TObject {
+                elems: array_elems,
+                is_interface: _,
+            }) = &scheme.t.kind
+            {
                 for array_elem in array_elems {
                     match array_elem {
                         TObjElem::Call(_) => (),
@@ -590,7 +620,10 @@ pub fn get_obj_type(t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeErro
                 }
             };
 
-            let t = Type::from(TypeKind::Object(TObject { elems }));
+            let t = Type::from(TypeKind::Object(TObject {
+                elems,
+                is_interface: false,
+            }));
 
             Ok(t)
         }

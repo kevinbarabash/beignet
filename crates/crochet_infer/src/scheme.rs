@@ -165,6 +165,7 @@ mod tests {
                     t: ctx.fresh_var(),
                 }),
             ],
+            is_interface: false,
         }));
 
         let env = Env::new();
@@ -193,6 +194,7 @@ mod tests {
                     t: tv,
                 }),
             ],
+            is_interface: false,
         }));
 
         let env = Env::new();
@@ -218,6 +220,7 @@ mod tests {
                     t: Type::from(TypeKind::Keyword(TKeyword::String)),
                 }),
             ],
+            is_interface: false,
         }));
 
         let env = Env::new();
@@ -312,6 +315,7 @@ mod tests {
                     t: Type::from(TypeKind::Keyword(TKeyword::String)),
                 }),
             ],
+            is_interface: false,
         }));
 
         let sc = Scheme {
@@ -348,6 +352,7 @@ mod tests {
                     })),
                 }),
             ],
+            is_interface: false,
         }));
 
         let sc = Scheme {
@@ -395,6 +400,7 @@ mod tests {
                     })),
                 }),
             ],
+            is_interface: false,
         }));
 
         let sc = Scheme {
@@ -435,6 +441,7 @@ mod tests {
                     })),
                 }),
             ],
+            is_interface: false,
         }));
 
         let sc = Scheme {

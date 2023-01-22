@@ -259,10 +259,12 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
 
     let statics_t = Type::from(TypeKind::Object(TObject {
         elems: statics_elems,
+        is_interface: false,
     }));
 
     let instance_t = Type::from(TypeKind::Object(TObject {
         elems: mut_instance_elems,
+        is_interface: true,
     }));
 
     let empty_env = Env::default();
