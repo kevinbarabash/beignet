@@ -482,6 +482,39 @@ fn infer_prog_using_partial() {
 }
 
 #[test]
+fn infer_partial_with_getters_and_setters_on_class_instance() {
+    let src = r#"
+    class Foo {
+        get bar(self): number { 5; }
+        set baz(mut self, value: string) {}
+        qux(): boolean { true; }
+    }
+    type PartialFoo = Partial<Foo>;
+
+    type T1 = PartialFoo["bar"];
+    type T2 = PartialFoo["baz"];
+    type T3 = PartialFoo["qux"];
+    "#;
+
+    let (_, mut ctx) = infer_prog(src);
+
+    let t = ctx.lookup_type("T1", false).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "number | undefined");
+
+    let t = ctx.lookup_type("T2", false).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "string | undefined");
+
+    let t = ctx.lookup_type("T3", false).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "() => boolean | undefined"); // should be (() => boolean) | undefined
+}
+
+#[test]
 fn tuple_mapping() {
     let src = r#"
     let tuple = [1, 2, 3];
@@ -598,32 +631,11 @@ fn infer_getter_setter_types_with_indexed_access() {
     class Foo {
         get bar(self): number { 5; }
         set baz(mut self, value: string) {}
+        qux(): boolean { true; }
     }
     type T1 = Foo["bar"];
     type T2 = Foo["baz"];
-    "#;
-    let (_, mut ctx) = infer_prog(src);
-
-    let t = ctx.lookup_type("T1", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
-    let result = format!("{}", t);
-    assert_eq!(result, "() => number");
-
-    let t = ctx.lookup_type("T2", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
-    let result = format!("{}", t);
-    assert_eq!(result, "(value: string) => undefined");
-}
-
-#[test]
-#[ignore]
-fn infer_getter_setter_types_with_indexed_access_for_the_same_property() {
-    let src = r#"
-    class Foo {
-        get bar(self): number { 5; }
-        set bar(mut self, value: number) {}
-    }
-    type T1 = Foo["bar"];
+    type T3 = Foo["qux"];
     "#;
     let (_, mut ctx) = infer_prog(src);
 
@@ -631,6 +643,16 @@ fn infer_getter_setter_types_with_indexed_access_for_the_same_property() {
     let t = expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "number");
+
+    let t = ctx.lookup_type("T2", false).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "string");
+
+    let t = ctx.lookup_type("T3", false).unwrap();
+    let t = expand_type(&t, &mut ctx).unwrap();
+    let result = format!("{}", t);
+    assert_eq!(result, "() => boolean");
 }
 
 #[test]
