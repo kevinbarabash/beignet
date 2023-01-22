@@ -3026,7 +3026,7 @@ mod tests {
         let src = r#"
         class Foo {
             constructor(self) {}
-            add(self, x, y) { x + y; }
+            add(self, x: number, y: number): number { x + y; }
         }
 
         let foo = new Foo();
@@ -3080,9 +3080,9 @@ mod tests {
         let src = r#"
         class Foo {
             msg: string;
-            constructor() {}
-            add(self, x, y) { x + y; }
-            set_msg(mut self, msg: string) {}
+            constructor(self) {}
+            add(self, x: number, y: number): number { x + y; }
+            set_msg(mut self, msg: string): undefined {}
             get bar(self): boolean { true; }
             set bar(mut self, value: boolean) {}
         }
@@ -3109,7 +3109,7 @@ mod tests {
         class Foo {
             static msg: string;
             constructor(self) {}
-            static add(x, y) { x + y; }
+            static add(x: number, y: number): number { x + y; }
         }
 
         let {msg} = Foo;
@@ -3132,8 +3132,8 @@ mod tests {
     fn infer_class_getter() {
         let src = r#"
         class Foo {
-            constructor() {}
-            get msg(self) { "hello"; }
+            constructor(self) {}
+            get msg(self): string { "hello"; }
             get num(self): number { 5; }
         }
 
@@ -3145,7 +3145,7 @@ mod tests {
         let ctx = infer_prog(src);
 
         let msg = ctx.lookup_value("msg").unwrap();
-        assert_eq!(format!("{msg}"), "\"hello\"");
+        assert_eq!(format!("{msg}"), "string");
 
         let num = ctx.lookup_value("num").unwrap();
         assert_eq!(format!("{num}"), "number");
@@ -3155,7 +3155,7 @@ mod tests {
     fn infer_class_setter() {
         let src = r#"
         class Foo {
-            constructor() {}
+            constructor(self) {}
             set msg(mut self, value: string) {}
         }
 
@@ -3171,7 +3171,7 @@ mod tests {
     fn setting_a_getter_without_a_setter_should_fail() {
         let src = r#"
         class Foo {
-            constructor() {}
+            constructor(self) {}
             get msg(self): string { "hello"; }
         }
 
@@ -3187,7 +3187,7 @@ mod tests {
     fn getting_a_setter_without_a_getter_should_fail() {
         let src = r#"
         class Foo {
-            constructor() {}
+            constructor(self) {}
             set msg(mut self, value: string) {}
         }
 

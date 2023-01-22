@@ -4,9 +4,9 @@ class Foo {
 
     constructor(self) {}
 
-    bar(self) { "hello"; }
-    static add(x, y) { x + y; }
-    get baz(self) { "world!"; }
+    bar(self): string { "hello"; }
+    static add(x: number, y: number): number { x + y; }
+    get baz(self): string { "world!"; }
     set qux(mut self, msg: string) {}
 }
 

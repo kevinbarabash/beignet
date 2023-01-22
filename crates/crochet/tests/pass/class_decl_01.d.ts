@@ -1,13 +1,13 @@
 declare type Foo = {
     readonly msg: string;
-    bar(): "hello";
-    get baz(): "world!";
+    bar(): string;
+    get baz(): string;
     set qux(msg: string);
 };
 declare type ReadonlyFoo = {
     readonly msg: string;
-    bar(): "hello";
-    get baz(): "world!";
+    bar(): string;
+    get baz(): string;
 };
 declare type FooConstructor = {
     readonly tag: "Foo";
@@ -17,5 +17,5 @@ declare type FooConstructor = {
 export declare const Foo: FooConstructor;
 export declare const f1: ReadonlyFoo;
 export declare const f2: Foo;
-export declare const msg1: "hello";
-export declare const msg2: "hello";
+export declare const msg1: string;
+export declare const msg2: string;
