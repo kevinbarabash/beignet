@@ -87,7 +87,11 @@ pub fn infer_expr(
             }
 
             let mut results = vec![];
-            if let TypeKind::Object(TObject { elems }) = t.kind {
+            if let TypeKind::Object(TObject {
+                elems,
+                is_interface: _,
+            }) = t.kind
+            {
                 for elem in elems {
                     if let TObjElem::Constructor(callable) = &elem {
                         let mut ret_type = ctx.fresh_var();
@@ -284,7 +288,10 @@ pub fn infer_expr(
                         }));
 
                         let mut call_type = Type::from(TypeKind::App(types::TApp {
-                            args: vec![Type::from(TypeKind::Object(TObject { elems }))],
+                            args: vec![Type::from(TypeKind::Object(TObject {
+                                elems,
+                                is_interface: false,
+                            }))],
                             ret: Box::from(ret_type.clone()),
                         }));
 
@@ -553,10 +560,16 @@ pub fn infer_expr(
 
             let s = compose_many_subs(&ss);
             let t = if spread_types.is_empty() {
-                Type::from(TypeKind::Object(TObject { elems }))
+                Type::from(TypeKind::Object(TObject {
+                    elems,
+                    is_interface: false,
+                }))
             } else {
                 let mut all_types = spread_types;
-                all_types.push(Type::from(TypeKind::Object(TObject { elems })));
+                all_types.push(Type::from(TypeKind::Object(TObject {
+                    elems,
+                    is_interface: false,
+                })));
                 simplify_intersection(&all_types)
             };
 

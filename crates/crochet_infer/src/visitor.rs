@@ -1,11 +1,12 @@
 use crochet_ast::types::*;
 
+// TODO: rename this to VisitorMut and create a non-mutable Visitor
 pub trait Visitor {
     fn visit_type(&mut self, t: &mut Type);
 
     fn visit_children(&mut self, t: &mut Type) {
         match &mut t.kind {
-            TypeKind::Var(_) => (), // no children
+            TypeKind::Var(_) => (), // leaf node
             TypeKind::App(app) => {
                 app.args.iter_mut().for_each(|arg| self.visit_children(arg));
                 self.visit_children(app.ret.as_mut());
@@ -30,8 +31,8 @@ pub trait Visitor {
                     .for_each(|TFnParam { t, .. }| self.visit_children(t));
                 self.visit_children(lam.ret.as_mut());
             }
-            TypeKind::Lit(_) => (),     // no children
-            TypeKind::Keyword(_) => (), // no children
+            TypeKind::Lit(_) => (),     // leaf node
+            TypeKind::Keyword(_) => (), // leaf node
             TypeKind::Union(types) => {
                 types.iter_mut().for_each(|t| self.visit_children(t));
             }
@@ -49,7 +50,7 @@ pub trait Visitor {
             }
             TypeKind::Array(t) => self.visit_children(t),
             TypeKind::Rest(t) => self.visit_children(t),
-            TypeKind::This => (), // no children
+            TypeKind::This => (), // leaf node
             TypeKind::KeyOf(t) => self.visit_children(t),
             TypeKind::IndexAccess(access) => {
                 self.visit_children(&mut access.object);
@@ -69,6 +70,7 @@ pub trait Visitor {
                 self.visit_children(true_type);
                 self.visit_children(false_type);
             }
+            TypeKind::InferType(_) => (), // leaf node
         }
 
         self.visit_type(t);

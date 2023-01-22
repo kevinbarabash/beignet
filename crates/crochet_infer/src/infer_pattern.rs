@@ -199,7 +199,10 @@ fn infer_pattern_rec(
                 }
             }
 
-            let obj_type = Type::from(TypeKind::Object(TObject { elems }));
+            let obj_type = Type::from(TypeKind::Object(TObject {
+                elems,
+                is_interface: false,
+            }));
 
             match rest_opt_ty {
                 // TODO: Replace this with a proper Rest/Spread type

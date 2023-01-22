@@ -53,6 +53,7 @@ Type {
                     },
                 ),
             ],
+            is_interface: false,
         },
     ),
     mutable: false,

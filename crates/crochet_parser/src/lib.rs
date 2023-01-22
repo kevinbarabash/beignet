@@ -1504,7 +1504,9 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             "symbol" => todo!(),
             "void" => todo!(),
             "unknown" => todo!(),
-            "never" => todo!(),
+            "never" => TypeAnnKind::Keyword(KeywordType {
+                keyword: Keyword::Never,
+            }),
             "object" => todo!("remove support for 'object'"),
             name => panic!("Unkwnown predefined_type: '{name}'"),
         },
@@ -1799,6 +1801,12 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             })
         }
         "conditional_type" => {
+            // TODO: Track whether we're inside a conditional type or not.  To
+            // do this we'll need to use a counter and increase it every time
+            // we enter a conditional type and decrement it each time we leave
+            // one.
+            // TODO: Attach all of these functions to a struct so that we can
+            // have shared data.
             let left = node.child_by_field_name("left").unwrap();
             let left = parse_type_ann(&left, src)?;
             let right = node.child_by_field_name("right").unwrap();
@@ -1813,6 +1821,13 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
                 extends_type: Box::from(right),
                 true_type: Box::from(consequent),
                 false_type: Box::from(alternate),
+            })
+        }
+        "infer_type" => {
+            let name_node = node.named_child(0).unwrap();
+
+            TypeAnnKind::Infer(InferType {
+                name: text_for_node(&name_node, src)?,
             })
         }
         "template_literal_type" => todo!(),
@@ -1897,7 +1912,6 @@ fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseE
             })
         }
         "constructor_type" => todo!(),
-        "infer_type" => todo!(),
 
         kind => panic!("Unexpected type_annotation kind: '{kind}'"),
     };
@@ -2483,6 +2497,15 @@ mod tests {
     fn conditional_types() {
         insta::assert_debug_snapshot!(parse(
             r#"type GetTypeName<T extends number | string> = T extends number ? "number" : "string";"#
+        ));
+        insta::assert_debug_snapshot!(parse(
+            "type Flatten<Type> = Type extends Array<infer Item> ? Item : Type;"
+        ));
+        insta::assert_debug_snapshot!(parse(
+            r#"type GetReturnType<Type> = Type extends (...args: never[]) => infer Return
+                ? Return
+                : never;
+        "#
         ));
     }
 

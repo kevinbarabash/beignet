@@ -147,6 +147,11 @@ pub struct MutableType {
     pub type_ann: Box<TypeAnn>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InferType {
+    pub name: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnnKind {
     Lam(LamType),
@@ -164,6 +169,7 @@ pub enum TypeAnnKind {
     Mapped(MappedType),
     Conditional(ConditionalType),
     Mutable(MutableType),
+    Infer(InferType),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -11,6 +11,7 @@ pub enum Keyword {
     Self_, // self is a replacement for this
     Symbol,
     Undefined,
+    Never,
 }
 
 impl fmt::Display for Keyword {
@@ -23,6 +24,7 @@ impl fmt::Display for Keyword {
             Keyword::Self_ => write!(f, "self"),
             Keyword::Symbol => write!(f, "symbol"),
             Keyword::Undefined => write!(f, "undefined"),
+            Keyword::Never => write!(f, "never"),
         }
     }
 }
@@ -38,6 +40,7 @@ impl From<Keyword> for Type {
                 Keyword::Symbol => TKeyword::Symbol,
                 Keyword::Undefined => TKeyword::Undefined,
                 Keyword::Self_ => TKeyword::Self_,
+                Keyword::Never => TKeyword::Never,
             }),
             provenance: None,
             mutable: false,

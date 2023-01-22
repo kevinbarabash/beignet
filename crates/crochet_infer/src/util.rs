@@ -208,7 +208,10 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                         TObjElem::Setter(_) => todo!(),
                     })
                     .collect();
-                TypeKind::Object(TObject { elems })
+                TypeKind::Object(TObject {
+                    elems,
+                    is_interface: obj.is_interface,
+                })
             }
             TypeKind::Ref(TRef { name, type_args }) => {
                 let type_args = type_args
@@ -261,6 +264,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                 true_type: Box::from(norm_type(true_type, mapping, _ctx)),
                 false_type: Box::from(norm_type(false_type, mapping, _ctx)),
             }),
+            TypeKind::InferType(_) => return t.to_owned(),
         };
 
         Type {
@@ -350,7 +354,10 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let mut out_types = vec![];
     out_types.append(&mut not_obj_types);
     if !elems.is_empty() {
-        out_types.push(Type::from(TypeKind::Object(TObject { elems })));
+        out_types.push(Type::from(TypeKind::Object(TObject {
+            elems,
+            is_interface: false,
+        })));
     }
     // TODO: figure out a consistent way to sort types
     // out_types.sort_by_key(|t| t.id); // ensure a stable order
@@ -644,7 +651,10 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
                     }
                 })
                 .collect();
-            TypeKind::Object(TObject { elems })
+            TypeKind::Object(TObject {
+                elems,
+                is_interface: obj.is_interface,
+            })
         }
         TypeKind::Ref(alias) => match type_param_map.get(&alias.name) {
             Some(t) => {
@@ -707,12 +717,17 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
             extends_type,
             true_type,
             false_type,
-        }) => TypeKind::ConditionalType(TConditionalType {
-            check_type: Box::from(replace_aliases_rec(check_type, type_param_map)),
-            extends_type: Box::from(replace_aliases_rec(extends_type, type_param_map)),
-            true_type: Box::from(replace_aliases_rec(true_type, type_param_map)),
-            false_type: Box::from(replace_aliases_rec(false_type, type_param_map)),
-        }),
+        }) => {
+            // TODO: check if extends_type introduces a new type, if it does, make
+            // sure it shadows the corresponding type reference in `type_param_map`.
+            TypeKind::ConditionalType(TConditionalType {
+                check_type: Box::from(replace_aliases_rec(check_type, type_param_map)),
+                extends_type: Box::from(replace_aliases_rec(extends_type, type_param_map)),
+                true_type: Box::from(replace_aliases_rec(true_type, type_param_map)),
+                false_type: Box::from(replace_aliases_rec(false_type, type_param_map)),
+            })
+        }
+        TypeKind::InferType(_) => return t.to_owned(),
     };
 
     Type {
@@ -768,7 +783,10 @@ pub fn immutable_obj_type(obj: &TObject) -> Option<TObject> {
         .collect();
 
     if changed {
-        Some(TObject { elems })
+        Some(TObject {
+            elems,
+            is_interface: obj.is_interface,
+        })
     } else {
         None
     }

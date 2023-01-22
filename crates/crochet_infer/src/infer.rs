@@ -22,7 +22,10 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
         mutable: false,
         t: Type::from(Lit::str(String::from("Promise"), 0..0, DUMMY_LOC)),
     })];
-    let promise_type = Type::from(TypeKind::Object(TObject { elems }));
+    let promise_type = Type::from(TypeKind::Object(TObject {
+        elems,
+        is_interface: true,
+    }));
     ctx.insert_type(String::from("Promise"), promise_type);
     // TODO: replace with Class type once it exists
     // We use {_name: "JSXElement"} to differentiate it from other
@@ -33,7 +36,10 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
         mutable: false,
         t: Type::from(Lit::str(String::from("JSXElement"), 0..0, DUMMY_LOC)),
     })];
-    let jsx_element_type = Type::from(TypeKind::Object(TObject { elems }));
+    let jsx_element_type = Type::from(TypeKind::Object(TObject {
+        elems,
+        is_interface: true,
+    }));
     ctx.insert_type(String::from("JSXElement"), jsx_element_type);
 
     // We push a scope here so that it's easy to differentiate globals from

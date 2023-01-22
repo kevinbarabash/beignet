@@ -8,8 +8,8 @@ use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
 use crochet_ast::types::{
-    TConditionalType, TFnParam, TGetter, TIndexAccess, TMappedType, TObjElem, TObject, TPat,
-    TPropKey, TSetter, TVar, Type, TypeKind, TypeParam,
+    TConditionalType, TFnParam, TGetter, TIndexAccess, TInferType, TMappedType, TObjElem, TObject,
+    TPat, TPropKey, TSetter, TVar, Type, TypeKind, TypeParam,
 };
 use crochet_ast::{types, values};
 use crochet_infer::{immutable_obj_type, Context};
@@ -593,6 +593,21 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
             extends_type: Box::from(build_type(extends_type.as_ref(), type_params, ctx)),
             true_type: Box::from(build_type(true_type.as_ref(), type_params, ctx)),
             false_type: Box::from(build_type(false_type.as_ref(), type_params, ctx)),
+        }),
+        TypeKind::InferType(TInferType { name }) => TsType::TsInferType(TsInferType {
+            span: DUMMY_SP,
+            type_param: TsTypeParam {
+                span: DUMMY_SP,
+                name: Ident {
+                    span: DUMMY_SP,
+                    sym: JsWord::from(name.to_string()),
+                    optional: false,
+                },
+                is_in: false,
+                is_out: false,
+                constraint: None,
+                default: None,
+            },
         }),
     }
 }

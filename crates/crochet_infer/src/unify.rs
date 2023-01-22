@@ -8,7 +8,7 @@ use crochet_ast::values::{ExprKind, TypeAnn, TypeAnnKind};
 use types::TKeyword;
 
 use crate::context::Context;
-use crate::expand_type::expand_type;
+use crate::expand_type::{expand_alias_type, expand_type};
 use crate::scheme::{instantiate_callable, instantiate_gen_lam};
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
@@ -16,7 +16,8 @@ use crate::unify_mut::unify_mut;
 use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
-pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<TypeError>> {
+pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, Vec<TypeError>> {
+    eprintln!("Attempting to unify {t1} with {t2}");
     // All binding must be done first
     match (&mut t1.kind, &mut t2.kind) {
         // If both are type variables...
@@ -580,14 +581,20 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                         });
 
                     let s1 = unify(
-                        &mut Type::from(TypeKind::Object(TObject { elems: obj_elems })),
+                        &mut Type::from(TypeKind::Object(TObject {
+                            elems: obj_elems,
+                            is_interface: false,
+                        })),
                         obj_type,
                         ctx,
                     )?;
 
                     let rest_type = rest_types.get_mut(0).unwrap();
                     let s2 = unify(
-                        &mut Type::from(TypeKind::Object(TObject { elems: rest_elems })),
+                        &mut Type::from(TypeKind::Object(TObject {
+                            elems: rest_elems,
+                            is_interface: false,
+                        })),
                         rest_type,
                         ctx,
                     )?;
@@ -634,14 +641,20 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
 
                     let s_obj = unify(
                         obj_type,
-                        &mut Type::from(TypeKind::Object(TObject { elems: obj_elems })),
+                        &mut Type::from(TypeKind::Object(TObject {
+                            elems: obj_elems,
+                            is_interface: false,
+                        })),
                         ctx,
                     )?;
 
                     let rest_type = rest_types.get_mut(0).unwrap();
                     let s_rest = unify(
                         rest_type,
-                        &mut Type::from(TypeKind::Object(TObject { elems: rest_elems })),
+                        &mut Type::from(TypeKind::Object(TObject {
+                            elems: rest_elems,
+                            is_interface: false,
+                        })),
                         ctx,
                     )?;
 
@@ -651,8 +664,18 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
                 _ => Err(vec![TypeError::UnificationIsUndecidable]),
             }
         }
+        // NOTE: `expand_alias` doesn't expand interfaces so if we want to
+        // destructure and object created from a class (which is modeled as an
+        // interface) we need call `expand_alias_type` directly.
+        (TypeKind::Object(_), TypeKind::Ref(alias)) => {
+            unify(t1, &mut expand_alias_type(alias, ctx)?, ctx)
+        }
+        (TypeKind::Ref(alias), TypeKind::Object(_)) => {
+            unify(&mut expand_alias_type(alias, ctx)?, t2, ctx)
+        }
         (TypeKind::Ref(alias1), TypeKind::Ref(alias2)) => {
             if alias1.name == alias2.name {
+                eprintln!("unifying aliases {alias1} with {alias2}");
                 match (&mut alias1.type_args, &mut alias2.type_args) {
                     (Some(tp1), Some(tp2)) => {
                         let result: Result<Vec<_>, _> = tp1
@@ -676,6 +699,8 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &Context) -> Result<Subst, Vec<T
         (TypeKind::MappedType(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
         (_, TypeKind::IndexAccess(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),
         (TypeKind::IndexAccess(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
+        (_, TypeKind::InferType(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),
+        (TypeKind::InferType(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
 
         (_, TypeKind::GenLam(gen_lam)) => {
             let mut lam = instantiate_gen_lam(ctx, gen_lam);
@@ -730,7 +755,7 @@ fn bind(
     tv: &mut TVar,
     t: &mut Type,
     rel: Relation,
-    ctx: &Context,
+    ctx: &mut Context,
 ) -> Result<Subst, Vec<TypeError>> {
     // | t == TVar a     = return nullSubst
     // | occursCheck a t = throwError $ InfiniteType a t
@@ -829,26 +854,26 @@ mod tests {
 
     #[test]
     fn literals_are_subtypes_of_corresponding_keywords() -> Result<(), Vec<TypeError>> {
-        let ctx = Context::default();
+        let mut ctx = Context::default();
 
         let result = unify(
             &mut Type::from(num("5")),
             &mut Type::from(TypeKind::Keyword(TKeyword::Number)),
-            &ctx,
+            &mut ctx,
         )?;
         assert_eq!(result, Subst::default());
 
         let result = unify(
             &mut Type::from(str("hello")),
             &mut Type::from(TypeKind::Keyword(TKeyword::String)),
-            &ctx,
+            &mut ctx,
         )?;
         assert_eq!(result, Subst::default());
 
         let result = unify(
             &mut Type::from(bool(&true)),
             &mut Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-            &ctx,
+            &mut ctx,
         )?;
         assert_eq!(result, Subst::default());
 
@@ -857,7 +882,7 @@ mod tests {
 
     #[test]
     fn object_subtypes() -> Result<(), Vec<TypeError>> {
-        let ctx = Context::default();
+        let mut ctx = Context::default();
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
@@ -880,7 +905,10 @@ mod tests {
                 t: Type::from(TypeKind::Keyword(TKeyword::String)),
             }),
         ];
-        let mut t1 = Type::from(TypeKind::Object(TObject { elems }));
+        let mut t1 = Type::from(TypeKind::Object(TObject {
+            elems,
+            is_interface: false,
+        }));
 
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
@@ -904,9 +932,12 @@ mod tests {
                 t: Type::from(TypeKind::Keyword(TKeyword::String)),
             }),
         ];
-        let mut t2 = Type::from(TypeKind::Object(TObject { elems }));
+        let mut t2 = Type::from(TypeKind::Object(TObject {
+            elems,
+            is_interface: false,
+        }));
 
-        let result = unify(&mut t1, &mut t2, &ctx)?;
+        let result = unify(&mut t1, &mut t2, &mut ctx)?;
         assert_eq!(result, Subst::default());
 
         Ok(())

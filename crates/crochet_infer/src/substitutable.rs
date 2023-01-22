@@ -87,6 +87,7 @@ impl Substitutable for Type {
                 true_type.apply(sub);
                 false_type.apply(sub);
             }
+            TypeKind::InferType(_) => (),
         };
 
         norm_type(self)
@@ -148,6 +149,7 @@ impl Substitutable for Type {
                 result.append(&mut false_type.ftv());
                 result
             }
+            TypeKind::InferType(_) => vec![],
         }
     }
 }
