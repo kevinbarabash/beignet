@@ -154,6 +154,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
 
                 // This follows the same pattern found in lib.es5.d.ts.
                 let name = ident.name.to_owned();
+                eprintln!("inserting {name}Constructor = {t}");
                 ctx.insert_type(format!("{name}Constructor"), t);
                 ctx.insert_value(
                     name.to_owned(),

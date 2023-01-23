@@ -284,11 +284,12 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
                 let is_static = child.child_by_field_name("static").is_some();
                 let is_mutating = child.child_by_field_name("mut").is_some();
 
+                let type_params = parse_type_params_for_node(&child, src)?;
+
                 if key.name.as_str() == "constructor" {
                     class_members.push(ClassMember::Constructor(Constructor {
                         params,
                         body: Box::from(body),
-                        type_params: None, // TODO
                     }));
                 } else {
                     class_members.push(ClassMember::Method(ClassMethod {
@@ -299,7 +300,7 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
                             body: Box::from(body),
                             is_async: child.child_by_field_name("async").is_some(),
                             return_type,
-                            type_params: None, // TODO
+                            type_params,
                         },
                         is_static,
                         is_mutating,
@@ -354,6 +355,7 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
                 name: text_for_node(&name_node, src)?,
             },
             body: class_members,
+            type_params: parse_type_params_for_node(node, src)?, // TODO
         }),
     };
 
@@ -997,10 +999,25 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
                 })
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
+            let type_args = match node.child_by_field_name("type_arguments") {
+                Some(type_args) => {
+                    let mut cursor = type_args.walk();
+                    Some(
+                        type_args
+                            .named_children(&mut cursor)
+                            .into_iter()
+                            .map(|arg| parse_type_ann(&arg, src))
+                            .collect::<Result<Vec<_>, ParseError>>()?,
+                    )
+                }
+                None => None,
+            };
+
             // TODO: handle template string
             ExprKind::App(App {
                 lam: Box::from(func),
                 args,
+                type_args,
             })
         }
         "new_expression" => {
@@ -1034,9 +1051,24 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
                 })
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
+            let type_args = match node.child_by_field_name("type_arguments") {
+                Some(type_args) => {
+                    let mut cursor = type_args.walk();
+                    Some(
+                        type_args
+                            .named_children(&mut cursor)
+                            .into_iter()
+                            .map(|arg| parse_type_ann(&arg, src))
+                            .collect::<Result<Vec<_>, ParseError>>()?,
+                    )
+                }
+                None => None,
+            };
+
             ExprKind::New(New {
                 expr: Box::from(constructor),
                 args,
+                type_args,
             })
         }
         "identifier" => {

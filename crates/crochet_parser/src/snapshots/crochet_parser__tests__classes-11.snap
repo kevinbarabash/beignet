@@ -234,7 +234,6 @@ Ok(
                                     ),
                                     inferred_type: None,
                                 },
-                                type_params: None,
                             },
                         ),
                         Method(
@@ -660,6 +659,7 @@ Ok(
                             },
                         ),
                     ],
+                    type_params: None,
                 },
             },
         ],

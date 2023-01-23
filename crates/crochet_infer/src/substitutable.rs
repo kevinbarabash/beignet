@@ -101,9 +101,14 @@ impl Substitutable for Type {
                 }
                 result.unique_via(|a, b| a.id == b.id)
             }
-            TypeKind::App(TApp { args, ret }) => {
+            TypeKind::App(TApp {
+                args,
+                ret,
+                type_args,
+            }) => {
                 let mut result = args.ftv();
                 result.append(&mut ret.ftv());
+                result.append(&mut type_args.ftv());
                 result.unique_via(|a, b| a.id == b.id)
             }
             TypeKind::Lam(lam) => lam.ftv(),

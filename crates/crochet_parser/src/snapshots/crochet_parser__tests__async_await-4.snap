@@ -124,6 +124,7 @@ Ok(
                                                             inferred_type: None,
                                                         },
                                                         args: [],
+                                                        type_args: None,
                                                     },
                                                 ),
                                                 inferred_type: None,

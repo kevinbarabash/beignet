@@ -2,7 +2,7 @@ use std::cmp;
 use std::collections::BTreeSet;
 
 use crochet_ast::types::{
-    self as types, Provenance, TLam, TObjElem, TObject, TVar, Type, TypeKind,
+    self as types, Provenance, TApp, TLam, TObjElem, TObject, TVar, Type, TypeKind,
 };
 use crochet_ast::values::{ExprKind, TypeAnn, TypeAnnKind};
 use types::TKeyword;
@@ -169,49 +169,6 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
         }
         // NOTE: this arm is only hit by the `infer_skk` test case
         (TypeKind::Lam(_), TypeKind::App(_)) => unify(t2, t1, ctx),
-        (TypeKind::App(_), TypeKind::Object(obj)) => {
-            let mut callables: Vec<_> = obj
-                .elems
-                .iter()
-                .filter_map(|elem| match elem {
-                    TObjElem::Call(call) => {
-                        eprintln!("handling callable");
-                        let lam = Type::from(TypeKind::Lam(TLam {
-                            params: call.params.to_owned(),
-                            ret: call.ret.to_owned(),
-                        }));
-                        let t = if call.type_params.is_empty() {
-                            lam
-                        } else {
-                            instantiate_callable(ctx, call)
-                        };
-                        eprintln!("callable instantiated as {t}");
-                        Some(t)
-                    }
-                    TObjElem::Constructor(_) => None,
-                    TObjElem::Index(_) => None,
-                    TObjElem::Prop(_) => None,
-                    TObjElem::Method(_) => todo!(),
-                    TObjElem::Getter(_) => todo!(),
-                    TObjElem::Setter(_) => todo!(),
-                })
-                .collect();
-
-            if callables.is_empty() {
-                Err(vec![TypeError::ObjectIsNotCallable(Box::from(
-                    t1.to_owned(),
-                ))])
-            } else {
-                for callable in callables.iter_mut() {
-                    let result = unify(t1, callable, ctx);
-                    if result.is_ok() {
-                        return result;
-                    }
-                }
-                // TODO: include a report of which callable signatures were tried
-                Err(vec![TypeError::NoValidCallable])
-            }
-        }
         (TypeKind::App(app), TypeKind::Lam(lam)) => {
             let mut s = Subst::new();
 
@@ -369,6 +326,49 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
             lam.ret.apply(&s);
             let s_ret = unify(&mut app.ret, &mut lam.ret, ctx)?;
             Ok(compose_subs(&s, &s_ret))
+        }
+        (TypeKind::App(_), TypeKind::Object(obj)) => {
+            let mut callables: Vec<_> = obj
+                .elems
+                .iter()
+                .filter_map(|elem| match elem {
+                    TObjElem::Call(call) => {
+                        eprintln!("handling callable");
+                        let lam = Type::from(TypeKind::Lam(TLam {
+                            params: call.params.to_owned(),
+                            ret: call.ret.to_owned(),
+                        }));
+                        let t = if call.type_params.is_empty() {
+                            lam
+                        } else {
+                            instantiate_callable(ctx, call)
+                        };
+                        eprintln!("callable instantiated as {t}");
+                        Some(t)
+                    }
+                    TObjElem::Constructor(_) => None,
+                    TObjElem::Index(_) => None,
+                    TObjElem::Prop(_) => None,
+                    TObjElem::Method(_) => todo!(),
+                    TObjElem::Getter(_) => todo!(),
+                    TObjElem::Setter(_) => todo!(),
+                })
+                .collect();
+
+            if callables.is_empty() {
+                Err(vec![TypeError::ObjectIsNotCallable(Box::from(
+                    t1.to_owned(),
+                ))])
+            } else {
+                for callable in callables.iter_mut() {
+                    let result = unify(t1, callable, ctx);
+                    if result.is_ok() {
+                        return result;
+                    }
+                }
+                // TODO: include a report of which callable signatures were tried
+                Err(vec![TypeError::NoValidCallable])
+            }
         }
         (TypeKind::App(_), TypeKind::Intersection(types)) => {
             for t in types {
@@ -701,12 +701,24 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
         (_, TypeKind::InferType(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),
         (TypeKind::InferType(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
 
+        (TypeKind::App(TApp { type_args, .. }), TypeKind::GenLam(gen_lam)) => {
+            // TODO: special case the instantiation if `t1` is an `App`
+            let mut lam = instantiate_gen_lam(ctx, gen_lam, type_args);
+            unify(t1, &mut lam, ctx)
+        }
+        (TypeKind::GenLam(gen_lam), TypeKind::App(TApp { type_args, .. })) => {
+            // TODO: special case the instantiation if `t2` is an `App`
+            let mut lam = instantiate_gen_lam(ctx, gen_lam, type_args);
+            unify(&mut lam, t2, ctx)
+        }
         (_, TypeKind::GenLam(gen_lam)) => {
-            let mut lam = instantiate_gen_lam(ctx, gen_lam);
+            // TODO: special case the instantiation if `t1` is an `App`
+            let mut lam = instantiate_gen_lam(ctx, gen_lam, &None);
             unify(t1, &mut lam, ctx)
         }
         (TypeKind::GenLam(gen_lam), _) => {
-            let mut lam = instantiate_gen_lam(ctx, gen_lam);
+            // TODO: special case the instantiation if `t2` is an `App`
+            let mut lam = instantiate_gen_lam(ctx, gen_lam, &None);
             unify(&mut lam, t2, ctx)
         }
 

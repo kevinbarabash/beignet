@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crochet_ast::types::{
-    self as types, Provenance, TFnParam, TKeyword, TObjElem, TObject, TPat, TPropKey, TVar, Type,
-    TypeKind,
+    self as types, Provenance, TCallable, TFnParam, TKeyword, TLam, TObjElem, TObject, TPat,
+    TPropKey, TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
 
@@ -11,7 +11,7 @@ use crate::expand_type::get_obj_type;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
-use crate::scheme::instantiate_callable;
+use crate::scheme::get_type_param_map;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify::unify;
@@ -25,7 +25,11 @@ pub fn infer_expr(
     is_lvalue: bool,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
     let result = match &mut expr.kind {
-        ExprKind::App(App { lam, args, .. }) => {
+        ExprKind::App(App {
+            lam,
+            args,
+            type_args,
+        }) => {
             let mut ss: Vec<Subst> = vec![];
             let mut arg_types: Vec<Type> = vec![];
 
@@ -46,12 +50,26 @@ pub fn infer_expr(
             }
 
             let mut ret_type = ctx.fresh_var();
+            let type_args = match type_args {
+                Some(type_args) => {
+                    let tuples = type_args
+                        .iter_mut()
+                        .map(|type_arg| infer_type_ann(type_arg, ctx, &mut None))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    let (mut subs, types): (Vec<_>, Vec<_>) = tuples.iter().cloned().unzip();
+                    ss.append(&mut subs);
+                    Some(types)
+                }
+                None => None,
+            };
+
             // Are we missing an `apply()` call here?
             // Maybe, I could see us needing an apply to handle generic functions properly
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
             let mut call_type = Type::from(TypeKind::App(types::TApp {
                 args: arg_types,
                 ret: Box::from(ret_type.clone()),
+                type_args,
             }));
             call_type.provenance = Some(Box::from(Provenance::Expr(Box::from(expr.to_owned()))));
 
@@ -65,7 +83,11 @@ pub fn infer_expr(
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
             Ok((s, ret_type))
         }
-        ExprKind::New(New { expr, args }) => {
+        ExprKind::New(New {
+            expr,
+            args,
+            type_args,
+        }) => {
             let mut ss: Vec<Subst> = vec![];
             let mut arg_types: Vec<Type> = vec![];
 
@@ -94,15 +116,42 @@ pub fn infer_expr(
             {
                 for elem in elems {
                     if let TObjElem::Constructor(callable) = &elem {
+                        // TODO: replace type
                         let mut ret_type = ctx.fresh_var();
                         let mut call_type = Type::from(TypeKind::App(types::TApp {
                             args: arg_types.clone(),
                             ret: Box::from(ret_type.clone()),
+                            type_args: None,
                         }));
 
-                        // We generalize first b/c lam_type isn't generic and
-                        // we need it to be before we can instantiate it.
-                        let mut lam_type = instantiate_callable(ctx, callable);
+                        let TCallable {
+                            type_params,
+                            params,
+                            ret,
+                        } = callable;
+
+                        // TODO: Check to make sure that we're passing type args
+                        // if and only if we need to.  In some cases it's okay
+                        // not to pass type args, e.g. new Array(1, 2, 3);
+                        let type_param_map = if let Some(type_args) = type_args {
+                            let mut type_param_map: HashMap<String, Type> = HashMap::new();
+                            for (type_param, type_arg) in type_params.iter().zip(type_args) {
+                                let (s, t) = infer_type_ann(type_arg, ctx, &mut None)?;
+                                ss.push(s);
+                                type_param_map.insert(type_param.name.to_string(), t);
+                            }
+                            type_param_map
+                        } else {
+                            get_type_param_map(ctx, type_params)
+                        };
+
+                        let lam_type = Type::from(TypeKind::Lam(TLam {
+                            params: params.to_owned(),
+                            ret: ret.to_owned(),
+                        }));
+
+                        let mut lam_type = replace_aliases_rec(&lam_type, &type_param_map);
+
                         // let t = generalize(&Env::default(), &lam_type);
                         // let mut lam_type = ctx.instantiate(&t);
                         lam_type.provenance =
@@ -293,6 +342,7 @@ pub fn infer_expr(
                                 is_interface: false,
                             }))],
                             ret: Box::from(ret_type.clone()),
+                            type_args: None,
                         }));
 
                         let s1 = compose_many_subs(&ss);
@@ -327,10 +377,10 @@ pub fn infer_expr(
             ctx.push_scope(is_async.to_owned());
 
             let type_params_map: HashMap<String, Type> = match type_params {
-                Some(params) => params
+                Some(type_params) => type_params
                     .iter_mut()
-                    .map(|param| {
-                        let tv = match &mut param.constraint {
+                    .map(|type_param| {
+                        let tv = match &mut type_param.constraint {
                             Some(type_ann) => {
                                 // TODO: push `s` on to `ss`
                                 let (_s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
@@ -341,8 +391,8 @@ pub fn infer_expr(
                             }
                             None => ctx.fresh_var(),
                         };
-                        ctx.insert_type(param.name.name.clone(), tv.clone());
-                        Ok((param.name.name.to_owned(), tv))
+                        ctx.insert_type(type_param.name.name.clone(), tv.clone());
+                        Ok((type_param.name.name.to_owned(), tv))
                     })
                     .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
                 None => HashMap::default(),
