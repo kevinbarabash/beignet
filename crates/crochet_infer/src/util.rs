@@ -105,7 +105,11 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     .map(|arg| norm_type(arg, mapping, _ctx))
                     .collect();
                 let ret = Box::from(norm_type(&app.ret, mapping, _ctx));
-                TypeKind::App(TApp { args, ret })
+                TypeKind::App(TApp {
+                    args,
+                    ret,
+                    type_args: app.type_args.to_owned(), // TODO: normalize these as well
+                })
             }
             TypeKind::Lam(lam) => {
                 let params: Vec<_> = lam
@@ -508,12 +512,17 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
             }),
             None => t.kind.to_owned(),
         },
-        TypeKind::App(TApp { args, ret }) => TypeKind::App(TApp {
+        TypeKind::App(TApp {
+            args,
+            ret,
+            type_args,
+        }) => TypeKind::App(TApp {
             args: args
                 .iter()
                 .map(|t| replace_aliases_rec(t, type_param_map))
                 .collect(),
             ret: Box::from(replace_aliases_rec(ret, type_param_map)),
+            type_args: type_args.to_owned(), // TODO: replace aliases in this as well
         }),
         TypeKind::Lam(TLam { params, ret }) => TypeKind::Lam(TLam {
             params: params

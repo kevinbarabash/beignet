@@ -138,23 +138,17 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 // TODO: aggregate method type params with class type params
                 // QUESTION: should we skip the first param when computing
                 // `type_params_map`?
+                // TODO: map type params to type refs with the same name
                 let type_params_map: HashMap<String, Type> = match type_params {
                     Some(params) => params
                         .iter_mut()
                         .map(|param| {
-                            let tv = match &mut param.constraint {
-                                Some(type_ann) => {
-                                    // TODO: push `s` on to `ss`
-                                    let (_s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
-                                    Type::from(TypeKind::Var(TVar {
-                                        id: ctx.fresh_id(),
-                                        constraint: Some(Box::from(t)),
-                                    }))
-                                }
-                                None => ctx.fresh_var(),
-                            };
-                            ctx.insert_type(param.name.name.clone(), tv.clone());
-                            Ok((param.name.name.to_owned(), tv))
+                            let t = Type::from(TypeKind::Ref(TRef {
+                                name: param.name.name.to_owned(),
+                                type_args: None,
+                            }));
+                            ctx.insert_type(param.name.name.clone(), t.clone());
+                            Ok((param.name.name.to_owned(), t))
                         })
                         .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
                     None => HashMap::default(),
@@ -206,6 +200,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 if let Some(ret_type_ann) = return_type {
                     let (ret_s, mut ret_t) =
                         infer_type_ann_with_params(ret_type_ann, ctx, &type_params_map)?;
+                    eprintln!("ret_t = {ret_t}");
                     ss.push(ret_s);
                     ss.push(unify(&mut body_t, &mut ret_t, ctx)?);
                 } else if kind != &MethodKind::Setter {
@@ -218,11 +213,14 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                     MethodKind::Method => {
                         let ret_t = match &mut lambda.return_type {
                             Some(type_ann) => {
-                                let (s, t) = infer_type_ann(type_ann, ctx, type_params)?;
+                                let (s, t) =
+                                    infer_type_ann_with_params(type_ann, ctx, &type_params_map)?;
                                 ss.push(s);
                                 t
                             }
-                            None => body_t,
+                            None => {
+                                return Err(vec![TypeError::MethodsMustHaveTypes]);
+                            }
                         };
 
                         let type_params = match &lambda.type_params {

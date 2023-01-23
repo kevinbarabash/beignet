@@ -28,7 +28,7 @@ pub fn infer_expr(
         ExprKind::App(App {
             lam,
             args,
-            type_args: _,
+            type_args,
         }) => {
             let mut ss: Vec<Subst> = vec![];
             let mut arg_types: Vec<Type> = vec![];
@@ -50,12 +50,26 @@ pub fn infer_expr(
             }
 
             let mut ret_type = ctx.fresh_var();
+            let type_args = match type_args {
+                Some(type_args) => {
+                    let tuples = type_args
+                        .iter_mut()
+                        .map(|type_arg| infer_type_ann(type_arg, ctx, &mut None))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    let (mut subs, types): (Vec<_>, Vec<_>) = tuples.iter().cloned().unzip();
+                    ss.append(&mut subs);
+                    Some(types)
+                }
+                None => None,
+            };
+
             // Are we missing an `apply()` call here?
             // Maybe, I could see us needing an apply to handle generic functions properly
             // s3       <- unify (apply s2 t1) (TArr t2 tv)
             let mut call_type = Type::from(TypeKind::App(types::TApp {
                 args: arg_types,
                 ret: Box::from(ret_type.clone()),
+                type_args,
             }));
             call_type.provenance = Some(Box::from(Provenance::Expr(Box::from(expr.to_owned()))));
 
@@ -107,6 +121,7 @@ pub fn infer_expr(
                         let mut call_type = Type::from(TypeKind::App(types::TApp {
                             args: arg_types.clone(),
                             ret: Box::from(ret_type.clone()),
+                            type_args: None,
                         }));
 
                         let TCallable {
@@ -327,6 +342,7 @@ pub fn infer_expr(
                                 is_interface: false,
                             }))],
                             ret: Box::from(ret_type.clone()),
+                            type_args: None,
                         }));
 
                         let s1 = compose_many_subs(&ss);
@@ -361,10 +377,10 @@ pub fn infer_expr(
             ctx.push_scope(is_async.to_owned());
 
             let type_params_map: HashMap<String, Type> = match type_params {
-                Some(params) => params
+                Some(type_params) => type_params
                     .iter_mut()
-                    .map(|param| {
-                        let tv = match &mut param.constraint {
+                    .map(|type_param| {
+                        let tv = match &mut type_param.constraint {
                             Some(type_ann) => {
                                 // TODO: push `s` on to `ss`
                                 let (_s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
@@ -375,8 +391,8 @@ pub fn infer_expr(
                             }
                             None => ctx.fresh_var(),
                         };
-                        ctx.insert_type(param.name.name.clone(), tv.clone());
-                        Ok((param.name.name.to_owned(), tv))
+                        ctx.insert_type(type_param.name.name.clone(), tv.clone());
+                        Ok((type_param.name.name.to_owned(), tv))
                     })
                     .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
                 None => HashMap::default(),

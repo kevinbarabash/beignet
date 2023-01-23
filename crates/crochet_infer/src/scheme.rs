@@ -116,11 +116,26 @@ pub fn instantiate(ctx: &Context, sc: &Scheme) -> Type {
     replace_aliases_rec(&sc.t, &type_param_map)
 }
 
-pub fn instantiate_gen_lam(ctx: &Context, gen_lam: &TGenLam) -> Type {
+pub fn instantiate_gen_lam(
+    ctx: &Context,
+    gen_lam: &TGenLam,
+    type_args: &Option<Vec<Type>>,
+) -> Type {
     let TGenLam { type_params, lam } = gen_lam;
 
-    let type_param_map = get_type_param_map(ctx, type_params);
+    // TODO: check if `type_args` conform the the constraints in `type_params`
+
     let t = Type::from(TypeKind::Lam(lam.as_ref().to_owned()));
+    let type_param_map = match type_args {
+        Some(type_args) => {
+            let mut map: HashMap<String, Type> = HashMap::new();
+            for (type_param, type_arg) in type_params.iter().zip(type_args) {
+                map.insert(type_param.name.to_owned(), type_arg.to_owned());
+            }
+            map
+        }
+        None => get_type_param_map(ctx, type_params),
+    };
 
     replace_aliases_rec(&t, &type_param_map)
 }
@@ -516,7 +531,7 @@ mod tests {
             }),
         };
 
-        let lam = instantiate_gen_lam(&ctx, &gen_lam);
+        let lam = instantiate_gen_lam(&ctx, &gen_lam, &None);
 
         assert_eq!(lam.to_string(), "(a: t1, b: t2) => t1");
     }

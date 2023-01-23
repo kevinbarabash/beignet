@@ -12,7 +12,7 @@ use crate::types::provenance::Provenance;
 pub struct TApp {
     pub args: Vec<Type>,
     pub ret: Box<Type>,
-    // TODO: add type_args property to support explicit specification of type args
+    pub type_args: Option<Vec<Type>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -172,7 +172,11 @@ impl fmt::Display for Type {
                 // }
                 Ok(())
             }
-            TypeKind::App(TApp { args, ret }) => {
+            TypeKind::App(TApp {
+                args,
+                ret,
+                type_args: _, // TODO
+            }) => {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }
             TypeKind::Lam(lam) => write!(f, "{lam}"),

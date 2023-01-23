@@ -3244,13 +3244,16 @@ mod tests {
             bar: T;
             constructor(self) {}
         }
-        let foo = new Foo<string>();
-        let {bar} = foo;
+        let foo1 = new Foo<string>();
+        let {bar: bar1} = foo1;
+        let foo2 = new Foo<number>();
+        let {bar: bar2} = foo2;
         "#;
 
         let ctx = infer_prog(src);
 
-        assert_eq!(ctx.lookup_value("bar").unwrap().to_string(), "string");
+        assert_eq!(ctx.lookup_value("bar1").unwrap().to_string(), "string");
+        assert_eq!(ctx.lookup_value("bar2").unwrap().to_string(), "number");
     }
 
     #[test]
@@ -3262,15 +3265,17 @@ mod tests {
         }
         let foo = new Foo();
         let fst = foo.fst;
-        // let result = foo.fst<number>(5, 10);
+        let num = foo.fst<number>(5, 10);
+        let str = foo.fst<string>("hello", "world");
         "#;
 
         let ctx = infer_prog(src);
 
-        // TODO: add type_params
         assert_eq!(
             ctx.lookup_value("fst").unwrap().to_string(),
-            "(a: T, b: T) => T"
+            "<T>(a: T, b: T) => T"
         );
+        assert_eq!(ctx.lookup_value("num").unwrap().to_string(), "number");
+        assert_eq!(ctx.lookup_value("str").unwrap().to_string(), "string");
     }
 }
