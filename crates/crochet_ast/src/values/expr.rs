@@ -59,6 +59,7 @@ pub enum Statement {
 pub struct App {
     pub lam: Box<Expr>,
     pub args: Vec<ExprOrSpread>,
+    pub type_args: Option<Vec<TypeAnn>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -275,6 +276,7 @@ pub struct Arm {
 pub struct New {
     pub expr: Box<Expr>, // should resolve to an object with a constructor signature
     pub args: Vec<ExprOrSpread>,
+    pub type_args: Option<Vec<TypeAnn>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

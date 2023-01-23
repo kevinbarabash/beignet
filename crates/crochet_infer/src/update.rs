@@ -69,14 +69,22 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
     }
 
     match &mut expr.kind {
-        ExprKind::App(App { lam, args }) => {
+        ExprKind::App(App {
+            lam,
+            args,
+            type_args: _,
+        }) => {
             update_expr(lam, s);
             args.iter_mut().for_each(|arg_or_spread| {
                 // TODO: rework args to be less awkward
                 update_expr(&mut arg_or_spread.expr, s);
             });
         }
-        ExprKind::New(New { expr, args }) => {
+        ExprKind::New(New {
+            expr,
+            args,
+            type_args: _,
+        }) => {
             update_expr(expr, s);
             args.iter_mut().for_each(|arg_or_spread| {
                 // TODO: rework args to be less awkward

@@ -6,6 +6,7 @@ use crate::values::type_ann::{TypeAnn, TypeParam};
 pub struct Class {
     pub ident: Ident, // Why do have `ident` here an in `ClassDecl`?
     pub body: Vec<ClassMember>,
+    pub type_params: Option<Vec<TypeParam>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,7 +20,6 @@ pub enum ClassMember {
 pub struct Constructor {
     pub params: Vec<EFnParam>,
     pub body: Box<Expr>,
-    pub type_params: Option<Vec<TypeParam>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -133,6 +133,7 @@ Ok(
                                     },
                                 },
                             ],
+                            type_args: None,
                         },
                     ),
                     inferred_type: None,

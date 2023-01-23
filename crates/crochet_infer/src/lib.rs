@@ -3236,4 +3236,41 @@ mod tests {
 
         infer_prog(src);
     }
+
+    #[test]
+    fn class_with_type_params() {
+        let src = r#"
+        class Foo<T> {
+            bar: T;
+            constructor(self) {}
+        }
+        let foo = new Foo<string>();
+        let {bar} = foo;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(ctx.lookup_value("bar").unwrap().to_string(), "string");
+    }
+
+    #[test]
+    fn use_method_param_inside_method() {
+        let src = r#"
+        class Foo {
+            constructor(self) {}
+            fst<T>(self, a: T, b: T): T { a; }
+        }
+        let foo = new Foo();
+        let fst = foo.fst;
+        // let result = foo.fst<number>(5, 10);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        // TODO: add type_params
+        assert_eq!(
+            ctx.lookup_value("fst").unwrap().to_string(),
+            "(a: T, b: T) => T"
+        );
+    }
 }

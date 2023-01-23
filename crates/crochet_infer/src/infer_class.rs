@@ -2,11 +2,11 @@ use crochet_ast::types::*;
 use crochet_ast::values::{class::*, Lambda, PatternKind};
 use std::collections::HashMap;
 
-use crate::context::{Context, Env};
+use crate::context::Context;
 use crate::infer_expr::infer_expr;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_type_ann::*;
-use crate::scheme::generalize;
+use crate::scheme::Scheme;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify::unify;
@@ -20,20 +20,14 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
     let class_name = class.ident.name.to_owned();
 
     let mut statics_elems: Vec<TObjElem> = vec![];
-    let mut mut_instance_elems: Vec<TObjElem> = vec![];
+    let mut instance_elems: Vec<TObjElem> = vec![];
 
     for member in &mut class.body {
         match member {
-            ClassMember::Constructor(Constructor {
-                params,
-                body,
-                type_params,
-            }) => {
+            ClassMember::Constructor(Constructor { params, body }) => {
                 ctx.push_scope(false); // Constructors cannot be async
 
-                // QUESTION: should we skip the first param when computing
-                // `type_params_map`?
-                let type_params_map: HashMap<String, Type> = match type_params {
+                let type_params_map: HashMap<String, Type> = match &mut class.type_params {
                     Some(params) => {
                         let mut iter = params.iter_mut();
                         iter.next(); // skip `self`
@@ -84,13 +78,37 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
 
                 ctx.pop_scope();
 
+                let type_args = class.type_params.as_ref().map(|type_params| {
+                    type_params
+                        .iter()
+                        .map(|type_param| {
+                            Type::from(TypeKind::Ref(TRef {
+                                name: type_param.name.name.to_owned(),
+                                type_args: None,
+                            }))
+                        })
+                        .collect::<Vec<Type>>()
+                });
+
+                let type_params = match &class.type_params {
+                    Some(type_params) => type_params
+                        .iter()
+                        .map(|type_param| TypeParam {
+                            name: type_param.name.name.to_owned(),
+                            constraint: None, // TODO
+                            default: None,    // TODO
+                        })
+                        .collect(),
+                    None => vec![],
+                };
+
                 let mut elem = TObjElem::Constructor(TCallable {
                     params: t_params,
                     ret: Box::from(Type::from(TypeKind::Ref(TRef {
                         name: class_name.to_owned(),
-                        type_args: None,
+                        type_args,
                     }))),
-                    type_params: vec![], // TODO
+                    type_params,
                 });
 
                 let s = compose_many_subs(&ss);
@@ -117,6 +135,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
 
                 ctx.push_scope(is_async.to_owned());
 
+                // TODO: aggregate method type params with class type params
                 // QUESTION: should we skip the first param when computing
                 // `type_params_map`?
                 let type_params_map: HashMap<String, Type> = match type_params {
@@ -205,11 +224,24 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                             }
                             None => body_t,
                         };
+
+                        let type_params = match &lambda.type_params {
+                            Some(type_params) => type_params
+                                .iter()
+                                .map(|type_param| TypeParam {
+                                    name: type_param.name.name.to_owned(),
+                                    constraint: None, // TODO
+                                    default: None,    // TODO
+                                })
+                                .collect(),
+                            None => vec![],
+                        };
+
                         TObjElem::Method(TMethod {
                             name,
                             params: t_params,
                             ret: Box::from(ret_t),
-                            type_params: vec![], // TODO
+                            type_params,
                             is_mutating,
                         })
                     }
@@ -242,10 +274,12 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 let s = compose_many_subs(&ss);
                 elem.apply(&s);
 
+                eprintln!("elem = {elem}");
+
                 if *is_static {
                     statics_elems.push(elem.clone());
                 } else {
-                    mut_instance_elems.push(elem);
+                    instance_elems.push(elem);
                 }
             }
             ClassMember::Prop(ClassProp {
@@ -281,7 +315,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 if *is_static {
                     statics_elems.push(elem);
                 } else {
-                    mut_instance_elems.push(elem);
+                    instance_elems.push(elem);
                 }
             }
         }
@@ -293,13 +327,28 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
     }));
 
     let instance_t = Type::from(TypeKind::Object(TObject {
-        elems: mut_instance_elems,
+        elems: instance_elems,
         is_interface: true,
     }));
 
-    let empty_env = Env::default();
+    let type_params = match &class.type_params {
+        Some(type_params) => type_params
+            .iter()
+            .map(|type_param| TypeParam {
+                name: type_param.name.name.to_owned(),
+                constraint: None, // TODO
+                default: None,    // TODO
+            })
+            .collect(),
+        None => vec![],
+    };
 
-    ctx.insert_scheme(class_name, generalize(&empty_env, &instance_t));
+    let scheme = Scheme {
+        t: Box::from(instance_t),
+        // TODO: be consistent about using Option<Vec<>> for type_params
+        type_params,
+    };
+    ctx.insert_scheme(class_name, scheme);
 
     // TODO: capture all of the subsitutions and return them
     let s = Subst::default();

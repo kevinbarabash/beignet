@@ -131,12 +131,20 @@ pub trait Visitor {
         self.visit_expr(expr);
 
         match &mut expr.kind {
-            ExprKind::App(App { lam, args }) => {
+            ExprKind::App(App {
+                lam,
+                args,
+                type_args: _, // TODO
+            }) => {
                 self._visit_expr(lam);
                 args.iter_mut()
                     .for_each(|arg| self._visit_expr(&mut arg.expr));
             }
-            ExprKind::New(New { expr, args }) => {
+            ExprKind::New(New {
+                expr,
+                args,
+                type_args: _, // TODO
+            }) => {
                 self._visit_expr(expr);
                 args.iter_mut()
                     .for_each(|arg| self._visit_expr(&mut arg.expr));
@@ -264,14 +272,14 @@ pub trait Visitor {
                 })
             }
             // TODO: finish implementing this
-            ExprKind::Class(Class { ident: _, body }) => {
+            ExprKind::Class(Class {
+                body,
+                ident: _,
+                type_params: _,
+            }) => {
                 for member in body {
                     match member {
-                        ClassMember::Constructor(Constructor {
-                            params,
-                            body,
-                            type_params: _,
-                        }) => {
+                        ClassMember::Constructor(Constructor { params, body }) => {
                             params.iter_mut().for_each(|param| {
                                 // TODO: add visit_fn_param() method
                                 let EFnParam { pat, type_ann, .. } = param;

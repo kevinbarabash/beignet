@@ -86,7 +86,7 @@ pub fn generalize_gen_lam(env: &Env, lam: &TLam) -> TGenLam {
     }
 }
 
-fn get_type_param_map(ctx: &Context, type_params: &[TypeParam]) -> HashMap<String, Type> {
+pub fn get_type_param_map(ctx: &Context, type_params: &[TypeParam]) -> HashMap<String, Type> {
     let mut type_param_map = HashMap::new();
 
     for type_param in type_params {
@@ -125,6 +125,7 @@ pub fn instantiate_gen_lam(ctx: &Context, gen_lam: &TGenLam) -> Type {
     replace_aliases_rec(&t, &type_param_map)
 }
 
+// TODO: Update to acception optional type args
 pub fn instantiate_callable(ctx: &Context, callable: &TCallable) -> Type {
     let TCallable {
         type_params,

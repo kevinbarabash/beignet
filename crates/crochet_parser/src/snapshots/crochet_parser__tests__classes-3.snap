@@ -103,6 +103,7 @@ Ok(
                             },
                         ),
                     ],
+                    type_params: None,
                 },
             },
         ],
