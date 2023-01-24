@@ -196,7 +196,7 @@ mod tests {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
             is_mutating: false,
         })];
         let old_scheme = Scheme {
@@ -210,7 +210,7 @@ mod tests {
             name: TPropKey::StringKey(String::from("bar")),
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
             is_mutating: false,
         })];
         let new_scheme = Scheme {
@@ -234,7 +234,7 @@ mod tests {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
             is_mutating: true,
         })];
         let old_scheme = Scheme {
@@ -248,7 +248,7 @@ mod tests {
             name: TPropKey::StringKey(String::from("bar")),
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
             is_mutating: true,
         })];
         let new_scheme = Scheme {
@@ -272,7 +272,7 @@ mod tests {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
             is_mutating: true,
         })];
         let old_scheme = Scheme {
@@ -286,7 +286,7 @@ mod tests {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
             is_mutating: false,
         })];
         let new_scheme = Scheme {
@@ -307,7 +307,7 @@ mod tests {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
             is_mutating: false,
         })];
         let old_scheme = Scheme {
@@ -321,7 +321,7 @@ mod tests {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
             is_mutating: true,
         })];
         let new_scheme = Scheme {
@@ -421,7 +421,7 @@ mod tests {
         let old_elems = vec![TObjElem::Call(TCallable {
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
         })];
         let old_scheme = Scheme {
             t: Box::from(Type::from(TypeKind::Object(TObject {
@@ -433,7 +433,7 @@ mod tests {
         let new_elems = vec![TObjElem::Call(TCallable {
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
         })];
         let new_scheme = Scheme {
             t: Box::from(Type::from(TypeKind::Object(TObject {
@@ -452,7 +452,7 @@ mod tests {
         let old_elems = vec![TObjElem::Constructor(TCallable {
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
         })];
         let old_scheme = Scheme {
             t: Box::from(Type::from(TypeKind::Object(TObject {
@@ -464,7 +464,7 @@ mod tests {
         let new_elems = vec![TObjElem::Constructor(TCallable {
             params: vec![],
             ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
-            type_params: vec![],
+            type_params: None,
         })];
         let new_scheme = Scheme {
             t: Box::from(Type::from(TypeKind::Object(TObject {

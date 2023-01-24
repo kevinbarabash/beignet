@@ -440,7 +440,11 @@ fn infer_method_sig(
         name: TPropKey::StringKey(name),
         params,
         ret: Box::from(ret),
-        type_params,
+        type_params: if type_params.is_empty() {
+            None
+        } else {
+            Some(type_params)
+        },
         // Assume that all methods in mutable object can mutate the object.
         // If there's a ReadonlyFoo and Foo pair, duplicates will be merged such
         // that `is_mutating: false`.
@@ -518,7 +522,11 @@ fn infer_callable(
     Ok(TCallable {
         params,
         ret: Box::from(ret),
-        type_params,
+        type_params: if type_params.is_empty() {
+            None
+        } else {
+            Some(type_params)
+        },
     })
 }
 

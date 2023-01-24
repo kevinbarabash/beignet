@@ -623,6 +623,8 @@ fn build_obj_type(obj: &TObject, ctx: &Context) -> TsType {
                 ret,
                 type_params,
             }) => {
+                let empty = vec![];
+                let type_params = type_params.as_ref().unwrap_or(&empty);
                 let type_params = build_type_params_from_type_params(type_params, ctx);
                 let params: Vec<TsFnParam> = params
                     .iter()
@@ -671,6 +673,8 @@ fn build_obj_type(obj: &TObject, ctx: &Context) -> TsType {
                     TPropKey::NumberKey(key) => key.to_owned(),
                 };
                 // TODO: dedupe with build_ts_fn_type_with_params
+                let empty = vec![];
+                let type_params = type_params.as_ref().unwrap_or(&empty);
                 let type_params = build_type_params_from_type_params(type_params, ctx);
                 let params: Vec<TsFnParam> = params
                     .iter()

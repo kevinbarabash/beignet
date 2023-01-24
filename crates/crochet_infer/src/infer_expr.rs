@@ -133,16 +133,22 @@ pub fn infer_expr(
                         // TODO: Check to make sure that we're passing type args
                         // if and only if we need to.  In some cases it's okay
                         // not to pass type args, e.g. new Array(1, 2, 3);
-                        let type_param_map = if let Some(type_args) = type_args {
-                            let mut type_param_map: HashMap<String, Type> = HashMap::new();
-                            for (type_param, type_arg) in type_params.iter().zip(type_args) {
-                                let (s, t) = infer_type_ann(type_arg, ctx, &mut None)?;
-                                ss.push(s);
-                                type_param_map.insert(type_param.name.to_string(), t);
+                        let type_param_map: HashMap<String, Type> = match type_params {
+                            Some(type_params) => {
+                                if let Some(type_args) = type_args {
+                                    let mut type_param_map = HashMap::new();
+                                    for (type_param, type_arg) in type_params.iter().zip(type_args)
+                                    {
+                                        let (s, t) = infer_type_ann(type_arg, ctx, &mut None)?;
+                                        ss.push(s);
+                                        type_param_map.insert(type_param.name.to_string(), t);
+                                    }
+                                    type_param_map
+                                } else {
+                                    get_type_param_map(ctx, type_params)
+                                }
                             }
-                            type_param_map
-                        } else {
-                            get_type_param_map(ctx, type_params)
+                            None => HashMap::new(),
                         };
 
                         let lam_type = Type::from(TypeKind::Lam(TLam {
@@ -916,18 +922,18 @@ fn get_prop_value(
                         }
 
                         if method.name == TPropKey::StringKey(name.to_owned()) {
-                            let t = if method.type_params.is_empty() {
-                                Type::from(TypeKind::Lam(types::TLam {
-                                    params: method.params.to_owned(),
-                                    ret: method.ret.to_owned(),
-                                }))
-                            } else {
+                            let t = if let Some(type_params) = &method.type_params {
                                 Type::from(TypeKind::GenLam(types::TGenLam {
                                     lam: Box::from(types::TLam {
                                         params: method.params.to_owned(),
                                         ret: method.ret.to_owned(),
                                     }),
-                                    type_params: method.type_params.to_owned(),
+                                    type_params: type_params.to_owned(),
+                                }))
+                            } else {
+                                Type::from(TypeKind::Lam(types::TLam {
+                                    params: method.params.to_owned(),
+                                    ret: method.ret.to_owned(),
                                 }))
                             };
                             return Ok((Subst::default(), t));

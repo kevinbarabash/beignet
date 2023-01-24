@@ -148,7 +148,10 @@ pub fn instantiate_callable(ctx: &Context, callable: &TCallable) -> Type {
         ret,
     } = callable;
 
-    let type_param_map = get_type_param_map(ctx, type_params);
+    let type_param_map = match type_params {
+        Some(type_params) => get_type_param_map(ctx, type_params),
+        None => HashMap::new(),
+    };
     let t = Type::from(TypeKind::Lam(TLam {
         params: params.to_owned(),
         ret: ret.to_owned(),
