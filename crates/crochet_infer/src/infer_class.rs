@@ -27,32 +27,8 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
             ClassMember::Constructor(Constructor { params, body }) => {
                 ctx.push_scope(false); // Constructors cannot be async
 
-                let type_params_map: HashMap<String, Type> = match &mut class.type_params {
-                    Some(params) => {
-                        let mut iter = params.iter_mut();
-                        iter.next(); // skip `self`
-                        iter.map(|param| {
-                            let tv = match &mut param.constraint {
-                                Some(type_ann) => {
-                                    // TODO: push `s` on to `ss`
-                                    let (_s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
-                                    Type::from(TypeKind::Var(TVar {
-                                        id: ctx.fresh_id(),
-                                        constraint: Some(Box::from(t)),
-                                    }))
-                                }
-                                None => {
-                                    return Err(vec![TypeError::MethodsMustHaveTypes]);
-                                    // ctx.fresh_var()
-                                }
-                            };
-                            ctx.insert_type(param.name.name.clone(), tv.clone());
-                            Ok((param.name.name.to_owned(), tv))
-                        })
-                        .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?
-                    }
-                    None => HashMap::default(),
-                };
+                // Constructors can't have type parameters.
+                let type_params_map = HashMap::default();
 
                 let mut iter = params.iter_mut();
                 iter.next(); // skip `self`
@@ -136,9 +112,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 ctx.push_scope(is_async.to_owned());
 
                 // TODO: aggregate method type params with class type params
-                // QUESTION: should we skip the first param when computing
-                // `type_params_map`?
-                // TODO: map type params to type refs with the same name
+                // This maps type params to type refs with the same name.
                 let type_params_map: HashMap<String, Type> = match type_params {
                     Some(params) => params
                         .iter_mut()
@@ -200,7 +174,6 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 if let Some(ret_type_ann) = return_type {
                     let (ret_s, mut ret_t) =
                         infer_type_ann_with_params(ret_type_ann, ctx, &type_params_map)?;
-                    eprintln!("ret_t = {ret_t}");
                     ss.push(ret_s);
                     ss.push(unify(&mut body_t, &mut ret_t, ctx)?);
                 } else if kind != &MethodKind::Setter {
@@ -271,8 +244,6 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
 
                 let s = compose_many_subs(&ss);
                 elem.apply(&s);
-
-                eprintln!("elem = {elem}");
 
                 if *is_static {
                     statics_elems.push(elem.clone());

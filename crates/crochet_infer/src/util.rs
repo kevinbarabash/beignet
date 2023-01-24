@@ -535,7 +535,7 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
             ret: Box::from(replace_aliases_rec(ret, type_param_map)),
         }),
         TypeKind::GenLam(TGenLam { lam, type_params }) => {
-            // Removes any shadowed type variables.
+            // Removes any shadowed type params.
             let mut type_param_map = type_param_map.clone();
             for type_param in type_params {
                 type_param_map.remove(&type_param.name);
@@ -613,15 +613,20 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
                         })
                     }
                     TObjElem::Method(method) => {
+                        // Removes any shadowed type params.
+                        let mut type_param_map = type_param_map.clone();
+                        for type_param in &method.type_params {
+                            type_param_map.remove(&type_param.name);
+                        }
                         let params: Vec<TFnParam> = method
                             .params
                             .iter()
                             .map(|t| TFnParam {
-                                t: replace_aliases_rec(&t.t, type_param_map),
+                                t: replace_aliases_rec(&t.t, &type_param_map),
                                 ..t.to_owned()
                             })
                             .collect();
-                        let ret = replace_aliases_rec(method.ret.as_ref(), type_param_map);
+                        let ret = replace_aliases_rec(method.ret.as_ref(), &type_param_map);
 
                         TObjElem::Method(TMethod {
                             params,

@@ -3254,6 +3254,10 @@ mod tests {
 
         assert_eq!(ctx.lookup_value("bar1").unwrap().to_string(), "string");
         assert_eq!(ctx.lookup_value("bar2").unwrap().to_string(), "number");
+        assert_eq!(
+            ctx.lookup_scheme("FooConstructor").unwrap().to_string(),
+            "{new <T>() => Foo<T>}"
+        );
     }
 
     #[test]
@@ -3277,5 +3281,55 @@ mod tests {
         );
         assert_eq!(ctx.lookup_value("num").unwrap().to_string(), "number");
         assert_eq!(ctx.lookup_value("str").unwrap().to_string(), "string");
+        assert_eq!(
+            ctx.lookup_scheme("Foo").unwrap().to_string(),
+            "{fst<T>(self, a: T, b: T): T}"
+        );
     }
+
+    #[test]
+    fn class_with_type_param_and_method_with_type_param() {
+        let src = r#"
+        class Foo<T> {
+            bar: T;
+            constructor(self) {}
+            fst<U>(self, a: U, b: T): U { a; }
+        }
+        let foo = new Foo<string>();
+        let fst = foo.fst;
+        let result = foo.fst<number>(5, "world");
+        "#;
+
+        let ctx = infer_prog(src);
+        assert_eq!(
+            ctx.lookup_value("fst").unwrap().to_string(),
+            "<U>(a: U, b: string) => U"
+        );
+        assert_eq!(ctx.lookup_value("result").unwrap().to_string(), "number");
+    }
+
+    #[test]
+    fn method_type_param_shadows_class_type_param() {
+        let src = r#"
+        class Foo<T> {
+            bar: T;
+            constructor(self) {}
+            fst<T>(self, a: T, b: T): T { a; }
+        }
+        let foo = new Foo<string>();
+        let fst = foo.fst;
+        let result = foo.fst<number>(5, 10);
+        "#;
+
+        let ctx = infer_prog(src);
+        assert_eq!(
+            ctx.lookup_value("fst").unwrap().to_string(),
+            "<T>(a: T, b: T) => T"
+        );
+        assert_eq!(ctx.lookup_value("result").unwrap().to_string(), "number");
+    }
+
+    // TODO:
+    // - constraints
+    // - defaults
 }
