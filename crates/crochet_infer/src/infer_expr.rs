@@ -922,13 +922,13 @@ fn get_prop_value(
                         }
 
                         if method.name == TPropKey::StringKey(name.to_owned()) {
-                            let t = if let Some(type_params) = &method.type_params {
+                            let t = if method.type_params.is_some() {
                                 Type::from(TypeKind::GenLam(types::TGenLam {
                                     lam: Box::from(types::TLam {
                                         params: method.params.to_owned(),
                                         ret: method.ret.to_owned(),
                                     }),
-                                    type_params: type_params.to_owned(),
+                                    type_params: method.type_params.to_owned(),
                                 }))
                             } else {
                                 Type::from(TypeKind::Lam(types::TLam {

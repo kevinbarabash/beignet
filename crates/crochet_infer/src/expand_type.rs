@@ -260,13 +260,13 @@ fn expand_index_access(
                         TObjElem::Method(method) => match (&method.name, lit) {
                             (TPropKey::StringKey(key), TLit::Str(str)) if key == str => {
                                 // TODO: dedupe with infer_expr.rs and get_prop_by_name() below
-                                let t = if let Some(type_params) = &method.type_params {
+                                let t = if method.type_params.is_some() {
                                     Type::from(TypeKind::GenLam(TGenLam {
                                         lam: Box::from(TLam {
                                             params: method.params.to_owned(),
                                             ret: method.ret.to_owned(),
                                         }),
-                                        type_params: type_params.to_owned(),
+                                        type_params: method.type_params.to_owned(),
                                     }))
                                 } else {
                                     Type::from(TypeKind::Lam(TLam {
@@ -507,13 +507,13 @@ fn get_prop_by_name(elems: &[TObjElem], name: &str) -> Result<TProp, Vec<TypeErr
                     TPropKey::NumberKey(key) => key,
                 };
                 // TODO: dedupe with infer_expr.rs and expand_index_access() above
-                let t = if let Some(type_params) = &method.type_params {
+                let t = if method.type_params.is_some() {
                     Type::from(TypeKind::GenLam(TGenLam {
                         lam: Box::from(TLam {
                             params: method.params.to_owned(),
                             ret: method.ret.to_owned(),
                         }),
-                        type_params: type_params.to_owned(),
+                        type_params: method.type_params.to_owned(),
                     }))
                 } else {
                     Type::from(TypeKind::Lam(TLam {

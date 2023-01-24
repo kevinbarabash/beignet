@@ -100,7 +100,11 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
 
                         let t = Type::from(TypeKind::GenLam(TGenLam {
                             lam: Box::from(lam),
-                            type_params,
+                            type_params: if type_params.is_empty() {
+                                None
+                            } else {
+                                Some(type_params)
+                            },
                         }));
 
                         Ok(t)
