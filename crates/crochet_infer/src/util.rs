@@ -57,7 +57,11 @@ pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
 
                 let mut t = Type::from(TypeKind::GenLam(TGenLam {
                     lam: Box::from(lam.to_owned()),
-                    type_params,
+                    type_params: if type_params.is_empty() {
+                        None
+                    } else {
+                        Some(type_params)
+                    },
                 }));
 
                 t.apply(&sub);
@@ -537,8 +541,10 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
         TypeKind::GenLam(TGenLam { lam, type_params }) => {
             // Removes any shadowed type params.
             let mut type_param_map = type_param_map.clone();
-            for type_param in type_params {
-                type_param_map.remove(&type_param.name);
+            if let Some(type_params) = type_params {
+                for type_param in type_params {
+                    type_param_map.remove(&type_param.name);
+                }
             }
 
             let params: Vec<_> = lam
@@ -615,8 +621,10 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
                     TObjElem::Method(method) => {
                         // Removes any shadowed type params.
                         let mut type_param_map = type_param_map.clone();
-                        for type_param in &method.type_params {
-                            type_param_map.remove(&type_param.name);
+                        if let Some(type_params) = &method.type_params {
+                            for type_param in type_params {
+                                type_param_map.remove(&type_param.name);
+                            }
                         }
                         let params: Vec<TFnParam> = method
                             .params

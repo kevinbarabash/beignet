@@ -8,7 +8,7 @@ use crate::types::{Type, TypeParam};
 pub struct TCallable {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
-    pub type_params: Vec<TypeParam>,
+    pub type_params: Option<Vec<TypeParam>>,
     // TODO: support mutating callables?
 }
 
@@ -19,9 +19,7 @@ impl fmt::Display for TCallable {
             ret,
             type_params,
         } = self;
-        if type_params.is_empty() {
-            write!(f, "({}) => {}", join(params, ", "), ret)
-        } else {
+        if let Some(type_params) = type_params {
             let type_params = type_params.iter().map(|tp| {
                 let TypeParam {
                     name,
@@ -33,14 +31,9 @@ impl fmt::Display for TCallable {
                     None => name.to_string(),
                 }
             });
-            write!(
-                f,
-                "<{}>({}) => {}",
-                join(type_params, ", "),
-                join(params, ", "),
-                ret
-            )
+            write!(f, "<{}>", join(type_params, ", "))?;
         }
+        write!(f, "({}) => {}", join(params, ", "), ret)
     }
 }
 
@@ -49,7 +42,7 @@ pub struct TMethod {
     pub name: TPropKey,
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
-    pub type_params: Vec<TypeParam>,
+    pub type_params: Option<Vec<TypeParam>>,
     pub is_mutating: bool,
 }
 
@@ -63,7 +56,7 @@ impl fmt::Display for TMethod {
             is_mutating,
         } = self;
         write!(f, "{name}")?;
-        if !type_params.is_empty() {
+        if let Some(type_params) = type_params {
             let type_params = type_params.iter().map(|tp| {
                 let TypeParam {
                     name,

@@ -338,7 +338,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
                             params: call.params.to_owned(),
                             ret: call.ret.to_owned(),
                         }));
-                        let t = if call.type_params.is_empty() {
+                        let t = if call.type_params.is_some() {
                             lam
                         } else {
                             instantiate_callable(ctx, call)

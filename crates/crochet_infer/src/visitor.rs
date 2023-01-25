@@ -18,14 +18,16 @@ pub trait Visitor {
                 self.visit_children(lam.ret.as_mut());
             }
             TypeKind::GenLam(TGenLam { type_params, lam }) => {
-                type_params.iter_mut().for_each(|type_param| {
-                    if let Some(constraint) = &mut type_param.constraint {
-                        self.visit_children(constraint);
-                    }
-                    if let Some(default) = &mut type_param.default {
-                        self.visit_children(default);
-                    }
-                });
+                if let Some(type_params) = type_params {
+                    type_params.iter_mut().for_each(|type_param| {
+                        if let Some(constraint) = &mut type_param.constraint {
+                            self.visit_children(constraint);
+                        }
+                        if let Some(default) = &mut type_param.default {
+                            self.visit_children(default);
+                        }
+                    });
+                }
                 lam.params
                     .iter_mut()
                     .for_each(|TFnParam { t, .. }| self.visit_children(t));

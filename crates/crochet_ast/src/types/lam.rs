@@ -21,7 +21,7 @@ impl fmt::Display for TLam {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TGenLam {
-    pub type_params: Vec<TypeParam>,
+    pub type_params: Option<Vec<TypeParam>>,
     pub lam: Box<TLam>,
 }
 
@@ -29,8 +29,10 @@ impl fmt::Display for TGenLam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { type_params, lam } = self;
 
-        let type_params: Vec<_> = type_params.iter().map(|tp| tp.to_string()).collect();
-        write!(f, "<{}>", type_params.join(", "))?;
+        if let Some(type_params) = &type_params {
+            let type_params: Vec<_> = type_params.iter().map(|tp| tp.to_string()).collect();
+            write!(f, "<{}>", type_params.join(", "))?;
+        }
         write!(f, "{lam}")
     }
 }

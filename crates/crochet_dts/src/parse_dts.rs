@@ -100,7 +100,11 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
 
                         let t = Type::from(TypeKind::GenLam(TGenLam {
                             lam: Box::from(lam),
-                            type_params,
+                            type_params: if type_params.is_empty() {
+                                None
+                            } else {
+                                Some(type_params)
+                            },
                         }));
 
                         Ok(t)
@@ -440,7 +444,11 @@ fn infer_method_sig(
         name: TPropKey::StringKey(name),
         params,
         ret: Box::from(ret),
-        type_params,
+        type_params: if type_params.is_empty() {
+            None
+        } else {
+            Some(type_params)
+        },
         // Assume that all methods in mutable object can mutate the object.
         // If there's a ReadonlyFoo and Foo pair, duplicates will be merged such
         // that `is_mutating: false`.
@@ -509,8 +517,10 @@ fn infer_callable(
     let mut tvars = params.ftv();
     tvars.append(&mut ret.ftv());
 
-    let (sub, mut more_type_params) = get_sub_and_type_params(&tvars);
-    type_params.append(&mut more_type_params);
+    let (sub, more_type_params) = get_sub_and_type_params(&tvars);
+    if let Some(mut more_type_params) = more_type_params {
+        type_params.append(&mut more_type_params);
+    }
 
     params.apply(&sub);
     ret.apply(&sub);
@@ -518,7 +528,11 @@ fn infer_callable(
     Ok(TCallable {
         params,
         ret: Box::from(ret),
-        type_params,
+        type_params: if type_params.is_empty() {
+            None
+        } else {
+            Some(type_params)
+        },
     })
 }
 
@@ -598,34 +612,36 @@ fn infer_type_alias_decl(decl: &TsTypeAliasDecl, ctx: &Context) -> Result<Scheme
     let t = infer_ts_type_ann(&decl.type_ann, ctx)?;
 
     let type_params = match &decl.type_params {
-        Some(type_params) => type_params
-            .params
-            .iter()
-            .map(|type_param| {
-                let constraint = match &type_param.constraint {
-                    Some(constraint) => {
-                        let t = infer_ts_type_ann(constraint, ctx)?;
-                        Some(Box::from(t))
-                    }
-                    None => None,
-                };
+        Some(type_params) => Some(
+            type_params
+                .params
+                .iter()
+                .map(|type_param| {
+                    let constraint = match &type_param.constraint {
+                        Some(constraint) => {
+                            let t = infer_ts_type_ann(constraint, ctx)?;
+                            Some(Box::from(t))
+                        }
+                        None => None,
+                    };
 
-                let default = match &type_param.default {
-                    Some(default) => {
-                        let t = infer_ts_type_ann(default, ctx)?;
-                        Some(Box::from(t))
-                    }
-                    None => None,
-                };
+                    let default = match &type_param.default {
+                        Some(default) => {
+                            let t = infer_ts_type_ann(default, ctx)?;
+                            Some(Box::from(t))
+                        }
+                        None => None,
+                    };
 
-                Ok(TypeParam {
-                    name: type_param.name.sym.to_string(),
-                    constraint,
-                    default,
+                    Ok(TypeParam {
+                        name: type_param.name.sym.to_string(),
+                        constraint,
+                        default,
+                    })
                 })
-            })
-            .collect::<Result<Vec<TypeParam>, String>>()?,
-        None => vec![],
+                .collect::<Result<Vec<TypeParam>, String>>()?,
+        ),
+        None => None,
     };
 
     let scheme = Scheme {
@@ -665,34 +681,36 @@ fn infer_interface_decl(
     }));
 
     let type_params = match &decl.type_params {
-        Some(type_params) => type_params
-            .params
-            .iter()
-            .map(|type_param| {
-                let constraint = match &type_param.constraint {
-                    Some(constraint) => {
-                        let t = infer_ts_type_ann(constraint, ctx)?;
-                        Some(Box::from(t))
-                    }
-                    None => None,
-                };
+        Some(type_params) => Some(
+            type_params
+                .params
+                .iter()
+                .map(|type_param| {
+                    let constraint = match &type_param.constraint {
+                        Some(constraint) => {
+                            let t = infer_ts_type_ann(constraint, ctx)?;
+                            Some(Box::from(t))
+                        }
+                        None => None,
+                    };
 
-                let default = match &type_param.default {
-                    Some(default) => {
-                        let t = infer_ts_type_ann(default, ctx)?;
-                        Some(Box::from(t))
-                    }
-                    None => None,
-                };
+                    let default = match &type_param.default {
+                        Some(default) => {
+                            let t = infer_ts_type_ann(default, ctx)?;
+                            Some(Box::from(t))
+                        }
+                        None => None,
+                    };
 
-                Ok(TypeParam {
-                    name: type_param.name.sym.to_string(),
-                    constraint,
-                    default,
+                    Ok(TypeParam {
+                        name: type_param.name.sym.to_string(),
+                        constraint,
+                        default,
+                    })
                 })
-            })
-            .collect::<Result<Vec<TypeParam>, String>>()?,
-        None => vec![],
+                .collect::<Result<Vec<TypeParam>, String>>()?,
+        ),
+        None => None,
     };
 
     let scheme = Scheme {

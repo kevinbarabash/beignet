@@ -13,20 +13,24 @@ use crate::substitutable::{Subst, Substitutable};
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Scheme {
     pub t: Box<Type>,
-    pub type_params: Vec<TypeParam>,
+    pub type_params: Option<Vec<TypeParam>>,
 }
 
 impl fmt::Display for Scheme {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let Self { t, type_params } = self;
-        if !type_params.is_empty() {
+        if let Some(type_params) = type_params {
             write!(f, "<{}>", join(type_params, ", "))?;
         }
         write!(f, "{t}")
     }
 }
 
-pub fn get_sub_and_type_params(tvars: &[TVar]) -> (Subst, Vec<TypeParam>) {
+pub fn get_sub_and_type_params(tvars: &[TVar]) -> (Subst, Option<Vec<TypeParam>>) {
+    if tvars.is_empty() {
+        return (Subst::new(), None);
+    }
+
     let mut sub = Subst::new();
     let mut type_params: Vec<TypeParam> = vec![];
 
@@ -53,7 +57,7 @@ pub fn get_sub_and_type_params(tvars: &[TVar]) -> (Subst, Vec<TypeParam>) {
         );
     }
 
-    (sub, type_params)
+    (sub, Some(type_params))
 }
 
 pub fn generalize(env: &Env, t: &Type) -> Scheme {
@@ -109,7 +113,10 @@ pub fn get_type_param_map(ctx: &Context, type_params: &[TypeParam]) -> HashMap<S
 }
 
 pub fn instantiate(ctx: &Context, sc: &Scheme) -> Type {
-    let type_param_map = get_type_param_map(ctx, &sc.type_params);
+    let type_param_map = match &sc.type_params {
+        Some(type_params) => get_type_param_map(ctx, type_params),
+        None => HashMap::new(),
+    };
 
     // TODO: name functions so it's more obvious when a function is mutating
     // it's args.
@@ -126,15 +133,18 @@ pub fn instantiate_gen_lam(
     // TODO: check if `type_args` conform the the constraints in `type_params`
 
     let t = Type::from(TypeKind::Lam(lam.as_ref().to_owned()));
-    let type_param_map = match type_args {
-        Some(type_args) => {
-            let mut map: HashMap<String, Type> = HashMap::new();
-            for (type_param, type_arg) in type_params.iter().zip(type_args) {
-                map.insert(type_param.name.to_owned(), type_arg.to_owned());
+    let type_param_map = match type_params {
+        Some(type_params) => match type_args {
+            Some(type_args) => {
+                let mut map: HashMap<String, Type> = HashMap::new();
+                for (type_param, type_arg) in type_params.iter().zip(type_args) {
+                    map.insert(type_param.name.to_owned(), type_arg.to_owned());
+                }
+                map
             }
-            map
-        }
-        None => get_type_param_map(ctx, type_params),
+            None => get_type_param_map(ctx, type_params),
+        },
+        None => HashMap::new(),
     };
 
     replace_aliases_rec(&t, &type_param_map)
@@ -148,7 +158,10 @@ pub fn instantiate_callable(ctx: &Context, callable: &TCallable) -> Type {
         ret,
     } = callable;
 
-    let type_param_map = get_type_param_map(ctx, type_params);
+    let type_param_map = match type_params {
+        Some(type_params) => get_type_param_map(ctx, type_params),
+        None => HashMap::new(),
+    };
     let t = Type::from(TypeKind::Lam(TLam {
         params: params.to_owned(),
         ret: ret.to_owned(),
@@ -336,7 +349,7 @@ mod tests {
 
         let sc = Scheme {
             t: Box::from(t),
-            type_params: vec![],
+            type_params: None,
         };
 
         let ctx = Context::default();
@@ -373,7 +386,7 @@ mod tests {
 
         let sc = Scheme {
             t: Box::from(t),
-            type_params: vec![
+            type_params: Some(vec![
                 TypeParam {
                     name: "A".to_string(),
                     constraint: None,
@@ -384,7 +397,7 @@ mod tests {
                     constraint: None,
                     default: None,
                 },
-            ],
+            ]),
         };
 
         let ctx = Context::default();
@@ -421,11 +434,11 @@ mod tests {
 
         let sc = Scheme {
             t: Box::from(t),
-            type_params: vec![TypeParam {
+            type_params: Some(vec![TypeParam {
                 name: "A".to_string(),
                 constraint: None,
                 default: None,
-            }],
+            }]),
         };
 
         let ctx = Context::default();
@@ -462,7 +475,7 @@ mod tests {
 
         let sc = Scheme {
             t: Box::from(t),
-            type_params: vec![
+            type_params: Some(vec![
                 TypeParam {
                     name: "A".to_string(),
                     constraint: None,
@@ -473,7 +486,7 @@ mod tests {
                     constraint: Some(Box::from(Type::from(TypeKind::Keyword(TKeyword::String)))),
                     default: None,
                 },
-            ],
+            ]),
         };
 
         let ctx = Context::default();
@@ -487,7 +500,7 @@ mod tests {
         let ctx = Context::default();
 
         let gen_lam = TGenLam {
-            type_params: vec![
+            type_params: Some(vec![
                 TypeParam {
                     name: "A".to_string(),
                     constraint: None,
@@ -498,7 +511,7 @@ mod tests {
                     constraint: Some(Box::from(Type::from(TypeKind::Keyword(TKeyword::String)))),
                     default: None,
                 },
-            ],
+            ]),
             lam: Box::from(TLam {
                 params: vec![
                     TFnParam {
