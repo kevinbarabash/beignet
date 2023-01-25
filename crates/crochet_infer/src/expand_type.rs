@@ -20,7 +20,6 @@ pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> 
         TypeKind::Var(_) => Ok(t.to_owned()),
         TypeKind::App(_) => Ok(t.to_owned()),
         TypeKind::Lam(_) => Ok(t.to_owned()),
-        TypeKind::GenLam(_) => Ok(t.to_owned()),
         TypeKind::Lit(_) => Ok(t.to_owned()),
         TypeKind::Keyword(_) => Ok(t.to_owned()),
         TypeKind::Union(_) => Ok(t.to_owned()),
@@ -259,20 +258,11 @@ fn expand_index_access(
                         TObjElem::Method(method) => match (&method.name, lit) {
                             (TPropKey::StringKey(key), TLit::Str(str)) if key == str => {
                                 // TODO: dedupe with infer_expr.rs and get_prop_by_name() below
-                                let t = if method.type_params.is_some() {
-                                    Type::from(TypeKind::GenLam(TGenLam {
-                                        lam: Box::from(TLam {
-                                            params: method.params.to_owned(),
-                                            ret: method.ret.to_owned(),
-                                        }),
-                                        type_params: method.type_params.to_owned(),
-                                    }))
-                                } else {
-                                    Type::from(TypeKind::Lam(TLam {
-                                        params: method.params.to_owned(),
-                                        ret: method.ret.to_owned(),
-                                    }))
-                                };
+                                let t = Type::from(TypeKind::Lam(TLam {
+                                    params: method.params.to_owned(),
+                                    ret: method.ret.to_owned(),
+                                    type_params: method.type_params.to_owned(),
+                                }));
                                 return Ok(t);
                             }
                             _ => (),
@@ -506,20 +496,11 @@ fn get_prop_by_name(elems: &[TObjElem], name: &str) -> Result<TProp, Vec<TypeErr
                     TPropKey::NumberKey(key) => key,
                 };
                 // TODO: dedupe with infer_expr.rs and expand_index_access() above
-                let t = if method.type_params.is_some() {
-                    Type::from(TypeKind::GenLam(TGenLam {
-                        lam: Box::from(TLam {
-                            params: method.params.to_owned(),
-                            ret: method.ret.to_owned(),
-                        }),
-                        type_params: method.type_params.to_owned(),
-                    }))
-                } else {
-                    Type::from(TypeKind::Lam(TLam {
-                        params: method.params.to_owned(),
-                        ret: method.ret.to_owned(),
-                    }))
-                };
+                let t = Type::from(TypeKind::Lam(TLam {
+                    params: method.params.to_owned(),
+                    ret: method.ret.to_owned(),
+                    type_params: method.type_params.to_owned(),
+                }));
                 if key == name {
                     return Ok(TProp {
                         name: method.name.to_owned(),
@@ -538,6 +519,7 @@ fn get_prop_by_name(elems: &[TObjElem], name: &str) -> Result<TProp, Vec<TypeErr
                     let t = Type::from(TypeKind::Lam(TLam {
                         params: vec![],
                         ret: getter.ret.to_owned(),
+                        type_params: None,
                     }));
                     return Ok(TProp {
                         name: getter.name.to_owned(),
@@ -556,6 +538,7 @@ fn get_prop_by_name(elems: &[TObjElem], name: &str) -> Result<TProp, Vec<TypeErr
                     let t = Type::from(TypeKind::Lam(TLam {
                         params: vec![setter.param.to_owned()],
                         ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Undefined))),
+                        type_params: None,
                     }));
                     return Ok(TProp {
                         name: setter.name.to_owned(),
@@ -761,7 +744,6 @@ pub fn get_obj_type(t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeErro
             Ok(t)
         }
         TypeKind::Lam(_) => ctx.lookup_type("Function", false),
-        TypeKind::GenLam(_) => ctx.lookup_type("Function", false),
         TypeKind::App(_) => todo!(), // What does this even mean?
         TypeKind::Union(_) => todo!(),
         TypeKind::Intersection(_) => {

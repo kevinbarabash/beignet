@@ -11,13 +11,11 @@ pub trait Visitor {
                 app.args.iter_mut().for_each(|arg| self.visit_children(arg));
                 self.visit_children(app.ret.as_mut());
             }
-            TypeKind::Lam(lam) => {
-                lam.params
-                    .iter_mut()
-                    .for_each(|TFnParam { t, .. }| self.visit_children(t));
-                self.visit_children(lam.ret.as_mut());
-            }
-            TypeKind::GenLam(TGenLam { type_params, lam }) => {
+            TypeKind::Lam(TLam {
+                type_params,
+                params,
+                ret,
+            }) => {
                 if let Some(type_params) = type_params {
                     type_params.iter_mut().for_each(|type_param| {
                         if let Some(constraint) = &mut type_param.constraint {
@@ -28,10 +26,10 @@ pub trait Visitor {
                         }
                     });
                 }
-                lam.params
+                params
                     .iter_mut()
                     .for_each(|TFnParam { t, .. }| self.visit_children(t));
-                self.visit_children(lam.ret.as_mut());
+                self.visit_children(ret.as_mut());
             }
             TypeKind::Lit(_) => (),     // leaf node
             TypeKind::Keyword(_) => (), // leaf node

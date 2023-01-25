@@ -154,6 +154,7 @@ pub fn infer_expr(
                         let lam_type = Type::from(TypeKind::Lam(TLam {
                             params: params.to_owned(),
                             ret: ret.to_owned(),
+                            type_params: None,
                         }));
 
                         let mut lam_type = replace_aliases_rec(&lam_type, &type_param_map);
@@ -212,6 +213,7 @@ pub fn infer_expr(
                 &mut Type::from(TypeKind::Lam(types::TLam {
                     params: vec![param],
                     ret: Box::from(tv),
+                    type_params: None,
                 })),
                 &mut t,
                 ctx,
@@ -443,6 +445,7 @@ pub fn infer_expr(
             let mut t = Type::from(TypeKind::Lam(types::TLam {
                 params: t_params.clone(),
                 ret: Box::from(body_t.clone()),
+                type_params: None,
             }));
 
             let s = compose_many_subs(&ss);
@@ -924,20 +927,11 @@ fn get_prop_value(
                         }
 
                         if method.name == TPropKey::StringKey(name.to_owned()) {
-                            let t = if method.type_params.is_some() {
-                                Type::from(TypeKind::GenLam(types::TGenLam {
-                                    lam: Box::from(types::TLam {
-                                        params: method.params.to_owned(),
-                                        ret: method.ret.to_owned(),
-                                    }),
-                                    type_params: method.type_params.to_owned(),
-                                }))
-                            } else {
-                                Type::from(TypeKind::Lam(types::TLam {
-                                    params: method.params.to_owned(),
-                                    ret: method.ret.to_owned(),
-                                }))
-                            };
+                            let t = Type::from(TypeKind::Lam(types::TLam {
+                                params: method.params.to_owned(),
+                                ret: method.ret.to_owned(),
+                                type_params: method.type_params.to_owned(),
+                            }));
                             return Ok((Subst::default(), t));
                         }
                     }

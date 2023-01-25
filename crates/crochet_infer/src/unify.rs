@@ -2,7 +2,7 @@ use std::cmp;
 use std::collections::BTreeSet;
 
 use crochet_ast::types::{
-    self as types, Provenance, TApp, TLam, TObjElem, TObject, TVar, Type, TypeKind,
+    self as types, Provenance, TLam, TObjElem, TObject, TVar, Type, TypeKind,
 };
 use crochet_ast::values::{ExprKind, TypeAnn, TypeAnnKind};
 use types::TKeyword;
@@ -137,6 +137,8 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
             }
         }
         (TypeKind::Lam(lam1), TypeKind::Lam(lam2)) => {
+            // TODO: call instantiate_gen_lam on `lam1` and `lam2`
+
             let mut s = Subst::new();
 
             // It's okay if has fewer params than `lam2`.  This is because
@@ -170,6 +172,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
         // NOTE: this arm is only hit by the `infer_skk` test case
         (TypeKind::Lam(_), TypeKind::App(_)) => unify(t2, t1, ctx),
         (TypeKind::App(app), TypeKind::Lam(lam)) => {
+            let mut lam = instantiate_gen_lam(ctx, lam, &app.type_args);
             let mut s = Subst::new();
 
             let maybe_rest_param = if let Some(param) = lam.params.last() {
@@ -337,6 +340,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
                         let lam = Type::from(TypeKind::Lam(TLam {
                             params: call.params.to_owned(),
                             ret: call.ret.to_owned(),
+                            type_params: None, // TODO
                         }));
                         let t = if call.type_params.is_some() {
                             lam
@@ -700,28 +704,6 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
         (TypeKind::IndexAccess(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
         (_, TypeKind::InferType(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),
         (TypeKind::InferType(_), _) => unify(&mut expand_type(t1, ctx)?, t2, ctx),
-
-        (TypeKind::App(TApp { type_args, .. }), TypeKind::GenLam(gen_lam)) => {
-            // TODO: special case the instantiation if `t1` is an `App`
-            let mut lam = instantiate_gen_lam(ctx, gen_lam, type_args);
-            unify(t1, &mut lam, ctx)
-        }
-        (TypeKind::GenLam(gen_lam), TypeKind::App(TApp { type_args, .. })) => {
-            // TODO: special case the instantiation if `t2` is an `App`
-            let mut lam = instantiate_gen_lam(ctx, gen_lam, type_args);
-            unify(&mut lam, t2, ctx)
-        }
-        (_, TypeKind::GenLam(gen_lam)) => {
-            // TODO: special case the instantiation if `t1` is an `App`
-            let mut lam = instantiate_gen_lam(ctx, gen_lam, &None);
-            unify(t1, &mut lam, ctx)
-        }
-        (TypeKind::GenLam(gen_lam), _) => {
-            // TODO: special case the instantiation if `t2` is an `App`
-            let mut lam = instantiate_gen_lam(ctx, gen_lam, &None);
-            unify(&mut lam, t2, ctx)
-        }
-
         (TypeKind::Array(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_mut(), ctx),
         (TypeKind::Tuple(_), TypeKind::Rest(rest_arg)) => unify(t1, rest_arg.as_mut(), ctx),
         (_, TypeKind::KeyOf(_)) => unify(t1, &mut expand_type(t2, ctx)?, ctx),

@@ -26,6 +26,36 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
     mapping
 }
 
+// TODO: write unit tests for `close_over`, e.g.
+// #[test]
+// fn test_generalize_lam_to_gen_lam() {
+//     let ctx = Context::default();
+//     let tv = ctx.fresh_var();
+//     let lam = TLam {
+//         params: vec![
+//             TFnParam {
+//                 pat: TPat::Ident(BindingIdent {
+//                     name: "a".to_string(),
+//                     mutable: false,
+//                 }),
+//                 t: tv.clone(),
+//                 optional: false,
+//             },
+//             TFnParam {
+//                 pat: TPat::Ident(BindingIdent {
+//                     name: "b".to_string(),
+//                     mutable: false,
+//                 }),
+//                 t: ctx.fresh_var(),
+//                 optional: false,
+//             },
+//         ],
+//         ret: Box::from(tv),
+//     };
+//     let env = Env::new();
+//     let gen_lam = generalize_gen_lam(&env, &lam);
+//     assert_eq!(gen_lam.to_string(), "<A, B>(a: A, b: B) => A");
+// }
 pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
     let mut t = t.clone();
     t.apply(s);
@@ -36,7 +66,15 @@ pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
         t
     } else {
         match &t.kind {
-            TypeKind::Lam(lam) => {
+            // Generalize the lambda by giving it type parameters based on all
+            // of its free type variables.
+            TypeKind::Lam(TLam {
+                params,
+                ret,
+                // TODO: handle situations where the lambda we're closing over
+                // already has type parameters.
+                type_params: _,
+            }) => {
                 let mut type_params: Vec<TypeParam> = vec![];
                 let mut sub: Subst = Subst::default();
                 let mut char_code: u32 = 65;
@@ -55,8 +93,9 @@ pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
                     char_code += 1;
                 }
 
-                let mut t = Type::from(TypeKind::GenLam(TGenLam {
-                    lam: Box::from(lam.to_owned()),
+                let mut t = Type::from(TypeKind::Lam(TLam {
+                    params: params.to_owned(),
+                    ret: ret.to_owned(),
                     type_params: if type_params.is_empty() {
                         None
                     } else {
@@ -67,9 +106,6 @@ pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
                 t.apply(&sub);
 
                 t
-            }
-            TypeKind::GenLam(_) => {
-                panic!("We shouldn't be closing over TypeKind::GenLam");
             }
             _ => {
                 panic!("We shouldn't have any free type variables when closing over non-lambdas")
@@ -115,32 +151,23 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
                     type_args: app.type_args.to_owned(), // TODO: normalize these as well
                 })
             }
-            TypeKind::Lam(lam) => {
-                let params: Vec<_> = lam
-                    .params
+            TypeKind::Lam(TLam {
+                type_params,
+                params,
+                ret,
+            }) => {
+                let params: Vec<_> = params
                     .iter()
                     .map(|param| TFnParam {
                         t: norm_type(&param.t, mapping, _ctx),
                         ..param.to_owned()
                     })
                     .collect();
-                let ret = Box::from(norm_type(&lam.ret, mapping, _ctx));
-                TypeKind::Lam(TLam { params, ret })
-            }
-            TypeKind::GenLam(TGenLam { type_params, lam }) => {
-                let params: Vec<_> = lam
-                    .params
-                    .iter()
-                    .map(|param| TFnParam {
-                        t: norm_type(&param.t, mapping, _ctx),
-                        ..param.to_owned()
-                    })
-                    .collect();
-                let ret = Box::from(norm_type(&lam.ret, mapping, _ctx));
-
-                TypeKind::GenLam(TGenLam {
-                    lam: Box::from(TLam { params, ret }),
+                let ret = Box::from(norm_type(ret, mapping, _ctx));
+                TypeKind::Lam(TLam {
                     type_params: type_params.to_owned(),
+                    params,
+                    ret,
                 })
             }
             TypeKind::Lit(_) => return t.to_owned(),
@@ -503,6 +530,33 @@ pub fn get_property_type(prop: &TProp) -> Type {
     }
 }
 
+pub fn replace_aliases_in_lam(lam: &TLam, type_param_map: &HashMap<String, Type>) -> TLam {
+    let TLam {
+        params,
+        ret,
+        type_params,
+    } = lam;
+
+    let mut type_param_map = type_param_map.clone();
+    if let Some(type_params) = type_params {
+        for type_param in type_params {
+            type_param_map.remove(&type_param.name);
+        }
+    }
+
+    TLam {
+        params: params
+            .iter()
+            .map(|param| TFnParam {
+                t: replace_aliases_rec(&param.t, &type_param_map),
+                ..param.to_owned()
+            })
+            .collect(),
+        ret: Box::from(replace_aliases_rec(ret, &type_param_map)),
+        type_params: type_params.to_owned(),
+    }
+}
+
 // TODO: update this to use Visitor from crochet_infer, which should probably
 // be moved into the crochet_ast crate.
 // TODO: rename this replace_refs_rec
@@ -528,43 +582,7 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
             ret: Box::from(replace_aliases_rec(ret, type_param_map)),
             type_args: type_args.to_owned(), // TODO: replace aliases in this as well
         }),
-        TypeKind::Lam(TLam { params, ret }) => TypeKind::Lam(TLam {
-            params: params
-                .iter()
-                .map(|param| TFnParam {
-                    t: replace_aliases_rec(&param.t, type_param_map),
-                    ..param.to_owned()
-                })
-                .collect(),
-            ret: Box::from(replace_aliases_rec(ret, type_param_map)),
-        }),
-        TypeKind::GenLam(TGenLam { lam, type_params }) => {
-            // Removes any shadowed type params.
-            let mut type_param_map = type_param_map.clone();
-            if let Some(type_params) = type_params {
-                for type_param in type_params {
-                    type_param_map.remove(&type_param.name);
-                }
-            }
-
-            let params: Vec<_> = lam
-                .params
-                .iter()
-                .map(|param| TFnParam {
-                    t: replace_aliases_rec(&param.t, &type_param_map),
-                    ..param.to_owned()
-                })
-                .collect();
-            let ret = replace_aliases_rec(&lam.ret, &type_param_map);
-
-            TypeKind::GenLam(TGenLam {
-                lam: Box::from(TLam {
-                    params,
-                    ret: Box::from(ret),
-                }),
-                type_params: type_params.to_owned(),
-            })
-        }
+        TypeKind::Lam(lam) => TypeKind::Lam(replace_aliases_in_lam(lam, type_param_map)),
         TypeKind::Lit(_) => return t.to_owned(),
         TypeKind::Keyword(_) => return t.to_owned(),
         TypeKind::Union(types) => TypeKind::Union(

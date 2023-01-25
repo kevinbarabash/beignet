@@ -10,30 +10,21 @@ use crate::types::TypeParam;
 pub struct TLam {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
+    pub type_params: Option<Vec<TypeParam>>,
 }
 
 impl fmt::Display for TLam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { params, ret } = self;
-        write!(f, "({}) => {}", join(params, ", "), ret)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TGenLam {
-    pub type_params: Option<Vec<TypeParam>>,
-    pub lam: Box<TLam>,
-}
-
-impl fmt::Display for TGenLam {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self { type_params, lam } = self;
-
+        let Self {
+            type_params,
+            params,
+            ret,
+        } = self;
         if let Some(type_params) = &type_params {
             let type_params: Vec<_> = type_params.iter().map(|tp| tp.to_string()).collect();
             write!(f, "<{}>", type_params.join(", "))?;
         }
-        write!(f, "{lam}")
+        write!(f, "({}) => {}", join(params, ", "), ret)
     }
 }
 
