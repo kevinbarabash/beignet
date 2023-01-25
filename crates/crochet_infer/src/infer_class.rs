@@ -298,17 +298,16 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
         is_interface: true,
     }));
 
-    let type_params = match &class.type_params {
-        Some(type_params) => type_params
+    let type_params = class.type_params.as_ref().map(|type_params| {
+        type_params
             .iter()
             .map(|type_param| TypeParam {
                 name: type_param.name.name.to_owned(),
                 constraint: None, // TODO
                 default: None,    // TODO
             })
-            .collect(),
-        None => vec![],
-    };
+            .collect()
+    });
 
     let scheme = Scheme {
         t: Box::from(instance_t),

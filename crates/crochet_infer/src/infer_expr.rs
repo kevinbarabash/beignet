@@ -844,7 +844,9 @@ fn infer_property_type(
 
                     let mut type_param_map: HashMap<String, Type> = HashMap::new();
                     let type_param = Type::from(TypeKind::Union(elem_types.to_owned()));
-                    type_param_map.insert(scheme.type_params[0].name.to_owned(), type_param);
+                    if let Some(type_params) = scheme.type_params {
+                        type_param_map.insert(type_params[0].name.to_owned(), type_param);
+                    }
 
                     let mut t = replace_aliases_rec(&scheme.t, &type_param_map);
                     t.mutable = obj_t.mutable;

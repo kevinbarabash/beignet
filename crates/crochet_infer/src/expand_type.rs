@@ -58,7 +58,7 @@ pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> 
             // TODO: create separate methods `insert_type_and_generalize` and `insert_type`
             let scheme = Scheme {
                 t: Box::from(t.to_owned()),
-                type_params: vec![],
+                type_params: None,
             };
             ctx.insert_scheme(name.to_owned(), scheme);
 
@@ -71,75 +71,74 @@ pub fn expand_alias_type(alias: &TRef, ctx: &mut Context) -> Result<Type, Vec<Ty
     let name = &alias.name;
     let scheme = ctx.lookup_scheme(name)?;
 
-    let type_params = scheme.type_params;
-
     // Replaces qualifiers in the type with the corresponding type params
     // from the alias type.
-    if let Some(type_args) = &alias.type_args {
-        if type_args.len() != type_params.len() {
-            // TODO: rename this TypeParamTypeArgCountMismatch
-            eprintln!("type_args.len() != type_params.len()");
-            return Err(vec![TypeError::TypeInstantiationFailure]);
-        }
+    match (&alias.type_args, &scheme.type_params) {
+        (None, None) => expand_type(&scheme.t, ctx),
+        (None, Some(_)) => Err(vec![TypeError::TypeInstantiationFailure]),
+        (Some(_), None) => Err(vec![TypeError::TypeInstantiationFailure]),
+        (Some(type_args), Some(type_params)) => {
+            if type_args.len() != type_params.len() {
+                // TODO: rename this TypeParamTypeArgCountMismatch
+                eprintln!("type_args.len() != type_params.len()");
+                return Err(vec![TypeError::TypeInstantiationFailure]);
+            }
 
-        // NOTE: `infer_omit` fails with this commented out, but `test_infer_type`
-        // fails if we leave it in.
-        // TODO: figure out how to make both tests pass.
-        let type_args = type_args
-            .iter()
-            .map(|arg| expand_type(arg, ctx))
-            .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
+            // NOTE: `infer_omit` fails with this commented out, but `test_infer_type`
+            // fails if we leave it in.
+            // TODO: figure out how to make both tests pass.
+            let type_args = type_args
+                .iter()
+                .map(|arg| expand_type(arg, ctx))
+                .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
-        let mut type_param_map: HashMap<String, Type> = HashMap::new();
-        for (param, arg) in type_params.iter().zip(type_args.iter()) {
-            type_param_map.insert(param.name.to_owned(), arg.to_owned());
-        }
+            let mut type_param_map: HashMap<String, Type> = HashMap::new();
+            for (param, arg) in type_params.iter().zip(type_args.iter()) {
+                type_param_map.insert(param.name.to_owned(), arg.to_owned());
+            }
 
-        if let TypeKind::ConditionalType(TConditionalType { check_type, .. }) = &scheme.t.kind {
-            // When conditional types act on a generic type, they
-            // become distributive when given a union type.  In particular,
-            // if the `check_type` of the conditional type is a union, then
-            // we evaluate the conditional type for each element in the union
-            // and return the union of those results.
-            if let TypeKind::Ref(tref) = &check_type.kind {
-                if let Some((index_of_check_type, _)) = type_params
-                    .iter()
-                    .find_position(|param| param.name == tref.name)
-                {
-                    let check_args = match &type_args[index_of_check_type].kind {
-                        TypeKind::Union(types) => types.to_owned(),
-                        _ => vec![type_args[index_of_check_type].to_owned()],
-                    };
-
-                    // Distribute:
-                    // If the condition's `check_type` was a union we compute
-                    // the conditional type once for each element in the union.
-                    // The `Subst` used is slightly different from the normal
-                    // one in that we're replacing the type arg corresponding to
-                    // the `check_type` with each element in the union.
-                    let types = check_args
+            if let TypeKind::ConditionalType(TConditionalType { check_type, .. }) = &scheme.t.kind {
+                // When conditional types act on a generic type, they
+                // become distributive when given a union type.  In particular,
+                // if the `check_type` of the conditional type is a union, then
+                // we evaluate the conditional type for each element in the union
+                // and return the union of those results.
+                if let TypeKind::Ref(tref) = &check_type.kind {
+                    if let Some((index_of_check_type, _)) = type_params
                         .iter()
-                        .map(|check_arg| {
-                            type_param_map.insert(tref.name.to_owned(), check_arg.to_owned());
-                            let t = replace_aliases_rec(&scheme.t, &type_param_map);
-                            expand_type(&t, ctx)
-                        })
-                        .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
+                        .find_position(|param| param.name == tref.name)
+                    {
+                        let check_args = match &type_args[index_of_check_type].kind {
+                            TypeKind::Union(types) => types.to_owned(),
+                            _ => vec![type_args[index_of_check_type].to_owned()],
+                        };
 
-                    let t = union_many_types(&types);
-                    return expand_type(&t, ctx);
+                        // Distribute:
+                        // If the condition's `check_type` was a union we compute
+                        // the conditional type once for each element in the union.
+                        // The `Subst` used is slightly different from the normal
+                        // one in that we're replacing the type arg corresponding to
+                        // the `check_type` with each element in the union.
+                        let types = check_args
+                            .iter()
+                            .map(|check_arg| {
+                                type_param_map.insert(tref.name.to_owned(), check_arg.to_owned());
+                                let t = replace_aliases_rec(&scheme.t, &type_param_map);
+                                expand_type(&t, ctx)
+                            })
+                            .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
+
+                        let t = union_many_types(&types);
+                        return expand_type(&t, ctx);
+                    }
                 }
             }
-        }
 
-        // Handle the default case by replacing type variables that match type
-        // params with the corresponding type args.
-        let t = replace_aliases_rec(&scheme.t, &type_param_map);
-        expand_type(&t, ctx)
-    } else if !type_params.is_empty() {
-        Err(vec![TypeError::TypeInstantiationFailure])
-    } else {
-        expand_type(&scheme.t, ctx)
+            // Handle the default case by replacing type variables that match type
+            // params with the corresponding type args.
+            let t = replace_aliases_rec(&scheme.t, &type_param_map);
+            expand_type(&t, ctx)
+        }
     }
 }
 
@@ -750,10 +749,12 @@ pub fn get_obj_type(t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeErro
             let scheme = ctx.lookup_scheme("Array")?;
 
             let mut type_param_map: HashMap<String, Type> = HashMap::new();
-            type_param_map.insert(
-                scheme.type_params[0].name.to_owned(),
-                type_param.as_ref().to_owned(),
-            );
+            if let Some(type_params) = scheme.type_params {
+                type_param_map.insert(
+                    type_params[0].name.to_owned(),
+                    type_param.as_ref().to_owned(),
+                );
+            }
 
             let t = replace_aliases_rec(&scheme.t, &type_param_map);
 

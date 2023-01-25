@@ -70,12 +70,7 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
     let mut body: Vec<ModuleItem> = vec![];
 
     for (name, scheme) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
-        let type_params = if scheme.type_params.is_empty() {
-            None
-        } else {
-            Some(scheme.type_params.to_owned())
-        };
-        let type_params = build_type_params_from_type_params(&type_params, ctx);
+        let type_params = build_type_params_from_type_params(&scheme.type_params, ctx);
 
         if let TypeKind::Object(obj) = &scheme.t.kind {
             let mutable_decl =

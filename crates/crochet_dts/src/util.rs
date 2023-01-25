@@ -7,16 +7,23 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
     let type_params_1 = &old_scheme.type_params;
     let type_params_2 = &new_scheme.type_params;
 
-    if type_params_1.len() != type_params_2.len() {
-        panic!("Mismatch in type param count when attempting to merge type");
-    }
+    match (type_params_1, type_params_2) {
+        (None, None) => (),
+        (None, Some(_)) => panic!("Mismatch in type param count when attempting to merge type"),
+        (Some(_), None) => panic!("Mismatch in type param count when attempting to merge type"),
+        (Some(type_params_1), Some(type_params_2)) => {
+            if type_params_1.len() != type_params_2.len() {
+                panic!("Mismatch in type param count when attempting to merge type");
+            }
 
-    // TODO: check if the type params are in the same order
-    for (type_param_1, type_param_2) in type_params_1.iter().zip(type_params_2.iter()) {
-        if type_param_1.name != type_param_2.name {
-            panic!("Type params must have the same names when merging schemes");
+            // TODO: check if the type params are in the same order
+            for (type_param_1, type_param_2) in type_params_1.iter().zip(type_params_2.iter()) {
+                if type_param_1.name != type_param_2.name {
+                    panic!("Type params must have the same names when merging schemes");
+                }
+            }
         }
-    }
+    };
 
     let t = match (&old_scheme.t.kind, &new_scheme.t.kind) {
         (TypeKind::Object(old_obj), TypeKind::Object(new_obj)) => {
@@ -204,7 +211,7 @@ mod tests {
                 elems: old_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
         let new_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("bar")),
@@ -218,7 +225,7 @@ mod tests {
                 elems: new_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
 
         let result = merge_schemes(&old_scheme, &new_scheme);
@@ -242,7 +249,7 @@ mod tests {
                 elems: old_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
         let new_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("bar")),
@@ -256,7 +263,7 @@ mod tests {
                 elems: new_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
 
         let result = merge_schemes(&old_scheme, &new_scheme);
@@ -280,7 +287,7 @@ mod tests {
                 elems: old_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
         let new_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("foo")),
@@ -294,7 +301,7 @@ mod tests {
                 elems: new_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
 
         let result = merge_schemes(&old_scheme, &new_scheme);
@@ -315,7 +322,7 @@ mod tests {
                 elems: old_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
         let new_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("foo")),
@@ -329,7 +336,7 @@ mod tests {
                 elems: new_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
 
         let result = merge_schemes(&old_scheme, &new_scheme);
@@ -351,7 +358,7 @@ mod tests {
                 elems: old_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
         let new_elems = vec![TObjElem::Index(TIndex {
             key: TIndexKey {
@@ -366,7 +373,7 @@ mod tests {
                 elems: new_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
 
         let result = merge_schemes(&old_scheme, &new_scheme);
@@ -391,7 +398,7 @@ mod tests {
                 elems: old_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
         let new_elems = vec![TObjElem::Index(TIndex {
             key: TIndexKey {
@@ -406,7 +413,7 @@ mod tests {
                 elems: new_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
 
         let result = merge_schemes(&old_scheme, &new_scheme);
@@ -428,7 +435,7 @@ mod tests {
                 elems: old_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
         let new_elems = vec![TObjElem::Call(TCallable {
             params: vec![],
@@ -440,7 +447,7 @@ mod tests {
                 elems: new_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
 
         let result = merge_schemes(&old_scheme, &new_scheme);
@@ -459,7 +466,7 @@ mod tests {
                 elems: old_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
         let new_elems = vec![TObjElem::Constructor(TCallable {
             params: vec![],
@@ -471,7 +478,7 @@ mod tests {
                 elems: new_elems,
                 is_interface: true,
             }))),
-            type_params: vec![],
+            type_params: None,
         };
 
         let result = merge_schemes(&old_scheme, &new_scheme);
