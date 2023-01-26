@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use types::{
-    TCallable, TConditionalType, TIndex, TIndexAccess, TIndexKey, TMappedType, TObjElem, TObject,
-    TPropKey, TypeKind,
+    TCallable, TConditionalType, TIndex, TIndexAccess, TIndexKey, TLam, TMappedType, TObjElem,
+    TObject, TPropKey, TypeKind,
 };
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
@@ -12,8 +12,8 @@ use swc_ecma_visit::*;
 
 use crate::util;
 use crochet_ast::types::{
-    self as types, RestPat, TFnParam, TGenLam, TKeyword, TMappedTypeChangeProp, TPat, TProp, TRef,
-    Type, TypeParam,
+    self as types, RestPat, TFnParam, TKeyword, TMappedTypeChangeProp, TPat, TProp, TRef, Type,
+    TypeParam,
 };
 use crochet_ast::values::{Lit, DUMMY_LOC};
 use crochet_infer::{get_sub_and_type_params, Context, Scheme, Subst, Substitutable};
@@ -63,12 +63,10 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
         TsType::TsThisType(_) => Ok(Type::from(TypeKind::This)),
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
-                let lam = types::TLam {
-                    params: infer_fn_params(&fn_type.params, ctx)?,
-                    ret: Box::from(infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?),
-                };
+                let params = infer_fn_params(&fn_type.params, ctx)?;
+                let ret = Box::from(infer_ts_type_ann(&fn_type.type_ann.type_ann, ctx)?);
 
-                match &fn_type.type_params {
+                let type_params = match &fn_type.type_params {
                     Some(type_param_decl) => {
                         let type_params = type_param_decl
                             .params
@@ -98,19 +96,22 @@ pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, Strin
                             })
                             .collect::<Result<Vec<TypeParam>, String>>()?;
 
-                        let t = Type::from(TypeKind::GenLam(TGenLam {
-                            lam: Box::from(lam),
-                            type_params: if type_params.is_empty() {
-                                None
-                            } else {
-                                Some(type_params)
-                            },
-                        }));
-
-                        Ok(t)
+                        if type_params.is_empty() {
+                            None
+                        } else {
+                            Some(type_params)
+                        }
                     }
-                    None => Ok(Type::from(TypeKind::Lam(lam))),
-                }
+                    None => None,
+                };
+
+                let t = Type::from(TypeKind::Lam(TLam {
+                    type_params,
+                    params,
+                    ret,
+                }));
+
+                Ok(t)
             }
             TsFnOrConstructorType::TsConstructorType(_) => {
                 // NOTE: This is only used by `bind` in NewableFunction so it's

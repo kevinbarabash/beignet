@@ -107,7 +107,7 @@ impl Context {
         current_scope.namespaces.insert(name, Box::from(namespace));
     }
 
-    // TODO: update to instantiate GenLam -> Lam
+    // TODO: update to instantiate Lam
     pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, Vec<TypeError>> {
         for scope in self.scopes.iter().rev() {
             if let Some(binding) = scope.values.get(name) {

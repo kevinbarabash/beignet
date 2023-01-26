@@ -90,7 +90,11 @@ fn infer_type_ann_rec(
             ss.push(ret_s);
 
             let s = compose_many_subs(&ss);
-            let t = Type::from(TypeKind::Lam(types::TLam { params, ret }));
+            let t = Type::from(TypeKind::Lam(types::TLam {
+                type_params: None,
+                params,
+                ret,
+            }));
             type_ann.inferred_type = Some(t.clone());
             Ok((s, t))
         }

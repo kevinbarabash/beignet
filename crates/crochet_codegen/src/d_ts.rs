@@ -430,12 +430,12 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
             // This can happen when a function type is inferred by usage
             build_ts_fn_type_with_args(args, ret, type_params, ctx)
         }
-        TypeKind::Lam(types::TLam { params, ret, .. }) => {
-            build_ts_fn_type_with_params(params, ret, type_params, ctx)
-        }
-        TypeKind::GenLam(types::TGenLam { type_params, lam }) => {
+        TypeKind::Lam(types::TLam {
+            params,
+            ret,
+            type_params,
+        }) => {
             let type_params = build_type_params_from_type_params(type_params, ctx);
-            let types::TLam { params, ret } = lam.as_ref();
             build_ts_fn_type_with_params(params, ret, &type_params, ctx)
         }
         TypeKind::Union(types) => {

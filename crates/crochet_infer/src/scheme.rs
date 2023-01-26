@@ -7,8 +7,8 @@ use std::iter::Iterator;
 use crochet_ast::types::*;
 
 use crate::context::{Context, Env};
-use crate::replace_aliases_rec;
 use crate::substitutable::{Subst, Substitutable};
+use crate::util::{replace_aliases_in_lam, replace_aliases_rec};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Scheme {
@@ -75,21 +75,6 @@ pub fn generalize(env: &Env, t: &Type) -> Scheme {
     }
 }
 
-pub fn generalize_gen_lam(env: &Env, lam: &TLam) -> TGenLam {
-    let tvars: Vec<TVar> = lam.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id);
-
-    let (sub, type_params) = get_sub_and_type_params(&tvars);
-
-    // TODO: Consider not cloning here once we have some tests in place
-    let mut lam = lam.clone();
-    lam.apply(&sub);
-
-    TGenLam {
-        lam: Box::from(lam),
-        type_params,
-    }
-}
-
 pub fn get_type_param_map(ctx: &Context, type_params: &[TypeParam]) -> HashMap<String, Type> {
     let mut type_param_map = HashMap::new();
 
@@ -123,17 +108,13 @@ pub fn instantiate(ctx: &Context, sc: &Scheme) -> Type {
     replace_aliases_rec(&sc.t, &type_param_map)
 }
 
-pub fn instantiate_gen_lam(
-    ctx: &Context,
-    gen_lam: &TGenLam,
-    type_args: &Option<Vec<Type>>,
-) -> Type {
-    let TGenLam { type_params, lam } = gen_lam;
+pub fn instantiate_gen_lam(ctx: &Context, lam: &TLam, type_args: &Option<Vec<Type>>) -> TLam {
+    if lam.type_params.is_none() {
+        return lam.to_owned();
+    }
 
     // TODO: check if `type_args` conform the the constraints in `type_params`
-
-    let t = Type::from(TypeKind::Lam(lam.as_ref().to_owned()));
-    let type_param_map = match type_params {
+    let type_param_map = match &lam.type_params {
         Some(type_params) => match type_args {
             Some(type_args) => {
                 let mut map: HashMap<String, Type> = HashMap::new();
@@ -147,7 +128,12 @@ pub fn instantiate_gen_lam(
         None => HashMap::new(),
     };
 
-    replace_aliases_rec(&t, &type_param_map)
+    let lam = TLam {
+        type_params: None,
+        ..lam.to_owned()
+    };
+
+    replace_aliases_in_lam(&lam, &type_param_map)
 }
 
 // TODO: Update to acception optional type args
@@ -165,6 +151,7 @@ pub fn instantiate_callable(ctx: &Context, callable: &TCallable) -> Type {
     let t = Type::from(TypeKind::Lam(TLam {
         params: params.to_owned(),
         ret: ret.to_owned(),
+        type_params: None,
     }));
 
     replace_aliases_rec(&t, &type_param_map)
@@ -259,46 +246,13 @@ mod tests {
     }
 
     #[test]
-    fn test_generalize_lam_to_gen_lam() {
-        let ctx = Context::default();
-
-        let tv = ctx.fresh_var();
-
-        let lam = TLam {
-            params: vec![
-                TFnParam {
-                    pat: TPat::Ident(BindingIdent {
-                        name: "a".to_string(),
-                        mutable: false,
-                    }),
-                    t: tv.clone(),
-                    optional: false,
-                },
-                TFnParam {
-                    pat: TPat::Ident(BindingIdent {
-                        name: "b".to_string(),
-                        mutable: false,
-                    }),
-                    t: ctx.fresh_var(),
-                    optional: false,
-                },
-            ],
-            ret: Box::from(tv),
-        };
-
-        let env = Env::new();
-        let gen_lam = generalize_gen_lam(&env, &lam);
-
-        assert_eq!(gen_lam.to_string(), "<A, B>(a: A, b: B) => A");
-    }
-
-    #[test]
     fn test_generalize_lam_to_scheme() {
         let ctx = Context::default();
 
         let tv = ctx.fresh_var();
 
         let lam = TLam {
+            type_params: None,
             params: vec![
                 TFnParam {
                     pat: TPat::Ident(BindingIdent {
@@ -499,7 +453,7 @@ mod tests {
     fn test_instantiate_gen_lam() {
         let ctx = Context::default();
 
-        let gen_lam = TGenLam {
+        let gen_lam = TLam {
             type_params: Some(vec![
                 TypeParam {
                     name: "A".to_string(),
@@ -512,36 +466,34 @@ mod tests {
                     default: None,
                 },
             ]),
-            lam: Box::from(TLam {
-                params: vec![
-                    TFnParam {
-                        pat: TPat::Ident(BindingIdent {
-                            name: "a".to_string(),
-                            mutable: false,
-                        }),
-                        t: Type::from(TypeKind::Ref(TRef {
-                            name: "A".to_string(),
-                            type_args: None,
-                        })),
-                        optional: false,
-                    },
-                    TFnParam {
-                        pat: TPat::Ident(BindingIdent {
-                            name: "b".to_string(),
-                            mutable: false,
-                        }),
-                        t: Type::from(TypeKind::Ref(TRef {
-                            name: "B".to_string(),
-                            type_args: None,
-                        })),
-                        optional: false,
-                    },
-                ],
-                ret: Box::from(Type::from(TypeKind::Ref(TRef {
-                    name: "A".to_string(),
-                    type_args: None,
-                }))),
-            }),
+            params: vec![
+                TFnParam {
+                    pat: TPat::Ident(BindingIdent {
+                        name: "a".to_string(),
+                        mutable: false,
+                    }),
+                    t: Type::from(TypeKind::Ref(TRef {
+                        name: "A".to_string(),
+                        type_args: None,
+                    })),
+                    optional: false,
+                },
+                TFnParam {
+                    pat: TPat::Ident(BindingIdent {
+                        name: "b".to_string(),
+                        mutable: false,
+                    }),
+                    t: Type::from(TypeKind::Ref(TRef {
+                        name: "B".to_string(),
+                        type_args: None,
+                    })),
+                    optional: false,
+                },
+            ],
+            ret: Box::from(Type::from(TypeKind::Ref(TRef {
+                name: "A".to_string(),
+                type_args: None,
+            }))),
         };
 
         let lam = instantiate_gen_lam(&ctx, &gen_lam, &None);
