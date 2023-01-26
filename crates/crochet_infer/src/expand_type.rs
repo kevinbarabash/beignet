@@ -180,7 +180,7 @@ impl ReplaceVisitor {
 }
 
 impl Visitor for ReplaceVisitor {
-    // TODO: handle type params in TGenLams correctly
+    // TODO: handle type params in TLams with type_params correctly
     fn visit_type(&mut self, t: &mut Type) {
         if let TypeKind::InferType(TInferType { name }) = &t.kind {
             match self.type_param_map.get(name) {

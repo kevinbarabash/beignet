@@ -26,36 +26,6 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
     mapping
 }
 
-// TODO: write unit tests for `close_over`, e.g.
-// #[test]
-// fn test_generalize_lam_to_gen_lam() {
-//     let ctx = Context::default();
-//     let tv = ctx.fresh_var();
-//     let lam = TLam {
-//         params: vec![
-//             TFnParam {
-//                 pat: TPat::Ident(BindingIdent {
-//                     name: "a".to_string(),
-//                     mutable: false,
-//                 }),
-//                 t: tv.clone(),
-//                 optional: false,
-//             },
-//             TFnParam {
-//                 pat: TPat::Ident(BindingIdent {
-//                     name: "b".to_string(),
-//                     mutable: false,
-//                 }),
-//                 t: ctx.fresh_var(),
-//                 optional: false,
-//             },
-//         ],
-//         ret: Box::from(tv),
-//     };
-//     let env = Env::new();
-//     let gen_lam = generalize_gen_lam(&env, &lam);
-//     assert_eq!(gen_lam.to_string(), "<A, B>(a: A, b: B) => A");
-// }
 pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
     let mut t = t.clone();
     t.apply(s);
@@ -867,5 +837,38 @@ mod tests {
         let s = compose_subs(&s2, &s1);
 
         eprintln!("s = {s:#?}");
+    }
+
+    #[test]
+    fn test_close_over() {
+        let ctx = Context::default();
+        let tv = ctx.fresh_var();
+        let lam = TLam {
+            type_params: None,
+            params: vec![
+                TFnParam {
+                    pat: TPat::Ident(BindingIdent {
+                        name: "a".to_string(),
+                        mutable: false,
+                    }),
+                    t: tv.clone(),
+                    optional: false,
+                },
+                TFnParam {
+                    pat: TPat::Ident(BindingIdent {
+                        name: "b".to_string(),
+                        mutable: false,
+                    }),
+                    t: ctx.fresh_var(),
+                    optional: false,
+                },
+            ],
+            ret: Box::from(tv),
+        };
+        let t = Type::from(TypeKind::Lam(lam));
+        let s = Subst::default();
+        let result = close_over(&s, &t, &ctx);
+
+        assert_eq!(result.to_string(), "<A, B>(a: A, b: B) => A");
     }
 }

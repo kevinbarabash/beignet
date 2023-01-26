@@ -107,7 +107,6 @@ pub enum TypeKind {
     Var(TVar),
     App(TApp),
     Lam(TLam),
-    // GenLam(TGenLam),
     Lit(TLit),
     Keyword(TKeyword),
     Union(Vec<Type>),
@@ -180,7 +179,6 @@ impl fmt::Display for Type {
                 write!(f, "({}) => {}", join(args, ", "), ret)
             }
             TypeKind::Lam(lam) => write!(f, "{lam}"),
-            // TypeKind::GenLam(gen_lam) => write!(f, "{gen_lam}"),
             TypeKind::Lit(lit) => write!(f, "{}", lit),
             TypeKind::Keyword(keyword) => write!(f, "{}", keyword),
             TypeKind::Union(types) => {
