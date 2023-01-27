@@ -132,6 +132,7 @@ impl Context {
                 return Ok(b.to_owned());
             }
         }
+        eprintln!("lookup_binding failed");
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 

@@ -787,7 +787,6 @@ fn is_promise(t: &Type) -> bool {
     matches!(&t, Type {kind: TypeKind::Ref(types::TRef { name, .. }), ..} if name == "Promise")
 }
 
-// TODO: update this function to make use of get_obj_type
 fn infer_property_type(
     obj_t: &mut Type,
     prop: &mut MemberProp,
@@ -905,8 +904,17 @@ fn get_prop_value(
             for elem in elems {
                 match elem {
                     types::TObjElem::Prop(prop) => {
-                        // TODO: if `is_lvalue` is true and `obj_is_mutable`is false raise and error
                         if prop.name == TPropKey::StringKey(name.to_owned()) {
+                            if is_lvalue && !obj_is_mutable {
+                                eprintln!("object isn't mutable, obj = {obj:#?}");
+                                return Err(vec![TypeError::Unspecified]); // TODO
+                            }
+
+                            if is_lvalue && !prop.mutable {
+                                eprintln!("prop isn't mutable, prop = {prop:#?}");
+                                return Err(vec![TypeError::Unspecified]); // TODO
+                            }
+
                             let t = get_property_type(prop);
                             return Ok((Subst::default(), t));
                         }

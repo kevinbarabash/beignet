@@ -163,6 +163,7 @@ module.exports = grammar(tsx, {
           field("abstract", optional("abstract")),
           field("static", optional("static"))
         ),
+        field("mut", optional("mut")),
         optional($.override_modifier),
         field("name", $._property_name),
         // optional(choice("?", "!")),

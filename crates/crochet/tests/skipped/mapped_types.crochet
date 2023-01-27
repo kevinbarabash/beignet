@@ -1,3 +1,5 @@
+// NOTE: This is skipped b/c we need to figure out how to handle object types
+// with a mix of mutable and immutable fields.
 type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
 type PartialObj = Partial<Obj>;
 

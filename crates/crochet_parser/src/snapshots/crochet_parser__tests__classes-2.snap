@@ -120,6 +120,7 @@ Ok(
                                 ),
                                 is_static: false,
                                 is_optional: false,
+                                is_mutable: false,
                             },
                         ),
                     ],
