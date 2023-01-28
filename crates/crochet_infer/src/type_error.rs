@@ -21,6 +21,8 @@ pub enum TypeError {
     // Mutability
     NonMutableBindingAssignment(Box<Assign>),
     UnexpectedImutableValue,
+    ObjectIsNotMutable,
+    PropertyIsNotMutable,
 
     // Tuples and Arrays
     InvalidIndex(Box<Type>, Box<Type>),
@@ -100,6 +102,8 @@ impl fmt::Display for TypeError {
             }
             TypeError::MissingTypeIndex => write!(fmt, "MissingTypeIndex"),
             TypeError::NonMutableBindingAssignment(_) => write!(fmt, "NonMutableBindingAssignment"),
+            TypeError::ObjectIsNotMutable => write!(fmt, "ObjectIsNotMutable"),
+            TypeError::PropertyIsNotMutable => write!(fmt, "PropertyIsNotMutable"),
             TypeError::NotAnObject(t) => write!(fmt, "NotAnObject: {t} is not an object"),
             TypeError::NotAnObjectType(t) => {
                 write!(fmt, "NotAnObjectType: {t} is not an object type an can't be used in indexed access types")

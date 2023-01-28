@@ -3068,7 +3068,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::Unspecified"]
+    #[should_panic = "TypeError::PropertyIsNotMutable"]
     fn disallow_mutation_of_non_mutable_properties() {
         let src = r#"
         class Foo {
@@ -3085,7 +3085,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::Unspecified"]
+    #[should_panic = "TypeError::ObjectIsNotMutable"]
     fn disallow_mutation_of_non_mutable_references() {
         let src = r#"
         class Foo {

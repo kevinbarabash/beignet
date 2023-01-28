@@ -906,13 +906,11 @@ fn get_prop_value(
                     types::TObjElem::Prop(prop) => {
                         if prop.name == TPropKey::StringKey(name.to_owned()) {
                             if is_lvalue && !obj_is_mutable {
-                                eprintln!("object isn't mutable, obj = {obj:#?}");
-                                return Err(vec![TypeError::Unspecified]); // TODO
+                                return Err(vec![TypeError::ObjectIsNotMutable]);
                             }
 
                             if is_lvalue && !prop.mutable {
-                                eprintln!("prop isn't mutable, prop = {prop:#?}");
-                                return Err(vec![TypeError::Unspecified]); // TODO
+                                return Err(vec![TypeError::PropertyIsNotMutable]);
                             }
 
                             let t = get_property_type(prop);
