@@ -14,5 +14,5 @@ declare type ReadonlyObj = {
     readonly d?: number;
 };
 declare type PartialObj = Partial<ReadonlyObj>;
-export declare const custom_obj: Custom<ReadonlyObj>;
+export declare const custom_obj: Custom<Obj>;
 export declare const partial_obj: PartialObj;
