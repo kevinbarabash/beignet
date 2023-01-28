@@ -46,4 +46,5 @@ pub struct ClassProp {
     pub type_ann: Option<Box<TypeAnn>>,
     pub is_static: bool,
     pub is_optional: bool,
+    pub is_mutable: bool,
 }

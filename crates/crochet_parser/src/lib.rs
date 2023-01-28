@@ -308,9 +308,6 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
                 }
             }
             "public_field_definition" => {
-                // TODO: add support to the AST for this
-                let _mutable = child.child_by_field_name("mut").is_some();
-
                 let name_node = child.child_by_field_name("name").unwrap();
                 let key = Ident {
                     loc: SourceLocation::from(&name_node),
@@ -333,6 +330,7 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
                     type_ann,
                     is_static: child.child_by_field_name("static").is_some(),
                     is_optional: child.child_by_field_name("optional").is_some(),
+                    is_mutable: child.child_by_field_name("mut").is_some(),
                 }))
             }
             "private_field_definition" => todo!(),

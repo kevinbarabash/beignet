@@ -3039,6 +3039,92 @@ mod tests {
         assert_eq!(format!("{sum}"), "number");
     }
 
+    // TODO: introduce the `void` type which ignores the return type but also
+    // doesn't allow the result of a function or method to be assigned to anything.
+    // This would allow us to do:
+    // set_msg(mut self, value: string): void {
+    //    self.msg = value;
+    // }
+    // Ideally the code we generate would not return the value of the assignment
+    // if it appears last.  We'll still likely want to support using `a = b` as
+    // expression to support certain looping constructs
+    #[test]
+    fn infer_class_method_accessing_properties_on_self() {
+        let src = r#"
+        class Foo {
+            mut msg: string;
+            constructor(self) {}
+            get_msg(self): string {
+                self.msg;
+            }
+            set_msg(mut self, value: string): undefined {
+                self.msg = value;
+                undefined;
+            }
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    fn infer_class_method_accessing_properties_on_self_generic() {
+        let src = r#"
+        class Foo<T> {
+            mut msg: T;
+            constructor(self) {}
+            get_msg(self): T {
+                self.msg;
+            }
+            set_msg(mut self, value: T): undefined {
+                self.msg = value;
+                undefined;
+            }
+        }
+
+        let foo_num = new Foo<number>();
+        foo_num.set_msg(5);
+        let foo_str = new Foo<string>();
+        foo_str.set_msg("hello");
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "TypeError::PropertyIsNotMutable"]
+    fn disallow_mutation_of_non_mutable_properties() {
+        let src = r#"
+        class Foo {
+            msg: string;
+            constructor(self) {}
+            set_msg(mut self, value: string): undefined {
+                self.msg = value;
+                undefined;
+            }
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
+    #[should_panic = "TypeError::ObjectIsNotMutable"]
+    fn disallow_mutation_of_non_mutable_references() {
+        let src = r#"
+        class Foo {
+            mut msg: string;
+            constructor(self) {}
+            set_msg(self, value: string): undefined {
+                self.msg = value;
+                undefined;
+            }
+        }
+        "#;
+
+        infer_prog(src);
+    }
+
     #[test]
     fn infer_class_property() {
         let src = r#"

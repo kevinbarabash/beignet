@@ -87,6 +87,7 @@ Ok(
                                 ),
                                 is_static: true,
                                 is_optional: false,
+                                is_mutable: false,
                             },
                         ),
                     ],
