@@ -3068,6 +3068,30 @@ mod tests {
     }
 
     #[test]
+    fn infer_class_method_accessing_properties_on_self_generic() {
+        let src = r#"
+        class Foo<T> {
+            mut msg: T;
+            constructor(self) {}
+            get_msg(self): T {
+                self.msg;
+            }
+            set_msg(mut self, value: T): undefined {
+                self.msg = value;
+                undefined;
+            }
+        }
+
+        let foo_num = new Foo<number>();
+        foo_num.set_msg(5);
+        let foo_str = new Foo<string>();
+        foo_str.set_msg("hello");
+        "#;
+
+        infer_prog(src);
+    }
+
+    #[test]
     #[should_panic = "TypeError::PropertyIsNotMutable"]
     fn disallow_mutation_of_non_mutable_properties() {
         let src = r#"
