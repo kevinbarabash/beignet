@@ -3085,7 +3085,7 @@ mod tests {
         let foo_num: mut Foo<number> = new Foo<number>();
         foo_num.set_msg(5);
         let foo_str = new Foo<string>();
-        foo_str.set_msg("hello");
+        let msg: string = foo_str.get_msg();
         "#;
 
         infer_prog(src);
