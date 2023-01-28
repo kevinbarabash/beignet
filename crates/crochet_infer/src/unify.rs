@@ -68,7 +68,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
         // is a literal, e.g. 1 + 2, but not something that calls a function or contains
         // variables.
         // NOTE: this is different from what a hypothetical `isConstExpr` would return
-        // which is similar, but call also contain:
+        // which is similar, but can also contain:
         // - binders that have been assigned const expressions
         // - pure function calls with args that are const expressions
         match &t1.provenance {
@@ -76,6 +76,7 @@ pub fn unify(t1: &mut Type, t2: &mut Type, ctx: &mut Context) -> Result<Subst, V
                 types::Provenance::Expr(e) => match e.kind {
                     ExprKind::Obj(_) => return Ok(Subst::new()),
                     ExprKind::Tuple(_) => return Ok(Subst::new()),
+                    ExprKind::New(_) => return Ok(Subst::new()),
                     _ => (),
                 },
                 types::Provenance::Pattern(_) => (),

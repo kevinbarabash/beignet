@@ -116,14 +116,6 @@ pub fn infer_expr(
             {
                 for elem in elems {
                     if let TObjElem::Constructor(callable) = &elem {
-                        // TODO: replace type
-                        let mut ret_type = ctx.fresh_var();
-                        let mut call_type = Type::from(TypeKind::App(types::TApp {
-                            args: arg_types.clone(),
-                            ret: Box::from(ret_type.clone()),
-                            type_args: None,
-                        }));
-
                         let TCallable {
                             type_params,
                             params,
@@ -164,14 +156,25 @@ pub fn infer_expr(
                         lam_type.provenance =
                             Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
 
+                        let mut ret_type = ctx.fresh_var();
+                        let mut call_type = Type::from(TypeKind::App(types::TApp {
+                            args: arg_types.clone(),
+                            ret: Box::from(ret_type.clone()),
+                            type_args: None,
+                        }));
+
                         if let Ok(s3) = unify(&mut call_type, &mut lam_type, ctx) {
                             ss.push(s3);
 
                             let s = compose_many_subs(&ss.clone());
                             ret_type.apply(&s);
-                            // TODO: figure out how we want to differentiate
-                            // new-ing up mutable objects vs. immutable ones.
-                            ret_type.mutable = true;
+                            // NOTE: This is only necessary for TypeScript constructors
+                            // since they return mutable instances by definition.
+                            // We allow immutable objects to be converted to mutable
+                            // ones when a new-expression is being assigned to an l-value.
+                            // If no type annotation is specified for the l-value, we
+                            // want it to be inferred as immutable.
+                            ret_type.mutable = false;
 
                             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
                             results.push((s, ret_type));

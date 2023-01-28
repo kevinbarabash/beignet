@@ -665,7 +665,7 @@ fn new_expressions() {
 
     let t = ctx.lookup_value("array").unwrap();
     let result = format!("{}", t);
-    assert_eq!(result, "mut 1 | 2 | 3[]");
+    assert_eq!(result, "1 | 2 | 3[]");
 }
 
 #[test]
@@ -679,11 +679,11 @@ fn new_expressions_instantiation_check() {
 
     let t = ctx.lookup_value("numbers").unwrap();
     let result = format!("{}", t);
-    assert_eq!(result, "mut 1 | 2 | 3[]");
+    assert_eq!(result, "1 | 2 | 3[]");
 
     let t = ctx.lookup_value("letters").unwrap();
     let result = format!("{}", t);
-    assert_eq!(result, r#"mut "a" | "b" | "c"[]"#);
+    assert_eq!(result, r#""a" | "b" | "c"[]"#);
 }
 
 #[test]

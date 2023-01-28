@@ -3082,7 +3082,7 @@ mod tests {
             }
         }
 
-        let foo_num = new Foo<number>();
+        let foo_num: mut Foo<number> = new Foo<number>();
         foo_num.set_msg(5);
         let foo_str = new Foo<string>();
         foo_str.set_msg("hello");
