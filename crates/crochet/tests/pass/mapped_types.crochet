@@ -6,5 +6,5 @@ let partial_obj: PartialObj = {b: "hello"};
 type Custom<T> = {
     +mut [P in keyof T]+?: T[P];
 };
-let custom_obj: mut Custom<mut Obj> = {b: "hello"};
+let custom_obj: mut Custom<Obj> = {b: "hello"};
 custom_obj.b = "world";
