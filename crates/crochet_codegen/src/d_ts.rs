@@ -461,18 +461,26 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
             name, type_args, ..
         }) => {
             let mut sym = JsWord::from(name.to_owned());
+            let mut use_readonly_utility = false;
 
             if !mutable && !name.ends_with("Constructor") {
                 if let Ok(scheme) = ctx.lookup_scheme(name) {
                     if let TypeKind::Object(obj) = scheme.t.kind {
                         if immutable_obj_type(&obj).is_some() {
-                            sym = JsWord::from(format!("Readonly{name}"));
+                            // TODO: keep track of which types are derived from
+                            // .d.ts files and whether or not they have Readonly
+                            // variants like ReadonlyArray, ReadonlySet, etc.
+                            if name == "RegExpMatchArray" {
+                                use_readonly_utility = true;
+                            } else {
+                                sym = JsWord::from(format!("Readonly{name}"));
+                            }
                         }
                     }
                 }
             }
 
-            TsType::TsTypeRef(TsTypeRef {
+            let t = TsType::TsTypeRef(TsTypeRef {
                 span: DUMMY_SP,
                 type_name: TsEntityName::from(Ident {
                     span: DUMMY_SP,
@@ -489,7 +497,24 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
                             .collect(),
                     })
                 }),
-            })
+            });
+
+            if use_readonly_utility {
+                TsType::TsTypeRef(TsTypeRef {
+                    span: DUMMY_SP,
+                    type_name: TsEntityName::from(Ident {
+                        span: DUMMY_SP,
+                        sym: JsWord::from("Readonly".to_string()),
+                        optional: false,
+                    }),
+                    type_params: Some(Box::from(TsTypeParamInstantiation {
+                        span: DUMMY_SP,
+                        params: vec![Box::from(t)],
+                    })),
+                })
+            } else {
+                t
+            }
         }
         TypeKind::Tuple(types) => {
             let type_ann = TsType::TsTupleType(TsTupleType {
@@ -531,6 +556,15 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
             }
         }
         TypeKind::Rest(_) => todo!(),
+        TypeKind::Regex(_) => TsType::TsTypeRef(TsTypeRef {
+            span: DUMMY_SP,
+            type_name: TsEntityName::Ident(Ident {
+                span: DUMMY_SP,
+                sym: JsWord::from("RegExp".to_string()),
+                optional: false,
+            }),
+            type_params: None,
+        }),
         TypeKind::This => TsType::TsThisType(TsThisType { span: DUMMY_SP }),
         TypeKind::KeyOf(t) => TsType::TsTypeOperator(TsTypeOperator {
             span: DUMMY_SP,

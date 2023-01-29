@@ -280,6 +280,12 @@ pub struct New {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Regex {
+    pub pattern: String,
+    pub flags: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
     App(App),
     New(New), // like App but for calling constructors to create a new instance
@@ -304,6 +310,7 @@ pub enum ExprKind {
     TaggedTemplateLiteral(TaggedTemplateLiteral),
     Match(Match),
     Class(Class),
+    Regex(Regex),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -216,6 +216,7 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
             })
         }
         ExprKind::Class(_) => todo!(),
+        ExprKind::Regex(_) => (), // leaf node
     }
 }
 
