@@ -15,6 +15,7 @@ enum Mode {
     Check,
     Write,
 }
+// foo
 
 #[testing_macros::fixture("tests/pass/*.crochet")]
 fn pass(in_path: PathBuf) {

@@ -695,6 +695,14 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 class: Box::from(class),
             })
         }
+        values::ExprKind::Regex(regex) => Expr::Lit(Lit::Regex(Regex {
+            span,
+            exp: Atom::new(regex.pattern.as_ref()),
+            flags: match &regex.flags {
+                Some(flags) => Atom::new(flags.as_ref()),
+                None => Atom::new(""),
+            },
+        })),
     }
 }
 

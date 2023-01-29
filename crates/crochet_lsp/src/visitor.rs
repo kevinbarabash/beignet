@@ -153,6 +153,7 @@ pub trait Visitor {
                 self._visit_expr(expr);
             }
             ExprKind::Ident(_) => (), // leaf node
+            ExprKind::Regex(_) => (), // leaf node
             ExprKind::IfElse(IfElse {
                 cond,
                 consequent,

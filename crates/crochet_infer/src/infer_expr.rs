@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crochet_ast::types::{
     self as types, Provenance, TCallable, TFnParam, TKeyword, TLam, TObjElem, TObject, TPat,
-    TPropKey, TVar, Type, TypeKind,
+    TPropKey, TRegex, TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
 
@@ -743,6 +743,17 @@ pub fn infer_expr(
 
             Ok((s, t))
         }
+        ExprKind::Regex(Regex { pattern, flags }) => {
+            let s = Subst::default();
+            let t = Type::from(TypeKind::Regex(TRegex {
+                pattern: pattern.to_owned(),
+                flags: flags.to_owned(),
+            }));
+
+            Ok((s, t))
+        }
+        // This is only need for classes that are expressions.  Allowing this
+        // seems like a bad idea.
         ExprKind::Class(_) => todo!(),
     };
 

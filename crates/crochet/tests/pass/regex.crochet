@@ -1,0 +1,2 @@
+let regex = /foo|bar/g;
+let match = "foobarbaz".match(regex);

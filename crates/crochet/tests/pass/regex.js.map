@@ -1,0 +1,1 @@
+{"version":3,"sources":["<anon>"],"sourcesContent":["let regex = /foo|bar/g;\nlet match = \"foobarbaz\".match(regex);\n"],"names":[],"mappings":"aAAI,QAAQ;aACR,QAAQ,YAAY,KAAK,CAAC"}

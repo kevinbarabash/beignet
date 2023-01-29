@@ -233,6 +233,7 @@ pub fn normalize(t: &Type, ctx: &Context) -> Type {
             }
             TypeKind::Array(t) => TypeKind::Array(Box::from(norm_type(t, mapping, _ctx))),
             TypeKind::Rest(arg) => TypeKind::Rest(Box::from(norm_type(arg, mapping, _ctx))),
+            TypeKind::Regex(_) => return t.to_owned(),
             TypeKind::This => TypeKind::This,
             TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(norm_type(t, mapping, _ctx))),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => {
@@ -697,6 +698,7 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
         ),
         TypeKind::Array(t) => TypeKind::Array(Box::from(replace_aliases_rec(t, type_param_map))),
         TypeKind::Rest(t) => TypeKind::Rest(Box::from(replace_aliases_rec(t, type_param_map))),
+        TypeKind::Regex(_) => return t.to_owned(),
         TypeKind::This => TypeKind::This,
         TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(replace_aliases_rec(t, type_param_map))),
         TypeKind::IndexAccess(TIndexAccess { object, index }) => {

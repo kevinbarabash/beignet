@@ -26,14 +26,10 @@ pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> 
         TypeKind::Intersection(_) => Ok(t.to_owned()),
         TypeKind::Object(_) => Ok(t.to_owned()),
         TypeKind::Ref(alias) => {
-            // We don't want to expand Array's and other interfaces since it
-            // would be we'd have to unify their underlying definitions which
-            // would be pretty bad for performance.
-            // TODO: Add a flag to track whether an object type is an interface
-            // or not, then update this code to check for it when looking up the
-            // alias.
             let scheme = ctx.lookup_scheme(&alias.name)?;
             match &scheme.t.kind {
+                // We don't bother expanding interfaces since unifying them based
+                // on their properties is expensive.
                 TypeKind::Object(obj) if obj.is_interface => Ok(t.to_owned()),
                 _ => expand_alias_type(alias, ctx),
             }
@@ -41,6 +37,13 @@ pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> 
         TypeKind::Tuple(_) => Ok(t.to_owned()),
         TypeKind::Array(_) => Ok(t.to_owned()),
         TypeKind::Rest(_) => Ok(t.to_owned()),
+        TypeKind::Regex(_) => {
+            // TODO: define our own custom Regexp type that is parameterized
+            // by its pattern.
+            let scheme = ctx.lookup_scheme("Regexp")?;
+            let t = scheme.t.as_ref();
+            Ok(t.to_owned())
+        }
         TypeKind::This => todo!(),
         TypeKind::KeyOf(t) => expand_keyof(t, ctx),
         TypeKind::IndexAccess(access) => expand_index_access(access, ctx, true),
@@ -728,15 +731,12 @@ pub fn get_obj_type(t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeErro
 
             Ok(t)
         }
-        TypeKind::Array(type_param) => {
+        TypeKind::Array(type_arg) => {
             let scheme = ctx.lookup_scheme("Array")?;
 
             let mut type_param_map: HashMap<String, Type> = HashMap::new();
             if let Some(type_params) = scheme.type_params {
-                type_param_map.insert(
-                    type_params[0].name.to_owned(),
-                    type_param.as_ref().to_owned(),
-                );
+                type_param_map.insert(type_params[0].name.to_owned(), type_arg.as_ref().to_owned());
             }
 
             let t = replace_aliases_rec(&scheme.t, &type_param_map);
@@ -753,7 +753,15 @@ pub fn get_obj_type(t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeErro
             todo!();
         }
         TypeKind::Rest(_) => todo!(), // What does this even mean?
-        TypeKind::This => todo!(),    // Depends on what this is referencing
+        TypeKind::Regex(_) => {
+            // TODO: Create a customized Regexp interface that's generic with
+            // the regex pattern.
+            let scheme = ctx.lookup_scheme("Regexp")?;
+            let t = replace_aliases_rec(&scheme.t, &HashMap::new());
+
+            Ok(t)
+        }
+        TypeKind::This => todo!(), // Depends on what this is referencing
         TypeKind::KeyOf(t) => expand_keyof(t, ctx),
         TypeKind::IndexAccess(access) => {
             let t = expand_index_access(access, ctx, true)?;

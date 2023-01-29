@@ -1238,6 +1238,16 @@ fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseEr
                 arms,
             })
         }
+        "regex" => {
+            let flags = match node.child_by_field_name("flags") {
+                Some(flags_node) => Some(text_for_node(&flags_node, src)?),
+                None => None,
+            };
+            let pattern_node = node.child_by_field_name("pattern").unwrap();
+            let pattern = text_for_node(&pattern_node, src)?;
+
+            ExprKind::Regex(Regex { pattern, flags })
+        }
         _ => {
             return Err(ParseError::from(format!(
                 "unhandled {node:#?} = '{}'",
