@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crochet_ast::types::{
     self as types, Provenance, TCallable, TFnParam, TKeyword, TLam, TObjElem, TObject, TPat,
-    TPropKey, TRegex, TVar, Type, TypeKind,
+    TPropKey, TRef, TRegex, TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
 
@@ -819,6 +819,17 @@ fn infer_property_type(
         TypeKind::Object(obj) => get_prop_value(obj, prop, ctx, is_lvalue, obj_t.mutable),
         TypeKind::Ref(_) => {
             let mut t = get_obj_type(obj_t, ctx)?;
+            t.mutable = obj_t.mutable;
+            infer_property_type(&mut t, prop, ctx, is_lvalue)
+        }
+        TypeKind::Regex(_) => {
+            // TODO: Create custom type for regexes that is parametric based on
+            // the regex pattern.
+            let obj_t = Type::from(TypeKind::Ref(TRef {
+                name: "RegExp".to_string(),
+                type_args: None,
+            }));
+            let mut t = get_obj_type(&obj_t, ctx)?;
             t.mutable = obj_t.mutable;
             infer_property_type(&mut t, prop, ctx, is_lvalue)
         }
