@@ -5,8 +5,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str;
 
-use crochet_dts::parse_dts::parse_dts;
 use crochet_infer::*;
+use crochet_interop::parse::parse_dts;
 
 use crochet::compile_error::CompileError;
 use crochet::diagnostics::get_diagnostics;

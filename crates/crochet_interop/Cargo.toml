@@ -1,5 +1,5 @@
 [package]
-name = "crochet_dts"
+name = "crochet_interop"
 version = "0.1.0"
 edition = "2021"
 

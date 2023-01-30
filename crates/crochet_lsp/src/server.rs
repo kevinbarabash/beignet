@@ -12,7 +12,7 @@ use lsp_types::*;
 
 use crochet_ast::types::Type;
 use crochet_ast::values::{Position, Program, SourceLocation};
-use crochet_dts::parse_dts::parse_dts;
+use crochet_interop::parse::parse_dts;
 use crochet_parser::parse;
 
 use crate::semantic_tokens::get_semantic_tokens;

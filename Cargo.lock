@@ -165,8 +165,8 @@ dependencies = [
  "ariadne",
  "crochet_ast",
  "crochet_codegen",
- "crochet_dts",
  "crochet_infer",
+ "crochet_interop",
  "crochet_parser",
  "insta",
  "pretty_assertions",
@@ -194,8 +194,8 @@ version = "0.1.0"
 dependencies = [
  "crochet_ast",
  "crochet_codegen",
- "crochet_dts",
  "crochet_infer",
+ "crochet_interop",
  "crochet_parser",
  "insta",
  "pretty_assertions",
@@ -224,7 +224,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "crochet_dts"
+name = "crochet_infer"
+version = "0.1.0"
+dependencies = [
+ "ariadne",
+ "array_tool",
+ "crochet_ast",
+ "crochet_parser",
+ "defaultmap",
+ "insta",
+ "itertools",
+]
+
+[[package]]
+name = "crochet_interop"
 version = "0.1.0"
 dependencies = [
  "crochet_ast",
@@ -241,25 +254,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "crochet_infer"
-version = "0.1.0"
-dependencies = [
- "ariadne",
- "array_tool",
- "crochet_ast",
- "crochet_parser",
- "defaultmap",
- "insta",
- "itertools",
-]
-
-[[package]]
 name = "crochet_lsp"
 version = "0.1.0"
 dependencies = [
  "crochet_ast",
- "crochet_dts",
  "crochet_infer",
+ "crochet_interop",
  "crochet_parser",
  "crossbeam",
  "insta",

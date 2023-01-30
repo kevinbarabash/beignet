@@ -1,8 +1,8 @@
 use std::fs;
 
 use crochet_ast::values::Program;
-use crochet_dts::parse_dts::*;
 use crochet_infer::{expand_type, TypeError};
+use crochet_interop::parse::*;
 use crochet_parser::parse;
 
 pub fn messages(report: &[TypeError]) -> Vec<String> {

@@ -2,8 +2,8 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
 use std::str;
 
-use crochet_dts::parse_dts::parse_dts;
 use crochet_infer::*;
+use crochet_interop::parse::parse_dts;
 
 pub mod compile_error;
 pub mod diagnostics;

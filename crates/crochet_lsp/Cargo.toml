@@ -11,7 +11,7 @@ lsp-types = "0.93.2"
 serde = "1.0.152"
 serde_json = "1.0.91"
 crochet_ast = { version = "0.1.0", path = "../crochet_ast" }
-crochet_dts = { version = "0.1.0", path = "../crochet_dts" }
+crochet_interop = { version = "0.1.0", path = "../crochet_interop" }
 crochet_infer = { version = "0.1.0", path = "../crochet_infer" }
 crochet_parser = { version = "0.1.0", path = "../crochet_parser" }
 
