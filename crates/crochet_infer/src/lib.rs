@@ -3415,7 +3415,30 @@ mod tests {
         assert_eq!(ctx.lookup_value("result").unwrap().to_string(), "number");
     }
 
-    // TODO:
+    // TODO: Test that the following works in classes and methods:
     // - constraints
     // - defaults
+
+    #[test]
+    fn func_with_default_type_param() {
+        let src = r#"
+        type Regex<TPattern, TFlags> = {};
+        type RegexMatch<TRegex> = {};
+
+        declare let my_match: <
+            TPattern,
+            TFlags,
+            TRegex = Regex<TPattern, TFlags>,
+        >(str: string, regex: TRegex) => RegexMatch<TRegex>;
+
+        declare let regex: Regex<"foo|bar", "g">;
+        let result = my_match("foobar", regex);
+        "#;
+
+        let ctx = infer_prog(src);
+        assert_eq!(
+            ctx.lookup_value("result").unwrap().to_string(),
+            "RegexMatch<Regex<\"foo|bar\", \"g\">>"
+        );
+    }
 }
