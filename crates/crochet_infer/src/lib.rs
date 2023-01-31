@@ -2174,6 +2174,7 @@ mod tests {
         infer_prog(src);
     }
 
+    // NOTE: This test relies on the proper functioning of Context#apply()
     #[test]
     fn infer_fn_based_on_multiple_different_calls() {
         let src = r#"let h = (f, x, y) => f(x) + f(y);"#;

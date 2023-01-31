@@ -121,8 +121,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
                 ..
             } => match infer_type_ann(type_ann, ctx, type_params) {
                 Ok((s, t)) => {
-                    let mut t = t.clone();
-                    t.apply(&s);
+                    let t = t.apply(&s);
 
                     let empty_env = Env::default();
                     let scheme = generalize(&empty_env, &t);
@@ -149,8 +148,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
             } => {
                 let (s, t) = infer_class(ctx, class)?;
 
-                let mut t = t.clone();
-                t.apply(&s);
+                let t = t.apply(&s);
 
                 // This follows the same pattern found in lib.es5.d.ts.
                 let name = ident.name.to_owned();

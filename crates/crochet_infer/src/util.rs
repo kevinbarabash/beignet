@@ -27,8 +27,7 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
 }
 
 pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
-    let mut t = t.clone();
-    t.apply(s);
+    let t = t.apply(s);
 
     let tvs = t.ftv();
 
@@ -63,7 +62,7 @@ pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
                     char_code += 1;
                 }
 
-                let mut t = Type::from(TypeKind::Lam(TLam {
+                let t = Type::from(TypeKind::Lam(TLam {
                     params: params.to_owned(),
                     ret: ret.to_owned(),
                     type_params: if type_params.is_empty() {
@@ -73,9 +72,7 @@ pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
                     },
                 }));
 
-                t.apply(&sub);
-
-                t
+                t.apply(&sub)
             }
             _ => {
                 panic!("We shouldn't have any free type variables when closing over non-lambdas")
@@ -443,8 +440,7 @@ pub fn compose_subs(s2: &Subst, s1: &Subst) -> Subst {
     let mut result: Subst = s1
         .iter()
         .map(|(tv, t)| {
-            let mut t = t.clone();
-            t.apply(s2);
+            let t = t.apply(s2);
             (*tv, t)
         })
         .collect();
@@ -467,8 +463,7 @@ fn compose_subs_with_context(s1: &Subst, s2: &Subst) -> Subst {
     let mut result: Subst = s2
         .iter()
         .map(|(tv, t)| {
-            let mut t = t.clone();
-            t.apply(s1);
+            let t = t.apply(s1);
             (*tv, t)
         })
         .collect();
