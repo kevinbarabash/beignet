@@ -33,7 +33,7 @@ pub fn infer_expr(
             let mut ss: Vec<Subst> = vec![];
             let mut arg_types: Vec<Type> = vec![];
 
-            let (s1, mut lam_type) = infer_expr(ctx, lam, false)?;
+            let (s1, lam_type) = infer_expr(ctx, lam, false)?;
             ss.push(s1);
 
             for arg in args {
@@ -49,7 +49,7 @@ pub fn infer_expr(
                 }
             }
 
-            let mut ret_type = ctx.fresh_var();
+            let ret_type = ctx.fresh_var();
             let type_args = match type_args {
                 Some(type_args) => {
                     let tuples = type_args
@@ -73,15 +73,15 @@ pub fn infer_expr(
             }));
             call_type.provenance = Some(Box::from(Provenance::Expr(Box::from(expr.to_owned()))));
 
-            let s3 = unify(&mut call_type, &mut lam_type, ctx)?;
+            let s3 = unify(&call_type, &lam_type, ctx)?;
 
             ss.push(s3);
 
             let s = compose_many_subs(&ss);
-            ret_type.apply(&s);
+            let t = ret_type.apply(&s);
 
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
-            Ok((s, ret_type))
+            Ok((s, t))
         }
         ExprKind::New(New {
             expr,
@@ -156,28 +156,28 @@ pub fn infer_expr(
                         lam_type.provenance =
                             Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
 
-                        let mut ret_type = ctx.fresh_var();
-                        let mut call_type = Type::from(TypeKind::App(types::TApp {
+                        let ret_type = ctx.fresh_var();
+                        let call_type = Type::from(TypeKind::App(types::TApp {
                             args: arg_types.clone(),
                             ret: Box::from(ret_type.clone()),
                             type_args: None,
                         }));
 
-                        if let Ok(s3) = unify(&mut call_type, &mut lam_type, ctx) {
+                        if let Ok(s3) = unify(&call_type, &lam_type, ctx) {
                             ss.push(s3);
 
                             let s = compose_many_subs(&ss.clone());
-                            ret_type.apply(&s);
+                            let mut t = ret_type.apply(&s);
                             // NOTE: This is only necessary for TypeScript constructors
                             // since they return mutable instances by definition.
                             // We allow immutable objects to be converted to mutable
                             // ones when a new-expression is being assigned to an l-value.
                             // If no type annotation is specified for the l-value, we
                             // want it to be inferred as immutable.
-                            ret_type.mutable = false;
+                            t.mutable = false;
 
                             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
-                            results.push((s, ret_type));
+                            results.push((s, t));
                         }
                     }
                 }
@@ -202,7 +202,7 @@ pub fn infer_expr(
             }
         }
         ExprKind::Fix(Fix { expr, .. }) => {
-            let (s1, mut t) = infer_expr(ctx, expr, false)?;
+            let (s1, t) = infer_expr(ctx, expr, false)?;
             let tv = ctx.fresh_var();
             let param = TFnParam {
                 pat: TPat::Ident(types::BindingIdent {
@@ -213,12 +213,12 @@ pub fn infer_expr(
                 optional: false,
             };
             let s2 = unify(
-                &mut Type::from(TypeKind::Lam(types::TLam {
+                &Type::from(TypeKind::Lam(types::TLam {
                     params: vec![param],
                     ret: Box::from(tv),
                     type_params: None,
                 })),
-                &mut t,
+                &t,
                 ctx,
             )?;
 
@@ -257,14 +257,11 @@ pub fn infer_expr(
                         Ok((s, t))
                     }
                     _ => {
-                        let (s1, mut t1) = infer_expr(ctx, cond, false)?;
+                        let (s1, t1) = infer_expr(ctx, cond, false)?;
                         let (s2, t2) = infer_expr(ctx, consequent, false)?;
                         let (s3, t3) = infer_expr(ctx, alternate, false)?;
-                        let s4 = unify(
-                            &mut t1,
-                            &mut Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                            ctx,
-                        )?;
+                        let s4 =
+                            unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
 
                         let s = compose_many_subs(&[s1, s2, s3, s4]);
                         let t = union_types(&t2, &t3);
@@ -284,13 +281,9 @@ pub fn infer_expr(
                     Ok((s, t))
                 }
                 _ => {
-                    let (s1, mut t1) = infer_expr(ctx, cond, false)?;
+                    let (s1, t1) = infer_expr(ctx, cond, false)?;
                     let (s2, t2) = infer_expr(ctx, consequent, false)?;
-                    let s3 = unify(
-                        &mut t1,
-                        &mut Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                        ctx,
-                    )?;
+                    let s3 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
 
                     let s = compose_many_subs(&[s1, s2, s3]);
 
@@ -310,7 +303,7 @@ pub fn infer_expr(
             let first_char = name.chars().next().unwrap();
             // JSXElement's starting with an uppercase char are user defined.
             if first_char.is_uppercase() {
-                let mut t = ctx.lookup_value_and_instantiate(name)?;
+                let t = ctx.lookup_value_and_instantiate(name)?;
                 match &t.kind {
                     TypeKind::Lam(_) => {
                         let mut ss: Vec<_> = vec![];
@@ -347,7 +340,7 @@ pub fn infer_expr(
                             type_args: None,
                         }));
 
-                        let mut call_type = Type::from(TypeKind::App(types::TApp {
+                        let call_type = Type::from(TypeKind::App(types::TApp {
                             args: vec![Type::from(TypeKind::Object(TObject {
                                 elems,
                                 is_interface: false,
@@ -357,7 +350,7 @@ pub fn infer_expr(
                         }));
 
                         let s1 = compose_many_subs(&ss);
-                        let s2 = unify(&mut call_type, &mut t, ctx)?;
+                        let s2 = unify(&call_type, &t, ctx)?;
 
                         let s = compose_subs(&s2, &s1);
                         let t = ret_type;
@@ -424,7 +417,7 @@ pub fn infer_expr(
                 })
                 .collect();
 
-            let (mut ss, mut t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
+            let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
             let (body_s, mut body_t) = infer_expr(ctx, body, false)?;
             ss.push(body_s);
@@ -439,22 +432,25 @@ pub fn infer_expr(
             }
 
             if let Some(rt_type_ann) = rt_type_ann {
-                let (ret_s, mut ret_t) =
+                let (ret_s, ret_t) =
                     infer_type_ann_with_params(rt_type_ann, ctx, &type_params_map)?;
                 ss.push(ret_s);
-                ss.push(unify(&mut body_t, &mut ret_t, ctx)?);
+                ss.push(unify(&body_t, &ret_t, ctx)?);
             }
 
-            let mut t = Type::from(TypeKind::Lam(types::TLam {
-                params: t_params.clone(),
+            let t = Type::from(TypeKind::Lam(types::TLam {
+                params: t_params,
                 ret: Box::from(body_t.clone()),
                 type_params: None,
             }));
 
-            let s = compose_many_subs(&ss);
+            eprintln!("t: before = {t}");
 
-            t_params.apply(&s); // Do we need to do this since t_params is part of t?
-            t.apply(&s);
+            let s = compose_many_subs(&ss);
+            let t = t.apply(&s);
+
+            // eprintln!("ss = {ss:#?}");
+            eprintln!("t: after = {t}");
 
             // TODO: Update the inferred_type on each param to equal the
             // corresponding type from t_params.
@@ -476,12 +472,12 @@ pub fn infer_expr(
                     eprintln!("WARNING: {init_t} was not assigned");
                 }
 
-                let (body_s, mut body_t) = infer_expr(ctx, body, false)?;
+                let (body_s, body_t) = infer_expr(ctx, body, false)?;
 
-                body_t.apply(&init_s);
+                let t = body_t.apply(&init_s);
                 let s = compose_subs(&body_s, &init_s);
 
-                Ok((s, body_t))
+                Ok((s, t))
             }
         },
         ExprKind::Assign(assign) => {
@@ -500,15 +496,15 @@ pub fn infer_expr(
 
             // This is similar to infer let, but without the type annotation and
             // with pat being an expression instead of a pattern.
-            let (rs, mut rt) = infer_expr(ctx, &mut assign.right, false)?;
+            let (rs, rt) = infer_expr(ctx, &mut assign.right, false)?;
             // TODO: figure out how to get the type of a setter
-            let (ls, mut lt) = infer_expr(ctx, &mut assign.left, true)?;
+            let (ls, lt) = infer_expr(ctx, &mut assign.left, true)?;
 
             if assign.op != AssignOp::Eq {
                 todo!("handle update assignment operators");
             }
 
-            let s = unify(&mut rt, &mut lt, ctx)?;
+            let s = unify(&rt, &lt, ctx)?;
 
             let s = compose_many_subs(&[rs, ls, s]);
             let t = rt; // This is JavaScript's behavior
@@ -537,18 +533,10 @@ pub fn infer_expr(
             // differently from arithmetic operators
             // TODO: if both are literals, compute the result at compile
             // time and set the result to be appropriate number literal.
-            let (s1, mut t1) = infer_expr(ctx, left, false)?;
-            let (s2, mut t2) = infer_expr(ctx, right, false)?;
-            let s3 = unify(
-                &mut t1,
-                &mut Type::from(TypeKind::Keyword(TKeyword::Number)),
-                ctx,
-            )?;
-            let s4 = unify(
-                &mut t2,
-                &mut Type::from(TypeKind::Keyword(TKeyword::Number)),
-                ctx,
-            )?;
+            let (s1, t1) = infer_expr(ctx, left, false)?;
+            let (s2, t2) = infer_expr(ctx, right, false)?;
+            let s3 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
+            let s4 = unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
 
             let s = compose_many_subs(&[s1, s2, s3, s4]);
             let t = match op {
@@ -567,12 +555,8 @@ pub fn infer_expr(
             Ok((s, t))
         }
         ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
-            let (s1, mut t1) = infer_expr(ctx, arg, false)?;
-            let s2 = unify(
-                &mut t1,
-                &mut Type::from(TypeKind::Keyword(TKeyword::Number)),
-                ctx,
-            )?;
+            let (s1, t1) = infer_expr(ctx, arg, false)?;
+            let s2 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
 
             let s = compose_many_subs(&[s1, s2]);
             let t = match op {
@@ -642,14 +626,14 @@ pub fn infer_expr(
                 return Err(vec![TypeError::AwaitOutsideOfAsync]);
             }
 
-            let (s1, mut t1) = infer_expr(ctx, expr, false)?;
+            let (s1, t1) = infer_expr(ctx, expr, false)?;
             let inner_t = ctx.fresh_var();
-            let mut promise_t = Type::from(TypeKind::Ref(types::TRef {
+            let promise_t = Type::from(TypeKind::Ref(types::TRef {
                 name: String::from("Promise"),
                 type_args: Some(vec![inner_t.clone()]),
             }));
 
-            let s2 = unify(&mut t1, &mut promise_t, ctx)?;
+            let s2 = unify(&t1, &promise_t, ctx)?;
             let s = compose_subs(&s2, &s1);
 
             Ok((s, inner_t))
@@ -975,7 +959,7 @@ fn get_prop_value(
         MemberProp::Computed(ComputedPropName { expr, .. }) => {
             let (prop_s, prop_t) = infer_expr(ctx, expr, false)?;
 
-            let mut prop_t_clone = prop_t.clone();
+            let prop_t_clone = prop_t.clone();
             let prop_s_clone = prop_s.clone();
 
             let result = match &prop_t.kind {
@@ -1046,8 +1030,8 @@ fn get_prop_value(
                         Err(vec![err])
                     } else {
                         for indexer in indexers {
-                            let mut key_clone = indexer.key.t.clone();
-                            let result = unify(&mut prop_t_clone, &mut key_clone, ctx);
+                            let key_clone = indexer.key.t.clone();
+                            let result = unify(&prop_t_clone, &key_clone, ctx);
                             if result.is_ok() {
                                 let key_s = result?;
                                 let s = compose_subs(&key_s, &prop_s_clone);

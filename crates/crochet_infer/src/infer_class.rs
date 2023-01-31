@@ -79,7 +79,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                         .collect()
                 });
 
-                let mut elem = TObjElem::Constructor(TCallable {
+                let elem = TObjElem::Constructor(TCallable {
                     params: t_params,
                     ret: Box::from(Type::from(TypeKind::Ref(TRef {
                         name: class_name.to_owned(),
@@ -89,9 +89,9 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 });
 
                 let s = compose_many_subs(&ss);
-                elem.apply(&s);
+                let t = elem.apply(&s);
 
-                statics_elems.push(elem);
+                statics_elems.push(t);
             }
             ClassMember::Method(ClassMethod {
                 key,
@@ -179,17 +179,17 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 }
 
                 if let Some(ret_type_ann) = return_type {
-                    let (ret_s, mut ret_t) =
+                    let (ret_s, ret_t) =
                         infer_type_ann_with_params(ret_type_ann, ctx, &type_params_map)?;
                     ss.push(ret_s);
-                    ss.push(unify(&mut body_t, &mut ret_t, ctx)?);
+                    ss.push(unify(&body_t, &ret_t, ctx)?);
                 } else if kind != &MethodKind::Setter {
                     return Err(vec![TypeError::MethodsMustHaveTypes]);
                 }
 
                 let name = TPropKey::StringKey(key.name.to_owned());
 
-                let mut elem = match kind {
+                let elem = match kind {
                     MethodKind::Method => {
                         let ret_t = match &mut lambda.return_type {
                             Some(type_ann) => {
@@ -249,12 +249,12 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 };
 
                 let s = compose_many_subs(&ss);
-                elem.apply(&s);
+                let t = elem.apply(&s);
 
                 if *is_static {
-                    statics_elems.push(elem.clone());
+                    statics_elems.push(t.clone());
                 } else {
-                    instance_elems.push(elem);
+                    instance_elems.push(t);
                 }
             }
             ClassMember::Prop(ClassProp {
@@ -404,7 +404,7 @@ fn infer_interface_from_class(
 
                 let name = TPropKey::StringKey(key.name.to_owned());
 
-                let mut elem = match kind {
+                let elem = match kind {
                     MethodKind::Method => {
                         let ret_t = match &mut lambda.return_type {
                             Some(type_ann) => {
@@ -466,9 +466,9 @@ fn infer_interface_from_class(
                 };
 
                 let s = compose_many_subs(&ss);
-                elem.apply(&s);
+                let t = elem.apply(&s);
 
-                instance_elems.push(elem);
+                instance_elems.push(t);
             }
             ClassMember::Prop(ClassProp {
                 key,

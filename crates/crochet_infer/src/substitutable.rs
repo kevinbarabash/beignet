@@ -10,15 +10,15 @@ use crate::scheme::Scheme;
 pub type Subst = HashMap<i32, Type>;
 
 pub trait Substitutable {
-    fn apply(&mut self, subs: &Subst);
+    fn apply(&self, subs: &Subst) -> Self;
     // The vector return must not contain any `TVar`s with the same `id`.
     fn ftv(&self) -> Vec<TVar>;
 }
 
 impl Substitutable for Type {
-    fn apply(&mut self, sub: &Subst) {
-        match &mut self.kind {
-            TypeKind::Var(tv) => {
+    fn apply(&self, sub: &Subst) -> Type {
+        let kind: TypeKind = match &self.kind {
+            kind @ TypeKind::Var(tv) => {
                 match sub.get(&tv.id) {
                     Some(replacement) => {
                         // If the replacement has no provenance, point to ourselves.
@@ -29,63 +29,81 @@ impl Substitutable for Type {
 
                         // TODO: apply the constraint and then check if the replacement
                         // is a subtype of it.
-                        self.kind = replacement.kind.to_owned();
-                        self.mutable = replacement.mutable;
-                        self.provenance = provenance;
+                        return Type {
+                            kind: replacement.kind.to_owned(),
+                            mutable: replacement.mutable,
+                            provenance,
+                        };
                     }
                     None => {
-                        if let Some(constraint) = &mut tv.constraint {
-                            constraint.apply(sub);
+                        if let Some(constraint) = &tv.constraint {
+                            TypeKind::Var(TVar {
+                                constraint: Some(Box::from(constraint.apply(sub))),
+                                ..tv.to_owned()
+                            })
+                        } else {
+                            kind.to_owned()
                         }
                     }
                 }
             }
             TypeKind::App(app) => {
-                app.args.apply(sub);
-                app.ret.apply(sub);
+                TypeKind::App(TApp {
+                    args: app.args.apply(sub),
+                    ret: Box::from(app.ret.apply(sub)),
+                    type_args: app.type_args.to_owned(), // TODO
+                })
             }
             // TODO: handle widening of lambdas
-            TypeKind::Lam(lam) => lam.apply(sub),
-            TypeKind::Lit(_) => norm_type(self),
-            TypeKind::Keyword(_) => norm_type(self),
-            TypeKind::Union(types) => types.apply(sub),
-            TypeKind::Intersection(types) => types.apply(sub),
-            TypeKind::Object(obj) => obj.elems.apply(sub),
-            TypeKind::Ref(tr) => tr.apply(sub),
-            TypeKind::Tuple(types) => types.apply(sub),
-            TypeKind::Array(t) => t.apply(sub),
-            TypeKind::Rest(arg) => arg.apply(sub),
-            TypeKind::Regex(_) => norm_type(self),
-            TypeKind::This => (),
-            TypeKind::KeyOf(t) => t.apply(sub),
+            TypeKind::Lam(lam) => TypeKind::Lam(lam.apply(sub)),
+            kind @ TypeKind::Lit(_) => kind.to_owned(),
+            kind @ TypeKind::Keyword(_) => kind.to_owned(),
+            TypeKind::Union(types) => TypeKind::Union(types.apply(sub)),
+            TypeKind::Intersection(types) => TypeKind::Intersection(types.apply(sub)),
+            TypeKind::Object(obj) => TypeKind::Object(TObject {
+                elems: obj.elems.apply(sub),
+                ..obj.to_owned()
+            }),
+            TypeKind::Ref(tr) => TypeKind::Ref(tr.apply(sub)),
+            TypeKind::Tuple(types) => TypeKind::Tuple(types.apply(sub)),
+            TypeKind::Array(t) => TypeKind::Array(Box::from(t.apply(sub))),
+            TypeKind::Rest(arg) => TypeKind::Rest(Box::from(arg.apply(sub))),
+            kind @ TypeKind::Regex(_) => kind.to_owned(),
+            kind @ TypeKind::This => kind.to_owned(),
+            TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(t.apply(sub))),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => {
-                object.apply(sub);
-                index.apply(sub);
+                TypeKind::IndexAccess(TIndexAccess {
+                    object: Box::from(object.apply(sub)),
+                    index: Box::from(index.apply(sub)),
+                })
             }
-            TypeKind::MappedType(mapped) => {
-                mapped.t.apply(sub);
-                if let Some(constraint) = &mut mapped.type_param.constraint {
-                    constraint.apply(sub);
-                }
-                if let Some(default) = &mut mapped.type_param.default {
-                    default.apply(sub);
-                }
-            }
+            TypeKind::MappedType(mapped) => TypeKind::MappedType(TMappedType {
+                t: Box::from(mapped.t.apply(sub)),
+                type_param: mapped.type_param.apply(sub),
+                ..mapped.to_owned()
+            }),
             TypeKind::ConditionalType(TConditionalType {
                 check_type,
                 extends_type,
                 true_type,
                 false_type,
-            }) => {
-                check_type.apply(sub);
-                extends_type.apply(sub);
-                true_type.apply(sub);
-                false_type.apply(sub);
-            }
-            TypeKind::InferType(_) => (),
+            }) => TypeKind::ConditionalType(TConditionalType {
+                check_type: Box::from(check_type.apply(sub)),
+                extends_type: Box::from(extends_type.apply(sub)),
+                true_type: Box::from(true_type.apply(sub)),
+                false_type: Box::from(false_type.apply(sub)),
+            }),
+            kind @ TypeKind::InferType(_) => kind.to_owned(),
         };
 
-        norm_type(self)
+        let mut t = Type {
+            kind,
+            ..self.to_owned()
+        };
+
+        norm_type(&mut t);
+
+        t
     }
     fn ftv(&self) -> Vec<TVar> {
         match &self.kind {
@@ -154,9 +172,11 @@ impl Substitutable for Type {
 }
 
 impl Substitutable for Scheme {
-    fn apply(&mut self, s: &Subst) {
-        self.t.apply(s);
-        self.type_params.apply(s);
+    fn apply(&self, s: &Subst) -> Self {
+        Scheme {
+            t: Box::from(self.t.apply(s)),
+            type_params: self.type_params.apply(s),
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         let mut result = self.t.ftv();
@@ -166,12 +186,11 @@ impl Substitutable for Scheme {
 }
 
 impl Substitutable for TypeParam {
-    fn apply(&mut self, s: &Subst) {
-        if let Some(constraint) = &mut self.constraint {
-            constraint.apply(s);
-        }
-        if let Some(default) = &mut self.default {
-            default.apply(s);
+    fn apply(&self, s: &Subst) -> Self {
+        TypeParam {
+            constraint: self.constraint.as_ref().map(|c| Box::from(c.apply(s))),
+            default: self.default.as_ref().map(|d| Box::from(d.apply(s))),
+            ..self.to_owned()
         }
     }
     fn ftv(&self) -> Vec<TVar> {
@@ -187,10 +206,13 @@ impl Substitutable for TypeParam {
 }
 
 impl Substitutable for TMethod {
-    fn apply(&mut self, sub: &Subst) {
-        self.params.iter_mut().for_each(|param| param.apply(sub));
-        self.ret.apply(sub);
-        self.type_params.apply(sub);
+    fn apply(&self, sub: &Subst) -> Self {
+        TMethod {
+            params: self.params.iter().map(|param| param.apply(sub)).collect(),
+            ret: Box::from(self.ret.apply(sub)),
+            type_params: self.type_params.apply(sub),
+            ..self.to_owned()
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         let mut result = self.params.ftv();
@@ -201,8 +223,11 @@ impl Substitutable for TMethod {
 }
 
 impl Substitutable for TGetter {
-    fn apply(&mut self, sub: &Subst) {
-        self.ret.apply(sub)
+    fn apply(&self, sub: &Subst) -> Self {
+        TGetter {
+            ret: Box::from(self.ret.apply(sub)),
+            ..self.to_owned()
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         self.ret.ftv()
@@ -210,8 +235,11 @@ impl Substitutable for TGetter {
 }
 
 impl Substitutable for TSetter {
-    fn apply(&mut self, sub: &Subst) {
-        self.param.apply(sub);
+    fn apply(&self, sub: &Subst) -> Self {
+        TSetter {
+            param: self.param.apply(sub),
+            ..self.to_owned()
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         self.param.ftv()
@@ -219,15 +247,15 @@ impl Substitutable for TSetter {
 }
 
 impl Substitutable for TObjElem {
-    fn apply(&mut self, sub: &Subst) {
+    fn apply(&self, sub: &Subst) -> Self {
         match self {
-            TObjElem::Call(qlam) => qlam.apply(sub),
-            TObjElem::Constructor(qlam) => qlam.apply(sub),
-            TObjElem::Index(index) => index.apply(sub),
-            TObjElem::Prop(prop) => prop.apply(sub),
-            TObjElem::Method(method) => method.apply(sub),
-            TObjElem::Getter(getter) => getter.apply(sub),
-            TObjElem::Setter(setter) => setter.apply(sub),
+            TObjElem::Call(qlam) => TObjElem::Call(qlam.apply(sub)),
+            TObjElem::Constructor(qlam) => TObjElem::Constructor(qlam.apply(sub)),
+            TObjElem::Index(index) => TObjElem::Index(index.apply(sub)),
+            TObjElem::Prop(prop) => TObjElem::Prop(prop.apply(sub)),
+            TObjElem::Method(method) => TObjElem::Method(method.apply(sub)),
+            TObjElem::Getter(getter) => TObjElem::Getter(getter.apply(sub)),
+            TObjElem::Setter(setter) => TObjElem::Setter(setter.apply(sub)),
         }
     }
     fn ftv(&self) -> Vec<TVar> {
@@ -244,10 +272,12 @@ impl Substitutable for TObjElem {
 }
 
 impl Substitutable for TLam {
-    fn apply(&mut self, sub: &Subst) {
-        self.type_params.apply(sub);
-        self.params.apply(sub);
-        self.ret.apply(sub);
+    fn apply(&self, sub: &Subst) -> Self {
+        TLam {
+            type_params: self.type_params.apply(sub),
+            params: self.params.apply(sub),
+            ret: Box::from(self.ret.apply(sub)),
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         let mut result = self.params.ftv();
@@ -257,10 +287,14 @@ impl Substitutable for TLam {
 }
 
 impl Substitutable for TRef {
-    fn apply(&mut self, sub: &Subst) {
-        self.type_args
-            .iter_mut()
-            .for_each(|type_arg| type_arg.apply(sub));
+    fn apply(&self, sub: &Subst) -> Self {
+        TRef {
+            type_args: self
+                .type_args
+                .as_ref()
+                .map(|args| args.iter().map(|arg| arg.apply(sub)).collect()),
+            ..self.to_owned()
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         match &self.type_args {
@@ -271,10 +305,12 @@ impl Substitutable for TRef {
 }
 
 impl Substitutable for TCallable {
-    fn apply(&mut self, sub: &Subst) {
-        self.params.iter_mut().for_each(|param| param.apply(sub));
-        self.ret.apply(sub);
-        self.type_params.apply(sub);
+    fn apply(&self, sub: &Subst) -> Self {
+        TCallable {
+            params: self.params.iter().map(|param| param.apply(sub)).collect(),
+            ret: Box::from(self.ret.apply(sub)),
+            type_params: self.type_params.apply(sub),
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         let mut result = self.params.ftv();
@@ -285,8 +321,11 @@ impl Substitutable for TCallable {
 }
 
 impl Substitutable for TIndex {
-    fn apply(&mut self, sub: &Subst) {
-        self.t.apply(sub);
+    fn apply(&self, sub: &Subst) -> Self {
+        TIndex {
+            t: self.t.apply(sub),
+            ..self.to_owned()
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         self.t.ftv()
@@ -294,8 +333,11 @@ impl Substitutable for TIndex {
 }
 
 impl Substitutable for TProp {
-    fn apply(&mut self, sub: &Subst) {
-        self.t.apply(sub);
+    fn apply(&self, sub: &Subst) -> Self {
+        TProp {
+            t: self.t.apply(sub),
+            ..self.to_owned()
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         self.t.ftv()
@@ -303,8 +345,11 @@ impl Substitutable for TProp {
 }
 
 impl Substitutable for TFnParam {
-    fn apply(&mut self, sub: &Subst) {
-        self.t.apply(sub)
+    fn apply(&self, sub: &Subst) -> Self {
+        TFnParam {
+            t: self.t.apply(sub),
+            ..self.to_owned()
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         self.t.ftv()
@@ -315,10 +360,10 @@ impl<I> Substitutable for HashMap<String, I>
 where
     I: Substitutable,
 {
-    fn apply(&mut self, sub: &Subst) {
-        for val in self.values_mut() {
-            val.apply(sub)
-        }
+    fn apply(&self, sub: &Subst) -> Self {
+        self.iter()
+            .map(|(k, v)| (k.to_owned(), v.apply(sub)))
+            .collect()
     }
     fn ftv(&self) -> Vec<TVar> {
         // we can't use iter_values() here because it's a consuming iterator
@@ -326,12 +371,33 @@ where
     }
 }
 
+// TODO: update apply() to not mutate so that we can use `im::hashmap` _et al_.
+// TODO: figure out if doing so will affect our ability to update exprs with
+// inferred types (it shouldn't be we need to be diligent).
+// impl<I> ImSubstitutable for hashmap::HashMap<String, I>
+// where
+//     I: ImSubstitutable,
+// {
+//     fn apply(&self, sub: &Subst) -> Subst {
+//         self.into_iter()
+//             .map(|(key, val)| (key.to_owned(), val.apply(sub).to_owned()))
+//             .collect()
+//         // for val in self.values() {
+//         //     val.apply(sub)
+//         // }
+//     }
+//     fn ftv(&self) -> Vec<TVar> {
+//         // we can't use iter_values() here because it's a consuming iterator
+//         self.iter().flat_map(|(_, b)| b.ftv()).collect()
+//     }
+// }
+
 impl<I> Substitutable for Vec<I>
 where
     I: Substitutable,
 {
-    fn apply(&mut self, sub: &Subst) {
-        self.iter_mut().for_each(|elem| elem.apply(sub))
+    fn apply(&self, sub: &Subst) -> Self {
+        self.iter().map(|elem| elem.apply(sub)).collect()
     }
     fn ftv(&self) -> Vec<TVar> {
         self.iter().flat_map(|c| c.ftv()).collect()
@@ -342,10 +408,8 @@ impl<I> Substitutable for Option<I>
 where
     I: Substitutable,
 {
-    fn apply(&mut self, sub: &Subst) {
-        if let Some(val) = self {
-            val.apply(sub);
-        }
+    fn apply(&self, sub: &Subst) -> Self {
+        self.as_ref().map(|val| val.apply(sub))
     }
     fn ftv(&self) -> Vec<TVar> {
         self.as_ref()
@@ -355,8 +419,11 @@ where
 }
 
 impl Substitutable for Binding {
-    fn apply(&mut self, sub: &Subst) {
-        self.t.apply(sub);
+    fn apply(&self, sub: &Subst) -> Self {
+        Binding {
+            t: self.t.apply(sub),
+            ..self.to_owned()
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         self.t.ftv()

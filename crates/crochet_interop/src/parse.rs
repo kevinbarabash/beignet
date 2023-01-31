@@ -441,7 +441,7 @@ fn infer_method_sig(
         char_code += 1;
     }
 
-    let mut elem = types::TObjElem::Method(types::TMethod {
+    let elem = types::TObjElem::Method(types::TMethod {
         name: TPropKey::StringKey(name),
         params,
         ret: Box::from(ret),
@@ -456,9 +456,9 @@ fn infer_method_sig(
         is_mutating: obj_is_mutable,
     });
 
-    elem.apply(&sub);
+    let t = elem.apply(&sub);
 
-    Ok(elem)
+    Ok(t)
 }
 
 fn get_key_name(key: &Expr) -> Result<String, String> {
@@ -511,8 +511,8 @@ fn infer_callable(
     type_params: &Option<Box<TsTypeParamDecl>>,
     ctx: &Context,
 ) -> Result<TCallable, String> {
-    let mut params = infer_fn_params(params, ctx)?;
-    let mut ret = infer_ts_type_ann(type_ann, ctx)?;
+    let params = infer_fn_params(params, ctx)?;
+    let ret = infer_ts_type_ann(type_ann, ctx)?;
     let mut type_params = get_type_params(type_params, ctx)?;
 
     let mut tvars = params.ftv();
@@ -523,8 +523,8 @@ fn infer_callable(
         type_params.append(&mut more_type_params);
     }
 
-    params.apply(&sub);
-    ret.apply(&sub);
+    let params = params.apply(&sub);
+    let ret = ret.apply(&sub);
 
     Ok(TCallable {
         params,

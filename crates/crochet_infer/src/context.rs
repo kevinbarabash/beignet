@@ -36,6 +36,14 @@ pub struct Context {
     pub state: State,
 }
 
+// #[derive(Clone, Debug)]
+// pub struct Context {
+//     pub values: HashMap<String, Binding>,
+//     pub types: HashMap<String, Scheme>,
+//     pub is_async: bool,
+//     pub count: Cell<i32>,
+// }
+
 impl Default for Context {
     fn default() -> Self {
         Self {
@@ -66,8 +74,15 @@ impl Context {
 
     pub fn apply(&mut self, s: &Subst) {
         let current_scope = self.scopes.last_mut().unwrap();
-        for (_, b) in current_scope.values.iter_mut() {
-            b.apply(s);
+        for (k, b) in current_scope.values.clone() {
+            // Should we be apply substitions to types as well?
+            current_scope.values.insert(
+                k.to_owned(),
+                Binding {
+                    mutable: b.mutable,
+                    t: b.t.apply(s),
+                },
+            );
         }
     }
 

@@ -65,12 +65,8 @@ pub fn generalize(env: &Env, t: &Type) -> Scheme {
 
     let (sub, type_params) = get_sub_and_type_params(&tvars);
 
-    // TODO: Consider not cloning here once we have some tests in place
-    let mut t = t.clone();
-    t.apply(&sub);
-
     Scheme {
-        t: Box::from(t),
+        t: Box::from(t.apply(&sub)),
         type_params,
     }
 }

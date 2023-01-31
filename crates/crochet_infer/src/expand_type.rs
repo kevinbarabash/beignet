@@ -214,7 +214,7 @@ fn expand_conditional_type(
         false_type,
     } = cond;
 
-    let mut check_type = check_type.clone();
+    let check_type = check_type.clone();
     let mut extends_type = extends_type.clone();
 
     let infer_types = find_infer_types(&mut extends_type);
@@ -226,11 +226,11 @@ fn expand_conditional_type(
 
     replace_infer_types(&mut extends_type, &type_param_map);
 
-    let t = match unify(&mut check_type, &mut extends_type, ctx) {
+    let t = match unify(&check_type, &extends_type, ctx) {
         Ok(s) => {
-            let mut true_type = replace_aliases_rec(true_type, &type_param_map);
-            true_type.apply(&s);
-            Box::from(true_type)
+            let true_type = replace_aliases_rec(true_type, &type_param_map);
+            let t = true_type.apply(&s);
+            Box::from(t)
         }
         Err(_) => false_type.to_owned(),
     };

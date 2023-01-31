@@ -23,25 +23,25 @@ pub fn infer_pattern(
     // Keeps track of all of the variables the need to be introduced by this pattern.
     let mut new_vars: HashMap<String, Binding> = HashMap::new();
 
-    let mut pat_type = infer_pattern_rec(pat, ctx, &mut new_vars)?;
+    let pat_type = infer_pattern_rec(pat, ctx, &mut new_vars)?;
 
     // If the pattern had a type annotation associated with it, we infer type of the
     // type annotation and add a constraint between the types of the pattern and its
     // type annotation.
     match type_ann {
         Some(type_ann) => {
-            let (type_ann_s, mut type_ann_t) =
+            let (type_ann_s, type_ann_t) =
                 infer_type_ann_with_params(type_ann, ctx, type_param_map)?;
 
             // Allowing type_ann_ty to be a subtype of pat_type because
             // only non-refutable patterns can have type annotations.
-            let s = unify(&mut type_ann_t, &mut pat_type, ctx)?;
+            let s = unify(&type_ann_t, &pat_type, ctx)?;
             let s = compose_subs(&s, &type_ann_s);
 
             // Substs are applied to any new variables introduced.  This handles
             // the situation where explicit types have be provided for function
             // parameters.
-            new_vars.apply(&s);
+            let new_vars = new_vars.apply(&s);
             Ok((s, new_vars, type_ann_t))
         }
         None => Ok((Subst::new(), new_vars, pat_type)),
@@ -233,23 +233,23 @@ pub fn infer_pattern_and_init(
     pu: &PatternUsage,
 ) -> Result<(Assump, Subst), Vec<TypeError>> {
     let type_param_map = HashMap::new();
-    let (ps, mut pa, mut pt) = infer_pattern(pat, type_ann, ctx, &type_param_map)?;
-    let (is, mut it) = infer_expr(ctx, init, false)?;
+    let (ps, pa, pt) = infer_pattern(pat, type_ann, ctx, &type_param_map)?;
+    let (is, it) = infer_expr(ctx, init, false)?;
 
     // Unifies initializer and pattern.
     let s = match pu {
         // Assign: The inferred type of the init value must be a sub-type
         // of the pattern it's being assigned to.
-        PatternUsage::Assign => unify(&mut it, &mut pt, ctx)?,
+        PatternUsage::Assign => unify(&it, &pt, ctx)?,
         // Matching: The pattern must be a sub-type of the expression
         // it's being matched against
-        PatternUsage::Match => unify(&mut pt, &mut it, ctx)?,
+        PatternUsage::Match => unify(&pt, &it, ctx)?,
     };
 
     // infer_pattern can generate a non-empty Subst when the pattern includes
     // a type annotation.
     let s = compose_many_subs(&[is, ps, s]);
-    pa.apply(&s);
+    let pa = pa.apply(&s);
 
     Ok((pa, s))
 }
