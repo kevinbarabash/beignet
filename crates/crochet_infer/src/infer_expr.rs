@@ -444,13 +444,8 @@ pub fn infer_expr(
                 type_params: None,
             }));
 
-            eprintln!("t: before = {t}");
-
             let s = compose_many_subs(&ss);
             let t = t.apply(&s);
-
-            // eprintln!("ss = {ss:#?}");
-            eprintln!("t: after = {t}");
 
             // TODO: Update the inferred_type on each param to equal the
             // corresponding type from t_params.

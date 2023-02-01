@@ -17,6 +17,8 @@ use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &Type, t2: &Type, ctx: &mut Context) -> Result<Subst, Vec<TypeError>> {
+    eprintln!("unify({t1}, {t2}, ctx)");
+
     // All binding must be done first
     match (&t1.kind, &t2.kind) {
         // If both are type variables...
@@ -56,11 +58,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &mut Context) -> Result<Subst, Vec<TypeE
             return bind(tv, t2, Relation::SubType, ctx);
         }
         (_, TypeKind::Var(tv)) => {
-            let s = bind(tv, t1, Relation::SuperType, ctx)?;
-            for (k, v) in s.clone() {
-                eprintln!("{k} -> {v}");
-            }
-            return Ok(s);
+            return bind(tv, t1, Relation::SuperType, ctx);
         }
         _ => (),
     };
@@ -729,7 +727,6 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &mut Context) -> Result<Subst, Vec<TypeE
     if result.is_err() {
         eprintln!("Can't unify {t1} with {t2}");
     }
-    eprintln!("unify result = {result:#?}");
     result
 }
 
