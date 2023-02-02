@@ -3422,7 +3422,7 @@ mod tests {
     // - defaults
 
     #[test]
-    fn func_with_default_type_param() {
+    fn regex_helper_types_with_capture_groups() {
         let src = r#"
         type Regex<TPattern, TFlags> = {};
         type RegexMatch<TRegex> = {};
@@ -3441,6 +3441,29 @@ mod tests {
         assert_eq!(
             ctx.lookup_value("result").unwrap().to_string(),
             "{0: string, 1: string, 2: string}"
+        );
+    }
+
+    #[test]
+    fn regex_helper_types_with_named_capture_groups() {
+        let src = r#"
+        type Regex<TPattern, TFlags> = {};
+        type RegexMatch<TRegex> = {};
+
+        declare let matchAll: <
+            TPattern,
+            TFlags,
+            TRegex = Regex<TPattern, TFlags>,
+        >(str: string, regex: TRegex) => RegexMatch<TRegex>;
+
+        declare let regex: Regex<"(?<foo>foo)(?<bar>bar)", "g">;
+        let result = matchAll("foobar", regex);
+        "#;
+
+        let ctx = infer_prog(src);
+        assert_eq!(
+            ctx.lookup_value("result").unwrap().to_string(),
+            "{0: string, 1: string, 2: string, groups: {foo: string, bar: string}}"
         );
     }
 }

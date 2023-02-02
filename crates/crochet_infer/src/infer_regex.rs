@@ -7,6 +7,7 @@ use crochet_ast::types::*;
 struct RegexVisitor {
     pub optional_count: u32,
     pub elems: Vec<TObjElem>,
+    pub groups: Vec<TObjElem>,
 }
 
 impl Visitor for RegexVisitor {
@@ -14,8 +15,21 @@ impl Visitor for RegexVisitor {
     type Err = String;
 
     fn finish(self) -> Result<Self::Output, Self::Err> {
+        let mut elems = self.elems.clone();
+        if !self.groups.is_empty() {
+            let groups = Type::from(TypeKind::Object(TObject {
+                elems: self.groups,
+                is_interface: false,
+            }));
+            elems.push(TObjElem::Prop(TProp {
+                name: TPropKey::StringKey("groups".to_string()),
+                optional: false,
+                mutable: false,
+                t: groups,
+            }));
+        };
         let t = Type::from(TypeKind::Object(TObject {
-            elems: self.elems,
+            elems,
             is_interface: false,
         }));
         Ok(t)
@@ -79,7 +93,7 @@ impl Visitor for RegexVisitor {
                             mutable: false,
                             t: Type::from(TypeKind::Keyword(TKeyword::String)),
                         }));
-                        self.elems.push(TObjElem::Prop(TProp {
+                        self.groups.push(TObjElem::Prop(TProp {
                             name: TPropKey::NumberKey(name.to_string()),
                             optional: self.optional_count > 0,
                             mutable: false,
@@ -100,7 +114,9 @@ impl Visitor for RegexVisitor {
 }
 
 fn parse_regex(pattern: &str) -> Type {
-    let hir = Parser::new().parse(pattern).unwrap();
+    let hir = Parser::new()
+        .parse(&pattern.replace("(?<", "(?P<"))
+        .unwrap();
     let mut visitor = RegexVisitor::default();
     visitor.elems.push(TObjElem::Prop(TProp {
         name: TPropKey::StringKey("0".to_string()),
@@ -116,5 +132,61 @@ pub fn infer_regex(pattern: &Type) -> Type {
         parse_regex(pattern)
     } else {
         todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_capture_groups() {
+        let t = parse_regex("foo|bar");
+        assert_eq!(t.to_string(), "{0: string}");
+    }
+
+    #[test]
+    fn capture_groups() {
+        let t = parse_regex("(foo)(bar)");
+        assert_eq!(t.to_string(), "{0: string, 1: string, 2: string}");
+    }
+
+    #[test]
+    fn optional_capture_groups() {
+        let t = parse_regex("(foo)|(bar)");
+        assert_eq!(t.to_string(), "{0: string, 1?: string, 2?: string}");
+    }
+
+    #[test]
+    fn some_optional_capture_groups() {
+        let t = parse_regex("(foo)+(bar)?");
+        assert_eq!(t.to_string(), "{0: string, 1: string, 2?: string}");
+    }
+
+    #[test]
+    fn named_capture_groups() {
+        let t = parse_regex("(?<x>\\d+),(?<y>\\d+)");
+        assert_eq!(
+            t.to_string(),
+            "{0: string, 1: string, 2: string, groups: {x: string, y: string}}"
+        );
+    }
+
+    #[test]
+    fn optional_name_capture_groups() {
+        let t = parse_regex("(?<x>\\d+)|(?<y>\\d+)");
+        assert_eq!(
+            t.to_string(),
+            "{0: string, 1?: string, 2?: string, groups: {x?: string, y?: string}}",
+        );
+    }
+
+    #[test]
+    fn some_optional_named_capture_groups_and_non_capturing_group() {
+        let t = parse_regex("(?<x>\\d+),(?<y>\\d+)(?:,(?<z>\\d+))?");
+        assert_eq!(
+            t.to_string(),
+            "{0: string, 1: string, 2: string, 3?: string, groups: {x: string, y: string, z?: string}}",
+        );
     }
 }
