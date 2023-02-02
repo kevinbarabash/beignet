@@ -5,6 +5,7 @@ mod infer_class;
 mod infer_expr;
 mod infer_fn_param;
 mod infer_pattern;
+mod infer_regex;
 mod infer_type_ann;
 mod scheme;
 mod substitutable;
@@ -3426,20 +3427,20 @@ mod tests {
         type Regex<TPattern, TFlags> = {};
         type RegexMatch<TRegex> = {};
 
-        declare let my_match: <
+        declare let matchAll: <
             TPattern,
             TFlags,
             TRegex = Regex<TPattern, TFlags>,
         >(str: string, regex: TRegex) => RegexMatch<TRegex>;
 
-        declare let regex: Regex<"foo|bar", "g">;
-        let result = my_match("foobar", regex);
+        declare let regex: Regex<"(foo)(bar)", "g">;
+        let result = matchAll("foobar", regex);
         "#;
 
         let ctx = infer_prog(src);
         assert_eq!(
             ctx.lookup_value("result").unwrap().to_string(),
-            "RegexMatch<Regex<\"foo|bar\", \"g\">>"
+            "{0: string, 1: string, 2: string}"
         );
     }
 }

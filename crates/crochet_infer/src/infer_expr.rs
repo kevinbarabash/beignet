@@ -10,6 +10,7 @@ use crate::context::Context;
 use crate::expand_type::get_obj_type;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
+use crate::infer_regex::infer_regex;
 use crate::infer_type_ann::*;
 use crate::scheme::get_type_param_map;
 use crate::substitutable::{Subst, Substitutable};
@@ -78,7 +79,24 @@ pub fn infer_expr(
             ss.push(s3);
 
             let s = compose_many_subs(&ss);
-            let t = ret_type.apply(&s);
+            let mut t = ret_type.apply(&s);
+
+            match &t.kind {
+                TypeKind::Ref(alias) if alias.name == "RegexMatch" => {
+                    if let Some(args) = &alias.type_args {
+                        let arg = &args[0];
+                        match &arg.kind {
+                            TypeKind::Ref(alias) if alias.name == "Regex" => {
+                                if let Some(args) = &alias.type_args {
+                                    t = infer_regex(&args[0]);
+                                }
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+                _ => (),
+            }
 
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
             Ok((s, t))
