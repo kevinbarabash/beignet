@@ -68,7 +68,6 @@ impl Substitutable for Type {
             TypeKind::Tuple(types) => TypeKind::Tuple(types.apply(sub)),
             TypeKind::Array(t) => TypeKind::Array(Box::from(t.apply(sub))),
             TypeKind::Rest(arg) => TypeKind::Rest(Box::from(arg.apply(sub))),
-            kind @ TypeKind::Regex(_) => kind.to_owned(),
             kind @ TypeKind::This => kind.to_owned(),
             TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(t.apply(sub))),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => {
@@ -134,7 +133,6 @@ impl Substitutable for Type {
             TypeKind::Tuple(types) => types.ftv(),
             TypeKind::Array(t) => t.ftv(),
             TypeKind::Rest(arg) => arg.ftv(),
-            TypeKind::Regex(_) => vec![],
             TypeKind::This => vec![],
             TypeKind::KeyOf(t) => t.ftv(),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => {

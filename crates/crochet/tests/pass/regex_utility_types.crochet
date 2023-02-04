@@ -1,0 +1,11 @@
+type Regex<TPattern, TFlags> = {};
+type RegexMatch<TRegex> = {};
+
+declare let matchAll: <
+    TPattern,
+    TFlags,
+    TRegex = Regex<TPattern, TFlags>,
+>(str: string, regex: TRegex) => RegexMatch<TRegex>;
+
+declare let regex: Regex<"(foo)(bar)", "g">;
+let result = matchAll("foobar", regex);

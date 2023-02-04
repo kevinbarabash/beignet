@@ -5,6 +5,7 @@ mod infer_class;
 mod infer_expr;
 mod infer_fn_param;
 mod infer_pattern;
+mod infer_regex;
 mod infer_type_ann;
 mod scheme;
 mod substitutable;
@@ -3421,25 +3422,79 @@ mod tests {
     // - defaults
 
     #[test]
-    fn func_with_default_type_param() {
+    fn regex_helper_types_with_capture_groups() {
         let src = r#"
         type Regex<TPattern, TFlags> = {};
         type RegexMatch<TRegex> = {};
 
-        declare let my_match: <
+        declare let matchAll: <
             TPattern,
             TFlags,
             TRegex = Regex<TPattern, TFlags>,
         >(str: string, regex: TRegex) => RegexMatch<TRegex>;
 
-        declare let regex: Regex<"foo|bar", "g">;
-        let result = my_match("foobar", regex);
+        declare let regex: Regex<"(foo)(bar)", "g">;
+        let result = matchAll("foobar", regex);
         "#;
 
         let ctx = infer_prog(src);
         assert_eq!(
             ctx.lookup_value("result").unwrap().to_string(),
-            "RegexMatch<Regex<\"foo|bar\", \"g\">>"
+            "[string, string, string]"
         );
+    }
+
+    #[test]
+    fn regex_helper_types_with_named_capture_groups() {
+        let src = r#"
+        type Regex<TPattern, TFlags> = {};
+        type RegexMatch<TRegex> = {};
+
+        declare let matchAll: <
+            TPattern,
+            TFlags,
+            TRegex = Regex<TPattern, TFlags>,
+        >(str: string, regex: TRegex) => RegexMatch<TRegex>;
+
+        declare let regex: Regex<"(?<foo>foo)(?<bar>bar)", "g">;
+        let result = matchAll("foobar", regex);
+        "#;
+
+        let ctx = infer_prog(src);
+        assert_eq!(
+            ctx.lookup_value("result").unwrap().to_string(),
+            "[string, string, string] & {groups: {foo: string, bar: string}}"
+        );
+    }
+
+    #[test]
+    fn index_access_on_array_obj_intersection() {
+        let src = r#"
+        declare let match_result: [string, string, string] & {groups: {foo: string, bar: string}};
+
+        let a = match_result[0];
+        let b = match_result.groups.foo;
+        let len = match_result.length;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(ctx.lookup_value("a").unwrap().to_string(), "string");
+        assert_eq!(ctx.lookup_value("b").unwrap().to_string(), "string");
+        assert_eq!(ctx.lookup_value("len").unwrap().to_string(), "3");
+    }
+
+    #[test]
+    fn array_properties_on_tuple() {
+        let src = r#"
+        type Array<T> = {length: number};
+        declare let tuple: [string, string, string];
+
+        let len = tuple.length;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(ctx.lookup_value("len").unwrap().to_string(), "3");
     }
 }

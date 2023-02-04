@@ -12,6 +12,7 @@ array_tool = "1.0.3"
 defaultmap = "0.5.0"
 itertools = "0.10.3"
 im = "15.1.0"
+regex-syntax = "0.6.28"
 
 [dev-dependencies]
 crochet_parser = { version = "0.1.0", path = "../crochet_parser" }

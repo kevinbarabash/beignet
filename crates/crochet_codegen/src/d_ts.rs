@@ -556,15 +556,6 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
             }
         }
         TypeKind::Rest(_) => todo!(),
-        TypeKind::Regex(_) => TsType::TsTypeRef(TsTypeRef {
-            span: DUMMY_SP,
-            type_name: TsEntityName::Ident(Ident {
-                span: DUMMY_SP,
-                sym: JsWord::from("RegExp".to_string()),
-                optional: false,
-            }),
-            type_params: None,
-        }),
         TypeKind::This => TsType::TsThisType(TsThisType { span: DUMMY_SP }),
         TypeKind::KeyOf(t) => TsType::TsTypeOperator(TsTypeOperator {
             span: DUMMY_SP,
