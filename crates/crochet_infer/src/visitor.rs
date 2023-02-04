@@ -50,8 +50,7 @@ pub trait Visitor {
             }
             TypeKind::Array(t) => self.visit_children(t),
             TypeKind::Rest(t) => self.visit_children(t),
-            TypeKind::Regex(_) => (), // leaf node
-            TypeKind::This => (),     // leaf node
+            TypeKind::This => (), // leaf node
             TypeKind::KeyOf(t) => self.visit_children(t),
             TypeKind::IndexAccess(access) => {
                 self.visit_children(&mut access.object);

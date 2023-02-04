@@ -26,7 +26,13 @@ pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> 
         TypeKind::Intersection(_) => Ok(t.to_owned()),
         TypeKind::Object(_) => Ok(t.to_owned()),
         TypeKind::Ref(alias) => {
-            let scheme = ctx.lookup_scheme(&alias.name)?;
+            // TODO: Add a table for these kinds of aliases
+            let name = if alias.name == "Regex" {
+                "RegExp"
+            } else {
+                &alias.name
+            };
+            let scheme = ctx.lookup_scheme(name)?;
             match &scheme.t.kind {
                 // We don't bother expanding interfaces since unifying them based
                 // on their properties is expensive.
@@ -37,13 +43,6 @@ pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> 
         TypeKind::Tuple(_) => Ok(t.to_owned()),
         TypeKind::Array(_) => Ok(t.to_owned()),
         TypeKind::Rest(_) => Ok(t.to_owned()),
-        TypeKind::Regex(_) => {
-            // TODO: define our own custom Regexp type that is parameterized
-            // by its pattern.
-            let scheme = ctx.lookup_scheme("Regexp")?;
-            let t = scheme.t.as_ref();
-            Ok(t.to_owned())
-        }
         TypeKind::This => todo!(),
         TypeKind::KeyOf(t) => expand_keyof(t, ctx),
         TypeKind::IndexAccess(access) => expand_index_access(access, ctx, true),
@@ -645,7 +644,16 @@ pub fn get_obj_type(t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeErro
     match &t.kind {
         TypeKind::Var(_) => Err(vec![TypeError::CantInferTypeFromItKeys]),
         TypeKind::Ref(alias) => {
-            let t = expand_alias_type(alias, ctx)?;
+            let alias = if alias.name == "Regex" {
+                TRef {
+                    name: "RegExp".to_string(),
+                    type_args: None,
+                }
+            } else {
+                alias.to_owned()
+            };
+
+            let t = expand_alias_type(&alias, ctx)?;
             get_obj_type(&t, ctx)
         }
         TypeKind::Object(_) => Ok(t.to_owned()),
@@ -753,15 +761,7 @@ pub fn get_obj_type(t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeErro
             todo!();
         }
         TypeKind::Rest(_) => todo!(), // What does this even mean?
-        TypeKind::Regex(_) => {
-            // TODO: Create a customized Regexp interface that's generic with
-            // the regex pattern.
-            let scheme = ctx.lookup_scheme("Regexp")?;
-            let t = replace_aliases_rec(&scheme.t, &HashMap::new());
-
-            Ok(t)
-        }
-        TypeKind::This => todo!(), // Depends on what this is referencing
+        TypeKind::This => todo!(),    // Depends on what this is referencing
         TypeKind::KeyOf(t) => expand_keyof(t, ctx),
         TypeKind::IndexAccess(access) => {
             let t = expand_index_access(access, ctx, true)?;

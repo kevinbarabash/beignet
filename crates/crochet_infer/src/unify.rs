@@ -682,12 +682,12 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &mut Context) -> Result<Subst, Vec<TypeE
                 todo!("unify(): handle aliases that point to another alias")
             }
         }
-        (TypeKind::Regex(_), TypeKind::Ref(alias)) if alias.name == "RegExp" => {
-            Ok(Subst::default())
-        }
-        (TypeKind::Ref(alias), TypeKind::Regex(_)) if alias.name == "RegExp" => {
-            Ok(Subst::default())
-        }
+        // (TypeKind::Regex(_), TypeKind::Ref(alias)) if alias.name == "RegExp" => {
+        //     Ok(Subst::default())
+        // }
+        // (TypeKind::Ref(alias), TypeKind::Regex(_)) if alias.name == "RegExp" => {
+        //     Ok(Subst::default())
+        // }
         (_, TypeKind::Ref(alias)) => unify(t1, &expand_alias_type(alias, ctx)?, ctx),
         (TypeKind::Ref(alias), _) => unify(&expand_alias_type(alias, ctx)?, t2, ctx),
         (_, TypeKind::MappedType(_)) => unify(t1, &expand_type(t2, ctx)?, ctx),

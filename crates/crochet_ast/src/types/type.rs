@@ -103,12 +103,6 @@ pub struct TInferType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TRegex {
-    pub pattern: String,
-    pub flags: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TypeKind {
     Var(TVar),
     App(TApp),
@@ -122,7 +116,6 @@ pub enum TypeKind {
     Tuple(Vec<Type>),
     Array(Box<Type>),
     Rest(Box<Type>), // TODO: rename this to Spread
-    Regex(TRegex),
     This,
 
     // Type operations
@@ -203,13 +196,13 @@ impl fmt::Display for Type {
             TypeKind::Tuple(types) => write!(f, "[{}]", join(types, ", ")),
             TypeKind::Array(t) => write!(f, "{t}[]"),
             TypeKind::Rest(arg) => write!(f, "...{arg}"),
-            TypeKind::Regex(TRegex { pattern, flags }) => {
-                write!(f, "/{pattern}/")?;
-                if let Some(flags) = flags {
-                    write!(f, "{flags}")?;
-                }
-                Ok(())
-            }
+            // TypeKind::Regex(TRegex { pattern, flags }) => {
+            //     write!(f, "/{pattern}/")?;
+            //     if let Some(flags) = flags {
+            //         write!(f, "{flags}")?;
+            //     }
+            //     Ok(())
+            // }
             TypeKind::This => write!(f, "this"),
             TypeKind::KeyOf(t) => write!(f, "keyof {t}"),
             TypeKind::IndexAccess(TIndexAccess { object, index }) => write!(f, "{object}[{index}]"),

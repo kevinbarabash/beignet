@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crochet_ast::types::{
     self as types, Provenance, TCallable, TFnParam, TKeyword, TLam, TObjElem, TObject, TPat,
-    TPropKey, TRef, TRegex, TVar, Type, TypeKind,
+    TPropKey, TRef, TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
 
@@ -742,10 +742,21 @@ pub fn infer_expr(
         }
         ExprKind::Regex(Regex { pattern, flags }) => {
             let s = Subst::default();
-            let t = Type::from(TypeKind::Regex(TRegex {
-                pattern: pattern.to_owned(),
-                flags: flags.to_owned(),
+            let t = Type::from(TypeKind::Ref(TRef {
+                name: "Regex".to_string(),
+                type_args: Some(vec![
+                    Type::from(TypeKind::Lit(types::TLit::Str(pattern.to_owned()))),
+                    Type::from(TypeKind::Lit(types::TLit::Str(match flags {
+                        Some(flags) => flags.to_owned(),
+                        None => "".to_string(),
+                    }))),
+                ]),
             }));
+
+            //     TypeKind::Regex(TRegex {
+            //     pattern: pattern.to_owned(),
+            //     flags: flags.to_owned(),
+            // }));
 
             Ok((s, t))
         }
@@ -819,17 +830,6 @@ fn infer_property_type(
             t.mutable = obj_t.mutable;
             infer_property_type(&mut t, prop, ctx, is_lvalue)
         }
-        TypeKind::Regex(_) => {
-            // TODO: Create custom type for regexes that is parametric based on
-            // the regex pattern.
-            let obj_t = Type::from(TypeKind::Ref(TRef {
-                name: "RegExp".to_string(),
-                type_args: None,
-            }));
-            let mut t = get_obj_type(&obj_t, ctx)?;
-            t.mutable = obj_t.mutable;
-            infer_property_type(&mut t, prop, ctx, is_lvalue)
-        }
         TypeKind::Lit(_) => {
             let mut t = get_obj_type(obj_t, ctx)?;
             infer_property_type(&mut t, prop, ctx, is_lvalue)
@@ -863,7 +863,15 @@ fn infer_property_type(
             // not, treat it the same as a regular property look up on Array.
             match prop {
                 // TODO: lookup methods on Array.prototype
-                MemberProp::Ident(_) => {
+                MemberProp::Ident(Ident { name, .. }) => {
+                    if name == "length" {
+                        let t = Type::from(TypeKind::Lit(types::TLit::Num(
+                            elem_types.len().to_string(),
+                        )));
+                        let s = Subst::default();
+                        return Ok((s, t));
+                    }
+
                     let scheme = ctx.lookup_scheme("Array")?;
 
                     let mut type_param_map: HashMap<String, Type> = HashMap::new();
@@ -906,8 +914,17 @@ fn infer_property_type(
                 }
             }
         }
+        TypeKind::Intersection(types) => {
+            for t in types {
+                let result = infer_property_type(t, prop, ctx, is_lvalue);
+                if result.is_ok() {
+                    return result;
+                }
+            }
+            Err(vec![TypeError::Unspecified]) // TODO
+        }
         _ => {
-            todo!("Unhandled {obj_t:#?} in infer_property_type")
+            todo!("Unhandled {obj_t:?} in infer_property_type")
         }
     }
 }

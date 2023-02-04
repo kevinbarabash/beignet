@@ -3440,7 +3440,7 @@ mod tests {
         let ctx = infer_prog(src);
         assert_eq!(
             ctx.lookup_value("result").unwrap().to_string(),
-            "{0: string, 1: string, 2: string}"
+            "[string, string, string]"
         );
     }
 
@@ -3463,7 +3463,38 @@ mod tests {
         let ctx = infer_prog(src);
         assert_eq!(
             ctx.lookup_value("result").unwrap().to_string(),
-            "{0: string, 1: string, 2: string, groups: {foo: string, bar: string}}"
+            "[string, string, string] & {groups: {foo: string, bar: string}}"
         );
+    }
+
+    #[test]
+    fn index_access_on_array_obj_intersection() {
+        let src = r#"
+        declare let match_result: [string, string, string] & {groups: {foo: string, bar: string}};
+
+        let a = match_result[0];
+        let b = match_result.groups.foo;
+        let len = match_result.length;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(ctx.lookup_value("a").unwrap().to_string(), "string");
+        assert_eq!(ctx.lookup_value("b").unwrap().to_string(), "string");
+        assert_eq!(ctx.lookup_value("len").unwrap().to_string(), "3");
+    }
+
+    #[test]
+    fn array_properties_on_tuple() {
+        let src = r#"
+        type Array<T> = {length: number};
+        declare let tuple: [string, string, string];
+
+        let len = tuple.length;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(ctx.lookup_value("len").unwrap().to_string(), "3");
     }
 }
