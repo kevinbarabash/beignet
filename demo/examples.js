@@ -137,3 +137,11 @@ let ro_obj: ReadonlyObj = {a: 5, c: true};
 // uncommenting the following line will cause an error
 // ro_obj.c = false;
 `;
+
+export const regexes = `
+let regex = /(?<foo>foo)|(?<bar>bar)/g;
+let result = "foobarbaz".match(regex);
+if (regex.test("foo")) {
+    // do something
+}
+`;

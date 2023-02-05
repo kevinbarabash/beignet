@@ -64,6 +64,7 @@ const Dropdown = () => {
           Standard Library (lib.es5.d.ts)
         </a>
         <a href={getPermalinkHref(examples.utilityTypes)}>Utility types</a>
+        <a href={getPermalinkHref(examples.regexes)}>Regexes</a>
       </div>
     </button>
   );
