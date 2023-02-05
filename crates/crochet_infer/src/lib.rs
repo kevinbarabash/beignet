@@ -3450,4 +3450,22 @@ mod tests {
 
         assert_eq!(ctx.lookup_value("len").unwrap().to_string(), "3");
     }
+
+    #[test]
+    fn infer_const_binary_operations() {
+        let src = r#"
+        let a = 5;
+        let b = 10;
+
+        let c = a + b;
+        let cond1 = a < b;
+        let cond2 = a > b;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(ctx.lookup_value("c").unwrap().to_string(), "15");
+        assert_eq!(ctx.lookup_value("cond1").unwrap().to_string(), "true");
+        assert_eq!(ctx.lookup_value("cond2").unwrap().to_string(), "false");
+    }
 }
