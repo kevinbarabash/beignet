@@ -1,3 +1,4 @@
+use crochet_ast::types::visitor_mut::VisitorMut;
 use crochet_ast::types::*;
 use crochet_ast::types::{
     TIndex, TIndexKey, TLit, TObjElem, TObject, TProp, TPropKey, Type, TypeKind,
@@ -11,7 +12,6 @@ use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
 use crate::unify::unify;
 use crate::util::{get_property_type, replace_aliases_rec, union_many_types, union_types};
-use crate::visitor_mut::VisitorMut;
 
 // `expand_type` is used to expand types that `unify` doesn't know how to unify
 // into something that it does know how to unify.

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crochet_ast::types::visitor_mut::VisitorMut;
 use crochet_ast::types::{
     self as types, Provenance, TCallable, TFnParam, TKeyword, TLam, TObjElem, TObject, TPat,
     TPropKey, TRef, TVar, Type, TypeKind,
@@ -17,7 +18,6 @@ use crate::type_error::TypeError;
 use crate::unify::unify;
 use crate::update::update_pattern;
 use crate::util::*;
-use crate::visitor_mut::VisitorMut;
 
 pub fn infer_expr(
     ctx: &mut Context,

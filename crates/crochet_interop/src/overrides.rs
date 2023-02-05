@@ -1,7 +1,8 @@
 use swc_ecma_ast::TsInterfaceDecl;
 
+use crochet_ast::types::visitor::Visitor;
+use crochet_ast::types::visitor_mut::VisitorMut;
 use crochet_ast::types::*;
-use crochet_infer::{Visitor, VisitorMut};
 
 pub fn maybe_override_string_methods(decl: &TsInterfaceDecl, elem: &TObjElem) -> Option<TObjElem> {
     if decl.id.sym.to_string() == "String" {

@@ -14,8 +14,6 @@ mod unify;
 mod unify_mut;
 mod update;
 mod util;
-mod visitor;
-mod visitor_mut;
 
 pub mod infer;
 
@@ -26,8 +24,6 @@ pub use scheme::{get_sub_and_type_params, instantiate, Scheme};
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
 pub use util::{close_over, immutable_obj_type, normalize, replace_aliases_rec};
-pub use visitor::*;
-pub use visitor_mut::*;
 
 #[cfg(test)]
 mod tests {

@@ -6,6 +6,8 @@ pub mod obj;
 pub mod pat;
 pub mod provenance;
 pub mod r#type;
+pub mod visitor;
+pub mod visitor_mut;
 
 pub use binding::*;
 pub use keyword::*;
