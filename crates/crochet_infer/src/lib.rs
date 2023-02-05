@@ -3476,11 +3476,16 @@ mod tests {
         let b = 10;
         let c = a + b;
         let d = ((c / a) - (b / a)) / a;
+
+        let x: number = 5;
+        let y: number = 10;
+        let z = x + y;
         "#;
 
         let ctx = infer_prog(src);
 
         assert_eq!(ctx.lookup_value("c").unwrap().to_string(), "15");
         assert_eq!(ctx.lookup_value("d").unwrap().to_string(), "0.2");
+        assert_eq!(ctx.lookup_value("z").unwrap().to_string(), "number");
     }
 }
