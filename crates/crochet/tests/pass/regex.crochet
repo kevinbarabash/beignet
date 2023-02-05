@@ -1,5 +1,5 @@
-let regex = /foo|bar/g;
-let match = "foobarbaz".match(regex);
+let regex = /(?<foo>foo)|(?<bar>bar)/g;
+let result = "foobarbaz".match(regex);
 if (regex.test("foo")) {
     // do something
 }

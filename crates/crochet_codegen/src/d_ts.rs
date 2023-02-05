@@ -69,6 +69,8 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
 
     let mut body: Vec<ModuleItem> = vec![];
 
+    eprintln!("current_scope = {current_scope:#?}");
+
     for (name, scheme) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
         let type_params = build_type_params_from_type_params(&scheme.type_params, ctx);
 
@@ -113,6 +115,8 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
     }
 
     for (name, b) in current_scope.values.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+        eprintln!("{name} = {}", b.t);
+
         let pat = Pat::Ident(BindingIdent {
             id: build_ident(name),
             type_ann: Some(Box::from(TsTypeAnn {
