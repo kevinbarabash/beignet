@@ -307,14 +307,13 @@ impl Substitutable for TLam {
 
 impl Substitutable for TRef {
     fn apply(&self, sub: &Subst) -> Self {
-        let result = TRef {
+        TRef {
             type_args: self
                 .type_args
                 .as_ref()
                 .map(|args| args.iter().map(|arg| arg.apply(sub)).collect()),
             ..self.to_owned()
-        };
-        result
+        }
     }
     fn ftv(&self) -> Vec<TVar> {
         match &self.type_args {

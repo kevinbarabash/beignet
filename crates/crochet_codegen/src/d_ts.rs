@@ -69,8 +69,6 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
 
     let mut body: Vec<ModuleItem> = vec![];
 
-    eprintln!("current_scope = {current_scope:#?}");
-
     for (name, scheme) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
         let type_params = build_type_params_from_type_params(&scheme.type_params, ctx);
 
@@ -115,8 +113,6 @@ fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
     }
 
     for (name, b) in current_scope.values.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
-        eprintln!("{name} = {}", b.t);
-
         let pat = Pat::Ident(BindingIdent {
             id: build_ident(name),
             type_ann: Some(Box::from(TsTypeAnn {
@@ -465,18 +461,21 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
             name, type_args, ..
         }) => {
             let mut sym = JsWord::from(name.to_owned());
-            let mut use_readonly_utility = false;
+            let use_readonly_utility = false;
 
             if !mutable && !name.ends_with("Constructor") {
                 if let Ok(scheme) = ctx.lookup_scheme(name) {
                     if let TypeKind::Object(obj) = scheme.t.kind {
                         if immutable_obj_type(&obj).is_some() {
-                            // TODO: keep track of which types are derived from
-                            // .d.ts files and whether or not they have Readonly
-                            // variants like ReadonlyArray, ReadonlySet, etc.
-                            if name == "RegExpMatchArray" || name == "RegExp" {
-                                use_readonly_utility = false;
+                            if name == "RegExp"
+                                || name == "RegExpExecArray"
+                                || name == "RegExpMatchArray"
+                            {
+                                // Don't pre-pend "Readonly" on to these types
                             } else {
+                                // TODO: keep track of which types are derived from
+                                // .d.ts files and whether or not they have Readonly
+                                // variants like ReadonlyArray, ReadonlySet, etc.
                                 sym = JsWord::from(format!("Readonly{name}"));
                             }
                         }
@@ -510,6 +509,7 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
                 type_params: type_args,
             });
 
+            // TODO: Write a test that uses this code
             if use_readonly_utility {
                 TsType::TsTypeRef(TsTypeRef {
                     span: DUMMY_SP,
