@@ -121,20 +121,12 @@ impl Visitor for RegexVisitor {
     }
 }
 
-fn parse_regex(pattern: &str) -> Type {
+pub fn parse_regex(pattern: &str) -> Type {
     let hir = Parser::new()
         .parse(&pattern.replace("(?<", "(?P<"))
         .unwrap();
     let visitor = RegexVisitor::default();
     visit(&hir, visitor).unwrap()
-}
-
-pub fn infer_regex(pattern: &Type) -> Type {
-    if let TypeKind::Lit(TLit::Str(pattern)) = &pattern.kind {
-        parse_regex(pattern)
-    } else {
-        todo!()
-    }
 }
 
 #[cfg(test)]

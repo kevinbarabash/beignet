@@ -5,6 +5,7 @@ use std::iter::IntoIterator;
 use crochet_ast::types::*;
 
 use crate::context::Binding;
+use crate::infer_regex::parse_regex;
 use crate::scheme::Scheme;
 
 pub type Subst = HashMap<i32, Type>;
@@ -64,7 +65,20 @@ impl Substitutable for Type {
                 elems: obj.elems.apply(sub),
                 ..obj.to_owned()
             }),
-            TypeKind::Ref(tr) => TypeKind::Ref(tr.apply(sub)),
+            TypeKind::Ref(tr) => {
+                let result = tr.apply(sub);
+
+                if tr.name == "RegExpMatchArray" {
+                    if let Some(type_args) = &result.type_args {
+                        let pattern = &type_args[0];
+                        if let TypeKind::Lit(TLit::Str(pattern)) = &pattern.kind {
+                            return parse_regex(pattern);
+                        }
+                    }
+                }
+
+                TypeKind::Ref(result)
+            }
             TypeKind::Tuple(types) => TypeKind::Tuple(types.apply(sub)),
             TypeKind::Array(t) => TypeKind::Array(Box::from(t.apply(sub))),
             TypeKind::Rest(arg) => TypeKind::Rest(Box::from(arg.apply(sub))),
@@ -286,13 +300,14 @@ impl Substitutable for TLam {
 
 impl Substitutable for TRef {
     fn apply(&self, sub: &Subst) -> Self {
-        TRef {
+        let result = TRef {
             type_args: self
                 .type_args
                 .as_ref()
                 .map(|args| args.iter().map(|arg| arg.apply(sub)).collect()),
             ..self.to_owned()
-        }
+        };
+        result
     }
     fn ftv(&self) -> Vec<TVar> {
         match &self.type_args {

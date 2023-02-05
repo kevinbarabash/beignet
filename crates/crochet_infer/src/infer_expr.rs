@@ -10,7 +10,6 @@ use crate::context::Context;
 use crate::expand_type::get_obj_type;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
-use crate::infer_regex::infer_regex;
 use crate::infer_type_ann::*;
 use crate::scheme::get_type_param_map;
 use crate::substitutable::{Subst, Substitutable};
@@ -18,7 +17,7 @@ use crate::type_error::TypeError;
 use crate::unify::unify;
 use crate::update::update_pattern;
 use crate::util::*;
-use crate::visitor::Visitor;
+use crate::visitor_mut::VisitorMut;
 
 pub fn infer_expr(
     ctx: &mut Context,
@@ -79,24 +78,7 @@ pub fn infer_expr(
             ss.push(s3);
 
             let s = compose_many_subs(&ss);
-            let mut t = ret_type.apply(&s);
-
-            match &t.kind {
-                TypeKind::Ref(alias) if alias.name == "RegexMatch" => {
-                    if let Some(args) = &alias.type_args {
-                        let arg = &args[0];
-                        match &arg.kind {
-                            TypeKind::Ref(alias) if alias.name == "Regex" => {
-                                if let Some(args) = &alias.type_args {
-                                    t = infer_regex(&args[0]);
-                                }
-                            }
-                            _ => (),
-                        }
-                    }
-                }
-                _ => (),
-            }
+            let t = ret_type.apply(&s);
 
             // return (s3 `compose` s2 `compose` s1, apply s3 tv)
             Ok((s, t))
@@ -743,7 +725,7 @@ pub fn infer_expr(
         ExprKind::Regex(Regex { pattern, flags }) => {
             let s = Subst::default();
             let t = Type::from(TypeKind::Ref(TRef {
-                name: "Regex".to_string(),
+                name: "RegExp".to_string(),
                 type_args: Some(vec![
                     Type::from(TypeKind::Lit(types::TLit::Str(pattern.to_owned()))),
                     Type::from(TypeKind::Lit(types::TLit::Str(match flags {
@@ -1091,7 +1073,7 @@ impl ReplaceVisitor {
     }
 }
 
-impl Visitor for ReplaceVisitor {
+impl VisitorMut for ReplaceVisitor {
     fn visit_type(&mut self, t: &mut Type) {
         if let TypeKind::This = t.kind {
             t.kind = self.rep.kind.to_owned();

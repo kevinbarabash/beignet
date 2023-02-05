@@ -1,22 +1,21 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use types::{
-    TCallable, TConditionalType, TIndex, TIndexAccess, TIndexKey, TLam, TMappedType, TObjElem,
-    TObject, TPropKey, TypeKind,
-};
 
 use swc_common::{comments::SingleThreadedComments, FileName, SourceMap};
 use swc_ecma_ast::*;
 use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
 
-use crate::util;
 use crochet_ast::types::{
-    self as types, RestPat, TFnParam, TKeyword, TMappedTypeChangeProp, TPat, TProp, TRef, Type,
-    TypeParam,
+    self as types, RestPat, TCallable, TConditionalType, TFnParam, TIndex, TIndexAccess, TIndexKey,
+    TKeyword, TLam, TMappedType, TMappedTypeChangeProp, TObjElem, TObject, TPat, TProp, TPropKey,
+    TRef, Type, TypeKind, TypeParam,
 };
 use crochet_ast::values::{Lit, DUMMY_LOC};
 use crochet_infer::{get_sub_and_type_params, Context, Scheme, Subst, Substitutable};
+
+use crate::overrides::maybe_override_string_methods;
+use crate::util;
 
 #[derive(Debug, Clone)]
 pub struct InterfaceCollector {
@@ -664,10 +663,13 @@ fn infer_interface_decl(
         .body
         .iter()
         .filter_map(|elem| {
-            let prop = infer_ts_type_element(elem, ctx, obj_is_mutable);
+            let elem = infer_ts_type_element(elem, ctx, obj_is_mutable);
 
-            match prop {
-                Ok(prop) => Some(prop),
+            match elem {
+                Ok(elem) => match maybe_override_string_methods(decl, &elem) {
+                    Some(override_elem) => Some(override_elem),
+                    None => Some(elem),
+                },
                 Err(msg) => {
                     eprintln!("Err: {msg}");
                     None
@@ -681,7 +683,7 @@ fn infer_interface_decl(
         is_interface: false,
     }));
 
-    let type_params = match &decl.type_params {
+    let mut type_params = match &decl.type_params {
         Some(type_params) => Some(
             type_params
                 .params
@@ -713,6 +715,27 @@ fn infer_interface_decl(
         ),
         None => None,
     };
+
+    // Add `TPattern` and `TFlags` type params to `RegExp`, `RegExpExecArray`,
+    // and `RegExpMatchArray`.
+    let interface_name = decl.id.sym.to_string();
+    if interface_name == "RegExp"
+        || interface_name == "RegExpExecArray"
+        || interface_name == "RegExpMatchArray"
+    {
+        type_params = Some(vec![
+            TypeParam {
+                name: "TPattern".to_string(),
+                constraint: None,
+                default: None,
+            },
+            TypeParam {
+                name: "TFlags".to_string(),
+                constraint: None,
+                default: None,
+            },
+        ])
+    }
 
     let scheme = Scheme {
         t: Box::from(t),
@@ -791,8 +814,6 @@ impl Visit for InterfaceCollector {
         }
     }
 }
-
-impl InterfaceCollector {}
 
 pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
     let cm = Arc::<SourceMap>::default();

@@ -11,7 +11,7 @@ use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
 use crate::unify::unify;
 use crate::util::{get_property_type, replace_aliases_rec, union_many_types, union_types};
-use crate::visitor::Visitor;
+use crate::visitor_mut::VisitorMut;
 
 // `expand_type` is used to expand types that `unify` doesn't know how to unify
 // into something that it does know how to unify.
@@ -155,7 +155,7 @@ impl FindInferTypesVisitor {
     }
 }
 
-impl Visitor for FindInferTypesVisitor {
+impl VisitorMut for FindInferTypesVisitor {
     fn visit_type(&mut self, t: &mut Type) {
         if let TypeKind::InferType(it) = &t.kind {
             self.infer_types.push(it.to_owned());
@@ -181,7 +181,7 @@ impl ReplaceVisitor {
     }
 }
 
-impl Visitor for ReplaceVisitor {
+impl VisitorMut for ReplaceVisitor {
     // TODO: handle type params in TLams with type_params correctly
     fn visit_type(&mut self, t: &mut Type) {
         if let TypeKind::InferType(TInferType { name }) = &t.kind {
