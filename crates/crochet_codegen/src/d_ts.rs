@@ -474,8 +474,8 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
                             // TODO: keep track of which types are derived from
                             // .d.ts files and whether or not they have Readonly
                             // variants like ReadonlyArray, ReadonlySet, etc.
-                            if name == "RegExpMatchArray" {
-                                use_readonly_utility = true;
+                            if name == "RegExpMatchArray" || name == "RegExp" {
+                                use_readonly_utility = false;
                             } else {
                                 sym = JsWord::from(format!("Readonly{name}"));
                             }
@@ -484,15 +484,12 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
                 }
             }
 
-            let t = TsType::TsTypeRef(TsTypeRef {
-                span: DUMMY_SP,
-                type_name: TsEntityName::from(Ident {
-                    span: DUMMY_SP,
-                    sym,
-                    optional: false,
-                }),
+            // Reverse overrides when exporting types
+            let type_args = if name == "RegExpMatchArray" || name == "RegExp" {
+                None
+            } else {
                 // swc's AST calls these type params when really they're type args
-                type_params: type_args.clone().map(|params| {
+                type_args.clone().map(|params| {
                     Box::from(TsTypeParamInstantiation {
                         span: DUMMY_SP,
                         params: params
@@ -500,7 +497,17 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
                             .map(|t| Box::from(build_type(t, &None, ctx)))
                             .collect(),
                     })
+                })
+            };
+
+            let t = TsType::TsTypeRef(TsTypeRef {
+                span: DUMMY_SP,
+                type_name: TsEntityName::from(Ident {
+                    span: DUMMY_SP,
+                    sym,
+                    optional: false,
                 }),
+                type_params: type_args,
             });
 
             if use_readonly_utility {

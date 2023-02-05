@@ -68,6 +68,13 @@ impl Substitutable for Type {
             TypeKind::Ref(tr) => {
                 let result = tr.apply(sub);
 
+                // If we have enough information to infer a type from a regex
+                // pattern we can replace `RegExpMatchArray` with a more accurate
+                // type based on the regex itself.
+                //
+                // TODO: Don't allow .match() to be called with a regex using the
+                // /g flag since it returns a result that do not contain capture,
+                // named or otherwise.
                 if tr.name == "RegExpMatchArray" {
                     if let Some(type_args) = &result.type_args {
                         let pattern = &type_args[0];
