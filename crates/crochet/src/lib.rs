@@ -119,7 +119,7 @@ pub unsafe extern "C" fn parse(c_buf: *const c_char) -> *const WasmString {
         .expect("Error loading crochet language");
 
     let str_slice: &str = CStr::from_ptr(c_buf).to_str().unwrap();
-    println!("str_slice = {str_slice}");
+    eprintln!("str_slice = {str_slice}");
     let tree = parser.parse(str_slice, None).unwrap();
 
     let root = tree.root_node();

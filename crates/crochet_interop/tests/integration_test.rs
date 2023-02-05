@@ -729,7 +729,29 @@ fn infer_infer_type() {
 }
 
 #[test]
-fn regex_helper_types_with_named_capture_groups() {
+fn regex_with_named_capture_groups() {
+    let src = r#"
+    let regex = /(?<foo>foo)(?<bar>bar)/;
+    let result = "foobar".match(regex);
+    "#;
+
+    let (_, ctx) = infer_prog(src);
+
+    let regex = ctx.lookup_value("regex").unwrap();
+    assert_eq!(
+        regex.to_string(),
+        "RegExp<\"(?<foo>foo)(?<bar>bar)\", \"\">"
+    );
+
+    let result = ctx.lookup_value("result").unwrap();
+    assert_eq!(
+        result.to_string(),
+        "[string, string, string] & {groups: {foo: string, bar: string}} | null"
+    );
+}
+
+#[test]
+fn regex_with_g_flag_returns_only_matches() {
     let src = r#"
     let regex = /(?<foo>foo)(?<bar>bar)/g;
     let result = "foobar".match(regex);
@@ -744,8 +766,5 @@ fn regex_helper_types_with_named_capture_groups() {
     );
 
     let result = ctx.lookup_value("result").unwrap();
-    assert_eq!(
-        result.to_string(),
-        "[string, string, string] & {groups: {foo: string, bar: string}} | null"
-    );
+    assert_eq!(result.to_string(), "null | string[]");
 }

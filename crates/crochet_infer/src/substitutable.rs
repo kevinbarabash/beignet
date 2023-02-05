@@ -71,15 +71,22 @@ impl Substitutable for Type {
                 // If we have enough information to infer a type from a regex
                 // pattern we can replace `RegExpMatchArray` with a more accurate
                 // type based on the regex itself.
-                //
-                // TODO: Don't allow .match() to be called with a regex using the
-                // /g flag since it returns a result that do not contain capture,
-                // named or otherwise.
                 if tr.name == "RegExpMatchArray" {
                     if let Some(type_args) = &result.type_args {
                         let pattern = &type_args[0];
-                        if let TypeKind::Lit(TLit::Str(pattern)) = &pattern.kind {
-                            return parse_regex(pattern);
+                        let flags = &type_args[1];
+                        if let (
+                            TypeKind::Lit(TLit::Str(pattern)),
+                            TypeKind::Lit(TLit::Str(flags)),
+                        ) = (&pattern.kind, &flags.kind)
+                        {
+                            if flags.contains('g') {
+                                return Type::from(TypeKind::Array(Box::from(Type::from(
+                                    TypeKind::Keyword(TKeyword::String),
+                                ))));
+                            } else {
+                                return parse_regex(pattern);
+                            }
                         }
                     }
                 }
