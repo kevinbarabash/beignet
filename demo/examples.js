@@ -139,7 +139,10 @@ let ro_obj: ReadonlyObj = {a: 5, c: true};
 `;
 
 export const regexes = `
-let regex = /(?<foo>foo)|(?<bar>bar)/g;
+let regex_g = /(?<foo>foo)|(?<bar>bar)/g;
+let result_g = "foobarbaz".match(regex_g);
+
+let regex = /(?<foo>foo)|(?<bar>bar)/;
 let result = "foobarbaz".match(regex);
 if (regex.test("foo")) {
     // do something
