@@ -1,5 +1,0 @@
-let regex = /foo|bar/g;
-let match = "foobarbaz".match(regex);
-if (regex.test("foo")) {
-    // do something
-}

@@ -76,7 +76,7 @@ pub fn get_diagnostics(report: CompileError, src: &str) -> Vec<String> {
                                 if let ExprKind::Lambda(lam) = &expr.kind {
                                     // TODO: Add a span to lam.params so that we don't
                                     // have to compute it here.
-                                    println!("params = {:#?}", lam.params)
+                                    eprintln!("params = {:#?}", lam.params)
                                 }
                             }
                             // TODO: figure out how to get a span for just the function
@@ -107,7 +107,7 @@ pub fn get_diagnostics(report: CompileError, src: &str) -> Vec<String> {
                             &format!("{prop_t} is not a valid index"),
                         ),
                         error => {
-                            println!("TODO: handle {error}");
+                            eprintln!("TODO: handle {error}");
                             None
                         }
                     }

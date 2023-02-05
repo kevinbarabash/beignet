@@ -15,6 +15,7 @@ mod unify_mut;
 mod update;
 mod util;
 mod visitor;
+mod visitor_mut;
 
 pub mod infer;
 
@@ -25,6 +26,8 @@ pub use scheme::{get_sub_and_type_params, instantiate, Scheme};
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
 pub use util::{close_over, immutable_obj_type, normalize, replace_aliases_rec};
+pub use visitor::*;
+pub use visitor_mut::*;
 
 #[cfg(test)]
 mod tests {
@@ -3420,52 +3423,6 @@ mod tests {
     // TODO: Test that the following works in classes and methods:
     // - constraints
     // - defaults
-
-    #[test]
-    fn regex_helper_types_with_capture_groups() {
-        let src = r#"
-        type Regex<TPattern, TFlags> = {};
-        type RegexMatch<TRegex> = {};
-
-        declare let matchAll: <
-            TPattern,
-            TFlags,
-            TRegex = Regex<TPattern, TFlags>,
-        >(str: string, regex: TRegex) => RegexMatch<TRegex>;
-
-        declare let regex: Regex<"(foo)(bar)", "g">;
-        let result = matchAll("foobar", regex);
-        "#;
-
-        let ctx = infer_prog(src);
-        assert_eq!(
-            ctx.lookup_value("result").unwrap().to_string(),
-            "[string, string, string]"
-        );
-    }
-
-    #[test]
-    fn regex_helper_types_with_named_capture_groups() {
-        let src = r#"
-        type Regex<TPattern, TFlags> = {};
-        type RegexMatch<TRegex> = {};
-
-        declare let matchAll: <
-            TPattern,
-            TFlags,
-            TRegex = Regex<TPattern, TFlags>,
-        >(str: string, regex: TRegex) => RegexMatch<TRegex>;
-
-        declare let regex: Regex<"(?<foo>foo)(?<bar>bar)", "g">;
-        let result = matchAll("foobar", regex);
-        "#;
-
-        let ctx = infer_prog(src);
-        assert_eq!(
-            ctx.lookup_value("result").unwrap().to_string(),
-            "[string, string, string] & {groups: {foo: string, bar: string}}"
-        );
-    }
 
     #[test]
     fn index_access_on_array_obj_intersection() {

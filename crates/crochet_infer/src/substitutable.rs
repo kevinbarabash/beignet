@@ -5,6 +5,7 @@ use std::iter::IntoIterator;
 use crochet_ast::types::*;
 
 use crate::context::Binding;
+use crate::infer_regex::parse_regex;
 use crate::scheme::Scheme;
 
 pub type Subst = HashMap<i32, Type>;
@@ -64,7 +65,34 @@ impl Substitutable for Type {
                 elems: obj.elems.apply(sub),
                 ..obj.to_owned()
             }),
-            TypeKind::Ref(tr) => TypeKind::Ref(tr.apply(sub)),
+            TypeKind::Ref(tr) => {
+                let result = tr.apply(sub);
+
+                // If we have enough information to infer a type from a regex
+                // pattern we can replace `RegExpMatchArray` with a more accurate
+                // type based on the regex itself.
+                if tr.name == "RegExpMatchArray" {
+                    if let Some(type_args) = &result.type_args {
+                        let pattern = &type_args[0];
+                        let flags = &type_args[1];
+                        if let (
+                            TypeKind::Lit(TLit::Str(pattern)),
+                            TypeKind::Lit(TLit::Str(flags)),
+                        ) = (&pattern.kind, &flags.kind)
+                        {
+                            if flags.contains('g') {
+                                return Type::from(TypeKind::Array(Box::from(Type::from(
+                                    TypeKind::Keyword(TKeyword::String),
+                                ))));
+                            } else {
+                                return parse_regex(pattern);
+                            }
+                        }
+                    }
+                }
+
+                TypeKind::Ref(result)
+            }
             TypeKind::Tuple(types) => TypeKind::Tuple(types.apply(sub)),
             TypeKind::Array(t) => TypeKind::Array(Box::from(t.apply(sub))),
             TypeKind::Rest(arg) => TypeKind::Rest(Box::from(arg.apply(sub))),

@@ -17,8 +17,6 @@ use crate::util::*;
 
 // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
 pub fn unify(t1: &Type, t2: &Type, ctx: &mut Context) -> Result<Subst, Vec<TypeError>> {
-    eprintln!("unify({t1}, {t2}, ctx)");
-
     // All binding must be done first
     match (&t1.kind, &t2.kind) {
         // If both are type variables...

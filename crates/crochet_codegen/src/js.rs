@@ -1217,7 +1217,7 @@ fn get_conds_for_pat(pat: &values::Pattern, conds: &mut Vec<Condition>, path: &m
                 });
             }
             _ => {
-                println!("adding Check::Instanceof condition");
+                eprintln!("adding Check::Instanceof condition");
                 conds.push(Condition {
                     path: path.to_owned(),
                     check: Check::Instanceof(is_id.to_owned()),

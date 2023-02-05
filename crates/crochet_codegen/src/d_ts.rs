@@ -461,24 +461,43 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
             name, type_args, ..
         }) => {
             let mut sym = JsWord::from(name.to_owned());
-            let mut use_readonly_utility = false;
+            let use_readonly_utility = false;
 
             if !mutable && !name.ends_with("Constructor") {
                 if let Ok(scheme) = ctx.lookup_scheme(name) {
                     if let TypeKind::Object(obj) = scheme.t.kind {
                         if immutable_obj_type(&obj).is_some() {
-                            // TODO: keep track of which types are derived from
-                            // .d.ts files and whether or not they have Readonly
-                            // variants like ReadonlyArray, ReadonlySet, etc.
-                            if name == "RegExpMatchArray" {
-                                use_readonly_utility = true;
+                            if name == "RegExp"
+                                || name == "RegExpExecArray"
+                                || name == "RegExpMatchArray"
+                            {
+                                // Don't pre-pend "Readonly" on to these types
                             } else {
+                                // TODO: keep track of which types are derived from
+                                // .d.ts files and whether or not they have Readonly
+                                // variants like ReadonlyArray, ReadonlySet, etc.
                                 sym = JsWord::from(format!("Readonly{name}"));
                             }
                         }
                     }
                 }
             }
+
+            // Reverse overrides when exporting types
+            let type_args = if name == "RegExpMatchArray" || name == "RegExp" {
+                None
+            } else {
+                // swc's AST calls these type params when really they're type args
+                type_args.clone().map(|params| {
+                    Box::from(TsTypeParamInstantiation {
+                        span: DUMMY_SP,
+                        params: params
+                            .iter()
+                            .map(|t| Box::from(build_type(t, &None, ctx)))
+                            .collect(),
+                    })
+                })
+            };
 
             let t = TsType::TsTypeRef(TsTypeRef {
                 span: DUMMY_SP,
@@ -487,18 +506,10 @@ pub fn build_type(t: &Type, type_params: &Option<Box<TsTypeParamDecl>>, ctx: &Co
                     sym,
                     optional: false,
                 }),
-                // swc's AST calls these type params when really they're type args
-                type_params: type_args.clone().map(|params| {
-                    Box::from(TsTypeParamInstantiation {
-                        span: DUMMY_SP,
-                        params: params
-                            .iter()
-                            .map(|t| Box::from(build_type(t, &None, ctx)))
-                            .collect(),
-                    })
-                }),
+                type_params: type_args,
             });
 
+            // TODO: Write a test that uses this code
             if use_readonly_utility {
                 TsType::TsTypeRef(TsTypeRef {
                     span: DUMMY_SP,

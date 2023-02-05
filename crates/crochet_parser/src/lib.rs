@@ -72,7 +72,7 @@ pub fn parse(src: &str) -> Result<Program, ParseError> {
 
 fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, ParseError> {
     let kind = node.kind();
-    println!("parse_statement: kind = {kind}");
+    eprintln!("parse_statement: kind = {kind}");
 
     match node.kind() {
         "lexical_declaration" => parse_declaration(node, false, src),
@@ -158,7 +158,7 @@ fn parse_declaration(
     declare: bool,
     src: &str,
 ) -> Result<Vec<Statement>, ParseError> {
-    println!("node.kind = {}", node.kind());
+    eprintln!("node.kind = {}", node.kind());
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing declaration"));
@@ -235,7 +235,7 @@ fn parse_declaration(
 }
 
 fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, ParseError> {
-    println!("node.kind = {}", node.kind());
+    eprintln!("node.kind = {}", node.kind());
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing declaration"));
@@ -249,7 +249,7 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
     for child in body_node.named_children(&mut cursor) {
         let kind = child.kind();
 
-        println!("child.kind() = {kind}");
+        eprintln!("child.kind() = {kind}");
 
         match kind {
             "method_definition" => {
