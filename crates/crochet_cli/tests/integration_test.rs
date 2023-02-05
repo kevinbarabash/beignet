@@ -91,7 +91,7 @@ fn infer_let_inside_function() {
 
 #[test]
 fn infer_op() {
-    assert_eq!(infer("5 + 10;"), "number");
+    assert_eq!(infer("5 + 10;"), "15");
 }
 
 #[test]
@@ -104,7 +104,7 @@ fn infer_fn_param() {
 
 #[test]
 fn infer_fn_with_param_types() {
-    assert_eq!(infer("(a: 5, b: 10) => a + b;"), "(a: 5, b: 10) => number");
+    assert_eq!(infer("(a: 5, b: 10) => a + b;"), "(a: 5, b: 10) => 15");
 }
 
 #[test]
@@ -113,7 +113,7 @@ fn infer_let_fn_with_param_types() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.lookup_value("add").unwrap());
-    assert_eq!(result, "(a: 5, b: 10) => number");
+    assert_eq!(result, "(a: 5, b: 10) => 15");
 }
 
 #[test]
@@ -191,9 +191,21 @@ fn infer_skk() {
 }
 
 #[test]
-fn infer_adding_variables() {
+fn infer_adding_literals_in_variables() {
     let src = r#"
     let x = 5;
+    let y = 10;
+    let z = x + y;
+    "#;
+    let (_, ctx) = infer_prog(src);
+    let result = format!("{}", ctx.lookup_value("z").unwrap());
+    assert_eq!(result, "15");
+}
+
+#[test]
+fn infer_adding_numbers() {
+    let src = r#"
+    let x: number = 5;
     let y = 10;
     let z = x + y;
     "#;
@@ -290,7 +302,7 @@ fn infer_if_else_with_multiple_widenings() {
 fn infer_equal_with_numbers() {
     let (_, ctx) = infer_prog("let cond = 5 == 10;");
     let result = format!("{}", ctx.lookup_value("cond").unwrap());
-    assert_eq!(result, "boolean");
+    assert_eq!(result, "false");
 }
 
 // TODO: update definition of "!=" to be <A>(A, A) => boolean
@@ -848,7 +860,7 @@ fn infer_nested_block() {
     let (_, ctx) = infer_prog(src);
 
     let result = format!("{}", ctx.lookup_value("result").unwrap());
-    assert_eq!(result, "number");
+    assert_eq!(result, "15");
 }
 
 #[test]

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crochet_ast::types::visitor_mut::VisitorMut;
 use crochet_ast::types::{
-    self as types, Provenance, TCallable, TFnParam, TKeyword, TLam, TObjElem, TObject, TPat,
+    self as types, Provenance, TCallable, TFnParam, TKeyword, TLam, TLit, TObjElem, TObject, TPat,
     TPropKey, TRef, TVar, Type, TypeKind,
 };
 use crochet_ast::values::*;
@@ -534,17 +534,42 @@ pub fn infer_expr(
             let s4 = unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
 
             let s = compose_many_subs(&[s1, s2, s3, s4]);
-            let t = match op {
-                BinOp::Add => Type::from(TypeKind::Keyword(TKeyword::Number)),
-                BinOp::Sub => Type::from(TypeKind::Keyword(TKeyword::Number)),
-                BinOp::Mul => Type::from(TypeKind::Keyword(TKeyword::Number)),
-                BinOp::Div => Type::from(TypeKind::Keyword(TKeyword::Number)),
-                BinOp::EqEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                BinOp::NotEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                BinOp::Gt => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                BinOp::GtEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                BinOp::Lt => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                BinOp::LtEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+
+            let t = match (&t1.kind, &t2.kind) {
+                (TypeKind::Lit(TLit::Num(n1)), TypeKind::Lit(TLit::Num(n2))) => {
+                    let n1 = match n1.parse::<f64>() {
+                        Ok(value) => Ok(value),
+                        Err(_) => Err(vec![TypeError::Unspecified]), // Parse the number during parsing
+                    }?;
+                    let n2 = match n2.parse::<f64>() {
+                        Ok(value) => Ok(value),
+                        Err(_) => Err(vec![TypeError::Unspecified]), // Parse the number during parsing
+                    }?;
+                    match op {
+                        BinOp::Add => Type::from(TypeKind::Lit(TLit::Num((n1 + n2).to_string()))),
+                        BinOp::Sub => Type::from(TypeKind::Lit(TLit::Num((n1 - n2).to_string()))),
+                        BinOp::Mul => Type::from(TypeKind::Lit(TLit::Num((n1 * n2).to_string()))),
+                        BinOp::Div => Type::from(TypeKind::Lit(TLit::Num((n1 / n2).to_string()))),
+                        BinOp::EqEq => Type::from(TypeKind::Lit(TLit::Bool(n1 == n2))),
+                        BinOp::NotEq => Type::from(TypeKind::Lit(TLit::Bool(n1 != n2))),
+                        BinOp::Gt => Type::from(TypeKind::Lit(TLit::Bool(n1 > n2))),
+                        BinOp::GtEq => Type::from(TypeKind::Lit(TLit::Bool(n1 >= n2))),
+                        BinOp::Lt => Type::from(TypeKind::Lit(TLit::Bool(n1 < n2))),
+                        BinOp::LtEq => Type::from(TypeKind::Lit(TLit::Bool(n1 <= n2))),
+                    }
+                }
+                _ => match op {
+                    BinOp::Add => Type::from(TypeKind::Keyword(TKeyword::Number)),
+                    BinOp::Sub => Type::from(TypeKind::Keyword(TKeyword::Number)),
+                    BinOp::Mul => Type::from(TypeKind::Keyword(TKeyword::Number)),
+                    BinOp::Div => Type::from(TypeKind::Keyword(TKeyword::Number)),
+                    BinOp::EqEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                    BinOp::NotEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                    BinOp::Gt => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                    BinOp::GtEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                    BinOp::Lt => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                    BinOp::LtEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                },
             };
 
             Ok((s, t))

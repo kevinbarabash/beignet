@@ -138,7 +138,7 @@ mod tests {
     #[test]
     fn infer_adding_variables() {
         let src = r#"
-        let x = 5;
+        let x: number = 5;
         let y = 10;
         let z = x + y;
         "#;
@@ -593,7 +593,7 @@ mod tests {
     fn obj_param_destructuring_with_type_annotation() {
         assert_eq!(
             infer("({x, y}: {x: 5, y: 10}) => x + y"),
-            "({x, y}: {x: 5, y: 10}) => number"
+            "({x, y}: {x: 5, y: 10}) => 15"
         );
     }
 
@@ -622,7 +622,7 @@ mod tests {
     #[test]
     fn infer_if_let() {
         let src = r#"
-        let p = {x: 5, y: 10};
+        declare let p: {x: number, y: number};
         let sum = if (let {x, y} = p) {
             x + y
         } else {
@@ -642,7 +642,7 @@ mod tests {
     #[test]
     fn infer_if_let_without_else_with_semi() {
         let src = r#"
-        let p = {x: 5, y: 10};
+        declare let p: {x: number, y: number};
         let result = if (let {x, y} = p) {
             x + y;
         };
@@ -664,7 +664,7 @@ mod tests {
 
         let ctx = infer_prog(src);
 
-        assert_eq!(get_value_type("result", &ctx), "number | undefined");
+        assert_eq!(get_value_type("result", &ctx), "15 | undefined");
     }
 
     #[test]
@@ -3449,5 +3449,43 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(ctx.lookup_value("len").unwrap().to_string(), "3");
+    }
+
+    #[test]
+    fn infer_const_binary_operations() {
+        let src = r#"
+        let a = 5;
+        let b = 10;
+
+        let c = a + b;
+        let cond1 = a < b;
+        let cond2 = a > b;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(ctx.lookup_value("c").unwrap().to_string(), "15");
+        assert_eq!(ctx.lookup_value("cond1").unwrap().to_string(), "true");
+        assert_eq!(ctx.lookup_value("cond2").unwrap().to_string(), "false");
+    }
+
+    #[test]
+    fn infer_const_binary_operations_stress_test() {
+        let src = r#"
+        let a = 5;
+        let b = 10;
+        let c = a + b;
+        let d = ((c / a) - (b / a)) / a;
+
+        let x: number = 5;
+        let y: number = 10;
+        let z = x + y;
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(ctx.lookup_value("c").unwrap().to_string(), "15");
+        assert_eq!(ctx.lookup_value("d").unwrap().to_string(), "0.2");
+        assert_eq!(ctx.lookup_value("z").unwrap().to_string(), "number");
     }
 }
