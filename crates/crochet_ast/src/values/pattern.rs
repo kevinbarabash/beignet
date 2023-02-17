@@ -1,3 +1,6 @@
+use derive_visitor::{Drive, Visitor};
+use std::collections::BTreeSet;
+
 use crate::types::Type;
 use crate::values::common::{SourceLocation, Span};
 use crate::values::expr::Expr;
@@ -7,7 +10,7 @@ use crate::values::Lit;
 // TODO: split this into separate patterns:
 // - one for assignment (obj, ident, array, rest)
 // - one for pattern matching/if let
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Drive, Debug, Clone, PartialEq, Eq)]
 pub enum PatternKind {
     // TODO: use Ident instead of BindingIdent, there's no need to
     // have BindingIdent which simply wraps Ident
@@ -22,11 +25,14 @@ pub enum PatternKind {
     // Assign(AssignPat),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Drive, Debug, Clone, PartialEq, Eq)]
 pub struct Pattern {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
     pub kind: PatternKind,
+    #[drive(skip)]
     pub inferred_type: Option<Type>,
 }
 
@@ -39,63 +45,75 @@ impl Pattern {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq)]
 pub struct LitPat {
+    #[drive(skip)] // TODO: derive visitor for Lit as well
     pub lit: Lit,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq)]
 pub struct IsPat {
     pub ident: BindingIdent,
+    #[drive(skip)]
     pub is_id: Ident,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq)]
 pub struct RestPat {
     pub arg: Box<Pattern>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq)]
 pub struct ArrayPat {
     // The elements are optional to support sparse arrays.
     pub elems: Vec<Option<ArrayPatElem>>,
+    #[drive(skip)]
     pub optional: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq)]
 pub struct ArrayPatElem {
     // TODO: add .span property
     pub pattern: Pattern,
+    #[drive(skip)] // TODO: derive visitor for Expr as well
     pub init: Option<Box<Expr>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq)]
 pub struct ObjectPat {
     pub props: Vec<ObjectPatProp>,
+    #[drive(skip)]
     pub optional: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Drive, Debug, PartialEq, Eq)]
 pub enum ObjectPatProp {
     KeyValue(KeyValuePatProp),
     Shorthand(ShorthandPatProp),
     Rest(RestPat), // TODO: create a new RestPatProp that includes a span
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Drive, Debug, PartialEq, Eq)]
 pub struct KeyValuePatProp {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
+    #[drive(skip)]
     pub key: Ident,
     pub value: Box<Pattern>,
+    #[drive(skip)] // TODO: derive visitor for Expr as well
     pub init: Option<Box<Expr>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq)]
 pub struct ShorthandPatProp {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
     pub ident: BindingIdent,
+    #[drive(skip)] // TODO: derive visitor for Expr as well
     pub init: Option<Box<Expr>>,
 }
 
@@ -131,6 +149,26 @@ pub fn is_refutable(pat: &Pattern) -> bool {
 
 pub fn is_irrefutable(pat: &Pattern) -> bool {
     !is_refutable(pat)
+}
+
+#[derive(Visitor, Default)]
+#[visitor(BindingIdent(enter))]
+struct BindingCollector {
+    bindings: BTreeSet<String>,
+}
+
+impl BindingCollector {
+    fn enter_binding_ident(&mut self, binding: &BindingIdent) {
+        self.bindings.insert(binding.name.to_owned());
+    }
+}
+
+pub fn get_binding(pat: &Pattern) -> BTreeSet<String> {
+    let mut collector = BindingCollector {
+        bindings: BTreeSet::new(),
+    };
+    pat.drive(&mut collector);
+    collector.bindings
 }
 
 #[cfg(test)]
