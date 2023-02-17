@@ -6,7 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-derivative = "2.2.0"
 itertools = "0.10.3"
 # TODO: hide these behind a feature and then only use that feature in the codegen crate
 swc_atoms = "0.4.21"
