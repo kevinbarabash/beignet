@@ -1,3 +1,4 @@
+use derive_visitor::Drive;
 use itertools::{join, Itertools};
 use std::cmp::Ordering;
 use std::fmt;
@@ -8,15 +9,16 @@ use crate::types::lit::TLit;
 use crate::types::obj::TObjElem;
 use crate::types::provenance::Provenance;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TApp {
     pub args: Vec<Type>,
     pub ret: Box<Type>,
     pub type_args: Option<Vec<Type>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TRef {
+    #[drive(skip)]
     pub name: String,
     // TODO: make this non-optional
     pub type_args: Option<Vec<Type>>,
@@ -32,26 +34,29 @@ impl fmt::Display for TRef {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TObject {
     pub elems: Vec<TObjElem>,
+    #[drive(skip)]
     pub is_interface: bool, // Used for `interface` types and classes
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TIndexAccess {
     pub object: Box<Type>,
     pub index: Box<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TVar {
+    #[drive(skip)]
     pub id: i32, // This should never be mutated
     pub constraint: Option<Box<Type>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TypeParam {
+    #[drive(skip)]
     pub name: String,
     pub constraint: Option<Box<Type>>,
     pub default: Option<Box<Type>>,
@@ -75,10 +80,12 @@ impl fmt::Display for TypeParam {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TMappedType {
     pub type_param: TypeParam,
+    #[drive(skip)]
     pub optional: Option<TMappedTypeChangeProp>,
+    #[drive(skip)]
     pub mutable: Option<TMappedTypeChangeProp>,
     pub t: Box<Type>,
 }
@@ -89,7 +96,7 @@ pub enum TMappedTypeChangeProp {
     Minus,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TConditionalType {
     pub check_type: Box<Type>,
     pub extends_type: Box<Type>,
@@ -97,12 +104,13 @@ pub struct TConditionalType {
     pub false_type: Box<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TInferType {
+    #[drive(skip)]
     pub name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TypeKind {
     Var(TVar),
     App(TApp),
@@ -127,10 +135,12 @@ pub enum TypeKind {
     // Query, // use for typed holes
 }
 
-#[derive(Debug, Clone, Eq)]
+#[derive(Clone, Debug, Drive, Eq)]
 pub struct Type {
     pub kind: TypeKind,
+    #[drive(skip)]
     pub mutable: bool,
+    #[drive(skip)]
     pub provenance: Option<Box<Provenance>>,
 }
 

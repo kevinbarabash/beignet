@@ -1,3 +1,4 @@
+use derive_visitor::Drive;
 use itertools::join;
 use std::fmt;
 
@@ -6,7 +7,7 @@ use crate::types::pat::TPat;
 use crate::types::r#type::{Type, TypeKind};
 use crate::types::TypeParam;
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TLam {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
@@ -28,10 +29,11 @@ impl fmt::Display for TLam {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TFnParam {
     pub pat: TPat,
     pub t: Type,
+    #[drive(skip)]
     pub optional: bool,
 }
 

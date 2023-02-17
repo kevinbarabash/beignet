@@ -1,10 +1,11 @@
+use derive_visitor::Drive;
 use itertools::join;
 use std::fmt;
 
 use crate::types::binding::BindingIdent;
 use crate::types::r#type::Type;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TPat {
     Ident(BindingIdent),
     Rest(RestPat),
@@ -23,7 +24,7 @@ impl fmt::Display for TPat {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RestPat {
     pub arg: Box<TPat>,
 }
@@ -35,7 +36,7 @@ impl fmt::Display for RestPat {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ArrayPat {
     pub elems: Vec<Option<TPat>>,
 }
@@ -51,7 +52,7 @@ impl fmt::Display for ArrayPat {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TObjectPat {
     pub props: Vec<TObjectPatProp>,
 }
@@ -64,7 +65,7 @@ impl fmt::Display for TObjectPat {
 }
 
 // TODO: update this to match AST changes to ObjectPatProp
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TObjectPatProp {
     KeyValue(TObjectKeyValuePatProp),
     Assign(TObjectAssignPatProp),
@@ -81,8 +82,9 @@ impl fmt::Display for TObjectPatProp {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TObjectKeyValuePatProp {
+    #[drive(skip)]
     pub key: String,
     pub value: TPat,
 }
@@ -94,8 +96,9 @@ impl fmt::Display for TObjectKeyValuePatProp {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TObjectAssignPatProp {
+    #[drive(skip)]
     pub key: String,
     pub value: Option<Type>,
 }

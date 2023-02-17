@@ -164,9 +164,7 @@ impl BindingCollector {
 }
 
 pub fn get_binding(pat: &Pattern) -> BTreeSet<String> {
-    let mut collector = BindingCollector {
-        bindings: BTreeSet::new(),
-    };
+    let mut collector = BindingCollector::default();
     pat.drive(&mut collector);
     collector.bindings
 }

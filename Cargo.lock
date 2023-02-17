@@ -261,6 +261,7 @@ dependencies = [
  "crochet_infer",
  "crochet_parser",
  "defaultmap",
+ "derive-visitor",
  "insta",
  "memoize",
  "swc_atoms",
