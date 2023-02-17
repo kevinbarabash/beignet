@@ -1,5 +1,4 @@
-use crochet_ast::values::ShorthandPatProp;
-use itertools::Itertools;
+use std::collections::BTreeSet;
 use std::rc::Rc;
 
 use swc_atoms::*;
@@ -64,79 +63,118 @@ fn build_type_params_from_type_params(
     })
 }
 
-fn build_d_ts(_program: &values::Program, ctx: &Context) -> Program {
-    let current_scope = ctx.scopes.last().unwrap();
+fn build_d_ts(program: &values::Program, ctx: &Context) -> Program {
+    // TODO: Create a common `Export` type
+    let mut type_exports: BTreeSet<String> = BTreeSet::new();
+    let mut value_exports: BTreeSet<String> = BTreeSet::new();
 
-    let mut body: Vec<ModuleItem> = vec![];
+    for stmt in &program.body {
+        match stmt {
+            values::Statement::ClassDecl { ident, .. } => {
+                let name = ident.name.to_owned();
+                value_exports.insert(name.to_owned());
+                type_exports.insert(name.to_owned());
+                type_exports.insert(format!("{name}Constructor"));
 
-    for (name, scheme) in current_scope.types.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
-        let type_params = build_type_params_from_type_params(&scheme.type_params, ctx);
-
-        if let TypeKind::Object(obj) = &scheme.t.kind {
-            let mutable_decl =
-                ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(TsTypeAliasDecl {
-                    span: DUMMY_SP,
-                    declare: true,
-                    id: build_ident(name),
-                    type_params: type_params.clone(),
-                    type_ann: Box::from(build_obj_type(obj, ctx)),
-                }))));
-            body.push(mutable_decl);
-
-            if !name.ends_with("Constructor") {
-                if let Some(obj) = immutable_obj_type(obj) {
-                    let immutable_decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(
-                        Box::from(TsTypeAliasDecl {
-                            span: DUMMY_SP,
-                            declare: true,
-                            id: build_ident(format!("Readonly{name}").as_str()),
-                            type_params,
-                            type_ann: Box::from(build_obj_type(&obj, ctx)),
-                        }),
-                    )));
-
-                    body.push(immutable_decl);
+                // NOTE: The Readonly version of the interface type is generated
+                // when we process `type_exports`.
+            }
+            values::Statement::VarDecl { pattern, .. } => {
+                let bindings = values::pattern::get_binding(pattern);
+                for name in bindings {
+                    value_exports.insert(name);
                 }
             }
-        } else {
-            let decl =
-                ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(TsTypeAliasDecl {
-                    span: DUMMY_SP,
-                    declare: true,
-                    id: build_ident(name),
-                    type_params,
-                    type_ann: Box::from(build_type(&scheme.t, &None, ctx)),
-                }))));
-
-            body.push(decl);
+            values::Statement::TypeDecl { id, .. } => {
+                type_exports.insert(id.name.to_owned());
+            }
+            values::Statement::Expr { .. } => (), // nothing is exported
         }
     }
 
-    for (name, b) in current_scope.values.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
-        let pat = Pat::Ident(BindingIdent {
-            id: build_ident(name),
-            type_ann: Some(Box::from(TsTypeAnn {
-                span: DUMMY_SP,
-                type_ann: Box::from(build_type(&b.t, &None, ctx)),
-            })),
-        });
+    let current_scope = ctx.scopes.last().unwrap();
+    let mut body: Vec<ModuleItem> = vec![];
 
-        let decl = ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-            span: DUMMY_SP,
-            decl: Decl::Var(Box::from(VarDecl {
-                span: DUMMY_SP,
-                kind: VarDeclKind::Const,
-                declare: true,
-                decls: vec![VarDeclarator {
+    for name in type_exports {
+        match current_scope.types.get(&name) {
+            Some(scheme) => {
+                let type_params = build_type_params_from_type_params(&scheme.type_params, ctx);
+
+                if let TypeKind::Object(obj) = &scheme.t.kind {
+                    let mutable_decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(
+                        TsTypeAliasDecl {
+                            span: DUMMY_SP,
+                            declare: true,
+                            id: build_ident(&name),
+                            type_params: type_params.clone(),
+                            type_ann: Box::from(build_obj_type(obj, ctx)),
+                        },
+                    ))));
+                    body.push(mutable_decl);
+
+                    if !name.ends_with("Constructor") {
+                        if let Some(obj) = immutable_obj_type(obj) {
+                            let immutable_decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(
+                                Box::from(TsTypeAliasDecl {
+                                    span: DUMMY_SP,
+                                    declare: true,
+                                    id: build_ident(format!("Readonly{name}").as_str()),
+                                    type_params,
+                                    type_ann: Box::from(build_obj_type(&obj, ctx)),
+                                }),
+                            )));
+
+                            body.push(immutable_decl);
+                        }
+                    }
+                } else {
+                    let decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(
+                        TsTypeAliasDecl {
+                            span: DUMMY_SP,
+                            declare: true,
+                            id: build_ident(&name),
+                            type_params,
+                            type_ann: Box::from(build_type(&scheme.t, &None, ctx)),
+                        },
+                    ))));
+
+                    body.push(decl);
+                }
+            }
+            None => panic!("Can't find type '{name}' in current scope"),
+        }
+    }
+
+    for name in value_exports {
+        match current_scope.values.get(&name) {
+            Some(binding) => {
+                let pat = Pat::Ident(BindingIdent {
+                    id: build_ident(&name),
+                    type_ann: Some(Box::from(TsTypeAnn {
+                        span: DUMMY_SP,
+                        type_ann: Box::from(build_type(&binding.t, &None, ctx)),
+                    })),
+                });
+
+                let decl = ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
                     span: DUMMY_SP,
-                    name: pat,
-                    init: None,
-                    definite: false,
-                }],
-            })),
-        }));
+                    decl: Decl::Var(Box::from(VarDecl {
+                        span: DUMMY_SP,
+                        kind: VarDeclKind::Const,
+                        declare: true,
+                        decls: vec![VarDeclarator {
+                            span: DUMMY_SP,
+                            name: pat,
+                            init: None,
+                            definite: false,
+                        }],
+                    })),
+                }));
 
-        body.push(decl);
+                body.push(decl);
+            }
+            None => panic!("Can't find value '{name}' in current scope"),
+        }
     }
 
     Program::Module(Module {
@@ -152,74 +190,6 @@ pub fn build_ident(name: &str) -> Ident {
         span: DUMMY_SP,
         sym: JsWord::from(name.to_owned()),
         optional: false,
-    }
-}
-
-pub fn build_param_pat_rec(pattern: &values::Pattern, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
-    match &pattern.kind {
-        values::PatternKind::Ident(values::BindingIdent { name, .. }) => Pat::Ident(BindingIdent {
-            id: build_ident(name),
-            type_ann,
-        }),
-        values::PatternKind::Rest(values::RestPat { arg, .. }) => Pat::Rest(RestPat {
-            span: DUMMY_SP,
-            dot3_token: DUMMY_SP,
-            arg: Box::from(build_param_pat_rec(arg.as_ref(), None)),
-            type_ann,
-        }),
-        values::PatternKind::Object(values::ObjectPat { props, .. }) => {
-            let props: Vec<ObjectPatProp> = props
-                .iter()
-                .map(|prop| match prop {
-                    values::ObjectPatProp::KeyValue(kv) => {
-                        ObjectPatProp::KeyValue(KeyValuePatProp {
-                            key: PropName::Ident(build_ident(&kv.key.name)),
-                            value: Box::from(build_param_pat_rec(kv.value.as_ref(), None)),
-                        })
-                    }
-                    values::ObjectPatProp::Shorthand(ShorthandPatProp { ident, .. }) => {
-                        ObjectPatProp::Assign(AssignPatProp {
-                            span: DUMMY_SP,
-                            key: build_ident(&ident.name),
-                            value: None, // TS type annotations don't support default values
-                        })
-                    }
-                    values::ObjectPatProp::Rest(rest) => ObjectPatProp::Rest(RestPat {
-                        span: DUMMY_SP,
-                        dot3_token: DUMMY_SP,
-                        arg: Box::from(build_param_pat_rec(rest.arg.as_ref(), None)),
-                        type_ann: None,
-                    }),
-                })
-                .collect();
-            Pat::Object(ObjectPat {
-                span: DUMMY_SP,
-                props,
-                optional: false,
-                type_ann,
-            })
-        }
-        values::PatternKind::Array(array) => {
-            let elems = array
-                .elems
-                .iter()
-                .map(|elem| {
-                    elem.as_ref()
-                        .map(|elem| build_param_pat_rec(&elem.pattern, None))
-                })
-                .collect();
-            Pat::Array(ArrayPat {
-                span: DUMMY_SP,
-                elems,
-                optional: false,
-                type_ann,
-            })
-        }
-        values::PatternKind::Lit(_) => panic!("Literal patterns are not allowed in params"),
-        values::PatternKind::Is(_) => panic!("'is' patterns are not allowed in params"),
-        values::PatternKind::Wildcard => {
-            panic!("Wildcard patterns are not allowed in params")
-        }
     }
 }
 
