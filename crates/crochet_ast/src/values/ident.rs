@@ -1,4 +1,4 @@
-use derivative::*;
+use std::cmp::Ordering;
 use std::fmt;
 use swc_atoms::JsWord;
 use swc_common::{self, BytePos, SyntaxContext};
@@ -49,17 +49,30 @@ impl From<&BindingIdent> for swc_ecma_ast::Ident {
 // TODO: have a separate struct for BindingIdents in types so that
 // we don't have to create spans for things that don't need them.
 // TODO: add an `ident` field so that we can have separate spans
-#[derive(Derivative)]
-#[derivative(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BindingIdent {
     pub name: String,
     pub mutable: bool,
-    #[derivative(PartialOrd = "ignore")]
-    #[derivative(Ord = "ignore")]
     pub span: Span,
-    #[derivative(PartialOrd = "ignore")]
-    #[derivative(Ord = "ignore")]
     pub loc: SourceLocation,
+}
+
+impl PartialOrd for BindingIdent {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for BindingIdent {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let result = self.name.cmp(&other.name);
+
+        if result == Ordering::Equal {
+            self.mutable.cmp(&other.mutable)
+        } else {
+            result
+        }
+    }
 }
 
 impl fmt::Display for BindingIdent {

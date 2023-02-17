@@ -189,7 +189,6 @@ dependencies = [
 name = "crochet_ast"
 version = "0.1.0"
 dependencies = [
- "derivative",
  "itertools",
  "swc_atoms",
  "swc_common",
@@ -431,17 +430,6 @@ name = "defaultmap"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51c4d4fbd66561c3acff86b297b024826505a715eb1b0984a78013b349d0e834"
-
-[[package]]
-name = "derivative"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "diff"

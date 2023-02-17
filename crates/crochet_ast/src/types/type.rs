@@ -1,5 +1,5 @@
-use derivative::*;
 use itertools::{join, Itertools};
+use std::cmp::Ordering;
 use std::fmt;
 
 use crate::types::keyword::TKeyword;
@@ -127,15 +127,35 @@ pub enum TypeKind {
     // Query, // use for typed holes
 }
 
-#[derive(Derivative)]
-#[derivative(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Eq)]
 pub struct Type {
     pub kind: TypeKind,
     pub mutable: bool,
-    #[derivative(PartialOrd = "ignore")]
-    #[derivative(Ord = "ignore")]
-    #[derivative(PartialEq = "ignore")] // we don't care about provenance when comparing types
     pub provenance: Option<Box<Provenance>>,
+}
+
+impl PartialOrd for Type {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Type {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let result = self.kind.cmp(&other.kind);
+
+        if result == Ordering::Equal {
+            self.mutable.cmp(&other.mutable)
+        } else {
+            result
+        }
+    }
+}
+
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind && self.mutable == other.mutable
+    }
 }
 
 impl From<TypeKind> for Type {
