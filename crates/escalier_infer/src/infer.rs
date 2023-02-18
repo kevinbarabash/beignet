@@ -42,10 +42,6 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
     }));
     ctx.insert_type(String::from("JSXElement"), jsx_element_type);
 
-    // We push a scope here so that it's easy to differentiate globals from
-    // module definitions.
-    ctx.push_scope(false);
-
     let mut reports: Vec<TypeError> = vec![];
 
     // TODO: figure out how report multiple errors

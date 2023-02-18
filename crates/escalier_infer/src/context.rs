@@ -15,140 +15,89 @@ pub struct Binding {
     pub t: Type,
 }
 
-// TODO: each scope has separate namespaces for values and types.  Namespace module
-// imports/decls can include types and values.
-#[derive(Clone, Debug, Default)]
-pub struct Scope {
-    pub namespaces: HashMap<String, Box<Scope>>,
+#[derive(Clone, Debug)]
+pub struct Context {
     pub values: HashMap<String, Binding>,
     pub types: Env,
     pub is_async: bool,
-}
-
-#[derive(Clone, Debug)]
-pub struct Context {
-    pub scopes: Vec<Scope>,
     pub count: Cell<i32>,
 }
-
-// #[derive(Clone, Debug)]
-// pub struct Context {
-//     pub values: HashMap<String, Binding>,
-//     pub types: HashMap<String, Scheme>,
-//     pub is_async: bool,
-//     pub count: Cell<i32>,
-// }
 
 impl Default for Context {
     fn default() -> Self {
         Self {
-            scopes: vec![Scope::default()],
+            values: HashMap::default(),
+            types: HashMap::default(),
+            is_async: false,
             count: Cell::from(0),
         }
     }
 }
 
 impl Context {
-    pub fn push_scope(&mut self, is_async: bool) {
-        self.scopes.push(Scope {
-            is_async,
-            ..Scope::default()
-        });
-    }
-
-    pub fn pop_scope(&mut self) {
-        self.scopes.pop();
-    }
-
     pub fn is_async(&self) -> bool {
-        let current_scope = self.scopes.last().unwrap();
-        current_scope.is_async
+        self.is_async
     }
 
     pub fn apply(&mut self, s: &Subst) {
-        let current_scope = self.scopes.last_mut().unwrap();
-        for (k, b) in current_scope.values.clone() {
+        // Why do we need to clone() this instead of calling `.apply(s)`
+        // on self.values()?
+        for (k, b) in self.values.clone() {
             // Should we be apply substitions to types as well?
-            current_scope.values.insert(
-                k.to_owned(),
-                Binding {
-                    mutable: b.mutable,
-                    t: b.t.apply(s),
-                },
-            );
+            self.values.insert(k.to_owned(), b.apply(s));
         }
     }
 
     pub fn get_all_types(&self) -> Env {
-        // TODO: gather types from all scopes being careful with shadowing
-        let current_scope = self.scopes.last().unwrap();
-        current_scope.types.to_owned()
+        self.types.to_owned()
     }
 
     pub fn insert_value(&mut self, name: String, t: Type) {
-        let current_scope = self.scopes.last_mut().unwrap();
-        current_scope
-            .values
-            .insert(name, Binding { mutable: false, t });
+        self.values.insert(name, Binding { mutable: false, t });
     }
 
     pub fn insert_binding(&mut self, name: String, b: Binding) {
-        let current_scope = self.scopes.last_mut().unwrap();
-        current_scope.values.insert(name, b);
+        self.values.insert(name, b);
     }
 
     // TODO: determine if we need to generalize the inserted type everywhere
     // this is being called.
     pub fn insert_type(&mut self, name: String, t: Type) {
-        let current_scope = self.scopes.last_mut().unwrap();
-        let scheme = generalize(&current_scope.types, &t);
-        current_scope.types.insert(name, scheme);
+        let scheme = generalize(&self.types, &t);
+        self.types.insert(name, scheme);
     }
 
     pub fn insert_scheme(&mut self, name: String, scheme: Scheme) {
-        let current_scope = self.scopes.last_mut().unwrap();
-        current_scope.types.insert(name, scheme);
-    }
-
-    pub fn insert_namespace(&mut self, name: String, namespace: Scope) {
-        let current_scope = self.scopes.last_mut().unwrap();
-        current_scope.namespaces.insert(name, Box::from(namespace));
+        self.types.insert(name, scheme);
     }
 
     // TODO: update to instantiate Lam
     pub fn lookup_value_and_instantiate(&self, name: &str) -> Result<Type, Vec<TypeError>> {
-        for scope in self.scopes.iter().rev() {
-            if let Some(binding) = scope.values.get(name) {
-                return Ok(binding.t.to_owned());
-            }
+        if let Some(binding) = self.values.get(name) {
+            return Ok(binding.t.to_owned());
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
+    // TODO: dedupe this and lookup_value_and_instantiate since they do the same thing
     pub fn lookup_value(&self, name: &str) -> Result<Type, Vec<TypeError>> {
-        for scope in self.scopes.iter().rev() {
-            if let Some(b) = scope.values.get(name) {
-                return Ok(b.t.to_owned());
-            }
+        if let Some(b) = self.values.get(name) {
+            return Ok(b.t.to_owned());
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
     pub fn lookup_binding(&self, name: &str) -> Result<Binding, Vec<TypeError>> {
-        for scope in self.scopes.iter().rev() {
-            if let Some(b) = scope.values.get(name) {
-                return Ok(b.to_owned());
-            }
+        if let Some(b) = self.values.get(name) {
+            return Ok(b.to_owned());
         }
         eprintln!("lookup_binding failed");
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
     pub fn lookup_scheme(&self, name: &str) -> Result<Scheme, Vec<TypeError>> {
-        for scope in self.scopes.iter().rev() {
-            if let Some(scheme) = scope.types.get(name) {
-                return Ok(scheme.to_owned());
-            }
+        if let Some(scheme) = self.types.get(name) {
+            return Ok(scheme.to_owned());
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
@@ -173,23 +122,11 @@ impl Context {
     }
 
     pub fn _lookup_type(&self, name: &str) -> Result<Type, Vec<TypeError>> {
-        for scope in self.scopes.iter().rev() {
-            if let Some(scheme) = scope.types.get(name) {
-                return Ok(instantiate(self, scheme));
-            }
+        if let Some(scheme) = self.types.get(name) {
+            return Ok(instantiate(self, scheme));
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
-
-    // pub fn lookup_namespace(&self, name: &str) -> Result<Box<Scope>, TypeError> {
-    //     for scope in self.scopes.iter().rev() {
-    //         if let Some(namespace) = scope.namespaces.get(name) {
-    //             return Ok(namespace.to_owned());
-    //         }
-    //     }
-    //     // TODO: Add a CantFindNamespace error
-    //     Err(TypeError::CantFindIdent(name.to_owned()))
-    // }
 
     pub fn fresh_id(&self) -> i32 {
         let id = self.count.get() + 1;

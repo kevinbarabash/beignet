@@ -378,7 +378,8 @@ pub fn infer_expr(
             type_params,
             ..
         }) => {
-            ctx.push_scope(is_async.to_owned());
+            let mut new_ctx = ctx.clone();
+            new_ctx.is_async = is_async.to_owned();
 
             let type_params_map: HashMap<String, Type> = match type_params {
                 Some(type_params) => type_params
@@ -387,15 +388,15 @@ pub fn infer_expr(
                         let tv = match &mut type_param.constraint {
                             Some(type_ann) => {
                                 // TODO: push `s` on to `ss`
-                                let (_s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
+                                let (_s, t) = infer_type_ann(type_ann, &mut new_ctx, &mut None)?;
                                 Type::from(TypeKind::Var(TVar {
-                                    id: ctx.fresh_id(),
+                                    id: new_ctx.fresh_id(),
                                     constraint: Some(Box::from(t)),
                                 }))
                             }
-                            None => ctx.fresh_var(),
+                            None => new_ctx.fresh_var(),
                         };
-                        ctx.insert_type(type_param.name.name.clone(), tv.clone());
+                        new_ctx.insert_type(type_param.name.name.clone(), tv.clone());
                         Ok((type_param.name.name.to_owned(), tv))
                     })
                     .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
@@ -405,12 +406,13 @@ pub fn infer_expr(
             let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = params
                 .iter_mut()
                 .map(|e_param| {
-                    let (ps, pa, t_param) = infer_fn_param(e_param, ctx, &type_params_map)?;
+                    let (ps, pa, t_param) =
+                        infer_fn_param(e_param, &mut new_ctx, &type_params_map)?;
 
                     // Inserts any new variables introduced by infer_fn_param() into
                     // the current context.
                     for (name, binding) in pa {
-                        ctx.insert_binding(name, binding);
+                        new_ctx.insert_binding(name, binding);
                     }
 
                     Ok((ps, t_param))
@@ -419,10 +421,10 @@ pub fn infer_expr(
 
             let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-            let (body_s, mut body_t) = infer_expr(ctx, body, false)?;
+            let (body_s, mut body_t) = infer_expr(&mut new_ctx, body, false)?;
             ss.push(body_s);
 
-            ctx.pop_scope();
+            ctx.count = new_ctx.count;
 
             if *is_async && !is_promise(&body_t) {
                 body_t = Type::from(TypeKind::Ref(types::TRef {
@@ -461,6 +463,7 @@ pub fn infer_expr(
         }) => match pattern {
             Some(pat) => infer_let(pat, type_ann, init, body, ctx, &PatternUsage::Assign),
             None => {
+                // TODO: Clone the context before passing it to infer_expr()
                 let (init_s, init_t) = infer_expr(ctx, init, false)?;
 
                 if init_t.kind != TypeKind::Keyword(TKeyword::Undefined) {
@@ -790,19 +793,19 @@ fn infer_let(
     ctx: &mut Context,
     pu: &PatternUsage,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
-    ctx.push_scope(ctx.is_async());
-    let (pa, s1) = infer_pattern_and_init(pat, type_ann, init, ctx, pu)?;
+    let mut new_ctx = ctx.clone();
+    let (pa, s1) = infer_pattern_and_init(pat, type_ann, init, &mut new_ctx, pu)?;
 
     // Inserts the new variables from infer_pattern_and_init() into the
     // current context.
     // TODO: have infer_pattern_and_init do this
     for (name, binding) in pa {
-        ctx.insert_binding(name.to_owned(), binding.to_owned());
+        new_ctx.insert_binding(name.to_owned(), binding.to_owned());
     }
 
-    let (s2, t2) = infer_expr(ctx, body, false)?;
+    let (s2, t2) = infer_expr(&mut new_ctx, body, false)?;
 
-    ctx.pop_scope();
+    ctx.count = new_ctx.count;
 
     let s = compose_subs(&s2, &s1);
     let t = t2;
