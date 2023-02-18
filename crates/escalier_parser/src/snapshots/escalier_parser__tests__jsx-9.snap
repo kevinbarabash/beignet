@@ -1,0 +1,153 @@
+---
+source: crates/escalier_parser/src/lib.rs
+expression: "parse(\"<Foo>hello<Bar/>{world}<Baz/></Foo>\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 35,
+                    },
+                },
+                span: 0..35,
+                expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 35,
+                        },
+                    },
+                    span: 0..35,
+                    kind: JSXElement(
+                        JSXElement {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 0,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 35,
+                                },
+                            },
+                            span: 0..35,
+                            name: "Foo",
+                            attrs: [],
+                            children: [
+                                JSXText(
+                                    JSXText {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 5,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 10,
+                                            },
+                                        },
+                                        span: 5..10,
+                                        value: "hello",
+                                    },
+                                ),
+                                JSXElement(
+                                    JSXElement {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 10,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 16,
+                                            },
+                                        },
+                                        span: 10..16,
+                                        name: "Bar",
+                                        attrs: [],
+                                        children: [],
+                                    },
+                                ),
+                                JSXExprContainer(
+                                    JSXExprContainer {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 16,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 23,
+                                            },
+                                        },
+                                        span: 16..23,
+                                        expr: Expr {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 17,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 22,
+                                                },
+                                            },
+                                            span: 17..22,
+                                            kind: Ident(
+                                                Ident {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 17,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 22,
+                                                        },
+                                                    },
+                                                    span: 17..22,
+                                                    name: "world",
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                                JSXElement(
+                                    JSXElement {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 23,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 29,
+                                            },
+                                        },
+                                        span: 23..29,
+                                        name: "Baz",
+                                        attrs: [],
+                                        children: [],
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                    inferred_type: None,
+                },
+            },
+        ],
+    },
+)

@@ -1,0 +1,20 @@
+[package]
+name = "escalier_lsp"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lsp-server = "0.6.0"
+lsp-types = "0.93.2"
+serde = "1.0.152"
+serde_json = "1.0.91"
+escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
+escalier_interop = { version = "0.1.0", path = "../escalier_interop" }
+escalier_infer = { version = "0.1.0", path = "../escalier_infer" }
+escalier_parser = { version = "0.1.0", path = "../escalier_parser" }
+
+[dev-dependencies]
+crossbeam = "0.8.2"
+insta = "1.13.0"

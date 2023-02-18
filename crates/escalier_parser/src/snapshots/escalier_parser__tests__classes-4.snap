@@ -1,0 +1,99 @@
+---
+source: crates/escalier_parser/src/lib.rs
+expression: "parse(\"class Foo { static a: number; }\")"
+---
+Ok(
+    Program {
+        body: [
+            ClassDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 31,
+                    },
+                },
+                span: 0..31,
+                ident: Ident {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 9,
+                        },
+                    },
+                    span: 6..9,
+                    name: "Foo",
+                },
+                class: Class {
+                    ident: Ident {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 6,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 9,
+                            },
+                        },
+                        span: 6..9,
+                        name: "Foo",
+                    },
+                    body: [
+                        Prop(
+                            ClassProp {
+                                key: Ident {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 19,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 20,
+                                        },
+                                    },
+                                    span: 19..20,
+                                    name: "a",
+                                },
+                                value: None,
+                                type_ann: Some(
+                                    TypeAnn {
+                                        kind: Keyword(
+                                            KeywordType {
+                                                keyword: Number,
+                                            },
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 22,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 28,
+                                            },
+                                        },
+                                        span: 22..28,
+                                        inferred_type: None,
+                                    },
+                                ),
+                                is_static: true,
+                                is_optional: false,
+                                is_mutable: false,
+                            },
+                        ),
+                    ],
+                    type_params: None,
+                },
+            },
+        ],
+    },
+)

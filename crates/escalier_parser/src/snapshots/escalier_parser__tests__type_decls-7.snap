@@ -1,0 +1,77 @@
+---
+source: crates/escalier_parser/src/lib.rs
+expression: "parse(\"type CoordNames = keyof Point;\")"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 30,
+                    },
+                },
+                span: 0..30,
+                declare: false,
+                id: Ident {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 15,
+                        },
+                    },
+                    span: 5..15,
+                    name: "CoordNames",
+                },
+                type_ann: TypeAnn {
+                    kind: KeyOf(
+                        KeyOfType {
+                            type_ann: TypeAnn {
+                                kind: TypeRef(
+                                    TypeRef {
+                                        name: "Point",
+                                        type_args: None,
+                                    },
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 24,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 29,
+                                    },
+                                },
+                                span: 24..29,
+                                inferred_type: None,
+                            },
+                        },
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 18,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 29,
+                        },
+                    },
+                    span: 18..29,
+                    inferred_type: None,
+                },
+                type_params: None,
+            },
+        ],
+    },
+)

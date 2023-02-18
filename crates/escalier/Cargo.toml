@@ -1,0 +1,28 @@
+[package]
+name = "escalier"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+strip = "debuginfo"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ariadne = "0.1.5"
+tree-sitter = "0.20.8"
+escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
+escalier_codegen = { version = "0.1.0", path = "../escalier_codegen" }
+escalier_interop = { version = "0.1.0", path = "../escalier_interop" }
+escalier_infer = { version = "0.1.0", path = "../escalier_infer" }
+escalier_parser = { version = "0.1.0", path = "../escalier_parser" }
+tree_sitter_escalier = { version = "0.1.0", path = "../tree_sitter_escalier" }
+
+[dev-dependencies]
+insta = "1.13.0"
+pretty_assertions = "1.2.1"
+testing_macros = "0.2.5"
+strip-ansi-escapes = "0.1.1"

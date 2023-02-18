@@ -1,14 +1,14 @@
 import * as React from "react";
 
 import libPath from "../node_modules/typescript/lib/lib.es5.d.ts";
-import crochetWasmPath from "../target/wasm32-wasi/release/crochet.wasm";
+import escalierWasmPath from "../target/wasm32-wasi/release/escalier.wasm";
 
 import Dropdown from "./dropdown";
 import { getPermalinkHref } from "./util";
 import { loadWasm, Compiler, CompilerResult } from "./wasm";
 
 const DEFAULT_CODE = `
-// Welcome to the Crochet Playground!
+// Welcome to the Escalier Playground!
 let add = (a, b) => a + b;
 let add5 = (b) => add(5, b);
 let sum = add5(10);
@@ -20,7 +20,7 @@ export const App = () => {
     const hash = url.hash.slice(1);
     return hash ? window.atob(hash) : DEFAULT_CODE.trim();
   });
-  let [crochet, setCrochet] = React.useState<Compiler | null>(null);
+  let [escalier, setEscalier] = React.useState<Compiler | null>(null);
   let [outputTab, setOutputTab] = React.useState<
     "js" | "dts" | "srcmap" | "ast"
   >("js");
@@ -29,9 +29,9 @@ export const App = () => {
     fetch(libPath)
       .then((res) => res.text())
       .then((lib) => {
-        // TODO: fetch crochet code in parallel with fetch lib src
-        loadWasm(crochetWasmPath, lib).then((compiler) => {
-          setCrochet(compiler);
+        // TODO: fetch escalier code in parallel with fetch lib src
+        loadWasm(escalierWasmPath, lib).then((compiler) => {
+          setEscalier(compiler);
         });
       });
   }, []);
@@ -53,15 +53,15 @@ export const App = () => {
 
   let output = React.useMemo<CompilerResult>(() => {
     try {
-      if (crochet) {
-        return crochet.compile(source);
+      if (escalier) {
+        return escalier.compile(source);
       } else {
         return { type: "ok", data: { js: "", dts: "", srcmap: "", ast: "" } };
       }
     } catch (e) {
       return { type: "err", error: (e as Error).message };
     }
-  }, [source, crochet]);
+  }, [source, escalier]);
 
   const updateSource = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setSource(e.target.value);
@@ -110,17 +110,17 @@ export const App = () => {
           backgroundColor: "var(--header)",
         }}
       >
-        <div style={styles.header}>🧣Crochet</div>
+        <div style={styles.header}>Escalier</div>
         <a
           className="header-link"
-          href="https://github.com/crochet-lang/crochet"
+          href="https://github.com/escalier-lang/escalier"
           target="_blank"
         >
           Source {"\u2197"}
         </a>
         <a
           className="header-link"
-          href="https://github.com/crochet-lang/crochet/issues"
+          href="https://github.com/escalier-lang/escalier/issues"
           target="_blank"
         >
           Issues {"\u2197"}
