@@ -3,7 +3,6 @@ use im::hashmap::HashMap;
 use std::cell::Cell;
 
 use crate::scheme::{generalize, instantiate, Scheme};
-use crate::substitutable::*;
 use crate::type_error::TypeError;
 use crate::util::immutable_obj_type;
 
@@ -37,15 +36,6 @@ impl Default for Context {
 impl Context {
     pub fn is_async(&self) -> bool {
         self.is_async
-    }
-
-    pub fn apply(&mut self, s: &Subst) {
-        // Why do we need to clone() this instead of calling `.apply(s)`
-        // on self.values()?
-        for (k, b) in self.values.clone() {
-            // Should we be apply substitions to types as well?
-            self.values.insert(k.to_owned(), b.apply(s));
-        }
     }
 
     pub fn get_all_types(&self) -> Env {

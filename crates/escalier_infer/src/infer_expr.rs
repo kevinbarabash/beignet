@@ -463,14 +463,14 @@ pub fn infer_expr(
         }) => match pattern {
             Some(pat) => infer_let(pat, type_ann, init, body, ctx, &PatternUsage::Assign),
             None => {
-                // TODO: Clone the context before passing it to infer_expr()
-                let (init_s, init_t) = infer_expr(ctx, init, false)?;
+                let mut new_ctx = ctx.clone();
+                let (init_s, init_t) = infer_expr(&mut new_ctx, init, false)?;
 
                 if init_t.kind != TypeKind::Keyword(TKeyword::Undefined) {
                     eprintln!("WARNING: {init_t} was not assigned");
                 }
 
-                let (body_s, body_t) = infer_expr(ctx, body, false)?;
+                let (body_s, body_t) = infer_expr(&mut new_ctx, body, false)?;
 
                 let t = body_t.apply(&init_s);
                 let s = compose_subs(&body_s, &init_s);
@@ -777,7 +777,8 @@ pub fn infer_expr(
 
     let (s, mut t) = result?;
 
-    ctx.apply(&s);
+    // QUESTION: Do we need to update ctx.types as well?
+    ctx.values = ctx.values.apply(&s);
 
     expr.inferred_type = Some(t.clone());
     t.provenance = Some(Box::from(Provenance::from(expr)));
