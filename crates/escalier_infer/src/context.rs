@@ -10,11 +10,6 @@ use crate::util::immutable_obj_type;
 pub type Env = HashMap<String, Scheme>;
 
 #[derive(Clone, Debug)]
-pub struct State {
-    pub count: Cell<i32>,
-}
-
-#[derive(Clone, Debug)]
 pub struct Binding {
     pub mutable: bool,
     pub t: Type,
@@ -33,7 +28,7 @@ pub struct Scope {
 #[derive(Clone, Debug)]
 pub struct Context {
     pub scopes: Vec<Scope>,
-    pub state: State,
+    pub count: Cell<i32>,
 }
 
 // #[derive(Clone, Debug)]
@@ -48,9 +43,7 @@ impl Default for Context {
     fn default() -> Self {
         Self {
             scopes: vec![Scope::default()],
-            state: State {
-                count: Cell::from(0),
-            },
+            count: Cell::from(0),
         }
     }
 }
@@ -199,8 +192,8 @@ impl Context {
     // }
 
     pub fn fresh_id(&self) -> i32 {
-        let id = self.state.count.get() + 1;
-        self.state.count.set(id);
+        let id = self.count.get() + 1;
+        self.count.set(id);
         id
     }
 
