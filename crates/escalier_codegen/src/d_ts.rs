@@ -92,11 +92,10 @@ fn build_d_ts(program: &values::Program, ctx: &Context) -> Program {
         }
     }
 
-    let current_scope = ctx.scopes.last().unwrap();
     let mut body: Vec<ModuleItem> = vec![];
 
     for name in type_exports {
-        match current_scope.types.get(&name) {
+        match ctx.types.get(&name) {
             Some(scheme) => {
                 let type_params = build_type_params_from_type_params(&scheme.type_params, ctx);
 
@@ -146,7 +145,7 @@ fn build_d_ts(program: &values::Program, ctx: &Context) -> Program {
     }
 
     for name in value_exports {
-        match current_scope.values.get(&name) {
+        match ctx.values.get(&name) {
             Some(binding) => {
                 let pat = Pat::Ident(BindingIdent {
                     id: build_ident(&name),

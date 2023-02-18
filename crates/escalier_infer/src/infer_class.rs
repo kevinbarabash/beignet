@@ -27,7 +27,8 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
     for member in &mut class.body {
         match member {
             ClassMember::Constructor(Constructor { params, body }) => {
-                ctx.push_scope(false); // Constructors cannot be async
+                let mut new_ctx = ctx.clone();
+                new_ctx.is_async = false; // Constructors cannot be async
 
                 // Constructors can't have type parameters.
                 let type_params_map = HashMap::default();
@@ -36,12 +37,13 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 iter.next(); // skip `self`
                 let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = iter
                     .map(|e_param| {
-                        let (ps, pa, t_param) = infer_fn_param(e_param, ctx, &type_params_map)?;
+                        let (ps, pa, t_param) =
+                            infer_fn_param(e_param, &mut new_ctx, &type_params_map)?;
 
                         // Inserts any new variables introduced by infer_fn_param() into
                         // the current context.
                         for (name, binding) in pa {
-                            ctx.insert_binding(name, binding);
+                            new_ctx.insert_binding(name, binding);
                         }
 
                         Ok((ps, t_param))
@@ -50,11 +52,11 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
                 // TODO: ensure that constructors don't have a return statement
-                // TODO: add `self` and `Self` to ctx
-                let (body_s, _body_t) = infer_expr(ctx, body, false)?;
+                // TODO: add `self` and `Self` to new_ctx
+                let (body_s, _body_t) = infer_expr(&mut new_ctx, body, false)?;
                 ss.push(body_s);
 
-                ctx.pop_scope();
+                ctx.count = new_ctx.count;
 
                 let type_args = class.type_params.as_ref().map(|type_params| {
                     type_params
@@ -110,7 +112,8 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                     type_params,
                 } = lambda;
 
-                ctx.push_scope(is_async.to_owned());
+                let mut new_ctx = ctx.clone();
+                new_ctx.is_async = is_async.to_owned();
 
                 // TODO: aggregate method type params with class type params
                 // This maps type params to type refs with the same name.
@@ -122,7 +125,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                                 name: param.name.name.to_owned(),
                                 type_args: None,
                             }));
-                            ctx.insert_type(param.name.name.clone(), t.clone());
+                            new_ctx.insert_type(param.name.name.clone(), t.clone());
                             Ok((param.name.name.to_owned(), t))
                         })
                         .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
@@ -146,12 +149,13 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                             return Err(vec![TypeError::MethodsMustHaveTypes]);
                         }
 
-                        let (ps, pa, t_param) = infer_fn_param(e_param, ctx, &type_params_map)?;
+                        let (ps, pa, t_param) =
+                            infer_fn_param(e_param, &mut new_ctx, &type_params_map)?;
 
                         // Inserts any new variables introduced by infer_fn_param() into
                         // the current context.
                         for (name, binding) in pa {
-                            ctx.insert_binding(name, binding);
+                            new_ctx.insert_binding(name, binding);
                         }
 
                         Ok((ps, t_param))
@@ -165,11 +169,11 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                     mutable: false, // this should be false since we don't want to allow `self` to be re-assigned
                     t: interface_t,
                 };
-                ctx.insert_binding("self".to_string(), binding);
-                let (body_s, mut body_t) = infer_expr(ctx, body, false)?;
+                new_ctx.insert_binding("self".to_string(), binding);
+                let (body_s, mut body_t) = infer_expr(&mut new_ctx, body, false)?;
                 ss.push(body_s);
 
-                ctx.pop_scope();
+                ctx.count = new_ctx.count;
 
                 if *is_async && !is_promise(&body_t) {
                     body_t = Type::from(TypeKind::Ref(TRef {
