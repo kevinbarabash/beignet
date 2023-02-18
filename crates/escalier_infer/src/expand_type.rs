@@ -3,8 +3,8 @@ use escalier_ast::types::*;
 use escalier_ast::types::{
     TIndex, TIndexKey, TLit, TObjElem, TObject, TProp, TPropKey, Type, TypeKind,
 };
+use im::hashmap::HashMap;
 use itertools::Itertools;
-use std::collections::HashMap;
 
 use crate::context::Context;
 use crate::scheme::Scheme;
@@ -390,7 +390,7 @@ fn expand_mapped_type(mapped: &TMappedType, ctx: &mut Context) -> Result<Type, V
         .iter()
         .map(|key| {
             let name = mapped.type_param.name.to_owned();
-            let type_arg_map = HashMap::from([(name, key.to_owned())]);
+            let type_arg_map = HashMap::from(vec![(name, key.to_owned())]);
             let t = replace_aliases_rec(mapped.t.as_ref(), &type_arg_map);
 
             let t = match &t.kind {

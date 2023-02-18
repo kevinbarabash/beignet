@@ -1,5 +1,5 @@
 use derive_visitor::{DriveMut, VisitorMut};
-use std::collections::HashMap;
+use im::hashmap::HashMap;
 
 use escalier_ast::types::{
     self as types, Provenance, TCallable, TFnParam, TKeyword, TLam, TLit, TObjElem, TObject, TPat,

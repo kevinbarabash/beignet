@@ -770,7 +770,7 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &mut Context) -> Result<Subst, 
                             Type::from(TypeKind::Union(types))
                         };
 
-                        return Ok(Subst::from([(tv.id.to_owned(), t)]));
+                        return Ok(Subst::from(vec![(tv.id.to_owned(), t)]));
                     }
                 }
 
@@ -792,7 +792,7 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &mut Context) -> Result<Subst, 
                         constraint: None,
                     }) = t.kind
                     {
-                        let s: Subst = Subst::from([(
+                        let s: Subst = Subst::from(vec![(
                             id.to_owned(),
                             Type::from(TypeKind::Var(tv.to_owned())),
                         )]);
@@ -802,7 +802,7 @@ fn bind(tv: &TVar, t: &Type, rel: Relation, ctx: &mut Context) -> Result<Subst, 
                     // TODO: handle the case where both type variables have constraints
                 }
 
-                Ok(Subst::from([(tv.id.to_owned(), t.to_owned())]))
+                Ok(Subst::from(vec![(tv.id.to_owned(), t.to_owned())]))
             }
         }
     }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use im::hashmap::HashMap;
 use std::iter::Iterator;
 
 use escalier_ast::types::{

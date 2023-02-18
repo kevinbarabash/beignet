@@ -1,6 +1,6 @@
 use escalier_ast::types::*;
+use im::hashmap::HashMap;
 use std::cell::Cell;
-use std::collections::HashMap;
 
 use crate::scheme::{generalize, instantiate, Scheme};
 use crate::substitutable::*;
