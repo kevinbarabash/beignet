@@ -1,5 +1,6 @@
 use defaultmap::*;
-use std::collections::{BTreeSet, HashMap};
+use im::hashmap::HashMap;
+use std::collections::BTreeSet;
 use std::iter::Iterator;
 
 use escalier_ast::types::*;

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use im::hashmap::HashMap;
 
 use escalier_ast::types::{self as types, TFnParam, TKeyword, TPat, Type, TypeKind};
 use escalier_ast::values::*;

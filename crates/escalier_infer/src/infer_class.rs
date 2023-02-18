@@ -1,6 +1,6 @@
 use escalier_ast::types::*;
 use escalier_ast::values::{class::*, Lambda, PatternKind};
-use std::collections::HashMap;
+use im::hashmap::HashMap;
 
 use crate::context::{Binding, Context};
 use crate::infer_expr::infer_expr;

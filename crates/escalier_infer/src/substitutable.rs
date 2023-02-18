@@ -1,5 +1,6 @@
 use array_tool::vec::*;
-use std::collections::{BTreeSet, HashMap};
+use im::hashmap::HashMap;
+use std::collections::BTreeSet;
 use std::iter::IntoIterator;
 
 use escalier_ast::types::*;
@@ -384,7 +385,7 @@ impl Substitutable for TFnParam {
 
 impl<I> Substitutable for HashMap<String, I>
 where
-    I: Substitutable,
+    I: Substitutable + Clone,
 {
     fn apply(&self, sub: &Subst) -> Self {
         self.iter()
@@ -396,27 +397,6 @@ where
         self.iter().flat_map(|(_, b)| b.ftv()).collect()
     }
 }
-
-// TODO: update apply() to not mutate so that we can use `im::hashmap` _et al_.
-// TODO: figure out if doing so will affect our ability to update exprs with
-// inferred types (it shouldn't be we need to be diligent).
-// impl<I> ImSubstitutable for hashmap::HashMap<String, I>
-// where
-//     I: ImSubstitutable,
-// {
-//     fn apply(&self, sub: &Subst) -> Subst {
-//         self.into_iter()
-//             .map(|(key, val)| (key.to_owned(), val.apply(sub).to_owned()))
-//             .collect()
-//         // for val in self.values() {
-//         //     val.apply(sub)
-//         // }
-//     }
-//     fn ftv(&self) -> Vec<TVar> {
-//         // we can't use iter_values() here because it's a consuming iterator
-//         self.iter().flat_map(|(_, b)| b.ftv()).collect()
-//     }
-// }
 
 impl<I> Substitutable for Vec<I>
 where

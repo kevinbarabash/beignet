@@ -1,6 +1,6 @@
 use array_tool::vec::*;
+use im::hashmap::HashMap;
 use itertools::join;
-use std::collections::HashMap;
 use std::fmt;
 use std::iter::Iterator;
 
