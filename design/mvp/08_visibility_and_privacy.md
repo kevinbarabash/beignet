@@ -10,7 +10,7 @@ TypeScript classes, but with the following changes:
   will fill this need, see [Bonus Features](11_bonus_features.md).
 
 ```ts
-// my_component.crochet
+// my_component.esc
 type Props = { ... };
 
 class MyComponent extends React.Component<Props> {

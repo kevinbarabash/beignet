@@ -22,7 +22,7 @@ Traits avoid these issues by:
 - Using `Symbol`s to isolate traits from one another
 
 ```ts
-// serialization.crochet
+// serialization.esc
 trait Serializable {
   static fromJSON(entries: [string, Serializable]): Result<Self, string>;
   toJSON(): string;
@@ -34,7 +34,7 @@ export const Serializable = {
   toJSON: Symbol(),
 };
 
-// user.crochet
+// user.esc
 impl Serializable for User {
   static fromJSON(json: string) {
   // TODO
@@ -90,7 +90,7 @@ Questions:
 - How we can we compose nested Serializable structs when deserializing?
 
 ```ts
-// user.crochet
+// user.esc
 import { Serializable } from "./serialization";
 
 @derive(Serializable)
@@ -113,7 +113,7 @@ In order to use a trait, it must be imported. This serves a multiple purposes:
   use in this file.
 
 ```ts
-// write_user.crochet
+// write_user.esc
 import { Serializable } from "./serialization";
 
 declare let user: User;

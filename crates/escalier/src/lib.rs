@@ -100,7 +100,7 @@ pub unsafe extern "C" fn compile(input: *const c_char, lib: *const c_char) -> *c
                 srcmap: string_to_wasm_string(""),
                 dts: string_to_wasm_string(""),
                 ast: string_to_wasm_string(""),
-                // TODO: update report to exclude Crochet source code locations
+                // TODO: update report to exclude Escalier source code locations
                 error: string_to_wasm_string(&diagnostics.join("\n")),
             };
             Box::into_raw(Box::new(result))
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn parse(c_buf: *const c_char) -> *const WasmString {
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(tree_sitter_escalier::language())
-        .expect("Error loading crochet language");
+        .expect("Error loading escalier language");
 
     let str_slice: &str = CStr::from_ptr(c_buf).to_str().unwrap();
     eprintln!("str_slice = {str_slice}");

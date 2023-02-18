@@ -326,11 +326,11 @@ mod tests {
             lib: String::from(""),
         };
 
-        let uri = Url::from_str("file://path/to/file.crochet").unwrap();
+        let uri = Url::from_str("file://path/to/file.esc").unwrap();
         let params = DidOpenTextDocumentParams {
             text_document: TextDocumentItem {
                 uri: uri.to_owned(),
-                language_id: String::from("crochet"),
+                language_id: String::from("escalier"),
                 version: 123,
                 text: String::from("let a = 5;"),
             },
@@ -349,7 +349,7 @@ mod tests {
 
     #[test]
     fn test_handle_notification_did_change() {
-        let uri = Url::from_str("file://path/to/file.crochet").unwrap();
+        let uri = Url::from_str("file://path/to/file.esc").unwrap();
         let mut file_cache = HashMap::new();
         file_cache.insert(uri.to_owned(), String::from("let a = 5;"));
 
@@ -383,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_handle_hover_request() {
-        let uri = Url::from_str("file://path/to/file.crochet").unwrap();
+        let uri = Url::from_str("file://path/to/file.esc").unwrap();
         let mut file_cache = HashMap::new();
         file_cache.insert(uri.to_owned(), String::from("let a = 5;"));
 

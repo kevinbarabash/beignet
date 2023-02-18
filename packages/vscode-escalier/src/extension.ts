@@ -13,7 +13,7 @@ let client: LanguageClient;
 export function activate(context: vscode.ExtensionContext) {
   console.log("hello, world");
 
-  const selector = { scheme: "file", language: "crochet" };
+  const selector = { scheme: "file", language: "escalier" };
 
   const command = path.join(
     __dirname,
@@ -22,7 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
     "..",
     "target",
     "debug",
-    "crochet_lsp"
+    "escalier_lsp"
   );
 
   const serverOptions: ServerOptions = {
@@ -45,7 +45,7 @@ export function activate(context: vscode.ExtensionContext) {
     clientOptions
   );
 
-  // Output `eprintln!()` messages from the crochet_lsp in the `output` tab.
+  // Output `eprintln!()` messages from the escalier_lsp in the `output` tab.
   client.outputChannel.show(true);
 
   // Start the client. This will also launch the server

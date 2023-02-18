@@ -7,7 +7,7 @@ want to reload a fresh copy of a module very difficult.
 At the same time, we still want to allow people to use Escalier for scripts which
 necessitates side-effects. Post-MVP we'll be adding a REPL and we want people
 to be able to copy/paste code between REPL and a script file (and vice versa).
-To this end, there will be a way to specify whether a .crochet file is a script
+To this end, there will be a way to specify whether a .esc file is a script
 or a module. This may be a different file extension or compiler directive in the
 file itself.
 

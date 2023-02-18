@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
     paths:
-      - "**.crochet"
+      - "**.esc"
       - "**.js"
       - "**.rs"
       - ".github/workflows/ci.yml"

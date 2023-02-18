@@ -1,1 +1,1 @@
-declare module "tree-sitter-crochet";
+declare module "tree-sitter-escalier";

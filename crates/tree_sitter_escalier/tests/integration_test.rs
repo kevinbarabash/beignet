@@ -6,7 +6,7 @@ fn test_can_load_grammar() {
     let mut parser = Parser::new();
     parser
         .set_language(language())
-        .expect("Error loading crochet language");
+        .expect("Error loading escalier language");
 }
 
 #[test]
@@ -14,7 +14,7 @@ fn test_can_parse_simple_expressions() {
     let mut parser = Parser::new();
     parser
         .set_language(language())
-        .expect("Error loading crochet language");
+        .expect("Error loading escalier language");
 
     let code = "const a = 1 + 2 * 3 - 4 / 5";
 

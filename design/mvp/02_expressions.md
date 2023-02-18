@@ -76,7 +76,7 @@ similar to an IIFE (immediately invoked function expression) without the cost of
 function call.
 
 ```ts
-// foo.crochet
+// foo.esc
 let foo = do {
     let bar = getBar();
     console.log(`bar = ${bar}`);

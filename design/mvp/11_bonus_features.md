@@ -49,7 +49,7 @@ callbacks. To avoid this confusion when a method is passed as a callback,
 Escalier will autobind it.
 
 ```tsx
-// autobinding.crochet
+// autobinding.esc
 class MyComponents extends React.Component {
   constructor(props) {
     super(props);

@@ -10,7 +10,7 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-crochet"
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-escalier"
       ]
     }
   ]

@@ -29,33 +29,33 @@
 		},
 		"keywords": {
 			"patterns": [{
-				"name": "keyword.control.crochet",
+				"name": "keyword.control.esc",
 				"match": "\\b(if|while|for|return|let|await|async|type|extends|new)\\b"
 			}]
 		},
 		"numbers": {
-			"name": "constant.numeric.decimal.crochet",
+			"name": "constant.numeric.decimal.esc",
 			"match": "\\b([1-9][0-9]*(\\.[0-9]*)?|0?\\.[0-9]*)\\b"
 		},
 		"strings": {
-			"name": "string.quoted.double.crochet",
+			"name": "string.quoted.double.esc",
 			"begin": "\"",
 			"end": "\"",
 			"patterns": [
 				{
-					"name": "constant.character.escape.crochet",
+					"name": "constant.character.escape.esc",
 					"match": "\\\\."
 				}
 			]
 		},
 		"variables": {
-            "name": "variable.other.crochet",
+            "name": "variable.other.esc",
             "match": "[A-Za-z]\\w*"
         },
 		"modifiers": {
-			"name": "storage.modifier.crochet",
+			"name": "storage.modifier.esc",
 			"match": "\\b(mut)\\b"
 		}
 	},
-	"scopeName": "source.crochet"
+	"scopeName": "source.esc"
 }

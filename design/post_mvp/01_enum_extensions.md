@@ -11,7 +11,7 @@ NOTE: This example was adapted from an example in "The Rust Programming
 Language" book.
 
 ```ts
-// network.crochet
+// network.esc
 enum IpAddr {
     V4(string),
     V6(string),

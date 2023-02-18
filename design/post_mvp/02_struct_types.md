@@ -13,7 +13,7 @@ struct's properties.
 NOTE: This example was adapted from an example in the serde_json documentation.
 
 ```ts
-// user.crochet
+// user.esc
 struct User {
     pub name: string,
     pub age: number,
@@ -75,7 +75,7 @@ capable of deserialization needs to implement a `.fromJSON(entries)` method.
 This will be called by the reviver that `deserialize` passed to `JSON.parse()`.
 
 ```ts
-// read_user.crochet
+// read_user.esc
 let user = User.fromJSON(jsonStr)?;
 ```
 

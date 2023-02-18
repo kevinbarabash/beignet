@@ -217,7 +217,7 @@ automatically exported as a named export. `let` in Escalier is equivalent to
 a .d.ts file it does the reverse conversion.
 
 ```typescript
-// example.crochet
+// example.esc
 let foo = "foo";
 let mut bar = "bar";
 
@@ -259,7 +259,7 @@ function's type to TypeScript while re-using the existing TypeScript definition
 of `Point`:
 
 ```typescript
-// point_utils.crochet
+// point_utils.esc
 let scalePoint = (point: mut Point, scaleFactor: number): void => ...
 let magnitude = (point: Point): number => ...
 
@@ -290,7 +290,7 @@ If we define the following Escalier functions, we'll output the following .d.ts
 file (re-using the existing TypeScript definition of `Point`):
 
 ```typescript
-// point_utils.crochet
+// point_utils.esc
 let scalePoint = (point: mut Point, scaleFactor: number) => ...
 let magnitude = (point: Point): number => ...
 

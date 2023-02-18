@@ -1342,7 +1342,7 @@ to-regex-range@^5.0.1:
   resolved "https://registry.yarnpkg.com/traverse/-/traverse-0.3.9.tgz#717b8f220cc0bb7b44e40514c22b2e8bbc70d8b9"
   integrity sha512-iawgk0hLP3SxGKDfnDJf8wTz4p2qImnyihM5Hh/sGvQ3K37dPi/w8sRhdNIxYA1TwFwc5mDhIJq+O0RsvXBKdQ==
 
-"tree-sitter-crochet@file:../../crates/tree_sitter_crochet":
+"tree-sitter-escalier@file:../../crates/tree_sitter_escalier":
   version "0.0.1"
   dependencies:
     tree-sitter-javascript "github:tree-sitter/tree-sitter-javascript#936d976"
