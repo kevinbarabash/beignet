@@ -263,6 +263,24 @@ fn tpat_to_pat(pat: &TPat, type_ann: Option<Box<TsTypeAnn>>) -> Pat {
     }
 }
 
+pub fn pat_to_fn_param(param: &TFnParam, pat: Pat) -> TsFnParam {
+    match pat {
+        Pat::Ident(bi) => {
+            let id = Ident {
+                optional: param.optional,
+                ..bi.id
+            };
+            TsFnParam::Ident(BindingIdent { id, ..bi })
+        }
+        Pat::Array(array) => TsFnParam::Array(array),
+        Pat::Rest(rest) => TsFnParam::Rest(rest),
+        Pat::Object(obj) => TsFnParam::Object(obj),
+        Pat::Assign(_) => todo!(),
+        Pat::Invalid(_) => todo!(),
+        Pat::Expr(_) => todo!(),
+    }
+}
+
 pub fn build_ts_fn_type_with_params(
     params: &[TFnParam],
     ret: &Type,
@@ -274,24 +292,7 @@ pub fn build_ts_fn_type_with_params(
         .map(|param| {
             let type_ann = Some(Box::from(build_type_ann(&param.t, ctx)));
             let pat = tpat_to_pat(&param.pat, type_ann);
-
-            let result: TsFnParam = match pat {
-                Pat::Ident(bi) => {
-                    let id = Ident {
-                        optional: param.optional,
-                        ..bi.id
-                    };
-                    TsFnParam::Ident(BindingIdent { id, ..bi })
-                }
-                Pat::Array(array) => TsFnParam::Array(array),
-                Pat::Rest(rest) => TsFnParam::Rest(rest),
-                Pat::Object(obj) => TsFnParam::Object(obj),
-                Pat::Assign(_) => todo!(),
-                Pat::Invalid(_) => todo!(),
-                Pat::Expr(_) => todo!(),
-            };
-
-            result
+            pat_to_fn_param(param, pat)
         })
         .collect();
 
@@ -631,24 +632,7 @@ fn build_obj_type(obj: &TObject, ctx: &Context) -> TsType {
                     .map(|param| {
                         let type_ann = Some(Box::from(build_type_ann(&param.t, ctx)));
                         let pat = tpat_to_pat(&param.pat, type_ann);
-
-                        let result: TsFnParam = match pat {
-                            Pat::Ident(bi) => {
-                                let id = Ident {
-                                    optional: param.optional,
-                                    ..bi.id
-                                };
-                                TsFnParam::Ident(BindingIdent { id, ..bi })
-                            }
-                            Pat::Array(array) => TsFnParam::Array(array),
-                            Pat::Rest(rest) => TsFnParam::Rest(rest),
-                            Pat::Object(obj) => TsFnParam::Object(obj),
-                            Pat::Assign(_) => todo!(),
-                            Pat::Invalid(_) => todo!(),
-                            Pat::Expr(_) => todo!(),
-                        };
-
-                        result
+                        pat_to_fn_param(param, pat)
                     })
                     .collect();
 
@@ -679,24 +663,7 @@ fn build_obj_type(obj: &TObject, ctx: &Context) -> TsType {
                     .map(|param| {
                         let type_ann = Some(Box::from(build_type_ann(&param.t, ctx)));
                         let pat = tpat_to_pat(&param.pat, type_ann);
-
-                        let result: TsFnParam = match pat {
-                            Pat::Ident(bi) => {
-                                let id = Ident {
-                                    optional: param.optional,
-                                    ..bi.id
-                                };
-                                TsFnParam::Ident(BindingIdent { id, ..bi })
-                            }
-                            Pat::Array(array) => TsFnParam::Array(array),
-                            Pat::Rest(rest) => TsFnParam::Rest(rest),
-                            Pat::Object(obj) => TsFnParam::Object(obj),
-                            Pat::Assign(_) => todo!(),
-                            Pat::Invalid(_) => todo!(),
-                            Pat::Expr(_) => todo!(),
-                        };
-
-                        result
+                        pat_to_fn_param(param, pat)
                     })
                     .collect();
 
@@ -741,22 +708,7 @@ fn build_obj_type(obj: &TObject, ctx: &Context) -> TsType {
 
                 let type_ann = Some(Box::from(build_type_ann(&param.t, ctx)));
                 let pat = tpat_to_pat(&param.pat, type_ann);
-
-                let param: TsFnParam = match pat {
-                    Pat::Ident(bi) => {
-                        let id = Ident {
-                            optional: param.optional,
-                            ..bi.id
-                        };
-                        TsFnParam::Ident(BindingIdent { id, ..bi })
-                    }
-                    Pat::Array(array) => TsFnParam::Array(array),
-                    Pat::Rest(rest) => TsFnParam::Rest(rest),
-                    Pat::Object(obj) => TsFnParam::Object(obj),
-                    Pat::Assign(_) => todo!(),
-                    Pat::Invalid(_) => todo!(),
-                    Pat::Expr(_) => todo!(),
-                };
+                let param = pat_to_fn_param(param, pat);
 
                 Some(TsTypeElement::TsSetterSignature(TsSetterSignature {
                     span: DUMMY_SP,
