@@ -1,7 +1,7 @@
 # 02 Expressions
 
 JavaScript is a very statement-heavy language. As a result, things often end up
-needing to be more verbose than would otherwise be necessary. Crochet redefines
+needing to be more verbose than would otherwise be necessary. Escalier redefines
 the following statements as expressions:
 
 - `if`-`else`
@@ -10,7 +10,7 @@ the following statements as expressions:
 
 ## `if`-`else`
 
-The result of an `if`-`else` in Crochet is defined as the last expression in
+The result of an `if`-`else` in Escalier is defined as the last expression in
 each block. `if`-`else` can be chained and is much more readable than chained
 ternaries. This obviates the need for ternary expressions.
 
@@ -92,7 +92,7 @@ let foo;
 }
 ```
 
-The Crochet implementation of this is very similar to the [TC39
+The Escalier implementation of this is very similar to the [TC39
 Proposal](https://github.com/tc39/proposal-do-expressions). One notable
 difference is that `let` and `if` can appear last within a block.
 

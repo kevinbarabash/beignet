@@ -1,6 +1,6 @@
 # 08 Visibility and Privacy
 
-Crochet will have support for classes. These will roughly be the same as
+Escalier will have support for classes. These will roughly be the same as
 TypeScript classes, but with the following changes:
 
 - properties will be readonly and private by default (same for `static`

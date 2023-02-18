@@ -13,6 +13,6 @@
   "exclude": [
     "build/**/*",
     "crates/escalier/tests/**/*",
-    "packages/vscode-crochet/**/*"
+    "packages/vscode-escalier/**/**"
   ]
 }

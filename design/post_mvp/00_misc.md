@@ -24,11 +24,11 @@ pure we can safely memoize. If we know which side-effects a function can
 generate we could use that information when writing tests to indicate to the
 operator what mocking should be done.
 
-## TypeScript-to-Crochet Converter
+## TypeScript-to-Escalier Converter
 
-While Crochet has good TypeScript interop, it has a number of features not
+While Escalier has good TypeScript interop, it has a number of features not
 available in TypeScript. Being able to easily convert TypeScript code to
-Crochet would allow more code within existing projects to benefit from these
+Escalier would allow more code within existing projects to benefit from these
 features.
 
 ## Range Types and Range Checking
@@ -81,7 +81,7 @@ would do the following:
 ## Interpreter
 
 One of the great things about JavaScript is that it can be used interactively in
-the browser and in node. Crochet could benefit from having an interpreter as
+the browser and in node. Escalier could benefit from having an interpreter as
 well.
 
 ## Runtime Type Information

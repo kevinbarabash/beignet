@@ -21,7 +21,7 @@ declare const cats: Cat[];
 processAnimals(cats); // not an error, but now `cats` has a `Dog` in it
 ```
 
-Crochet prevents this by doing the following:
+Escalier prevents this by doing the following:
 
 - Only allow covariance (sub-types of params to be passed as arg) when the
   params are `readonly`
@@ -45,7 +45,7 @@ let point: {x: 5, y: 10}; // {x: number, y: number}
 let point: {x: 5, y: 10} as const; // {x: 5, y: 10}
 ```
 
-**Crochet**
+**Escalier**
 
 ```ts
 let point: { x: 5; y: 10 }; // {x: 5, y: 10}
@@ -55,7 +55,7 @@ let point: { x: 5; y: 10 }; // {x: 5, y: 10}
 
 TypeScript assumes that all keys exist on objects with indexers. If you index an
 element in an array typed as `number[]` the value you get back will be typed as
-`number` regardless of whether that element exists in the array or not. Crochet
+`number` regardless of whether that element exists in the array or not. Escalier
 on the other hand will type the value as `number | undefined`.
 
 ```ts
@@ -89,7 +89,7 @@ code in `catch` blocks.
 ## Improved Inference
 
 TypeScript infers parameters types as `any` if no explicit type is provided.
-Crochet is able to infer parameter types based on how they are used in the
+Escalier is able to infer parameter types based on how they are used in the
 function, e.g.
 
 **TypeScript**
@@ -98,13 +98,13 @@ function, e.g.
 let add = (a, b) => a + b; // inferred as (a: any, b: any) => any
 ```
 
-**Crochet**
+**Escalier**
 
 ```ts
 let add = (a, b) => a + b; // inferred as (a: number, b: number) => number
 ```
 
-NOTE: `+` in Crochet can only be used with numbers. For string concatenation use
+NOTE: `+` in Escalier can only be used with numbers. For string concatenation use
 template literals.
 
 ## No `any` type
@@ -122,7 +122,7 @@ interface JSON {
 
 will be converted to
 
-**Crochet**
+**Escalier**
 
 ```ts
 interface JSON {

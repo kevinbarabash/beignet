@@ -11,8 +11,8 @@ JavaScript and TypeScript make this difficult for a number of reasons:
   to a separate file, but this is not a great solution since the limitations of
   mocking are driving code organization.
 
-Crochet gets around these issues by having a "testing" compilation target. When
-compiling for this target, Crochet will modify the code generated in the
+Escalier gets around these issues by having a "testing" compilation target. When
+compiling for this target, Escalier will modify the code generated in the
 following ways:
 
 - All top-level symbols are assigned to properties on an `exports` object, even

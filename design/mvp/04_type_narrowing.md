@@ -50,7 +50,7 @@ other statically type languages.
 
 ## `if`-`let`
 
-Crochet takes a different approach. Instead of narrowing the type of an existing
+Escalier takes a different approach. Instead of narrowing the type of an existing
 variable, a new variable binding is introduced when determining a variable's
 type, e.g.
 

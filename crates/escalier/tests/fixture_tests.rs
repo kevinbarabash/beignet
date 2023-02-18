@@ -16,7 +16,7 @@ enum Mode {
     Write,
 }
 
-#[testing_macros::fixture("tests/pass/*.crochet")]
+#[testing_macros::fixture("tests/pass/*.esc")]
 fn pass(in_path: PathBuf) {
     let mode = match env::var("UPDATE") {
         Ok(_) => Mode::Write,
@@ -62,7 +62,7 @@ fn pass(in_path: PathBuf) {
     };
 }
 
-#[testing_macros::fixture("tests/errors/*.crochet")]
+#[testing_macros::fixture("tests/errors/*.esc")]
 fn fail(in_path: PathBuf) {
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
 

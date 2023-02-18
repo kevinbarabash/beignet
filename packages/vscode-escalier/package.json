@@ -1,6 +1,6 @@
 {
-  "name": "crochet-language-support",
-  "displayName": "crochet-language-support",
+  "name": "escalier-language-support",
+  "displayName": "escalier-language-support",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -10,19 +10,19 @@
     "Programming Languages"
   ],
   "activationEvents": [
-    "onLanguage:crochet"
+    "onLanguage:escalier"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "languages": [
       {
-        "id": "crochet",
+        "id": "escalier",
         "aliases": [
-          "Crochet",
-          "crochet"
+          "escalier",
+          "escalier"
         ],
         "extensions": [
-          ".crochet"
+          ".esc"
         ],
         "configuration": "./language-configuration.json",
         "icon": {
@@ -33,14 +33,14 @@
     ],
     "grammars": [
       {
-        "language": "crochet",
-        "scopeName": "source.crochet",
-        "path": "./syntaxes/crochet.tmLanguage.json"
+        "language": "escalier",
+        "scopeName": "source.esc",
+        "path": "./syntaxes/escalier.tmLanguage.json"
       }
     ]
   },
   "configurationDefaults": {
-    "crochet": {
+    "escalier": {
       "editor.semanticHighlighting.enabled": true
     }
   },
@@ -57,7 +57,7 @@
     "@vscode/test-electron": "^2.2.0",
     "eslint": "^8.28.0",
     "tree-sitter": "^0.20.1",
-    "tree-sitter-crochet": "file:../../crates/tree_sitter_crochet",
+    "tree-sitter-escalier": "file:../../crates/tree_sitter_escalier",
     "typescript": "^4.9.3"
   },
   "dependencies": {
