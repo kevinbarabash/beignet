@@ -1,10 +1,11 @@
+use derive_visitor::{Drive, DriveMut};
 use itertools::join;
 use std::fmt;
 
 use crate::types::TFnParam;
 use crate::types::{Type, TypeParam};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TCallable {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
@@ -37,12 +38,14 @@ impl fmt::Display for TCallable {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TMethod {
+    #[drive(skip)]
     pub name: TPropKey,
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
     pub type_params: Option<Vec<TypeParam>>,
+    #[drive(skip)]
     pub is_mutating: bool,
 }
 
@@ -85,8 +88,9 @@ impl fmt::Display for TMethod {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TGetter {
+    #[drive(skip)]
     pub name: TPropKey,
     pub ret: Box<Type>,
 }
@@ -98,8 +102,9 @@ impl fmt::Display for TGetter {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TSetter {
+    #[drive(skip)]
     pub name: TPropKey,
     pub param: TFnParam,
 }
@@ -111,7 +116,7 @@ impl fmt::Display for TSetter {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TObjElem {
     Call(TCallable),
     Constructor(TCallable),
@@ -150,9 +155,11 @@ impl fmt::Display for TIndexKey {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TIndex {
+    #[drive(skip)]
     pub key: TIndexKey,
+    #[drive(skip)]
     pub mutable: bool,
     pub t: Type,
 }
@@ -182,10 +189,13 @@ impl fmt::Display for TPropKey {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TProp {
+    #[drive(skip)]
     pub name: TPropKey,
+    #[drive(skip)]
     pub optional: bool,
+    #[drive(skip)]
     pub mutable: bool,
     pub t: Type,
 }

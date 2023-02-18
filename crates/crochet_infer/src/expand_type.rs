@@ -1,8 +1,8 @@
-use crochet_ast::types::visitor_mut::VisitorMut;
 use crochet_ast::types::*;
 use crochet_ast::types::{
     TIndex, TIndexKey, TLit, TObjElem, TObject, TProp, TPropKey, Type, TypeKind,
 };
+use derive_visitor::{DriveMut, VisitorMut};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -143,6 +143,8 @@ pub fn expand_alias_type(alias: &TRef, ctx: &mut Context) -> Result<Type, Vec<Ty
     }
 }
 
+#[derive(VisitorMut)]
+#[visitor(Type(enter))]
 struct FindInferTypesVisitor {
     infer_types: Vec<TInferType>,
 }
@@ -153,10 +155,7 @@ impl FindInferTypesVisitor {
             infer_types: vec![],
         }
     }
-}
-
-impl VisitorMut for FindInferTypesVisitor {
-    fn visit_type(&mut self, t: &mut Type) {
+    fn enter_type(&mut self, t: &mut Type) {
         if let TypeKind::InferType(it) = &t.kind {
             self.infer_types.push(it.to_owned());
         }
@@ -165,10 +164,12 @@ impl VisitorMut for FindInferTypesVisitor {
 
 fn find_infer_types(t: &mut Type) -> Vec<TInferType> {
     let mut visitor = FindInferTypesVisitor::new();
-    visitor.visit_children(t);
+    t.drive_mut(&mut visitor);
     visitor.infer_types
 }
 
+#[derive(VisitorMut)]
+#[visitor(Type(enter))]
 struct ReplaceVisitor {
     type_param_map: HashMap<String, Type>,
 }
@@ -179,11 +180,7 @@ impl ReplaceVisitor {
             type_param_map: type_param_map.to_owned(),
         }
     }
-}
-
-impl VisitorMut for ReplaceVisitor {
-    // TODO: handle type params in TLams with type_params correctly
-    fn visit_type(&mut self, t: &mut Type) {
+    fn enter_type(&mut self, t: &mut Type) {
         if let TypeKind::InferType(TInferType { name }) = &t.kind {
             match self.type_param_map.get(name) {
                 Some(rep_t) => {
@@ -199,7 +196,7 @@ impl VisitorMut for ReplaceVisitor {
 
 fn replace_infer_types(t: &mut Type, type_param_map: &HashMap<String, Type>) {
     let mut rep_visitor = ReplaceVisitor::new(type_param_map);
-    rep_visitor.visit_children(t);
+    t.drive_mut(&mut rep_visitor);
 }
 
 fn expand_conditional_type(

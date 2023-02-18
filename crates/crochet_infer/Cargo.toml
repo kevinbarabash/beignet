@@ -7,9 +7,10 @@ edition = "2021"
 
 [dependencies]
 ariadne = "0.1.5"
-crochet_ast = { version = "0.1.0", path = "../crochet_ast" }
 array_tool = "1.0.3"
+crochet_ast = { version = "0.1.0", path = "../crochet_ast" }
 defaultmap = "0.5.0"
+derive-visitor = "0.3.0"
 itertools = "0.10.3"
 im = "15.1.0"
 regex-syntax = "0.6.28"
