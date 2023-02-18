@@ -247,6 +247,7 @@ dependencies = [
  "crochet_ast",
  "crochet_parser",
  "defaultmap",
+ "derive-visitor",
  "im",
  "insta",
  "itertools",

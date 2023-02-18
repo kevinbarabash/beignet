@@ -1,8 +1,8 @@
-use derive_visitor::Drive;
+use derive_visitor::{Drive, DriveMut};
 use std::fmt;
 use std::hash::Hash;
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TKeyword {
     Number,
     Boolean,

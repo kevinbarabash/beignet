@@ -1,6 +1,6 @@
+use derive_visitor::{DriveMut, VisitorMut};
 use std::collections::HashMap;
 
-use crochet_ast::types::visitor_mut::VisitorMut;
 use crochet_ast::types::{
     self as types, Provenance, TCallable, TFnParam, TKeyword, TLam, TLit, TObjElem, TObject, TPat,
     TPropKey, TRef, TVar, Type, TypeKind,
@@ -1088,6 +1088,8 @@ fn get_prop_value(
     }
 }
 
+#[derive(VisitorMut)]
+#[visitor(Type(enter))]
 struct ReplaceVisitor {
     rep: Type,
 }
@@ -1096,10 +1098,7 @@ impl ReplaceVisitor {
     fn new(t: &Type) -> Self {
         ReplaceVisitor { rep: t.to_owned() }
     }
-}
-
-impl VisitorMut for ReplaceVisitor {
-    fn visit_type(&mut self, t: &mut Type) {
+    fn enter_type(&mut self, t: &mut Type) {
         if let TypeKind::This = t.kind {
             t.kind = self.rep.kind.to_owned();
             t.mutable = self.rep.mutable;
@@ -1110,5 +1109,5 @@ impl VisitorMut for ReplaceVisitor {
 
 fn replace_this(t: &mut Type, rep: &Type) {
     let mut rep_visitor = ReplaceVisitor::new(rep);
-    rep_visitor.visit_children(t);
+    t.drive_mut(&mut rep_visitor);
 }

@@ -1,7 +1,6 @@
-use derive_visitor::{Drive, Visitor};
+use derive_visitor::{Drive, DriveMut, Visitor, VisitorMut};
 use swc_ecma_ast::TsInterfaceDecl;
 
-use crochet_ast::types::visitor_mut::VisitorMut;
 use crochet_ast::types::*;
 
 pub fn maybe_override_string_methods(decl: &TsInterfaceDecl, elem: &TObjElem) -> Option<TObjElem> {
@@ -50,7 +49,7 @@ pub fn maybe_override_string_methods(decl: &TsInterfaceDecl, elem: &TObjElem) ->
                 // passed `TPattern` and `TFlags` as type arguments.
                 let mut elem = TObjElem::Method(method);
                 let mut regex_visitor = RegExpVisitor {};
-                regex_visitor.visit_obj_elem(&mut elem);
+                elem.drive_mut(&mut regex_visitor);
 
                 return Some(elem);
             }
@@ -88,10 +87,12 @@ impl HasTypeRefVisitor {
     }
 }
 
+#[derive(VisitorMut)]
+#[visitor(Type(enter))]
 struct RegExpVisitor {}
 
-impl VisitorMut for RegExpVisitor {
-    fn visit_type(&mut self, t: &mut Type) {
+impl RegExpVisitor {
+    fn enter_type(&mut self, t: &mut Type) {
         match &t.kind {
             TypeKind::Ref(alias)
                 if (alias.name == "RegExp"

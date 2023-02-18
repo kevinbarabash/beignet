@@ -1,4 +1,4 @@
-use derive_visitor::Drive;
+use derive_visitor::{Drive, DriveMut};
 use itertools::{join, Itertools};
 use std::cmp::Ordering;
 use std::fmt;
@@ -9,14 +9,14 @@ use crate::types::lit::TLit;
 use crate::types::obj::TObjElem;
 use crate::types::provenance::Provenance;
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TApp {
     pub args: Vec<Type>,
     pub ret: Box<Type>,
     pub type_args: Option<Vec<Type>>,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TRef {
     #[drive(skip)]
     pub name: String,
@@ -34,27 +34,27 @@ impl fmt::Display for TRef {
     }
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TObject {
     pub elems: Vec<TObjElem>,
     #[drive(skip)]
     pub is_interface: bool, // Used for `interface` types and classes
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TIndexAccess {
     pub object: Box<Type>,
     pub index: Box<Type>,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TVar {
     #[drive(skip)]
     pub id: i32, // This should never be mutated
     pub constraint: Option<Box<Type>>,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TypeParam {
     #[drive(skip)]
     pub name: String,
@@ -80,7 +80,7 @@ impl fmt::Display for TypeParam {
     }
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TMappedType {
     pub type_param: TypeParam,
     #[drive(skip)]
@@ -96,7 +96,7 @@ pub enum TMappedTypeChangeProp {
     Minus,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TConditionalType {
     pub check_type: Box<Type>,
     pub extends_type: Box<Type>,
@@ -104,13 +104,13 @@ pub struct TConditionalType {
     pub false_type: Box<Type>,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TInferType {
     #[drive(skip)]
     pub name: String,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TypeKind {
     Var(TVar),
     App(TApp),
@@ -135,7 +135,7 @@ pub enum TypeKind {
     // Query, // use for typed holes
 }
 
-#[derive(Clone, Debug, Drive, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, Eq)]
 pub struct Type {
     pub kind: TypeKind,
     #[drive(skip)]

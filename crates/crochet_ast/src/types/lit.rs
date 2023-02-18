@@ -1,8 +1,8 @@
-use derive_visitor::Drive;
+use derive_visitor::{Drive, DriveMut};
 use std::fmt;
 use std::hash::Hash;
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TLit {
     // We store all of the values as strings since f64 doesn't
     // support the Eq trait because NaN and 0.1 + 0.2 != 0.3.

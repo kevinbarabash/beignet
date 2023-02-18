@@ -1,11 +1,11 @@
-use derive_visitor::Drive;
+use derive_visitor::{Drive, DriveMut};
 use itertools::join;
 use std::fmt;
 
 use crate::types::TFnParam;
 use crate::types::{Type, TypeParam};
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TCallable {
     pub params: Vec<TFnParam>,
     pub ret: Box<Type>,
@@ -38,7 +38,7 @@ impl fmt::Display for TCallable {
     }
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TMethod {
     #[drive(skip)]
     pub name: TPropKey,
@@ -88,7 +88,7 @@ impl fmt::Display for TMethod {
     }
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TGetter {
     #[drive(skip)]
     pub name: TPropKey,
@@ -102,7 +102,7 @@ impl fmt::Display for TGetter {
     }
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TSetter {
     #[drive(skip)]
     pub name: TPropKey,
@@ -116,7 +116,7 @@ impl fmt::Display for TSetter {
     }
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TObjElem {
     Call(TCallable),
     Constructor(TCallable),
@@ -155,7 +155,7 @@ impl fmt::Display for TIndexKey {
     }
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TIndex {
     #[drive(skip)]
     pub key: TIndexKey,
@@ -189,7 +189,7 @@ impl fmt::Display for TPropKey {
     }
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TProp {
     #[drive(skip)]
     pub name: TPropKey,
