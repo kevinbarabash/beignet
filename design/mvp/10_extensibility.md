@@ -18,7 +18,7 @@ the queries. It's a workable solution, but it results in a lot of generated
 files that need to be kept up to date and may result in merge conflicts with
 other generated types.
 
-Crochet will solve these issues by providing a plugin API for the type system
+Escalier will solve these issues by providing a plugin API for the type system
 that can:
 
 - infer structured types based on literals (strings, regexes, tagged template
@@ -32,7 +32,7 @@ The TypeScript library definitions for `String.prototype.match` is quite
 general. A plugin could be implemented using
 [regex_syntax](https://docs.rs/regex-syntax/latest/regex_syntax/) to determine
 which capture groups are in the regex. This information could then be used to
-synthesize a Crochet type for successful matches. The code below shows what it
+synthesize a Escalier type for successful matches. The code below shows what it
 would look like using the plugin. The destructuring of the `input.match()`
 result would be completely typesafe with `r`, `g`, and `b` being inferred as
 `string`s.
@@ -60,5 +60,5 @@ let parseColor = (input) => {
 
 ## Linting
 
-Crochet can provide a typed AST to a future linter. This would allow us to craft
+Escalier can provide a typed AST to a future linter. This would allow us to craft
 more powerful rules than is currently possible with `eslint`.

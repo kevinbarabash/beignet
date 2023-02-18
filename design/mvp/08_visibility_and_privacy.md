@@ -1,6 +1,6 @@
 # 08 Visibility and Privacy
 
-Crochet will have support for classes. These will roughly be the same as
+Escalier will have support for classes. These will roughly be the same as
 TypeScript classes, but with the following changes:
 
 - properties will be readonly and private by default (same for `static`
@@ -10,7 +10,7 @@ TypeScript classes, but with the following changes:
   will fill this need, see [Bonus Features](11_bonus_features.md).
 
 ```ts
-// my_component.crochet
+// my_component.esc
 type Props = { ... };
 
 class MyComponent extends React.Component<Props> {

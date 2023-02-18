@@ -1,0 +1,219 @@
+---
+source: crates/escalier_parser/src/lib.rs
+expression: "parse(\"if (a) { 5 } else if (b) { 10 } else { 20 };\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 44,
+                    },
+                },
+                span: 0..44,
+                expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 43,
+                        },
+                    },
+                    span: 0..43,
+                    kind: IfElse(
+                        IfElse {
+                            cond: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 4,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 5,
+                                    },
+                                },
+                                span: 4..5,
+                                kind: Ident(
+                                    Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 4,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 5,
+                                            },
+                                        },
+                                        span: 4..5,
+                                        name: "a",
+                                    },
+                                ),
+                                inferred_type: None,
+                            },
+                            consequent: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 9,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 10,
+                                    },
+                                },
+                                span: 9..10,
+                                kind: Lit(
+                                    Num(
+                                        Num {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 9,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 10,
+                                                },
+                                            },
+                                            span: 9..10,
+                                            value: "5",
+                                        },
+                                    ),
+                                ),
+                                inferred_type: None,
+                            },
+                            alternate: Some(
+                                Expr {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 18,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 43,
+                                        },
+                                    },
+                                    span: 18..43,
+                                    kind: IfElse(
+                                        IfElse {
+                                            cond: Expr {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 22,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 23,
+                                                    },
+                                                },
+                                                span: 22..23,
+                                                kind: Ident(
+                                                    Ident {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 22,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 23,
+                                                            },
+                                                        },
+                                                        span: 22..23,
+                                                        name: "b",
+                                                    },
+                                                ),
+                                                inferred_type: None,
+                                            },
+                                            consequent: Expr {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 27,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 29,
+                                                    },
+                                                },
+                                                span: 27..29,
+                                                kind: Lit(
+                                                    Num(
+                                                        Num {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 27,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 29,
+                                                                },
+                                                            },
+                                                            span: 27..29,
+                                                            value: "10",
+                                                        },
+                                                    ),
+                                                ),
+                                                inferred_type: None,
+                                            },
+                                            alternate: Some(
+                                                Expr {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 39,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 41,
+                                                        },
+                                                    },
+                                                    span: 39..41,
+                                                    kind: Lit(
+                                                        Num(
+                                                            Num {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 39,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 41,
+                                                                    },
+                                                                },
+                                                                span: 39..41,
+                                                                value: "20",
+                                                            },
+                                                        ),
+                                                    ),
+                                                    inferred_type: None,
+                                                },
+                                            ),
+                                        },
+                                    ),
+                                    inferred_type: None,
+                                },
+                            ),
+                        },
+                    ),
+                    inferred_type: None,
+                },
+            },
+        ],
+    },
+)

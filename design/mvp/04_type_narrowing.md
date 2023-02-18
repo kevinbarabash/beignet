@@ -50,7 +50,7 @@ other statically type languages.
 
 ## `if`-`let`
 
-Crochet takes a different approach. Instead of narrowing the type of an existing
+Escalier takes a different approach. Instead of narrowing the type of an existing
 variable, a new variable binding is introduced when determining a variable's
 type, e.g.
 
@@ -84,7 +84,7 @@ There are a number of different patterns that can be used with `if`-`let`:
 Here's an example using a couple of `is` patterns.
 
 ```ts
-// is_pattern.crochet
+// is_pattern.esc
 declare let foo: number | Set<number>;
 
 if (let num is number = foo) {
@@ -107,7 +107,7 @@ There may be situations where you want to destructure an object based on what
 class it is. This can be done in the following way:
 
 ```ts
-// instance_pattern.crochet
+// instance_pattern.esc
 declare const event: MouseEvent | KeyboardEvent;
 
 if (let MouseEvent { pageX, pageY } = event) {

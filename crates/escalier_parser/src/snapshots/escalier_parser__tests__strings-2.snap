@@ -1,0 +1,55 @@
+---
+source: crates/escalier_parser/src/lib.rs
+expression: "parse(r#\"\"hello\";\"#)"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 8,
+                    },
+                },
+                span: 0..8,
+                expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 7,
+                        },
+                    },
+                    span: 0..7,
+                    kind: Lit(
+                        Str(
+                            Str {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 7,
+                                    },
+                                },
+                                span: 0..7,
+                                value: "hello",
+                            },
+                        ),
+                    ),
+                    inferred_type: None,
+                },
+            },
+        ],
+    },
+)

@@ -1,9 +1,9 @@
 {
-  "name": "@crochet-lang/crochet",
+  "name": "@escalier-lang/escalier",
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
-    "build-wasm": "cd crates/crochet && cargo build --target wasm32-wasi --release",
+    "build-wasm": "cd crates/escalier && cargo build --target wasm32-wasi --release",
     "watch-wasm": "cargo watch -- cargo build --target wasm32-wasi --release",
     "build": "webpack && cp scarf.png build && cp index.css build",
     "serve": "webpack serve",

@@ -4,14 +4,14 @@ Modules should not have any side-effects. This is not the case in JavaScript
 and TypeScript which can make writing tests and other activities where you might
 want to reload a fresh copy of a module very difficult.
 
-At the same time, we still want to allow people to use Crochet for scripts which
+At the same time, we still want to allow people to use Escalier for scripts which
 necessitates side-effects. Post-MVP we'll be adding a REPL and we want people
 to be able to copy/paste code between REPL and a script file (and vice versa).
-To this end, there will be a way to specify whether a .crochet file is a script
+To this end, there will be a way to specify whether a .esc file is a script
 or a module. This may be a different file extension or compiler directive in the
 file itself.
 
-Crochet scripts will be allowed to run code that has side-effects at the
+Escalier scripts will be allowed to run code that has side-effects at the
 top-level while modules will not. Modules will be allowed to declare functions
 and literals (including objects and tuples) at the top-level. Post-MVP we'll be
 adding support for const expressions. These will be also be allowed at the

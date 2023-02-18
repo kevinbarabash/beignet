@@ -2,7 +2,7 @@ TODO: rework this document
 
 # 06 Mutability
 
-In order for Crochet to have tight interop with TypeScript, it needs to support
+In order for Escalier to have tight interop with TypeScript, it needs to support
 mutability. TypeScript assumes that everything is mutiple unless otherwise
 indicated.
 
@@ -87,9 +87,9 @@ There are a few other paired interfaces like this:
 The reason for this is that TypeScript doesn't have a way to mark methods as
 mutating or not.
 
-## Crochet's Approach
+## Escalier's Approach
 
-Crochet removes TypeScript's `const` and `readonly` keywords, `Readonly<T>`
+Escalier removes TypeScript's `const` and `readonly` keywords, `Readonly<T>`
 utility type, and readonly interface variants (`ReadonlyArray<T>`,
 `ReadonlyMap<K, V>`, and `ReadonlySet<T>`) and replaces them with a single `mut`
 keyword. Below we describe various uses of `mut`.
@@ -98,7 +98,7 @@ keyword. Below we describe various uses of `mut`.
 
 Variables that can be re-assigned and declared using `let mut`.
 
-**Crochet (TypeScript in comments)**
+**Escalier (TypeScript in comments)**
 
 ```typescript
 let message = "hello";              // const message = "hello" as const;
@@ -115,7 +115,7 @@ Notes:
 
 ### Object types
 
-Crochet has object types which are similar to object types in TypeScript but
+Escalier has object types which are similar to object types in TypeScript but
 with the follow differences:
 
 - getters/setters are not allowed
@@ -126,7 +126,7 @@ with the follow differences:
 Mutable references are specified using the `mut` keyword as shown in the
 following example.
 
-**Crochet**
+**Escalier**
 
 ```typescript
 type Point = {      // type Point {
@@ -175,7 +175,7 @@ A mutable reference of an instance conforming to a given interface can call
 all of its methods (including the mutating ones) and reassign any of its mutable
 properties. It does **not** allow immutable properties to be reassigned.
 
-**Crochet (TypeScript in comments)**
+**Escalier (TypeScript in comments)**
 
 ```typescript
 interface Greeter {             // interface Greeter {
@@ -205,19 +205,19 @@ Notes:
 
 ## Making Interop Work
 
-Crochet uses .d.ts to import types from and export types to TypeScript. We do
-not generate Crochet types on disk from TypeScript, instead they appear in
+Escalier uses .d.ts to import types from and export types to TypeScript. We do
+not generate Escalier types on disk from TypeScript, instead they appear in
 memory only.
 
 ### `let` and `const`
 
-When outputting a .d.ts file, each top-level Crochet declaration is
-automatically exported as a named export. `let` in Crochet is equivalent to
-`const` in TypeScript and `let mut` is equivalent to `let`. When Crochet reads
+When outputting a .d.ts file, each top-level Escalier declaration is
+automatically exported as a named export. `let` in Escalier is equivalent to
+`const` in TypeScript and `let mut` is equivalent to `let`. When Escalier reads
 a .d.ts file it does the reverse conversion.
 
 ```typescript
-// example.crochet
+// example.esc
 let foo = "foo";
 let mut bar = "bar";
 
@@ -234,10 +234,10 @@ declare let bar: "bar";
 
 When import an object type from a .d.ts file, it checks whether all of the
 properties are marked as `readonly` or none are. If there's some are `readonly`
-and some are not then Crochet will end up converting the type to an interface.
+and some are not then Escalier will end up converting the type to an interface.
 
 The happy path is when all of the properties in the TypeScript object type are
-`readonly`. We can create a Crochet type with the same name and have the two
+`readonly`. We can create a Escalier type with the same name and have the two
 types line up exactly.
 
 ```typescript
@@ -247,19 +247,19 @@ type Point = {
   readonly y: number;
 };
 
-// corresponding Crochet type (in-memory)
+// corresponding Escalier type (in-memory)
 type Point = {
   x: number;
   y: number;
 };
 ```
 
-If a Crochet function accepts a `mut Point`, we need a way to export that
+If a Escalier function accepts a `mut Point`, we need a way to export that
 function's type to TypeScript while re-using the existing TypeScript definition
 of `Point`:
 
 ```typescript
-// point_utils.crochet
+// point_utils.esc
 let scalePoint = (point: mut Point, scaleFactor: number): void => ...
 let magnitude = (point: Point): number => ...
 
@@ -269,7 +269,7 @@ export declare let magnitude = (point: Point): number;
 ```
 
 If none of an object's properties are `readonly` in the TypeScript type then
-we have to do more work to map the TypeScript type to the corresponding Crochet
+we have to do more work to map the TypeScript type to the corresponding Escalier
 type.
 
 ```typescript
@@ -279,18 +279,18 @@ type Point = {
   y: number;
 };
 
-// the Crochet type (in-memory) corresponds to `Readonly<Point>` in TypeScript
+// the Escalier type (in-memory) corresponds to `Readonly<Point>` in TypeScript
 type Point = {
   x: number;
   y: number;
 };
 ```
 
-If we define the following Crochet functions, we'll output the following .d.ts
+If we define the following Escalier functions, we'll output the following .d.ts
 file (re-using the existing TypeScript definition of `Point`):
 
 ```typescript
-// point_utils.crochet
+// point_utils.esc
 let scalePoint = (point: mut Point, scaleFactor: number) => ...
 let magnitude = (point: Point): number => ...
 
@@ -310,11 +310,11 @@ I think it's okay to treat them like interfaces.
 
 ### Interfaces
 
-When Crochet reads a .d.ts file, it will merge readonly and non-readonly
+When Escalier reads a .d.ts file, it will merge readonly and non-readonly
 interfaces into a single interface type. In the case of `Array<T>` and
 `ReadonlyArray<T>` it would construct the following type:
 
-**Crochet**
+**Escalier**
 
 ```typescript
 type Array<T> = {
@@ -332,9 +332,9 @@ Notes:
 - `map` is overloaded with mutating and non-mutating versions
 - `map` returns a mutable array in both versions. To get a non-mutable reference
   to the result you'd have to do `let result: T[] = input.map(cb);`.
-- We should be able to output a Crochet interface to the corresponding mutable
+- We should be able to output a Escalier interface to the corresponding mutable
   and immutable (`Readonly` prefixed) types and then read those TypeScript types
-  in to reconstruct the original Crochet interface.
+  in to reconstruct the original Escalier interface.
 
 ### Literals
 
@@ -390,7 +390,7 @@ let point: Point = {x: 5, y: 10};     // OK: because there are no other refrence
 ## Rethinking things a bit
 
 TypeScript code will have object types with a mix of `readonly` fields and those
-that are not. We need to be able to model that in Crochet.
+that are not. We need to be able to model that in Escalier.
 
 Given the following TypeScript type:
 
@@ -401,7 +401,7 @@ type SimpleObj = {
 };
 ```
 
-We should expect the corresponding Crochet type:
+We should expect the corresponding Escalier type:
 
 ```ts
 type SimpleObj = {
@@ -425,7 +425,7 @@ and tuples), and in the opposite direction.
 This means that if you have an `obj` typed as `SimpleObj`, it will not have
 access to any methods that mutate and all fields will not be writeable.
 
-Let's look at a more complicated type in Crochet:
+Let's look at a more complicated type in Escalier:
 
 ```ts
 type ComplexObj = {

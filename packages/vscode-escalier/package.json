@@ -1,0 +1,67 @@
+{
+  "name": "escalier-language-support",
+  "displayName": "escalier-language-support",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:escalier"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "escalier",
+        "aliases": [
+          "escalier",
+          "escalier"
+        ],
+        "extensions": [
+          ".esc"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/scarf.png",
+          "dark": "./icons/scarf.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "escalier",
+        "scopeName": "source.esc",
+        "path": "./syntaxes/escalier.tmLanguage.json"
+      }
+    ]
+  },
+  "configurationDefaults": {
+    "escalier": {
+      "editor.semanticHighlighting.enabled": true
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "@vscode/test-electron": "^2.2.0",
+    "eslint": "^8.28.0",
+    "tree-sitter": "^0.20.1",
+    "tree-sitter-escalier": "file:../../crates/tree_sitter_escalier",
+    "typescript": "^4.9.3"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.0.2",
+    "web-tree-sitter": "^0.20.7"
+  }
+}

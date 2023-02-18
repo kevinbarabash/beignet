@@ -1,0 +1,61 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Crochet",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#modifiers"
+		},
+		{
+			"include": "#variables"
+		}
+	],
+	"repository": {
+		"comments": {
+			"name": "comment.line.double-slash",
+			"begin": "//",
+			"end": "$"
+		},
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.esc",
+				"match": "\\b(if|while|for|return|let|await|async|type|extends|new)\\b"
+			}]
+		},
+		"numbers": {
+			"name": "constant.numeric.decimal.esc",
+			"match": "\\b([1-9][0-9]*(\\.[0-9]*)?|0?\\.[0-9]*)\\b"
+		},
+		"strings": {
+			"name": "string.quoted.double.esc",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.esc",
+					"match": "\\\\."
+				}
+			]
+		},
+		"variables": {
+            "name": "variable.other.esc",
+            "match": "[A-Za-z]\\w*"
+        },
+		"modifiers": {
+			"name": "storage.modifier.esc",
+			"match": "\\b(mut)\\b"
+		}
+	},
+	"scopeName": "source.esc"
+}

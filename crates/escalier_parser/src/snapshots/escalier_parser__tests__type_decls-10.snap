@@ -1,0 +1,147 @@
+---
+source: crates/escalier_parser/src/lib.rs
+expression: "parse(r#\"type C = A[\"b\"][C_Key];\"#)"
+---
+Ok(
+    Program {
+        body: [
+            TypeDecl {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 23,
+                    },
+                },
+                span: 0..23,
+                declare: false,
+                id: Ident {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 6,
+                        },
+                    },
+                    span: 5..6,
+                    name: "C",
+                },
+                type_ann: TypeAnn {
+                    kind: IndexedAccess(
+                        IndexedAccessType {
+                            obj_type: TypeAnn {
+                                kind: IndexedAccess(
+                                    IndexedAccessType {
+                                        obj_type: TypeAnn {
+                                            kind: TypeRef(
+                                                TypeRef {
+                                                    name: "A",
+                                                    type_args: None,
+                                                },
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 9,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 10,
+                                                },
+                                            },
+                                            span: 9..10,
+                                            inferred_type: None,
+                                        },
+                                        index_type: TypeAnn {
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 11,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 14,
+                                                            },
+                                                        },
+                                                        span: 11..14,
+                                                        value: "b",
+                                                    },
+                                                ),
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 11,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 14,
+                                                },
+                                            },
+                                            span: 11..14,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 9,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 15,
+                                    },
+                                },
+                                span: 9..15,
+                                inferred_type: None,
+                            },
+                            index_type: TypeAnn {
+                                kind: TypeRef(
+                                    TypeRef {
+                                        name: "C_Key",
+                                        type_args: None,
+                                    },
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 16,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 21,
+                                    },
+                                },
+                                span: 16..21,
+                                inferred_type: None,
+                            },
+                        },
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 9,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 22,
+                        },
+                    },
+                    span: 9..22,
+                    inferred_type: None,
+                },
+                type_params: None,
+            },
+        ],
+    },
+)

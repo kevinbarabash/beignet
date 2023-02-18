@@ -1,9 +1,9 @@
-# Crochet: MVP 🧣
+# Escalier: MVP 🧣
 
-Crochet is a compile-to-JavaScript language with tight TypeScript interop and
+Escalier is a compile-to-JavaScript language with tight TypeScript interop and
 modern language features.
 
-## Why Crochet?
+## Why Escalier?
 
 ### Productivity
 
@@ -25,10 +25,10 @@ modern language features.
 
 After experimenting with different strongly typed compile-to-JS languages, one
 common downside was that they all required bindings to be written to existing
-JavaScript/TypeScript libraries. Crochet's type system is compatible with
-TypeScript's type system. Crochet can parse .d.ts files and convert the types
-into Crochet types. It can also output .d.ts files when compiling .crochet
-source code. This provides automatic, bidirectional, interop with TypeScript.
+JavaScript/TypeScript libraries. Escalier's type system is compatible with
+TypeScript's type system. Escalier can parse .d.ts files and convert the types
+into Escalier types. It can also output .d.ts files when compiling .esc source
+code. This provides automatic, bidirectional, interop with TypeScript.
 
 ## Design Docs
 

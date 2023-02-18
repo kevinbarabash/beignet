@@ -1,7 +1,7 @@
 # 11 Bonus Features
 
 There are lots of great features from other languages that we can bring to
-Crochet to make it even more of a joy to use.
+Escalier to make it even more of a joy to use.
 
 ## Ranges
 
@@ -11,7 +11,7 @@ check if each element is defined or not.
 Additionally, we could adopt Rust's syntax (which is very similar to Python's
 syntax) for slices as syntactic sugar for calls to `.slice()`, e.g.
 
-**Crochet**
+**Escalier**
 
 ```typescript
 let tuple = [1, 2, 3, 4, 5];
@@ -23,7 +23,7 @@ let slice4 = [:-1]; // tuple.slice(0, -1); === [1, 2, 3, 4]
 let slice5 = [:];   // tuple.slice();      === [1, 2, 3, 4, 5]
 ```
 
-Post-MVP, I'd like to make ranges a first-class concept in Crochet along with an
+Post-MVP, I'd like to make ranges a first-class concept in Escalier along with an
 associated type and type checking.
 
 ## Typed holes
@@ -46,10 +46,10 @@ Answer: We do the following:
 
 One of the confusing aspects of using JavaScript is passing methods as
 callbacks. To avoid this confusion when a method is passed as a callback,
-Crochet will autobind it.
+Escalier will autobind it.
 
 ```tsx
-// autobinding.crochet
+// autobinding.esc
 class MyComponents extends React.Component {
   constructor(props) {
     super(props);

@@ -1,0 +1,142 @@
+---
+source: crates/escalier_parser/src/lib.rs
+expression: "parse(\"foo(a, ...b);\")"
+---
+Ok(
+    Program {
+        body: [
+            Expr {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 13,
+                    },
+                },
+                span: 0..13,
+                expr: Expr {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 0,
+                            column: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            column: 12,
+                        },
+                    },
+                    span: 0..12,
+                    kind: App(
+                        App {
+                            lam: Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 3,
+                                    },
+                                },
+                                span: 0..3,
+                                kind: Ident(
+                                    Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 3,
+                                            },
+                                        },
+                                        span: 0..3,
+                                        name: "foo",
+                                    },
+                                ),
+                                inferred_type: None,
+                            },
+                            args: [
+                                ExprOrSpread {
+                                    spread: None,
+                                    expr: Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 4,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 5,
+                                            },
+                                        },
+                                        span: 4..5,
+                                        kind: Ident(
+                                            Ident {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 4,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 5,
+                                                    },
+                                                },
+                                                span: 4..5,
+                                                name: "a",
+                                            },
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                },
+                                ExprOrSpread {
+                                    spread: Some(
+                                        7..10,
+                                    ),
+                                    expr: Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 10,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 11,
+                                            },
+                                        },
+                                        span: 10..11,
+                                        kind: Ident(
+                                            Ident {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 10,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 11,
+                                                    },
+                                                },
+                                                span: 10..11,
+                                                name: "b",
+                                            },
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                },
+                            ],
+                            type_args: None,
+                        },
+                    ),
+                    inferred_type: None,
+                },
+            },
+        ],
+    },
+)

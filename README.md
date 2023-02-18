@@ -1,7 +1,7 @@
-# Crochet 🧣
+# Escalier
 
-[![CI](https://github.com/crochet-lang/crochet/actions/workflows/ci.yml/badge.svg)](https://github.com/crochet-lang/crochet/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/crochet-lang/crochet/branch/main/graph/badge.svg?token=0r6KE7snsL)](https://codecov.io/gh/crochet-lang/crochet)
+[![CI](https://github.com/escalier-lang/escalier/actions/workflows/ci.yml/badge.svg)](https://github.com/escalier-lang/escalier/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/escalier-lang/escalier/branch/main/graph/badge.svg?token=0r6KE7snsL)](https://codecov.io/gh/escalier-lang/escalier)
 
 A compile-to-JavaScript language with tight TypeScript integration. See
 [design/mvp/README.md](design/mvp/README.md) for information about planned
@@ -36,5 +36,5 @@ The parser is broken down into two parts:
 
 NOTE: The AST models functions as lambdas whereas the CST does not.
 
-See [crates/tree_sitter_crochet/README.md](crates/tree_sitter_crochet/README.md)
+See [crates/tree_sitter_escalier/README.md](crates/tree_sitter_escalier/README.md)
 for details on how to modify the tree-sitter parser.

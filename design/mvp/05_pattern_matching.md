@@ -2,7 +2,7 @@
 
 Pattern matching is like a `switch`-`case` but you can match against structured
 data and the case statements can use the same patterns that are use with
-`if`-`let`. Here's one example of what this looks like in Crochet:
+`if`-`let`. Here's one example of what this looks like in Escalier:
 
 ```ts
 type Event =

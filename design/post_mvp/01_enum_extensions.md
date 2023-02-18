@@ -11,7 +11,7 @@ NOTE: This example was adapted from an example in "The Rust Programming
 Language" book.
 
 ```ts
-// network.crochet
+// network.esc
 enum IpAddr {
     V4(string),
     V6(string),
@@ -48,7 +48,7 @@ if (addr instanceof IpAddr.V4) {
 ```
 
 Interop with TypeScript shouldn't be an issue since v5.0 will be unifying enums
-and unions. We can represent a Crochet enum in TypeScript as a union of
+and unions. We can represent a Escalier enum in TypeScript as a union of
 qualified classes, e.g.
 
 ```ts
