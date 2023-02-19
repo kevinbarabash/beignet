@@ -773,32 +773,12 @@ pub fn infer_expr(
         // This is only need for classes that are expressions.  Allowing this
         // seems like a bad idea.
         ExprKind::Class(_) => todo!(),
-        ExprKind::DoExpr(DoExpr { body }) => {
-            // let mut new_ctx = ctx.clone();
-            // let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
-            // let mut s = Subst::new();
-
-            // for expr in body {
-            //     new_ctx = new_ctx.clone();
-            //     let (new_s, new_t) = infer_expr(&mut new_ctx, expr, is_lvalue)?;
-
-            //     t = new_t.apply(&s);
-            //     s = compose_subs(&new_s, &s);
-            // }
-
-            // Ok((s, t))
-            infer_body(body, ctx)
-        }
+        ExprKind::DoExpr(DoExpr { body }) => infer_body(body, ctx),
         ExprKind::LetDecl(LetDecl {
             pattern,
             type_ann,
             init,
         }) => {
-            // infer_let(pat, type_ann, init, body, ctx, &PatternUsage::Assign);
-
-            // We don't need to do this here anymore since infer_body() does
-            // this for us now.
-            // let mut new_ctx = ctx.clone();
             let (pa, s1) =
                 infer_pattern_and_init(pattern, type_ann, init, ctx, &PatternUsage::Assign)?;
 
@@ -809,12 +789,6 @@ pub fn infer_expr(
                 ctx.insert_binding(name.to_owned(), binding.to_owned());
             }
 
-            // let (s2, t2) = infer_expr(&mut new_ctx, body, false)?;
-
-            // ctx.count = new_ctx.count;
-
-            // let s = compose_subs(&s2, &s1);
-            // let t = t2;
             let s = s1;
             let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
 
