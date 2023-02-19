@@ -786,45 +786,7 @@ fn build_body(
         // temporary variables correctly.
         BlockStmtOrExpr::Expr(Box::from(build_expr(&body[0], stmts, ctx)))
     } else {
-        let mut new_stmts: Vec<Stmt> = vec![];
-        for (i, expr) in body.iter().enumerate() {
-            match &expr.kind {
-                values::ExprKind::LetDecl(values::LetDecl {
-                    pattern,
-                    type_ann: _,
-                    init,
-                }) => {
-                    let stmt = match build_pattern(pattern, &mut new_stmts, ctx) {
-                        Some(name) => build_const_decl_stmt_with_pat(
-                            name,
-                            build_expr(init, &mut new_stmts, ctx),
-                        ),
-                        None => todo!(),
-                    };
-                    new_stmts.push(stmt);
-                }
-                _ => {
-                    let expr = build_expr(expr, &mut new_stmts, ctx);
-
-                    if i == len - 1 {
-                        new_stmts.push(Stmt::Return(ReturnStmt {
-                            span: DUMMY_SP,
-                            arg: Some(Box::from(expr)),
-                        }));
-                    } else {
-                        new_stmts.push(Stmt::Expr(ExprStmt {
-                            span: DUMMY_SP,
-                            expr: Box::from(expr),
-                        }));
-                    }
-                }
-            }
-        }
-
-        BlockStmtOrExpr::BlockStmt(BlockStmt {
-            span: DUMMY_SP,
-            stmts: new_stmts,
-        })
+        BlockStmtOrExpr::BlockStmt(build_body_block_stmt(body, ctx))
     }
 }
 
