@@ -386,7 +386,8 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 .map(|arg| build_pattern(&arg.pat, stmts, ctx).unwrap())
                 .collect();
 
-            let body = build_lambda_body(body.as_ref(), ctx);
+            let body = build_body(body, stmts, ctx);
+            // let body = build_lambda_body(body.as_ref(), ctx);
 
             Expr::Arrow(ArrowExpr {
                 span,
@@ -502,7 +503,9 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             })
         }
         values::ExprKind::Fix(values::Fix { expr, .. }) => match &expr.kind {
-            values::ExprKind::Lambda(values::Lambda { body, .. }) => build_expr(body, stmts, ctx),
+            values::ExprKind::Lambda(values::Lambda { body, .. }) => {
+                build_expr(&body[0], stmts, ctx)
+            }
             _ => panic!("Fix should only wrap a lambda"),
         },
         values::ExprKind::IfElse(values::IfElse {
@@ -766,6 +769,82 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
     }
 }
 
+fn build_body(
+    body: &Vec<values::Expr>,
+    stmts: &mut Vec<Stmt>,
+    ctx: &mut Context,
+) -> BlockStmtOrExpr {
+    let len = body.len();
+
+    if body.is_empty() {
+        BlockStmtOrExpr::BlockStmt(BlockStmt {
+            span: DUMMY_SP,
+            stmts: vec![],
+        })
+    } else if len == 1 {
+        // TODO: Fix this - it doesn't doesn't handle expressions that introduce
+        // temporary variables correctly.
+        BlockStmtOrExpr::Expr(Box::from(build_expr(&body[0], stmts, ctx)))
+    } else {
+        BlockStmtOrExpr::BlockStmt(build_body_block_stmt(body, ctx))
+    }
+}
+
+fn build_body_block_stmt(body: &[values::Expr], ctx: &mut Context) -> BlockStmt {
+    let mut new_stmts: Vec<Stmt> = vec![];
+    let len = body.len();
+
+    for (i, expr) in body.iter().enumerate() {
+        match &expr.kind {
+            values::ExprKind::LetDecl(values::LetDecl {
+                pattern,
+                type_ann: _,
+                init,
+            }) => {
+                let stmt = match build_pattern(pattern, &mut new_stmts, ctx) {
+                    Some(name) => {
+                        build_const_decl_stmt_with_pat(name, build_expr(init, &mut new_stmts, ctx))
+                    }
+                    None => todo!(),
+                };
+                new_stmts.push(stmt);
+            }
+            _ => {
+                let expr = build_expr(expr, &mut new_stmts, ctx);
+
+                if i == len - 1 {
+                    new_stmts.push(Stmt::Return(ReturnStmt {
+                        span: DUMMY_SP,
+                        arg: Some(Box::from(expr)),
+                    }));
+                } else {
+                    new_stmts.push(Stmt::Expr(ExprStmt {
+                        span: DUMMY_SP,
+                        expr: Box::from(expr),
+                    }));
+                }
+            }
+        }
+    }
+
+    if body.is_empty() {
+        let undefined = swc_ecma_ast::Expr::Ident(swc_ecma_ast::Ident {
+            span: DUMMY_SP,
+            sym: swc_atoms::JsWord::from(String::from("undefined")),
+            optional: false,
+        });
+        new_stmts.push(Stmt::Return(ReturnStmt {
+            span: DUMMY_SP,
+            arg: Some(Box::from(undefined)),
+        }));
+    }
+
+    BlockStmt {
+        span: DUMMY_SP,
+        stmts: new_stmts,
+    }
+}
+
 fn build_let_expr(
     let_expr: &values::LetExpr,
     consequent: &values::Expr,
@@ -962,38 +1041,13 @@ fn build_lit(lit: &values::Lit) -> Lit {
     }
 }
 
-// TODO: have an intermediary from between the AST and what we used for
-// codegen that unwraps `Let` nodes into vectors before converting them
-// to statements.
-fn build_lambda_body(body: &values::Expr, ctx: &mut Context) -> BlockStmtOrExpr {
-    let mut stmts: Vec<Stmt> = vec![];
-
-    let ret_expr = _build_expr(body, &mut stmts, ctx);
-
-    if stmts.is_empty() {
-        // Use fat arrow shorthand, e.g. (x) => x
-        BlockStmtOrExpr::Expr(Box::from(ret_expr))
-    } else {
-        let ret = Stmt::Return(ReturnStmt {
-            span: DUMMY_SP,
-            arg: Some(Box::from(ret_expr)),
-        });
-        stmts.push(ret);
-
-        BlockStmtOrExpr::BlockStmt(BlockStmt {
-            span: DUMMY_SP,
-            stmts,
-        })
-    }
-}
-
 fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Class {
     let body: Vec<ClassMember> = class
         .body
         .iter()
         .filter_map(|member| match member {
             values::ClassMember::Constructor(constructor) => {
-                let body = build_fn_body(&constructor.body, ctx);
+                let body = build_body_block_stmt(&constructor.body, ctx);
                 // In Crochet, `self` is always the first param in methods, but
                 // it represents `this` in JavaScript which is implicit so we
                 // ignore it here.
@@ -1024,7 +1078,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
                 }))
             }
             values::ClassMember::Method(method) => {
-                let body = build_fn_body(&method.lambda.body, ctx);
+                let body = build_body_block_stmt(&method.lambda.body, ctx);
                 // In Crochet, `self` is always the first param in non-static
                 // methods, but it represents `this` in JavaScript which is
                 // implicit so we ignore it here.
@@ -1100,30 +1154,6 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
         type_params: None,
         implements: vec![],
         body,
-    }
-}
-
-fn build_fn_body(body: &values::Expr, ctx: &mut Context) -> BlockStmt {
-    let mut stmts: Vec<Stmt> = vec![];
-
-    let ret_expr = _build_expr(body, &mut stmts, ctx);
-    let ret = Stmt::Return(ReturnStmt {
-        span: DUMMY_SP,
-        arg: Some(Box::from(ret_expr)),
-    });
-
-    if stmts.is_empty() {
-        BlockStmt {
-            span: DUMMY_SP,
-            stmts: vec![ret],
-        }
-    } else {
-        stmts.push(ret);
-
-        BlockStmt {
-            span: DUMMY_SP,
-            stmts,
-        }
     }
 }
 

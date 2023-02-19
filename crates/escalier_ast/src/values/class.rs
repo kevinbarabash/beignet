@@ -19,7 +19,7 @@ pub enum ClassMember {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Constructor {
     pub params: Vec<EFnParam>,
-    pub body: Box<Expr>,
+    pub body: Vec<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

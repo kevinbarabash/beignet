@@ -133,7 +133,9 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
             params.iter_mut().for_each(|param| {
                 update_fn_param_pat(&mut param.pat, s);
             });
-            update_expr(body, s);
+            body.iter_mut().for_each(|expr| {
+                update_expr(expr, s);
+            });
         }
         ExprKind::Let(Let {
             pattern,

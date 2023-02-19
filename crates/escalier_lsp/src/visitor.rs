@@ -195,7 +195,9 @@ pub trait Visitor {
                 if let Some(return_type) = return_type {
                     self._visit_type_ann(return_type);
                 }
-                self._visit_expr(body);
+                body.iter_mut().for_each(|child| {
+                    self._visit_expr(child);
+                });
             }
             ExprKind::Let(Let {
                 pattern,
@@ -289,7 +291,9 @@ pub trait Visitor {
                                     self._visit_type_ann(type_ann);
                                 }
                             });
-                            self._visit_expr(body);
+                            body.iter_mut().for_each(|child| {
+                                self._visit_expr(child);
+                            });
                         }
                         ClassMember::Method(ClassMethod {
                             key: _,
@@ -306,7 +310,9 @@ pub trait Visitor {
                                     self._visit_type_ann(type_ann);
                                 }
                             });
-                            self._visit_expr(&mut lambda.body);
+                            lambda.body.iter_mut().for_each(|child| {
+                                self._visit_expr(child);
+                            });
                         }
                         ClassMember::Prop(ClassProp { key: _, value, .. }) => {
                             if let Some(value) = value {

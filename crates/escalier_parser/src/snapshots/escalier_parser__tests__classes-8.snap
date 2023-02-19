@@ -66,21 +66,7 @@ Ok(
                                 kind: Getter,
                                 lambda: Lambda {
                                     params: [],
-                                    body: Expr {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 0,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 0,
-                                            },
-                                        },
-                                        span: 0..0,
-                                        kind: Empty,
-                                        inferred_type: None,
-                                    },
+                                    body: [],
                                     is_async: false,
                                     return_type: None,
                                     type_params: None,
