@@ -447,7 +447,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         }
         values::ExprKind::Fix(values::Fix { expr, .. }) => match &expr.kind {
             values::ExprKind::Lambda(values::Lambda { body, .. }) => {
-                build_expr(&body[0], stmts, ctx)
+                build_expr(&body.stmts[0], stmts, ctx)
             }
             _ => panic!("Fix should only wrap a lambda"),
         },
@@ -469,17 +469,11 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 // if (cond) { ...; $temp_n = <cons_res> } else { ...; $temp_n = <alt_res> }
                 let test = Box::from(build_expr(cond.as_ref(), stmts, ctx));
                 let cons = Box::from(Stmt::Block(build_body_block_stmt(
-                    consequent.as_ref(),
-                    &temp_id,
-                    ctx,
+                    consequent, &temp_id, ctx,
                 )));
-                let alt = alternate.as_ref().map(|alt| {
-                    Box::from(Stmt::Block(build_body_block_stmt(
-                        alt.as_ref(),
-                        &temp_id,
-                        ctx,
-                    )))
-                });
+                let alt = alternate
+                    .as_ref()
+                    .map(|alt| Box::from(Stmt::Block(build_body_block_stmt(alt, &temp_id, ctx))));
                 stmts.push(Stmt::If(IfStmt {
                     span,
                     test,
@@ -650,14 +644,14 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             },
         })),
         values::ExprKind::DoExpr(do_expr) => {
-            let len = do_expr.body.len();
+            let len = do_expr.body.stmts.len();
 
             let temp_id = ctx.new_ident();
             let temp_decl = build_let_decl_stmt(&temp_id);
             stmts.push(temp_decl);
 
             let mut new_stmts: Vec<Stmt> = vec![];
-            for (i, expr) in do_expr.body.iter().enumerate() {
+            for (i, expr) in do_expr.body.stmts.iter().enumerate() {
                 match &expr.kind {
                     values::ExprKind::LetDecl(values::LetDecl {
                         pattern,
@@ -712,14 +706,10 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
     }
 }
 
-fn build_body(
-    body: &Vec<values::Expr>,
-    stmts: &mut Vec<Stmt>,
-    ctx: &mut Context,
-) -> BlockStmtOrExpr {
-    let len = body.len();
+fn build_body(body: &values::Block, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> BlockStmtOrExpr {
+    let len = body.stmts.len();
 
-    if body.is_empty() {
+    if body.stmts.is_empty() {
         BlockStmtOrExpr::BlockStmt(BlockStmt {
             span: DUMMY_SP,
             stmts: vec![],
@@ -727,17 +717,17 @@ fn build_body(
     } else if len == 1 {
         // TODO: Fix this - it doesn't doesn't handle expressions that introduce
         // temporary variables correctly.
-        BlockStmtOrExpr::Expr(Box::from(build_expr(&body[0], stmts, ctx)))
+        BlockStmtOrExpr::Expr(Box::from(build_expr(&body.stmts[0], stmts, ctx)))
     } else {
         BlockStmtOrExpr::BlockStmt(build_body_block_stmt_fn(body, ctx))
     }
 }
 
-fn build_body_block_stmt_fn(body: &[values::Expr], ctx: &mut Context) -> BlockStmt {
+fn build_body_block_stmt_fn(body: &values::Block, ctx: &mut Context) -> BlockStmt {
     let mut new_stmts: Vec<Stmt> = vec![];
-    let len = body.len();
+    let len = body.stmts.len();
 
-    for (i, expr) in body.iter().enumerate() {
+    for (i, expr) in body.stmts.iter().enumerate() {
         match &expr.kind {
             values::ExprKind::LetDecl(values::LetDecl {
                 pattern,
@@ -770,7 +760,7 @@ fn build_body_block_stmt_fn(body: &[values::Expr], ctx: &mut Context) -> BlockSt
         }
     }
 
-    if body.is_empty() {
+    if body.stmts.is_empty() {
         let undefined = swc_ecma_ast::Expr::Ident(swc_ecma_ast::Ident {
             span: DUMMY_SP,
             sym: swc_atoms::JsWord::from(String::from("undefined")),
@@ -788,11 +778,11 @@ fn build_body_block_stmt_fn(body: &[values::Expr], ctx: &mut Context) -> BlockSt
     }
 }
 
-fn build_body_block_stmt(body: &[values::Expr], ret_id: &Ident, ctx: &mut Context) -> BlockStmt {
+fn build_body_block_stmt(body: &values::Block, ret_id: &Ident, ctx: &mut Context) -> BlockStmt {
     let mut new_stmts: Vec<Stmt> = vec![];
-    let len = body.len();
+    let len = body.stmts.len();
 
-    for (i, expr) in body.iter().enumerate() {
+    for (i, expr) in body.stmts.iter().enumerate() {
         match &expr.kind {
             values::ExprKind::LetDecl(values::LetDecl {
                 pattern,
@@ -833,7 +823,7 @@ fn build_body_block_stmt(body: &[values::Expr], ret_id: &Ident, ctx: &mut Contex
         }
     }
 
-    if body.is_empty() {
+    if body.stmts.is_empty() {
         let undefined = swc_ecma_ast::Expr::Ident(swc_ecma_ast::Ident {
             span: DUMMY_SP,
             sym: swc_atoms::JsWord::from(String::from("undefined")),
@@ -861,8 +851,8 @@ fn build_body_block_stmt(body: &[values::Expr], ret_id: &Ident, ctx: &mut Contex
 
 fn build_let_expr(
     let_expr: &values::LetExpr,
-    consequent: &[values::Expr],
-    alternate: &Option<Vec<values::Expr>>,
+    consequent: &values::Block,
+    alternate: &Option<values::Block>,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> Expr {
@@ -888,13 +878,9 @@ fn build_let_expr(
 
     match cond {
         Some(cond) => {
-            let alt = alternate.as_ref().map(|alt| {
-                Box::from(Stmt::Block(build_body_block_stmt(
-                    alt.as_ref(),
-                    &ret_id,
-                    ctx,
-                )))
-            });
+            let alt = alternate
+                .as_ref()
+                .map(|alt| Box::from(Stmt::Block(build_body_block_stmt(alt, &ret_id, ctx))));
             let if_else = Stmt::If(IfStmt {
                 span: DUMMY_SP,
                 test: Box::from(cond),

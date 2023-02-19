@@ -145,72 +145,75 @@ Ok(
                                         optional: false,
                                     },
                                 ],
-                                body: [
-                                    Expr {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 34,
+                                body: Block {
+                                    span: 34..41,
+                                    stmts: [
+                                        Expr {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 34,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 41,
+                                                },
                                             },
-                                            end: Position {
-                                                line: 0,
-                                                column: 41,
-                                            },
-                                        },
-                                        span: 34..41,
-                                        kind: Member(
-                                            Member {
-                                                obj: Expr {
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 0,
-                                                            column: 34,
+                                            span: 34..41,
+                                            kind: Member(
+                                                Member {
+                                                    obj: Expr {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 34,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 37,
+                                                            },
                                                         },
-                                                        end: Position {
-                                                            line: 0,
-                                                            column: 37,
-                                                        },
+                                                        span: 34..37,
+                                                        kind: Ident(
+                                                            Ident {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 34,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 37,
+                                                                    },
+                                                                },
+                                                                span: 34..37,
+                                                                name: "foo",
+                                                            },
+                                                        ),
+                                                        inferred_type: None,
                                                     },
-                                                    span: 34..37,
-                                                    kind: Ident(
+                                                    prop: Ident(
                                                         Ident {
                                                             loc: SourceLocation {
                                                                 start: Position {
                                                                     line: 0,
-                                                                    column: 34,
+                                                                    column: 38,
                                                                 },
                                                                 end: Position {
                                                                     line: 0,
-                                                                    column: 37,
+                                                                    column: 41,
                                                                 },
                                                             },
-                                                            span: 34..37,
-                                                            name: "foo",
+                                                            span: 38..41,
+                                                            name: "bar",
                                                         },
                                                     ),
-                                                    inferred_type: None,
                                                 },
-                                                prop: Ident(
-                                                    Ident {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 0,
-                                                                column: 38,
-                                                            },
-                                                            end: Position {
-                                                                line: 0,
-                                                                column: 41,
-                                                            },
-                                                        },
-                                                        span: 38..41,
-                                                        name: "bar",
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                        inferred_type: None,
-                                    },
-                                ],
+                                            ),
+                                            inferred_type: None,
+                                        },
+                                    ],
+                                },
                                 is_async: false,
                                 return_type: None,
                                 type_params: Some(

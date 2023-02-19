@@ -262,40 +262,43 @@ Ok(
                                             inferred_type: None,
                                         },
                                         guard: None,
-                                        body: [
-                                            Expr {
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 2,
-                                                        column: 33,
-                                                    },
-                                                    end: Position {
-                                                        line: 2,
-                                                        column: 41,
-                                                    },
-                                                },
-                                                span: 70..78,
-                                                kind: Lit(
-                                                    Str(
-                                                        Str {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 2,
-                                                                    column: 33,
-                                                                },
-                                                                end: Position {
-                                                                    line: 2,
-                                                                    column: 41,
-                                                                },
-                                                            },
-                                                            span: 70..78,
-                                                            value: "object",
+                                        body: Block {
+                                            span: 70..78,
+                                            stmts: [
+                                                Expr {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 2,
+                                                            column: 33,
                                                         },
+                                                        end: Position {
+                                                            line: 2,
+                                                            column: 41,
+                                                        },
+                                                    },
+                                                    span: 70..78,
+                                                    kind: Lit(
+                                                        Str(
+                                                            Str {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 2,
+                                                                        column: 33,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 2,
+                                                                        column: 41,
+                                                                    },
+                                                                },
+                                                                span: 70..78,
+                                                                value: "object",
+                                                            },
+                                                        ),
                                                     ),
-                                                ),
-                                                inferred_type: None,
-                                            },
-                                        ],
+                                                    inferred_type: None,
+                                                },
+                                            ],
+                                        },
                                     },
                                     Arm {
                                         loc: SourceLocation {
@@ -325,40 +328,43 @@ Ok(
                                             inferred_type: None,
                                         },
                                         guard: None,
-                                        body: [
-                                            Expr {
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 3,
-                                                        column: 21,
-                                                    },
-                                                    end: Position {
-                                                        line: 3,
-                                                        column: 34,
-                                                    },
-                                                },
-                                                span: 101..114,
-                                                kind: Lit(
-                                                    Str(
-                                                        Str {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 3,
-                                                                    column: 21,
-                                                                },
-                                                                end: Position {
-                                                                    line: 3,
-                                                                    column: 34,
-                                                                },
-                                                            },
-                                                            span: 101..114,
-                                                            value: "fallthrough",
+                                        body: Block {
+                                            span: 101..114,
+                                            stmts: [
+                                                Expr {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 3,
+                                                            column: 21,
                                                         },
+                                                        end: Position {
+                                                            line: 3,
+                                                            column: 34,
+                                                        },
+                                                    },
+                                                    span: 101..114,
+                                                    kind: Lit(
+                                                        Str(
+                                                            Str {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 3,
+                                                                        column: 21,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 3,
+                                                                        column: 34,
+                                                                    },
+                                                                },
+                                                                span: 101..114,
+                                                                value: "fallthrough",
+                                                            },
+                                                        ),
                                                     ),
-                                                ),
-                                                inferred_type: None,
-                                            },
-                                        ],
+                                                    inferred_type: None,
+                                                },
+                                            ],
+                                        },
                                     },
                                 ],
                             },

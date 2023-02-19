@@ -49,11 +49,11 @@ pub enum Statement {
     },
 }
 
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// struct Block {
-//     pub span: Span,
-//     pub stmts: Vec<Expr>,
-// }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Block {
+    pub span: Span,
+    pub stmts: Vec<Expr>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct App {
@@ -70,8 +70,8 @@ pub struct Fix {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IfElse {
     pub cond: Box<Expr>,
-    pub consequent: Vec<Expr>,
-    pub alternate: Option<Vec<Expr>>,
+    pub consequent: Block,
+    pub alternate: Option<Block>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,7 +83,7 @@ pub struct LetExpr {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lambda {
     pub params: Vec<EFnParam>,
-    pub body: Vec<Expr>,
+    pub body: Block,
     pub is_async: bool,
     pub return_type: Option<TypeAnn>,
     pub type_params: Option<Vec<TypeParam>>,
@@ -261,7 +261,7 @@ pub struct Arm {
     pub span: Span,
     pub pattern: Pattern,
     pub guard: Option<Expr>,
-    pub body: Vec<Expr>,
+    pub body: Block,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -279,7 +279,7 @@ pub struct Regex {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DoExpr {
-    pub body: Vec<Expr>,
+    pub body: Block,
 }
 
 // Later on we can make this a real decl.  For now, it's here to ease the move

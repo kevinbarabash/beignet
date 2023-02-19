@@ -86,7 +86,10 @@ Ok(
                                         optional: false,
                                     },
                                 ],
-                                body: [],
+                                body: Block {
+                                    span: 27..29,
+                                    stmts: [],
+                                },
                             },
                         ),
                     ],

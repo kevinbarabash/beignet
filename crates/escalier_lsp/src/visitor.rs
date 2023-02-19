@@ -160,11 +160,11 @@ pub trait Visitor {
                 alternate,
             }) => {
                 self._visit_expr(cond);
-                consequent.iter_mut().for_each(|child| {
+                consequent.stmts.iter_mut().for_each(|child| {
                     self._visit_expr(child);
                 });
                 if let Some(alternate) = alternate {
-                    alternate.iter_mut().for_each(|child| {
+                    alternate.stmts.iter_mut().for_each(|child| {
                         self._visit_expr(child);
                     });
                 }
@@ -199,7 +199,7 @@ pub trait Visitor {
                 if let Some(return_type) = return_type {
                     self._visit_type_ann(return_type);
                 }
-                body.iter_mut().for_each(|child| {
+                body.stmts.iter_mut().for_each(|child| {
                     self._visit_expr(child);
                 });
             }
@@ -260,7 +260,9 @@ pub trait Visitor {
                     if let Some(guard) = guard {
                         self._visit_expr(guard);
                     }
-                    body.iter_mut().for_each(|child| self._visit_expr(child));
+                    body.stmts
+                        .iter_mut()
+                        .for_each(|child| self._visit_expr(child));
                 })
             }
             // TODO: finish implementing this
@@ -280,7 +282,7 @@ pub trait Visitor {
                                     self._visit_type_ann(type_ann);
                                 }
                             });
-                            body.iter_mut().for_each(|child| {
+                            body.stmts.iter_mut().for_each(|child| {
                                 self._visit_expr(child);
                             });
                         }
@@ -299,7 +301,7 @@ pub trait Visitor {
                                     self._visit_type_ann(type_ann);
                                 }
                             });
-                            lambda.body.iter_mut().for_each(|child| {
+                            lambda.body.stmts.iter_mut().for_each(|child| {
                                 self._visit_expr(child);
                             });
                         }

@@ -860,15 +860,12 @@ pub fn infer_expr(
     Ok((s, t))
 }
 
-pub fn infer_body(
-    body: &mut Vec<Expr>,
-    ctx: &mut Context,
-) -> Result<(Subst, Type), Vec<TypeError>> {
+pub fn infer_body(body: &mut Block, ctx: &mut Context) -> Result<(Subst, Type), Vec<TypeError>> {
     let mut new_ctx = ctx.clone();
     let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
     let mut s = Subst::new();
 
-    for expr in body {
+    for expr in &mut body.stmts {
         new_ctx = new_ctx.clone();
         let (new_s, new_t) = infer_expr(&mut new_ctx, expr, false)?;
 

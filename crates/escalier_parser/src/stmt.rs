@@ -108,8 +108,7 @@ fn parse_declaration(
         // `let fib = fix((fib) => (n) => ...)`
         // TODO: Fix always wraps a lambda
 
-        let init_node = decl.child_by_field_name("value").unwrap();
-        let init = parse_expression(&init_node, src)?;
+        let value = decl.child_by_field_name("value").unwrap();
 
         let lambda_expr = Expr {
             loc: SourceLocation::from(&decl),
@@ -120,7 +119,10 @@ fn parse_declaration(
                     type_ann: type_ann.clone(),
                     optional: false,
                 }],
-                body: vec![init],
+                body: Block {
+                    span: value.byte_range(),
+                    stmts: vec![parse_expression(&value, src)?],
+                },
                 is_async: false,
                 return_type: None,
                 type_params: None, // TODO: support type params on VarDecls
@@ -196,7 +198,7 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
                     src,
                 )?;
                 let body_node = child.child_by_field_name("body").unwrap();
-                let body = parse_block_statement_as_vec(&body_node, src)?;
+                let body = parse_block_statement(&body_node, src)?;
                 let return_type = match child.child_by_field_name("return_type") {
                     Some(type_ann) => Some(parse_type_ann(&type_ann, src)?),
                     None => None,
@@ -289,10 +291,7 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
     Ok(vec![stmt])
 }
 
-pub fn parse_block_statement_as_vec(
-    node: &tree_sitter::Node,
-    src: &str,
-) -> Result<Vec<Expr>, ParseError> {
+pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Block, ParseError> {
     assert_eq!(node.kind(), "statement_block");
 
     let mut cursor = node.walk();
@@ -397,5 +396,8 @@ pub fn parse_block_statement_as_vec(
         result.push(expr);
     }
 
-    Ok(result)
+    Ok(Block {
+        span: node.byte_range(),
+        stmts: result,
+    })
 }
