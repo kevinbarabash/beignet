@@ -203,6 +203,7 @@ pub fn infer_expr(
         }
         ExprKind::Fix(Fix { expr, .. }) => {
             let (s1, t) = infer_expr(ctx, expr, false)?;
+            eprintln!("t = {t}");
             let tv = ctx.fresh_var();
             let param = TFnParam {
                 pat: TPat::Ident(types::BindingIdent {
@@ -421,7 +422,7 @@ pub fn infer_expr(
 
             let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-            let (body_s, mut body_t) = infer_expr(&mut new_ctx, body, false)?;
+            let (body_s, mut body_t) = infer_body(body, &mut new_ctx)?;
             ss.push(body_s);
 
             ctx.count = new_ctx.count;
@@ -809,7 +810,10 @@ pub fn infer_expr(
     Ok((s, t))
 }
 
-fn infer_body(body: &mut Vec<Expr>, ctx: &mut Context) -> Result<(Subst, Type), Vec<TypeError>> {
+pub fn infer_body(
+    body: &mut Vec<Expr>,
+    ctx: &mut Context,
+) -> Result<(Subst, Type), Vec<TypeError>> {
     let mut new_ctx = ctx.clone();
     let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
     let mut s = Subst::new();
@@ -821,6 +825,8 @@ fn infer_body(body: &mut Vec<Expr>, ctx: &mut Context) -> Result<(Subst, Type), 
         t = new_t.apply(&s);
         s = compose_subs(&new_s, &s);
     }
+
+    ctx.count = new_ctx.count;
 
     Ok((s, t))
 }

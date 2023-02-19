@@ -83,7 +83,7 @@ pub struct LetExpr {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lambda {
     pub params: Vec<EFnParam>,
-    pub body: Box<Expr>,
+    pub body: Vec<Expr>,
     pub is_async: bool,
     pub return_type: Option<TypeAnn>,
     pub type_params: Option<Vec<TypeParam>>,

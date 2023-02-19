@@ -98,12 +98,6 @@ fn parse_declaration(
     let name = decl.child_by_field_name("name").unwrap();
     let pattern = parse_pattern(&name, src)?;
 
-    let init = if let Some(init) = decl.child_by_field_name("value") {
-        Some(Box::from(parse_expression(&init, src)?))
-    } else {
-        None
-    };
-
     let type_ann = if let Some(type_ann) = decl.child_by_field_name("type") {
         Some(parse_type_ann(&type_ann, src)?)
     } else {
@@ -114,6 +108,9 @@ fn parse_declaration(
         // `let fib = fix((fib) => (n) => ...)`
         // TODO: Fix always wraps a lambda
 
+        let init_node = decl.child_by_field_name("value").unwrap();
+        let init = parse_expression(&init_node, src)?;
+
         let lambda_expr = Expr {
             loc: SourceLocation::from(&decl),
             span: decl.byte_range(),
@@ -123,7 +120,7 @@ fn parse_declaration(
                     type_ann: type_ann.clone(),
                     optional: false,
                 }],
-                body: init.unwrap(),
+                body: vec![init],
                 is_async: false,
                 return_type: None,
                 type_params: None, // TODO: support type params on VarDecls
@@ -149,6 +146,12 @@ fn parse_declaration(
             declare,
         }
     } else {
+        let init = if let Some(init) = decl.child_by_field_name("value") {
+            Some(Box::from(parse_expression(&init, src)?))
+        } else {
+            None
+        };
+
         Statement::VarDecl {
             loc: SourceLocation::from(node),
             span: node.byte_range(),
@@ -192,7 +195,8 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
                     &child.child_by_field_name("parameters").unwrap(),
                     src,
                 )?;
-                let body = parse_block_statement(&child.child_by_field_name("body").unwrap(), src)?;
+                let body_node = child.child_by_field_name("body").unwrap();
+                let body = parse_block_statement_as_vec(&body_node, src)?;
                 let return_type = match child.child_by_field_name("return_type") {
                     Some(type_ann) => Some(parse_type_ann(&type_ann, src)?),
                     None => None,
@@ -215,17 +219,14 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
                 let type_params = parse_type_params_for_node(&child, src)?;
 
                 if key.name.as_str() == "constructor" {
-                    class_members.push(ClassMember::Constructor(Constructor {
-                        params,
-                        body: Box::from(body),
-                    }));
+                    class_members.push(ClassMember::Constructor(Constructor { params, body }));
                 } else {
                     class_members.push(ClassMember::Method(ClassMethod {
                         key,
                         kind,
                         lambda: Lambda {
                             params,
-                            body: Box::from(body),
+                            body,
                             is_async: child.child_by_field_name("async").is_some(),
                             return_type,
                             type_params,

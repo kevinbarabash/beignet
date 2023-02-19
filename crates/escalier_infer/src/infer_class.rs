@@ -3,7 +3,7 @@ use escalier_ast::values::{class::*, Lambda, PatternKind};
 use im::hashmap::HashMap;
 
 use crate::context::{Binding, Context};
-use crate::infer_expr::infer_expr;
+use crate::infer_expr::*;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_type_ann::*;
 use crate::scheme::Scheme;
@@ -53,7 +53,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
 
                 // TODO: ensure that constructors don't have a return statement
                 // TODO: add `self` and `Self` to new_ctx
-                let (body_s, _body_t) = infer_expr(&mut new_ctx, body, false)?;
+                let (body_s, _body_t) = infer_body(body, &mut new_ctx)?;
                 ss.push(body_s);
 
                 ctx.count = new_ctx.count;
@@ -170,7 +170,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                     t: interface_t,
                 };
                 new_ctx.insert_binding("self".to_string(), binding);
-                let (body_s, mut body_t) = infer_expr(&mut new_ctx, body, false)?;
+                let (body_s, mut body_t) = infer_body(body, &mut new_ctx)?;
                 ss.push(body_s);
 
                 ctx.count = new_ctx.count;

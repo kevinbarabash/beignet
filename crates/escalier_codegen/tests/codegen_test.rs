@@ -229,17 +229,15 @@ fn simple_if_else_inside_fn_as_expr() {
     let (js, _) = compile(src);
 
     insta::assert_snapshot!(js, @r###"
-    export const foo = ()=>{
-        let $temp_0;
-        if (cond) {
-            console.log("true");
-            $temp_0 = 5;
-        } else {
-            console.log("false");
-            $temp_0 = 10;
-        }
-        return $temp_0;
-    };
+    let $temp_0;
+    if (cond) {
+        console.log("true");
+        $temp_0 = 5;
+    } else {
+        console.log("false");
+        $temp_0 = 10;
+    }
+    export const foo = ()=>$temp_0;
     "###);
 }
 

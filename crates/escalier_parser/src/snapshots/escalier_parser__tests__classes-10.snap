@@ -86,21 +86,7 @@ Ok(
                                         optional: false,
                                     },
                                 ],
-                                body: Expr {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 0,
-                                            column: 0,
-                                        },
-                                        end: Position {
-                                            line: 0,
-                                            column: 0,
-                                        },
-                                    },
-                                    span: 0..0,
-                                    kind: Empty,
-                                    inferred_type: None,
-                                },
+                                body: [],
                             },
                         ),
                     ],
