@@ -525,13 +525,13 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
 
                 // if (cond) { ...; $temp_n = <cons_res> } else { ...; $temp_n = <alt_res> }
                 let test = Box::from(build_expr(cond.as_ref(), stmts, ctx));
-                let cons = Box::from(Stmt::Block(build_expr_in_new_scope(
+                let cons = Box::from(Stmt::Block(build_body_block_stmt(
                     consequent.as_ref(),
                     &temp_id,
                     ctx,
                 )));
                 let alt = alternate.as_ref().map(|alt| {
-                    Box::from(Stmt::Block(build_expr_in_new_scope(
+                    Box::from(Stmt::Block(build_body_block_stmt(
                         alt.as_ref(),
                         &temp_id,
                         ctx,
@@ -786,11 +786,11 @@ fn build_body(
         // temporary variables correctly.
         BlockStmtOrExpr::Expr(Box::from(build_expr(&body[0], stmts, ctx)))
     } else {
-        BlockStmtOrExpr::BlockStmt(build_body_block_stmt(body, ctx))
+        BlockStmtOrExpr::BlockStmt(build_body_block_stmt_fn(body, ctx))
     }
 }
 
-fn build_body_block_stmt(body: &[values::Expr], ctx: &mut Context) -> BlockStmt {
+fn build_body_block_stmt_fn(body: &[values::Expr], ctx: &mut Context) -> BlockStmt {
     let mut new_stmts: Vec<Stmt> = vec![];
     let len = body.len();
 
@@ -845,10 +845,81 @@ fn build_body_block_stmt(body: &[values::Expr], ctx: &mut Context) -> BlockStmt 
     }
 }
 
+fn build_body_block_stmt(body: &[values::Expr], ret_id: &Ident, ctx: &mut Context) -> BlockStmt {
+    let mut new_stmts: Vec<Stmt> = vec![];
+    let len = body.len();
+
+    for (i, expr) in body.iter().enumerate() {
+        match &expr.kind {
+            values::ExprKind::LetDecl(values::LetDecl {
+                pattern,
+                type_ann: _,
+                init,
+            }) => {
+                let stmt = match build_pattern(pattern, &mut new_stmts, ctx) {
+                    Some(name) => {
+                        build_const_decl_stmt_with_pat(name, build_expr(init, &mut new_stmts, ctx))
+                    }
+                    None => todo!(),
+                };
+                new_stmts.push(stmt);
+            }
+            _ => {
+                let expr = build_expr(expr, &mut new_stmts, ctx);
+
+                if i == len - 1 {
+                    new_stmts.push(Stmt::Expr(ExprStmt {
+                        span: DUMMY_SP,
+                        expr: Box::from(Expr::Assign(AssignExpr {
+                            span: DUMMY_SP,
+                            op: AssignOp::Assign,
+                            left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
+                                id: ret_id.to_owned(),
+                                type_ann: None,
+                            }))),
+                            right: Box::from(expr),
+                        })),
+                    }));
+                } else {
+                    new_stmts.push(Stmt::Expr(ExprStmt {
+                        span: DUMMY_SP,
+                        expr: Box::from(expr),
+                    }));
+                }
+            }
+        }
+    }
+
+    if body.is_empty() {
+        let undefined = swc_ecma_ast::Expr::Ident(swc_ecma_ast::Ident {
+            span: DUMMY_SP,
+            sym: swc_atoms::JsWord::from(String::from("undefined")),
+            optional: false,
+        });
+        new_stmts.push(Stmt::Expr(ExprStmt {
+            span: DUMMY_SP,
+            expr: Box::from(Expr::Assign(AssignExpr {
+                span: DUMMY_SP,
+                op: AssignOp::Assign,
+                left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
+                    id: ret_id.to_owned(),
+                    type_ann: None,
+                }))),
+                right: Box::from(undefined),
+            })),
+        }));
+    }
+
+    BlockStmt {
+        span: DUMMY_SP,
+        stmts: new_stmts,
+    }
+}
+
 fn build_let_expr(
     let_expr: &values::LetExpr,
-    consequent: &values::Expr,
-    alternate: &Option<Box<values::Expr>>,
+    consequent: &[values::Expr],
+    alternate: &Option<Vec<values::Expr>>,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> Expr {
@@ -864,7 +935,7 @@ fn build_let_expr(
 
     let cond = build_cond_for_pat(pat, &temp_id);
 
-    let mut block = build_expr_in_new_scope(consequent, &ret_id, ctx);
+    let mut block = build_body_block_stmt(consequent, &ret_id, ctx);
 
     if let Some(name) = build_pattern(pat, stmts, ctx) {
         // TODO: ignore the refutuable patterns when destructuring
@@ -875,7 +946,7 @@ fn build_let_expr(
     match cond {
         Some(cond) => {
             let alt = alternate.as_ref().map(|alt| {
-                Box::from(Stmt::Block(build_expr_in_new_scope(
+                Box::from(Stmt::Block(build_body_block_stmt(
                     alt.as_ref(),
                     &ret_id,
                     ctx,
@@ -913,7 +984,7 @@ fn build_arm(
 
     let cond = build_cond_for_pat(pat, id);
 
-    let mut block = build_expr_in_new_scope(body, ret_id, ctx);
+    let mut block = build_body_block_stmt(body, ret_id, ctx);
 
     // If pattern has assignables, assign them
     if let Some(name) = build_pattern(pat, stmts, ctx) {
@@ -1047,7 +1118,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
         .iter()
         .filter_map(|member| match member {
             values::ClassMember::Constructor(constructor) => {
-                let body = build_body_block_stmt(&constructor.body, ctx);
+                let body = build_body_block_stmt_fn(&constructor.body, ctx);
                 // In Crochet, `self` is always the first param in methods, but
                 // it represents `this` in JavaScript which is implicit so we
                 // ignore it here.
@@ -1078,7 +1149,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
                 }))
             }
             values::ClassMember::Method(method) => {
-                let body = build_body_block_stmt(&method.lambda.body, ctx);
+                let body = build_body_block_stmt_fn(&method.lambda.body, ctx);
                 // In Crochet, `self` is always the first param in non-static
                 // methods, but it represents `this` in JavaScript which is
                 // implicit so we ignore it here.

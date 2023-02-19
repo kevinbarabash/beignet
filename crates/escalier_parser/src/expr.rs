@@ -490,28 +490,28 @@ fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pars
     let condition = node.child_by_field_name("condition").unwrap();
     let condition = parse_expression(&condition, src)?;
     let consequent = node.child_by_field_name("consequence").unwrap();
-    let consequent = parse_block_statement(&consequent, src)?;
+    let consequent = parse_block_statement_as_vec(&consequent, src)?;
     let alternate = if let Some(alt) = node.child_by_field_name("alternative") {
-        let expr = match alt.kind() {
-            "statement_block" => parse_block_statement(&alt, src),
+        let exprs = match alt.kind() {
+            "statement_block" => parse_block_statement_as_vec(&alt, src)?,
             "else_clause" => {
                 let else_clause = alt.named_child(0).unwrap();
                 match else_clause.kind() {
-                    "if_expression" => parse_if_expression(&else_clause, src),
-                    "statement_block" => parse_block_statement(&else_clause, src),
+                    "if_expression" => vec![parse_if_expression(&else_clause, src)?],
+                    "statement_block" => parse_block_statement_as_vec(&else_clause, src)?,
                     kind => panic!("Unexpected else_clause child kind: '{kind}'"),
                 }
             }
             kind => panic!("Unexpected alternative kind: '{kind}'"),
         };
-        Some(Box::from(expr?))
+        Some(exprs)
     } else {
         None
     };
 
     let kind = ExprKind::IfElse(IfElse {
         cond: Box::from(condition),
-        consequent: Box::from(consequent),
+        consequent,
         alternate,
     });
 
@@ -527,8 +527,8 @@ fn parse_arm(node: &tree_sitter::Node, src: &str) -> Result<Arm, ParseError> {
     let pat = node.child_by_field_name("pattern").unwrap();
     let body = node.child_by_field_name("value").unwrap();
     let body = match body.kind() {
-        "statement_block" => parse_block_statement(&body, src)?,
-        _ => parse_expression(&body, src)?,
+        "statement_block" => parse_block_statement_as_vec(&body, src)?,
+        _ => vec![parse_expression(&body, src)?],
     };
 
     let guard = if let Some(cond) = node.child_by_field_name("condition") {
