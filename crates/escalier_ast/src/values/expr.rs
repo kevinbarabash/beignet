@@ -106,14 +106,6 @@ impl EFnParam {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Let {
-    pub pattern: Option<Pattern>,
-    pub type_ann: Option<TypeAnn>,
-    pub init: Box<Expr>,
-    pub body: Box<Expr>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Assign {
     pub left: Box<Expr>,
     pub right: Box<Expr>,
@@ -308,7 +300,6 @@ pub enum ExprKind {
     IfElse(IfElse),
     JSXElement(JSXElement),
     Lambda(Lambda),
-    Let(Let),
     Assign(Assign),
     LetExpr(LetExpr), // should only be used in `if let` expressions
     Lit(Lit),

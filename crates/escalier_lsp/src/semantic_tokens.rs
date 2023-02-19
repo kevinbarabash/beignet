@@ -164,7 +164,6 @@ impl Visitor for SemanticTokenVisitor {
             ExprKind::IfElse(_) => None,
             ExprKind::JSXElement(_) => None,
             ExprKind::Lambda(_) => None,
-            ExprKind::Let(_) => None,
             ExprKind::Assign(_) => None,
             ExprKind::LetExpr(_) => None,
             ExprKind::Lit(lit) => match lit {

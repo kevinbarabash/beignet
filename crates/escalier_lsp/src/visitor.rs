@@ -203,21 +203,6 @@ pub trait Visitor {
                     self._visit_expr(child);
                 });
             }
-            ExprKind::Let(Let {
-                pattern,
-                type_ann,
-                init,
-                body,
-            }) => {
-                if let Some(pattern) = pattern {
-                    self._visit_pattern(pattern);
-                }
-                if let Some(type_ann) = type_ann {
-                    self._visit_type_ann(type_ann);
-                }
-                self._visit_expr(init);
-                self._visit_expr(body);
-            }
             ExprKind::Assign(Assign { left, right, .. }) => {
                 self._visit_expr(left);
                 self._visit_expr(right);

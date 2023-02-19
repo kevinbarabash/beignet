@@ -502,30 +502,6 @@ pub fn infer_expr(
 
             Ok((s, t))
         }
-        ExprKind::Let(Let {
-            pattern,
-            type_ann,
-            init,
-            body,
-            ..
-        }) => match pattern {
-            Some(pat) => infer_let(pat, type_ann, init, body, ctx, &PatternUsage::Assign),
-            None => {
-                let mut new_ctx = ctx.clone();
-                let (init_s, init_t) = infer_expr(&mut new_ctx, init, false)?;
-
-                if init_t.kind != TypeKind::Keyword(TKeyword::Undefined) {
-                    eprintln!("WARNING: {init_t} was not assigned");
-                }
-
-                let (body_s, body_t) = infer_expr(&mut new_ctx, body, false)?;
-
-                let t = body_t.apply(&init_s);
-                let s = compose_subs(&body_s, &init_s);
-
-                Ok((s, t))
-            }
-        },
         ExprKind::Assign(assign) => {
             // TODO:
             // - if left is an identifier look it up to see if it exists in the context
@@ -901,36 +877,6 @@ pub fn infer_body(
     }
 
     ctx.count = new_ctx.count;
-
-    Ok((s, t))
-}
-
-fn infer_let(
-    pat: &mut Pattern,
-    type_ann: &mut Option<TypeAnn>,
-    init: &mut Expr,
-    body: &mut Expr,
-    ctx: &mut Context,
-    pu: &PatternUsage,
-) -> Result<(Subst, Type), Vec<TypeError>> {
-    let mut new_ctx = ctx.clone();
-    let (pa, s1) = infer_pattern_and_init(pat, type_ann, init, &mut new_ctx, pu)?;
-
-    // Inserts the new variables from infer_pattern_and_init() into the
-    // current context.
-    // TODO: have infer_pattern_and_init do this
-    for (name, binding) in pa {
-        new_ctx.insert_binding(name.to_owned(), binding.to_owned());
-    }
-
-    let (s2, t2) = infer_expr(&mut new_ctx, body, false)?;
-
-    ctx.count = new_ctx.count;
-
-    let s = compose_subs(&s2, &s1);
-    let t = t2;
-
-    update_pattern(pat, &s);
 
     Ok((s, t))
 }
