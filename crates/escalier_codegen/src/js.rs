@@ -1079,31 +1079,6 @@ fn build_lit(lit: &values::Lit) -> Lit {
     }
 }
 
-// TODO: have an intermediary from between the AST and what we used for
-// codegen that unwraps `Let` nodes into vectors before converting them
-// to statements.
-fn build_lambda_body(body: &values::Expr, ctx: &mut Context) -> BlockStmtOrExpr {
-    let mut stmts: Vec<Stmt> = vec![];
-
-    let ret_expr = _build_expr(body, &mut stmts, ctx);
-
-    if stmts.is_empty() {
-        // Use fat arrow shorthand, e.g. (x) => x
-        BlockStmtOrExpr::Expr(Box::from(ret_expr))
-    } else {
-        let ret = Stmt::Return(ReturnStmt {
-            span: DUMMY_SP,
-            arg: Some(Box::from(ret_expr)),
-        });
-        stmts.push(ret);
-
-        BlockStmtOrExpr::BlockStmt(BlockStmt {
-            span: DUMMY_SP,
-            stmts,
-        })
-    }
-}
-
 fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Class {
     let body: Vec<ClassMember> = class
         .body
@@ -1217,30 +1192,6 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
         type_params: None,
         implements: vec![],
         body,
-    }
-}
-
-fn build_fn_body(body: &values::Expr, ctx: &mut Context) -> BlockStmt {
-    let mut stmts: Vec<Stmt> = vec![];
-
-    let ret_expr = _build_expr(body, &mut stmts, ctx);
-    let ret = Stmt::Return(ReturnStmt {
-        span: DUMMY_SP,
-        arg: Some(Box::from(ret_expr)),
-    });
-
-    if stmts.is_empty() {
-        BlockStmt {
-            span: DUMMY_SP,
-            stmts: vec![ret],
-        }
-    } else {
-        stmts.push(ret);
-
-        BlockStmt {
-            span: DUMMY_SP,
-            stmts,
-        }
     }
 }
 
