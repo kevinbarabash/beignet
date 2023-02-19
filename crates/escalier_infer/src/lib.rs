@@ -3502,4 +3502,26 @@ mod tests {
 
         assert_eq!(get_value_type("a", &ctx), "15");
     }
+
+    #[test]
+    fn do_expr_empty() {
+        let src = r#"
+        let a = do {};
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("a", &ctx), "undefined");
+    }
+
+    #[test]
+    fn do_expr_last_child_is_a_let() {
+        let src = r#"
+        let a = do {
+            let x = 5;
+        };
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("a", &ctx), "undefined");
+    }
 }
