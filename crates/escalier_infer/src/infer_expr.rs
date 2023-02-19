@@ -249,18 +249,41 @@ pub fn infer_expr(
                 match &mut cond.kind {
                     ExprKind::LetExpr(LetExpr { pat, expr, .. }) => {
                         // TODO: warn if the pattern isn't refutable
-                        let (s1, t1) =
-                            infer_let(pat, &mut None, expr, consequent, ctx, &PatternUsage::Match)?;
-                        let (s2, t2) = infer_expr(ctx, alternate, false)?;
+                        // let (s1, t1) =
+                        //     infer_let(pat, &mut None, expr, consequent, ctx, &PatternUsage::Match)?;
+                        let mut new_ctx = ctx.clone();
+                        let (pa, s0) = infer_pattern_and_init(
+                            pat,
+                            &mut None,
+                            expr,
+                            &mut new_ctx,
+                            &PatternUsage::Match,
+                        )?;
 
-                        let s = compose_many_subs(&[s1, s2]);
+                        // Inserts the new variables from infer_pattern_and_init() into the
+                        // current context.
+                        // TODO: have infer_pattern_and_init do this
+                        for (name, binding) in pa {
+                            new_ctx.insert_binding(name.to_owned(), binding.to_owned());
+                        }
+
+                        let (s1, t1) = infer_body(consequent, &mut new_ctx)?;
+
+                        ctx.count = new_ctx.count;
+
+                        let s = compose_subs(&s1, &s0);
+
+                        update_pattern(pat, &s);
+                        let (s2, t2) = infer_body(alternate, ctx)?;
+
+                        let s = compose_many_subs(&[s, s2]);
                         let t = union_types(&t1, &t2);
                         Ok((s, t))
                     }
                     _ => {
                         let (s1, t1) = infer_expr(ctx, cond, false)?;
-                        let (s2, t2) = infer_expr(ctx, consequent, false)?;
-                        let (s3, t3) = infer_expr(ctx, alternate, false)?;
+                        let (s2, t2) = infer_body(consequent, ctx)?;
+                        let (s3, t3) = infer_body(alternate, ctx)?;
                         let s4 =
                             unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
 
@@ -273,8 +296,32 @@ pub fn infer_expr(
             }
             None => match &mut cond.kind {
                 ExprKind::LetExpr(LetExpr { pat, expr, .. }) => {
-                    let (s, t) =
-                        infer_let(pat, &mut None, expr, consequent, ctx, &PatternUsage::Match)?;
+                    // let (s, t) =
+                    //     infer_let(pat, &mut None, expr, consequent, ctx, &PatternUsage::Match)?;
+                    let mut new_ctx = ctx.clone();
+                    let (pa, s0) = infer_pattern_and_init(
+                        pat,
+                        &mut None,
+                        expr,
+                        &mut new_ctx,
+                        &PatternUsage::Match,
+                    )?;
+
+                    // Inserts the new variables from infer_pattern_and_init() into the
+                    // current context.
+                    // TODO: have infer_pattern_and_init do this
+                    for (name, binding) in pa {
+                        new_ctx.insert_binding(name.to_owned(), binding.to_owned());
+                    }
+
+                    let (s1, t1) = infer_body(consequent, &mut new_ctx)?;
+
+                    ctx.count = new_ctx.count;
+
+                    let s = compose_subs(&s1, &s0);
+                    let t = t1;
+
+                    update_pattern(pat, &s);
 
                     let undefined = Type::from(TypeKind::Keyword(TKeyword::Undefined));
                     let t = union_types(&t, &undefined);
@@ -283,7 +330,7 @@ pub fn infer_expr(
                 }
                 _ => {
                     let (s1, t1) = infer_expr(ctx, cond, false)?;
-                    let (s2, t2) = infer_expr(ctx, consequent, false)?;
+                    let (s2, t2) = infer_body(consequent, ctx)?;
                     let s3 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
 
                     let s = compose_many_subs(&[s1, s2, s3]);
@@ -734,14 +781,41 @@ pub fn infer_expr(
             let mut ss: Vec<Subst> = vec![];
             let mut ts: Vec<Type> = vec![];
             for arm in arms {
-                let (s, t) = infer_let(
+                let mut new_ctx = ctx.clone();
+                let (pa, s1) = infer_pattern_and_init(
                     &mut arm.pattern,
                     &mut None,
                     expr,
-                    &mut arm.body,
-                    ctx,
+                    &mut new_ctx,
                     &PatternUsage::Match,
                 )?;
+
+                // Inserts the new variables from infer_pattern_and_init() into the
+                // current context.
+                // TODO: have infer_pattern_and_init do this
+                for (name, binding) in pa {
+                    new_ctx.insert_binding(name.to_owned(), binding.to_owned());
+                }
+
+                let (s2, t2) = infer_body(&mut arm.body, &mut new_ctx)?;
+
+                ctx.count = new_ctx.count;
+
+                let s = compose_subs(&s2, &s1);
+                let t = t2;
+
+                update_pattern(&mut arm.pattern, &s);
+
+                // Ok((s, t))
+                // let (s, t) = infer_let(
+                //     &mut arm.pattern,
+                //     &mut None,
+                //     expr,
+                //     &mut arm.body,
+                //     ctx,
+                //     &PatternUsage::Match,
+                // )?;
+
                 ss.push(s);
                 ts.push(t);
             }

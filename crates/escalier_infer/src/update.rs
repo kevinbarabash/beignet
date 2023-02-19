@@ -103,9 +103,13 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
             alternate,
         }) => {
             update_expr(cond, s);
-            update_expr(consequent, s);
+            consequent.iter_mut().for_each(|child| {
+                update_expr(child, s);
+            });
             if let Some(alternate) = alternate {
-                update_expr(alternate, s);
+                alternate.iter_mut().for_each(|child| {
+                    update_expr(child, s);
+                });
             }
         }
         ExprKind::JSXElement(JSXElement {
@@ -227,7 +231,9 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
                 if let Some(guard) = guard {
                     update_expr(guard, s);
                 }
-                update_expr(body, s);
+                body.iter_mut().for_each(|child| {
+                    update_expr(child, s);
+                });
             })
         }
         ExprKind::Class(_) => todo!(),

@@ -160,9 +160,13 @@ pub trait Visitor {
                 alternate,
             }) => {
                 self._visit_expr(cond);
-                self._visit_expr(consequent);
+                consequent.iter_mut().for_each(|child| {
+                    self._visit_expr(child);
+                });
                 if let Some(alternate) = alternate {
-                    self._visit_expr(alternate);
+                    alternate.iter_mut().for_each(|child| {
+                        self._visit_expr(child);
+                    });
                 }
             }
             ExprKind::JSXElement(_) => todo!(),
@@ -271,7 +275,7 @@ pub trait Visitor {
                     if let Some(guard) = guard {
                         self._visit_expr(guard);
                     }
-                    self._visit_expr(body);
+                    body.iter_mut().for_each(|child| self._visit_expr(child));
                 })
             }
             // TODO: finish implementing this

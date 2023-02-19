@@ -70,8 +70,8 @@ pub struct Fix {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IfElse {
     pub cond: Box<Expr>,
-    pub consequent: Box<Expr>,
-    pub alternate: Option<Box<Expr>>,
+    pub consequent: Vec<Expr>,
+    pub alternate: Option<Vec<Expr>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -269,7 +269,7 @@ pub struct Arm {
     pub span: Span,
     pub pattern: Pattern,
     pub guard: Option<Expr>,
-    pub body: Expr,
+    pub body: Vec<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

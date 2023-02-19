@@ -142,38 +142,40 @@ Ok(
                                             inferred_type: None,
                                         },
                                         guard: None,
-                                        body: Expr {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 2,
-                                                    column: 21,
-                                                },
-                                                end: Position {
-                                                    line: 2,
-                                                    column: 26,
-                                                },
-                                            },
-                                            span: 58..63,
-                                            kind: Lit(
-                                                Str(
-                                                    Str {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 2,
-                                                                column: 21,
-                                                            },
-                                                            end: Position {
-                                                                line: 2,
-                                                                column: 26,
-                                                            },
-                                                        },
-                                                        span: 58..63,
-                                                        value: "one",
+                                        body: [
+                                            Expr {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 2,
+                                                        column: 21,
                                                     },
+                                                    end: Position {
+                                                        line: 2,
+                                                        column: 26,
+                                                    },
+                                                },
+                                                span: 58..63,
+                                                kind: Lit(
+                                                    Str(
+                                                        Str {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 2,
+                                                                    column: 21,
+                                                                },
+                                                                end: Position {
+                                                                    line: 2,
+                                                                    column: 26,
+                                                                },
+                                                            },
+                                                            span: 58..63,
+                                                            value: "one",
+                                                        },
+                                                    ),
                                                 ),
-                                            ),
-                                            inferred_type: None,
-                                        },
+                                                inferred_type: None,
+                                            },
+                                        ],
                                     },
                                     Arm {
                                         loc: SourceLocation {
@@ -222,38 +224,40 @@ Ok(
                                             inferred_type: None,
                                         },
                                         guard: None,
-                                        body: Expr {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 3,
-                                                    column: 21,
-                                                },
-                                                end: Position {
-                                                    line: 3,
-                                                    column: 26,
-                                                },
-                                            },
-                                            span: 86..91,
-                                            kind: Lit(
-                                                Str(
-                                                    Str {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 3,
-                                                                column: 21,
-                                                            },
-                                                            end: Position {
-                                                                line: 3,
-                                                                column: 26,
-                                                            },
-                                                        },
-                                                        span: 86..91,
-                                                        value: "two",
+                                        body: [
+                                            Expr {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 3,
+                                                        column: 21,
                                                     },
+                                                    end: Position {
+                                                        line: 3,
+                                                        column: 26,
+                                                    },
+                                                },
+                                                span: 86..91,
+                                                kind: Lit(
+                                                    Str(
+                                                        Str {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 3,
+                                                                    column: 21,
+                                                                },
+                                                                end: Position {
+                                                                    line: 3,
+                                                                    column: 26,
+                                                                },
+                                                            },
+                                                            span: 86..91,
+                                                            value: "two",
+                                                        },
+                                                    ),
                                                 ),
-                                            ),
-                                            inferred_type: None,
-                                        },
+                                                inferred_type: None,
+                                            },
+                                        ],
                                     },
                                     Arm {
                                         loc: SourceLocation {
@@ -381,38 +385,40 @@ Ok(
                                                 inferred_type: None,
                                             },
                                         ),
-                                        body: Expr {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 4,
-                                                    column: 32,
-                                                },
-                                                end: Position {
-                                                    line: 4,
-                                                    column: 37,
-                                                },
-                                            },
-                                            span: 125..130,
-                                            kind: Lit(
-                                                Str(
-                                                    Str {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 4,
-                                                                column: 32,
-                                                            },
-                                                            end: Position {
-                                                                line: 4,
-                                                                column: 37,
-                                                            },
-                                                        },
-                                                        span: 125..130,
-                                                        value: "few",
+                                        body: [
+                                            Expr {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 4,
+                                                        column: 32,
                                                     },
+                                                    end: Position {
+                                                        line: 4,
+                                                        column: 37,
+                                                    },
+                                                },
+                                                span: 125..130,
+                                                kind: Lit(
+                                                    Str(
+                                                        Str {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 4,
+                                                                    column: 32,
+                                                                },
+                                                                end: Position {
+                                                                    line: 4,
+                                                                    column: 37,
+                                                                },
+                                                            },
+                                                            span: 125..130,
+                                                            value: "few",
+                                                        },
+                                                    ),
                                                 ),
-                                            ),
-                                            inferred_type: None,
-                                        },
+                                                inferred_type: None,
+                                            },
+                                        ],
                                     },
                                     Arm {
                                         loc: SourceLocation {
@@ -442,38 +448,40 @@ Ok(
                                             inferred_type: None,
                                         },
                                         guard: None,
-                                        body: Expr {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 5,
-                                                    column: 21,
-                                                },
-                                                end: Position {
-                                                    line: 5,
-                                                    column: 27,
-                                                },
-                                            },
-                                            span: 153..159,
-                                            kind: Lit(
-                                                Str(
-                                                    Str {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 5,
-                                                                column: 21,
-                                                            },
-                                                            end: Position {
-                                                                line: 5,
-                                                                column: 27,
-                                                            },
-                                                        },
-                                                        span: 153..159,
-                                                        value: "many",
+                                        body: [
+                                            Expr {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 5,
+                                                        column: 21,
                                                     },
+                                                    end: Position {
+                                                        line: 5,
+                                                        column: 27,
+                                                    },
+                                                },
+                                                span: 153..159,
+                                                kind: Lit(
+                                                    Str(
+                                                        Str {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 5,
+                                                                    column: 21,
+                                                                },
+                                                                end: Position {
+                                                                    line: 5,
+                                                                    column: 27,
+                                                                },
+                                                            },
+                                                            span: 153..159,
+                                                            value: "many",
+                                                        },
+                                                    ),
                                                 ),
-                                            ),
-                                            inferred_type: None,
-                                        },
+                                                inferred_type: None,
+                                            },
+                                        ],
                                     },
                                 ],
                             },
