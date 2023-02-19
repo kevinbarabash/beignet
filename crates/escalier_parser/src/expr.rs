@@ -4,7 +4,7 @@ use unescape::unescape;
 use crate::literal::parse_literal;
 use crate::parse_error::ParseError;
 use crate::pattern::*;
-use crate::stmt::parse_block_statement;
+use crate::stmt::*;
 use crate::type_ann::parse_type_ann;
 use crate::util::*;
 
@@ -396,7 +396,8 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
         }
         "do_expression" => {
             let child = node.named_child(0).unwrap();
-            return parse_block_statement(&child, src);
+            let body = parse_block_statement_as_vec(&child, src)?;
+            ExprKind::DoExpr(DoExpr { body })
         }
         "match_expression" => {
             let expr = node.child_by_field_name("expression").unwrap();

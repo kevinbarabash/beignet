@@ -3488,4 +3488,18 @@ mod tests {
         assert_eq!(ctx.lookup_value("d").unwrap().to_string(), "0.2");
         assert_eq!(ctx.lookup_value("z").unwrap().to_string(), "number");
     }
+
+    #[test]
+    fn do_expr() {
+        let src = r#"
+        let a = do {
+            let x = 5;
+            let y = 10;
+            x + y
+        };
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("a", &ctx), "15");
+    }
 }

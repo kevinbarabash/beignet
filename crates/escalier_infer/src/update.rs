@@ -3,6 +3,8 @@ use escalier_ast::values::*;
 
 use crate::substitutable::{Subst, Substitutable};
 
+// TODO: Refactor to use derived visitors
+
 pub fn update_pattern(pattern: &mut Pattern, s: &Subst) {
     // Since we process the node first, if `expr` is a leaf node we
     // ignore it in the match statement below.
@@ -148,6 +150,17 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
             update_expr(init, s);
             update_expr(body, s);
         }
+        ExprKind::LetDecl(LetDecl {
+            pattern,
+            type_ann,
+            init,
+        }) => {
+            update_pattern(pattern, s);
+            if let Some(type_ann) = type_ann {
+                update_type_ann(type_ann, s);
+            }
+            update_expr(init, s);
+        }
         ExprKind::Assign(Assign { left, right, op: _ }) => {
             update_expr(left, s);
             update_expr(right, s)
@@ -217,6 +230,9 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
         }
         ExprKind::Class(_) => todo!(),
         ExprKind::Regex(_) => (), // leaf node
+        ExprKind::DoExpr(DoExpr { body }) => body.iter_mut().for_each(|expr| {
+            update_expr(expr, s);
+        }),
     }
 }
 
