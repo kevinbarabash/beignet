@@ -278,50 +278,6 @@ fn build_pattern(
     }
 }
 
-// This should only be called by `build_expr_in_new_scope` or `build_fn_body`.
-fn _build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
-    if let values::ExprKind::Let(r#let) = &expr.kind {
-        let child = let_to_child(r#let, stmts, ctx);
-        stmts.push(child);
-
-        let mut body = r#let.body.to_owned();
-        while let values::ExprKind::Let(r#let) = &body.kind {
-            let child = let_to_child(r#let, stmts, ctx);
-            stmts.push(child);
-            body = r#let.body.to_owned();
-        }
-
-        build_expr(&body, stmts, ctx)
-    } else {
-        build_expr(expr, stmts, ctx)
-    }
-}
-
-fn build_expr_in_new_scope(expr: &values::Expr, temp_id: &Ident, ctx: &mut Context) -> BlockStmt {
-    let mut stmts: Vec<Stmt> = vec![];
-
-    let expr = _build_expr(expr, &mut stmts, ctx);
-
-    // Assigns the result of the block to the temp variable
-    stmts.push(Stmt::Expr(ExprStmt {
-        span: DUMMY_SP,
-        expr: Box::from(Expr::Assign(AssignExpr {
-            span: DUMMY_SP,
-            op: AssignOp::Assign,
-            left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
-                id: temp_id.to_owned(),
-                type_ann: None,
-            }))),
-            right: Box::from(expr),
-        })),
-    }));
-
-    BlockStmt {
-        span: DUMMY_SP,
-        stmts,
-    }
-}
-
 fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
     let span = swc_common::Span {
         lo: BytePos(expr.span.start as u32 + 1),
@@ -398,19 +354,6 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 type_params: None,
                 return_type: None,
             })
-        }
-        values::ExprKind::Let(_) => {
-            // let $temp_n;
-            let temp_id = ctx.new_ident();
-            let temp_decl = build_let_decl_stmt(&temp_id);
-            stmts.push(temp_decl);
-
-            // { ...; $temp_n = <result> }
-            let block = build_expr_in_new_scope(expr, &temp_id, ctx);
-            stmts.push(Stmt::Block(block));
-
-            // $temp_n
-            Expr::Ident(temp_id)
         }
         values::ExprKind::Assign(values::Assign { left, right, op: _ }) => {
             // TODO: handle other operators
@@ -1225,23 +1168,6 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
         type_params: None,
         implements: vec![],
         body,
-    }
-}
-
-fn let_to_child(r#let: &values::Let, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Stmt {
-    let values::Let { pattern, init, .. } = r#let;
-
-    // TODO: handle shadowed variables in the same scope by introducing
-    // unique identifiers.
-    match pattern {
-        Some(pattern) => match build_pattern(pattern, stmts, ctx) {
-            Some(name) => build_const_decl_stmt_with_pat(name, build_expr(init, stmts, ctx)),
-            None => todo!(),
-        },
-        None => Stmt::Expr(ExprStmt {
-            span: DUMMY_SP,
-            expr: Box::from(build_expr(init, stmts, ctx)),
-        }),
     }
 }
 

@@ -141,21 +141,6 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
                 update_expr(expr, s);
             });
         }
-        ExprKind::Let(Let {
-            pattern,
-            type_ann,
-            init,
-            body,
-        }) => {
-            if let Some(pattern) = pattern {
-                update_pattern(pattern, s);
-            }
-            if let Some(type_ann) = type_ann {
-                update_type_ann(type_ann, s);
-            }
-            update_expr(init, s);
-            update_expr(body, s);
-        }
         ExprKind::LetDecl(LetDecl {
             pattern,
             type_ann,
