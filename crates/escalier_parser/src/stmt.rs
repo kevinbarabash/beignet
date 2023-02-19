@@ -485,3 +485,114 @@ pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Expr
 
     Ok(result)
 }
+
+pub fn parse_block_statement_as_vec(
+    node: &tree_sitter::Node,
+    src: &str,
+) -> Result<Vec<Expr>, ParseError> {
+    assert_eq!(node.kind(), "statement_block");
+
+    let mut cursor = node.walk();
+
+    let child_count = node.named_child_count();
+
+    let mut stmts: Vec<Statement> = vec![];
+
+    for (i, child) in node.named_children(&mut cursor).into_iter().enumerate() {
+        let is_last = i == child_count - 1;
+        if is_last {
+            // This is the only place where a named `expression` node
+            // should exist.  Everywhere else its contents should be
+            // inline.
+            if child.kind() == "expression" {
+                let expr = child.named_child(0).unwrap();
+                let expr = parse_expression(&expr, src)?;
+                stmts.push(Statement::Expr {
+                    loc: SourceLocation::from(&child),
+                    span: child.byte_range(),
+                    expr: Box::from(expr),
+                })
+            } else {
+                let mut result = parse_statement(&child, src)?;
+                stmts.append(&mut result);
+            }
+        } else {
+            let mut result = parse_statement(&child, src)?;
+            stmts.append(&mut result);
+        }
+    }
+
+    let mut result: Vec<Expr> = vec![];
+
+    for stmt in stmts {
+        let expr = match stmt {
+            Statement::ClassDecl {
+                loc,
+                span,
+                ident,
+                class,
+            } => Expr {
+                loc: loc.to_owned(),
+                span: span.to_owned(),
+                kind: ExprKind::LetDecl(LetDecl {
+                    pattern: Pattern {
+                        loc: ident.loc.to_owned(),
+                        span: ident.span.to_owned(),
+                        kind: PatternKind::Ident(BindingIdent {
+                            loc: ident.loc.to_owned(),
+                            span: ident.span.to_owned(),
+                            name: ident.name.to_owned(),
+                            mutable: false,
+                        }),
+                        inferred_type: None,
+                    },
+                    init: Box::from(Expr {
+                        loc: loc.to_owned(),
+                        span: span.to_owned(),
+                        kind: ExprKind::Class(class.as_ref().to_owned()),
+                        inferred_type: None,
+                    }),
+                    type_ann: None,
+                    // body: empty_expr,
+                }),
+                inferred_type: None,
+            },
+            Statement::VarDecl {
+                loc,
+                span,
+                pattern,
+                init,
+                type_ann,
+                ..
+            } => Expr {
+                loc: loc.to_owned(),
+                span: span.to_owned(),
+                kind: ExprKind::LetDecl(LetDecl {
+                    pattern: pattern.to_owned(),
+                    // TODO: Think about how to deal with variable declarations
+                    // without initializers.  Right now these are allowed by our
+                    // tree-sitter grammar, but aren't handled by the rust code
+                    // which processes its CST.  We probably don't want to allow
+                    // this for normal `let` declarations, we need to allow this
+                    // for `declare let`.
+                    init: init.as_ref().unwrap().to_owned(),
+                    type_ann: type_ann.to_owned(),
+                    // body: empty_expr,
+                }),
+                inferred_type: None,
+            },
+            Statement::TypeDecl { .. } => {
+                // We can't convert this `let` expression so we can't include it
+                // in the `body`.  I think we'll want move the conversion of block
+                // statements to lambdas later in the process.  This will allow us
+                // to handle type declarations within the body of a function.  It
+                // will also help with handling statements like loops.
+                todo!("decide how to handle type decls within BlockStatements")
+            }
+            Statement::Expr { expr, .. } => *expr.to_owned(),
+        };
+        result.push(expr);
+    }
+
+    Ok(result)
+}

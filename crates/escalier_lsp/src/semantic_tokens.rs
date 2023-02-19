@@ -185,6 +185,8 @@ impl Visitor for SemanticTokenVisitor {
             ExprKind::Match(_) => None,
             ExprKind::Class(_) => None,
             ExprKind::Regex(_) => None, // TODO
+            ExprKind::DoExpr(_) => None,
+            ExprKind::LetDecl(_) => None,
         };
 
         let Expr { loc, .. } = expr;

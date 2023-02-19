@@ -286,6 +286,20 @@ pub struct Regex {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DoExpr {
+    pub body: Vec<Expr>,
+}
+
+// Later on we can make this a real decl.  For now, it's here to ease the move
+// to deferring lambda-ization.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LetDecl {
+    pub pattern: Pattern,
+    pub type_ann: Option<TypeAnn>,
+    pub init: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
     App(App),
     New(New), // like App but for calling constructors to create a new instance
@@ -311,6 +325,8 @@ pub enum ExprKind {
     Match(Match),
     Class(Class),
     Regex(Regex),
+    DoExpr(DoExpr),
+    LetDecl(LetDecl),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

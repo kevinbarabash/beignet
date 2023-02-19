@@ -773,6 +773,29 @@ pub fn infer_expr(
         // This is only need for classes that are expressions.  Allowing this
         // seems like a bad idea.
         ExprKind::Class(_) => todo!(),
+        ExprKind::DoExpr(DoExpr { body }) => infer_body(body, ctx),
+        ExprKind::LetDecl(LetDecl {
+            pattern,
+            type_ann,
+            init,
+        }) => {
+            let (pa, s1) =
+                infer_pattern_and_init(pattern, type_ann, init, ctx, &PatternUsage::Assign)?;
+
+            // Inserts the new variables from infer_pattern_and_init() into the
+            // current context.
+            // TODO: have infer_pattern_and_init do this
+            for (name, binding) in pa {
+                ctx.insert_binding(name.to_owned(), binding.to_owned());
+            }
+
+            let s = s1;
+            let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+
+            update_pattern(pattern, &s);
+
+            Ok((s, t))
+        }
     };
 
     let (s, mut t) = result?;
@@ -782,6 +805,22 @@ pub fn infer_expr(
 
     expr.inferred_type = Some(t.clone());
     t.provenance = Some(Box::from(Provenance::from(expr)));
+
+    Ok((s, t))
+}
+
+fn infer_body(body: &mut Vec<Expr>, ctx: &mut Context) -> Result<(Subst, Type), Vec<TypeError>> {
+    let mut new_ctx = ctx.clone();
+    let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+    let mut s = Subst::new();
+
+    for expr in body {
+        new_ctx = new_ctx.clone();
+        let (new_s, new_t) = infer_expr(&mut new_ctx, expr, false)?;
+
+        t = new_t.apply(&s);
+        s = compose_subs(&new_s, &s);
+    }
 
     Ok((s, t))
 }
