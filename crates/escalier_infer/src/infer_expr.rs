@@ -267,14 +267,14 @@ pub fn infer_expr(
                             new_ctx.insert_binding(name.to_owned(), binding.to_owned());
                         }
 
-                        let (s1, t1) = infer_body(consequent, &mut new_ctx)?;
+                        let (s1, t1) = infer_block(consequent, &mut new_ctx)?;
 
                         ctx.count = new_ctx.count;
 
                         let s = compose_subs(&s1, &s0);
 
                         update_pattern(pat, &s);
-                        let (s2, t2) = infer_body(alternate, ctx)?;
+                        let (s2, t2) = infer_block(alternate, ctx)?;
 
                         let s = compose_many_subs(&[s, s2]);
                         let t = union_types(&t1, &t2);
@@ -282,8 +282,8 @@ pub fn infer_expr(
                     }
                     _ => {
                         let (s1, t1) = infer_expr(ctx, cond, false)?;
-                        let (s2, t2) = infer_body(consequent, ctx)?;
-                        let (s3, t3) = infer_body(alternate, ctx)?;
+                        let (s2, t2) = infer_block(consequent, ctx)?;
+                        let (s3, t3) = infer_block(alternate, ctx)?;
                         let s4 =
                             unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
 
@@ -314,7 +314,7 @@ pub fn infer_expr(
                         new_ctx.insert_binding(name.to_owned(), binding.to_owned());
                     }
 
-                    let (s1, t1) = infer_body(consequent, &mut new_ctx)?;
+                    let (s1, t1) = infer_block(consequent, &mut new_ctx)?;
 
                     ctx.count = new_ctx.count;
 
@@ -330,7 +330,7 @@ pub fn infer_expr(
                 }
                 _ => {
                     let (s1, t1) = infer_expr(ctx, cond, false)?;
-                    let (s2, t2) = infer_body(consequent, ctx)?;
+                    let (s2, t2) = infer_block(consequent, ctx)?;
                     let s3 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
 
                     let s = compose_many_subs(&[s1, s2, s3]);
@@ -469,7 +469,7 @@ pub fn infer_expr(
 
             let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-            let (body_s, mut body_t) = infer_body(body, &mut new_ctx)?;
+            let (body_s, mut body_t) = infer_block(body, &mut new_ctx)?;
             ss.push(body_s);
 
             ctx.count = new_ctx.count;
@@ -773,7 +773,7 @@ pub fn infer_expr(
                     new_ctx.insert_binding(name.to_owned(), binding.to_owned());
                 }
 
-                let (s2, t2) = infer_body(&mut arm.body, &mut new_ctx)?;
+                let (s2, t2) = infer_block(&mut arm.body, &mut new_ctx)?;
 
                 ctx.count = new_ctx.count;
 
@@ -824,7 +824,7 @@ pub fn infer_expr(
         // This is only need for classes that are expressions.  Allowing this
         // seems like a bad idea.
         ExprKind::Class(_) => todo!(),
-        ExprKind::DoExpr(DoExpr { body }) => infer_body(body, ctx),
+        ExprKind::DoExpr(DoExpr { body }) => infer_block(body, ctx),
         ExprKind::LetDecl(LetDecl {
             pattern,
             type_ann,
@@ -860,7 +860,7 @@ pub fn infer_expr(
     Ok((s, t))
 }
 
-pub fn infer_body(body: &mut Block, ctx: &mut Context) -> Result<(Subst, Type), Vec<TypeError>> {
+pub fn infer_block(body: &mut Block, ctx: &mut Context) -> Result<(Subst, Type), Vec<TypeError>> {
     let mut new_ctx = ctx.clone();
     let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
     let mut s = Subst::new();
