@@ -66,7 +66,10 @@ Ok(
                                 kind: Method,
                                 lambda: Lambda {
                                     params: [],
-                                    body: [],
+                                    body: Block {
+                                        span: 26..28,
+                                        stmts: [],
+                                    },
                                     is_async: false,
                                     return_type: Some(
                                         TypeAnn {

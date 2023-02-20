@@ -103,11 +103,11 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
             alternate,
         }) => {
             update_expr(cond, s);
-            consequent.iter_mut().for_each(|child| {
+            consequent.stmts.iter_mut().for_each(|child| {
                 update_expr(child, s);
             });
             if let Some(alternate) = alternate {
-                alternate.iter_mut().for_each(|child| {
+                alternate.stmts.iter_mut().for_each(|child| {
                     update_expr(child, s);
                 });
             }
@@ -137,7 +137,7 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
             params.iter_mut().for_each(|param| {
                 update_fn_param_pat(&mut param.pat, s);
             });
-            body.iter_mut().for_each(|expr| {
+            body.stmts.iter_mut().for_each(|expr| {
                 update_expr(expr, s);
             });
         }
@@ -216,14 +216,14 @@ pub fn update_expr(expr: &mut Expr, s: &Subst) {
                 if let Some(guard) = guard {
                     update_expr(guard, s);
                 }
-                body.iter_mut().for_each(|child| {
+                body.stmts.iter_mut().for_each(|child| {
                     update_expr(child, s);
                 });
             })
         }
         ExprKind::Class(_) => todo!(),
         ExprKind::Regex(_) => (), // leaf node
-        ExprKind::DoExpr(DoExpr { body }) => body.iter_mut().for_each(|expr| {
+        ExprKind::DoExpr(DoExpr { body }) => body.stmts.iter_mut().for_each(|expr| {
             update_expr(expr, s);
         }),
     }

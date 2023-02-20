@@ -1,4 +1,4 @@
-use crate::values::expr::{EFnParam, Expr, Lambda};
+use crate::values::expr::{Block, EFnParam, Expr, Lambda};
 use crate::values::ident::Ident;
 use crate::values::type_ann::{TypeAnn, TypeParam};
 
@@ -19,7 +19,7 @@ pub enum ClassMember {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Constructor {
     pub params: Vec<EFnParam>,
-    pub body: Vec<Expr>,
+    pub body: Block,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

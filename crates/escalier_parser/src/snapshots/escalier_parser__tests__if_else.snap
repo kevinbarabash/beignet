@@ -63,75 +63,81 @@ Ok(
                                 ),
                                 inferred_type: None,
                             },
-                            consequent: [
-                                Expr {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 0,
-                                            column: 12,
-                                        },
-                                        end: Position {
-                                            line: 0,
-                                            column: 13,
-                                        },
-                                    },
-                                    span: 12..13,
-                                    kind: Lit(
-                                        Num(
-                                            Num {
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 0,
-                                                        column: 12,
-                                                    },
-                                                    end: Position {
-                                                        line: 0,
-                                                        column: 13,
-                                                    },
-                                                },
-                                                span: 12..13,
-                                                value: "5",
-                                            },
-                                        ),
-                                    ),
-                                    inferred_type: None,
-                                },
-                            ],
-                            alternate: Some(
-                                [
+                            consequent: Block {
+                                span: 10..15,
+                                stmts: [
                                     Expr {
                                         loc: SourceLocation {
                                             start: Position {
                                                 line: 0,
-                                                column: 23,
+                                                column: 12,
                                             },
                                             end: Position {
                                                 line: 0,
-                                                column: 25,
+                                                column: 13,
                                             },
                                         },
-                                        span: 23..25,
+                                        span: 12..13,
                                         kind: Lit(
                                             Num(
                                                 Num {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
-                                                            column: 23,
+                                                            column: 12,
                                                         },
                                                         end: Position {
                                                             line: 0,
-                                                            column: 25,
+                                                            column: 13,
                                                         },
                                                     },
-                                                    span: 23..25,
-                                                    value: "10",
+                                                    span: 12..13,
+                                                    value: "5",
                                                 },
                                             ),
                                         ),
                                         inferred_type: None,
                                     },
                                 ],
+                            },
+                            alternate: Some(
+                                Block {
+                                    span: 21..27,
+                                    stmts: [
+                                        Expr {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 23,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 25,
+                                                },
+                                            },
+                                            span: 23..25,
+                                            kind: Lit(
+                                                Num(
+                                                    Num {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 23,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 25,
+                                                            },
+                                                        },
+                                                        span: 23..25,
+                                                        value: "10",
+                                                    },
+                                                ),
+                                            ),
+                                            inferred_type: None,
+                                        },
+                                    ],
+                                },
                             ),
                         },
                     ),
