@@ -6,6 +6,7 @@ mod infer_expr;
 mod infer_fn_param;
 mod infer_pattern;
 mod infer_regex;
+mod infer_stmt;
 mod infer_type_ann;
 mod scheme;
 mod substitutable;
