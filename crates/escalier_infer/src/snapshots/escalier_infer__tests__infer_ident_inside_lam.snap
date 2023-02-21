@@ -886,14 +886,24 @@ Program {
                                         ),
                                         inferred_type: Some(
                                             Type {
-                                                kind: Var(
-                                                    TVar {
-                                                        id: 2,
-                                                        constraint: None,
-                                                    },
+                                                kind: Keyword(
+                                                    Number,
                                                 ),
                                                 mutable: false,
-                                                provenance: None,
+                                                provenance: Some(
+                                                    Type(
+                                                        Type {
+                                                            kind: Var(
+                                                                TVar {
+                                                                    id: 2,
+                                                                    constraint: None,
+                                                                },
+                                                            ),
+                                                            mutable: false,
+                                                            provenance: None,
+                                                        },
+                                                    ),
+                                                ),
                                             },
                                         ),
                                     },
@@ -932,14 +942,24 @@ Program {
                                         ),
                                         inferred_type: Some(
                                             Type {
-                                                kind: Var(
-                                                    TVar {
-                                                        id: 3,
-                                                        constraint: None,
-                                                    },
+                                                kind: Keyword(
+                                                    Number,
                                                 ),
                                                 mutable: false,
-                                                provenance: None,
+                                                provenance: Some(
+                                                    Type(
+                                                        Type {
+                                                            kind: Var(
+                                                                TVar {
+                                                                    id: 3,
+                                                                    constraint: None,
+                                                                },
+                                                            ),
+                                                            mutable: false,
+                                                            provenance: None,
+                                                        },
+                                                    ),
+                                                ),
                                             },
                                         ),
                                     },
