@@ -1,4 +1,5 @@
 use defaultmap::*;
+use derive_visitor::{DriveMut, VisitorMut};
 use im::hashmap::HashMap;
 use std::collections::BTreeSet;
 use std::iter::Iterator;
@@ -84,201 +85,30 @@ pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
     normalize(&t, ctx)
 }
 
-pub fn normalize(t: &Type, ctx: &Context) -> Type {
-    let mapping = get_mapping(t);
+#[derive(VisitorMut)]
+#[visitor(Type(exit))]
+struct NormalizeVisitor {
+    mapping: HashMap<i32, Type>,
+}
 
-    // TODO: add norm_type as a method on Type, Vec<Type>, etc. similar to what we do for Substitutable
-    // We should also add it to TObjElem (and structs used by its enums.  This will help us filter out
-    // type variables that are bound to the object element as opposed to the encompassing object type.
-    fn norm_type(t: &Type, mapping: &HashMap<i32, Type>, _ctx: &Context) -> Type {
-        let kind = match &t.kind {
-            TypeKind::Var(tv) => {
-                match mapping.get(&tv.id) {
-                    Some(t) => return t.to_owned(),
-                    // If `id` doesn't exist in `mapping` we return the original type variable.
-                    // In this situation, it should appear in some other list of qualifiers.
-                    None => TypeKind::Var(TVar {
-                        id: tv.id,
-                        constraint: tv
-                            .constraint
-                            .as_ref()
-                            .map(|constraint| Box::from(norm_type(constraint, mapping, _ctx))),
-                    }),
-                }
+impl NormalizeVisitor {
+    fn exit_type(&mut self, t: &mut Type) {
+        if let TypeKind::Var(tv) = &t.kind {
+            if let Some(rep_t) = self.mapping.get(&tv.id) {
+                t.kind = rep_t.kind.to_owned();
+                t.mutable = rep_t.mutable;
+                t.provenance = rep_t.provenance.to_owned();
             }
-            TypeKind::App(app) => {
-                let args: Vec<_> = app
-                    .args
-                    .iter()
-                    .map(|arg| norm_type(arg, mapping, _ctx))
-                    .collect();
-                let ret = Box::from(norm_type(&app.ret, mapping, _ctx));
-                TypeKind::App(TApp {
-                    args,
-                    ret,
-                    type_args: app.type_args.to_owned(), // TODO: normalize these as well
-                })
-            }
-            TypeKind::Lam(TLam {
-                type_params,
-                params,
-                ret,
-            }) => {
-                let params: Vec<_> = params
-                    .iter()
-                    .map(|param| TFnParam {
-                        t: norm_type(&param.t, mapping, _ctx),
-                        ..param.to_owned()
-                    })
-                    .collect();
-                let ret = Box::from(norm_type(ret, mapping, _ctx));
-                TypeKind::Lam(TLam {
-                    type_params: type_params.to_owned(),
-                    params,
-                    ret,
-                })
-            }
-            TypeKind::Lit(_) => return t.to_owned(),
-            TypeKind::Keyword(_) => return t.to_owned(),
-            TypeKind::Union(types) => {
-                // TODO: update union_types from constraint_solver.rs to handle
-                // any number of types instead of just two and then call it here.
-                let types = types.iter().map(|t| norm_type(t, mapping, _ctx)).collect();
-                TypeKind::Union(types)
-            }
-            TypeKind::Intersection(types) => {
-                // TODO: update intersection_types from constraint_solver.rs to handle
-                // any number of types instead of just two and then call it here.
-                let types: Vec<_> = types.iter().map(|t| norm_type(t, mapping, _ctx)).collect();
-
-                let mut result = simplify_intersection(&types);
-                result.provenance = t.provenance.to_owned();
-                result.mutable = t.mutable;
-                return result;
-            }
-            TypeKind::Object(obj) => {
-                let elems = obj
-                    .elems
-                    .iter()
-                    .map(|elem| match elem {
-                        TObjElem::Call(call) => {
-                            let params: Vec<_> = call
-                                .params
-                                .iter()
-                                .map(|param| TFnParam {
-                                    t: norm_type(&param.t, mapping, _ctx),
-                                    ..param.to_owned()
-                                })
-                                .collect();
-                            let ret = Box::from(norm_type(&call.ret, mapping, _ctx));
-                            TObjElem::Call(TCallable {
-                                params,
-                                ret,
-                                // TODO: normalize type_params?
-                                type_params: call.type_params.to_owned(),
-                            })
-                        }
-                        TObjElem::Constructor(call) => {
-                            let params: Vec<_> = call
-                                .params
-                                .iter()
-                                .map(|param| TFnParam {
-                                    t: norm_type(&param.t, mapping, _ctx),
-                                    ..param.to_owned()
-                                })
-                                .collect();
-                            let ret = Box::from(norm_type(&call.ret, mapping, _ctx));
-                            TObjElem::Constructor(TCallable {
-                                params,
-                                ret,
-                                // TODO: normalize type_params?
-                                type_params: call.type_params.to_owned(),
-                            })
-                        }
-                        TObjElem::Index(index) => TObjElem::Index(TIndex {
-                            key: index.key.to_owned(),
-                            mutable: index.mutable,
-                            t: norm_type(&index.t, mapping, _ctx),
-                        }),
-                        TObjElem::Prop(prop) => TObjElem::Prop(TProp {
-                            name: prop.name.to_owned(),
-                            optional: prop.optional,
-                            mutable: prop.mutable,
-                            t: norm_type(&prop.t, mapping, _ctx),
-                        }),
-                        TObjElem::Method(_) => todo!(),
-                        TObjElem::Getter(_) => todo!(),
-                        TObjElem::Setter(_) => todo!(),
-                    })
-                    .collect();
-                TypeKind::Object(TObject {
-                    elems,
-                    is_interface: obj.is_interface,
-                })
-            }
-            TypeKind::Ref(TRef { name, type_args }) => {
-                let type_args = type_args
-                    .clone()
-                    .map(|params| params.iter().map(|t| norm_type(t, mapping, _ctx)).collect());
-                TypeKind::Ref(TRef {
-                    name: name.to_owned(),
-                    type_args,
-                })
-            }
-            TypeKind::Tuple(types) => {
-                let types = types.iter().map(|t| norm_type(t, mapping, _ctx)).collect();
-                TypeKind::Tuple(types)
-            }
-            TypeKind::Array(t) => TypeKind::Array(Box::from(norm_type(t, mapping, _ctx))),
-            TypeKind::Rest(arg) => TypeKind::Rest(Box::from(norm_type(arg, mapping, _ctx))),
-            TypeKind::This => TypeKind::This,
-            TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(norm_type(t, mapping, _ctx))),
-            TypeKind::IndexAccess(TIndexAccess { object, index }) => {
-                TypeKind::IndexAccess(TIndexAccess {
-                    object: Box::from(norm_type(object, mapping, _ctx)),
-                    index: Box::from(norm_type(index, mapping, _ctx)),
-                })
-            }
-            TypeKind::MappedType(mapped) => TypeKind::MappedType(TMappedType {
-                t: Box::from(norm_type(&mapped.t, mapping, _ctx)),
-                type_param: TypeParam {
-                    name: mapped.type_param.name.to_owned(),
-                    constraint: mapped
-                        .type_param
-                        .constraint
-                        .as_ref()
-                        .map(|constraint| Box::from(norm_type(constraint, mapping, _ctx))),
-                    default: mapped
-                        .type_param
-                        .default
-                        .as_ref()
-                        .map(|default| Box::from(norm_type(default, mapping, _ctx))),
-                },
-                ..mapped.to_owned()
-            }),
-            TypeKind::ConditionalType(TConditionalType {
-                check_type,
-                extends_type,
-                true_type,
-                false_type,
-            }) => TypeKind::ConditionalType(TConditionalType {
-                check_type: Box::from(norm_type(check_type, mapping, _ctx)),
-                extends_type: Box::from(norm_type(extends_type, mapping, _ctx)),
-                true_type: Box::from(norm_type(true_type, mapping, _ctx)),
-                false_type: Box::from(norm_type(false_type, mapping, _ctx)),
-            }),
-            TypeKind::InferType(_) => return t.to_owned(),
-        };
-
-        Type {
-            kind,
-            ..t.to_owned()
         }
     }
+}
 
-    // NOTE: normalize() is usually called on a type that's already been generalized so we
-    // don't need to re-generalize the result type here.
-    norm_type(t, &mapping, ctx)
+pub fn normalize(t: &Type, _ctx: &Context) -> Type {
+    let mapping = get_mapping(t);
+    let mut t = t.clone();
+    let mut visitor = NormalizeVisitor { mapping };
+    t.drive_mut(&mut visitor);
+    t
 }
 
 // TODO: make this recursive
@@ -523,223 +353,52 @@ pub fn replace_aliases_in_lam(lam: &TLam, type_param_map: &HashMap<String, Type>
     }
 }
 
-// TODO: update this to use Visitor from escalier_infer, which should probably
-// be moved into the escalier_ast crate.
-// TODO: rename this replace_refs_rec
-// NOTE: This is only used externally by replace_aliases_rec.
-pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> Type {
-    let kind = match &t.kind {
-        TypeKind::Var(tvar) => match &tvar.constraint {
-            Some(constraint) => TypeKind::Var(TVar {
-                constraint: Some(Box::from(replace_aliases_rec(constraint, type_param_map))),
-                ..tvar.to_owned()
-            }),
-            None => t.kind.to_owned(),
-        },
-        TypeKind::App(TApp {
-            args,
-            ret,
-            type_args,
-        }) => TypeKind::App(TApp {
-            args: args
-                .iter()
-                .map(|t| replace_aliases_rec(t, type_param_map))
-                .collect(),
-            ret: Box::from(replace_aliases_rec(ret, type_param_map)),
-            type_args: type_args.to_owned(), // TODO: replace aliases in this as well
-        }),
-        TypeKind::Lam(lam) => TypeKind::Lam(replace_aliases_in_lam(lam, type_param_map)),
-        TypeKind::Lit(_) => return t.to_owned(),
-        TypeKind::Keyword(_) => return t.to_owned(),
-        TypeKind::Union(types) => TypeKind::Union(
-            types
-                .iter()
-                .map(|t| replace_aliases_rec(t, type_param_map))
-                .collect(),
-        ),
-        TypeKind::Intersection(types) => TypeKind::Intersection(
-            types
-                .iter()
-                .map(|t| replace_aliases_rec(t, type_param_map))
-                .collect(),
-        ),
-        TypeKind::Object(obj) => {
-            let elems: Vec<TObjElem> = obj
-                .elems
-                .iter()
-                .map(|elem| match elem {
-                    TObjElem::Call(lam) => {
-                        let params: Vec<TFnParam> = lam
-                            .params
-                            .iter()
-                            .map(|t| TFnParam {
-                                t: replace_aliases_rec(&t.t, type_param_map),
-                                ..t.to_owned()
-                            })
-                            .collect();
-                        let ret = replace_aliases_rec(lam.ret.as_ref(), type_param_map);
+#[derive(VisitorMut)]
+#[visitor(Type(exit), TMethod)]
+struct ReplaceAliasVisitor<'a> {
+    type_param_map: &'a HashMap<String, Type>,
+    // Methods can have their own type parameters which shadow type parameters
+    // with the same names that are in scope.
+    shadowed_type_param_names: Vec<String>,
+}
 
-                        TObjElem::Call(TCallable {
-                            params,
-                            ret: Box::from(ret),
-                            type_params: lam.type_params.to_owned(),
-                        })
-                    }
-                    TObjElem::Constructor(lam) => {
-                        let params: Vec<TFnParam> = lam
-                            .params
-                            .iter()
-                            .map(|t| TFnParam {
-                                t: replace_aliases_rec(&t.t, type_param_map),
-                                ..t.to_owned()
-                            })
-                            .collect();
-                        let ret = replace_aliases_rec(lam.ret.as_ref(), type_param_map);
-
-                        TObjElem::Constructor(TCallable {
-                            params,
-                            ret: Box::from(ret),
-                            type_params: lam.type_params.to_owned(),
-                        })
-                    }
-                    TObjElem::Method(method) => {
-                        // Removes any shadowed type params.
-                        let mut type_param_map = type_param_map.clone();
-                        if let Some(type_params) = &method.type_params {
-                            for type_param in type_params {
-                                type_param_map.remove(&type_param.name);
-                            }
-                        }
-                        let params: Vec<TFnParam> = method
-                            .params
-                            .iter()
-                            .map(|t| TFnParam {
-                                t: replace_aliases_rec(&t.t, &type_param_map),
-                                ..t.to_owned()
-                            })
-                            .collect();
-                        let ret = replace_aliases_rec(method.ret.as_ref(), &type_param_map);
-
-                        TObjElem::Method(TMethod {
-                            params,
-                            ret: Box::from(ret),
-                            ..method.to_owned()
-                        })
-                    }
-                    TObjElem::Getter(getter) => {
-                        let ret = replace_aliases_rec(getter.ret.as_ref(), type_param_map);
-
-                        TObjElem::Getter(TGetter {
-                            ret: Box::from(ret),
-                            ..getter.to_owned()
-                        })
-                    }
-                    TObjElem::Setter(setter) => TObjElem::Setter(TSetter {
-                        param: TFnParam {
-                            t: replace_aliases_rec(&setter.param.t, type_param_map),
-                            ..setter.param.to_owned()
-                        },
-                        ..setter.to_owned()
-                    }),
-                    TObjElem::Index(index) => {
-                        let t = replace_aliases_rec(&index.t, type_param_map);
-                        TObjElem::Index(TIndex {
-                            t,
-                            ..index.to_owned()
-                        })
-                    }
-                    TObjElem::Prop(prop) => {
-                        let t = replace_aliases_rec(&prop.t, type_param_map);
-                        TObjElem::Prop(TProp {
-                            t,
-                            ..prop.to_owned()
-                        })
-                    }
-                })
-                .collect();
-            TypeKind::Object(TObject {
-                elems,
-                is_interface: obj.is_interface,
-            })
-        }
-        TypeKind::Ref(alias) => match type_param_map.get(&alias.name) {
-            Some(t) => {
-                return t.to_owned();
+impl ReplaceAliasVisitor<'_> {
+    fn enter_t_method(&mut self, method: &mut TMethod) {
+        if let Some(type_params) = &method.type_params {
+            for type_param in type_params {
+                self.shadowed_type_param_names
+                    .push(type_param.name.to_owned());
             }
-            None => match &alias.type_args {
-                Some(type_args) => {
-                    let type_args: Vec<_> = type_args
-                        .iter()
-                        .map(|arg| replace_aliases_rec(arg, type_param_map))
-                        .collect();
-
-                    return Type {
-                        kind: TypeKind::Ref(TRef {
-                            name: alias.name.to_owned(),
-                            type_args: Some(type_args),
-                        }),
-                        provenance: None,
-                        mutable: t.mutable,
-                    };
-                }
-                None => return t.to_owned(),
-            },
-        },
-        TypeKind::Tuple(types) => TypeKind::Tuple(
-            types
-                .iter()
-                .map(|t| replace_aliases_rec(t, type_param_map))
-                .collect(),
-        ),
-        TypeKind::Array(t) => TypeKind::Array(Box::from(replace_aliases_rec(t, type_param_map))),
-        TypeKind::Rest(t) => TypeKind::Rest(Box::from(replace_aliases_rec(t, type_param_map))),
-        TypeKind::This => TypeKind::This,
-        TypeKind::KeyOf(t) => TypeKind::KeyOf(Box::from(replace_aliases_rec(t, type_param_map))),
-        TypeKind::IndexAccess(TIndexAccess { object, index }) => {
-            TypeKind::IndexAccess(TIndexAccess {
-                object: Box::from(replace_aliases_rec(object, type_param_map)),
-                index: Box::from(replace_aliases_rec(index, type_param_map)),
-            })
         }
-        TypeKind::MappedType(mapped) => {
-            TypeKind::MappedType(TMappedType {
-                t: Box::from(replace_aliases_rec(&mapped.t, type_param_map)),
-                type_param: TypeParam {
-                    name: mapped.type_param.name.to_owned(),
-                    constraint: mapped.type_param.constraint.as_ref().map(|constraint| {
-                        Box::from(replace_aliases_rec(constraint, type_param_map))
-                    }),
-                    default: mapped
-                        .type_param
-                        .default
-                        .as_ref()
-                        .map(|default| Box::from(replace_aliases_rec(default, type_param_map))),
-                },
-                ..mapped.to_owned()
-            })
-        }
-        TypeKind::ConditionalType(TConditionalType {
-            check_type,
-            extends_type,
-            true_type,
-            false_type,
-        }) => {
-            // TODO: check if extends_type introduces a new type, if it does, make
-            // sure it shadows the corresponding type reference in `type_param_map`.
-            TypeKind::ConditionalType(TConditionalType {
-                check_type: Box::from(replace_aliases_rec(check_type, type_param_map)),
-                extends_type: Box::from(replace_aliases_rec(extends_type, type_param_map)),
-                true_type: Box::from(replace_aliases_rec(true_type, type_param_map)),
-                false_type: Box::from(replace_aliases_rec(false_type, type_param_map)),
-            })
-        }
-        TypeKind::InferType(_) => return t.to_owned(),
-    };
-
-    Type {
-        kind,
-        ..t.to_owned()
     }
+    fn exit_t_method(&mut self, method: &mut TMethod) {
+        if let Some(type_params) = &method.type_params {
+            for _ in type_params {
+                self.shadowed_type_param_names.pop();
+            }
+        }
+    }
+    fn exit_type(&mut self, t: &mut Type) {
+        if let TypeKind::Ref(alias) = &t.kind {
+            if !self.shadowed_type_param_names.contains(&alias.name) {
+                if let Some(rep_t) = self.type_param_map.get(&alias.name) {
+                    t.kind = rep_t.kind.to_owned();
+                    t.mutable = rep_t.mutable;
+                    t.provenance = rep_t.provenance.to_owned();
+                }
+            }
+        }
+    }
+}
+
+pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> Type {
+    let mut t = t.clone();
+    let mut visitor = ReplaceAliasVisitor {
+        type_param_map,
+        shadowed_type_param_names: vec![],
+    };
+    t.drive_mut(&mut visitor);
+    t
 }
 
 pub fn immutable_obj_type(obj: &TObject) -> Option<TObject> {
