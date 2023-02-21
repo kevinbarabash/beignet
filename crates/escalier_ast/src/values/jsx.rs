@@ -1,33 +1,43 @@
+use derive_visitor::{Drive, DriveMut};
+
 use crate::values::common::{SourceLocation, Span};
 use crate::values::expr::Expr;
 use crate::values::ident::Ident;
 use crate::values::lit::Lit;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct JSXText {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
+    #[drive(skip)]
     pub value: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct JSXExprContainer {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
     pub expr: Box<Expr>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct JSXElement {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
     // Other ASTs make have JSXOpeningElement and JSXClosingElement
+    #[drive(skip)]
     pub name: String,
     pub attrs: Vec<JSXAttr>,
     pub children: Vec<JSXElementChild>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub enum JSXElementChild {
     JSXText(JSXText),
     JSXExprContainer(JSXExprContainer),
@@ -36,15 +46,18 @@ pub enum JSXElementChild {
     // JSXFragment(JSXFragment),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct JSXAttr {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
+    #[drive(skip)]
     pub ident: Ident,
     pub value: JSXAttrValue,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub enum JSXAttrValue {
     Lit(Lit),
     JSXExprContainer(JSXExprContainer),

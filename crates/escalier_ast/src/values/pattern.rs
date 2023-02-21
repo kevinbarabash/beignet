@@ -1,4 +1,4 @@
-use derive_visitor::{Drive, Visitor};
+use derive_visitor::{Drive, DriveMut, Visitor};
 use std::collections::BTreeSet;
 
 use crate::types::Type;
@@ -10,7 +10,7 @@ use crate::values::Lit;
 // TODO: split this into separate patterns:
 // - one for assignment (obj, ident, array, rest)
 // - one for pattern matching/if let
-#[derive(Drive, Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub enum PatternKind {
     // TODO: use Ident instead of BindingIdent, there's no need to
     // have BindingIdent which simply wraps Ident
@@ -25,7 +25,7 @@ pub enum PatternKind {
     // Assign(AssignPat),
 }
 
-#[derive(Drive, Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct Pattern {
     #[drive(skip)]
     pub loc: SourceLocation,
@@ -45,25 +45,25 @@ impl Pattern {
     }
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct LitPat {
     #[drive(skip)] // TODO: derive visitor for Lit as well
     pub lit: Lit,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct IsPat {
     pub ident: BindingIdent,
     #[drive(skip)]
     pub is_id: Ident,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct RestPat {
     pub arg: Box<Pattern>,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct ArrayPat {
     // The elements are optional to support sparse arrays.
     pub elems: Vec<Option<ArrayPatElem>>,
@@ -71,7 +71,7 @@ pub struct ArrayPat {
     pub optional: bool,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct ArrayPatElem {
     // TODO: add .span property
     pub pattern: Pattern,
@@ -79,21 +79,21 @@ pub struct ArrayPatElem {
     pub init: Option<Box<Expr>>,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct ObjectPat {
     pub props: Vec<ObjectPatProp>,
     #[drive(skip)]
     pub optional: bool,
 }
 
-#[derive(Clone, Drive, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub enum ObjectPatProp {
     KeyValue(KeyValuePatProp),
     Shorthand(ShorthandPatProp),
     Rest(RestPat), // TODO: create a new RestPatProp that includes a span
 }
 
-#[derive(Clone, Drive, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct KeyValuePatProp {
     #[drive(skip)]
     pub loc: SourceLocation,
@@ -106,14 +106,13 @@ pub struct KeyValuePatProp {
     pub init: Option<Box<Expr>>,
 }
 
-#[derive(Clone, Debug, Drive, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct ShorthandPatProp {
     #[drive(skip)]
     pub loc: SourceLocation,
     #[drive(skip)]
     pub span: Span,
     pub ident: BindingIdent,
-    #[drive(skip)] // TODO: derive visitor for Expr as well
     pub init: Option<Box<Expr>>,
 }
 

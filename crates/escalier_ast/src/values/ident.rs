@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt;
 
-use derive_visitor::Drive;
+use derive_visitor::{Drive, DriveMut};
 
 use swc_atoms::JsWord;
 use swc_common::{self, BytePos, SyntaxContext};
@@ -52,7 +52,7 @@ impl From<&BindingIdent> for swc_ecma_ast::Ident {
 // TODO: have a separate struct for BindingIdents in types so that
 // we don't have to create spans for things that don't need them.
 // TODO: add an `ident` field so that we can have separate spans
-#[derive(Clone, Debug, Drive, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, Hash)]
 pub struct BindingIdent {
     #[drive(skip)]
     pub name: String,

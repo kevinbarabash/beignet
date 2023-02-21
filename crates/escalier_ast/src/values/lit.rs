@@ -1,3 +1,4 @@
+use derive_visitor::{Drive, DriveMut};
 use std::fmt;
 use swc_atoms::{Atom, JsWord};
 use swc_common::{self, BytePos, SyntaxContext};
@@ -6,28 +7,37 @@ use swc_ecma_ast;
 use crate::types::{TLit, Type, TypeKind};
 use crate::values::common::{SourceLocation, Span};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct Num {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
+    #[drive(skip)]
     pub value: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct Bool {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
+    #[drive(skip)]
     pub value: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct Str {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
+    #[drive(skip)]
     pub value: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub enum Lit {
     // We store all of the values as strings since f64 doesn't
     // support the Eq trait because NaN and 0.1 + 0.2 != 0.3.

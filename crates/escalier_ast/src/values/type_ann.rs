@@ -1,3 +1,5 @@
+use derive_visitor::{Drive, DriveMut};
+
 use crate::types::Type;
 use crate::values::common::{SourceLocation, Span};
 use crate::values::expr::Expr;
@@ -6,39 +8,42 @@ use crate::values::keyword::Keyword;
 use crate::values::lit::Lit;
 use crate::values::pattern::Pattern;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct TypeAnnFnParam {
     pub pat: Pattern,
     pub type_ann: TypeAnn,
+    #[drive(skip)]
     pub optional: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct LamType {
     pub params: Vec<TypeAnnFnParam>,
     pub ret: Box<TypeAnn>,
     pub type_params: Option<Vec<TypeParam>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct KeywordType {
+    #[drive(skip)]
     pub keyword: Keyword,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct TypeRef {
+    #[drive(skip)]
     pub name: String,
     // TODO: drop the Option
     pub type_args: Option<Vec<TypeAnn>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct ObjectType {
     // TODO: update this to support indexers and callables as well.
     pub elems: Vec<TObjElem>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub enum TObjElem {
     // Call(TLam),
     // Constructor(TLam),
@@ -49,58 +54,67 @@ pub enum TObjElem {
     // RestSpread - we can use this instead of converting {a, ...x} to {a} & tvar
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct TProp {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
+    #[drive(skip)]
     pub name: String,
+    #[drive(skip)]
     pub optional: bool,
+    #[drive(skip)]
     pub mutable: bool,
     pub type_ann: Box<TypeAnn>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct TIndexKey {
+    #[drive(skip)]
     pub name: String,
     pub type_ann: Box<TypeAnn>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct TIndex {
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
     // TODO: update this to only allow `<ident>: string` or `<ident>: number`
     pub key: Box<TypeAnnFnParam>,
+    #[drive(skip)]
     pub mutable: bool,
     pub type_ann: Box<TypeAnn>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct UnionType {
     pub types: Vec<TypeAnn>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct IntersectionType {
     pub types: Vec<TypeAnn>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct TupleType {
     pub types: Vec<TypeAnn>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct ArrayType {
     pub elem_type: Box<TypeAnn>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct KeyOfType {
     pub type_ann: Box<TypeAnn>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct QueryType {
     // TypeScript only supports typeof on (qualified) identifiers.
     // We could modify the parser if we wanted to support taking
@@ -108,13 +122,13 @@ pub struct QueryType {
     pub expr: Box<Expr>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct IndexedAccessType {
     pub obj_type: Box<TypeAnn>,
     pub index_type: Box<TypeAnn>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct MappedType {
     pub type_param: TypeParam, // default is always None for MappedType
     pub optional: Option<TMappedTypeChange>,
@@ -122,19 +136,20 @@ pub struct MappedType {
     pub type_ann: Box<TypeAnn>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct TMappedTypeChange {
+    #[drive(skip)]
     pub span: Span,
     pub change: TMappedTypeChangeProp,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub enum TMappedTypeChangeProp {
     Plus,
     Minus,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct ConditionalType {
     pub check_type: Box<TypeAnn>,
     pub extends_type: Box<TypeAnn>,
@@ -142,17 +157,18 @@ pub struct ConditionalType {
     pub false_type: Box<TypeAnn>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct MutableType {
     pub type_ann: Box<TypeAnn>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct InferType {
+    #[drive(skip)]
     pub name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub enum TypeAnnKind {
     Lam(LamType),
     Lit(Lit),
@@ -172,17 +188,21 @@ pub enum TypeAnnKind {
     Infer(InferType),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct TypeAnn {
     pub kind: TypeAnnKind,
+    #[drive(skip)]
     pub loc: SourceLocation,
+    #[drive(skip)]
     pub span: Span,
     pub inferred_type: Option<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct TypeParam {
+    #[drive(skip)]
     pub span: Span,
+    #[drive(skip)]
     pub name: Ident,
     pub constraint: Option<Box<TypeAnn>>,
     pub default: Option<Box<TypeAnn>>,
