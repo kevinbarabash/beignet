@@ -5,19 +5,8 @@ expression: "parse(\"\\\"line 1\\\\nline 2\\\\nline 3\\\";\")"
 Ok(
     Program {
         body: [
-            Expr {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 0,
-                        column: 0,
-                    },
-                    end: Position {
-                        line: 0,
-                        column: 25,
-                    },
-                },
-                span: 0..25,
-                expr: Expr {
+            ExprStmt(
+                Expr {
                     loc: SourceLocation {
                         start: Position {
                             line: 0,
@@ -49,7 +38,7 @@ Ok(
                     ),
                     inferred_type: None,
                 },
-            },
+            ),
         ],
     },
 )

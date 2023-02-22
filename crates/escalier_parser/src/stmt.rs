@@ -16,11 +16,7 @@ pub fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statem
         "expression_statement" => {
             let expr = node.named_child(0).unwrap();
             let expr = parse_expression(&expr, src)?;
-            Ok(vec![Statement::Expr {
-                loc: SourceLocation::from(node),
-                span: node.byte_range(),
-                expr: Box::from(expr),
-            }])
+            Ok(vec![Statement::ExprStmt(expr)])
         }
         "ambient_declaration" => {
             let decl = node.named_child(0).unwrap();
@@ -309,11 +305,7 @@ pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Bloc
             if child.kind() == "expression" {
                 let expr = child.named_child(0).unwrap();
                 let expr = parse_expression(&expr, src)?;
-                stmts.push(Statement::Expr {
-                    loc: SourceLocation::from(&child),
-                    span: child.byte_range(),
-                    expr: Box::from(expr),
-                })
+                stmts.push(Statement::ExprStmt(expr))
             } else {
                 let mut result = parse_statement(&child, src)?;
                 stmts.append(&mut result);
@@ -391,7 +383,7 @@ pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Bloc
                 // will also help with handling statements like loops.
                 todo!("decide how to handle type decls within BlockStatements")
             }
-            Statement::Expr { expr, .. } => *expr.to_owned(),
+            Statement::ExprStmt(expr) => expr.to_owned(),
         };
         result.push(expr);
     }

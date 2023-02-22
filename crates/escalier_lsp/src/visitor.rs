@@ -46,7 +46,7 @@ pub trait Visitor {
             } => {
                 self._visit_type_ann(type_ann);
             }
-            Statement::Expr { expr, .. } => {
+            Statement::ExprStmt(expr) => {
                 self._visit_expr(expr);
             }
         }

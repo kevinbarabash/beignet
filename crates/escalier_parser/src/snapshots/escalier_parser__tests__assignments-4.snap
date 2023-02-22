@@ -5,19 +5,8 @@ expression: "parse(r#\"a[\"b\"] = c;\"#)"
 Ok(
     Program {
         body: [
-            Expr {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 0,
-                        column: 0,
-                    },
-                    end: Position {
-                        line: 0,
-                        column: 11,
-                    },
-                },
-                span: 0..11,
-                expr: Expr {
+            ExprStmt(
+                Expr {
                     loc: SourceLocation {
                         start: Position {
                             line: 0,
@@ -161,7 +150,7 @@ Ok(
                     ),
                     inferred_type: None,
                 },
-            },
+            ),
         ],
     },
 )

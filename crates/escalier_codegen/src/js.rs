@@ -126,7 +126,7 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
                 values::Statement::TypeDecl { .. } => {
                     ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP }))
                 }
-                values::Statement::Expr { expr, .. } => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                values::Statement::ExprStmt(expr) => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
                     span: DUMMY_SP,
                     expr: Box::from(build_expr(expr, &mut stmts, ctx)),
                 })),

@@ -5,19 +5,8 @@ expression: "parse(\"foo[bar[-1]];\")"
 Ok(
     Program {
         body: [
-            Expr {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 0,
-                        column: 0,
-                    },
-                    end: Position {
-                        line: 0,
-                        column: 13,
-                    },
-                },
-                span: 0..13,
-                expr: Expr {
+            ExprStmt(
+                Expr {
                     loc: SourceLocation {
                         start: Position {
                             line: 0,
@@ -194,7 +183,7 @@ Ok(
                     ),
                     inferred_type: None,
                 },
-            },
+            ),
         ],
     },
 )
