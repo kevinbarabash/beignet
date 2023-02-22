@@ -464,6 +464,7 @@ name = "escalier_lsp"
 version = "0.1.0"
 dependencies = [
  "crossbeam",
+ "derive-visitor",
  "escalier_ast",
  "escalier_infer",
  "escalier_interop",
