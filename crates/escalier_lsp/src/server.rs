@@ -1,3 +1,4 @@
+use derive_visitor::{DriveMut, VisitorMut};
 use std::collections::HashMap;
 use std::error::Error;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -11,12 +12,11 @@ use lsp_types::request::{HoverRequest, SemanticTokensFullRequest};
 use lsp_types::*;
 
 use escalier_ast::types::Type;
-use escalier_ast::values::{Position, Program, SourceLocation};
+use escalier_ast::values::{Expr, Pattern, Position, Program, SourceLocation, Statement, TypeAnn};
 use escalier_interop::parse::parse_dts;
 use escalier_parser::parse;
 
 use crate::semantic_tokens::get_semantic_tokens;
-use crate::visitor::Visitor;
 
 pub struct LanguageServer {
     pub lib: String,
@@ -231,6 +231,14 @@ impl LanguageServer {
     }
 }
 
+#[derive(VisitorMut)]
+#[visitor(
+    Expr(enter),
+    Pattern(enter),
+    Program(enter),
+    Statement(enter),
+    TypeAnn(enter)
+)]
 struct GetTypeVisitor {
     cursor_pos: Position,
     t: Option<Type>,
@@ -246,36 +254,35 @@ fn is_pos_in_source_loc(pos: &Position, src_loc: &SourceLocation) -> bool {
 }
 
 // TODO: use is_pos_in_source_loc to terminate certain branches of the visitor
-impl Visitor for GetTypeVisitor {
-    fn visit_program(&mut self, _: &escalier_ast::values::Program) {
-        eprintln!("visit_program");
+impl GetTypeVisitor {
+    fn enter_expr(&mut self, expr: &Expr) {
+        if is_pos_in_source_loc(&self.cursor_pos, &expr.loc) {
+            if let Some(t) = &expr.inferred_type {
+                self.t = Some(t.to_owned())
+            }
+        }
+    }
+
+    fn enter_pattern(&mut self, pattern: &Pattern) {
+        if is_pos_in_source_loc(&self.cursor_pos, &pattern.loc) {
+            if let Some(t) = &pattern.inferred_type {
+                self.t = Some(t.to_owned())
+            }
+        }
+    }
+
+    fn enter_program(&mut self, _program: &Program) {
+        eprintln!("enter_program");
         // Do nothing b/c Program doesn't have an .inferred_type field
     }
 
-    fn visit_statement(&mut self, _stmt: &escalier_ast::values::Statement) {
-        eprintln!("visit_statement");
+    fn enter_statement(&mut self, _stmt: &Statement) {
+        eprintln!("enter_statement");
         // Do nothing b/c Statement doesn't have an .inferred_type field (yet)
     }
-
-    fn visit_pattern(&mut self, pat: &escalier_ast::values::Pattern) {
-        if is_pos_in_source_loc(&self.cursor_pos, &pat.loc) {
-            if let Some(t) = &pat.inferred_type {
-                self.t = Some(t.to_owned())
-            }
-        }
-    }
-
-    fn visit_type_ann(&mut self, type_ann: &escalier_ast::values::TypeAnn) {
+    fn enter_type_ann(&mut self, type_ann: &TypeAnn) {
         if is_pos_in_source_loc(&self.cursor_pos, &type_ann.loc) {
             if let Some(t) = &type_ann.inferred_type {
-                self.t = Some(t.to_owned())
-            }
-        }
-    }
-
-    fn visit_expr(&mut self, expr: &escalier_ast::values::Expr) {
-        if is_pos_in_source_loc(&self.cursor_pos, &expr.loc) {
-            if let Some(t) = &expr.inferred_type {
                 self.t = Some(t.to_owned())
             }
         }
@@ -287,8 +294,7 @@ fn get_type_at_location(program: &mut Program, cursor_pos: &Position) -> Option<
         cursor_pos: cursor_pos.to_owned(),
         t: None,
     };
-    visitor.visit(program);
-
+    program.drive_mut(&mut visitor);
     visitor.t
 }
 

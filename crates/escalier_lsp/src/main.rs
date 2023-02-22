@@ -7,7 +7,6 @@ use lsp_types::*;
 
 mod semantic_tokens;
 mod server;
-mod visitor;
 
 use server::LanguageServer;
 
