@@ -51,16 +51,7 @@ pub enum Statement {
         type_ann: TypeAnn,
         type_params: Option<Vec<TypeParam>>,
     },
-    // TODO: Rename this to `ExprStmt`.
-    // NOTE: This will never contain a `let` expression since that case is
-    // covered by `VarDecl`.
-    Expr {
-        #[drive(skip)]
-        loc: SourceLocation,
-        #[drive(skip)]
-        span: Span,
-        expr: Box<Expr>,
-    },
+    ExprStmt(Expr),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]

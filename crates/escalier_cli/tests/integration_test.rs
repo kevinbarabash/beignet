@@ -13,7 +13,7 @@ fn infer(input: &str) -> String {
     let prog = parse(input).unwrap();
     let stmt = prog.body.get(0).unwrap();
     let result = match stmt {
-        Statement::Expr { expr, .. } => {
+        Statement::ExprStmt(expr) => {
             let mut expr = expr.to_owned();
             infer_expr(&mut ctx, &mut expr)
         }

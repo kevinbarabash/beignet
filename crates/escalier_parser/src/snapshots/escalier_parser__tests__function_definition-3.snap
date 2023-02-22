@@ -5,19 +5,8 @@ expression: "parse(\"(a) => \\\"hello\\\";\")"
 Ok(
     Program {
         body: [
-            Expr {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 0,
-                        column: 0,
-                    },
-                    end: Position {
-                        line: 0,
-                        column: 15,
-                    },
-                },
-                span: 0..15,
-                expr: Expr {
+            ExprStmt(
+                Expr {
                     loc: SourceLocation {
                         start: Position {
                             line: 0,
@@ -112,7 +101,7 @@ Ok(
                     ),
                     inferred_type: None,
                 },
-            },
+            ),
         ],
     },
 )

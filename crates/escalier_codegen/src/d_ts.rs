@@ -88,7 +88,7 @@ fn build_d_ts(program: &values::Program, ctx: &Context) -> Program {
             values::Statement::TypeDecl { id, .. } => {
                 type_exports.insert(id.name.to_owned());
             }
-            values::Statement::Expr { .. } => (), // nothing is exported
+            values::Statement::ExprStmt(_) => (), // nothing is exported
         }
     }
 

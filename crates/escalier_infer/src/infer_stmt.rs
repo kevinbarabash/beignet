@@ -100,7 +100,7 @@ pub fn infer_stmt(
 
             Ok((s, t))
         }
-        Statement::Expr { expr, .. } => {
+        Statement::ExprStmt(expr) => {
             let (s, t) = infer_expr_rec(ctx, expr, false)?;
             // We ignore the type that was inferred, we only care that
             // it succeeds since we aren't assigning it to variable.
