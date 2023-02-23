@@ -41,7 +41,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
 
     // TODO: figure out how report multiple errors
     for stmt in &mut prog.body {
-        match infer_stmt(stmt, ctx) {
+        match infer_stmt(stmt, ctx, true) {
             Ok(_) => (),
             Err(mut errors) => reports.append(&mut errors),
         }

@@ -72,7 +72,7 @@ Ok(
                                 body: Block {
                                     span: 7..14,
                                     stmts: [
-                                        Expr {
+                                        Statement {
                                             loc: SourceLocation {
                                                 start: Position {
                                                     line: 0,
@@ -84,25 +84,40 @@ Ok(
                                                 },
                                             },
                                             span: 7..14,
-                                            kind: Lit(
-                                                Str(
-                                                    Str {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 0,
-                                                                column: 7,
-                                                            },
-                                                            end: Position {
-                                                                line: 0,
-                                                                column: 14,
-                                                            },
+                                            kind: ExprStmt(
+                                                Expr {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 7,
                                                         },
-                                                        span: 7..14,
-                                                        value: "hello",
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 14,
+                                                        },
                                                     },
-                                                ),
+                                                    span: 7..14,
+                                                    kind: Lit(
+                                                        Str(
+                                                            Str {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 7,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 14,
+                                                                    },
+                                                                },
+                                                                span: 7..14,
+                                                                value: "hello",
+                                                            },
+                                                        ),
+                                                    ),
+                                                    inferred_type: None,
+                                                },
                                             ),
-                                            inferred_type: None,
                                         },
                                     ],
                                 },

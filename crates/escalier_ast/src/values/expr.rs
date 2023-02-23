@@ -20,7 +20,7 @@ pub struct Program {
 pub struct Block {
     #[drive(skip)]
     pub span: Span,
-    pub stmts: Vec<Expr>,
+    pub stmts: Vec<Statement>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]

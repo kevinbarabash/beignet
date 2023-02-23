@@ -227,7 +227,7 @@ Ok(
                                         body: Block {
                                             span: 40..41,
                                             stmts: [
-                                                Expr {
+                                                Statement {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
@@ -239,8 +239,8 @@ Ok(
                                                         },
                                                     },
                                                     span: 40..41,
-                                                    kind: Ident(
-                                                        Ident {
+                                                    kind: ExprStmt(
+                                                        Expr {
                                                             loc: SourceLocation {
                                                                 start: Position {
                                                                     line: 0,
@@ -252,10 +252,25 @@ Ok(
                                                                 },
                                                             },
                                                             span: 40..41,
-                                                            name: "a",
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    loc: SourceLocation {
+                                                                        start: Position {
+                                                                            line: 0,
+                                                                            column: 40,
+                                                                        },
+                                                                        end: Position {
+                                                                            line: 0,
+                                                                            column: 41,
+                                                                        },
+                                                                    },
+                                                                    span: 40..41,
+                                                                    name: "a",
+                                                                },
+                                                            ),
+                                                            inferred_type: None,
                                                         },
                                                     ),
-                                                    inferred_type: None,
                                                 },
                                             ],
                                         },

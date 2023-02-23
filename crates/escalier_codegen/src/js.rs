@@ -446,9 +446,10 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             })
         }
         values::ExprKind::Fix(values::Fix { expr, .. }) => match &expr.kind {
-            values::ExprKind::Lambda(values::Lambda { body, .. }) => {
-                build_expr(&body.stmts[0], stmts, ctx)
-            }
+            values::ExprKind::Lambda(values::Lambda { body, .. }) => match &body.stmts[0].kind {
+                values::StmtKind::ExprStmt(expr) => build_expr(expr, stmts, ctx),
+                _ => panic!("Invalid recursive function"),
+            },
             _ => panic!("Fix should only wrap a lambda"),
         },
         values::ExprKind::IfElse(values::IfElse {
@@ -651,12 +652,13 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             stmts.push(temp_decl);
 
             let mut new_stmts: Vec<Stmt> = vec![];
-            for (i, expr) in do_expr.body.stmts.iter().enumerate() {
-                match &expr.kind {
-                    values::ExprKind::LetDecl(values::LetDecl {
+            for (i, stmt) in do_expr.body.stmts.iter().enumerate() {
+                match &stmt.kind {
+                    values::StmtKind::VarDecl(values::VarDecl {
                         pattern,
                         type_ann: _,
-                        init,
+                        init: Some(init),
+                        declare: _,
                     }) => {
                         let stmt = match build_pattern(pattern, &mut new_stmts, ctx) {
                             Some(name) => build_const_decl_stmt_with_pat(
@@ -667,7 +669,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                         };
                         new_stmts.push(stmt);
                     }
-                    _ => {
+                    values::StmtKind::ExprStmt(expr) => {
                         let expr = build_expr(expr, &mut new_stmts, ctx);
                         if i == len - 1 {
                             new_stmts.push(Stmt::Expr(ExprStmt {
@@ -689,6 +691,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                             }));
                         }
                     }
+                    _ => todo!(),
                 }
             }
 
@@ -717,7 +720,11 @@ fn build_body(body: &values::Block, stmts: &mut Vec<Stmt>, ctx: &mut Context) ->
     } else if len == 1 {
         // TODO: Fix this - it doesn't doesn't handle expressions that introduce
         // temporary variables correctly.
-        BlockStmtOrExpr::Expr(Box::from(build_expr(&body.stmts[0], stmts, ctx)))
+        if let values::StmtKind::ExprStmt(expr) = &body.stmts[0].kind {
+            BlockStmtOrExpr::Expr(Box::from(build_expr(expr, stmts, ctx)))
+        } else {
+            todo!("body contains a single statement that isn't an ExprStmt");
+        }
     } else {
         BlockStmtOrExpr::BlockStmt(build_body_block_stmt_fn(body, ctx))
     }
@@ -727,12 +734,13 @@ fn build_body_block_stmt_fn(body: &values::Block, ctx: &mut Context) -> BlockStm
     let mut new_stmts: Vec<Stmt> = vec![];
     let len = body.stmts.len();
 
-    for (i, expr) in body.stmts.iter().enumerate() {
-        match &expr.kind {
-            values::ExprKind::LetDecl(values::LetDecl {
+    for (i, stmt) in body.stmts.iter().enumerate() {
+        match &stmt.kind {
+            values::StmtKind::VarDecl(values::VarDecl {
                 pattern,
                 type_ann: _,
-                init,
+                init: Some(init),
+                declare: _,
             }) => {
                 let stmt = match build_pattern(pattern, &mut new_stmts, ctx) {
                     Some(name) => {
@@ -742,7 +750,7 @@ fn build_body_block_stmt_fn(body: &values::Block, ctx: &mut Context) -> BlockStm
                 };
                 new_stmts.push(stmt);
             }
-            _ => {
+            values::StmtKind::ExprStmt(expr) => {
                 let expr = build_expr(expr, &mut new_stmts, ctx);
 
                 if i == len - 1 {
@@ -757,6 +765,7 @@ fn build_body_block_stmt_fn(body: &values::Block, ctx: &mut Context) -> BlockStm
                     }));
                 }
             }
+            _ => todo!(),
         }
     }
 
@@ -782,12 +791,13 @@ fn build_body_block_stmt(body: &values::Block, ret_id: &Ident, ctx: &mut Context
     let mut new_stmts: Vec<Stmt> = vec![];
     let len = body.stmts.len();
 
-    for (i, expr) in body.stmts.iter().enumerate() {
-        match &expr.kind {
-            values::ExprKind::LetDecl(values::LetDecl {
+    for (i, stmt) in body.stmts.iter().enumerate() {
+        match &stmt.kind {
+            values::StmtKind::VarDecl(values::VarDecl {
                 pattern,
                 type_ann: _,
-                init,
+                init: Some(init),
+                declare: _,
             }) => {
                 let stmt = match build_pattern(pattern, &mut new_stmts, ctx) {
                     Some(name) => {
@@ -797,7 +807,7 @@ fn build_body_block_stmt(body: &values::Block, ret_id: &Ident, ctx: &mut Context
                 };
                 new_stmts.push(stmt);
             }
-            _ => {
+            values::StmtKind::ExprStmt(expr) => {
                 let expr = build_expr(expr, &mut new_stmts, ctx);
 
                 if i == len - 1 {
@@ -820,6 +830,7 @@ fn build_body_block_stmt(body: &values::Block, ret_id: &Ident, ctx: &mut Context
                     }));
                 }
             }
+            _ => todo!(),
         }
     }
 

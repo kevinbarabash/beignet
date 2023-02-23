@@ -130,7 +130,11 @@ fn parse_declaration(
                 }],
                 body: Block {
                     span: value.byte_range(),
-                    stmts: vec![parse_expression(&value, src)?],
+                    stmts: vec![Statement {
+                        loc: SourceLocation::from(&value),
+                        span: value.byte_range(),
+                        kind: StmtKind::ExprStmt(parse_expression(&value, src)?),
+                    }],
                 },
                 is_async: false,
                 return_type: None,
@@ -333,73 +337,8 @@ pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Bloc
         }
     }
 
-    let mut result: Vec<Expr> = vec![];
-
-    for stmt in stmts {
-        let expr = match stmt.kind {
-            StmtKind::ClassDecl(ClassDecl { ident, class }) => Expr {
-                loc: stmt.loc.to_owned(),
-                span: stmt.span.to_owned(),
-                kind: ExprKind::LetDecl(LetDecl {
-                    pattern: Pattern {
-                        loc: ident.loc.to_owned(),
-                        span: ident.span.to_owned(),
-                        kind: PatternKind::Ident(BindingIdent {
-                            loc: ident.loc.to_owned(),
-                            span: ident.span.to_owned(),
-                            name: ident.name.to_owned(),
-                            mutable: false,
-                        }),
-                        inferred_type: None,
-                    },
-                    init: Box::from(Expr {
-                        loc: stmt.loc.to_owned(),
-                        span: stmt.span.to_owned(),
-                        kind: ExprKind::Class(class.as_ref().to_owned()),
-                        inferred_type: None,
-                    }),
-                    type_ann: None,
-                    // body: empty_expr,
-                }),
-                inferred_type: None,
-            },
-            StmtKind::VarDecl(VarDecl {
-                pattern,
-                init,
-                type_ann,
-                ..
-            }) => Expr {
-                loc: stmt.loc.to_owned(),
-                span: stmt.span.to_owned(),
-                kind: ExprKind::LetDecl(LetDecl {
-                    pattern: pattern.to_owned(),
-                    // TODO: Think about how to deal with variable declarations
-                    // without initializers.  Right now these are allowed by our
-                    // tree-sitter grammar, but aren't handled by the rust code
-                    // which processes its CST.  We probably don't want to allow
-                    // this for normal `let` declarations, we need to allow this
-                    // for `declare let`.
-                    init: init.as_ref().unwrap().to_owned(),
-                    type_ann: type_ann.to_owned(),
-                    // body: empty_expr,
-                }),
-                inferred_type: None,
-            },
-            StmtKind::TypeDecl(_) => {
-                // We can't convert this `let` expression so we can't include it
-                // in the `body`.  I think we'll want move the conversion of block
-                // statements to lambdas later in the process.  This will allow us
-                // to handle type declarations within the body of a function.  It
-                // will also help with handling statements like loops.
-                todo!("decide how to handle type decls within BlockStatements")
-            }
-            StmtKind::ExprStmt(expr) => expr.to_owned(),
-        };
-        result.push(expr);
-    }
-
     Ok(Block {
         span: node.byte_range(),
-        stmts: result,
+        stmts,
     })
 }
