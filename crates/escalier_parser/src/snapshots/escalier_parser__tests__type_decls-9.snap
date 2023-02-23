@@ -5,7 +5,7 @@ expression: "parse(\"type FooBar = typeof foo.bar;\")"
 Ok(
     Program {
         body: [
-            TypeDecl {
+            Statement {
                 loc: SourceLocation {
                     start: Position {
                         line: 0,
@@ -17,52 +17,41 @@ Ok(
                     },
                 },
                 span: 0..29,
-                declare: false,
-                id: Ident {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 5,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 11,
-                        },
-                    },
-                    span: 5..11,
-                    name: "FooBar",
-                },
-                type_ann: TypeAnn {
-                    kind: Query(
-                        QueryType {
-                            expr: Expr {
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 0,
-                                        column: 21,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        column: 28,
-                                    },
+                kind: TypeDecl(
+                    TypeDecl {
+                        declare: false,
+                        id: Ident {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 5,
                                 },
-                                span: 21..28,
-                                kind: Member(
-                                    Member {
-                                        obj: Expr {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 21,
-                                                },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 24,
-                                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 11,
+                                },
+                            },
+                            span: 5..11,
+                            name: "FooBar",
+                        },
+                        type_ann: TypeAnn {
+                            kind: Query(
+                                QueryType {
+                                    expr: Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 21,
                                             },
-                                            span: 21..24,
-                                            kind: Ident(
-                                                Ident {
+                                            end: Position {
+                                                line: 0,
+                                                column: 28,
+                                            },
+                                        },
+                                        span: 21..28,
+                                        kind: Member(
+                                            Member {
+                                                obj: Expr {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
@@ -74,47 +63,62 @@ Ok(
                                                         },
                                                     },
                                                     span: 21..24,
-                                                    name: "foo",
+                                                    kind: Ident(
+                                                        Ident {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 21,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 24,
+                                                                },
+                                                            },
+                                                            span: 21..24,
+                                                            name: "foo",
+                                                        },
+                                                    ),
+                                                    inferred_type: None,
                                                 },
-                                            ),
-                                            inferred_type: None,
-                                        },
-                                        prop: Ident(
-                                            Ident {
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 0,
-                                                        column: 25,
+                                                prop: Ident(
+                                                    Ident {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 25,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 28,
+                                                            },
+                                                        },
+                                                        span: 25..28,
+                                                        name: "bar",
                                                     },
-                                                    end: Position {
-                                                        line: 0,
-                                                        column: 28,
-                                                    },
-                                                },
-                                                span: 25..28,
-                                                name: "bar",
+                                                ),
                                             },
                                         ),
+                                        inferred_type: None,
                                     },
-                                ),
-                                inferred_type: None,
+                                },
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 14,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 28,
+                                },
                             },
+                            span: 14..28,
+                            inferred_type: None,
                         },
-                    ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 14,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 28,
-                        },
+                        type_params: None,
                     },
-                    span: 14..28,
-                    inferred_type: None,
-                },
-                type_params: None,
+                ),
             },
         ],
     },

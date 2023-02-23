@@ -5,7 +5,7 @@ expression: "parse(\"let x = [];\")"
 Ok(
     Program {
         body: [
-            VarDecl {
+            Statement {
                 loc: SourceLocation {
                     start: Position {
                         line: 0,
@@ -17,23 +17,9 @@ Ok(
                     },
                 },
                 span: 0..11,
-                pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 4,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 5,
-                        },
-                    },
-                    span: 4..5,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "x",
-                            mutable: false,
-                            span: 4..5,
+                kind: VarDecl(
+                    VarDecl {
+                        pattern: Pattern {
                             loc: SourceLocation {
                                 start: Position {
                                     line: 0,
@@ -44,33 +30,51 @@ Ok(
                                     column: 5,
                                 },
                             },
+                            span: 4..5,
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "x",
+                                    mutable: false,
+                                    span: 4..5,
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 4,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 5,
+                                        },
+                                    },
+                                },
+                            ),
+                            inferred_type: None,
                         },
-                    ),
-                    inferred_type: None,
-                },
-                type_ann: None,
-                init: Some(
-                    Expr {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 0,
-                                column: 8,
-                            },
-                            end: Position {
-                                line: 0,
-                                column: 10,
-                            },
-                        },
-                        span: 8..10,
-                        kind: Tuple(
-                            Tuple {
-                                elems: [],
+                        type_ann: None,
+                        init: Some(
+                            Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 8,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 10,
+                                    },
+                                },
+                                span: 8..10,
+                                kind: Tuple(
+                                    Tuple {
+                                        elems: [],
+                                    },
+                                ),
+                                inferred_type: None,
                             },
                         ),
-                        inferred_type: None,
+                        declare: false,
                     },
                 ),
-                declare: false,
             },
         ],
     },

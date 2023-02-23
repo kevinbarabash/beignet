@@ -5,74 +5,87 @@ expression: "parse(\"`Hello, world`\")"
 Ok(
     Program {
         body: [
-            ExprStmt(
-                Expr {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 0,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 14,
-                        },
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
                     },
-                    span: 0..14,
-                    kind: TemplateLiteral(
-                        TemplateLiteral {
-                            exprs: [],
-                            quasis: [
-                                TemplateElem {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 0,
-                                            column: 0,
-                                        },
-                                        end: Position {
-                                            line: 0,
-                                            column: 14,
-                                        },
-                                    },
-                                    span: 1..13,
-                                    raw: Str(
-                                        Str {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 0,
-                                                },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 14,
-                                                },
-                                            },
-                                            span: 1..13,
-                                            value: "Hello, world",
-                                        },
-                                    ),
-                                    cooked: Str(
-                                        Str {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 0,
-                                                },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 14,
-                                                },
-                                            },
-                                            span: 1..13,
-                                            value: "Hello, world",
-                                        },
-                                    ),
-                                },
-                            ],
-                        },
-                    ),
-                    inferred_type: None,
+                    end: Position {
+                        line: 0,
+                        column: 14,
+                    },
                 },
-            ),
+                span: 0..14,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 14,
+                            },
+                        },
+                        span: 0..14,
+                        kind: TemplateLiteral(
+                            TemplateLiteral {
+                                exprs: [],
+                                quasis: [
+                                    TemplateElem {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 14,
+                                            },
+                                        },
+                                        span: 1..13,
+                                        raw: Str(
+                                            Str {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 14,
+                                                    },
+                                                },
+                                                span: 1..13,
+                                                value: "Hello, world",
+                                            },
+                                        ),
+                                        cooked: Str(
+                                            Str {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 14,
+                                                    },
+                                                },
+                                                span: 1..13,
+                                                value: "Hello, world",
+                                            },
+                                        ),
+                                    },
+                                ],
+                            },
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+            },
         ],
     },
 )

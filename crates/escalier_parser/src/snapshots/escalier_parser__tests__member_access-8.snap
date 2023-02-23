@@ -5,65 +5,65 @@ expression: "parse(\"foo[bar[-1]];\")"
 Ok(
     Program {
         body: [
-            ExprStmt(
-                Expr {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 0,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 12,
-                        },
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
                     },
-                    span: 0..12,
-                    kind: Member(
-                        Member {
-                            obj: Expr {
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 0,
-                                        column: 0,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        column: 3,
-                                    },
-                                },
-                                span: 0..3,
-                                kind: Ident(
-                                    Ident {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 0,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 3,
-                                            },
-                                        },
-                                        span: 0..3,
-                                        name: "foo",
-                                    },
-                                ),
-                                inferred_type: None,
+                    end: Position {
+                        line: 0,
+                        column: 13,
+                    },
+                },
+                span: 0..13,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
                             },
-                            prop: Computed(
-                                ComputedPropName {
+                            end: Position {
+                                line: 0,
+                                column: 12,
+                            },
+                        },
+                        span: 0..12,
+                        kind: Member(
+                            Member {
+                                obj: Expr {
                                     loc: SourceLocation {
                                         start: Position {
                                             line: 0,
-                                            column: 4,
+                                            column: 0,
                                         },
                                         end: Position {
                                             line: 0,
-                                            column: 11,
+                                            column: 3,
                                         },
                                     },
-                                    span: 4..11,
-                                    expr: Expr {
+                                    span: 0..3,
+                                    kind: Ident(
+                                        Ident {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 3,
+                                                },
+                                            },
+                                            span: 0..3,
+                                            name: "foo",
+                                        },
+                                    ),
+                                    inferred_type: None,
+                                },
+                                prop: Computed(
+                                    ComputedPropName {
                                         loc: SourceLocation {
                                             start: Position {
                                                 line: 0,
@@ -75,52 +75,52 @@ Ok(
                                             },
                                         },
                                         span: 4..11,
-                                        kind: Member(
-                                            Member {
-                                                obj: Expr {
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 0,
-                                                            column: 4,
-                                                        },
-                                                        end: Position {
-                                                            line: 0,
-                                                            column: 7,
-                                                        },
-                                                    },
-                                                    span: 4..7,
-                                                    kind: Ident(
-                                                        Ident {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 4,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 7,
-                                                                },
-                                                            },
-                                                            span: 4..7,
-                                                            name: "bar",
-                                                        },
-                                                    ),
-                                                    inferred_type: None,
+                                        expr: Expr {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 4,
                                                 },
-                                                prop: Computed(
-                                                    ComputedPropName {
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 11,
+                                                },
+                                            },
+                                            span: 4..11,
+                                            kind: Member(
+                                                Member {
+                                                    obj: Expr {
                                                         loc: SourceLocation {
                                                             start: Position {
                                                                 line: 0,
-                                                                column: 8,
+                                                                column: 4,
                                                             },
                                                             end: Position {
                                                                 line: 0,
-                                                                column: 10,
+                                                                column: 7,
                                                             },
                                                         },
-                                                        span: 8..10,
-                                                        expr: Expr {
+                                                        span: 4..7,
+                                                        kind: Ident(
+                                                            Ident {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 4,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 7,
+                                                                    },
+                                                                },
+                                                                span: 4..7,
+                                                                name: "bar",
+                                                            },
+                                                        ),
+                                                        inferred_type: None,
+                                                    },
+                                                    prop: Computed(
+                                                        ComputedPropName {
                                                             loc: SourceLocation {
                                                                 start: Position {
                                                                     line: 0,
@@ -132,58 +132,71 @@ Ok(
                                                                 },
                                                             },
                                                             span: 8..10,
-                                                            kind: UnaryExpr(
-                                                                UnaryExpr {
-                                                                    op: Minus,
-                                                                    arg: Expr {
-                                                                        loc: SourceLocation {
-                                                                            start: Position {
-                                                                                line: 0,
-                                                                                column: 9,
-                                                                            },
-                                                                            end: Position {
-                                                                                line: 0,
-                                                                                column: 10,
-                                                                            },
-                                                                        },
-                                                                        span: 9..10,
-                                                                        kind: Lit(
-                                                                            Num(
-                                                                                Num {
-                                                                                    loc: SourceLocation {
-                                                                                        start: Position {
-                                                                                            line: 0,
-                                                                                            column: 9,
-                                                                                        },
-                                                                                        end: Position {
-                                                                                            line: 0,
-                                                                                            column: 10,
-                                                                                        },
-                                                                                    },
-                                                                                    span: 9..10,
-                                                                                    value: "1",
-                                                                                },
-                                                                            ),
-                                                                        ),
-                                                                        inferred_type: None,
+                                                            expr: Expr {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 8,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 10,
                                                                     },
                                                                 },
-                                                            ),
-                                                            inferred_type: None,
+                                                                span: 8..10,
+                                                                kind: UnaryExpr(
+                                                                    UnaryExpr {
+                                                                        op: Minus,
+                                                                        arg: Expr {
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 0,
+                                                                                    column: 9,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 0,
+                                                                                    column: 10,
+                                                                                },
+                                                                            },
+                                                                            span: 9..10,
+                                                                            kind: Lit(
+                                                                                Num(
+                                                                                    Num {
+                                                                                        loc: SourceLocation {
+                                                                                            start: Position {
+                                                                                                line: 0,
+                                                                                                column: 9,
+                                                                                            },
+                                                                                            end: Position {
+                                                                                                line: 0,
+                                                                                                column: 10,
+                                                                                            },
+                                                                                        },
+                                                                                        span: 9..10,
+                                                                                        value: "1",
+                                                                                    },
+                                                                                ),
+                                                                            ),
+                                                                            inferred_type: None,
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                inferred_type: None,
+                                                            },
                                                         },
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                        inferred_type: None,
+                                                    ),
+                                                },
+                                            ),
+                                            inferred_type: None,
+                                        },
                                     },
-                                },
-                            ),
-                        },
-                    ),
-                    inferred_type: None,
-                },
-            ),
+                                ),
+                            },
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+            },
         ],
     },
 )

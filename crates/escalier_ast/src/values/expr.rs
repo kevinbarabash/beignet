@@ -8,50 +8,12 @@ use crate::values::jsx::JSXElement;
 use crate::values::keyword::Keyword;
 use crate::values::lit::Lit;
 use crate::values::pattern::{Pattern, PatternKind};
+use crate::values::stmt::Statement;
 use crate::values::type_ann::{TypeAnn, TypeParam};
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct Program {
     pub body: Vec<Statement>,
-}
-
-// TODO: Update Statement to mimic structure of Expr/ExprKind
-// TODO: Update Statement to have an .inferred_type field like Expr
-#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub enum Statement {
-    ClassDecl {
-        #[drive(skip)]
-        loc: SourceLocation,
-        #[drive(skip)]
-        span: Span,
-        #[drive(skip)]
-        ident: Ident, // Why do have `ident` here an in `Class`?
-        class: Box<Class>,
-    },
-    VarDecl {
-        #[drive(skip)]
-        loc: SourceLocation,
-        #[drive(skip)]
-        span: Span,
-        pattern: Pattern,
-        type_ann: Option<TypeAnn>,
-        init: Option<Box<Expr>>,
-        #[drive(skip)]
-        declare: bool,
-    },
-    TypeDecl {
-        #[drive(skip)]
-        loc: SourceLocation,
-        #[drive(skip)]
-        span: Span,
-        #[drive(skip)]
-        declare: bool,
-        #[drive(skip)]
-        id: Ident,
-        type_ann: TypeAnn,
-        type_params: Option<Vec<TypeParam>>,
-    },
-    ExprStmt(Expr),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]

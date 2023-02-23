@@ -5,7 +5,7 @@ expression: "parse(\"type Num = number;\")"
 Ok(
     Program {
         body: [
-            TypeDecl {
+            Statement {
                 loc: SourceLocation {
                     start: Position {
                         line: 0,
@@ -17,41 +17,45 @@ Ok(
                     },
                 },
                 span: 0..18,
-                declare: false,
-                id: Ident {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 5,
+                kind: TypeDecl(
+                    TypeDecl {
+                        declare: false,
+                        id: Ident {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 8,
+                                },
+                            },
+                            span: 5..8,
+                            name: "Num",
                         },
-                        end: Position {
-                            line: 0,
-                            column: 8,
+                        type_ann: TypeAnn {
+                            kind: Keyword(
+                                KeywordType {
+                                    keyword: Number,
+                                },
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 11,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 17,
+                                },
+                            },
+                            span: 11..17,
+                            inferred_type: None,
                         },
+                        type_params: None,
                     },
-                    span: 5..8,
-                    name: "Num",
-                },
-                type_ann: TypeAnn {
-                    kind: Keyword(
-                        KeywordType {
-                            keyword: Number,
-                        },
-                    ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 11,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 17,
-                        },
-                    },
-                    span: 11..17,
-                    inferred_type: None,
-                },
-                type_params: None,
+                ),
             },
         ],
     },

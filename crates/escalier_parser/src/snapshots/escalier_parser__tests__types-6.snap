@@ -5,7 +5,7 @@ expression: "parse(\"declare let add: ((a: number, b: number) => number) & (a: s
 Ok(
     Program {
         body: [
-            VarDecl {
+            Statement {
                 loc: SourceLocation {
                     start: Position {
                         line: 0,
@@ -17,23 +17,9 @@ Ok(
                     },
                 },
                 span: 8..87,
-                pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 12,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 15,
-                        },
-                    },
-                    span: 12..15,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "add",
-                            mutable: false,
-                            span: 12..15,
+                kind: VarDecl(
+                    VarDecl {
+                        pattern: Pattern {
                             loc: SourceLocation {
                                 start: Position {
                                     line: 0,
@@ -44,37 +30,37 @@ Ok(
                                     column: 15,
                                 },
                             },
+                            span: 12..15,
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "add",
+                                    mutable: false,
+                                    span: 12..15,
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 12,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 15,
+                                        },
+                                    },
+                                },
+                            ),
+                            inferred_type: None,
                         },
-                    ),
-                    inferred_type: None,
-                },
-                type_ann: Some(
-                    TypeAnn {
-                        kind: Intersection(
-                            IntersectionType {
-                                types: [
-                                    TypeAnn {
-                                        kind: Lam(
-                                            LamType {
-                                                params: [
-                                                    TypeAnnFnParam {
-                                                        pat: Pattern {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 19,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 20,
-                                                                },
-                                                            },
-                                                            span: 19..20,
-                                                            kind: Ident(
-                                                                BindingIdent {
-                                                                    name: "a",
-                                                                    mutable: false,
-                                                                    span: 19..20,
+                        type_ann: Some(
+                            TypeAnn {
+                                kind: Intersection(
+                                    IntersectionType {
+                                        types: [
+                                            TypeAnn {
+                                                kind: Lam(
+                                                    LamType {
+                                                        params: [
+                                                            TypeAnnFnParam {
+                                                                pat: Pattern {
                                                                     loc: SourceLocation {
                                                                         start: Position {
                                                                             line: 0,
@@ -85,49 +71,49 @@ Ok(
                                                                             column: 20,
                                                                         },
                                                                     },
+                                                                    span: 19..20,
+                                                                    kind: Ident(
+                                                                        BindingIdent {
+                                                                            name: "a",
+                                                                            mutable: false,
+                                                                            span: 19..20,
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 0,
+                                                                                    column: 19,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 0,
+                                                                                    column: 20,
+                                                                                },
+                                                                            },
+                                                                        },
+                                                                    ),
+                                                                    inferred_type: None,
                                                                 },
-                                                            ),
-                                                            inferred_type: None,
-                                                        },
-                                                        type_ann: TypeAnn {
-                                                            kind: Keyword(
-                                                                KeywordType {
-                                                                    keyword: Number,
+                                                                type_ann: TypeAnn {
+                                                                    kind: Keyword(
+                                                                        KeywordType {
+                                                                            keyword: Number,
+                                                                        },
+                                                                    ),
+                                                                    loc: SourceLocation {
+                                                                        start: Position {
+                                                                            line: 0,
+                                                                            column: 22,
+                                                                        },
+                                                                        end: Position {
+                                                                            line: 0,
+                                                                            column: 28,
+                                                                        },
+                                                                    },
+                                                                    span: 22..28,
+                                                                    inferred_type: None,
                                                                 },
-                                                            ),
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 22,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 28,
-                                                                },
+                                                                optional: false,
                                                             },
-                                                            span: 22..28,
-                                                            inferred_type: None,
-                                                        },
-                                                        optional: false,
-                                                    },
-                                                    TypeAnnFnParam {
-                                                        pat: Pattern {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 30,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 31,
-                                                                },
-                                                            },
-                                                            span: 30..31,
-                                                            kind: Ident(
-                                                                BindingIdent {
-                                                                    name: "b",
-                                                                    mutable: false,
-                                                                    span: 30..31,
+                                                            TypeAnnFnParam {
+                                                                pat: Pattern {
                                                                     loc: SourceLocation {
                                                                         start: Position {
                                                                             line: 0,
@@ -138,11 +124,49 @@ Ok(
                                                                             column: 31,
                                                                         },
                                                                     },
+                                                                    span: 30..31,
+                                                                    kind: Ident(
+                                                                        BindingIdent {
+                                                                            name: "b",
+                                                                            mutable: false,
+                                                                            span: 30..31,
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 0,
+                                                                                    column: 30,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 0,
+                                                                                    column: 31,
+                                                                                },
+                                                                            },
+                                                                        },
+                                                                    ),
+                                                                    inferred_type: None,
                                                                 },
-                                                            ),
-                                                            inferred_type: None,
-                                                        },
-                                                        type_ann: TypeAnn {
+                                                                type_ann: TypeAnn {
+                                                                    kind: Keyword(
+                                                                        KeywordType {
+                                                                            keyword: Number,
+                                                                        },
+                                                                    ),
+                                                                    loc: SourceLocation {
+                                                                        start: Position {
+                                                                            line: 0,
+                                                                            column: 33,
+                                                                        },
+                                                                        end: Position {
+                                                                            line: 0,
+                                                                            column: 39,
+                                                                        },
+                                                                    },
+                                                                    span: 33..39,
+                                                                    inferred_type: None,
+                                                                },
+                                                                optional: false,
+                                                            },
+                                                        ],
+                                                        ret: TypeAnn {
                                                             kind: Keyword(
                                                                 KeywordType {
                                                                     keyword: Number,
@@ -151,76 +175,38 @@ Ok(
                                                             loc: SourceLocation {
                                                                 start: Position {
                                                                     line: 0,
-                                                                    column: 33,
+                                                                    column: 44,
                                                                 },
                                                                 end: Position {
                                                                     line: 0,
-                                                                    column: 39,
+                                                                    column: 50,
                                                                 },
                                                             },
-                                                            span: 33..39,
+                                                            span: 44..50,
                                                             inferred_type: None,
                                                         },
-                                                        optional: false,
+                                                        type_params: None,
                                                     },
-                                                ],
-                                                ret: TypeAnn {
-                                                    kind: Keyword(
-                                                        KeywordType {
-                                                            keyword: Number,
-                                                        },
-                                                    ),
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 0,
-                                                            column: 44,
-                                                        },
-                                                        end: Position {
-                                                            line: 0,
-                                                            column: 50,
-                                                        },
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 18,
                                                     },
-                                                    span: 44..50,
-                                                    inferred_type: None,
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 50,
+                                                    },
                                                 },
-                                                type_params: None,
+                                                span: 18..50,
+                                                inferred_type: None,
                                             },
-                                        ),
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 18,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 50,
-                                            },
-                                        },
-                                        span: 18..50,
-                                        inferred_type: None,
-                                    },
-                                    TypeAnn {
-                                        kind: Lam(
-                                            LamType {
-                                                params: [
-                                                    TypeAnnFnParam {
-                                                        pat: Pattern {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 55,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 56,
-                                                                },
-                                                            },
-                                                            span: 55..56,
-                                                            kind: Ident(
-                                                                BindingIdent {
-                                                                    name: "a",
-                                                                    mutable: false,
-                                                                    span: 55..56,
+                                            TypeAnn {
+                                                kind: Lam(
+                                                    LamType {
+                                                        params: [
+                                                            TypeAnnFnParam {
+                                                                pat: Pattern {
                                                                     loc: SourceLocation {
                                                                         start: Position {
                                                                             line: 0,
@@ -231,49 +217,49 @@ Ok(
                                                                             column: 56,
                                                                         },
                                                                     },
+                                                                    span: 55..56,
+                                                                    kind: Ident(
+                                                                        BindingIdent {
+                                                                            name: "a",
+                                                                            mutable: false,
+                                                                            span: 55..56,
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 0,
+                                                                                    column: 55,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 0,
+                                                                                    column: 56,
+                                                                                },
+                                                                            },
+                                                                        },
+                                                                    ),
+                                                                    inferred_type: None,
                                                                 },
-                                                            ),
-                                                            inferred_type: None,
-                                                        },
-                                                        type_ann: TypeAnn {
-                                                            kind: Keyword(
-                                                                KeywordType {
-                                                                    keyword: String,
+                                                                type_ann: TypeAnn {
+                                                                    kind: Keyword(
+                                                                        KeywordType {
+                                                                            keyword: String,
+                                                                        },
+                                                                    ),
+                                                                    loc: SourceLocation {
+                                                                        start: Position {
+                                                                            line: 0,
+                                                                            column: 58,
+                                                                        },
+                                                                        end: Position {
+                                                                            line: 0,
+                                                                            column: 64,
+                                                                        },
+                                                                    },
+                                                                    span: 58..64,
+                                                                    inferred_type: None,
                                                                 },
-                                                            ),
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 58,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 64,
-                                                                },
+                                                                optional: false,
                                                             },
-                                                            span: 58..64,
-                                                            inferred_type: None,
-                                                        },
-                                                        optional: false,
-                                                    },
-                                                    TypeAnnFnParam {
-                                                        pat: Pattern {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 66,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 67,
-                                                                },
-                                                            },
-                                                            span: 66..67,
-                                                            kind: Ident(
-                                                                BindingIdent {
-                                                                    name: "b",
-                                                                    mutable: false,
-                                                                    span: 66..67,
+                                                            TypeAnnFnParam {
+                                                                pat: Pattern {
                                                                     loc: SourceLocation {
                                                                         start: Position {
                                                                             line: 0,
@@ -284,11 +270,49 @@ Ok(
                                                                             column: 67,
                                                                         },
                                                                     },
+                                                                    span: 66..67,
+                                                                    kind: Ident(
+                                                                        BindingIdent {
+                                                                            name: "b",
+                                                                            mutable: false,
+                                                                            span: 66..67,
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 0,
+                                                                                    column: 66,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 0,
+                                                                                    column: 67,
+                                                                                },
+                                                                            },
+                                                                        },
+                                                                    ),
+                                                                    inferred_type: None,
                                                                 },
-                                                            ),
-                                                            inferred_type: None,
-                                                        },
-                                                        type_ann: TypeAnn {
+                                                                type_ann: TypeAnn {
+                                                                    kind: Keyword(
+                                                                        KeywordType {
+                                                                            keyword: String,
+                                                                        },
+                                                                    ),
+                                                                    loc: SourceLocation {
+                                                                        start: Position {
+                                                                            line: 0,
+                                                                            column: 69,
+                                                                        },
+                                                                        end: Position {
+                                                                            line: 0,
+                                                                            column: 75,
+                                                                        },
+                                                                    },
+                                                                    span: 69..75,
+                                                                    inferred_type: None,
+                                                                },
+                                                                optional: false,
+                                                            },
+                                                        ],
+                                                        ret: TypeAnn {
                                                             kind: Keyword(
                                                                 KeywordType {
                                                                     keyword: String,
@@ -297,73 +321,53 @@ Ok(
                                                             loc: SourceLocation {
                                                                 start: Position {
                                                                     line: 0,
-                                                                    column: 69,
+                                                                    column: 80,
                                                                 },
                                                                 end: Position {
                                                                     line: 0,
-                                                                    column: 75,
+                                                                    column: 86,
                                                                 },
                                                             },
-                                                            span: 69..75,
+                                                            span: 80..86,
                                                             inferred_type: None,
                                                         },
-                                                        optional: false,
+                                                        type_params: None,
                                                     },
-                                                ],
-                                                ret: TypeAnn {
-                                                    kind: Keyword(
-                                                        KeywordType {
-                                                            keyword: String,
-                                                        },
-                                                    ),
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 0,
-                                                            column: 80,
-                                                        },
-                                                        end: Position {
-                                                            line: 0,
-                                                            column: 86,
-                                                        },
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 54,
                                                     },
-                                                    span: 80..86,
-                                                    inferred_type: None,
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 86,
+                                                    },
                                                 },
-                                                type_params: None,
+                                                span: 54..86,
+                                                inferred_type: None,
                                             },
-                                        ),
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 54,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 86,
-                                            },
-                                        },
-                                        span: 54..86,
-                                        inferred_type: None,
+                                        ],
                                     },
-                                ],
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 17,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 86,
+                                    },
+                                },
+                                span: 17..86,
+                                inferred_type: None,
                             },
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 0,
-                                column: 17,
-                            },
-                            end: Position {
-                                line: 0,
-                                column: 86,
-                            },
-                        },
-                        span: 17..86,
-                        inferred_type: None,
+                        init: None,
+                        declare: true,
                     },
                 ),
-                init: None,
-                declare: true,
             },
         ],
     },

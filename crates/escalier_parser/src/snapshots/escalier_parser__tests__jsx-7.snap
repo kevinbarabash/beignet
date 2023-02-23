@@ -5,47 +5,47 @@ expression: "parse(\"<Foo msg=\\\"hello\\\" bar={baz}></Foo>\")"
 Ok(
     Program {
         body: [
-            ExprStmt(
-                Expr {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 0,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 33,
-                        },
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
                     },
-                    span: 0..33,
-                    kind: JSXElement(
-                        JSXElement {
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 0,
-                                    column: 0,
-                                },
-                                end: Position {
-                                    line: 0,
-                                    column: 33,
-                                },
+                    end: Position {
+                        line: 0,
+                        column: 33,
+                    },
+                },
+                span: 0..33,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
                             },
-                            span: 0..33,
-                            name: "Foo",
-                            attrs: [
-                                JSXAttr {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 0,
-                                            column: 5,
-                                        },
-                                        end: Position {
-                                            line: 0,
-                                            column: 16,
-                                        },
+                            end: Position {
+                                line: 0,
+                                column: 33,
+                            },
+                        },
+                        span: 0..33,
+                        kind: JSXElement(
+                            JSXElement {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
                                     },
-                                    span: 5..16,
-                                    ident: Ident {
+                                    end: Position {
+                                        line: 0,
+                                        column: 33,
+                                    },
+                                },
+                                span: 0..33,
+                                name: "Foo",
+                                attrs: [
+                                    JSXAttr {
                                         loc: SourceLocation {
                                             start: Position {
                                                 line: 0,
@@ -53,44 +53,44 @@ Ok(
                                             },
                                             end: Position {
                                                 line: 0,
-                                                column: 8,
+                                                column: 16,
                                             },
                                         },
-                                        span: 5..8,
-                                        name: "msg",
-                                    },
-                                    value: Lit(
-                                        Str(
-                                            Str {
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 0,
-                                                        column: 9,
-                                                    },
-                                                    end: Position {
-                                                        line: 0,
-                                                        column: 16,
-                                                    },
+                                        span: 5..16,
+                                        ident: Ident {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 5,
                                                 },
-                                                span: 9..16,
-                                                value: "hello",
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 8,
+                                                },
                                             },
+                                            span: 5..8,
+                                            name: "msg",
+                                        },
+                                        value: Lit(
+                                            Str(
+                                                Str {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 9,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 16,
+                                                        },
+                                                    },
+                                                    span: 9..16,
+                                                    value: "hello",
+                                                },
+                                            ),
                                         ),
-                                    ),
-                                },
-                                JSXAttr {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 0,
-                                            column: 17,
-                                        },
-                                        end: Position {
-                                            line: 0,
-                                            column: 26,
-                                        },
                                     },
-                                    span: 17..26,
-                                    ident: Ident {
+                                    JSXAttr {
                                         loc: SourceLocation {
                                             start: Position {
                                                 line: 0,
@@ -98,65 +98,78 @@ Ok(
                                             },
                                             end: Position {
                                                 line: 0,
-                                                column: 20,
+                                                column: 26,
                                             },
                                         },
-                                        span: 17..20,
-                                        name: "bar",
-                                    },
-                                    value: JSXExprContainer(
-                                        JSXExprContainer {
+                                        span: 17..26,
+                                        ident: Ident {
                                             loc: SourceLocation {
                                                 start: Position {
                                                     line: 0,
-                                                    column: 21,
+                                                    column: 17,
                                                 },
                                                 end: Position {
                                                     line: 0,
-                                                    column: 26,
+                                                    column: 20,
                                                 },
                                             },
-                                            span: 21..26,
-                                            expr: Expr {
+                                            span: 17..20,
+                                            name: "bar",
+                                        },
+                                        value: JSXExprContainer(
+                                            JSXExprContainer {
                                                 loc: SourceLocation {
                                                     start: Position {
                                                         line: 0,
-                                                        column: 22,
+                                                        column: 21,
                                                     },
                                                     end: Position {
                                                         line: 0,
-                                                        column: 25,
+                                                        column: 26,
                                                     },
                                                 },
-                                                span: 22..25,
-                                                kind: Ident(
-                                                    Ident {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 0,
-                                                                column: 22,
-                                                            },
-                                                            end: Position {
-                                                                line: 0,
-                                                                column: 25,
-                                                            },
+                                                span: 21..26,
+                                                expr: Expr {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 22,
                                                         },
-                                                        span: 22..25,
-                                                        name: "baz",
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 25,
+                                                        },
                                                     },
-                                                ),
-                                                inferred_type: None,
+                                                    span: 22..25,
+                                                    kind: Ident(
+                                                        Ident {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 22,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 25,
+                                                                },
+                                                            },
+                                                            span: 22..25,
+                                                            name: "baz",
+                                                        },
+                                                    ),
+                                                    inferred_type: None,
+                                                },
                                             },
-                                        },
-                                    ),
-                                },
-                            ],
-                            children: [],
-                        },
-                    ),
-                    inferred_type: None,
-                },
-            ),
+                                        ),
+                                    },
+                                ],
+                                children: [],
+                            },
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+            },
         ],
     },
 )

@@ -5,7 +5,7 @@ expression: "parse(\"class Foo { a: number; }\")"
 Ok(
     Program {
         body: [
-            ClassDecl {
+            Statement {
                 loc: SourceLocation {
                     start: Position {
                         line: 0,
@@ -17,82 +17,86 @@ Ok(
                     },
                 },
                 span: 0..24,
-                ident: Ident {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 6,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 9,
-                        },
-                    },
-                    span: 6..9,
-                    name: "Foo",
-                },
-                class: Class {
-                    ident: Ident {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 0,
-                                column: 6,
-                            },
-                            end: Position {
-                                line: 0,
-                                column: 9,
-                            },
-                        },
-                        span: 6..9,
-                        name: "Foo",
-                    },
-                    body: [
-                        Prop(
-                            ClassProp {
-                                key: Ident {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 0,
-                                            column: 12,
-                                        },
-                                        end: Position {
-                                            line: 0,
-                                            column: 13,
-                                        },
-                                    },
-                                    span: 12..13,
-                                    name: "a",
+                kind: ClassDecl(
+                    ClassDecl {
+                        ident: Ident {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 6,
                                 },
-                                value: None,
-                                type_ann: Some(
-                                    TypeAnn {
-                                        kind: Keyword(
-                                            KeywordType {
-                                                keyword: Number,
+                                end: Position {
+                                    line: 0,
+                                    column: 9,
+                                },
+                            },
+                            span: 6..9,
+                            name: "Foo",
+                        },
+                        class: Class {
+                            ident: Ident {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 6,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 9,
+                                    },
+                                },
+                                span: 6..9,
+                                name: "Foo",
+                            },
+                            body: [
+                                Prop(
+                                    ClassProp {
+                                        key: Ident {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 12,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 13,
+                                                },
+                                            },
+                                            span: 12..13,
+                                            name: "a",
+                                        },
+                                        value: None,
+                                        type_ann: Some(
+                                            TypeAnn {
+                                                kind: Keyword(
+                                                    KeywordType {
+                                                        keyword: Number,
+                                                    },
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 15,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 21,
+                                                    },
+                                                },
+                                                span: 15..21,
+                                                inferred_type: None,
                                             },
                                         ),
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 15,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 21,
-                                            },
-                                        },
-                                        span: 15..21,
-                                        inferred_type: None,
+                                        is_static: false,
+                                        is_optional: false,
+                                        is_mutable: false,
                                     },
                                 ),
-                                is_static: false,
-                                is_optional: false,
-                                is_mutable: false,
-                            },
-                        ),
-                    ],
-                    type_params: None,
-                },
+                            ],
+                            type_params: None,
+                        },
+                    },
+                ),
             },
         ],
     },

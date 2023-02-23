@@ -5,103 +5,116 @@ expression: "parse(\"(a) => \\\"hello\\\";\")"
 Ok(
     Program {
         body: [
-            ExprStmt(
-                Expr {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 0,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 14,
-                        },
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
                     },
-                    span: 0..14,
-                    kind: Lambda(
-                        Lambda {
-                            params: [
-                                EFnParam {
-                                    pat: Pattern {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 1,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 2,
-                                            },
-                                        },
-                                        span: 1..2,
-                                        kind: Ident(
-                                            BindingIdent {
-                                                name: "a",
-                                                mutable: false,
-                                                span: 1..2,
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 0,
-                                                        column: 1,
-                                                    },
-                                                    end: Position {
-                                                        line: 0,
-                                                        column: 2,
-                                                    },
+                    end: Position {
+                        line: 0,
+                        column: 15,
+                    },
+                },
+                span: 0..15,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 14,
+                            },
+                        },
+                        span: 0..14,
+                        kind: Lambda(
+                            Lambda {
+                                params: [
+                                    EFnParam {
+                                        pat: Pattern {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 1,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 2,
                                                 },
                                             },
-                                        ),
-                                        inferred_type: None,
-                                    },
-                                    type_ann: None,
-                                    optional: false,
-                                },
-                            ],
-                            body: Block {
-                                span: 7..14,
-                                stmts: [
-                                    Expr {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 7,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 14,
-                                            },
-                                        },
-                                        span: 7..14,
-                                        kind: Lit(
-                                            Str(
-                                                Str {
+                                            span: 1..2,
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "a",
+                                                    mutable: false,
+                                                    span: 1..2,
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
-                                                            column: 7,
+                                                            column: 1,
                                                         },
                                                         end: Position {
                                                             line: 0,
-                                                            column: 14,
+                                                            column: 2,
                                                         },
                                                     },
-                                                    span: 7..14,
-                                                    value: "hello",
                                                 },
                                             ),
-                                        ),
-                                        inferred_type: None,
+                                            inferred_type: None,
+                                        },
+                                        type_ann: None,
+                                        optional: false,
                                     },
                                 ],
+                                body: Block {
+                                    span: 7..14,
+                                    stmts: [
+                                        Expr {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 7,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 14,
+                                                },
+                                            },
+                                            span: 7..14,
+                                            kind: Lit(
+                                                Str(
+                                                    Str {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 7,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 14,
+                                                            },
+                                                        },
+                                                        span: 7..14,
+                                                        value: "hello",
+                                                    },
+                                                ),
+                                            ),
+                                            inferred_type: None,
+                                        },
+                                    ],
+                                },
+                                is_async: false,
+                                return_type: None,
+                                type_params: None,
                             },
-                            is_async: false,
-                            return_type: None,
-                            type_params: None,
-                        },
-                    ),
-                    inferred_type: None,
-                },
-            ),
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+            },
         ],
     },
 )

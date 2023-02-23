@@ -1,4 +1,4 @@
-use escalier_ast::values::{Program, Statement};
+use escalier_ast::values::{Program, StmtKind};
 use escalier_codegen::*;
 use escalier_infer::TypeError;
 use escalier_infer::*;
@@ -12,8 +12,8 @@ fn infer(input: &str) -> String {
     let mut ctx = escalier_infer::Context::default();
     let prog = parse(input).unwrap();
     let stmt = prog.body.get(0).unwrap();
-    let result = match stmt {
-        Statement::ExprStmt(expr) => {
+    let result = match &stmt.kind {
+        StmtKind::ExprStmt(expr) => {
             let mut expr = expr.to_owned();
             infer_expr(&mut ctx, &mut expr)
         }

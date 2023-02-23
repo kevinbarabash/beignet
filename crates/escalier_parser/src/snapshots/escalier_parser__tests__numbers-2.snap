@@ -5,40 +5,53 @@ expression: "parse(\"1.23;\")"
 Ok(
     Program {
         body: [
-            ExprStmt(
-                Expr {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 0,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 4,
-                        },
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
                     },
-                    span: 0..4,
-                    kind: Lit(
-                        Num(
-                            Num {
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 0,
-                                        column: 0,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        column: 4,
-                                    },
-                                },
-                                span: 0..4,
-                                value: "1.23",
-                            },
-                        ),
-                    ),
-                    inferred_type: None,
+                    end: Position {
+                        line: 0,
+                        column: 5,
+                    },
                 },
-            ),
+                span: 0..5,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 4,
+                            },
+                        },
+                        span: 0..4,
+                        kind: Lit(
+                            Num(
+                                Num {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 4,
+                                        },
+                                    },
+                                    span: 0..4,
+                                    value: "1.23",
+                                },
+                            ),
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+            },
         ],
     },
 )

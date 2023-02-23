@@ -5,7 +5,7 @@ expression: "parse(\"type Foo = typeof foo;\")"
 Ok(
     Program {
         body: [
-            TypeDecl {
+            Statement {
                 loc: SourceLocation {
                     start: Position {
                         line: 0,
@@ -17,38 +17,27 @@ Ok(
                     },
                 },
                 span: 0..22,
-                declare: false,
-                id: Ident {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 5,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 8,
-                        },
-                    },
-                    span: 5..8,
-                    name: "Foo",
-                },
-                type_ann: TypeAnn {
-                    kind: Query(
-                        QueryType {
-                            expr: Expr {
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 0,
-                                        column: 18,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        column: 21,
-                                    },
+                kind: TypeDecl(
+                    TypeDecl {
+                        declare: false,
+                        id: Ident {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 5,
                                 },
-                                span: 18..21,
-                                kind: Ident(
-                                    Ident {
+                                end: Position {
+                                    line: 0,
+                                    column: 8,
+                                },
+                            },
+                            span: 5..8,
+                            name: "Foo",
+                        },
+                        type_ann: TypeAnn {
+                            kind: Query(
+                                QueryType {
+                                    expr: Expr {
                                         loc: SourceLocation {
                                             start: Position {
                                                 line: 0,
@@ -60,27 +49,42 @@ Ok(
                                             },
                                         },
                                         span: 18..21,
-                                        name: "foo",
+                                        kind: Ident(
+                                            Ident {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 18,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 21,
+                                                    },
+                                                },
+                                                span: 18..21,
+                                                name: "foo",
+                                            },
+                                        ),
+                                        inferred_type: None,
                                     },
-                                ),
-                                inferred_type: None,
+                                },
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 11,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 21,
+                                },
                             },
+                            span: 11..21,
+                            inferred_type: None,
                         },
-                    ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 11,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 21,
-                        },
+                        type_params: None,
                     },
-                    span: 11..21,
-                    inferred_type: None,
-                },
-                type_params: None,
+                ),
             },
         ],
     },

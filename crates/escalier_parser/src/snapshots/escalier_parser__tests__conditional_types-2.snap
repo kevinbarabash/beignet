@@ -5,7 +5,7 @@ expression: "parse(\"type Flatten<Type> = Type extends Array<infer Item> ? Item 
 Ok(
     Program {
         body: [
-            TypeDecl {
+            Statement {
                 loc: SourceLocation {
                     start: Position {
                         line: 0,
@@ -17,163 +17,167 @@ Ok(
                     },
                 },
                 span: 0..66,
-                declare: false,
-                id: Ident {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 5,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 12,
-                        },
-                    },
-                    span: 5..12,
-                    name: "Flatten",
-                },
-                type_ann: TypeAnn {
-                    kind: Conditional(
-                        ConditionalType {
-                            check_type: TypeAnn {
-                                kind: TypeRef(
-                                    TypeRef {
-                                        name: "Type",
-                                        type_args: None,
-                                    },
-                                ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 0,
-                                        column: 21,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        column: 25,
-                                    },
+                kind: TypeDecl(
+                    TypeDecl {
+                        declare: false,
+                        id: Ident {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 5,
                                 },
-                                span: 21..25,
-                                inferred_type: None,
+                                end: Position {
+                                    line: 0,
+                                    column: 12,
+                                },
                             },
-                            extends_type: TypeAnn {
-                                kind: TypeRef(
-                                    TypeRef {
-                                        name: "Array",
-                                        type_args: Some(
-                                            [
-                                                TypeAnn {
-                                                    kind: Infer(
-                                                        InferType {
-                                                            name: "Item",
-                                                        },
-                                                    ),
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 0,
-                                                            column: 40,
-                                                        },
-                                                        end: Position {
-                                                            line: 0,
-                                                            column: 50,
-                                                        },
-                                                    },
-                                                    span: 40..50,
-                                                    inferred_type: None,
-                                                },
-                                            ],
+                            span: 5..12,
+                            name: "Flatten",
+                        },
+                        type_ann: TypeAnn {
+                            kind: Conditional(
+                                ConditionalType {
+                                    check_type: TypeAnn {
+                                        kind: TypeRef(
+                                            TypeRef {
+                                                name: "Type",
+                                                type_args: None,
+                                            },
                                         ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 21,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 25,
+                                            },
+                                        },
+                                        span: 21..25,
+                                        inferred_type: None,
                                     },
-                                ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 0,
-                                        column: 34,
+                                    extends_type: TypeAnn {
+                                        kind: TypeRef(
+                                            TypeRef {
+                                                name: "Array",
+                                                type_args: Some(
+                                                    [
+                                                        TypeAnn {
+                                                            kind: Infer(
+                                                                InferType {
+                                                                    name: "Item",
+                                                                },
+                                                            ),
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 40,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 50,
+                                                                },
+                                                            },
+                                                            span: 40..50,
+                                                            inferred_type: None,
+                                                        },
+                                                    ],
+                                                ),
+                                            },
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 34,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 51,
+                                            },
+                                        },
+                                        span: 34..51,
+                                        inferred_type: None,
                                     },
-                                    end: Position {
-                                        line: 0,
-                                        column: 51,
+                                    true_type: TypeAnn {
+                                        kind: TypeRef(
+                                            TypeRef {
+                                                name: "Item",
+                                                type_args: None,
+                                            },
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 54,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 58,
+                                            },
+                                        },
+                                        span: 54..58,
+                                        inferred_type: None,
+                                    },
+                                    false_type: TypeAnn {
+                                        kind: TypeRef(
+                                            TypeRef {
+                                                name: "Type",
+                                                type_args: None,
+                                            },
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 61,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 65,
+                                            },
+                                        },
+                                        span: 61..65,
+                                        inferred_type: None,
                                     },
                                 },
-                                span: 34..51,
-                                inferred_type: None,
-                            },
-                            true_type: TypeAnn {
-                                kind: TypeRef(
-                                    TypeRef {
-                                        name: "Item",
-                                        type_args: None,
-                                    },
-                                ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 0,
-                                        column: 54,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        column: 58,
-                                    },
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 21,
                                 },
-                                span: 54..58,
-                                inferred_type: None,
+                                end: Position {
+                                    line: 0,
+                                    column: 65,
+                                },
                             },
-                            false_type: TypeAnn {
-                                kind: TypeRef(
-                                    TypeRef {
+                            span: 21..65,
+                            inferred_type: None,
+                        },
+                        type_params: Some(
+                            [
+                                TypeParam {
+                                    span: 13..17,
+                                    name: Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 13,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 17,
+                                            },
+                                        },
+                                        span: 13..17,
                                         name: "Type",
-                                        type_args: None,
                                     },
-                                ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 0,
-                                        column: 61,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        column: 65,
-                                    },
+                                    constraint: None,
+                                    default: None,
                                 },
-                                span: 61..65,
-                                inferred_type: None,
-                            },
-                        },
-                    ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 21,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 65,
-                        },
+                            ],
+                        ),
                     },
-                    span: 21..65,
-                    inferred_type: None,
-                },
-                type_params: Some(
-                    [
-                        TypeParam {
-                            span: 13..17,
-                            name: Ident {
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 0,
-                                        column: 13,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        column: 17,
-                                    },
-                                },
-                                span: 13..17,
-                                name: "Type",
-                            },
-                            constraint: None,
-                            default: None,
-                        },
-                    ],
                 ),
             },
         ],

@@ -6,21 +6,28 @@ use crate::pattern::*;
 use crate::type_ann::parse_type_ann;
 use crate::util::*;
 
-pub fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, ParseError> {
+pub fn parse_statement(
+    node: &tree_sitter::Node,
+    src: &str,
+) -> Result<Option<Statement>, ParseError> {
     let kind = node.kind();
     eprintln!("parse_statement: kind = {kind}");
 
-    match node.kind() {
-        "lexical_declaration" => parse_declaration(node, false, src),
-        "class_declaration" => parse_class_decl(node, src),
+    let kind = match node.kind() {
+        "lexical_declaration" => {
+            return parse_declaration(node, false, src);
+        }
+        "class_declaration" => {
+            return parse_class_decl(node, src);
+        }
         "expression_statement" => {
             let expr = node.named_child(0).unwrap();
             let expr = parse_expression(&expr, src)?;
-            Ok(vec![Statement::ExprStmt(expr)])
+            StmtKind::ExprStmt(expr)
         }
         "ambient_declaration" => {
             let decl = node.named_child(0).unwrap();
-            parse_declaration(&decl, true, src)
+            return parse_declaration(&decl, true, src);
         }
         "type_alias_declaration" => {
             let name = node.child_by_field_name("name").unwrap();
@@ -34,24 +41,30 @@ pub fn parse_statement(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statem
 
             let type_params = parse_type_params_for_node(node, src)?;
 
-            Ok(vec![Statement::TypeDecl {
-                loc: SourceLocation::from(node),
-                span: node.byte_range(),
+            StmtKind::TypeDecl(TypeDecl {
                 declare: false,
                 id,
                 type_ann,
                 type_params,
-            }])
+            })
         }
         "comment" => {
-            Ok(vec![]) // ignore comments
+            return Ok(None); // ignore comments
         }
-        "ERROR" => Err(ParseError::from(format!(
-            "failed to parse: '{}'",
-            text_for_node(node, src)?
-        ))),
-        _ => Err(ParseError::from(format!("unhandled: {:#?}", node))),
-    }
+        "ERROR" => {
+            return Err(ParseError::from(format!(
+                "failed to parse: '{}'",
+                text_for_node(node, src)?
+            )))
+        }
+        _ => return Err(ParseError::from(format!("unhandled: {:#?}", node))),
+    };
+
+    Ok(Some(Statement {
+        loc: SourceLocation::from(node),
+        span: node.byte_range(),
+        kind,
+    }))
 
     // $.export_statement,
     // $.import_statement,
@@ -81,7 +94,7 @@ fn parse_declaration(
     node: &tree_sitter::Node,
     declare: bool,
     src: &str,
-) -> Result<Vec<Statement>, ParseError> {
+) -> Result<Option<Statement>, ParseError> {
     eprintln!("node.kind = {}", node.kind());
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
@@ -100,7 +113,7 @@ fn parse_declaration(
         None
     };
 
-    let stmt = if rec {
+    let kind = if rec {
         // `let fib = fix((fib) => (n) => ...)`
         // TODO: Fix always wraps a lambda
 
@@ -135,14 +148,12 @@ fn parse_declaration(
             inferred_type: None,
         };
 
-        Statement::VarDecl {
-            loc: SourceLocation::from(node),
-            span: node.byte_range(),
+        StmtKind::VarDecl(VarDecl {
             pattern,
             type_ann,
             init: Some(Box::from(fix)),
             declare,
-        }
+        })
     } else {
         let init = if let Some(init) = decl.child_by_field_name("value") {
             Some(Box::from(parse_expression(&init, src)?))
@@ -150,20 +161,22 @@ fn parse_declaration(
             None
         };
 
-        Statement::VarDecl {
-            loc: SourceLocation::from(node),
-            span: node.byte_range(),
+        StmtKind::VarDecl(VarDecl {
             pattern,
             type_ann,
             init,
             declare,
-        }
+        })
     };
 
-    Ok(vec![stmt])
+    Ok(Some(Statement {
+        loc: SourceLocation::from(node),
+        span: node.byte_range(),
+        kind,
+    }))
 }
 
-fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement>, ParseError> {
+fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Option<Statement>, ParseError> {
     eprintln!("node.kind = {}", node.kind());
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
@@ -265,26 +278,28 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Vec<Statement
         }
     }
 
-    let stmt = Statement::ClassDecl {
+    let stmt = Statement {
         loc: SourceLocation::from(node),
         span: node.byte_range(),
-        ident: Ident {
-            loc: SourceLocation::from(&name_node),
-            span: name_node.byte_range(),
-            name: text_for_node(&name_node, src)?,
-        },
-        class: Box::from(Class {
+        kind: StmtKind::ClassDecl(ClassDecl {
             ident: Ident {
                 loc: SourceLocation::from(&name_node),
                 span: name_node.byte_range(),
                 name: text_for_node(&name_node, src)?,
             },
-            body: class_members,
-            type_params: parse_type_params_for_node(node, src)?, // TODO
+            class: Box::from(Class {
+                ident: Ident {
+                    loc: SourceLocation::from(&name_node),
+                    span: name_node.byte_range(),
+                    name: text_for_node(&name_node, src)?,
+                },
+                body: class_members,
+                type_params: parse_type_params_for_node(node, src)?, // TODO
+            }),
         }),
     };
 
-    Ok(vec![stmt])
+    Ok(Some(stmt))
 }
 
 pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Block, ParseError> {
@@ -305,29 +320,26 @@ pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Bloc
             if child.kind() == "expression" {
                 let expr = child.named_child(0).unwrap();
                 let expr = parse_expression(&expr, src)?;
-                stmts.push(Statement::ExprStmt(expr))
-            } else {
-                let mut result = parse_statement(&child, src)?;
-                stmts.append(&mut result);
+                stmts.push(Statement {
+                    loc: SourceLocation::from(&child),
+                    span: child.byte_range(),
+                    kind: StmtKind::ExprStmt(expr),
+                })
+            } else if let Some(result) = parse_statement(&child, src)? {
+                stmts.push(result);
             }
-        } else {
-            let mut result = parse_statement(&child, src)?;
-            stmts.append(&mut result);
+        } else if let Some(result) = parse_statement(&child, src)? {
+            stmts.push(result);
         }
     }
 
     let mut result: Vec<Expr> = vec![];
 
     for stmt in stmts {
-        let expr = match stmt {
-            Statement::ClassDecl {
-                loc,
-                span,
-                ident,
-                class,
-            } => Expr {
-                loc: loc.to_owned(),
-                span: span.to_owned(),
+        let expr = match stmt.kind {
+            StmtKind::ClassDecl(ClassDecl { ident, class }) => Expr {
+                loc: stmt.loc.to_owned(),
+                span: stmt.span.to_owned(),
                 kind: ExprKind::LetDecl(LetDecl {
                     pattern: Pattern {
                         loc: ident.loc.to_owned(),
@@ -341,8 +353,8 @@ pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Bloc
                         inferred_type: None,
                     },
                     init: Box::from(Expr {
-                        loc: loc.to_owned(),
-                        span: span.to_owned(),
+                        loc: stmt.loc.to_owned(),
+                        span: stmt.span.to_owned(),
                         kind: ExprKind::Class(class.as_ref().to_owned()),
                         inferred_type: None,
                     }),
@@ -351,16 +363,14 @@ pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Bloc
                 }),
                 inferred_type: None,
             },
-            Statement::VarDecl {
-                loc,
-                span,
+            StmtKind::VarDecl(VarDecl {
                 pattern,
                 init,
                 type_ann,
                 ..
-            } => Expr {
-                loc: loc.to_owned(),
-                span: span.to_owned(),
+            }) => Expr {
+                loc: stmt.loc.to_owned(),
+                span: stmt.span.to_owned(),
                 kind: ExprKind::LetDecl(LetDecl {
                     pattern: pattern.to_owned(),
                     // TODO: Think about how to deal with variable declarations
@@ -375,7 +385,7 @@ pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Bloc
                 }),
                 inferred_type: None,
             },
-            Statement::TypeDecl { .. } => {
+            StmtKind::TypeDecl(_) => {
                 // We can't convert this `let` expression so we can't include it
                 // in the `body`.  I think we'll want move the conversion of block
                 // statements to lambdas later in the process.  This will allow us
@@ -383,7 +393,7 @@ pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Bloc
                 // will also help with handling statements like loops.
                 todo!("decide how to handle type decls within BlockStatements")
             }
-            Statement::ExprStmt(expr) => expr.to_owned(),
+            StmtKind::ExprStmt(expr) => expr.to_owned(),
         };
         result.push(expr);
     }
