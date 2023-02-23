@@ -20,7 +20,7 @@ pub struct Program {
 pub struct Block {
     #[drive(skip)]
     pub span: Span,
-    pub stmts: Vec<Expr>,
+    pub stmts: Vec<Statement>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
@@ -265,16 +265,6 @@ pub struct DoExpr {
     pub body: Block,
 }
 
-// Later on we can make this a real decl.  For now, it's here to ease the move
-// to deferring lambda-ization.
-#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct LetDecl {
-    pub pattern: Pattern,
-    #[drive(skip)]
-    pub type_ann: Option<TypeAnn>,
-    pub init: Box<Expr>,
-}
-
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub enum ExprKind {
     App(App),
@@ -303,7 +293,6 @@ pub enum ExprKind {
     Class(Class),
     Regex(Regex),
     DoExpr(DoExpr),
-    LetDecl(LetDecl),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]

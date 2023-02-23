@@ -77,6 +77,7 @@ pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
                 t.apply(&sub)
             }
             _ => {
+                eprintln!("t = {t}");
                 panic!("We shouldn't have any free type variables when closing over non-lambdas")
             }
         }

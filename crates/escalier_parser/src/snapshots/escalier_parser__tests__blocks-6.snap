@@ -69,7 +69,7 @@ Ok(
                                         body: Block {
                                             span: 13..32,
                                             stmts: [
-                                                Expr {
+                                                Statement {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
@@ -77,40 +77,40 @@ Ok(
                                                         },
                                                         end: Position {
                                                             line: 0,
-                                                            column: 28,
+                                                            column: 29,
                                                         },
                                                     },
-                                                    span: 14..28,
-                                                    kind: App(
-                                                        App {
-                                                            lam: Expr {
-                                                                loc: SourceLocation {
-                                                                    start: Position {
-                                                                        line: 0,
-                                                                        column: 14,
-                                                                    },
-                                                                    end: Position {
-                                                                        line: 0,
-                                                                        column: 25,
-                                                                    },
+                                                    span: 14..29,
+                                                    kind: ExprStmt(
+                                                        Expr {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 14,
                                                                 },
-                                                                span: 14..25,
-                                                                kind: Member(
-                                                                    Member {
-                                                                        obj: Expr {
-                                                                            loc: SourceLocation {
-                                                                                start: Position {
-                                                                                    line: 0,
-                                                                                    column: 14,
-                                                                                },
-                                                                                end: Position {
-                                                                                    line: 0,
-                                                                                    column: 21,
-                                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 28,
+                                                                },
+                                                            },
+                                                            span: 14..28,
+                                                            kind: App(
+                                                                App {
+                                                                    lam: Expr {
+                                                                        loc: SourceLocation {
+                                                                            start: Position {
+                                                                                line: 0,
+                                                                                column: 14,
                                                                             },
-                                                                            span: 14..21,
-                                                                            kind: Ident(
-                                                                                Ident {
+                                                                            end: Position {
+                                                                                line: 0,
+                                                                                column: 25,
+                                                                            },
+                                                                        },
+                                                                        span: 14..25,
+                                                                        kind: Member(
+                                                                            Member {
+                                                                                obj: Expr {
                                                                                     loc: SourceLocation {
                                                                                         start: Position {
                                                                                             line: 0,
@@ -122,48 +122,48 @@ Ok(
                                                                                         },
                                                                                     },
                                                                                     span: 14..21,
-                                                                                    name: "console",
+                                                                                    kind: Ident(
+                                                                                        Ident {
+                                                                                            loc: SourceLocation {
+                                                                                                start: Position {
+                                                                                                    line: 0,
+                                                                                                    column: 14,
+                                                                                                },
+                                                                                                end: Position {
+                                                                                                    line: 0,
+                                                                                                    column: 21,
+                                                                                                },
+                                                                                            },
+                                                                                            span: 14..21,
+                                                                                            name: "console",
+                                                                                        },
+                                                                                    ),
+                                                                                    inferred_type: None,
                                                                                 },
-                                                                            ),
-                                                                            inferred_type: None,
-                                                                        },
-                                                                        prop: Ident(
-                                                                            Ident {
-                                                                                loc: SourceLocation {
-                                                                                    start: Position {
-                                                                                        line: 0,
-                                                                                        column: 22,
+                                                                                prop: Ident(
+                                                                                    Ident {
+                                                                                        loc: SourceLocation {
+                                                                                            start: Position {
+                                                                                                line: 0,
+                                                                                                column: 22,
+                                                                                            },
+                                                                                            end: Position {
+                                                                                                line: 0,
+                                                                                                column: 25,
+                                                                                            },
+                                                                                        },
+                                                                                        span: 22..25,
+                                                                                        name: "log",
                                                                                     },
-                                                                                    end: Position {
-                                                                                        line: 0,
-                                                                                        column: 25,
-                                                                                    },
-                                                                                },
-                                                                                span: 22..25,
-                                                                                name: "log",
+                                                                                ),
                                                                             },
                                                                         ),
+                                                                        inferred_type: None,
                                                                     },
-                                                                ),
-                                                                inferred_type: None,
-                                                            },
-                                                            args: [
-                                                                ExprOrSpread {
-                                                                    spread: None,
-                                                                    expr: Expr {
-                                                                        loc: SourceLocation {
-                                                                            start: Position {
-                                                                                line: 0,
-                                                                                column: 26,
-                                                                            },
-                                                                            end: Position {
-                                                                                line: 0,
-                                                                                column: 27,
-                                                                            },
-                                                                        },
-                                                                        span: 26..27,
-                                                                        kind: Ident(
-                                                                            Ident {
+                                                                    args: [
+                                                                        ExprOrSpread {
+                                                                            spread: None,
+                                                                            expr: Expr {
                                                                                 loc: SourceLocation {
                                                                                     start: Position {
                                                                                         line: 0,
@@ -175,19 +175,34 @@ Ok(
                                                                                     },
                                                                                 },
                                                                                 span: 26..27,
-                                                                                name: "x",
+                                                                                kind: Ident(
+                                                                                    Ident {
+                                                                                        loc: SourceLocation {
+                                                                                            start: Position {
+                                                                                                line: 0,
+                                                                                                column: 26,
+                                                                                            },
+                                                                                            end: Position {
+                                                                                                line: 0,
+                                                                                                column: 27,
+                                                                                            },
+                                                                                        },
+                                                                                        span: 26..27,
+                                                                                        name: "x",
+                                                                                    },
+                                                                                ),
+                                                                                inferred_type: None,
                                                                             },
-                                                                        ),
-                                                                        inferred_type: None,
-                                                                    },
+                                                                        },
+                                                                    ],
+                                                                    type_args: None,
                                                                 },
-                                                            ],
-                                                            type_args: None,
+                                                            ),
+                                                            inferred_type: None,
                                                         },
                                                     ),
-                                                    inferred_type: None,
                                                 },
-                                                Expr {
+                                                Statement {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
@@ -199,8 +214,8 @@ Ok(
                                                         },
                                                     },
                                                     span: 30..31,
-                                                    kind: Ident(
-                                                        Ident {
+                                                    kind: ExprStmt(
+                                                        Expr {
                                                             loc: SourceLocation {
                                                                 start: Position {
                                                                     line: 0,
@@ -212,10 +227,25 @@ Ok(
                                                                 },
                                                             },
                                                             span: 30..31,
-                                                            name: "x",
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    loc: SourceLocation {
+                                                                        start: Position {
+                                                                            line: 0,
+                                                                            column: 30,
+                                                                        },
+                                                                        end: Position {
+                                                                            line: 0,
+                                                                            column: 31,
+                                                                        },
+                                                                    },
+                                                                    span: 30..31,
+                                                                    name: "x",
+                                                                },
+                                                            ),
+                                                            inferred_type: None,
                                                         },
                                                     ),
-                                                    inferred_type: None,
                                                 },
                                             ],
                                         },

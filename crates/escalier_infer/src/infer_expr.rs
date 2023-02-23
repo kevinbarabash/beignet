@@ -11,6 +11,7 @@ use crate::context::Context;
 use crate::expand_type::get_obj_type;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
+use crate::infer_stmt::infer_stmt;
 use crate::infer_type_ann::*;
 use crate::scheme::get_type_param_map;
 use crate::substitutable::{Subst, Substitutable};
@@ -825,28 +826,6 @@ pub fn infer_expr(
         // seems like a bad idea.
         ExprKind::Class(_) => todo!(),
         ExprKind::DoExpr(DoExpr { body }) => infer_block(body, ctx),
-        ExprKind::LetDecl(LetDecl {
-            pattern,
-            type_ann,
-            init,
-        }) => {
-            let (pa, s1) =
-                infer_pattern_and_init(pattern, type_ann, init, ctx, &PatternUsage::Assign)?;
-
-            // Inserts the new variables from infer_pattern_and_init() into the
-            // current context.
-            // TODO: have infer_pattern_and_init do this
-            for (name, binding) in pa {
-                ctx.insert_binding(name.to_owned(), binding.to_owned());
-            }
-
-            let s = s1;
-            let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
-
-            update_pattern(pattern, &s);
-
-            Ok((s, t))
-        }
     };
 
     let (s, mut t) = result?;
@@ -865,9 +844,9 @@ pub fn infer_block(body: &mut Block, ctx: &mut Context) -> Result<(Subst, Type),
     let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
     let mut s = Subst::new();
 
-    for expr in &mut body.stmts {
+    for stmt in &mut body.stmts {
         new_ctx = new_ctx.clone();
-        let (new_s, new_t) = infer_expr(&mut new_ctx, expr, false)?;
+        let (new_s, new_t) = infer_stmt(stmt, &mut new_ctx, false)?;
 
         t = new_t.apply(&s);
         s = compose_subs(&new_s, &s);

@@ -11,11 +11,12 @@ use crate::substitutable::Subst;
 use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
 use crate::update::*;
-use crate::util::{close_over, compose_subs};
+use crate::util::close_over;
 
 pub fn infer_stmt(
     stmt: &mut Statement,
     ctx: &mut Context,
+    top_level: bool,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
     match &mut stmt.kind {
         StmtKind::VarDecl(VarDecl {
@@ -33,7 +34,11 @@ pub fn infer_stmt(
                                 Some(type_ann) => {
                                     let (s, t) = infer_type_ann(type_ann, ctx, &mut None)?;
 
-                                    let t = close_over(&s, &t, ctx);
+                                    let t = if top_level {
+                                        close_over(&s, &t, ctx)
+                                    } else {
+                                        t
+                                    };
                                     ctx.insert_value(name.to_owned(), t.to_owned());
 
                                     update_type_ann(type_ann, &s);
@@ -68,7 +73,9 @@ pub fn infer_stmt(
                     // Inserts the new variables from infer_pattern() into the
                     // current context.
                     for (name, mut binding) in pa {
-                        binding.t = close_over(&s, &binding.t, ctx);
+                        if top_level {
+                            binding.t = close_over(&s, &binding.t, ctx);
+                        }
                         ctx.insert_binding(name, binding);
                     }
 
@@ -130,26 +137,26 @@ pub fn infer_stmt(
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Block {
-    pub span: Span,
-    pub stmts: Vec<Statement>,
-}
+// #[derive(Debug, Clone, PartialEq, Eq)]
+// pub struct Block {
+//     pub span: Span,
+//     pub stmts: Vec<Statement>,
+// }
 
-pub fn infer_block(block: &mut Block, ctx: &mut Context) -> Result<(Subst, Type), Vec<TypeError>> {
-    let mut new_ctx = ctx.clone();
-    let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
-    let mut s = Subst::new();
+// pub fn infer_block(block: &mut Block, ctx: &mut Context) -> Result<(Subst, Type), Vec<TypeError>> {
+//     let mut new_ctx = ctx.clone();
+//     let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+//     let mut s = Subst::new();
 
-    for stmt in &mut block.stmts {
-        new_ctx = new_ctx.clone();
-        let (new_s, new_t) = infer_stmt(stmt, &mut new_ctx)?;
+//     for stmt in &mut block.stmts {
+//         new_ctx = new_ctx.clone();
+//         let (new_s, new_t) = infer_stmt(stmt, &mut new_ctx, false)?;
 
-        t = new_t.apply(&s);
-        s = compose_subs(&new_s, &s);
-    }
+//         t = new_t.apply(&s);
+//         s = compose_subs(&new_s, &s);
+//     }
 
-    ctx.count = new_ctx.count;
+//     ctx.count = new_ctx.count;
 
-    Ok((s, t))
-}
+//     Ok((s, t))
+// }

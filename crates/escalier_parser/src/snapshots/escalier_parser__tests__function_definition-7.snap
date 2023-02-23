@@ -127,7 +127,7 @@ Ok(
                                 body: Block {
                                     span: 21..22,
                                     stmts: [
-                                        Expr {
+                                        Statement {
                                             loc: SourceLocation {
                                                 start: Position {
                                                     line: 0,
@@ -139,8 +139,8 @@ Ok(
                                                 },
                                             },
                                             span: 21..22,
-                                            kind: Ident(
-                                                Ident {
+                                            kind: ExprStmt(
+                                                Expr {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
@@ -152,10 +152,25 @@ Ok(
                                                         },
                                                     },
                                                     span: 21..22,
-                                                    name: "c",
+                                                    kind: Ident(
+                                                        Ident {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 21,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 22,
+                                                                },
+                                                            },
+                                                            span: 21..22,
+                                                            name: "c",
+                                                        },
+                                                    ),
+                                                    inferred_type: None,
                                                 },
                                             ),
-                                            inferred_type: None,
                                         },
                                     ],
                                 },

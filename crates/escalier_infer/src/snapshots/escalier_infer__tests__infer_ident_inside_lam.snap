@@ -437,7 +437,7 @@ Program {
                                                     body: Block {
                                                         span: 20..25,
                                                         stmts: [
-                                                            Expr {
+                                                            Statement {
                                                                 loc: SourceLocation {
                                                                     start: Position {
                                                                         line: 0,
@@ -449,23 +449,23 @@ Program {
                                                                     },
                                                                 },
                                                                 span: 20..25,
-                                                                kind: BinaryExpr(
-                                                                    BinaryExpr {
-                                                                        op: Add,
-                                                                        left: Expr {
-                                                                            loc: SourceLocation {
-                                                                                start: Position {
-                                                                                    line: 0,
-                                                                                    column: 20,
-                                                                                },
-                                                                                end: Position {
-                                                                                    line: 0,
-                                                                                    column: 21,
-                                                                                },
+                                                                kind: ExprStmt(
+                                                                    Expr {
+                                                                        loc: SourceLocation {
+                                                                            start: Position {
+                                                                                line: 0,
+                                                                                column: 20,
                                                                             },
-                                                                            span: 20..21,
-                                                                            kind: Ident(
-                                                                                Ident {
+                                                                            end: Position {
+                                                                                line: 0,
+                                                                                column: 25,
+                                                                            },
+                                                                        },
+                                                                        span: 20..25,
+                                                                        kind: BinaryExpr(
+                                                                            BinaryExpr {
+                                                                                op: Add,
+                                                                                left: Expr {
                                                                                     loc: SourceLocation {
                                                                                         start: Position {
                                                                                             line: 0,
@@ -477,36 +477,46 @@ Program {
                                                                                         },
                                                                                     },
                                                                                     span: 20..21,
-                                                                                    name: "a",
-                                                                                },
-                                                                            ),
-                                                                            inferred_type: Some(
-                                                                                Type {
-                                                                                    kind: Var(
-                                                                                        TVar {
-                                                                                            id: 2,
-                                                                                            constraint: None,
+                                                                                    kind: Ident(
+                                                                                        Ident {
+                                                                                            loc: SourceLocation {
+                                                                                                start: Position {
+                                                                                                    line: 0,
+                                                                                                    column: 20,
+                                                                                                },
+                                                                                                end: Position {
+                                                                                                    line: 0,
+                                                                                                    column: 21,
+                                                                                                },
+                                                                                            },
+                                                                                            span: 20..21,
+                                                                                            name: "a",
                                                                                         },
                                                                                     ),
-                                                                                    mutable: false,
-                                                                                    provenance: None,
+                                                                                    inferred_type: Some(
+                                                                                        Type {
+                                                                                            kind: Keyword(
+                                                                                                Number,
+                                                                                            ),
+                                                                                            mutable: false,
+                                                                                            provenance: Some(
+                                                                                                Type(
+                                                                                                    Type {
+                                                                                                        kind: Var(
+                                                                                                            TVar {
+                                                                                                                id: 2,
+                                                                                                                constraint: None,
+                                                                                                            },
+                                                                                                        ),
+                                                                                                        mutable: false,
+                                                                                                        provenance: None,
+                                                                                                    },
+                                                                                                ),
+                                                                                            ),
+                                                                                        },
+                                                                                    ),
                                                                                 },
-                                                                            ),
-                                                                        },
-                                                                        right: Expr {
-                                                                            loc: SourceLocation {
-                                                                                start: Position {
-                                                                                    line: 0,
-                                                                                    column: 24,
-                                                                                },
-                                                                                end: Position {
-                                                                                    line: 0,
-                                                                                    column: 25,
-                                                                                },
-                                                                            },
-                                                                            span: 24..25,
-                                                                            kind: Ident(
-                                                                                Ident {
+                                                                                right: Expr {
                                                                                     loc: SourceLocation {
                                                                                         start: Position {
                                                                                             line: 0,
@@ -518,31 +528,56 @@ Program {
                                                                                         },
                                                                                     },
                                                                                     span: 24..25,
-                                                                                    name: "b",
-                                                                                },
-                                                                            ),
-                                                                            inferred_type: Some(
-                                                                                Type {
-                                                                                    kind: Var(
-                                                                                        TVar {
-                                                                                            id: 3,
-                                                                                            constraint: None,
+                                                                                    kind: Ident(
+                                                                                        Ident {
+                                                                                            loc: SourceLocation {
+                                                                                                start: Position {
+                                                                                                    line: 0,
+                                                                                                    column: 24,
+                                                                                                },
+                                                                                                end: Position {
+                                                                                                    line: 0,
+                                                                                                    column: 25,
+                                                                                                },
+                                                                                            },
+                                                                                            span: 24..25,
+                                                                                            name: "b",
                                                                                         },
                                                                                     ),
-                                                                                    mutable: false,
-                                                                                    provenance: None,
+                                                                                    inferred_type: Some(
+                                                                                        Type {
+                                                                                            kind: Keyword(
+                                                                                                Number,
+                                                                                            ),
+                                                                                            mutable: false,
+                                                                                            provenance: Some(
+                                                                                                Type(
+                                                                                                    Type {
+                                                                                                        kind: Var(
+                                                                                                            TVar {
+                                                                                                                id: 3,
+                                                                                                                constraint: None,
+                                                                                                            },
+                                                                                                        ),
+                                                                                                        mutable: false,
+                                                                                                        provenance: None,
+                                                                                                    },
+                                                                                                ),
+                                                                                            ),
+                                                                                        },
+                                                                                    ),
                                                                                 },
-                                                                            ),
-                                                                        },
-                                                                    },
-                                                                ),
-                                                                inferred_type: Some(
-                                                                    Type {
-                                                                        kind: Keyword(
-                                                                            Number,
+                                                                            },
                                                                         ),
-                                                                        mutable: false,
-                                                                        provenance: None,
+                                                                        inferred_type: Some(
+                                                                            Type {
+                                                                                kind: Keyword(
+                                                                                    Number,
+                                                                                ),
+                                                                                mutable: false,
+                                                                                provenance: None,
+                                                                            },
+                                                                        ),
                                                                     },
                                                                 ),
                                                             },
@@ -972,7 +1007,7 @@ Program {
                                     body: Block {
                                         span: 20..25,
                                         stmts: [
-                                            Expr {
+                                            Statement {
                                                 loc: SourceLocation {
                                                     start: Position {
                                                         line: 0,
@@ -984,23 +1019,23 @@ Program {
                                                     },
                                                 },
                                                 span: 20..25,
-                                                kind: BinaryExpr(
-                                                    BinaryExpr {
-                                                        op: Add,
-                                                        left: Expr {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 20,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 21,
-                                                                },
+                                                kind: ExprStmt(
+                                                    Expr {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 20,
                                                             },
-                                                            span: 20..21,
-                                                            kind: Ident(
-                                                                Ident {
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 25,
+                                                            },
+                                                        },
+                                                        span: 20..25,
+                                                        kind: BinaryExpr(
+                                                            BinaryExpr {
+                                                                op: Add,
+                                                                left: Expr {
                                                                     loc: SourceLocation {
                                                                         start: Position {
                                                                             line: 0,
@@ -1012,46 +1047,46 @@ Program {
                                                                         },
                                                                     },
                                                                     span: 20..21,
-                                                                    name: "a",
-                                                                },
-                                                            ),
-                                                            inferred_type: Some(
-                                                                Type {
-                                                                    kind: Keyword(
-                                                                        Number,
+                                                                    kind: Ident(
+                                                                        Ident {
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 0,
+                                                                                    column: 20,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 0,
+                                                                                    column: 21,
+                                                                                },
+                                                                            },
+                                                                            span: 20..21,
+                                                                            name: "a",
+                                                                        },
                                                                     ),
-                                                                    mutable: false,
-                                                                    provenance: Some(
-                                                                        Type(
-                                                                            Type {
-                                                                                kind: Var(
-                                                                                    TVar {
-                                                                                        id: 2,
-                                                                                        constraint: None,
+                                                                    inferred_type: Some(
+                                                                        Type {
+                                                                            kind: Keyword(
+                                                                                Number,
+                                                                            ),
+                                                                            mutable: false,
+                                                                            provenance: Some(
+                                                                                Type(
+                                                                                    Type {
+                                                                                        kind: Var(
+                                                                                            TVar {
+                                                                                                id: 2,
+                                                                                                constraint: None,
+                                                                                            },
+                                                                                        ),
+                                                                                        mutable: false,
+                                                                                        provenance: None,
                                                                                     },
                                                                                 ),
-                                                                                mutable: false,
-                                                                                provenance: None,
-                                                                            },
-                                                                        ),
+                                                                            ),
+                                                                        },
                                                                     ),
                                                                 },
-                                                            ),
-                                                        },
-                                                        right: Expr {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 24,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 25,
-                                                                },
-                                                            },
-                                                            span: 24..25,
-                                                            kind: Ident(
-                                                                Ident {
+                                                                right: Expr {
                                                                     loc: SourceLocation {
                                                                         start: Position {
                                                                             line: 0,
@@ -1063,41 +1098,56 @@ Program {
                                                                         },
                                                                     },
                                                                     span: 24..25,
-                                                                    name: "b",
-                                                                },
-                                                            ),
-                                                            inferred_type: Some(
-                                                                Type {
-                                                                    kind: Keyword(
-                                                                        Number,
+                                                                    kind: Ident(
+                                                                        Ident {
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 0,
+                                                                                    column: 24,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 0,
+                                                                                    column: 25,
+                                                                                },
+                                                                            },
+                                                                            span: 24..25,
+                                                                            name: "b",
+                                                                        },
                                                                     ),
-                                                                    mutable: false,
-                                                                    provenance: Some(
-                                                                        Type(
-                                                                            Type {
-                                                                                kind: Var(
-                                                                                    TVar {
-                                                                                        id: 3,
-                                                                                        constraint: None,
+                                                                    inferred_type: Some(
+                                                                        Type {
+                                                                            kind: Keyword(
+                                                                                Number,
+                                                                            ),
+                                                                            mutable: false,
+                                                                            provenance: Some(
+                                                                                Type(
+                                                                                    Type {
+                                                                                        kind: Var(
+                                                                                            TVar {
+                                                                                                id: 3,
+                                                                                                constraint: None,
+                                                                                            },
+                                                                                        ),
+                                                                                        mutable: false,
+                                                                                        provenance: None,
                                                                                     },
                                                                                 ),
-                                                                                mutable: false,
-                                                                                provenance: None,
-                                                                            },
-                                                                        ),
+                                                                            ),
+                                                                        },
                                                                     ),
                                                                 },
-                                                            ),
-                                                        },
-                                                    },
-                                                ),
-                                                inferred_type: Some(
-                                                    Type {
-                                                        kind: Keyword(
-                                                            Number,
+                                                            },
                                                         ),
-                                                        mutable: false,
-                                                        provenance: None,
+                                                        inferred_type: Some(
+                                                            Type {
+                                                                kind: Keyword(
+                                                                    Number,
+                                                                ),
+                                                                mutable: false,
+                                                                provenance: None,
+                                                            },
+                                                        ),
                                                     },
                                                 ),
                                             },

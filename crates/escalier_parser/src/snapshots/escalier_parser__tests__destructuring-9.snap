@@ -253,7 +253,7 @@ Ok(
                                         body: Block {
                                             span: 46..47,
                                             stmts: [
-                                                Expr {
+                                                Statement {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
@@ -265,8 +265,8 @@ Ok(
                                                         },
                                                     },
                                                     span: 46..47,
-                                                    kind: Ident(
-                                                        Ident {
+                                                    kind: ExprStmt(
+                                                        Expr {
                                                             loc: SourceLocation {
                                                                 start: Position {
                                                                     line: 0,
@@ -278,10 +278,25 @@ Ok(
                                                                 },
                                                             },
                                                             span: 46..47,
-                                                            name: "b",
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    loc: SourceLocation {
+                                                                        start: Position {
+                                                                            line: 0,
+                                                                            column: 46,
+                                                                        },
+                                                                        end: Position {
+                                                                            line: 0,
+                                                                            column: 47,
+                                                                        },
+                                                                    },
+                                                                    span: 46..47,
+                                                                    name: "b",
+                                                                },
+                                                            ),
+                                                            inferred_type: None,
                                                         },
                                                     ),
-                                                    inferred_type: None,
                                                 },
                                             ],
                                         },

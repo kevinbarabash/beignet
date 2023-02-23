@@ -36,7 +36,7 @@ Ok(
                                 body: Block {
                                     span: 6..8,
                                     stmts: [
-                                        Expr {
+                                        Statement {
                                             loc: SourceLocation {
                                                 start: Position {
                                                     line: 0,
@@ -48,25 +48,40 @@ Ok(
                                                 },
                                             },
                                             span: 6..8,
-                                            kind: Lit(
-                                                Num(
-                                                    Num {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 0,
-                                                                column: 6,
-                                                            },
-                                                            end: Position {
-                                                                line: 0,
-                                                                column: 8,
-                                                            },
+                                            kind: ExprStmt(
+                                                Expr {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 6,
                                                         },
-                                                        span: 6..8,
-                                                        value: "10",
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 8,
+                                                        },
                                                     },
-                                                ),
+                                                    span: 6..8,
+                                                    kind: Lit(
+                                                        Num(
+                                                            Num {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 6,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 8,
+                                                                    },
+                                                                },
+                                                                span: 6..8,
+                                                                value: "10",
+                                                            },
+                                                        ),
+                                                    ),
+                                                    inferred_type: None,
+                                                },
                                             ),
-                                            inferred_type: None,
                                         },
                                     ],
                                 },

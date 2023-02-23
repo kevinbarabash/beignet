@@ -25,7 +25,11 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
                 "statement_block" => parse_block_statement(&body, src)?,
                 _ => Block {
                     span: body.byte_range(),
-                    stmts: vec![parse_expression(&body, src)?],
+                    stmts: vec![Statement {
+                        loc: SourceLocation::from(&body),
+                        span: body.byte_range(),
+                        kind: StmtKind::ExprStmt(parse_expression(&body, src)?),
+                    }],
                 },
             };
 
@@ -502,7 +506,11 @@ fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Pars
                 match else_clause.kind() {
                     "if_expression" => Block {
                         span: else_clause.byte_range(),
-                        stmts: vec![parse_if_expression(&else_clause, src)?],
+                        stmts: vec![Statement {
+                            loc: SourceLocation::from(&else_clause),
+                            span: else_clause.byte_range(),
+                            kind: StmtKind::ExprStmt(parse_if_expression(&else_clause, src)?),
+                        }],
                     },
                     "statement_block" => parse_block_statement(&else_clause, src)?,
                     kind => panic!("Unexpected else_clause child kind: '{kind}'"),
@@ -536,7 +544,11 @@ fn parse_arm(node: &tree_sitter::Node, src: &str) -> Result<Arm, ParseError> {
         "statement_block" => parse_block_statement(&body, src)?,
         _ => Block {
             span: body.byte_range(),
-            stmts: vec![parse_expression(&body, src)?],
+            stmts: vec![Statement {
+                loc: SourceLocation::from(&body),
+                span: body.byte_range(),
+                kind: StmtKind::ExprStmt(parse_expression(&body, src)?),
+            }],
         },
     };
 
