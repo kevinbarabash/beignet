@@ -702,10 +702,6 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
 
             Expr::Ident(temp_id)
         }
-        values::ExprKind::LetDecl(_) => {
-            // NOTE: This should always be handled by the DoExpr arm
-            todo!();
-        }
     }
 }
 

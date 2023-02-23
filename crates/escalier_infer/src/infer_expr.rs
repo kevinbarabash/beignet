@@ -826,28 +826,6 @@ pub fn infer_expr(
         // seems like a bad idea.
         ExprKind::Class(_) => todo!(),
         ExprKind::DoExpr(DoExpr { body }) => infer_block(body, ctx),
-        ExprKind::LetDecl(LetDecl {
-            pattern,
-            type_ann,
-            init,
-        }) => {
-            let (pa, s1) =
-                infer_pattern_and_init(pattern, type_ann, init, ctx, &PatternUsage::Assign)?;
-
-            // Inserts the new variables from infer_pattern_and_init() into the
-            // current context.
-            // TODO: have infer_pattern_and_init do this
-            for (name, binding) in pa {
-                ctx.insert_binding(name.to_owned(), binding.to_owned());
-            }
-
-            let s = s1;
-            let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
-
-            update_pattern(pattern, &s);
-
-            Ok((s, t))
-        }
     };
 
     let (s, mut t) = result?;
