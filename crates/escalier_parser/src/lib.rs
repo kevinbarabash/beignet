@@ -66,8 +66,9 @@ pub fn parse(src: &str) -> Result<Program, ParseError> {
 
         let mut body: Vec<Statement> = vec![];
         for child in children {
-            let mut stmts = parse_statement(&child, src)?;
-            body.append(&mut stmts);
+            if let Some(stmt) = parse_statement(&child, src)? {
+                body.push(stmt);
+            }
         }
 
         Ok(Program { body })

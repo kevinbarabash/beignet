@@ -5,40 +5,53 @@ expression: "parse(\"\\\"line 1\\\\nline 2\\\\nline 3\\\";\")"
 Ok(
     Program {
         body: [
-            ExprStmt(
-                Expr {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 0,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 24,
-                        },
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
                     },
-                    span: 0..24,
-                    kind: Lit(
-                        Str(
-                            Str {
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 0,
-                                        column: 0,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        column: 24,
-                                    },
-                                },
-                                span: 0..24,
-                                value: "line 1\nline 2\nline 3",
-                            },
-                        ),
-                    ),
-                    inferred_type: None,
+                    end: Position {
+                        line: 0,
+                        column: 25,
+                    },
                 },
-            ),
+                span: 0..25,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 24,
+                            },
+                        },
+                        span: 0..24,
+                        kind: Lit(
+                            Str(
+                                Str {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 24,
+                                        },
+                                    },
+                                    span: 0..24,
+                                    value: "line 1\nline 2\nline 3",
+                                },
+                            ),
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+            },
         ],
     },
 )

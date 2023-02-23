@@ -5,7 +5,7 @@ expression: "parse(\"let [a, mut b, ...rest] = letters;\")"
 Ok(
     Program {
         body: [
-            VarDecl {
+            Statement {
                 loc: SourceLocation {
                     start: Position {
                         line: 0,
@@ -17,40 +17,26 @@ Ok(
                     },
                 },
                 span: 0..34,
-                pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 4,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 23,
-                        },
-                    },
-                    span: 4..23,
-                    kind: Array(
-                        ArrayPat {
-                            elems: [
-                                Some(
-                                    ArrayPatElem {
-                                        pattern: Pattern {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 5,
-                                                },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 6,
-                                                },
-                                            },
-                                            span: 5..6,
-                                            kind: Ident(
-                                                BindingIdent {
-                                                    name: "a",
-                                                    mutable: false,
-                                                    span: 5..6,
+                kind: VarDecl(
+                    VarDecl {
+                        pattern: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 23,
+                                },
+                            },
+                            span: 4..23,
+                            kind: Array(
+                                ArrayPat {
+                                    elems: [
+                                        Some(
+                                            ArrayPatElem {
+                                                pattern: Pattern {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
@@ -61,32 +47,32 @@ Ok(
                                                             column: 6,
                                                         },
                                                     },
+                                                    span: 5..6,
+                                                    kind: Ident(
+                                                        BindingIdent {
+                                                            name: "a",
+                                                            mutable: false,
+                                                            span: 5..6,
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 5,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 6,
+                                                                },
+                                                            },
+                                                        },
+                                                    ),
+                                                    inferred_type: None,
                                                 },
-                                            ),
-                                            inferred_type: None,
-                                        },
-                                        init: None,
-                                    },
-                                ),
-                                Some(
-                                    ArrayPatElem {
-                                        pattern: Pattern {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 8,
-                                                },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 13,
-                                                },
+                                                init: None,
                                             },
-                                            span: 8..13,
-                                            kind: Ident(
-                                                BindingIdent {
-                                                    name: "b",
-                                                    mutable: true,
-                                                    span: 8..13,
+                                        ),
+                                        Some(
+                                            ArrayPatElem {
+                                                pattern: Pattern {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
@@ -97,46 +83,46 @@ Ok(
                                                             column: 13,
                                                         },
                                                     },
-                                                },
-                                            ),
-                                            inferred_type: None,
-                                        },
-                                        init: None,
-                                    },
-                                ),
-                                Some(
-                                    ArrayPatElem {
-                                        pattern: Pattern {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 15,
-                                                },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 22,
-                                                },
-                                            },
-                                            span: 15..22,
-                                            kind: Rest(
-                                                RestPat {
-                                                    arg: Pattern {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 0,
-                                                                column: 18,
-                                                            },
-                                                            end: Position {
-                                                                line: 0,
-                                                                column: 22,
+                                                    span: 8..13,
+                                                    kind: Ident(
+                                                        BindingIdent {
+                                                            name: "b",
+                                                            mutable: true,
+                                                            span: 8..13,
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 8,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 13,
+                                                                },
                                                             },
                                                         },
-                                                        span: 18..22,
-                                                        kind: Ident(
-                                                            BindingIdent {
-                                                                name: "rest",
-                                                                mutable: false,
-                                                                span: 18..22,
+                                                    ),
+                                                    inferred_type: None,
+                                                },
+                                                init: None,
+                                            },
+                                        ),
+                                        Some(
+                                            ArrayPatElem {
+                                                pattern: Pattern {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 15,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 22,
+                                                        },
+                                                    },
+                                                    span: 15..22,
+                                                    kind: Rest(
+                                                        RestPat {
+                                                            arg: Pattern {
                                                                 loc: SourceLocation {
                                                                     start: Position {
                                                                         line: 0,
@@ -147,39 +133,42 @@ Ok(
                                                                         column: 22,
                                                                     },
                                                                 },
+                                                                span: 18..22,
+                                                                kind: Ident(
+                                                                    BindingIdent {
+                                                                        name: "rest",
+                                                                        mutable: false,
+                                                                        span: 18..22,
+                                                                        loc: SourceLocation {
+                                                                            start: Position {
+                                                                                line: 0,
+                                                                                column: 18,
+                                                                            },
+                                                                            end: Position {
+                                                                                line: 0,
+                                                                                column: 22,
+                                                                            },
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                inferred_type: None,
                                                             },
-                                                        ),
-                                                        inferred_type: None,
-                                                    },
+                                                        },
+                                                    ),
+                                                    inferred_type: None,
                                                 },
-                                            ),
-                                            inferred_type: None,
-                                        },
-                                        init: None,
-                                    },
-                                ),
-                            ],
-                            optional: false,
+                                                init: None,
+                                            },
+                                        ),
+                                    ],
+                                    optional: false,
+                                },
+                            ),
+                            inferred_type: None,
                         },
-                    ),
-                    inferred_type: None,
-                },
-                type_ann: None,
-                init: Some(
-                    Expr {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 0,
-                                column: 26,
-                            },
-                            end: Position {
-                                line: 0,
-                                column: 33,
-                            },
-                        },
-                        span: 26..33,
-                        kind: Ident(
-                            Ident {
+                        type_ann: None,
+                        init: Some(
+                            Expr {
                                 loc: SourceLocation {
                                     start: Position {
                                         line: 0,
@@ -191,13 +180,28 @@ Ok(
                                     },
                                 },
                                 span: 26..33,
-                                name: "letters",
+                                kind: Ident(
+                                    Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 26,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 33,
+                                            },
+                                        },
+                                        span: 26..33,
+                                        name: "letters",
+                                    },
+                                ),
+                                inferred_type: None,
                             },
                         ),
-                        inferred_type: None,
+                        declare: false,
                     },
                 ),
-                declare: false,
             },
         ],
     },

@@ -5,7 +5,7 @@ expression: "parse(\"type MutPoint = {mut x: number, mut y: number};\")"
 Ok(
     Program {
         body: [
-            TypeDecl {
+            Statement {
                 loc: SourceLocation {
                     start: Position {
                         line: 0,
@@ -17,116 +17,120 @@ Ok(
                     },
                 },
                 span: 0..47,
-                declare: false,
-                id: Ident {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 5,
+                kind: TypeDecl(
+                    TypeDecl {
+                        declare: false,
+                        id: Ident {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 13,
+                                },
+                            },
+                            span: 5..13,
+                            name: "MutPoint",
                         },
-                        end: Position {
-                            line: 0,
-                            column: 13,
+                        type_ann: TypeAnn {
+                            kind: Object(
+                                ObjectType {
+                                    elems: [
+                                        Prop(
+                                            TProp {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 17,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 30,
+                                                    },
+                                                },
+                                                span: 17..30,
+                                                name: "x",
+                                                optional: false,
+                                                mutable: true,
+                                                type_ann: TypeAnn {
+                                                    kind: Keyword(
+                                                        KeywordType {
+                                                            keyword: Number,
+                                                        },
+                                                    ),
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 24,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 30,
+                                                        },
+                                                    },
+                                                    span: 24..30,
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                        ),
+                                        Prop(
+                                            TProp {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 32,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 45,
+                                                    },
+                                                },
+                                                span: 32..45,
+                                                name: "y",
+                                                optional: false,
+                                                mutable: true,
+                                                type_ann: TypeAnn {
+                                                    kind: Keyword(
+                                                        KeywordType {
+                                                            keyword: Number,
+                                                        },
+                                                    ),
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 39,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 45,
+                                                        },
+                                                    },
+                                                    span: 39..45,
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                        ),
+                                    ],
+                                },
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 16,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 46,
+                                },
+                            },
+                            span: 16..46,
+                            inferred_type: None,
                         },
+                        type_params: None,
                     },
-                    span: 5..13,
-                    name: "MutPoint",
-                },
-                type_ann: TypeAnn {
-                    kind: Object(
-                        ObjectType {
-                            elems: [
-                                Prop(
-                                    TProp {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 17,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 30,
-                                            },
-                                        },
-                                        span: 17..30,
-                                        name: "x",
-                                        optional: false,
-                                        mutable: true,
-                                        type_ann: TypeAnn {
-                                            kind: Keyword(
-                                                KeywordType {
-                                                    keyword: Number,
-                                                },
-                                            ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 24,
-                                                },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 30,
-                                                },
-                                            },
-                                            span: 24..30,
-                                            inferred_type: None,
-                                        },
-                                    },
-                                ),
-                                Prop(
-                                    TProp {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 32,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 45,
-                                            },
-                                        },
-                                        span: 32..45,
-                                        name: "y",
-                                        optional: false,
-                                        mutable: true,
-                                        type_ann: TypeAnn {
-                                            kind: Keyword(
-                                                KeywordType {
-                                                    keyword: Number,
-                                                },
-                                            ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 39,
-                                                },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 45,
-                                                },
-                                            },
-                                            span: 39..45,
-                                            inferred_type: None,
-                                        },
-                                    },
-                                ),
-                            ],
-                        },
-                    ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 16,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 46,
-                        },
-                    },
-                    span: 16..46,
-                    inferred_type: None,
-                },
-                type_params: None,
+                ),
             },
         ],
     },

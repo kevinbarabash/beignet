@@ -69,9 +69,9 @@ fn build_d_ts(program: &values::Program, ctx: &Context) -> Program {
     let mut value_exports: BTreeSet<String> = BTreeSet::new();
 
     for stmt in &program.body {
-        match stmt {
-            values::Statement::ClassDecl { ident, .. } => {
-                let name = ident.name.to_owned();
+        match &stmt.kind {
+            values::StmtKind::ClassDecl(class_decl) => {
+                let name = class_decl.ident.name.to_owned();
                 value_exports.insert(name.to_owned());
                 type_exports.insert(name.to_owned());
                 type_exports.insert(format!("{name}Constructor"));
@@ -79,16 +79,16 @@ fn build_d_ts(program: &values::Program, ctx: &Context) -> Program {
                 // NOTE: The Readonly version of the interface type is generated
                 // when we process `type_exports`.
             }
-            values::Statement::VarDecl { pattern, .. } => {
-                let bindings = values::pattern::get_binding(pattern);
+            values::StmtKind::VarDecl(var_decl) => {
+                let bindings = values::pattern::get_binding(&var_decl.pattern);
                 for name in bindings {
                     value_exports.insert(name);
                 }
             }
-            values::Statement::TypeDecl { id, .. } => {
-                type_exports.insert(id.name.to_owned());
+            values::StmtKind::TypeDecl(type_decl) => {
+                type_exports.insert(type_decl.id.name.to_owned());
             }
-            values::Statement::ExprStmt(_) => (), // nothing is exported
+            values::StmtKind::ExprStmt(_) => (), // nothing is exported
         }
     }
 

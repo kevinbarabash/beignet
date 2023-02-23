@@ -17,14 +17,14 @@ pub fn infer_stmt(
     stmt: &mut Statement,
     ctx: &mut Context,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
-    match stmt {
-        Statement::VarDecl {
+    match &mut stmt.kind {
+        StmtKind::VarDecl(VarDecl {
             declare,
             init,
             pattern,
             type_ann,
             ..
-        } => {
+        }) => {
             match declare {
                 true => {
                     match &mut pattern.kind {
@@ -81,12 +81,12 @@ pub fn infer_stmt(
                 }
             }
         }
-        Statement::TypeDecl {
+        StmtKind::TypeDecl(TypeDecl {
             id: Ident { name, .. },
             type_ann,
             type_params,
             ..
-        } => {
+        }) => {
             let (s, t) = infer_type_ann(type_ann, ctx, type_params)?;
 
             let t = t.apply(&s);
@@ -100,7 +100,7 @@ pub fn infer_stmt(
 
             Ok((s, t))
         }
-        Statement::ExprStmt(expr) => {
+        StmtKind::ExprStmt(expr) => {
             let (s, t) = infer_expr_rec(ctx, expr, false)?;
             // We ignore the type that was inferred, we only care that
             // it succeeds since we aren't assigning it to variable.
@@ -108,12 +108,7 @@ pub fn infer_stmt(
 
             Ok((s, t))
         }
-        Statement::ClassDecl {
-            loc: _,
-            span: _,
-            ident,
-            class,
-        } => {
+        StmtKind::ClassDecl(ClassDecl { ident, class }) => {
             let (s, t) = infer_class(ctx, class)?;
 
             let t = t.apply(&s);

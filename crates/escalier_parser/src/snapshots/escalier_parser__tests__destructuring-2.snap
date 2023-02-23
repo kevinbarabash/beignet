@@ -5,7 +5,7 @@ expression: "parse(\"let {a, b, ...rest} = letters;\")"
 Ok(
     Program {
         body: [
-            VarDecl {
+            Statement {
                 loc: SourceLocation {
                     start: Position {
                         line: 0,
@@ -17,102 +17,88 @@ Ok(
                     },
                 },
                 span: 0..30,
-                pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 4,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 19,
-                        },
-                    },
-                    span: 4..19,
-                    kind: Object(
-                        ObjectPat {
-                            props: [
-                                Shorthand(
-                                    ShorthandPatProp {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 5,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 6,
-                                            },
-                                        },
-                                        span: 5..6,
-                                        ident: BindingIdent {
-                                            name: "a",
-                                            mutable: false,
-                                            span: 5..6,
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 5,
+                kind: VarDecl(
+                    VarDecl {
+                        pattern: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 19,
+                                },
+                            },
+                            span: 4..19,
+                            kind: Object(
+                                ObjectPat {
+                                    props: [
+                                        Shorthand(
+                                            ShorthandPatProp {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 5,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 6,
+                                                    },
                                                 },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 6,
-                                                },
-                                            },
-                                        },
-                                        init: None,
-                                    },
-                                ),
-                                Shorthand(
-                                    ShorthandPatProp {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 8,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 9,
-                                            },
-                                        },
-                                        span: 8..9,
-                                        ident: BindingIdent {
-                                            name: "b",
-                                            mutable: false,
-                                            span: 8..9,
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 8,
-                                                },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 9,
-                                                },
-                                            },
-                                        },
-                                        init: None,
-                                    },
-                                ),
-                                Rest(
-                                    RestPat {
-                                        arg: Pattern {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 14,
-                                                },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 18,
-                                                },
-                                            },
-                                            span: 14..18,
-                                            kind: Ident(
-                                                BindingIdent {
-                                                    name: "rest",
+                                                span: 5..6,
+                                                ident: BindingIdent {
+                                                    name: "a",
                                                     mutable: false,
-                                                    span: 14..18,
+                                                    span: 5..6,
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 5,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 6,
+                                                        },
+                                                    },
+                                                },
+                                                init: None,
+                                            },
+                                        ),
+                                        Shorthand(
+                                            ShorthandPatProp {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 8,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 9,
+                                                    },
+                                                },
+                                                span: 8..9,
+                                                ident: BindingIdent {
+                                                    name: "b",
+                                                    mutable: false,
+                                                    span: 8..9,
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 8,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 9,
+                                                        },
+                                                    },
+                                                },
+                                                init: None,
+                                            },
+                                        ),
+                                        Rest(
+                                            RestPat {
+                                                arg: Pattern {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
@@ -123,34 +109,37 @@ Ok(
                                                             column: 18,
                                                         },
                                                     },
+                                                    span: 14..18,
+                                                    kind: Ident(
+                                                        BindingIdent {
+                                                            name: "rest",
+                                                            mutable: false,
+                                                            span: 14..18,
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 14,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 18,
+                                                                },
+                                                            },
+                                                        },
+                                                    ),
+                                                    inferred_type: None,
                                                 },
-                                            ),
-                                            inferred_type: None,
-                                        },
-                                    },
-                                ),
-                            ],
-                            optional: false,
+                                            },
+                                        ),
+                                    ],
+                                    optional: false,
+                                },
+                            ),
+                            inferred_type: None,
                         },
-                    ),
-                    inferred_type: None,
-                },
-                type_ann: None,
-                init: Some(
-                    Expr {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 0,
-                                column: 22,
-                            },
-                            end: Position {
-                                line: 0,
-                                column: 29,
-                            },
-                        },
-                        span: 22..29,
-                        kind: Ident(
-                            Ident {
+                        type_ann: None,
+                        init: Some(
+                            Expr {
                                 loc: SourceLocation {
                                     start: Position {
                                         line: 0,
@@ -162,13 +151,28 @@ Ok(
                                     },
                                 },
                                 span: 22..29,
-                                name: "letters",
+                                kind: Ident(
+                                    Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 22,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 29,
+                                            },
+                                        },
+                                        span: 22..29,
+                                        name: "letters",
+                                    },
+                                ),
+                                inferred_type: None,
                             },
                         ),
-                        inferred_type: None,
+                        declare: false,
                     },
                 ),
-                declare: false,
             },
         ],
     },

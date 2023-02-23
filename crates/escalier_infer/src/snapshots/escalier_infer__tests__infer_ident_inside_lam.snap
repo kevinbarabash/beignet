@@ -4,7 +4,7 @@ expression: prog
 ---
 Program {
     body: [
-        VarDecl {
+        Statement {
             loc: SourceLocation {
                 start: Position {
                     line: 0,
@@ -16,23 +16,9 @@ Program {
                 },
             },
             span: 0..26,
-            pattern: Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 0,
-                        column: 4,
-                    },
-                    end: Position {
-                        line: 0,
-                        column: 7,
-                    },
-                },
-                span: 4..7,
-                kind: Ident(
-                    BindingIdent {
-                        name: "add",
-                        mutable: false,
-                        span: 4..7,
+            kind: VarDecl(
+                VarDecl {
+                    pattern: Pattern {
                         loc: SourceLocation {
                             start: Position {
                                 line: 0,
@@ -43,54 +29,54 @@ Program {
                                 column: 7,
                             },
                         },
-                    },
-                ),
-                inferred_type: Some(
-                    Type {
-                        kind: Lam(
-                            TLam {
-                                params: [
-                                    TFnParam {
-                                        pat: Ident(
-                                            BindingIdent {
-                                                name: "a",
-                                                mutable: false,
-                                            },
-                                        ),
-                                        t: Type {
-                                            kind: Keyword(
-                                                Number,
-                                            ),
-                                            mutable: false,
-                                            provenance: Some(
-                                                Type(
-                                                    Type {
-                                                        kind: Var(
-                                                            TVar {
-                                                                id: 2,
-                                                                constraint: None,
-                                                            },
-                                                        ),
+                        span: 4..7,
+                        kind: Ident(
+                            BindingIdent {
+                                name: "add",
+                                mutable: false,
+                                span: 4..7,
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 4,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 7,
+                                    },
+                                },
+                            },
+                        ),
+                        inferred_type: Some(
+                            Type {
+                                kind: Lam(
+                                    TLam {
+                                        params: [
+                                            TFnParam {
+                                                pat: Ident(
+                                                    BindingIdent {
+                                                        name: "a",
                                                         mutable: false,
-                                                        provenance: Some(
-                                                            Pattern(
-                                                                Pattern {
-                                                                    loc: SourceLocation {
-                                                                        start: Position {
-                                                                            line: 0,
-                                                                            column: 11,
-                                                                        },
-                                                                        end: Position {
-                                                                            line: 0,
-                                                                            column: 12,
-                                                                        },
+                                                    },
+                                                ),
+                                                t: Type {
+                                                    kind: Keyword(
+                                                        Number,
+                                                    ),
+                                                    mutable: false,
+                                                    provenance: Some(
+                                                        Type(
+                                                            Type {
+                                                                kind: Var(
+                                                                    TVar {
+                                                                        id: 2,
+                                                                        constraint: None,
                                                                     },
-                                                                    span: 11..12,
-                                                                    kind: Ident(
-                                                                        BindingIdent {
-                                                                            name: "a",
-                                                                            mutable: false,
-                                                                            span: 11..12,
+                                                                ),
+                                                                mutable: false,
+                                                                provenance: Some(
+                                                                    Pattern(
+                                                                        Pattern {
                                                                             loc: SourceLocation {
                                                                                 start: Position {
                                                                                     line: 0,
@@ -101,70 +87,70 @@ Program {
                                                                                     column: 12,
                                                                                 },
                                                                             },
-                                                                        },
-                                                                    ),
-                                                                    inferred_type: Some(
-                                                                        Type {
-                                                                            kind: Var(
-                                                                                TVar {
-                                                                                    id: 2,
-                                                                                    constraint: None,
+                                                                            span: 11..12,
+                                                                            kind: Ident(
+                                                                                BindingIdent {
+                                                                                    name: "a",
+                                                                                    mutable: false,
+                                                                                    span: 11..12,
+                                                                                    loc: SourceLocation {
+                                                                                        start: Position {
+                                                                                            line: 0,
+                                                                                            column: 11,
+                                                                                        },
+                                                                                        end: Position {
+                                                                                            line: 0,
+                                                                                            column: 12,
+                                                                                        },
+                                                                                    },
                                                                                 },
                                                                             ),
-                                                                            mutable: false,
-                                                                            provenance: None,
+                                                                            inferred_type: Some(
+                                                                                Type {
+                                                                                    kind: Var(
+                                                                                        TVar {
+                                                                                            id: 2,
+                                                                                            constraint: None,
+                                                                                        },
+                                                                                    ),
+                                                                                    mutable: false,
+                                                                                    provenance: None,
+                                                                                },
+                                                                            ),
                                                                         },
                                                                     ),
-                                                                },
-                                                            ),
-                                                        ),
-                                                    },
-                                                ),
-                                            ),
-                                        },
-                                        optional: false,
-                                    },
-                                    TFnParam {
-                                        pat: Ident(
-                                            BindingIdent {
-                                                name: "b",
-                                                mutable: false,
-                                            },
-                                        ),
-                                        t: Type {
-                                            kind: Keyword(
-                                                Number,
-                                            ),
-                                            mutable: false,
-                                            provenance: Some(
-                                                Type(
-                                                    Type {
-                                                        kind: Var(
-                                                            TVar {
-                                                                id: 3,
-                                                                constraint: None,
+                                                                ),
                                                             },
                                                         ),
+                                                    ),
+                                                },
+                                                optional: false,
+                                            },
+                                            TFnParam {
+                                                pat: Ident(
+                                                    BindingIdent {
+                                                        name: "b",
                                                         mutable: false,
-                                                        provenance: Some(
-                                                            Pattern(
-                                                                Pattern {
-                                                                    loc: SourceLocation {
-                                                                        start: Position {
-                                                                            line: 0,
-                                                                            column: 14,
-                                                                        },
-                                                                        end: Position {
-                                                                            line: 0,
-                                                                            column: 15,
-                                                                        },
+                                                    },
+                                                ),
+                                                t: Type {
+                                                    kind: Keyword(
+                                                        Number,
+                                                    ),
+                                                    mutable: false,
+                                                    provenance: Some(
+                                                        Type(
+                                                            Type {
+                                                                kind: Var(
+                                                                    TVar {
+                                                                        id: 3,
+                                                                        constraint: None,
                                                                     },
-                                                                    span: 14..15,
-                                                                    kind: Ident(
-                                                                        BindingIdent {
-                                                                            name: "b",
-                                                                            mutable: false,
-                                                                            span: 14..15,
+                                                                ),
+                                                                mutable: false,
+                                                                provenance: Some(
+                                                                    Pattern(
+                                                                        Pattern {
                                                                             loc: SourceLocation {
                                                                                 start: Position {
                                                                                     line: 0,
@@ -175,266 +161,53 @@ Program {
                                                                                     column: 15,
                                                                                 },
                                                                             },
-                                                                        },
-                                                                    ),
-                                                                    inferred_type: Some(
-                                                                        Type {
-                                                                            kind: Var(
-                                                                                TVar {
-                                                                                    id: 3,
-                                                                                    constraint: None,
+                                                                            span: 14..15,
+                                                                            kind: Ident(
+                                                                                BindingIdent {
+                                                                                    name: "b",
+                                                                                    mutable: false,
+                                                                                    span: 14..15,
+                                                                                    loc: SourceLocation {
+                                                                                        start: Position {
+                                                                                            line: 0,
+                                                                                            column: 14,
+                                                                                        },
+                                                                                        end: Position {
+                                                                                            line: 0,
+                                                                                            column: 15,
+                                                                                        },
+                                                                                    },
                                                                                 },
                                                                             ),
-                                                                            mutable: false,
-                                                                            provenance: None,
+                                                                            inferred_type: Some(
+                                                                                Type {
+                                                                                    kind: Var(
+                                                                                        TVar {
+                                                                                            id: 3,
+                                                                                            constraint: None,
+                                                                                        },
+                                                                                    ),
+                                                                                    mutable: false,
+                                                                                    provenance: None,
+                                                                                },
+                                                                            ),
                                                                         },
                                                                     ),
-                                                                },
-                                                            ),
+                                                                ),
+                                                            },
                                                         ),
-                                                    },
-                                                ),
-                                            ),
-                                        },
-                                        optional: false,
-                                    },
-                                ],
-                                ret: Type {
-                                    kind: Keyword(
-                                        Number,
-                                    ),
-                                    mutable: false,
-                                    provenance: Some(
-                                        Expr(
-                                            Expr {
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 0,
-                                                        column: 20,
-                                                    },
-                                                    end: Position {
-                                                        line: 0,
-                                                        column: 25,
-                                                    },
+                                                    ),
                                                 },
-                                                span: 20..25,
-                                                kind: BinaryExpr(
-                                                    BinaryExpr {
-                                                        op: Add,
-                                                        left: Expr {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 20,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 21,
-                                                                },
-                                                            },
-                                                            span: 20..21,
-                                                            kind: Ident(
-                                                                Ident {
-                                                                    loc: SourceLocation {
-                                                                        start: Position {
-                                                                            line: 0,
-                                                                            column: 20,
-                                                                        },
-                                                                        end: Position {
-                                                                            line: 0,
-                                                                            column: 21,
-                                                                        },
-                                                                    },
-                                                                    span: 20..21,
-                                                                    name: "a",
-                                                                },
-                                                            ),
-                                                            inferred_type: Some(
-                                                                Type {
-                                                                    kind: Var(
-                                                                        TVar {
-                                                                            id: 2,
-                                                                            constraint: None,
-                                                                        },
-                                                                    ),
-                                                                    mutable: false,
-                                                                    provenance: None,
-                                                                },
-                                                            ),
-                                                        },
-                                                        right: Expr {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 24,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 25,
-                                                                },
-                                                            },
-                                                            span: 24..25,
-                                                            kind: Ident(
-                                                                Ident {
-                                                                    loc: SourceLocation {
-                                                                        start: Position {
-                                                                            line: 0,
-                                                                            column: 24,
-                                                                        },
-                                                                        end: Position {
-                                                                            line: 0,
-                                                                            column: 25,
-                                                                        },
-                                                                    },
-                                                                    span: 24..25,
-                                                                    name: "b",
-                                                                },
-                                                            ),
-                                                            inferred_type: Some(
-                                                                Type {
-                                                                    kind: Var(
-                                                                        TVar {
-                                                                            id: 3,
-                                                                            constraint: None,
-                                                                        },
-                                                                    ),
-                                                                    mutable: false,
-                                                                    provenance: None,
-                                                                },
-                                                            ),
-                                                        },
-                                                    },
-                                                ),
-                                                inferred_type: Some(
-                                                    Type {
-                                                        kind: Keyword(
-                                                            Number,
-                                                        ),
-                                                        mutable: false,
-                                                        provenance: None,
-                                                    },
-                                                ),
+                                                optional: false,
                                             },
-                                        ),
-                                    ),
-                                },
-                                type_params: None,
-                            },
-                        ),
-                        mutable: false,
-                        provenance: Some(
-                            Expr(
-                                Expr {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 0,
-                                            column: 10,
-                                        },
-                                        end: Position {
-                                            line: 0,
-                                            column: 25,
-                                        },
-                                    },
-                                    span: 10..25,
-                                    kind: Lambda(
-                                        Lambda {
-                                            params: [
-                                                EFnParam {
-                                                    pat: Pattern {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 0,
-                                                                column: 11,
-                                                            },
-                                                            end: Position {
-                                                                line: 0,
-                                                                column: 12,
-                                                            },
-                                                        },
-                                                        span: 11..12,
-                                                        kind: Ident(
-                                                            BindingIdent {
-                                                                name: "a",
-                                                                mutable: false,
-                                                                span: 11..12,
-                                                                loc: SourceLocation {
-                                                                    start: Position {
-                                                                        line: 0,
-                                                                        column: 11,
-                                                                    },
-                                                                    end: Position {
-                                                                        line: 0,
-                                                                        column: 12,
-                                                                    },
-                                                                },
-                                                            },
-                                                        ),
-                                                        inferred_type: Some(
-                                                            Type {
-                                                                kind: Var(
-                                                                    TVar {
-                                                                        id: 2,
-                                                                        constraint: None,
-                                                                    },
-                                                                ),
-                                                                mutable: false,
-                                                                provenance: None,
-                                                            },
-                                                        ),
-                                                    },
-                                                    type_ann: None,
-                                                    optional: false,
-                                                },
-                                                EFnParam {
-                                                    pat: Pattern {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 0,
-                                                                column: 14,
-                                                            },
-                                                            end: Position {
-                                                                line: 0,
-                                                                column: 15,
-                                                            },
-                                                        },
-                                                        span: 14..15,
-                                                        kind: Ident(
-                                                            BindingIdent {
-                                                                name: "b",
-                                                                mutable: false,
-                                                                span: 14..15,
-                                                                loc: SourceLocation {
-                                                                    start: Position {
-                                                                        line: 0,
-                                                                        column: 14,
-                                                                    },
-                                                                    end: Position {
-                                                                        line: 0,
-                                                                        column: 15,
-                                                                    },
-                                                                },
-                                                            },
-                                                        ),
-                                                        inferred_type: Some(
-                                                            Type {
-                                                                kind: Var(
-                                                                    TVar {
-                                                                        id: 3,
-                                                                        constraint: None,
-                                                                    },
-                                                                ),
-                                                                mutable: false,
-                                                                provenance: None,
-                                                            },
-                                                        ),
-                                                    },
-                                                    type_ann: None,
-                                                    optional: false,
-                                                },
-                                            ],
-                                            body: Block {
-                                                span: 20..25,
-                                                stmts: [
+                                        ],
+                                        ret: Type {
+                                            kind: Keyword(
+                                                Number,
+                                            ),
+                                            mutable: false,
+                                            provenance: Some(
+                                                Expr(
                                                     Expr {
                                                         loc: SourceLocation {
                                                             start: Position {
@@ -544,59 +317,272 @@ Program {
                                                             },
                                                         ),
                                                     },
-                                                ],
-                                            },
-                                            is_async: false,
-                                            return_type: None,
-                                            type_params: None,
+                                                ),
+                                            ),
                                         },
-                                    ),
-                                    inferred_type: Some(
-                                        Type {
-                                            kind: Lam(
-                                                TLam {
+                                        type_params: None,
+                                    },
+                                ),
+                                mutable: false,
+                                provenance: Some(
+                                    Expr(
+                                        Expr {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 10,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 25,
+                                                },
+                                            },
+                                            span: 10..25,
+                                            kind: Lambda(
+                                                Lambda {
                                                     params: [
-                                                        TFnParam {
-                                                            pat: Ident(
-                                                                BindingIdent {
-                                                                    name: "a",
-                                                                    mutable: false,
+                                                        EFnParam {
+                                                            pat: Pattern {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 11,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 12,
+                                                                    },
                                                                 },
-                                                            ),
-                                                            t: Type {
-                                                                kind: Keyword(
-                                                                    Number,
+                                                                span: 11..12,
+                                                                kind: Ident(
+                                                                    BindingIdent {
+                                                                        name: "a",
+                                                                        mutable: false,
+                                                                        span: 11..12,
+                                                                        loc: SourceLocation {
+                                                                            start: Position {
+                                                                                line: 0,
+                                                                                column: 11,
+                                                                            },
+                                                                            end: Position {
+                                                                                line: 0,
+                                                                                column: 12,
+                                                                            },
+                                                                        },
+                                                                    },
                                                                 ),
-                                                                mutable: false,
-                                                                provenance: Some(
-                                                                    Type(
-                                                                        Type {
-                                                                            kind: Var(
-                                                                                TVar {
-                                                                                    id: 2,
-                                                                                    constraint: None,
+                                                                inferred_type: Some(
+                                                                    Type {
+                                                                        kind: Var(
+                                                                            TVar {
+                                                                                id: 2,
+                                                                                constraint: None,
+                                                                            },
+                                                                        ),
+                                                                        mutable: false,
+                                                                        provenance: None,
+                                                                    },
+                                                                ),
+                                                            },
+                                                            type_ann: None,
+                                                            optional: false,
+                                                        },
+                                                        EFnParam {
+                                                            pat: Pattern {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 14,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 15,
+                                                                    },
+                                                                },
+                                                                span: 14..15,
+                                                                kind: Ident(
+                                                                    BindingIdent {
+                                                                        name: "b",
+                                                                        mutable: false,
+                                                                        span: 14..15,
+                                                                        loc: SourceLocation {
+                                                                            start: Position {
+                                                                                line: 0,
+                                                                                column: 14,
+                                                                            },
+                                                                            end: Position {
+                                                                                line: 0,
+                                                                                column: 15,
+                                                                            },
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                inferred_type: Some(
+                                                                    Type {
+                                                                        kind: Var(
+                                                                            TVar {
+                                                                                id: 3,
+                                                                                constraint: None,
+                                                                            },
+                                                                        ),
+                                                                        mutable: false,
+                                                                        provenance: None,
+                                                                    },
+                                                                ),
+                                                            },
+                                                            type_ann: None,
+                                                            optional: false,
+                                                        },
+                                                    ],
+                                                    body: Block {
+                                                        span: 20..25,
+                                                        stmts: [
+                                                            Expr {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 20,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 25,
+                                                                    },
+                                                                },
+                                                                span: 20..25,
+                                                                kind: BinaryExpr(
+                                                                    BinaryExpr {
+                                                                        op: Add,
+                                                                        left: Expr {
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 0,
+                                                                                    column: 20,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 0,
+                                                                                    column: 21,
+                                                                                },
+                                                                            },
+                                                                            span: 20..21,
+                                                                            kind: Ident(
+                                                                                Ident {
+                                                                                    loc: SourceLocation {
+                                                                                        start: Position {
+                                                                                            line: 0,
+                                                                                            column: 20,
+                                                                                        },
+                                                                                        end: Position {
+                                                                                            line: 0,
+                                                                                            column: 21,
+                                                                                        },
+                                                                                    },
+                                                                                    span: 20..21,
+                                                                                    name: "a",
                                                                                 },
                                                                             ),
-                                                                            mutable: false,
-                                                                            provenance: Some(
-                                                                                Pattern(
-                                                                                    Pattern {
-                                                                                        loc: SourceLocation {
-                                                                                            start: Position {
-                                                                                                line: 0,
-                                                                                                column: 11,
-                                                                                            },
-                                                                                            end: Position {
-                                                                                                line: 0,
-                                                                                                column: 12,
-                                                                                            },
+                                                                            inferred_type: Some(
+                                                                                Type {
+                                                                                    kind: Var(
+                                                                                        TVar {
+                                                                                            id: 2,
+                                                                                            constraint: None,
                                                                                         },
-                                                                                        span: 11..12,
-                                                                                        kind: Ident(
-                                                                                            BindingIdent {
-                                                                                                name: "a",
-                                                                                                mutable: false,
-                                                                                                span: 11..12,
+                                                                                    ),
+                                                                                    mutable: false,
+                                                                                    provenance: None,
+                                                                                },
+                                                                            ),
+                                                                        },
+                                                                        right: Expr {
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 0,
+                                                                                    column: 24,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 0,
+                                                                                    column: 25,
+                                                                                },
+                                                                            },
+                                                                            span: 24..25,
+                                                                            kind: Ident(
+                                                                                Ident {
+                                                                                    loc: SourceLocation {
+                                                                                        start: Position {
+                                                                                            line: 0,
+                                                                                            column: 24,
+                                                                                        },
+                                                                                        end: Position {
+                                                                                            line: 0,
+                                                                                            column: 25,
+                                                                                        },
+                                                                                    },
+                                                                                    span: 24..25,
+                                                                                    name: "b",
+                                                                                },
+                                                                            ),
+                                                                            inferred_type: Some(
+                                                                                Type {
+                                                                                    kind: Var(
+                                                                                        TVar {
+                                                                                            id: 3,
+                                                                                            constraint: None,
+                                                                                        },
+                                                                                    ),
+                                                                                    mutable: false,
+                                                                                    provenance: None,
+                                                                                },
+                                                                            ),
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                inferred_type: Some(
+                                                                    Type {
+                                                                        kind: Keyword(
+                                                                            Number,
+                                                                        ),
+                                                                        mutable: false,
+                                                                        provenance: None,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ],
+                                                    },
+                                                    is_async: false,
+                                                    return_type: None,
+                                                    type_params: None,
+                                                },
+                                            ),
+                                            inferred_type: Some(
+                                                Type {
+                                                    kind: Lam(
+                                                        TLam {
+                                                            params: [
+                                                                TFnParam {
+                                                                    pat: Ident(
+                                                                        BindingIdent {
+                                                                            name: "a",
+                                                                            mutable: false,
+                                                                        },
+                                                                    ),
+                                                                    t: Type {
+                                                                        kind: Keyword(
+                                                                            Number,
+                                                                        ),
+                                                                        mutable: false,
+                                                                        provenance: Some(
+                                                                            Type(
+                                                                                Type {
+                                                                                    kind: Var(
+                                                                                        TVar {
+                                                                                            id: 2,
+                                                                                            constraint: None,
+                                                                                        },
+                                                                                    ),
+                                                                                    mutable: false,
+                                                                                    provenance: Some(
+                                                                                        Pattern(
+                                                                                            Pattern {
                                                                                                 loc: SourceLocation {
                                                                                                     start: Position {
                                                                                                         line: 0,
@@ -607,6 +593,168 @@ Program {
                                                                                                         column: 12,
                                                                                                     },
                                                                                                 },
+                                                                                                span: 11..12,
+                                                                                                kind: Ident(
+                                                                                                    BindingIdent {
+                                                                                                        name: "a",
+                                                                                                        mutable: false,
+                                                                                                        span: 11..12,
+                                                                                                        loc: SourceLocation {
+                                                                                                            start: Position {
+                                                                                                                line: 0,
+                                                                                                                column: 11,
+                                                                                                            },
+                                                                                                            end: Position {
+                                                                                                                line: 0,
+                                                                                                                column: 12,
+                                                                                                            },
+                                                                                                        },
+                                                                                                    },
+                                                                                                ),
+                                                                                                inferred_type: Some(
+                                                                                                    Type {
+                                                                                                        kind: Var(
+                                                                                                            TVar {
+                                                                                                                id: 2,
+                                                                                                                constraint: None,
+                                                                                                            },
+                                                                                                        ),
+                                                                                                        mutable: false,
+                                                                                                        provenance: None,
+                                                                                                    },
+                                                                                                ),
+                                                                                            },
+                                                                                        ),
+                                                                                    ),
+                                                                                },
+                                                                            ),
+                                                                        ),
+                                                                    },
+                                                                    optional: false,
+                                                                },
+                                                                TFnParam {
+                                                                    pat: Ident(
+                                                                        BindingIdent {
+                                                                            name: "b",
+                                                                            mutable: false,
+                                                                        },
+                                                                    ),
+                                                                    t: Type {
+                                                                        kind: Keyword(
+                                                                            Number,
+                                                                        ),
+                                                                        mutable: false,
+                                                                        provenance: Some(
+                                                                            Type(
+                                                                                Type {
+                                                                                    kind: Var(
+                                                                                        TVar {
+                                                                                            id: 3,
+                                                                                            constraint: None,
+                                                                                        },
+                                                                                    ),
+                                                                                    mutable: false,
+                                                                                    provenance: Some(
+                                                                                        Pattern(
+                                                                                            Pattern {
+                                                                                                loc: SourceLocation {
+                                                                                                    start: Position {
+                                                                                                        line: 0,
+                                                                                                        column: 14,
+                                                                                                    },
+                                                                                                    end: Position {
+                                                                                                        line: 0,
+                                                                                                        column: 15,
+                                                                                                    },
+                                                                                                },
+                                                                                                span: 14..15,
+                                                                                                kind: Ident(
+                                                                                                    BindingIdent {
+                                                                                                        name: "b",
+                                                                                                        mutable: false,
+                                                                                                        span: 14..15,
+                                                                                                        loc: SourceLocation {
+                                                                                                            start: Position {
+                                                                                                                line: 0,
+                                                                                                                column: 14,
+                                                                                                            },
+                                                                                                            end: Position {
+                                                                                                                line: 0,
+                                                                                                                column: 15,
+                                                                                                            },
+                                                                                                        },
+                                                                                                    },
+                                                                                                ),
+                                                                                                inferred_type: Some(
+                                                                                                    Type {
+                                                                                                        kind: Var(
+                                                                                                            TVar {
+                                                                                                                id: 3,
+                                                                                                                constraint: None,
+                                                                                                            },
+                                                                                                        ),
+                                                                                                        mutable: false,
+                                                                                                        provenance: None,
+                                                                                                    },
+                                                                                                ),
+                                                                                            },
+                                                                                        ),
+                                                                                    ),
+                                                                                },
+                                                                            ),
+                                                                        ),
+                                                                    },
+                                                                    optional: false,
+                                                                },
+                                                            ],
+                                                            ret: Type {
+                                                                kind: Keyword(
+                                                                    Number,
+                                                                ),
+                                                                mutable: false,
+                                                                provenance: Some(
+                                                                    Expr(
+                                                                        Expr {
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 0,
+                                                                                    column: 20,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 0,
+                                                                                    column: 25,
+                                                                                },
+                                                                            },
+                                                                            span: 20..25,
+                                                                            kind: BinaryExpr(
+                                                                                BinaryExpr {
+                                                                                    op: Add,
+                                                                                    left: Expr {
+                                                                                        loc: SourceLocation {
+                                                                                            start: Position {
+                                                                                                line: 0,
+                                                                                                column: 20,
+                                                                                            },
+                                                                                            end: Position {
+                                                                                                line: 0,
+                                                                                                column: 21,
+                                                                                            },
+                                                                                        },
+                                                                                        span: 20..21,
+                                                                                        kind: Ident(
+                                                                                            Ident {
+                                                                                                loc: SourceLocation {
+                                                                                                    start: Position {
+                                                                                                        line: 0,
+                                                                                                        column: 20,
+                                                                                                    },
+                                                                                                    end: Position {
+                                                                                                        line: 0,
+                                                                                                        column: 21,
+                                                                                                    },
+                                                                                                },
+                                                                                                span: 20..21,
+                                                                                                name: "a",
                                                                                             },
                                                                                         ),
                                                                                         inferred_type: Some(
@@ -622,65 +770,32 @@ Program {
                                                                                             },
                                                                                         ),
                                                                                     },
-                                                                                ),
-                                                                            ),
-                                                                        },
-                                                                    ),
-                                                                ),
-                                                            },
-                                                            optional: false,
-                                                        },
-                                                        TFnParam {
-                                                            pat: Ident(
-                                                                BindingIdent {
-                                                                    name: "b",
-                                                                    mutable: false,
-                                                                },
-                                                            ),
-                                                            t: Type {
-                                                                kind: Keyword(
-                                                                    Number,
-                                                                ),
-                                                                mutable: false,
-                                                                provenance: Some(
-                                                                    Type(
-                                                                        Type {
-                                                                            kind: Var(
-                                                                                TVar {
-                                                                                    id: 3,
-                                                                                    constraint: None,
-                                                                                },
-                                                                            ),
-                                                                            mutable: false,
-                                                                            provenance: Some(
-                                                                                Pattern(
-                                                                                    Pattern {
+                                                                                    right: Expr {
                                                                                         loc: SourceLocation {
                                                                                             start: Position {
                                                                                                 line: 0,
-                                                                                                column: 14,
+                                                                                                column: 24,
                                                                                             },
                                                                                             end: Position {
                                                                                                 line: 0,
-                                                                                                column: 15,
+                                                                                                column: 25,
                                                                                             },
                                                                                         },
-                                                                                        span: 14..15,
+                                                                                        span: 24..25,
                                                                                         kind: Ident(
-                                                                                            BindingIdent {
-                                                                                                name: "b",
-                                                                                                mutable: false,
-                                                                                                span: 14..15,
+                                                                                            Ident {
                                                                                                 loc: SourceLocation {
                                                                                                     start: Position {
                                                                                                         line: 0,
-                                                                                                        column: 14,
+                                                                                                        column: 24,
                                                                                                     },
                                                                                                     end: Position {
                                                                                                         line: 0,
-                                                                                                        column: 15,
+                                                                                                        column: 25,
                                                                                                     },
                                                                                                 },
+                                                                                                span: 24..25,
+                                                                                                name: "b",
                                                                                             },
                                                                                         ),
                                                                                         inferred_type: Some(
@@ -696,23 +811,196 @@ Program {
                                                                                             },
                                                                                         ),
                                                                                     },
-                                                                                ),
+                                                                                },
+                                                                            ),
+                                                                            inferred_type: Some(
+                                                                                Type {
+                                                                                    kind: Keyword(
+                                                                                        Number,
+                                                                                    ),
+                                                                                    mutable: false,
+                                                                                    provenance: None,
+                                                                                },
                                                                             ),
                                                                         },
                                                                     ),
                                                                 ),
                                                             },
-                                                            optional: false,
+                                                            type_params: None,
                                                         },
-                                                    ],
-                                                    ret: Type {
+                                                    ),
+                                                    mutable: false,
+                                                    provenance: None,
+                                                },
+                                            ),
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                    },
+                    type_ann: None,
+                    init: Some(
+                        Expr {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 10,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 25,
+                                },
+                            },
+                            span: 10..25,
+                            kind: Lambda(
+                                Lambda {
+                                    params: [
+                                        EFnParam {
+                                            pat: Pattern {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 11,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 12,
+                                                    },
+                                                },
+                                                span: 11..12,
+                                                kind: Ident(
+                                                    BindingIdent {
+                                                        name: "a",
+                                                        mutable: false,
+                                                        span: 11..12,
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 11,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 12,
+                                                            },
+                                                        },
+                                                    },
+                                                ),
+                                                inferred_type: Some(
+                                                    Type {
                                                         kind: Keyword(
                                                             Number,
                                                         ),
                                                         mutable: false,
                                                         provenance: Some(
-                                                            Expr(
-                                                                Expr {
+                                                            Type(
+                                                                Type {
+                                                                    kind: Var(
+                                                                        TVar {
+                                                                            id: 2,
+                                                                            constraint: None,
+                                                                        },
+                                                                    ),
+                                                                    mutable: false,
+                                                                    provenance: None,
+                                                                },
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                            type_ann: None,
+                                            optional: false,
+                                        },
+                                        EFnParam {
+                                            pat: Pattern {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 14,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 15,
+                                                    },
+                                                },
+                                                span: 14..15,
+                                                kind: Ident(
+                                                    BindingIdent {
+                                                        name: "b",
+                                                        mutable: false,
+                                                        span: 14..15,
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 14,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 15,
+                                                            },
+                                                        },
+                                                    },
+                                                ),
+                                                inferred_type: Some(
+                                                    Type {
+                                                        kind: Keyword(
+                                                            Number,
+                                                        ),
+                                                        mutable: false,
+                                                        provenance: Some(
+                                                            Type(
+                                                                Type {
+                                                                    kind: Var(
+                                                                        TVar {
+                                                                            id: 3,
+                                                                            constraint: None,
+                                                                        },
+                                                                    ),
+                                                                    mutable: false,
+                                                                    provenance: None,
+                                                                },
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                            type_ann: None,
+                                            optional: false,
+                                        },
+                                    ],
+                                    body: Block {
+                                        span: 20..25,
+                                        stmts: [
+                                            Expr {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 20,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 25,
+                                                    },
+                                                },
+                                                span: 20..25,
+                                                kind: BinaryExpr(
+                                                    BinaryExpr {
+                                                        op: Add,
+                                                        left: Expr {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 20,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 21,
+                                                                },
+                                                            },
+                                                            span: 20..21,
+                                                            kind: Ident(
+                                                                Ident {
                                                                     loc: SourceLocation {
                                                                         start: Position {
                                                                             line: 0,
@@ -720,39 +1008,162 @@ Program {
                                                                         },
                                                                         end: Position {
                                                                             line: 0,
+                                                                            column: 21,
+                                                                        },
+                                                                    },
+                                                                    span: 20..21,
+                                                                    name: "a",
+                                                                },
+                                                            ),
+                                                            inferred_type: Some(
+                                                                Type {
+                                                                    kind: Keyword(
+                                                                        Number,
+                                                                    ),
+                                                                    mutable: false,
+                                                                    provenance: Some(
+                                                                        Type(
+                                                                            Type {
+                                                                                kind: Var(
+                                                                                    TVar {
+                                                                                        id: 2,
+                                                                                        constraint: None,
+                                                                                    },
+                                                                                ),
+                                                                                mutable: false,
+                                                                                provenance: None,
+                                                                            },
+                                                                        ),
+                                                                    ),
+                                                                },
+                                                            ),
+                                                        },
+                                                        right: Expr {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 24,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 25,
+                                                                },
+                                                            },
+                                                            span: 24..25,
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    loc: SourceLocation {
+                                                                        start: Position {
+                                                                            line: 0,
+                                                                            column: 24,
+                                                                        },
+                                                                        end: Position {
+                                                                            line: 0,
                                                                             column: 25,
                                                                         },
                                                                     },
-                                                                    span: 20..25,
-                                                                    kind: BinaryExpr(
-                                                                        BinaryExpr {
-                                                                            op: Add,
-                                                                            left: Expr {
+                                                                    span: 24..25,
+                                                                    name: "b",
+                                                                },
+                                                            ),
+                                                            inferred_type: Some(
+                                                                Type {
+                                                                    kind: Keyword(
+                                                                        Number,
+                                                                    ),
+                                                                    mutable: false,
+                                                                    provenance: Some(
+                                                                        Type(
+                                                                            Type {
+                                                                                kind: Var(
+                                                                                    TVar {
+                                                                                        id: 3,
+                                                                                        constraint: None,
+                                                                                    },
+                                                                                ),
+                                                                                mutable: false,
+                                                                                provenance: None,
+                                                                            },
+                                                                        ),
+                                                                    ),
+                                                                },
+                                                            ),
+                                                        },
+                                                    },
+                                                ),
+                                                inferred_type: Some(
+                                                    Type {
+                                                        kind: Keyword(
+                                                            Number,
+                                                        ),
+                                                        mutable: false,
+                                                        provenance: None,
+                                                    },
+                                                ),
+                                            },
+                                        ],
+                                    },
+                                    is_async: false,
+                                    return_type: None,
+                                    type_params: None,
+                                },
+                            ),
+                            inferred_type: Some(
+                                Type {
+                                    kind: Lam(
+                                        TLam {
+                                            params: [
+                                                TFnParam {
+                                                    pat: Ident(
+                                                        BindingIdent {
+                                                            name: "a",
+                                                            mutable: false,
+                                                        },
+                                                    ),
+                                                    t: Type {
+                                                        kind: Keyword(
+                                                            Number,
+                                                        ),
+                                                        mutable: false,
+                                                        provenance: Some(
+                                                            Type(
+                                                                Type {
+                                                                    kind: Var(
+                                                                        TVar {
+                                                                            id: 2,
+                                                                            constraint: None,
+                                                                        },
+                                                                    ),
+                                                                    mutable: false,
+                                                                    provenance: Some(
+                                                                        Pattern(
+                                                                            Pattern {
                                                                                 loc: SourceLocation {
                                                                                     start: Position {
                                                                                         line: 0,
-                                                                                        column: 20,
+                                                                                        column: 11,
                                                                                     },
                                                                                     end: Position {
                                                                                         line: 0,
-                                                                                        column: 21,
+                                                                                        column: 12,
                                                                                     },
                                                                                 },
-                                                                                span: 20..21,
+                                                                                span: 11..12,
                                                                                 kind: Ident(
-                                                                                    Ident {
+                                                                                    BindingIdent {
+                                                                                        name: "a",
+                                                                                        mutable: false,
+                                                                                        span: 11..12,
                                                                                         loc: SourceLocation {
                                                                                             start: Position {
                                                                                                 line: 0,
-                                                                                                column: 20,
+                                                                                                column: 11,
                                                                                             },
                                                                                             end: Position {
                                                                                                 line: 0,
-                                                                                                column: 21,
+                                                                                                column: 12,
                                                                                             },
                                                                                         },
-                                                                                        span: 20..21,
-                                                                                        name: "a",
                                                                                     },
                                                                                 ),
                                                                                 inferred_type: Some(
@@ -768,32 +1179,65 @@ Program {
                                                                                     },
                                                                                 ),
                                                                             },
-                                                                            right: Expr {
+                                                                        ),
+                                                                    ),
+                                                                },
+                                                            ),
+                                                        ),
+                                                    },
+                                                    optional: false,
+                                                },
+                                                TFnParam {
+                                                    pat: Ident(
+                                                        BindingIdent {
+                                                            name: "b",
+                                                            mutable: false,
+                                                        },
+                                                    ),
+                                                    t: Type {
+                                                        kind: Keyword(
+                                                            Number,
+                                                        ),
+                                                        mutable: false,
+                                                        provenance: Some(
+                                                            Type(
+                                                                Type {
+                                                                    kind: Var(
+                                                                        TVar {
+                                                                            id: 3,
+                                                                            constraint: None,
+                                                                        },
+                                                                    ),
+                                                                    mutable: false,
+                                                                    provenance: Some(
+                                                                        Pattern(
+                                                                            Pattern {
                                                                                 loc: SourceLocation {
                                                                                     start: Position {
                                                                                         line: 0,
-                                                                                        column: 24,
+                                                                                        column: 14,
                                                                                     },
                                                                                     end: Position {
                                                                                         line: 0,
-                                                                                        column: 25,
+                                                                                        column: 15,
                                                                                     },
                                                                                 },
-                                                                                span: 24..25,
+                                                                                span: 14..15,
                                                                                 kind: Ident(
-                                                                                    Ident {
+                                                                                    BindingIdent {
+                                                                                        name: "b",
+                                                                                        mutable: false,
+                                                                                        span: 14..15,
                                                                                         loc: SourceLocation {
                                                                                             start: Position {
                                                                                                 line: 0,
-                                                                                                column: 24,
+                                                                                                column: 14,
                                                                                             },
                                                                                             end: Position {
                                                                                                 line: 0,
-                                                                                                column: 25,
+                                                                                                column: 15,
                                                                                             },
                                                                                         },
-                                                                                        span: 24..25,
-                                                                                        name: "b",
                                                                                     },
                                                                                 ),
                                                                                 inferred_type: Some(
@@ -809,196 +1253,23 @@ Program {
                                                                                     },
                                                                                 ),
                                                                             },
-                                                                        },
-                                                                    ),
-                                                                    inferred_type: Some(
-                                                                        Type {
-                                                                            kind: Keyword(
-                                                                                Number,
-                                                                            ),
-                                                                            mutable: false,
-                                                                            provenance: None,
-                                                                        },
+                                                                        ),
                                                                     ),
                                                                 },
                                                             ),
                                                         ),
                                                     },
-                                                    type_params: None,
+                                                    optional: false,
                                                 },
-                                            ),
-                                            mutable: false,
-                                            provenance: None,
-                                        },
-                                    ),
-                                },
-                            ),
-                        ),
-                    },
-                ),
-            },
-            type_ann: None,
-            init: Some(
-                Expr {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 10,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 25,
-                        },
-                    },
-                    span: 10..25,
-                    kind: Lambda(
-                        Lambda {
-                            params: [
-                                EFnParam {
-                                    pat: Pattern {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 11,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 12,
-                                            },
-                                        },
-                                        span: 11..12,
-                                        kind: Ident(
-                                            BindingIdent {
-                                                name: "a",
-                                                mutable: false,
-                                                span: 11..12,
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 0,
-                                                        column: 11,
-                                                    },
-                                                    end: Position {
-                                                        line: 0,
-                                                        column: 12,
-                                                    },
-                                                },
-                                            },
-                                        ),
-                                        inferred_type: Some(
-                                            Type {
+                                            ],
+                                            ret: Type {
                                                 kind: Keyword(
                                                     Number,
                                                 ),
                                                 mutable: false,
                                                 provenance: Some(
-                                                    Type(
-                                                        Type {
-                                                            kind: Var(
-                                                                TVar {
-                                                                    id: 2,
-                                                                    constraint: None,
-                                                                },
-                                                            ),
-                                                            mutable: false,
-                                                            provenance: None,
-                                                        },
-                                                    ),
-                                                ),
-                                            },
-                                        ),
-                                    },
-                                    type_ann: None,
-                                    optional: false,
-                                },
-                                EFnParam {
-                                    pat: Pattern {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 14,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 15,
-                                            },
-                                        },
-                                        span: 14..15,
-                                        kind: Ident(
-                                            BindingIdent {
-                                                name: "b",
-                                                mutable: false,
-                                                span: 14..15,
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 0,
-                                                        column: 14,
-                                                    },
-                                                    end: Position {
-                                                        line: 0,
-                                                        column: 15,
-                                                    },
-                                                },
-                                            },
-                                        ),
-                                        inferred_type: Some(
-                                            Type {
-                                                kind: Keyword(
-                                                    Number,
-                                                ),
-                                                mutable: false,
-                                                provenance: Some(
-                                                    Type(
-                                                        Type {
-                                                            kind: Var(
-                                                                TVar {
-                                                                    id: 3,
-                                                                    constraint: None,
-                                                                },
-                                                            ),
-                                                            mutable: false,
-                                                            provenance: None,
-                                                        },
-                                                    ),
-                                                ),
-                                            },
-                                        ),
-                                    },
-                                    type_ann: None,
-                                    optional: false,
-                                },
-                            ],
-                            body: Block {
-                                span: 20..25,
-                                stmts: [
-                                    Expr {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 0,
-                                                column: 20,
-                                            },
-                                            end: Position {
-                                                line: 0,
-                                                column: 25,
-                                            },
-                                        },
-                                        span: 20..25,
-                                        kind: BinaryExpr(
-                                            BinaryExpr {
-                                                op: Add,
-                                                left: Expr {
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 0,
-                                                            column: 20,
-                                                        },
-                                                        end: Position {
-                                                            line: 0,
-                                                            column: 21,
-                                                        },
-                                                    },
-                                                    span: 20..21,
-                                                    kind: Ident(
-                                                        Ident {
+                                                    Expr(
+                                                        Expr {
                                                             loc: SourceLocation {
                                                                 start: Position {
                                                                     line: 0,
@@ -1006,162 +1277,39 @@ Program {
                                                                 },
                                                                 end: Position {
                                                                     line: 0,
-                                                                    column: 21,
-                                                                },
-                                                            },
-                                                            span: 20..21,
-                                                            name: "a",
-                                                        },
-                                                    ),
-                                                    inferred_type: Some(
-                                                        Type {
-                                                            kind: Keyword(
-                                                                Number,
-                                                            ),
-                                                            mutable: false,
-                                                            provenance: Some(
-                                                                Type(
-                                                                    Type {
-                                                                        kind: Var(
-                                                                            TVar {
-                                                                                id: 2,
-                                                                                constraint: None,
-                                                                            },
-                                                                        ),
-                                                                        mutable: false,
-                                                                        provenance: None,
-                                                                    },
-                                                                ),
-                                                            ),
-                                                        },
-                                                    ),
-                                                },
-                                                right: Expr {
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 0,
-                                                            column: 24,
-                                                        },
-                                                        end: Position {
-                                                            line: 0,
-                                                            column: 25,
-                                                        },
-                                                    },
-                                                    span: 24..25,
-                                                    kind: Ident(
-                                                        Ident {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 24,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
                                                                     column: 25,
                                                                 },
                                                             },
-                                                            span: 24..25,
-                                                            name: "b",
-                                                        },
-                                                    ),
-                                                    inferred_type: Some(
-                                                        Type {
-                                                            kind: Keyword(
-                                                                Number,
-                                                            ),
-                                                            mutable: false,
-                                                            provenance: Some(
-                                                                Type(
-                                                                    Type {
-                                                                        kind: Var(
-                                                                            TVar {
-                                                                                id: 3,
-                                                                                constraint: None,
-                                                                            },
-                                                                        ),
-                                                                        mutable: false,
-                                                                        provenance: None,
-                                                                    },
-                                                                ),
-                                                            ),
-                                                        },
-                                                    ),
-                                                },
-                                            },
-                                        ),
-                                        inferred_type: Some(
-                                            Type {
-                                                kind: Keyword(
-                                                    Number,
-                                                ),
-                                                mutable: false,
-                                                provenance: None,
-                                            },
-                                        ),
-                                    },
-                                ],
-                            },
-                            is_async: false,
-                            return_type: None,
-                            type_params: None,
-                        },
-                    ),
-                    inferred_type: Some(
-                        Type {
-                            kind: Lam(
-                                TLam {
-                                    params: [
-                                        TFnParam {
-                                            pat: Ident(
-                                                BindingIdent {
-                                                    name: "a",
-                                                    mutable: false,
-                                                },
-                                            ),
-                                            t: Type {
-                                                kind: Keyword(
-                                                    Number,
-                                                ),
-                                                mutable: false,
-                                                provenance: Some(
-                                                    Type(
-                                                        Type {
-                                                            kind: Var(
-                                                                TVar {
-                                                                    id: 2,
-                                                                    constraint: None,
-                                                                },
-                                                            ),
-                                                            mutable: false,
-                                                            provenance: Some(
-                                                                Pattern(
-                                                                    Pattern {
+                                                            span: 20..25,
+                                                            kind: BinaryExpr(
+                                                                BinaryExpr {
+                                                                    op: Add,
+                                                                    left: Expr {
                                                                         loc: SourceLocation {
                                                                             start: Position {
                                                                                 line: 0,
-                                                                                column: 11,
+                                                                                column: 20,
                                                                             },
                                                                             end: Position {
                                                                                 line: 0,
-                                                                                column: 12,
+                                                                                column: 21,
                                                                             },
                                                                         },
-                                                                        span: 11..12,
+                                                                        span: 20..21,
                                                                         kind: Ident(
-                                                                            BindingIdent {
-                                                                                name: "a",
-                                                                                mutable: false,
-                                                                                span: 11..12,
+                                                                            Ident {
                                                                                 loc: SourceLocation {
                                                                                     start: Position {
                                                                                         line: 0,
-                                                                                        column: 11,
+                                                                                        column: 20,
                                                                                     },
                                                                                     end: Position {
                                                                                         line: 0,
-                                                                                        column: 12,
+                                                                                        column: 21,
                                                                                     },
                                                                                 },
+                                                                                span: 20..21,
+                                                                                name: "a",
                                                                             },
                                                                         ),
                                                                         inferred_type: Some(
@@ -1177,65 +1325,32 @@ Program {
                                                                             },
                                                                         ),
                                                                     },
-                                                                ),
-                                                            ),
-                                                        },
-                                                    ),
-                                                ),
-                                            },
-                                            optional: false,
-                                        },
-                                        TFnParam {
-                                            pat: Ident(
-                                                BindingIdent {
-                                                    name: "b",
-                                                    mutable: false,
-                                                },
-                                            ),
-                                            t: Type {
-                                                kind: Keyword(
-                                                    Number,
-                                                ),
-                                                mutable: false,
-                                                provenance: Some(
-                                                    Type(
-                                                        Type {
-                                                            kind: Var(
-                                                                TVar {
-                                                                    id: 3,
-                                                                    constraint: None,
-                                                                },
-                                                            ),
-                                                            mutable: false,
-                                                            provenance: Some(
-                                                                Pattern(
-                                                                    Pattern {
+                                                                    right: Expr {
                                                                         loc: SourceLocation {
                                                                             start: Position {
                                                                                 line: 0,
-                                                                                column: 14,
+                                                                                column: 24,
                                                                             },
                                                                             end: Position {
                                                                                 line: 0,
-                                                                                column: 15,
+                                                                                column: 25,
                                                                             },
                                                                         },
-                                                                        span: 14..15,
+                                                                        span: 24..25,
                                                                         kind: Ident(
-                                                                            BindingIdent {
-                                                                                name: "b",
-                                                                                mutable: false,
-                                                                                span: 14..15,
+                                                                            Ident {
                                                                                 loc: SourceLocation {
                                                                                     start: Position {
                                                                                         line: 0,
-                                                                                        column: 14,
+                                                                                        column: 24,
                                                                                     },
                                                                                     end: Position {
                                                                                         line: 0,
-                                                                                        column: 15,
+                                                                                        column: 25,
                                                                                     },
                                                                                 },
+                                                                                span: 24..25,
+                                                                                name: "b",
                                                                             },
                                                                         ),
                                                                         inferred_type: Some(
@@ -1251,144 +1366,33 @@ Program {
                                                                             },
                                                                         ),
                                                                     },
-                                                                ),
+                                                                },
+                                                            ),
+                                                            inferred_type: Some(
+                                                                Type {
+                                                                    kind: Keyword(
+                                                                        Number,
+                                                                    ),
+                                                                    mutable: false,
+                                                                    provenance: None,
+                                                                },
                                                             ),
                                                         },
                                                     ),
                                                 ),
                                             },
-                                            optional: false,
+                                            type_params: None,
                                         },
-                                    ],
-                                    ret: Type {
-                                        kind: Keyword(
-                                            Number,
-                                        ),
-                                        mutable: false,
-                                        provenance: Some(
-                                            Expr(
-                                                Expr {
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 0,
-                                                            column: 20,
-                                                        },
-                                                        end: Position {
-                                                            line: 0,
-                                                            column: 25,
-                                                        },
-                                                    },
-                                                    span: 20..25,
-                                                    kind: BinaryExpr(
-                                                        BinaryExpr {
-                                                            op: Add,
-                                                            left: Expr {
-                                                                loc: SourceLocation {
-                                                                    start: Position {
-                                                                        line: 0,
-                                                                        column: 20,
-                                                                    },
-                                                                    end: Position {
-                                                                        line: 0,
-                                                                        column: 21,
-                                                                    },
-                                                                },
-                                                                span: 20..21,
-                                                                kind: Ident(
-                                                                    Ident {
-                                                                        loc: SourceLocation {
-                                                                            start: Position {
-                                                                                line: 0,
-                                                                                column: 20,
-                                                                            },
-                                                                            end: Position {
-                                                                                line: 0,
-                                                                                column: 21,
-                                                                            },
-                                                                        },
-                                                                        span: 20..21,
-                                                                        name: "a",
-                                                                    },
-                                                                ),
-                                                                inferred_type: Some(
-                                                                    Type {
-                                                                        kind: Var(
-                                                                            TVar {
-                                                                                id: 2,
-                                                                                constraint: None,
-                                                                            },
-                                                                        ),
-                                                                        mutable: false,
-                                                                        provenance: None,
-                                                                    },
-                                                                ),
-                                                            },
-                                                            right: Expr {
-                                                                loc: SourceLocation {
-                                                                    start: Position {
-                                                                        line: 0,
-                                                                        column: 24,
-                                                                    },
-                                                                    end: Position {
-                                                                        line: 0,
-                                                                        column: 25,
-                                                                    },
-                                                                },
-                                                                span: 24..25,
-                                                                kind: Ident(
-                                                                    Ident {
-                                                                        loc: SourceLocation {
-                                                                            start: Position {
-                                                                                line: 0,
-                                                                                column: 24,
-                                                                            },
-                                                                            end: Position {
-                                                                                line: 0,
-                                                                                column: 25,
-                                                                            },
-                                                                        },
-                                                                        span: 24..25,
-                                                                        name: "b",
-                                                                    },
-                                                                ),
-                                                                inferred_type: Some(
-                                                                    Type {
-                                                                        kind: Var(
-                                                                            TVar {
-                                                                                id: 3,
-                                                                                constraint: None,
-                                                                            },
-                                                                        ),
-                                                                        mutable: false,
-                                                                        provenance: None,
-                                                                    },
-                                                                ),
-                                                            },
-                                                        },
-                                                    ),
-                                                    inferred_type: Some(
-                                                        Type {
-                                                            kind: Keyword(
-                                                                Number,
-                                                            ),
-                                                            mutable: false,
-                                                            provenance: None,
-                                                        },
-                                                    ),
-                                                },
-                                            ),
-                                        ),
-                                    },
-                                    type_params: None,
+                                    ),
+                                    mutable: false,
+                                    provenance: None,
                                 },
                             ),
-                            mutable: false,
-                            provenance: None,
                         },
                     ),
+                    declare: false,
                 },
             ),
-            declare: false,
         },
     ],
 }

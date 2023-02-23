@@ -87,13 +87,13 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
         .iter()
         .flat_map(|child| {
             let mut stmts: Vec<Stmt> = vec![];
-            let result = match child {
-                values::Statement::VarDecl {
+            let result = match &child.kind {
+                values::StmtKind::VarDecl(values::VarDecl {
                     pattern,
                     init,
                     declare,
                     ..
-                } => match declare {
+                }) => match declare {
                     true => ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP })),
                     false => {
                         // It should be okay to unwrap this here since any decl that isn't
@@ -123,14 +123,14 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
                         }
                     }
                 },
-                values::Statement::TypeDecl { .. } => {
+                values::StmtKind::TypeDecl(_) => {
                     ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP }))
                 }
-                values::Statement::ExprStmt(expr) => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                values::StmtKind::ExprStmt(expr) => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
                     span: DUMMY_SP,
                     expr: Box::from(build_expr(expr, &mut stmts, ctx)),
                 })),
-                values::Statement::ClassDecl { class, ident, .. } => {
+                values::StmtKind::ClassDecl(values::ClassDecl { class, ident, .. }) => {
                     let ident = Ident::from(ident);
                     let class = build_class(class, &mut stmts, ctx);
 

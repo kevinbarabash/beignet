@@ -122,14 +122,8 @@ impl SemanticTokenVisitor {
     }
 
     fn enter_statement(&mut self, stmt: &Statement) {
-        if let Statement::TypeDecl {
-            id,
-            type_ann: _,
-            type_params: _,
-            ..
-        } = stmt
-        {
-            let Ident { loc, .. } = id;
+        if let StmtKind::TypeDecl(type_decl) = &stmt.kind {
+            let Ident { loc, .. } = type_decl.id;
             self.raw_tokens.push(RawSemanticToken {
                 line: loc.start.line,
                 start: loc.start.column,

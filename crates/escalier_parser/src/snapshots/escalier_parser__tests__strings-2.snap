@@ -5,40 +5,53 @@ expression: "parse(r#\"\"hello\";\"#)"
 Ok(
     Program {
         body: [
-            ExprStmt(
-                Expr {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 0,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 7,
-                        },
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
                     },
-                    span: 0..7,
-                    kind: Lit(
-                        Str(
-                            Str {
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 0,
-                                        column: 0,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        column: 7,
-                                    },
-                                },
-                                span: 0..7,
-                                value: "hello",
-                            },
-                        ),
-                    ),
-                    inferred_type: None,
+                    end: Position {
+                        line: 0,
+                        column: 8,
+                    },
                 },
-            ),
+                span: 0..8,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 7,
+                            },
+                        },
+                        span: 0..7,
+                        kind: Lit(
+                            Str(
+                                Str {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 7,
+                                        },
+                                    },
+                                    span: 0..7,
+                                    value: "hello",
+                                },
+                            ),
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+            },
         ],
     },
 )

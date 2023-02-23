@@ -5,7 +5,7 @@ expression: "parse(\"let x: number = 5;\")"
 Ok(
     Program {
         body: [
-            VarDecl {
+            Statement {
                 loc: SourceLocation {
                     start: Position {
                         line: 0,
@@ -17,23 +17,9 @@ Ok(
                     },
                 },
                 span: 0..18,
-                pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 0,
-                            column: 4,
-                        },
-                        end: Position {
-                            line: 0,
-                            column: 5,
-                        },
-                    },
-                    span: 4..5,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "x",
-                            mutable: false,
-                            span: 4..5,
+                kind: VarDecl(
+                    VarDecl {
+                        pattern: Pattern {
                             loc: SourceLocation {
                                 start: Position {
                                     line: 0,
@@ -44,66 +30,84 @@ Ok(
                                     column: 5,
                                 },
                             },
-                        },
-                    ),
-                    inferred_type: None,
-                },
-                type_ann: Some(
-                    TypeAnn {
-                        kind: Keyword(
-                            KeywordType {
-                                keyword: Number,
-                            },
-                        ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 0,
-                                column: 7,
-                            },
-                            end: Position {
-                                line: 0,
-                                column: 13,
-                            },
-                        },
-                        span: 7..13,
-                        inferred_type: None,
-                    },
-                ),
-                init: Some(
-                    Expr {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 0,
-                                column: 16,
-                            },
-                            end: Position {
-                                line: 0,
-                                column: 17,
-                            },
-                        },
-                        span: 16..17,
-                        kind: Lit(
-                            Num(
-                                Num {
+                            span: 4..5,
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "x",
+                                    mutable: false,
+                                    span: 4..5,
                                     loc: SourceLocation {
                                         start: Position {
                                             line: 0,
-                                            column: 16,
+                                            column: 4,
                                         },
                                         end: Position {
                                             line: 0,
-                                            column: 17,
+                                            column: 5,
                                         },
                                     },
-                                    span: 16..17,
-                                    value: "5",
                                 },
                             ),
+                            inferred_type: None,
+                        },
+                        type_ann: Some(
+                            TypeAnn {
+                                kind: Keyword(
+                                    KeywordType {
+                                        keyword: Number,
+                                    },
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 7,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 13,
+                                    },
+                                },
+                                span: 7..13,
+                                inferred_type: None,
+                            },
                         ),
-                        inferred_type: None,
+                        init: Some(
+                            Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 16,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 17,
+                                    },
+                                },
+                                span: 16..17,
+                                kind: Lit(
+                                    Num(
+                                        Num {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 16,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 17,
+                                                },
+                                            },
+                                            span: 16..17,
+                                            value: "5",
+                                        },
+                                    ),
+                                ),
+                                inferred_type: None,
+                            },
+                        ),
+                        declare: false,
                     },
                 ),
-                declare: false,
             },
         ],
     },
