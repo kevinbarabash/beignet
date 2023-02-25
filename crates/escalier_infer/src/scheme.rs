@@ -104,7 +104,7 @@ pub fn instantiate(ctx: &Context, sc: &Scheme) -> Type {
     replace_aliases_rec(&sc.t, &type_param_map)
 }
 
-pub fn instantiate_gen_lam(ctx: &Context, lam: &TLam, type_args: &Option<Vec<Type>>) -> TLam {
+pub fn instantiate_gen_lam(ctx: &Context, lam: &TLam, type_args: Option<&Vec<Type>>) -> TLam {
     if lam.type_params.is_none() {
         return lam.to_owned();
     }
@@ -492,7 +492,7 @@ mod tests {
             }))),
         };
 
-        let lam = instantiate_gen_lam(&ctx, &gen_lam, &None);
+        let lam = instantiate_gen_lam(&ctx, &gen_lam, None);
 
         assert_eq!(lam.to_string(), "(a: t1, b: t2) => t1");
     }
