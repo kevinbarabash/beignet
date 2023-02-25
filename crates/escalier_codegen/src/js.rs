@@ -342,8 +342,24 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 .map(|arg| build_pattern(&arg.pat, stmts, ctx).unwrap())
                 .collect();
 
-            let body = build_body(body, stmts, ctx);
-            // let body = build_lambda_body(body.as_ref(), ctx);
+            let len = body.stmts.len();
+
+            let body = if body.stmts.is_empty() {
+                BlockStmtOrExpr::BlockStmt(BlockStmt {
+                    span: DUMMY_SP,
+                    stmts: vec![],
+                })
+            } else if len == 1 {
+                // TODO: Fix this - it doesn't doesn't handle expressions that introduce
+                // temporary variables correctly.
+                if let values::StmtKind::ExprStmt(expr) = &body.stmts[0].kind {
+                    BlockStmtOrExpr::Expr(Box::from(build_expr(expr, stmts, ctx)))
+                } else {
+                    todo!("body contains a single statement that isn't an ExprStmt");
+                }
+            } else {
+                BlockStmtOrExpr::BlockStmt(build_body_block_stmt(body, None, ctx))
+            };
 
             Expr::Arrow(ArrowExpr {
                 span,
@@ -459,7 +475,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             ..
         }) => match &cond.kind {
             values::ExprKind::LetExpr(let_expr) => {
-                build_let_expr(let_expr, consequent, alternate, stmts, ctx)
+                build_let_expr(let_expr, consequent, alternate.as_ref(), stmts, ctx)
             }
             _ => {
                 // let $temp_n;
@@ -470,11 +486,13 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 // if (cond) { ...; $temp_n = <cons_res> } else { ...; $temp_n = <alt_res> }
                 let test = Box::from(build_expr(cond.as_ref(), stmts, ctx));
                 let cons = Box::from(Stmt::Block(build_body_block_stmt(
-                    consequent, &temp_id, ctx,
+                    consequent,
+                    Some(&temp_id),
+                    ctx,
                 )));
-                let alt = alternate
-                    .as_ref()
-                    .map(|alt| Box::from(Stmt::Block(build_body_block_stmt(alt, &temp_id, ctx))));
+                let alt = alternate.as_ref().map(|alt| {
+                    Box::from(Stmt::Block(build_body_block_stmt(alt, Some(&temp_id), ctx)))
+                });
                 stmts.push(Stmt::If(IfStmt {
                     span,
                     test,
@@ -705,28 +723,11 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
     }
 }
 
-fn build_body(body: &values::Block, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> BlockStmtOrExpr {
-    let len = body.stmts.len();
-
-    if body.stmts.is_empty() {
-        BlockStmtOrExpr::BlockStmt(BlockStmt {
-            span: DUMMY_SP,
-            stmts: vec![],
-        })
-    } else if len == 1 {
-        // TODO: Fix this - it doesn't doesn't handle expressions that introduce
-        // temporary variables correctly.
-        if let values::StmtKind::ExprStmt(expr) = &body.stmts[0].kind {
-            BlockStmtOrExpr::Expr(Box::from(build_expr(expr, stmts, ctx)))
-        } else {
-            todo!("body contains a single statement that isn't an ExprStmt");
-        }
-    } else {
-        BlockStmtOrExpr::BlockStmt(build_body_block_stmt_fn(body, ctx))
-    }
-}
-
-fn build_body_block_stmt_fn(body: &values::Block, ctx: &mut Context) -> BlockStmt {
+fn build_body_block_stmt(
+    body: &values::Block,
+    ret_id: Option<&Ident>,
+    ctx: &mut Context,
+) -> BlockStmt {
     let mut new_stmts: Vec<Stmt> = vec![];
     let len = body.stmts.len();
 
@@ -750,75 +751,28 @@ fn build_body_block_stmt_fn(body: &values::Block, ctx: &mut Context) -> BlockStm
                 let expr = build_expr(expr, &mut new_stmts, ctx);
 
                 if i == len - 1 {
-                    new_stmts.push(Stmt::Return(ReturnStmt {
-                        span: DUMMY_SP,
-                        arg: Some(Box::from(expr)),
-                    }));
-                } else {
-                    new_stmts.push(Stmt::Expr(ExprStmt {
-                        span: DUMMY_SP,
-                        expr: Box::from(expr),
-                    }));
-                }
-            }
-            _ => todo!(),
-        }
-    }
-
-    if body.stmts.is_empty() {
-        let undefined = swc_ecma_ast::Expr::Ident(swc_ecma_ast::Ident {
-            span: DUMMY_SP,
-            sym: swc_atoms::JsWord::from(String::from("undefined")),
-            optional: false,
-        });
-        new_stmts.push(Stmt::Return(ReturnStmt {
-            span: DUMMY_SP,
-            arg: Some(Box::from(undefined)),
-        }));
-    }
-
-    BlockStmt {
-        span: DUMMY_SP,
-        stmts: new_stmts,
-    }
-}
-
-fn build_body_block_stmt(body: &values::Block, ret_id: &Ident, ctx: &mut Context) -> BlockStmt {
-    let mut new_stmts: Vec<Stmt> = vec![];
-    let len = body.stmts.len();
-
-    for (i, stmt) in body.stmts.iter().enumerate() {
-        match &stmt.kind {
-            values::StmtKind::VarDecl(values::VarDecl {
-                pattern,
-                type_ann: _,
-                init: Some(init),
-                declare: _,
-            }) => {
-                let stmt = match build_pattern(pattern, &mut new_stmts, ctx) {
-                    Some(name) => {
-                        build_const_decl_stmt_with_pat(name, build_expr(init, &mut new_stmts, ctx))
-                    }
-                    None => todo!(),
-                };
-                new_stmts.push(stmt);
-            }
-            values::StmtKind::ExprStmt(expr) => {
-                let expr = build_expr(expr, &mut new_stmts, ctx);
-
-                if i == len - 1 {
-                    new_stmts.push(Stmt::Expr(ExprStmt {
-                        span: DUMMY_SP,
-                        expr: Box::from(Expr::Assign(AssignExpr {
+                    let stmt = match ret_id {
+                        Some(ret_id) => {
+                            let expr = Box::from(Expr::Assign(AssignExpr {
+                                span: DUMMY_SP,
+                                op: AssignOp::Assign,
+                                left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
+                                    id: ret_id.to_owned(),
+                                    type_ann: None,
+                                }))),
+                                right: Box::from(expr),
+                            }));
+                            Stmt::Expr(ExprStmt {
+                                span: DUMMY_SP,
+                                expr,
+                            })
+                        }
+                        None => Stmt::Return(ReturnStmt {
                             span: DUMMY_SP,
-                            op: AssignOp::Assign,
-                            left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
-                                id: ret_id.to_owned(),
-                                type_ann: None,
-                            }))),
-                            right: Box::from(expr),
-                        })),
-                    }));
+                            arg: Some(Box::from(expr)),
+                        }),
+                    };
+                    new_stmts.push(stmt);
                 } else {
                     new_stmts.push(Stmt::Expr(ExprStmt {
                         span: DUMMY_SP,
@@ -836,18 +790,28 @@ fn build_body_block_stmt(body: &values::Block, ret_id: &Ident, ctx: &mut Context
             sym: swc_atoms::JsWord::from(String::from("undefined")),
             optional: false,
         });
-        new_stmts.push(Stmt::Expr(ExprStmt {
-            span: DUMMY_SP,
-            expr: Box::from(Expr::Assign(AssignExpr {
+        let stmt = match ret_id {
+            Some(ret_id) => {
+                let expr = Box::from(Expr::Assign(AssignExpr {
+                    span: DUMMY_SP,
+                    op: AssignOp::Assign,
+                    left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
+                        id: ret_id.to_owned(),
+                        type_ann: None,
+                    }))),
+                    right: Box::from(undefined),
+                }));
+                Stmt::Expr(ExprStmt {
+                    span: DUMMY_SP,
+                    expr,
+                })
+            }
+            None => Stmt::Return(ReturnStmt {
                 span: DUMMY_SP,
-                op: AssignOp::Assign,
-                left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
-                    id: ret_id.to_owned(),
-                    type_ann: None,
-                }))),
-                right: Box::from(undefined),
-            })),
-        }));
+                arg: Some(Box::from(undefined)),
+            }),
+        };
+        new_stmts.push(stmt);
     }
 
     BlockStmt {
@@ -859,7 +823,7 @@ fn build_body_block_stmt(body: &values::Block, ret_id: &Ident, ctx: &mut Context
 fn build_let_expr(
     let_expr: &values::LetExpr,
     consequent: &values::Block,
-    alternate: &Option<values::Block>,
+    alternate: Option<&values::Block>,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> Expr {
@@ -875,7 +839,7 @@ fn build_let_expr(
 
     let cond = build_cond_for_pat(pat, &temp_id);
 
-    let mut block = build_body_block_stmt(consequent, &ret_id, ctx);
+    let mut block = build_body_block_stmt(consequent, Some(&ret_id), ctx);
 
     if let Some(name) = build_pattern(pat, stmts, ctx) {
         // TODO: ignore the refutuable patterns when destructuring
@@ -887,7 +851,7 @@ fn build_let_expr(
         Some(cond) => {
             let alt = alternate
                 .as_ref()
-                .map(|alt| Box::from(Stmt::Block(build_body_block_stmt(alt, &ret_id, ctx))));
+                .map(|alt| Box::from(Stmt::Block(build_body_block_stmt(alt, Some(&ret_id), ctx))));
             let if_else = Stmt::If(IfStmt {
                 span: DUMMY_SP,
                 test: Box::from(cond),
@@ -920,7 +884,7 @@ fn build_arm(
 
     let cond = build_cond_for_pat(pat, id);
 
-    let mut block = build_body_block_stmt(body, ret_id, ctx);
+    let mut block = build_body_block_stmt(body, Some(ret_id), ctx);
 
     // If pattern has assignables, assign them
     if let Some(name) = build_pattern(pat, stmts, ctx) {
@@ -1054,7 +1018,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
         .iter()
         .filter_map(|member| match member {
             values::ClassMember::Constructor(constructor) => {
-                let body = build_body_block_stmt_fn(&constructor.body, ctx);
+                let body = build_body_block_stmt(&constructor.body, None, ctx);
                 // In Crochet, `self` is always the first param in methods, but
                 // it represents `this` in JavaScript which is implicit so we
                 // ignore it here.
@@ -1085,7 +1049,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
                 }))
             }
             values::ClassMember::Method(method) => {
-                let body = build_body_block_stmt_fn(&method.lambda.body, ctx);
+                let body = build_body_block_stmt(&method.lambda.body, None, ctx);
                 // In Crochet, `self` is always the first param in non-static
                 // methods, but it represents `this` in JavaScript which is
                 // implicit so we ignore it here.

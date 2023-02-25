@@ -161,7 +161,7 @@ pub fn unify(t1: &Type, t2: &Type, ctx: &mut Context) -> Result<Subst, Vec<TypeE
         // NOTE: this arm is only hit by the `infer_skk` test case
         (TypeKind::Lam(_), TypeKind::App(_)) => unify(t2, t1, ctx),
         (TypeKind::App(app), TypeKind::Lam(lam)) => {
-            let lam = instantiate_gen_lam(ctx, lam, &app.type_args);
+            let lam = instantiate_gen_lam(ctx, lam, app.type_args.as_ref());
             let mut s = Subst::new();
 
             let maybe_rest_param = if let Some(param) = lam.params.last() {
