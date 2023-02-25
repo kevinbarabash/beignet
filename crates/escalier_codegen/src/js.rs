@@ -723,9 +723,13 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
     }
 }
 
+// NOTE: If an identifier has been specified in `assign_id` the last statement
+// in the block will assign the final expression to that identifier.  If it's
+// `None`, the last statement will be an actual return statement returning the
+// final expression.
 fn build_body_block_stmt(
     body: &values::Block,
-    ret_id: Option<&Ident>,
+    assign_id: Option<&Ident>,
     ctx: &mut Context,
 ) -> BlockStmt {
     let mut new_stmts: Vec<Stmt> = vec![];
@@ -751,7 +755,7 @@ fn build_body_block_stmt(
                 let expr = build_expr(expr, &mut new_stmts, ctx);
 
                 if i == len - 1 {
-                    let stmt = match ret_id {
+                    let stmt = match assign_id {
                         Some(ret_id) => {
                             let expr = Box::from(Expr::Assign(AssignExpr {
                                 span: DUMMY_SP,
@@ -790,7 +794,7 @@ fn build_body_block_stmt(
             sym: swc_atoms::JsWord::from(String::from("undefined")),
             optional: false,
         });
-        let stmt = match ret_id {
+        let stmt = match assign_id {
             Some(ret_id) => {
                 let expr = Box::from(Expr::Assign(AssignExpr {
                     span: DUMMY_SP,
