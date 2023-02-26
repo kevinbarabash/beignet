@@ -759,7 +759,7 @@ fn for_of_loop() {
         2,
         3
     ]){
-        return sum = sum + num;
+        sum = sum + num;
     }
     "###);
 
