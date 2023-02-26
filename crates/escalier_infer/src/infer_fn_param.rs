@@ -3,7 +3,6 @@ use im::hashmap::HashMap;
 use escalier_ast::types::{self as types, TFnParam, TKeyword, TPat, Type, TypeKind};
 use escalier_ast::values::*;
 
-use crate::assump::Assump;
 use crate::context::{Binding, Context};
 use crate::infer_pattern::infer_pattern;
 use crate::substitutable::Subst;
@@ -15,11 +14,9 @@ pub fn infer_fn_param(
     param: &mut EFnParam,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
-) -> Result<(Subst, Assump, TFnParam), Vec<TypeError>> {
-    // Keeps track of all of the variables the need to be introduced by this pattern.
-    // let mut new_vars: Assump = Assump::default();
-
-    let (ps, mut pa, pt) = infer_pattern(&mut param.pat, &mut param.type_ann, ctx, type_param_map)?;
+) -> Result<(Subst, TFnParam), Vec<TypeError>> {
+    let (ps, mut pa, pt) =
+        infer_pattern(&mut param.pat, param.type_ann.as_mut(), ctx, type_param_map)?;
 
     // TypeScript annotates rest params using an array type so we do the
     // same thing by converting top-level rest types to array types.
@@ -52,7 +49,9 @@ pub fn infer_fn_param(
         optional: param.optional,
     };
 
-    Ok((ps, pa, param))
+    ctx.insert_bindings(&pa);
+
+    Ok((ps, param))
 }
 
 pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {

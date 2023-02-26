@@ -5,18 +5,17 @@ use escalier_ast::values::{self as values, *};
 
 use crate::assump::Assump;
 use crate::context::{Binding, Context};
-use crate::infer_expr::infer_expr;
 use crate::infer_type_ann::*;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify::unify;
-use crate::util::{compose_many_subs, compose_subs};
+use crate::util::*;
 
 // NOTE: The caller is responsible for inserting any new variables introduced
 // into the appropriate context.
 pub fn infer_pattern(
     pat: &mut Pattern,
-    type_ann: &mut Option<TypeAnn>,
+    type_ann: Option<&mut TypeAnn>,
     ctx: &mut Context,
     type_param_map: &HashMap<String, Type>,
 ) -> Result<(Subst, Assump, Type), Vec<TypeError>> {
@@ -220,6 +219,7 @@ fn infer_pattern_rec(
     Ok(t)
 }
 
+#[derive(Debug)]
 pub enum PatternUsage {
     Assign,
     Match,
@@ -227,29 +227,37 @@ pub enum PatternUsage {
 
 pub fn infer_pattern_and_init(
     pat: &mut Pattern,
-    type_ann: &mut Option<TypeAnn>,
-    init: &mut Expr, // TODO: pass in type of `init` intead of the expression itself
+    type_ann: Option<&mut TypeAnn>,
+    init: &(Subst, Type), // TODO: pass in type of `init` intead of the expression itself
     ctx: &mut Context,
     pu: &PatternUsage,
-) -> Result<(Assump, Subst), Vec<TypeError>> {
+    top_level: bool,
+) -> Result<Subst, Vec<TypeError>> {
     let type_param_map = HashMap::new();
     let (ps, pa, pt) = infer_pattern(pat, type_ann, ctx, &type_param_map)?;
-    let (is, it) = infer_expr(ctx, init, false)?;
 
     // Unifies initializer and pattern.
     let s = match pu {
         // Assign: The inferred type of the init value must be a sub-type
         // of the pattern it's being assigned to.
-        PatternUsage::Assign => unify(&it, &pt, ctx)?,
+        PatternUsage::Assign => unify(&init.1, &pt, ctx)?,
         // Matching: The pattern must be a sub-type of the expression
         // it's being matched against
-        PatternUsage::Match => unify(&pt, &it, ctx)?,
+        PatternUsage::Match => unify(&pt, &init.1, ctx)?,
     };
 
     // infer_pattern can generate a non-empty Subst when the pattern includes
     // a type annotation.
-    let s = compose_many_subs(&[is, ps, s]);
+    let s = compose_subs(&ps, &s);
+    let s = compose_subs(&init.0, &s);
     let pa = pa.apply(&s);
 
-    Ok((pa, s))
+    for (name, mut binding) in pa {
+        if top_level {
+            binding.t = close_over(&s, &binding.t, ctx);
+        }
+        ctx.insert_binding(name, binding);
+    }
+
+    Ok(s)
 }

@@ -3,7 +3,7 @@ use escalier_ast::values::*;
 
 use crate::context::{Context, Env};
 use crate::infer_class::infer_class;
-use crate::infer_expr::infer_expr as infer_expr_rec;
+use crate::infer_expr::infer_expr;
 use crate::infer_pattern::*;
 use crate::infer_type_ann::*;
 use crate::scheme::generalize;
@@ -32,7 +32,21 @@ pub fn infer_stmt(
                     // `let` statement
                     let init = init.as_mut().unwrap();
 
-                    infer_var_decl(pattern, type_ann, init, top_level, ctx)
+                    let s = infer_pattern_and_init(
+                        pattern,
+                        type_ann.as_mut(),
+                        &infer_expr(ctx, init, false)?,
+                        ctx,
+                        &PatternUsage::Assign,
+                        top_level,
+                    )?;
+
+                    update_expr(init, &s);
+                    update_pattern(pattern, &s);
+
+                    let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+
+                    Ok((s, t))
                 }
                 true => {
                     match &mut pattern.kind {
@@ -106,7 +120,7 @@ pub fn infer_stmt(
         }
 
         StmtKind::ExprStmt(expr) => {
-            let (s, t) = infer_expr_rec(ctx, expr, false)?;
+            let (s, t) = infer_expr(ctx, expr, false)?;
             // We ignore the type that was inferred, we only care that
             // it succeeds since we aren't assigning it to variable.
             update_expr(expr, &s);
@@ -121,7 +135,6 @@ pub fn infer_stmt(
             // TODO: Fix this.  We need to check if `expr` unifies with `{[Symbol.iterator]: ...}`
             // - infer `expr` and then unify it with `{[Symbol.iterator]: T}`
             // - then unify `T` with `pattern`
-            // let (s1, _) = infer_var_decl(pattern, &mut None, expr, false, ctx)?;
             let (s2, _) = infer_block(body, ctx)?;
 
             // let s = compose_subs(&s2, &s1);
@@ -146,32 +159,6 @@ pub fn infer_block(body: &mut Block, ctx: &mut Context) -> Result<(Subst, Type),
     }
 
     ctx.count = new_ctx.count;
-
-    Ok((s, t))
-}
-
-fn infer_var_decl(
-    pattern: &mut Pattern,
-    type_ann: &mut Option<TypeAnn>,
-    init: &mut Expr,
-    top_level: bool,
-    ctx: &mut Context,
-) -> Result<(Subst, Type), Vec<TypeError>> {
-    let (pa, s) = infer_pattern_and_init(pattern, type_ann, init, ctx, &PatternUsage::Assign)?;
-
-    // Inserts the new variables from infer_pattern() into the
-    // current context.
-    for (name, mut binding) in pa {
-        if top_level {
-            binding.t = close_over(&s, &binding.t, ctx);
-        }
-        ctx.insert_binding(name, binding);
-    }
-
-    update_expr(init, &s);
-    update_pattern(pattern, &s);
-
-    let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
 
     Ok((s, t))
 }
