@@ -771,6 +771,42 @@ fn for_of_loop() {
 }
 
 #[test]
+fn for_loop_inside_fn() {
+    let src = r#"
+    let sum = (arr: number[]): number => {
+        let mut result: number = 0;
+        for (const num in [1, 2, 3]) {
+            result = result + num;
+        }
+        result
+    };
+    "#;
+
+    let (js, _) = compile(src);
+    insta::assert_snapshot!(js, @r###"
+    export const sum = (arr)=>{
+        const result = 0;
+        for (const num of [
+            1,
+            2,
+            3
+        ]){
+            result = result + num;
+        }
+        return result;
+    };
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const sum: (arr: readonly number[]) => number;
+");
+}
+
+#[test]
 fn type_decl_inside_block() {
     let src = r#"
     let result = do {

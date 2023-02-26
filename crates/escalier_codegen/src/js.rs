@@ -776,7 +776,25 @@ fn build_body_block_stmt(
                 }
             }
             values::StmtKind::ClassDecl(_) => todo!(),
-            values::StmtKind::ForStmt(_) => todo!(),
+            values::StmtKind::ForStmt(for_stmt) => {
+                let stmt = Stmt::ForOf(ForOfStmt {
+                    span: DUMMY_SP,
+                    await_token: None,
+                    left: VarDeclOrPat::VarDecl(Box::from(build_var_decl(
+                        &for_stmt.pattern,
+                        None,
+                        &mut new_stmts,
+                        ctx,
+                    ))),
+                    right: Box::from(build_expr(&for_stmt.expr, &mut new_stmts, ctx)),
+                    body: Box::from(Stmt::Block(build_body_block_stmt(
+                        &for_stmt.body,
+                        &BlockFinalizer::ExprStmt,
+                        ctx,
+                    ))),
+                });
+                new_stmts.push(stmt);
+            }
             // Types are ignored when generating .js code.
             values::StmtKind::TypeDecl(_) => (),
             // Variable declarations that use `declare` are ignored as well.
