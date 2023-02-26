@@ -607,7 +607,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: {a: string, b: boolean}, {c: t2}"]
+    #[should_panic = "TypeError::UnificationError: {a: string, b: boolean}, {c: t1}"]
     fn obj_destructuring_with_type_annotation_missing_param() {
         infer("({c}: {a: string, b: boolean}) => c");
     }
@@ -861,7 +861,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = r#"TypeError::UnificationError: {type: "bar", num: t2}, {type: "bar", str: string} | {type: "foo", num: number}"#]
+    #[should_panic = r#"TypeError::UnificationError: {type: "bar", num: t1}, {type: "bar", str: string} | {type: "foo", num: number}"#]
     fn infer_if_let_disjoint_union_no_matches() {
         let src = r#"
         declare let action: {type: "foo", num: number} | {type: "bar", str: string};
@@ -1283,7 +1283,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: (x: t2, y: t3, z: t4) => true, (a: number, b: number) => boolean"]
+    #[should_panic = "TypeError::UnificationError: (x: t1, y: t2, z: t3) => true, (a: number, b: number) => boolean"]
     fn pass_callback_with_too_many_params() {
         // This is not allowed because `fold_num` can't provide all of the params
         // that the callback is expecting.
@@ -2556,7 +2556,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::PossiblyNotAnObject: t2 might not be an object"]
+    #[should_panic = "TypeError::PossiblyNotAnObject: t1 might not be an object"]
     fn test_type_param_member_access_errors() {
         let src = r#"
         let getBar = <T>(obj: T): T => {

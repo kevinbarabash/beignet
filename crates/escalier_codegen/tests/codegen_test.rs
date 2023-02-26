@@ -739,3 +739,132 @@ fn class_with_methods() {
         }
     }"###);
 }
+
+#[test]
+fn for_of_loop() {
+    let src = r#"
+    let mut sum: number = 0;
+    for (const num in [1, 2, 3]) {
+        sum = sum + num;
+    }
+    "#;
+
+    let (js, _) = compile(src);
+    insta::assert_snapshot!(js, @r###"
+    export const sum = 0;
+    for (const num of [
+        1,
+        2,
+        3
+    ]){
+        sum = sum + num;
+    }
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###"export declare const sum: number;
+    "###);
+}
+
+#[test]
+fn for_loop_inside_fn() {
+    let src = r#"
+    let sum = (arr: number[]): number => {
+        let mut result: number = 0;
+        for (const num in [1, 2, 3]) {
+            result = result + num;
+        }
+        result
+    };
+    "#;
+
+    let (js, _) = compile(src);
+    insta::assert_snapshot!(js, @r###"
+    export const sum = (arr)=>{
+        const result = 0;
+        for (const num of [
+            1,
+            2,
+            3
+        ]){
+            result = result + num;
+        }
+        return result;
+    };
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const sum: (arr: readonly number[]) => number;
+");
+}
+
+#[test]
+fn type_decl_inside_block() {
+    let src = r#"
+    let result = do {
+        type Point = {x: number, y: number};
+        let p: Point = {x: 5, y: 10};
+        p.x + p.y
+    };
+    "#;
+
+    let (js, _) = compile(src);
+    insta::assert_snapshot!(js, @r###"
+    let $temp_0;
+    {
+        const p = {
+            x: 5,
+            y: 10
+        };
+        $temp_0 = p.x + p.y;
+    }export const result = $temp_0;
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const result: number;
+");
+}
+
+#[test]
+fn type_decl_inside_block_with_escape() {
+    let src = r#"
+    let result = do {
+        type Point = {x: number, y: number};
+        let p: Point = {x: 5, y: 10};
+        p
+    };
+    "#;
+
+    let (js, _) = compile(src);
+    insta::assert_snapshot!(js, @r###"
+    let $temp_0;
+    {
+        const p = {
+            x: 5,
+            y: 10
+        };
+        $temp_0 = p;
+    }export const result = $temp_0;
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    // TODO: How do we ensure that types defined within a block can't escape?
+    insta::assert_snapshot!(result, @"export declare const result: Point;
+");
+}

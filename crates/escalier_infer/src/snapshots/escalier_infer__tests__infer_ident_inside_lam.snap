@@ -69,7 +69,7 @@ Program {
                                                             Type {
                                                                 kind: Var(
                                                                     TVar {
-                                                                        id: 2,
+                                                                        id: 1,
                                                                         constraint: None,
                                                                     },
                                                                 ),
@@ -109,7 +109,7 @@ Program {
                                                                                 Type {
                                                                                     kind: Var(
                                                                                         TVar {
-                                                                                            id: 2,
+                                                                                            id: 1,
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
@@ -143,7 +143,7 @@ Program {
                                                             Type {
                                                                 kind: Var(
                                                                     TVar {
-                                                                        id: 3,
+                                                                        id: 2,
                                                                         constraint: None,
                                                                     },
                                                                 ),
@@ -183,7 +183,7 @@ Program {
                                                                                 Type {
                                                                                     kind: Var(
                                                                                         TVar {
-                                                                                            id: 3,
+                                                                                            id: 2,
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
@@ -255,7 +255,7 @@ Program {
                                                                         Type {
                                                                             kind: Var(
                                                                                 TVar {
-                                                                                    id: 2,
+                                                                                    id: 1,
                                                                                     constraint: None,
                                                                                 },
                                                                             ),
@@ -296,7 +296,7 @@ Program {
                                                                         Type {
                                                                             kind: Var(
                                                                                 TVar {
-                                                                                    id: 3,
+                                                                                    id: 2,
                                                                                     constraint: None,
                                                                                 },
                                                                             ),
@@ -375,7 +375,7 @@ Program {
                                                                     Type {
                                                                         kind: Var(
                                                                             TVar {
-                                                                                id: 2,
+                                                                                id: 1,
                                                                                 constraint: None,
                                                                             },
                                                                         ),
@@ -421,7 +421,7 @@ Program {
                                                                     Type {
                                                                         kind: Var(
                                                                             TVar {
-                                                                                id: 3,
+                                                                                id: 2,
                                                                                 constraint: None,
                                                                             },
                                                                         ),
@@ -504,7 +504,7 @@ Program {
                                                                                                     Type {
                                                                                                         kind: Var(
                                                                                                             TVar {
-                                                                                                                id: 2,
+                                                                                                                id: 1,
                                                                                                                 constraint: None,
                                                                                                             },
                                                                                                         ),
@@ -555,7 +555,7 @@ Program {
                                                                                                     Type {
                                                                                                         kind: Var(
                                                                                                             TVar {
-                                                                                                                id: 3,
+                                                                                                                id: 2,
                                                                                                                 constraint: None,
                                                                                                             },
                                                                                                         ),
@@ -610,7 +610,7 @@ Program {
                                                                                 Type {
                                                                                     kind: Var(
                                                                                         TVar {
-                                                                                            id: 2,
+                                                                                            id: 1,
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
@@ -650,7 +650,7 @@ Program {
                                                                                                     Type {
                                                                                                         kind: Var(
                                                                                                             TVar {
-                                                                                                                id: 2,
+                                                                                                                id: 1,
                                                                                                                 constraint: None,
                                                                                                             },
                                                                                                         ),
@@ -684,7 +684,7 @@ Program {
                                                                                 Type {
                                                                                     kind: Var(
                                                                                         TVar {
-                                                                                            id: 3,
+                                                                                            id: 2,
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
@@ -724,7 +724,7 @@ Program {
                                                                                                     Type {
                                                                                                         kind: Var(
                                                                                                             TVar {
-                                                                                                                id: 3,
+                                                                                                                id: 2,
                                                                                                                 constraint: None,
                                                                                                             },
                                                                                                         ),
@@ -796,7 +796,7 @@ Program {
                                                                                             Type {
                                                                                                 kind: Var(
                                                                                                     TVar {
-                                                                                                        id: 2,
+                                                                                                        id: 1,
                                                                                                         constraint: None,
                                                                                                     },
                                                                                                 ),
@@ -837,7 +837,7 @@ Program {
                                                                                             Type {
                                                                                                 kind: Var(
                                                                                                     TVar {
-                                                                                                        id: 3,
+                                                                                                        id: 2,
                                                                                                         constraint: None,
                                                                                                     },
                                                                                                 ),
@@ -932,7 +932,7 @@ Program {
                                                                 Type {
                                                                     kind: Var(
                                                                         TVar {
-                                                                            id: 2,
+                                                                            id: 1,
                                                                             constraint: None,
                                                                         },
                                                                     ),
@@ -988,7 +988,7 @@ Program {
                                                                 Type {
                                                                     kind: Var(
                                                                         TVar {
-                                                                            id: 3,
+                                                                            id: 2,
                                                                             constraint: None,
                                                                         },
                                                                     ),
@@ -1074,7 +1074,7 @@ Program {
                                                                                     Type {
                                                                                         kind: Var(
                                                                                             TVar {
-                                                                                                id: 2,
+                                                                                                id: 1,
                                                                                                 constraint: None,
                                                                                             },
                                                                                         ),
@@ -1125,7 +1125,7 @@ Program {
                                                                                     Type {
                                                                                         kind: Var(
                                                                                             TVar {
-                                                                                                id: 3,
+                                                                                                id: 2,
                                                                                                 constraint: None,
                                                                                             },
                                                                                         ),
@@ -1180,7 +1180,7 @@ Program {
                                                                 Type {
                                                                     kind: Var(
                                                                         TVar {
-                                                                            id: 2,
+                                                                            id: 1,
                                                                             constraint: None,
                                                                         },
                                                                     ),
@@ -1220,7 +1220,7 @@ Program {
                                                                                     Type {
                                                                                         kind: Var(
                                                                                             TVar {
-                                                                                                id: 2,
+                                                                                                id: 1,
                                                                                                 constraint: None,
                                                                                             },
                                                                                         ),
@@ -1254,7 +1254,7 @@ Program {
                                                                 Type {
                                                                     kind: Var(
                                                                         TVar {
-                                                                            id: 3,
+                                                                            id: 2,
                                                                             constraint: None,
                                                                         },
                                                                     ),
@@ -1294,7 +1294,7 @@ Program {
                                                                                     Type {
                                                                                         kind: Var(
                                                                                             TVar {
-                                                                                                id: 3,
+                                                                                                id: 2,
                                                                                                 constraint: None,
                                                                                             },
                                                                                         ),
@@ -1366,7 +1366,7 @@ Program {
                                                                             Type {
                                                                                 kind: Var(
                                                                                     TVar {
-                                                                                        id: 2,
+                                                                                        id: 1,
                                                                                         constraint: None,
                                                                                     },
                                                                                 ),
@@ -1407,7 +1407,7 @@ Program {
                                                                             Type {
                                                                                 kind: Var(
                                                                                     TVar {
-                                                                                        id: 3,
+                                                                                        id: 2,
                                                                                         constraint: None,
                                                                                     },
                                                                                 ),

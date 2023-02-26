@@ -2,6 +2,7 @@ use escalier_ast::types::*;
 use im::hashmap::HashMap;
 use std::cell::Cell;
 
+use crate::assump::Assump;
 use crate::scheme::{generalize, instantiate, Scheme};
 use crate::type_error::TypeError;
 use crate::util::immutable_obj_type;
@@ -48,6 +49,12 @@ impl Context {
 
     pub fn insert_binding(&mut self, name: String, b: Binding) {
         self.values.insert(name, b);
+    }
+
+    pub fn insert_bindings(&mut self, a: &Assump) {
+        for (name, binding) in a {
+            self.insert_binding(name.to_owned(), binding.to_owned());
+        }
     }
 
     // TODO: determine if we need to generalize the inserted type everywhere

@@ -3,8 +3,9 @@ use escalier_ast::values::{class::*, Lambda, PatternKind};
 use im::hashmap::HashMap;
 
 use crate::context::{Binding, Context};
-use crate::infer_expr::*;
+use crate::infer_expr::infer_expr;
 use crate::infer_fn_param::infer_fn_param;
+use crate::infer_stmt::infer_block;
 use crate::infer_type_ann::*;
 use crate::scheme::Scheme;
 use crate::substitutable::{Subst, Substitutable};
@@ -36,18 +37,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 let mut iter = params.iter_mut();
                 iter.next(); // skip `self`
                 let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = iter
-                    .map(|e_param| {
-                        let (ps, pa, t_param) =
-                            infer_fn_param(e_param, &mut new_ctx, &type_params_map)?;
-
-                        // Inserts any new variables introduced by infer_fn_param() into
-                        // the current context.
-                        for (name, binding) in pa {
-                            new_ctx.insert_binding(name, binding);
-                        }
-
-                        Ok((ps, t_param))
-                    })
+                    .map(|e_param| infer_fn_param(e_param, &mut new_ctx, &type_params_map))
                     .collect();
                 let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
@@ -149,16 +139,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                             return Err(vec![TypeError::MethodsMustHaveTypes]);
                         }
 
-                        let (ps, pa, t_param) =
-                            infer_fn_param(e_param, &mut new_ctx, &type_params_map)?;
-
-                        // Inserts any new variables introduced by infer_fn_param() into
-                        // the current context.
-                        for (name, binding) in pa {
-                            new_ctx.insert_binding(name, binding);
-                        }
-
-                        Ok((ps, t_param))
+                        infer_fn_param(e_param, &mut new_ctx, &type_params_map)
                     })
                     .collect();
                 let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
@@ -393,15 +374,16 @@ fn infer_interface_from_class(
                     }
                 }
 
+                // We create a new Context here so that bindings inferred from
+                // function params aren't added to the current context.
+                let mut new_ctx = ctx.clone();
                 let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = iter
                     .map(|e_param| {
                         if e_param.type_ann.is_none() {
                             return Err(vec![TypeError::MethodsMustHaveTypes]);
                         }
 
-                        let (ps, _pa, t_param) = infer_fn_param(e_param, ctx, &type_params_map)?;
-
-                        Ok((ps, t_param))
+                        infer_fn_param(e_param, &mut new_ctx, &type_params_map)
                     })
                     .collect();
                 let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();

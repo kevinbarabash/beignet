@@ -48,6 +48,17 @@ pub fn parse_statement(
                 type_params,
             })
         }
+        "for_in_statement" => {
+            let left_node = node.child_by_field_name("left").unwrap();
+            let right_node = node.child_by_field_name("right").unwrap();
+            let body_node = node.child_by_field_name("body").unwrap();
+
+            StmtKind::ForStmt(ForStmt {
+                pattern: Box::from(parse_pattern(&left_node, src)?),
+                expr: Box::from(parse_expression(&right_node, src)?),
+                body: parse_block_statement(&body_node, src)?,
+            })
+        }
         "comment" => {
             return Ok(None); // ignore comments
         }

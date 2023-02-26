@@ -1,5 +1,6 @@
 use derive_visitor::{Drive, DriveMut};
 
+use crate::values::block::Block;
 use crate::values::class::Class;
 use crate::values::common::{SourceLocation, Span};
 use crate::values::expr::Expr;
@@ -34,11 +35,22 @@ pub struct TypeDecl {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
+pub struct ForStmt {
+    pub pattern: Box<Pattern>,
+    pub expr: Box<Expr>,
+    pub body: Block,
+}
+
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub enum StmtKind {
+    // Declarations
     ClassDecl(ClassDecl),
     VarDecl(VarDecl),
     TypeDecl(TypeDecl),
+
+    // Statements
     ExprStmt(Expr),
+    ForStmt(ForStmt),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]

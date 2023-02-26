@@ -1,0 +1,1 @@
+{"version":3,"sources":["<anon>"],"sourcesContent":["let products: mut number[] = [];\nfor (const x in [1, 2, 3]) {\n    for (const y in [4, 5, 6]) {\n        products.push(x * y);\n    }\n}\n"],"names":[],"mappings":"aAAI,WAAyB,EAAE;WACpB,KAAK;IAAC;IAAG;IAAG;CAAE;eACV,KAAK;QAAC;QAAG;QAAG;KAAE;QACrB,SAAS,IAAI,CAAC,IAAI"}

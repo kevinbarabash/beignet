@@ -981,7 +981,7 @@ fn infer_with_constrained_polymorphism_success() {
 
 #[test]
 // TODO: figure out how to get the type constraints in the error message
-#[should_panic = r#"TypeError::UnificationError: {bar: "hello"}, {bar: t5}"#]
+#[should_panic = r#"TypeError::UnificationError: {bar: "hello"}, {bar: t4}"#]
 fn infer_with_constrained_polymorphism_failiure() {
     let src = r#"
     type Foo<T> = {bar: T};
