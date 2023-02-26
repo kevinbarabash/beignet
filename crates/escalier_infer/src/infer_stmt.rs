@@ -10,6 +10,7 @@ use crate::scheme::generalize;
 use crate::substitutable::Subst;
 use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
+use crate::unify::unify;
 use crate::update::*;
 use crate::util::*;
 
@@ -41,8 +42,8 @@ pub fn infer_stmt(
                         top_level,
                     )?;
 
+                    // TODO: Update `infer_pattern_and_init` to do this for us.
                     update_expr(init, &s);
-                    update_pattern(pattern, &s);
 
                     let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
 
@@ -128,19 +129,36 @@ pub fn infer_stmt(
             Ok((s, t))
         }
         StmtKind::ForStmt(ForStmt {
-            pattern: _,
-            expr: _,
+            pattern,
+            expr,
             body,
         }) => {
-            // TODO: Fix this.  We need to check if `expr` unifies with `{[Symbol.iterator]: ...}`
-            // - infer `expr` and then unify it with `{[Symbol.iterator]: T}`
-            // - then unify `T` with `pattern`
-            let (s2, _) = infer_block(body, ctx)?;
+            let elem_t = ctx.fresh_var();
+            let array_t = Type::from(TypeKind::Array(Box::from(elem_t.clone())));
 
-            // let s = compose_subs(&s2, &s1);
+            let (_expr_s, expr_t) = infer_expr(ctx, expr, false)?;
+
+            let s1 = unify(&expr_t, &array_t, ctx)?;
+            let elem_t = elem_t.apply(&s1);
+
+            let mut new_ctx = ctx.clone();
+            let s2 = infer_pattern_and_init(
+                pattern,
+                None,
+                &(Subst::new(), elem_t),
+                &mut new_ctx,
+                &PatternUsage::Assign,
+                top_level,
+            )?;
+
+            let (s3, _) = infer_block(body, &mut new_ctx)?;
+
+            ctx.count = new_ctx.count;
+
+            let s = compose_many_subs(&[s3, s2, s1]);
             let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
 
-            Ok((s2, t))
+            Ok((s, t))
         }
     }
 }

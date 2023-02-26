@@ -9,6 +9,7 @@ use crate::infer_type_ann::*;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify::unify;
+use crate::update::update_pattern;
 use crate::util::*;
 
 // NOTE: The caller is responsible for inserting any new variables introduced
@@ -226,15 +227,15 @@ pub enum PatternUsage {
 }
 
 pub fn infer_pattern_and_init(
-    pat: &mut Pattern,
+    pattern: &mut Pattern,
     type_ann: Option<&mut TypeAnn>,
-    init: &(Subst, Type), // TODO: pass in type of `init` intead of the expression itself
+    init: &(Subst, Type),
     ctx: &mut Context,
     pu: &PatternUsage,
     top_level: bool,
 ) -> Result<Subst, Vec<TypeError>> {
     let type_param_map = HashMap::new();
-    let (ps, pa, pt) = infer_pattern(pat, type_ann, ctx, &type_param_map)?;
+    let (ps, pa, pt) = infer_pattern(pattern, type_ann, ctx, &type_param_map)?;
 
     // Unifies initializer and pattern.
     let s = match pu {
@@ -258,6 +259,8 @@ pub fn infer_pattern_and_init(
         }
         ctx.insert_binding(name, binding);
     }
+
+    update_pattern(pattern, &s);
 
     Ok(s)
 }

@@ -17,7 +17,6 @@ use crate::scheme::get_type_param_map;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify::unify;
-use crate::update::update_pattern;
 use crate::util::*;
 
 pub fn infer_expr(
@@ -267,7 +266,6 @@ pub fn infer_expr(
 
                         let s = compose_subs(&s2, &s1);
 
-                        update_pattern(pat, &s);
                         let (s3, t3) = infer_block(alternate, ctx)?;
 
                         let s = compose_subs(&s3, &s);
@@ -307,8 +305,6 @@ pub fn infer_expr(
                     ctx.count = new_ctx.count;
 
                     let s = compose_subs(&s2, &s1);
-
-                    update_pattern(pat, &s);
 
                     let undefined = Type::from(TypeKind::Keyword(TKeyword::Undefined));
                     let t = union_types(&t2, &undefined);
@@ -750,8 +746,6 @@ pub fn infer_expr(
 
                 let s = compose_subs(&s2, &s1);
                 let t = t2;
-
-                update_pattern(&mut arm.pattern, &s);
 
                 ss.push(s);
                 ts.push(t);
