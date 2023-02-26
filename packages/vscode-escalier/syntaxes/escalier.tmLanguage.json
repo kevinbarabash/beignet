@@ -30,7 +30,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.esc",
-				"match": "\\b(if|while|for|return|let|await|async|type|extends|new)\\b"
+				"match": "\\b(if|while|for|return|await)\\b"
 			}]
 		},
 		"numbers": {
@@ -54,7 +54,7 @@
         },
 		"modifiers": {
 			"name": "storage.modifier.esc",
-			"match": "\\b(mut)\\b"
+			"match": "\\b(mut|in|let|type|new|extends|async)\\b"
 		}
 	},
 	"scopeName": "source.esc"
