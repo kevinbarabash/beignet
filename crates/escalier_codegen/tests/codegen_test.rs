@@ -739,3 +739,21 @@ fn class_with_methods() {
         }
     }"###);
 }
+
+#[ignore]
+#[test]
+fn for_of_loop() {
+    let src = r#"
+    let mut sum = 0;
+    for (const num in [1, 2, 3]) {
+        sum = sum + num;
+    }
+    "#;
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @r###""###);
+}

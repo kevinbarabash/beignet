@@ -545,6 +545,17 @@ mod tests {
         insta::assert_debug_snapshot!(parse(src));
     }
 
+    #[test]
+    fn for_loops() {
+        let src = r#"
+        let mut sum = 0;
+        for (const num of [1, 2, 3]) {
+            sum = sum + num;
+        }
+        "#;
+        insta::assert_debug_snapshot!(parse(src));
+    }
+
     // #[test]
     // fn top_level_parse_error() {
     //     let result = parse(

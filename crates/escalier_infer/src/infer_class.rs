@@ -3,8 +3,9 @@ use escalier_ast::values::{class::*, Lambda, PatternKind};
 use im::hashmap::HashMap;
 
 use crate::context::{Binding, Context};
-use crate::infer_expr::*;
+use crate::infer_expr::infer_expr;
 use crate::infer_fn_param::infer_fn_param;
+use crate::infer_stmt::infer_block;
 use crate::infer_type_ann::*;
 use crate::scheme::Scheme;
 use crate::substitutable::{Subst, Substitutable};

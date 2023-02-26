@@ -100,27 +100,15 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
                         // using `declare` should have an initial value.
                         let init = init.as_ref().unwrap();
 
-                        match build_pattern(pattern, &mut stmts, ctx) {
-                            Some(name) => {
-                                ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                                    span: DUMMY_SP,
-                                    decl: Decl::Var(Box::from(VarDecl {
-                                        span: DUMMY_SP,
-                                        kind: VarDeclKind::Const,
-                                        declare: false,
-                                        decls: vec![VarDeclarator {
-                                            span: DUMMY_SP,
-                                            name,
-                                            init: Some(Box::from(build_expr(
-                                                init, &mut stmts, ctx,
-                                            ))),
-                                            definite: false,
-                                        }],
-                                    })),
-                                }))
-                            }
-                            None => todo!(),
-                        }
+                        ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                            span: DUMMY_SP,
+                            decl: Decl::Var(Box::from(build_var_decl(
+                                pattern,
+                                Some(init),
+                                &mut stmts,
+                                ctx,
+                            ))),
+                        }))
                     }
                 },
                 values::StmtKind::TypeDecl(_) => {
@@ -140,6 +128,23 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
                         declare: false,
                     })))
                 }
+
+                values::StmtKind::ForStmt(for_stmt) => ModuleItem::Stmt(Stmt::ForOf(ForOfStmt {
+                    span: DUMMY_SP,
+                    await_token: None,
+                    left: VarDeclOrPat::VarDecl(Box::from(build_var_decl(
+                        &for_stmt.pattern,
+                        None,
+                        &mut stmts,
+                        ctx,
+                    ))),
+                    right: Box::from(build_expr(&for_stmt.expr, &mut stmts, ctx)),
+                    body: Box::from(Stmt::Block(build_body_block_stmt(
+                        &for_stmt.body,
+                        None,
+                        ctx,
+                    ))),
+                })),
             };
 
             let mut items: Vec<ModuleItem> = stmts
@@ -157,6 +162,25 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
         body,
         shebang: None,
     })
+}
+
+fn build_var_decl(
+    pattern: &values::Pattern,
+    init: Option<&values::Expr>,
+    stmts: &mut Vec<Stmt>,
+    ctx: &mut Context,
+) -> VarDecl {
+    VarDecl {
+        span: DUMMY_SP,
+        kind: VarDeclKind::Const,
+        declare: false,
+        decls: vec![VarDeclarator {
+            span: DUMMY_SP,
+            name: build_pattern(pattern, stmts, ctx).unwrap(),
+            init: init.map(|init| Box::from(build_expr(init, stmts, ctx))),
+            definite: false,
+        }],
+    }
 }
 
 // TODO: See if we can avoid returning an Option<> here so that we don't have
@@ -784,7 +808,12 @@ fn build_body_block_stmt(
                     }));
                 }
             }
-            _ => todo!(),
+            values::StmtKind::ClassDecl(_) => todo!(),
+            values::StmtKind::ForStmt(_) => todo!(),
+            // Types are ignored when generating .js code.
+            values::StmtKind::TypeDecl(_) => (),
+            // Variable declarations that use `declare` are ignored as well.
+            values::StmtKind::VarDecl(_) => (),
         }
     }
 

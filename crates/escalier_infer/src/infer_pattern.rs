@@ -228,7 +228,7 @@ pub enum PatternUsage {
 pub fn infer_pattern_and_init(
     pat: &mut Pattern,
     type_ann: &mut Option<TypeAnn>,
-    init: &mut Expr,
+    init: &mut Expr, // TODO: pass in type of `init` intead of the expression itself
     ctx: &mut Context,
     pu: &PatternUsage,
 ) -> Result<(Assump, Subst), Vec<TypeError>> {

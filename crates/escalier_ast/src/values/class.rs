@@ -1,6 +1,7 @@
 use derive_visitor::{Drive, DriveMut};
 
-use crate::values::expr::{Block, EFnParam, Expr, Lambda};
+use crate::values::block::Block;
+use crate::values::expr::{EFnParam, Expr, Lambda};
 use crate::values::ident::Ident;
 use crate::values::type_ann::{TypeAnn, TypeParam};
 

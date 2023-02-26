@@ -1,3 +1,4 @@
+pub mod block;
 pub mod class;
 pub mod common;
 pub mod expr;
@@ -9,6 +10,7 @@ pub mod pattern;
 pub mod stmt;
 pub mod type_ann;
 
+pub use block::*;
 pub use class::*;
 pub use common::*;
 pub use expr::*;

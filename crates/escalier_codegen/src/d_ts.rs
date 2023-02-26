@@ -89,6 +89,7 @@ fn build_d_ts(program: &values::Program, ctx: &Context) -> Program {
                 type_exports.insert(type_decl.id.name.to_owned());
             }
             values::StmtKind::ExprStmt(_) => (), // nothing is exported
+            values::StmtKind::ForStmt(_) => (),  // nothing is exported
         }
     }
 

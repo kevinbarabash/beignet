@@ -1,6 +1,7 @@
 use derive_visitor::{Drive, DriveMut};
 
 use crate::types::Type;
+use crate::values::block::Block;
 use crate::values::class::Class;
 use crate::values::common::{SourceLocation, Span};
 use crate::values::ident::*;
@@ -14,13 +15,6 @@ use crate::values::type_ann::{TypeAnn, TypeParam};
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct Program {
     pub body: Vec<Statement>,
-}
-
-#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Block {
-    #[drive(skip)]
-    pub span: Span,
-    pub stmts: Vec<Statement>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]

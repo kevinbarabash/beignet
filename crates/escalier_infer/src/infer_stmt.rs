@@ -11,7 +11,7 @@ use crate::substitutable::Subst;
 use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
 use crate::update::*;
-use crate::util::close_over;
+use crate::util::*;
 
 pub fn infer_stmt(
     stmt: &mut Statement,
@@ -27,6 +27,13 @@ pub fn infer_stmt(
             ..
         }) => {
             match declare {
+                false => {
+                    // An initial value should always be used when using a normal
+                    // `let` statement
+                    let init = init.as_mut().unwrap();
+
+                    infer_var_decl(pattern, type_ann, init, top_level, ctx)
+                }
                 true => {
                     match &mut pattern.kind {
                         PatternKind::Ident(BindingIdent { name, .. }) => {
@@ -57,35 +64,6 @@ pub fn infer_stmt(
                         _ => todo!(),
                     }
                 }
-                false => {
-                    // An initial value should always be used when using a normal
-                    // `let` statement
-                    let init = init.as_mut().unwrap();
-
-                    let (pa, s) = infer_pattern_and_init(
-                        pattern,
-                        type_ann,
-                        init,
-                        ctx,
-                        &PatternUsage::Assign,
-                    )?;
-
-                    // Inserts the new variables from infer_pattern() into the
-                    // current context.
-                    for (name, mut binding) in pa {
-                        if top_level {
-                            binding.t = close_over(&s, &binding.t, ctx);
-                        }
-                        ctx.insert_binding(name, binding);
-                    }
-
-                    update_expr(init, &s);
-                    update_pattern(pattern, &s);
-
-                    let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
-
-                    Ok((s, t))
-                }
             }
         }
         StmtKind::TypeDecl(TypeDecl {
@@ -104,14 +82,6 @@ pub fn infer_stmt(
             ctx.insert_scheme(name.to_owned(), scheme);
 
             update_type_ann(type_ann, &s);
-
-            Ok((s, t))
-        }
-        StmtKind::ExprStmt(expr) => {
-            let (s, t) = infer_expr_rec(ctx, expr, false)?;
-            // We ignore the type that was inferred, we only care that
-            // it succeeds since we aren't assigning it to variable.
-            update_expr(expr, &s);
 
             Ok((s, t))
         }
@@ -134,29 +104,74 @@ pub fn infer_stmt(
 
             Ok((s, t))
         }
+
+        StmtKind::ExprStmt(expr) => {
+            let (s, t) = infer_expr_rec(ctx, expr, false)?;
+            // We ignore the type that was inferred, we only care that
+            // it succeeds since we aren't assigning it to variable.
+            update_expr(expr, &s);
+
+            Ok((s, t))
+        }
+        StmtKind::ForStmt(ForStmt {
+            pattern: _,
+            expr: _,
+            body,
+        }) => {
+            // TODO: Fix this.  We need to check if `expr` unifies with `{[Symbol.iterator]: ...}`
+            // - infer `expr` and then unify it with `{[Symbol.iterator]: T}`
+            // - then unify `T` with `pattern`
+            // let (s1, _) = infer_var_decl(pattern, &mut None, expr, false, ctx)?;
+            let (s2, _) = infer_block(body, ctx)?;
+
+            // let s = compose_subs(&s2, &s1);
+            let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+
+            Ok((s2, t))
+        }
     }
 }
 
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// pub struct Block {
-//     pub span: Span,
-//     pub stmts: Vec<Statement>,
-// }
+pub fn infer_block(body: &mut Block, ctx: &mut Context) -> Result<(Subst, Type), Vec<TypeError>> {
+    let mut new_ctx = ctx.clone();
+    let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+    let mut s = Subst::new();
 
-// pub fn infer_block(block: &mut Block, ctx: &mut Context) -> Result<(Subst, Type), Vec<TypeError>> {
-//     let mut new_ctx = ctx.clone();
-//     let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
-//     let mut s = Subst::new();
+    for stmt in &mut body.stmts {
+        new_ctx = new_ctx.clone();
+        let (new_s, new_t) = infer_stmt(stmt, &mut new_ctx, false)?;
 
-//     for stmt in &mut block.stmts {
-//         new_ctx = new_ctx.clone();
-//         let (new_s, new_t) = infer_stmt(stmt, &mut new_ctx, false)?;
+        t = new_t.apply(&s);
+        s = compose_subs(&new_s, &s);
+    }
 
-//         t = new_t.apply(&s);
-//         s = compose_subs(&new_s, &s);
-//     }
+    ctx.count = new_ctx.count;
 
-//     ctx.count = new_ctx.count;
+    Ok((s, t))
+}
 
-//     Ok((s, t))
-// }
+fn infer_var_decl(
+    pattern: &mut Pattern,
+    type_ann: &mut Option<TypeAnn>,
+    init: &mut Expr,
+    top_level: bool,
+    ctx: &mut Context,
+) -> Result<(Subst, Type), Vec<TypeError>> {
+    let (pa, s) = infer_pattern_and_init(pattern, type_ann, init, ctx, &PatternUsage::Assign)?;
+
+    // Inserts the new variables from infer_pattern() into the
+    // current context.
+    for (name, mut binding) in pa {
+        if top_level {
+            binding.t = close_over(&s, &binding.t, ctx);
+        }
+        ctx.insert_binding(name, binding);
+    }
+
+    update_expr(init, &s);
+    update_pattern(pattern, &s);
+
+    let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+
+    Ok((s, t))
+}
