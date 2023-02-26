@@ -773,9 +773,9 @@ fn for_of_loop() {
 #[test]
 fn for_loop_inside_fn() {
     let src = r#"
-    let sum = (arr: number[]): number => {
+    let sum = (arr: number[]) => {
         let mut result: number = 0;
-        for (const num in [1, 2, 3]) {
+        for (const num in arr) {
             result = result + num;
         }
         result
@@ -786,11 +786,7 @@ fn for_loop_inside_fn() {
     insta::assert_snapshot!(js, @r###"
     export const sum = (arr)=>{
         const result = 0;
-        for (const num of [
-            1,
-            2,
-            3
-        ]){
+        for (const num of arr){
             result = result + num;
         }
         return result;
