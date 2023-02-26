@@ -1,8 +1,6 @@
 class Foo {
     static tag = "Foo";
-    constructor(){
-        return undefined;
-    }
+    constructor(){}
     bar() {
         return "hello";
     }

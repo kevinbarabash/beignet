@@ -42,7 +42,13 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                 let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
                 // TODO: ensure that constructors don't have a return statement
-                // TODO: add `self` and `Self` to new_ctx
+                let mut interface_t = interface.t.as_ref().to_owned();
+                interface_t.mutable = true;
+                let binding = Binding {
+                    mutable: false, // this should be false since we don't want to allow `self` to be re-assigned
+                    t: interface_t,
+                };
+                new_ctx.insert_binding("self".to_string(), binding);
                 let (body_s, _body_t) = infer_block(body, &mut new_ctx)?;
                 ss.push(body_s);
 

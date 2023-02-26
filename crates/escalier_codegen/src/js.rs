@@ -713,6 +713,31 @@ enum BlockFinalizer {
     Return,
 }
 
+fn build_finalizer(expr: &Expr, finalizer: &BlockFinalizer) -> Stmt {
+    match &finalizer {
+        BlockFinalizer::Assign(id) => Stmt::Expr(ExprStmt {
+            span: DUMMY_SP,
+            expr: Box::from(Expr::Assign(AssignExpr {
+                span: DUMMY_SP,
+                op: AssignOp::Assign,
+                left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
+                    id: id.to_owned(),
+                    type_ann: None,
+                }))),
+                right: Box::from(expr.to_owned()),
+            })),
+        }),
+        BlockFinalizer::Return => Stmt::Return(ReturnStmt {
+            span: DUMMY_SP,
+            arg: Some(Box::from(expr.to_owned())),
+        }),
+        BlockFinalizer::ExprStmt => Stmt::Expr(ExprStmt {
+            span: DUMMY_SP,
+            expr: Box::from(expr.to_owned()),
+        }),
+    }
+}
+
 // NOTE: If an identifier has been specified in `assign_id` the last statement
 // in the block will assign the final expression to that identifier.  If it's
 // `None`, the last statement will be an actual return statement returning the
@@ -743,39 +768,26 @@ fn build_body_block_stmt(
             }
             values::StmtKind::ExprStmt(expr) => {
                 let expr = build_expr(expr, &mut new_stmts, ctx);
-
-                if i == len - 1 {
-                    let stmt = match &finalizer {
-                        BlockFinalizer::Assign(id) => Stmt::Expr(ExprStmt {
-                            span: DUMMY_SP,
-                            expr: Box::from(Expr::Assign(AssignExpr {
-                                span: DUMMY_SP,
-                                op: AssignOp::Assign,
-                                left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
-                                    id: id.to_owned(),
-                                    type_ann: None,
-                                }))),
-                                right: Box::from(expr),
-                            })),
-                        }),
-                        BlockFinalizer::Return => Stmt::Return(ReturnStmt {
-                            span: DUMMY_SP,
-                            arg: Some(Box::from(expr)),
-                        }),
-                        BlockFinalizer::ExprStmt => Stmt::Expr(ExprStmt {
-                            span: DUMMY_SP,
-                            expr: Box::from(expr),
-                        }),
-                    };
-                    new_stmts.push(stmt);
+                let stmt = if i == len - 1 {
+                    build_finalizer(&expr, finalizer)
                 } else {
-                    new_stmts.push(Stmt::Expr(ExprStmt {
+                    Stmt::Expr(ExprStmt {
                         span: DUMMY_SP,
                         expr: Box::from(expr),
-                    }));
-                }
+                    })
+                };
+                new_stmts.push(stmt);
             }
-            values::StmtKind::ClassDecl(_) => todo!(),
+            values::StmtKind::ClassDecl(values::ClassDecl { class, ident, .. }) => {
+                let ident = Ident::from(ident);
+                let class = build_class(class, &mut new_stmts, ctx);
+                let stmt = Stmt::Decl(Decl::Class(ClassDecl {
+                    ident,
+                    class: Box::from(class),
+                    declare: false,
+                }));
+                new_stmts.push(stmt);
+            }
             values::StmtKind::ForStmt(for_stmt) => {
                 let stmt = Stmt::ForOf(ForOfStmt {
                     span: DUMMY_SP,
@@ -808,29 +820,10 @@ fn build_body_block_stmt(
             sym: swc_atoms::JsWord::from(String::from("undefined")),
             optional: false,
         });
-        let stmt = match finalizer {
-            BlockFinalizer::Assign(id) => Stmt::Expr(ExprStmt {
-                span: DUMMY_SP,
-                expr: Box::from(Expr::Assign(AssignExpr {
-                    span: DUMMY_SP,
-                    op: AssignOp::Assign,
-                    left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
-                        id: id.to_owned(),
-                        type_ann: None,
-                    }))),
-                    right: Box::from(undefined),
-                })),
-            }),
-            BlockFinalizer::Return => Stmt::Return(ReturnStmt {
-                span: DUMMY_SP,
-                arg: Some(Box::from(undefined)),
-            }),
-            BlockFinalizer::ExprStmt => Stmt::Expr(ExprStmt {
-                span: DUMMY_SP,
-                expr: Box::from(undefined),
-            }),
-        };
-        new_stmts.push(stmt);
+        match finalizer {
+            BlockFinalizer::ExprStmt => (),
+            _ => new_stmts.push(build_finalizer(&undefined, finalizer)),
+        }
     }
 
     BlockStmt {
@@ -1038,7 +1031,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
         .iter()
         .filter_map(|member| match member {
             values::ClassMember::Constructor(constructor) => {
-                let body = build_body_block_stmt(&constructor.body, &BlockFinalizer::Return, ctx);
+                let body = build_body_block_stmt(&constructor.body, &BlockFinalizer::ExprStmt, ctx);
                 // In Crochet, `self` is always the first param in methods, but
                 // it represents `this` in JavaScript which is implicit so we
                 // ignore it here.
