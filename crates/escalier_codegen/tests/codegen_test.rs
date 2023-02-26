@@ -750,8 +750,6 @@ fn for_of_loop() {
     "#;
 
     let (js, _) = compile(src);
-
-    // TODO: fix this so that we don't generate a `return` statement
     insta::assert_snapshot!(js, @r###"
     export const sum = 0;
     for (const num of [
@@ -770,4 +768,67 @@ fn for_of_loop() {
 
     insta::assert_snapshot!(result, @r###"export declare const sum: number;
     "###);
+}
+
+#[test]
+fn type_decl_inside_block() {
+    let src = r#"
+    let result = do {
+        type Point = {x: number, y: number};
+        let p: Point = {x: 5, y: 10};
+        p.x + p.y
+    };
+    "#;
+
+    let (js, _) = compile(src);
+    insta::assert_snapshot!(js, @r###"
+    let $temp_0;
+    {
+        const p = {
+            x: 5,
+            y: 10
+        };
+        $temp_0 = p.x + p.y;
+    }export const result = $temp_0;
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const result: number;
+");
+}
+
+#[test]
+fn type_decl_inside_block_with_escape() {
+    let src = r#"
+    let result = do {
+        type Point = {x: number, y: number};
+        let p: Point = {x: 5, y: 10};
+        p
+    };
+    "#;
+
+    let (js, _) = compile(src);
+    insta::assert_snapshot!(js, @r###"
+    let $temp_0;
+    {
+        const p = {
+            x: 5,
+            y: 10
+        };
+        $temp_0 = p;
+    }export const result = $temp_0;
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    // TODO: How do we ensure that types defined within a block can't escape?
+    insta::assert_snapshot!(result, @"export declare const result: Point;
+");
 }

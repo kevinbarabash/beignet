@@ -691,60 +691,14 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             },
         })),
         values::ExprKind::DoExpr(do_expr) => {
-            let len = do_expr.body.stmts.len();
-
             let temp_id = ctx.new_ident();
             let temp_decl = build_let_decl_stmt(&temp_id);
             stmts.push(temp_decl);
 
-            let mut new_stmts: Vec<Stmt> = vec![];
-            for (i, stmt) in do_expr.body.stmts.iter().enumerate() {
-                match &stmt.kind {
-                    values::StmtKind::VarDecl(values::VarDecl {
-                        pattern,
-                        type_ann: _,
-                        init: Some(init),
-                        declare: _,
-                    }) => {
-                        let stmt = match build_pattern(pattern, &mut new_stmts, ctx) {
-                            Some(name) => build_const_decl_stmt_with_pat(
-                                name,
-                                build_expr(init, &mut new_stmts, ctx),
-                            ),
-                            None => todo!(),
-                        };
-                        new_stmts.push(stmt);
-                    }
-                    values::StmtKind::ExprStmt(expr) => {
-                        let expr = build_expr(expr, &mut new_stmts, ctx);
-                        if i == len - 1 {
-                            new_stmts.push(Stmt::Expr(ExprStmt {
-                                span: DUMMY_SP,
-                                expr: Box::from(Expr::Assign(AssignExpr {
-                                    span: DUMMY_SP,
-                                    op: AssignOp::Assign,
-                                    left: PatOrExpr::Pat(Box::from(Pat::Ident(BindingIdent {
-                                        id: temp_id.to_owned(),
-                                        type_ann: None,
-                                    }))),
-                                    right: Box::from(expr),
-                                })),
-                            }));
-                        } else {
-                            new_stmts.push(Stmt::Expr(ExprStmt {
-                                span: DUMMY_SP,
-                                expr: Box::from(expr),
-                            }));
-                        }
-                    }
-                    _ => todo!(),
-                }
-            }
+            let finalizer = BlockFinalizer::Assign(temp_id.clone());
 
-            stmts.push(Stmt::Block(BlockStmt {
-                span: DUMMY_SP,
-                stmts: new_stmts,
-            }));
+            let block_stmt = build_body_block_stmt(&do_expr.body, &finalizer, ctx);
+            stmts.push(Stmt::Block(block_stmt));
 
             Expr::Ident(temp_id)
         }

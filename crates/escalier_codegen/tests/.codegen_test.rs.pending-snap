@@ -1,0 +1,3 @@
+{"run_id":"1677384262-927977000","line":831,"new":{"module_name":"codegen_test","snapshot_name":"type_decl_inside_block_with_escape-2","metadata":{"source":"crates/escalier_codegen/tests/codegen_test.rs","assertion_line":831,"expression":"result"},"snapshot":"export declare const result: Point;\n"},"old":{"module_name":"codegen_test","metadata":{},"snapshot":"export declare const result: number;"}}
+{"run_id":"1677384274-323751000","line":815,"new":null,"old":null}
+{"run_id":"1677384274-323751000","line":831,"new":null,"old":null}
