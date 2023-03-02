@@ -3055,7 +3055,9 @@ mod tests {
         let src = r#"
         class Foo {
             mut msg: string;
-            constructor(self) {}
+            constructor(self, msg: string) {
+                self.msg = msg;
+            }
             get_msg(self): string {
                 self.msg;
             }

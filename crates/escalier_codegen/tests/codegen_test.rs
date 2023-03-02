@@ -718,6 +718,7 @@ fn mutable_indexer() {
 fn class_with_methods() {
     let src = r#"
     class Foo {
+        x: number;
         constructor(self, x) {
             self.x = x;
         }
@@ -732,12 +733,13 @@ fn class_with_methods() {
     insta::assert_snapshot!(js, @r###"
     class Foo {
         constructor(x){
-            return self.x = x;
+            self.x = x;
         }
         bar(y) {
             return self.x + y;
         }
-    }"###);
+    }
+    "###);
 }
 
 #[test]
@@ -862,5 +864,45 @@ fn type_decl_inside_block_with_escape() {
 
     // TODO: How do we ensure that types defined within a block can't escape?
     insta::assert_snapshot!(result, @"export declare const result: Point;
+");
+}
+
+#[test]
+fn class_inside_function() {
+    let src = r#"
+    let foo = () => {
+        class Point {
+            mut x: number;
+            mut y: number;
+            constructor(self, x, y) {
+                self.x = x;
+                self.y = y;
+            }
+        }
+        const p = new Point(5, 10);
+        p
+    };
+    "#;
+
+    let (js, _) = compile(src);
+    insta::assert_snapshot!(js, @r###"
+    export const foo = ()=>{
+        class Point {
+            constructor(x, y){
+                self.x = x;
+                self.y = y;
+            }
+        }
+        const p = new Point(5, 10);
+        return p;
+    };
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const foo: () => Point;
 ");
 }
