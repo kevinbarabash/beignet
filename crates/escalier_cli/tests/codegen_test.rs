@@ -182,7 +182,7 @@ fn js_print_let_in_inside_lambda() {
     let foo = () => {
         let x = 5;
         let y = 10;
-        x + y
+        return x + y;
     };"#), @r###"
     export const foo = ()=>{
         const x = 5;
@@ -200,7 +200,7 @@ fn js_print_nested_lambdas() {
 
 #[test]
 fn js_print_nested_lambdas_with_multiple_lines() {
-    insta::assert_snapshot!(compile("let foo = (a) => (b) => {let sum = a + b; sum};"), @r###"
+    insta::assert_snapshot!(compile("let foo = (a) => (b) => {let sum = a + b; return sum;};"), @r###"
     export const foo = (a)=>(b)=>{
             const sum = a + b;
             return sum;
