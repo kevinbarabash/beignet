@@ -377,7 +377,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
 
             let body = match body {
                 values::BlockOrExpr::Block(body) => BlockStmtOrExpr::BlockStmt(
-                    build_body_block_stmt(body, &BlockFinalizer::Return, ctx),
+                    build_body_block_stmt(body, &BlockFinalizer::ExprStmt, ctx),
                 ),
                 values::BlockOrExpr::Expr(expr) => {
                     BlockStmtOrExpr::Expr(Box::from(build_expr(expr, stmts, ctx)))
@@ -703,9 +703,6 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
 enum BlockFinalizer {
     ExprStmt,
     Assign(Ident),
-    // In the future, code will need to include return statements explicitly in
-    // the code so this won't be necessary.
-    Return,
 }
 
 fn build_finalizer(expr: &Expr, finalizer: &BlockFinalizer) -> Stmt {
@@ -721,10 +718,6 @@ fn build_finalizer(expr: &Expr, finalizer: &BlockFinalizer) -> Stmt {
                 }))),
                 right: Box::from(expr.to_owned()),
             })),
-        }),
-        BlockFinalizer::Return => Stmt::Return(ReturnStmt {
-            span: DUMMY_SP,
-            arg: Some(Box::from(expr.to_owned())),
         }),
         BlockFinalizer::ExprStmt => Stmt::Expr(ExprStmt {
             span: DUMMY_SP,
@@ -1069,7 +1062,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
             values::ClassMember::Method(method) => {
                 let body = match &method.lambda.body {
                     values::BlockOrExpr::Block(body) => {
-                        build_body_block_stmt(body, &BlockFinalizer::Return, ctx)
+                        build_body_block_stmt(body, &BlockFinalizer::ExprStmt, ctx)
                     }
                     values::BlockOrExpr::Expr(_) => panic!("Invalid method body"),
                 };

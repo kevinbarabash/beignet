@@ -11,7 +11,7 @@ use crate::context::Context;
 use crate::expand_type::get_obj_type;
 use crate::infer_fn_param::infer_fn_param;
 use crate::infer_pattern::*;
-use crate::infer_stmt::infer_block;
+use crate::infer_stmt::{infer_block, infer_block_or_expr};
 use crate::infer_type_ann::*;
 use crate::scheme::get_type_param_map;
 use crate::substitutable::{Subst, Substitutable};
@@ -24,6 +24,7 @@ pub fn infer_expr(
     expr: &mut Expr,
     is_lvalue: bool,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
+    eprintln!("infer_expr");
     let result = match &mut expr.kind {
         ExprKind::App(App {
             lam,
@@ -438,14 +439,9 @@ pub fn infer_expr(
                 .iter_mut()
                 .map(|e_param| infer_fn_param(e_param, &mut new_ctx, &type_params_map))
                 .collect();
-
             let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-            let (body_s, mut body_t) = match body {
-                BlockOrExpr::Block(block) => infer_block(block, &mut new_ctx)?,
-                BlockOrExpr::Expr(expr) => infer_expr(&mut new_ctx, expr, false)?,
-            };
-
+            let (body_s, mut body_t) = infer_block_or_expr(body, &mut new_ctx)?;
             ss.push(body_s);
 
             ctx.count = new_ctx.count;

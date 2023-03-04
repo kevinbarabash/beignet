@@ -215,12 +215,15 @@ mod tests {
 
     #[test]
     fn inner_let() {
-        assert_eq!(infer("() => {let x = 5; x}"), "() => 5");
+        assert_eq!(infer("() => {let x = 5; return x;}"), "() => 5");
     }
 
     #[test]
     fn inner_let_with_type_annotation() {
-        assert_eq!(infer("() => {let x: number = 5; x}"), "() => number");
+        assert_eq!(
+            infer("() => {let x: number = 5; return x;}"),
+            "() => number"
+        );
     }
 
     #[test]
@@ -615,7 +618,7 @@ mod tests {
     #[test]
     fn destructuring_inside_lambda() {
         assert_eq!(
-            infer("(p) => {let {x, y} = p; x + y}"),
+            infer("(p) => {let {x, y} = p; return x + y;}"),
             "(p: {x: number, y: number}) => number"
         );
     }
@@ -695,11 +698,11 @@ mod tests {
     fn infer_if_let_inside_lambda() {
         let src = r#"
         let add = (p) => {
-            if (let {x, y} = p) {
+            return if (let {x, y} = p) {
                 x + y
             } else {
                 0
-            }
+            };
         };
         "#;
 
@@ -924,7 +927,7 @@ mod tests {
 
     #[test]
     fn infer_let_ignore_result() {
-        assert_eq!(infer("() => {let _ = 5; 10}"), "() => 10");
+        assert_eq!(infer("() => {let _ = 5; return 10;}"), "() => 10");
     }
 
     #[test]
@@ -943,7 +946,7 @@ mod tests {
 
     #[test]
     fn infer_expression_statements() {
-        assert_eq!(infer("() => {5; 10}"), "() => 10");
+        assert_eq!(infer("() => {5; return 10;}"), "() => 10");
     }
 
     #[test]
@@ -972,11 +975,7 @@ mod tests {
 
     #[test]
     fn lambda_with_type_param() {
-        let src = r#"
-        let fst = <T>(a: T, b: T): T => {
-            a
-        };
-        "#;
+        let src = "let fst = <T>(a: T, b: T): T => a;";
         let ctx = infer_prog(src);
 
         assert_eq!(get_value_type("fst", &ctx), "<A>(a: A, b: A) => A");
@@ -984,11 +983,7 @@ mod tests {
 
     #[test]
     fn lambda_with_multiple_type_params() {
-        let src = r#"
-        let fst = <A, B>(a: A, b: B): A => {
-            a
-        };
-        "#;
+        let src = "let fst = <A, B>(a: A, b: B): A => a;";
         let ctx = infer_prog(src);
 
         assert_eq!(get_value_type("fst", &ctx), "<A, B>(a: A, b: B) => A");
@@ -997,9 +992,7 @@ mod tests {
     #[test]
     fn calling_a_generic_function() {
         let src = r#"
-        let fst = <A, B>(a: A, b: B): A => {
-            a
-        };
+        let fst = <A, B>(a: A, b: B): A => a;
         let result = fst(5, 10);
         "#;
         let ctx = infer_prog(src);
@@ -1136,10 +1129,10 @@ mod tests {
     fn infer_optional_param_type() {
         let src = r#"
         let plus_one = (a, b?) => {
-            match (b) {
+            return match (b) {
                 c is string -> c,
                 _ -> a + 1
-            }
+            };
         };
         "#;
         let ctx = infer_prog(src);
@@ -1174,9 +1167,7 @@ mod tests {
     #[test]
     fn lambda_with_explicit_types() {
         let src = r#"
-        let add = (a: number, b: number): number => {
-            a + b
-        };
+        let add = (a: number, b: number): number => a + b;
         "#;
 
         let ctx = infer_prog(src);
@@ -1191,9 +1182,7 @@ mod tests {
     #[should_panic = "TypeError::UnificationError: number, string"]
     fn lambda_with_incorrect_return_type() {
         let src = r#"
-        let add = (a: number, b: number): string => {
-            a + b
-        };
+        let add = (a: number, b: number): string => a + b;
         "#;
 
         infer_prog(src);
@@ -1313,9 +1302,7 @@ mod tests {
     fn infer_generic_lam() {
         // TODO: figure out how to handle parametric functions like this
         let src = r#"
-        let add = <T>(x: T, y: T): T => {
-            x + y
-        };
+        let add = <T>(x: T, y: T): T => x + y;
         let sum = add(5, 5);
         "#;
 
@@ -1541,7 +1528,7 @@ mod tests {
         type Point = {x: number, y: number};
         let obj = {add: (p: Point, q: Point) => {
             let result = {x: p.x + q.x, y: p.y + q.y};
-            result
+            return result;
         }};
         let p = {x: 5, y: 10};
         let q = {x: 0, y: 1};
@@ -1781,9 +1768,7 @@ mod tests {
         let src = r#"
         type Point = {x: number, y: number, z: number};
         declare let mag: (p: Point) => number;
-        let mag_2d = (p) => {
-            mag({...p, z: 0})
-        };
+        let mag_2d = (p) => mag({...p, z: 0});
         "#;
         let ctx = infer_prog(src);
 
@@ -2003,7 +1988,7 @@ mod tests {
     fn async_await() {
         let src = r#"
         let add_async = async (a, b) => {
-            await a + await b
+            return await a + await b;
         };
         "#;
         let ctx = infer_prog(src);
@@ -2058,10 +2043,8 @@ mod tests {
     fn await_works_in_nested_async_functions() {
         let src = r#"
         let add_async = async (a, b) => {
-            let inner = async (x, y) => {
-                await x + await y
-            };
-            await inner(a, b)
+            let inner = async (x, y) => await x + await y;
+            return await inner(a, b);
         };
         "#;
         let ctx = infer_prog(src);
@@ -2311,10 +2294,10 @@ mod tests {
         type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string};
         declare let event: Event;
         let print = (event: Event): string => {
-            match (event) {
+            return match (event) {
                 {type: "mousedown", x, y} -> x + y,
                 {type: "keydown", key} -> key
-            }
+            };
         };
         "#;
 
@@ -2541,11 +2524,7 @@ mod tests {
 
     #[test]
     fn test_member_access_on_constraint_type_param_success() {
-        let src = r#"
-        let getBar = <T extends {bar: string}>(obj: T) => {
-            obj.bar
-        };
-        "#;
+        let src = "let getBar = <T extends {bar: string}>(obj: T) => obj.bar;";
 
         let ctx = infer_prog(src);
 
@@ -2751,7 +2730,7 @@ mod tests {
         let foo = () => {
             let mut x: number = 5;
             x = 10;
-            x
+            return x;
         };
         "#;
 
@@ -3028,7 +3007,7 @@ mod tests {
         let src = r#"
         class Foo {
             constructor(self) {}
-            add(self, x: number, y: number): number { x + y; }
+            add(self, x: number, y: number): number { return x + y; }
         }
 
         let foo = new Foo();
@@ -3059,11 +3038,10 @@ mod tests {
                 self.msg = msg;
             }
             get_msg(self): string {
-                self.msg;
+                return self.msg;
             }
             set_msg(mut self, value: string): undefined {
                 self.msg = value;
-                undefined;
             }
         }
         "#;
@@ -3078,11 +3056,10 @@ mod tests {
             mut msg: T;
             constructor(self) {}
             get_msg(self): T {
-                self.msg;
+                return self.msg;
             }
             set_msg(mut self, value: T): undefined {
                 self.msg = value;
-                undefined;
             }
         }
 
@@ -3171,9 +3148,9 @@ mod tests {
         class Foo {
             msg: string;
             constructor(self) {}
-            add(self, x: number, y: number): number { x + y; }
+            add(self, x: number, y: number): number { return x + y; }
             set_msg(mut self, msg: string): undefined {}
-            get bar(self): boolean { true; }
+            get bar(self): boolean { return true; }
             set bar(mut self, value: boolean) {}
         }
         "#;
@@ -3199,7 +3176,7 @@ mod tests {
         class Foo {
             static msg: string;
             constructor(self) {}
-            static add(x: number, y: number): number { x + y; }
+            static add(x: number, y: number): number { return x + y; }
         }
 
         let {msg} = Foo;
@@ -3223,8 +3200,8 @@ mod tests {
         let src = r#"
         class Foo {
             constructor(self) {}
-            get msg(self): string { "hello"; }
-            get num(self): number { 5; }
+            get msg(self): string { return "hello"; }
+            get num(self): number { return 5; }
         }
 
         let foo = new Foo();
@@ -3262,7 +3239,7 @@ mod tests {
         let src = r#"
         class Foo {
             constructor(self) {}
-            get msg(self): string { "hello"; }
+            get msg(self): string { return "hello"; }
         }
 
         let foo = new Foo();
@@ -3355,7 +3332,7 @@ mod tests {
         let src = r#"
         class Foo {
             constructor(self) {}
-            fst<T>(self, a: T, b: T): T { a; }
+            fst<T>(self, a: T, b: T): T { return a; }
         }
         let foo = new Foo();
         let fst = foo.fst;
@@ -3383,7 +3360,7 @@ mod tests {
         class Foo<T> {
             bar: T;
             constructor(self) {}
-            fst<U>(self, a: U, b: T): U { a; }
+            fst<U>(self, a: U, b: T): U { return a; }
         }
         let foo = new Foo<string>();
         let fst = foo.fst;
@@ -3404,7 +3381,7 @@ mod tests {
         class Foo<T> {
             bar: T;
             constructor(self) {}
-            fst<T>(self, a: T, b: T): T { a; }
+            fst<T>(self, a: T, b: T): T { return a; }
         }
         let foo = new Foo<string>();
         let fst = foo.fst;
@@ -3526,5 +3503,19 @@ mod tests {
         let ctx = infer_prog(src);
 
         assert_eq!(get_value_type("a", &ctx), "undefined");
+    }
+
+    #[test]
+    fn return_type_is_inferred_as_undefined_without_explicit_return() {
+        let src = r#"
+        let add = (a, b) => {
+            let sum = a + b;
+            sum;
+        };
+        let result = add(5, 10);
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("result", &ctx), "undefined");
     }
 }

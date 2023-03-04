@@ -31,6 +31,44 @@ fn unary_minus() {
 }
 
 #[test]
+fn fn_with_block_without_return() {
+    let src = r#"
+    let foo = (x, y) => {
+        let z = x + y;
+        z
+    };
+    "#;
+
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
+    export const foo = (x, y)=>{
+        const z = x + y;
+        z;
+    };
+    "###);
+}
+
+#[test]
+fn fn_with_block_with_return() {
+    let src = r#"
+    let foo = (x, y) => {
+        let z = x + y;
+        return z;
+    };
+    "#;
+
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
+    export const foo = (x, y)=>{
+        const z = x + y;
+        return z;
+    };
+    "###);
+}
+
+#[test]
 fn template_literals() {
     let src = r#"
     let a = `hello, world`;
@@ -194,7 +232,7 @@ fn simple_if_else_inside_fn() {
             console.log("false");
             10
         };
-        result
+        return result;
     };
     "#;
     let (js, _) = compile(src);
@@ -290,7 +328,7 @@ fn multiple_lets_inside_a_function() {
         let x = 5;
         let y = 10;
         let result = x + y;
-        result
+        return result;
     };
     "#;
     let (js, _) = compile(src);
@@ -722,6 +760,9 @@ fn class_with_methods() {
         constructor(self, x) {
             self.x = x;
         }
+        foo(self, y) {
+            return self.x + y;
+        }
         bar(self, y) {
             self.x + y;
         }
@@ -735,8 +776,11 @@ fn class_with_methods() {
         constructor(x){
             self.x = x;
         }
-        bar(y) {
+        foo(y) {
             return self.x + y;
+        }
+        bar(y) {
+            self.x + y;
         }
     }
     "###);
@@ -780,7 +824,7 @@ fn for_loop_inside_fn() {
         for (const num in arr) {
             result = result + num;
         }
-        result
+        return result;
     };
     "#;
 
@@ -880,7 +924,7 @@ fn class_inside_function() {
             }
         }
         const p = new Point(5, 10);
-        p
+        return p;
     };
     "#;
 

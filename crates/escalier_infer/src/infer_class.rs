@@ -1,11 +1,11 @@
 use escalier_ast::types::*;
-use escalier_ast::values::{class::*, BlockOrExpr, Lambda, PatternKind};
+use escalier_ast::values::{class::*, Lambda, PatternKind};
 use im::hashmap::HashMap;
 
 use crate::context::{Binding, Context};
 use crate::infer_expr::infer_expr;
 use crate::infer_fn_param::infer_fn_param;
-use crate::infer_stmt::infer_block;
+use crate::infer_stmt::{infer_block, infer_block_or_expr};
 use crate::infer_type_ann::*;
 use crate::scheme::Scheme;
 use crate::substitutable::{Subst, Substitutable};
@@ -139,6 +139,7 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                         }
                     }
                 }
+
                 let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = iter
                     .map(|e_param| {
                         if e_param.type_ann.is_none() {
@@ -157,10 +158,8 @@ pub fn infer_class(ctx: &mut Context, class: &mut Class) -> Result<(Subst, Type)
                     t: interface_t,
                 };
                 new_ctx.insert_binding("self".to_string(), binding);
-                let (body_s, mut body_t) = match body {
-                    BlockOrExpr::Block(block) => infer_block(block, &mut new_ctx)?,
-                    BlockOrExpr::Expr(expr) => infer_expr(ctx, expr, false)?,
-                };
+
+                let (body_s, mut body_t) = infer_block_or_expr(body, &mut new_ctx)?;
                 ss.push(body_s);
 
                 ctx.count = new_ctx.count;

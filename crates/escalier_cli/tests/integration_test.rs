@@ -86,7 +86,7 @@ fn infer_lam() {
 
 #[test]
 fn infer_let_inside_function() {
-    assert_eq!(infer("() => {let x = 5; x};"), "() => 5");
+    assert_eq!(infer("() => {let x = 5; return x;};"), "() => 5");
 }
 
 #[test]
@@ -641,13 +641,12 @@ fn infer_var_with_union_type_annotation() {
 #[test]
 fn infer_widen_tuple_return() {
     let src = r#"
-    let result = (cond) => {
+    let result = (cond) => 
         if (cond) {
             [1, 2]
         } else {
             [true, false]
-        }
-    };
+        };
     "#;
     let (_, ctx) = infer_prog(src);
 
@@ -719,7 +718,7 @@ fn infer_react_component() {
     let src = r#"
     type Props = {name: string};
     let Foo = (props: Props) => {
-        <div>Hello, world</div>
+        return <div>Hello, world</div>;
     };
     "#;
     let (_, ctx) = infer_prog(src);
@@ -1069,7 +1068,7 @@ fn infer_destructure_object_inside_fn() {
     type FooBar = {foo: number, bar: string};
     let get_foo = (x: FooBar) => {
         let {foo, bar} = x;
-        foo
+        return foo;
     };
     let foo = get_foo({foo: 5, bar: "hello"});
     "#;
@@ -1085,7 +1084,7 @@ fn infer_destructure_object_inside_fn_2() {
     type FooBar = {foo: number, bar: string};
     let get_foo = (x: FooBar) => {
         let {foo, bar} = x;
-        foo
+        return foo;
     };
     let foo = get_foo({foo: 5, bar: "hello"});
     "#;
@@ -1111,7 +1110,7 @@ fn infer_destructure_object_param() {
 fn infer_destructure_object_param_2() {
     let src = r#"
     let foo = ({a, b}: {a: string, b: number}) => {
-        {a: a, b: b}
+        return {a: a, b: b};
     };
     let {a, b} = foo({a: "hello", b: 5});
     "#;
@@ -1128,7 +1127,7 @@ fn infer_destructure_object_param_2() {
 fn return_an_object() {
     let src = r#"
     let foo = () => {
-        {a: "hello", b: 5}
+        return {a: "hello", b: 5};
     };
     let {a, b} = foo();
     "#;

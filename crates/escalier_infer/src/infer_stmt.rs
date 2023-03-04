@@ -19,6 +19,7 @@ pub fn infer_stmt(
     ctx: &mut Context,
     top_level: bool,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
+    eprintln!("infer_stmt");
     match &mut stmt.kind {
         StmtKind::VarDecl(VarDecl {
             declare,
@@ -173,6 +174,7 @@ pub fn infer_stmt(
 }
 
 pub fn infer_block(body: &mut Block, ctx: &mut Context) -> Result<(Subst, Type), Vec<TypeError>> {
+    eprintln!("infer_block");
     let mut new_ctx = ctx.clone();
     let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
     let mut s = Subst::new();
@@ -188,4 +190,28 @@ pub fn infer_block(body: &mut Block, ctx: &mut Context) -> Result<(Subst, Type),
     ctx.count = new_ctx.count;
 
     Ok((s, t))
+}
+
+pub fn infer_block_or_expr(
+    body: &mut BlockOrExpr,
+    ctx: &mut Context,
+) -> Result<(Subst, Type), Vec<TypeError>> {
+    match body {
+        BlockOrExpr::Block(block) => {
+            let (s, t) = infer_block(block, ctx)?;
+
+            let t = if let Some(last) = block.stmts.last() {
+                if let StmtKind::ReturnStmt(_) = &last.kind {
+                    t
+                } else {
+                    Type::from(TypeKind::Keyword(TKeyword::Undefined))
+                }
+            } else {
+                Type::from(TypeKind::Keyword(TKeyword::Undefined))
+            };
+
+            Ok((s, t))
+        }
+        BlockOrExpr::Expr(expr) => infer_expr(ctx, expr, false),
+    }
 }

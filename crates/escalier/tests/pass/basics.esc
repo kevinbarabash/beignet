@@ -2,7 +2,7 @@ let a = 5;
 let b = (x) => x;
 let c = () => {
     let x = 5;
-    x
+    return x;
 };
 let d = 5 + 10;
 let e = (f, x) => f(x) + x;
