@@ -42,6 +42,11 @@ pub struct ForStmt {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
+pub struct ReturnStmt {
+    pub arg: Option<Box<Expr>>,
+}
+
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub enum StmtKind {
     // Declarations
     ClassDecl(ClassDecl),
@@ -51,6 +56,7 @@ pub enum StmtKind {
     // Statements
     ExprStmt(Expr),
     ForStmt(ForStmt),
+    ReturnStmt(ReturnStmt),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]

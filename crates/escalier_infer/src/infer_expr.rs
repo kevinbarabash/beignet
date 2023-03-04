@@ -441,7 +441,11 @@ pub fn infer_expr(
 
             let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-            let (body_s, mut body_t) = infer_block(body, &mut new_ctx)?;
+            let (body_s, mut body_t) = match body {
+                BlockOrExpr::Block(block) => infer_block(block, &mut new_ctx)?,
+                BlockOrExpr::Expr(expr) => infer_expr(&mut new_ctx, expr, false)?,
+            };
+
             ss.push(body_s);
 
             ctx.count = new_ctx.count;

@@ -22,15 +22,8 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
             // as a simple expression
             let body = node.child_by_field_name("body").unwrap();
             let body = match body.kind() {
-                "statement_block" => parse_block_statement(&body, src)?,
-                _ => Block {
-                    span: body.byte_range(),
-                    stmts: vec![Statement {
-                        loc: SourceLocation::from(&body),
-                        span: body.byte_range(),
-                        kind: StmtKind::ExprStmt(parse_expression(&body, src)?),
-                    }],
-                },
+                "statement_block" => BlockOrExpr::Block(parse_block_statement(&body, src)?),
+                _ => BlockOrExpr::Expr(Box::from(parse_expression(&body, src)?)),
             };
 
             let params = node.child_by_field_name("parameters").unwrap();

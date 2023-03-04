@@ -160,6 +160,15 @@ pub fn infer_stmt(
 
             Ok((s, t))
         }
+        StmtKind::ReturnStmt(ReturnStmt { arg }) => match arg {
+            Some(arg) => infer_expr(ctx, arg.as_mut(), false),
+            None => {
+                let s = Subst::default();
+                let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+
+                Ok((s, t))
+            }
+        },
     }
 }
 
