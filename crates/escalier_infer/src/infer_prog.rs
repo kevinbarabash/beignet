@@ -2,8 +2,9 @@ use escalier_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
 use escalier_ast::values::*;
 
 use crate::context::Context;
-use crate::infer_stmt::infer_stmt;
 use crate::type_error::TypeError;
+
+use crate::checker::Checker;
 
 pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<TypeError>> {
     // TODO: replace with Class type once it exists
@@ -37,9 +38,11 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
 
     let mut reports: Vec<TypeError> = vec![];
 
+    let checker = Checker {};
+
     // TODO: figure out how report multiple errors
     for stmt in &mut prog.body {
-        match infer_stmt(stmt, ctx, true) {
+        match checker.infer_stmt(stmt, ctx, true) {
             Ok(_) => (),
             Err(mut errors) => reports.append(&mut errors),
         }

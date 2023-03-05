@@ -5,46 +5,90 @@ use escalier_ast::values::{self as values, *};
 
 use crate::assump::Assump;
 use crate::context::{Binding, Context};
-use crate::infer_type_ann::*;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::unify::unify;
 use crate::update::update_pattern;
 use crate::util::*;
 
-// NOTE: The caller is responsible for inserting any new variables introduced
-// into the appropriate context.
-pub fn infer_pattern(
-    pat: &mut Pattern,
-    type_ann: Option<&mut TypeAnn>,
-    ctx: &mut Context,
-    type_param_map: &HashMap<String, Type>,
-) -> Result<(Subst, Assump, Type), Vec<TypeError>> {
-    // Keeps track of all of the variables the need to be introduced by this pattern.
-    let mut new_vars: HashMap<String, Binding> = HashMap::new();
+use crate::checker::Checker;
 
-    let pat_type = infer_pattern_rec(pat, ctx, &mut new_vars)?;
+impl Checker {
+    // NOTE: The caller is responsible for inserting any new variables introduced
+    // into the appropriate context.
+    pub fn infer_pattern(
+        &self,
+        pat: &mut Pattern,
+        type_ann: Option<&mut TypeAnn>,
+        ctx: &mut Context,
+        type_param_map: &HashMap<String, Type>,
+    ) -> Result<(Subst, Assump, Type), Vec<TypeError>> {
+        // Keeps track of all of the variables the need to be introduced by this pattern.
+        let mut new_vars: HashMap<String, Binding> = HashMap::new();
 
-    // If the pattern had a type annotation associated with it, we infer type of the
-    // type annotation and add a constraint between the types of the pattern and its
-    // type annotation.
-    match type_ann {
-        Some(type_ann) => {
-            let (type_ann_s, type_ann_t) =
-                infer_type_ann_with_params(type_ann, ctx, type_param_map)?;
+        let pat_type = infer_pattern_rec(pat, ctx, &mut new_vars)?;
 
-            // Allowing type_ann_ty to be a subtype of pat_type because
-            // only non-refutable patterns can have type annotations.
-            let s = unify(&type_ann_t, &pat_type, ctx)?;
-            let s = compose_subs(&s, &type_ann_s);
+        // If the pattern had a type annotation associated with it, we infer type of the
+        // type annotation and add a constraint between the types of the pattern and its
+        // type annotation.
+        match type_ann {
+            Some(type_ann) => {
+                let (type_ann_s, type_ann_t) =
+                    self.infer_type_ann_with_params(type_ann, ctx, type_param_map)?;
 
-            // Substs are applied to any new variables introduced.  This handles
-            // the situation where explicit types have be provided for function
-            // parameters.
-            let new_vars = new_vars.apply(&s);
-            Ok((s, new_vars, type_ann_t))
+                // Allowing type_ann_ty to be a subtype of pat_type because
+                // only non-refutable patterns can have type annotations.
+                let s = unify(&type_ann_t, &pat_type, ctx)?;
+                let s = compose_subs(&s, &type_ann_s);
+
+                // Substs are applied to any new variables introduced.  This handles
+                // the situation where explicit types have be provided for function
+                // parameters.
+                let new_vars = new_vars.apply(&s);
+                Ok((s, new_vars, type_ann_t))
+            }
+            None => Ok((Subst::new(), new_vars, pat_type)),
         }
-        None => Ok((Subst::new(), new_vars, pat_type)),
+    }
+
+    pub fn infer_pattern_and_init(
+        &self,
+        pattern: &mut Pattern,
+        type_ann: Option<&mut TypeAnn>,
+        init: &(Subst, Type),
+        ctx: &mut Context,
+        pu: &PatternUsage,
+        top_level: bool,
+    ) -> Result<Subst, Vec<TypeError>> {
+        let type_param_map = HashMap::new();
+        let (ps, pa, pt) = self.infer_pattern(pattern, type_ann, ctx, &type_param_map)?;
+
+        // Unifies initializer and pattern.
+        let s = match pu {
+            // Assign: The inferred type of the init value must be a sub-type
+            // of the pattern it's being assigned to.
+            PatternUsage::Assign => unify(&init.1, &pt, ctx)?,
+            // Matching: The pattern must be a sub-type of the expression
+            // it's being matched against
+            PatternUsage::Match => unify(&pt, &init.1, ctx)?,
+        };
+
+        // infer_pattern can generate a non-empty Subst when the pattern includes
+        // a type annotation.
+        let s = compose_subs(&ps, &s);
+        let s = compose_subs(&init.0, &s);
+        let pa = pa.apply(&s);
+
+        for (name, mut binding) in pa {
+            if top_level {
+                binding.t = close_over(&s, &binding.t, ctx);
+            }
+            ctx.insert_binding(name, binding);
+        }
+
+        update_pattern(pattern, &s);
+
+        Ok(s)
     }
 }
 
@@ -224,43 +268,4 @@ fn infer_pattern_rec(
 pub enum PatternUsage {
     Assign,
     Match,
-}
-
-pub fn infer_pattern_and_init(
-    pattern: &mut Pattern,
-    type_ann: Option<&mut TypeAnn>,
-    init: &(Subst, Type),
-    ctx: &mut Context,
-    pu: &PatternUsage,
-    top_level: bool,
-) -> Result<Subst, Vec<TypeError>> {
-    let type_param_map = HashMap::new();
-    let (ps, pa, pt) = infer_pattern(pattern, type_ann, ctx, &type_param_map)?;
-
-    // Unifies initializer and pattern.
-    let s = match pu {
-        // Assign: The inferred type of the init value must be a sub-type
-        // of the pattern it's being assigned to.
-        PatternUsage::Assign => unify(&init.1, &pt, ctx)?,
-        // Matching: The pattern must be a sub-type of the expression
-        // it's being matched against
-        PatternUsage::Match => unify(&pt, &init.1, ctx)?,
-    };
-
-    // infer_pattern can generate a non-empty Subst when the pattern includes
-    // a type annotation.
-    let s = compose_subs(&ps, &s);
-    let s = compose_subs(&init.0, &s);
-    let pa = pa.apply(&s);
-
-    for (name, mut binding) in pa {
-        if top_level {
-            binding.t = close_over(&s, &binding.t, ctx);
-        }
-        ctx.insert_binding(name, binding);
-    }
-
-    update_pattern(pattern, &s);
-
-    Ok(s)
 }

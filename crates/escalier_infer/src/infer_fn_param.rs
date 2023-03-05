@@ -4,54 +4,58 @@ use escalier_ast::types::{self as types, TFnParam, TKeyword, TPat, Type, TypeKin
 use escalier_ast::values::*;
 
 use crate::context::{Binding, Context};
-use crate::infer_pattern::infer_pattern;
 use crate::substitutable::Subst;
 use crate::type_error::TypeError;
 
-// NOTE: The caller is responsible for inserting any new variables introduced
-// into the appropriate context.
-pub fn infer_fn_param(
-    param: &mut EFnParam,
-    ctx: &mut Context,
-    type_param_map: &HashMap<String, Type>,
-) -> Result<(Subst, TFnParam), Vec<TypeError>> {
-    let (ps, mut pa, pt) =
-        infer_pattern(&mut param.pat, param.type_ann.as_mut(), ctx, type_param_map)?;
+use crate::checker::Checker;
 
-    // TypeScript annotates rest params using an array type so we do the
-    // same thing by converting top-level rest types to array types.
-    let pt = if let TypeKind::Rest(arg) = &pt.kind {
-        Type::from(TypeKind::Array(arg.to_owned()))
-    } else {
-        pt
-    };
+impl Checker {
+    // NOTE: The caller is responsible for inserting any new variables introduced
+    // into the appropriate context.
+    pub fn infer_fn_param(
+        &self,
+        param: &mut EFnParam,
+        ctx: &mut Context,
+        type_param_map: &HashMap<String, Type>,
+    ) -> Result<(Subst, TFnParam), Vec<TypeError>> {
+        let (ps, mut pa, pt) =
+            self.infer_pattern(&mut param.pat, param.type_ann.as_mut(), ctx, type_param_map)?;
 
-    // If the param is optional...
-    if param.optional {
-        // ...we replace all bindings with new bindings where the type `T` is
-        // updated to `T | undefined`.
-        if let Some((name, binding)) = pa.iter().find(|(_, value)| pt == value.t) {
-            let binding = Binding {
-                mutable: binding.mutable,
-                // TODO: copy over the provenance from binding.t
-                t: Type::from(TypeKind::Union(vec![
-                    binding.t.to_owned(),
-                    Type::from(TypeKind::Keyword(TKeyword::Undefined)),
-                ])),
-            };
-            pa.insert(name.to_owned(), binding);
+        // TypeScript annotates rest params using an array type so we do the
+        // same thing by converting top-level rest types to array types.
+        let pt = if let TypeKind::Rest(arg) = &pt.kind {
+            Type::from(TypeKind::Array(arg.to_owned()))
+        } else {
+            pt
         };
+
+        // If the param is optional...
+        if param.optional {
+            // ...we replace all bindings with new bindings where the type `T` is
+            // updated to `T | undefined`.
+            if let Some((name, binding)) = pa.iter().find(|(_, value)| pt == value.t) {
+                let binding = Binding {
+                    mutable: binding.mutable,
+                    // TODO: copy over the provenance from binding.t
+                    t: Type::from(TypeKind::Union(vec![
+                        binding.t.to_owned(),
+                        Type::from(TypeKind::Keyword(TKeyword::Undefined)),
+                    ])),
+                };
+                pa.insert(name.to_owned(), binding);
+            };
+        }
+
+        let param = TFnParam {
+            pat: pattern_to_tpat(&param.pat),
+            t: pt,
+            optional: param.optional,
+        };
+
+        ctx.insert_bindings(&pa);
+
+        Ok((ps, param))
     }
-
-    let param = TFnParam {
-        pat: pattern_to_tpat(&param.pat),
-        t: pt,
-        optional: param.optional,
-    };
-
-    ctx.insert_bindings(&pa);
-
-    Ok((ps, param))
 }
 
 pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
