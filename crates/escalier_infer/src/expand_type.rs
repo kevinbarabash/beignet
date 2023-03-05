@@ -778,13 +778,12 @@ pub fn get_obj_type(t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeErro
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::infer;
     use escalier_parser::*;
 
     fn infer_prog(input: &str) -> Context {
         let mut prog = parse(input).unwrap();
         let mut ctx: Context = Context::default();
-        infer::infer_prog(&mut prog, &mut ctx).unwrap()
+        crate::infer_prog(&mut prog, &mut ctx).unwrap()
     }
 
     fn get_keyof(name: &str, ctx: &mut Context) -> String {

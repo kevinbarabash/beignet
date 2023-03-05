@@ -11,16 +11,13 @@ pub fn messages(report: &[TypeError]) -> Vec<String> {
 fn infer(input: &str) -> String {
     let mut ctx = escalier_infer::Context::default();
     let prog = parse(input).unwrap();
-    let stmt = prog.body.get(0).unwrap();
+    let mut stmt = prog.body.get(0).unwrap().to_owned();
     let result = match &stmt.kind {
-        StmtKind::ExprStmt(expr) => {
-            let mut expr = expr.to_owned();
-            infer_expr(&mut ctx, &mut expr)
-        }
+        StmtKind::ExprStmt(_) => infer_stmt(&mut stmt, &mut ctx, true),
         _ => Err(vec![TypeError::Unspecified]),
     };
     match result {
-        Ok(t) => t.to_string(),
+        Ok((_s, t)) => t.to_string(),
         Err(error) => {
             let message = error
                 .iter()

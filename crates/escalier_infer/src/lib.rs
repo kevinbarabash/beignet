@@ -5,6 +5,7 @@ mod infer_class;
 mod infer_expr;
 mod infer_fn_param;
 mod infer_pattern;
+mod infer_prog;
 mod infer_regex;
 mod infer_stmt;
 mod infer_type_ann;
@@ -16,11 +17,10 @@ mod unify_mut;
 mod update;
 mod util;
 
-pub mod infer;
-
 pub use context::*;
 pub use expand_type::expand_type;
-pub use infer::*;
+pub use infer_prog::*;
+pub use infer_stmt::*;
 pub use scheme::{get_sub_and_type_params, instantiate, Scheme};
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
@@ -39,7 +39,7 @@ mod tests {
     fn infer(input: &str) -> String {
         let mut ctx = Context::default();
         let mut prog = parse(&format!("let x = {input};")).unwrap();
-        match infer::infer_prog(&mut prog, &mut ctx) {
+        match infer_prog::infer_prog(&mut prog, &mut ctx) {
             Ok(ctx) => get_value_type("x", &ctx),
             Err(error) => {
                 let message = error
@@ -55,7 +55,7 @@ mod tests {
     fn infer_prog(input: &str) -> Context {
         let mut prog = parse(input).unwrap();
         let mut ctx: Context = Context::default();
-        match infer::infer_prog(&mut prog, &mut ctx) {
+        match infer_prog::infer_prog(&mut prog, &mut ctx) {
             Ok(ctx) => ctx,
             Err(error) => {
                 let message = error
@@ -79,7 +79,7 @@ mod tests {
         };
         let mut ctx = Context::default();
 
-        match infer::infer_prog(&mut prog, &mut ctx) {
+        match infer_prog::infer_prog(&mut prog, &mut ctx) {
             Ok(_) => panic!("was expect infer_prog() to return an error"),
             Err(report) => messages(&report),
         }
@@ -2429,7 +2429,7 @@ mod tests {
 
         let mut prog = parse(src).unwrap();
         let mut ctx: Context = Context::default();
-        infer::infer_prog(&mut prog, &mut ctx).unwrap();
+        infer_prog::infer_prog(&mut prog, &mut ctx).unwrap();
 
         insta::assert_debug_snapshot!(prog);
     }
@@ -2883,7 +2883,7 @@ mod tests {
 
         let mut prog = parse(src).unwrap();
         let mut ctx: Context = Context::default();
-        match infer::infer_prog(&mut prog, &mut ctx) {
+        match infer_prog::infer_prog(&mut prog, &mut ctx) {
             Ok(_) => panic!("expected an error"),
             Err(report) => {
                 eprintln!("{report:#?}");
@@ -2908,7 +2908,7 @@ mod tests {
 
         let mut prog = parse(src).unwrap();
         let mut ctx: Context = Context::default();
-        match infer::infer_prog(&mut prog, &mut ctx) {
+        match infer_prog::infer_prog(&mut prog, &mut ctx) {
             Ok(_) => panic!("expected an error"),
             Err(report) => {
                 eprintln!("{report:#?}");
