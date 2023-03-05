@@ -67,76 +67,78 @@ Ok(
                                 kind: Lambda(
                                     Lambda {
                                         params: [],
-                                        body: Block {
-                                            span: 22..34,
-                                            stmts: [
-                                                Statement {
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 0,
-                                                            column: 24,
-                                                        },
-                                                        end: Position {
-                                                            line: 0,
-                                                            column: 32,
-                                                        },
-                                                    },
-                                                    span: 24..32,
-                                                    kind: ExprStmt(
-                                                        Expr {
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 0,
-                                                                    column: 24,
-                                                                },
-                                                                end: Position {
-                                                                    line: 0,
-                                                                    column: 32,
-                                                                },
+                                        body: Block(
+                                            Block {
+                                                span: 22..34,
+                                                stmts: [
+                                                    Statement {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 24,
                                                             },
-                                                            span: 24..32,
-                                                            kind: Await(
-                                                                Await {
-                                                                    expr: Expr {
-                                                                        loc: SourceLocation {
-                                                                            start: Position {
-                                                                                line: 0,
-                                                                                column: 30,
-                                                                            },
-                                                                            end: Position {
-                                                                                line: 0,
-                                                                                column: 32,
-                                                                            },
-                                                                        },
-                                                                        span: 30..32,
-                                                                        kind: Lit(
-                                                                            Num(
-                                                                                Num {
-                                                                                    loc: SourceLocation {
-                                                                                        start: Position {
-                                                                                            line: 0,
-                                                                                            column: 30,
-                                                                                        },
-                                                                                        end: Position {
-                                                                                            line: 0,
-                                                                                            column: 32,
-                                                                                        },
-                                                                                    },
-                                                                                    span: 30..32,
-                                                                                    value: "10",
-                                                                                },
-                                                                            ),
-                                                                        ),
-                                                                        inferred_type: None,
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 32,
+                                                            },
+                                                        },
+                                                        span: 24..32,
+                                                        kind: ExprStmt(
+                                                            Expr {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 24,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 32,
                                                                     },
                                                                 },
-                                                            ),
-                                                            inferred_type: None,
-                                                        },
-                                                    ),
-                                                },
-                                            ],
-                                        },
+                                                                span: 24..32,
+                                                                kind: Await(
+                                                                    Await {
+                                                                        expr: Expr {
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 0,
+                                                                                    column: 30,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 0,
+                                                                                    column: 32,
+                                                                                },
+                                                                            },
+                                                                            span: 30..32,
+                                                                            kind: Lit(
+                                                                                Num(
+                                                                                    Num {
+                                                                                        loc: SourceLocation {
+                                                                                            start: Position {
+                                                                                                line: 0,
+                                                                                                column: 30,
+                                                                                            },
+                                                                                            end: Position {
+                                                                                                line: 0,
+                                                                                                column: 32,
+                                                                                            },
+                                                                                        },
+                                                                                        span: 30..32,
+                                                                                        value: "10",
+                                                                                    },
+                                                                                ),
+                                                                            ),
+                                                                            inferred_type: None,
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                inferred_type: None,
+                                                            },
+                                                        ),
+                                                    },
+                                                ],
+                                            },
+                                        ),
                                         is_async: true,
                                         return_type: None,
                                         type_params: None,

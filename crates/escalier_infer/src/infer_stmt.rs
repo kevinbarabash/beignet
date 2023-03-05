@@ -160,6 +160,15 @@ pub fn infer_stmt(
 
             Ok((s, t))
         }
+        StmtKind::ReturnStmt(ReturnStmt { arg }) => match arg {
+            Some(arg) => infer_expr(ctx, arg.as_mut(), false),
+            None => {
+                let s = Subst::default();
+                let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+
+                Ok((s, t))
+            }
+        },
     }
 }
 
@@ -179,4 +188,28 @@ pub fn infer_block(body: &mut Block, ctx: &mut Context) -> Result<(Subst, Type),
     ctx.count = new_ctx.count;
 
     Ok((s, t))
+}
+
+pub fn infer_block_or_expr(
+    body: &mut BlockOrExpr,
+    ctx: &mut Context,
+) -> Result<(Subst, Type), Vec<TypeError>> {
+    match body {
+        BlockOrExpr::Block(block) => {
+            let (s, t) = infer_block(block, ctx)?;
+
+            let t = if let Some(last) = block.stmts.last() {
+                if let StmtKind::ReturnStmt(_) = &last.kind {
+                    t
+                } else {
+                    Type::from(TypeKind::Keyword(TKeyword::Undefined))
+                }
+            } else {
+                Type::from(TypeKind::Keyword(TKeyword::Undefined))
+            };
+
+            Ok((s, t))
+        }
+        BlockOrExpr::Expr(expr) => infer_expr(ctx, expr, false),
+    }
 }

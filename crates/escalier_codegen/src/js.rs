@@ -145,6 +145,10 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
                         ctx,
                     ))),
                 })),
+
+                values::StmtKind::ReturnStmt(_) => {
+                    panic!("return statements aren't allowed at the top level")
+                }
             };
 
             let mut items: Vec<ModuleItem> = stmts
@@ -366,27 +370,13 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 .map(|arg| build_pattern(&arg.pat, stmts, ctx).unwrap())
                 .collect();
 
-            let len = body.stmts.len();
-
-            let body = if body.stmts.is_empty() {
-                BlockStmtOrExpr::BlockStmt(BlockStmt {
-                    span: DUMMY_SP,
-                    stmts: vec![],
-                })
-            } else if len == 1 {
-                // TODO: Fix this - it doesn't doesn't handle expressions that introduce
-                // temporary variables correctly.
-                if let values::StmtKind::ExprStmt(expr) = &body.stmts[0].kind {
+            let body = match body {
+                values::BlockOrExpr::Block(body) => BlockStmtOrExpr::BlockStmt(
+                    build_body_block_stmt(body, &BlockFinalizer::ExprStmt, ctx),
+                ),
+                values::BlockOrExpr::Expr(expr) => {
                     BlockStmtOrExpr::Expr(Box::from(build_expr(expr, stmts, ctx)))
-                } else {
-                    todo!("body contains a single statement that isn't an ExprStmt");
                 }
-            } else {
-                BlockStmtOrExpr::BlockStmt(build_body_block_stmt(
-                    body,
-                    &BlockFinalizer::Return,
-                    ctx,
-                ))
             };
 
             Expr::Arrow(ArrowExpr {
@@ -490,9 +480,9 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             })
         }
         values::ExprKind::Fix(values::Fix { expr, .. }) => match &expr.kind {
-            values::ExprKind::Lambda(values::Lambda { body, .. }) => match &body.stmts[0].kind {
-                values::StmtKind::ExprStmt(expr) => build_expr(expr, stmts, ctx),
-                _ => panic!("Invalid recursive function"),
+            values::ExprKind::Lambda(values::Lambda { body, .. }) => match body {
+                values::BlockOrExpr::Expr(expr) => build_expr(expr, stmts, ctx),
+                values::BlockOrExpr::Block(_) => panic!("Invalid recursive function"),
             },
             _ => panic!("Fix should only wrap a lambda"),
         },
@@ -708,9 +698,6 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
 enum BlockFinalizer {
     ExprStmt,
     Assign(Ident),
-    // In the future, code will need to include return statements explicitly in
-    // the code so this won't be necessary.
-    Return,
 }
 
 fn build_finalizer(expr: &Expr, finalizer: &BlockFinalizer) -> Stmt {
@@ -726,10 +713,6 @@ fn build_finalizer(expr: &Expr, finalizer: &BlockFinalizer) -> Stmt {
                 }))),
                 right: Box::from(expr.to_owned()),
             })),
-        }),
-        BlockFinalizer::Return => Stmt::Return(ReturnStmt {
-            span: DUMMY_SP,
-            arg: Some(Box::from(expr.to_owned())),
         }),
         BlockFinalizer::ExprStmt => Stmt::Expr(ExprStmt {
             span: DUMMY_SP,
@@ -807,6 +790,16 @@ fn build_body_block_stmt(
                 });
                 new_stmts.push(stmt);
             }
+            values::StmtKind::ReturnStmt(values::ReturnStmt { arg }) => {
+                let stmt = Stmt::Return(ReturnStmt {
+                    span: DUMMY_SP,
+                    arg: arg
+                        .as_ref()
+                        .map(|arg| Box::from(build_expr(arg.as_ref(), &mut new_stmts, ctx))),
+                });
+                new_stmts.push(stmt);
+            }
+
             // Types are ignored when generating .js code.
             values::StmtKind::TypeDecl(_) => (),
             // Variable declarations that use `declare` are ignored as well.
@@ -1062,7 +1055,12 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
                 }))
             }
             values::ClassMember::Method(method) => {
-                let body = build_body_block_stmt(&method.lambda.body, &BlockFinalizer::Return, ctx);
+                let body = match &method.lambda.body {
+                    values::BlockOrExpr::Block(body) => {
+                        build_body_block_stmt(body, &BlockFinalizer::ExprStmt, ctx)
+                    }
+                    values::BlockOrExpr::Expr(_) => panic!("Invalid method body"),
+                };
                 // In Crochet, `self` is always the first param in non-static
                 // methods, but it represents `this` in JavaScript which is
                 // implicit so we ignore it here.

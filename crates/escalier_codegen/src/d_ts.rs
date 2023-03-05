@@ -90,6 +90,7 @@ fn build_d_ts(program: &values::Program, ctx: &Context) -> Program {
             }
             values::StmtKind::ExprStmt(_) => (), // nothing is exported
             values::StmtKind::ForStmt(_) => (),  // nothing is exported
+            values::StmtKind::ReturnStmt(_) => (), // nothing is exported
         }
     }
 

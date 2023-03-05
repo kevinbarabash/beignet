@@ -43,9 +43,15 @@ pub struct LetExpr {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
+pub enum BlockOrExpr {
+    Block(Block),
+    Expr(Box<Expr>),
+}
+
+#[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
 pub struct Lambda {
     pub params: Vec<EFnParam>,
-    pub body: Block,
+    pub body: BlockOrExpr,
     #[drive(skip)]
     pub is_async: bool,
     pub return_type: Option<TypeAnn>,

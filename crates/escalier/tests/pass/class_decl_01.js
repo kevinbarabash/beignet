@@ -10,9 +10,7 @@ class Foo {
     baz() {
         return "world!";
     }
-    qux(msg) {
-        return undefined;
-    }
+    qux(msg) {}
 }
 export const f1 = new Foo();
 export const msg1 = f1.bar();

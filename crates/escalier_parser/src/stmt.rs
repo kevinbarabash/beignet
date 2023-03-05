@@ -59,6 +59,14 @@ pub fn parse_statement(
                 body: parse_block_statement(&body_node, src)?,
             })
         }
+        "return_statement" => {
+            let arg = match node.named_child(0) {
+                Some(arg) => Some(Box::from(parse_expression(&arg, src)?)),
+                None => None,
+            };
+
+            StmtKind::ReturnStmt(ReturnStmt { arg })
+        }
         "comment" => {
             return Ok(None); // ignore comments
         }
@@ -139,14 +147,7 @@ fn parse_declaration(
                     type_ann: type_ann.clone(),
                     optional: false,
                 }],
-                body: Block {
-                    span: value.byte_range(),
-                    stmts: vec![Statement {
-                        loc: SourceLocation::from(&value),
-                        span: value.byte_range(),
-                        kind: StmtKind::ExprStmt(parse_expression(&value, src)?),
-                    }],
-                },
+                body: BlockOrExpr::Expr(Box::from(parse_expression(&value, src)?)),
                 is_async: false,
                 return_type: None,
                 type_params: None, // TODO: support type params on VarDecls
@@ -252,7 +253,7 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Option<Statem
                         kind,
                         lambda: Lambda {
                             params,
-                            body,
+                            body: BlockOrExpr::Block(body),
                             is_async: child.child_by_field_name("async").is_some(),
                             return_type,
                             type_params,

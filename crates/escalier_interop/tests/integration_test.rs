@@ -485,9 +485,9 @@ fn infer_prog_using_partial() {
 fn infer_partial_with_getters_and_setters_on_class_instance() {
     let src = r#"
     class Foo {
-        get bar(self): number { 5; }
+        get bar(self): number { return 5; }
         set baz(mut self, value: string) {}
-        qux(): boolean { true; }
+        qux(): boolean { return true; }
     }
     type PartialFoo = Partial<Foo>;
 
@@ -629,9 +629,9 @@ fn infer_method_type_with_indexed_access() {
 fn infer_getter_setter_types_with_indexed_access() {
     let src = r#"
     class Foo {
-        get bar(self): number { 5; }
+        get bar(self): number { return 5; }
         set baz(mut self, value: string) {}
-        qux(): boolean { true; }
+        qux(): boolean { return true; }
     }
     type T1 = Foo["bar"];
     type T2 = Foo["baz"];

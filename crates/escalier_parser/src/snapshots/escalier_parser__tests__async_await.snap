@@ -33,23 +33,22 @@ Ok(
                         kind: Lambda(
                             Lambda {
                                 params: [],
-                                body: Block {
-                                    span: 12..14,
-                                    stmts: [
-                                        Statement {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 0,
-                                                    column: 12,
-                                                },
-                                                end: Position {
-                                                    line: 0,
-                                                    column: 14,
-                                                },
+                                body: Expr(
+                                    Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 12,
                                             },
-                                            span: 12..14,
-                                            kind: ExprStmt(
-                                                Expr {
+                                            end: Position {
+                                                line: 0,
+                                                column: 14,
+                                            },
+                                        },
+                                        span: 12..14,
+                                        kind: Lit(
+                                            Num(
+                                                Num {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 0,
@@ -61,30 +60,13 @@ Ok(
                                                         },
                                                     },
                                                     span: 12..14,
-                                                    kind: Lit(
-                                                        Num(
-                                                            Num {
-                                                                loc: SourceLocation {
-                                                                    start: Position {
-                                                                        line: 0,
-                                                                        column: 12,
-                                                                    },
-                                                                    end: Position {
-                                                                        line: 0,
-                                                                        column: 14,
-                                                                    },
-                                                                },
-                                                                span: 12..14,
-                                                                value: "10",
-                                                            },
-                                                        ),
-                                                    ),
-                                                    inferred_type: None,
+                                                    value: "10",
                                                 },
                                             ),
-                                        },
-                                    ],
-                                },
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                ),
                                 is_async: true,
                                 return_type: None,
                                 type_params: None,
