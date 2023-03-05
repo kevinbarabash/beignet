@@ -8,7 +8,6 @@ use crate::scheme::generalize;
 use crate::substitutable::Subst;
 use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
-use crate::unify::unify;
 use crate::update::*;
 use crate::util::*;
 
@@ -148,7 +147,7 @@ impl Checker {
 
                 let (_expr_s, expr_t) = self.infer_expr(ctx, expr, false)?;
 
-                let s1 = unify(&expr_t, &array_t, ctx)?;
+                let s1 = self.unify(&expr_t, &array_t, ctx)?;
                 let elem_t = elem_t.apply(&s1);
 
                 let mut new_ctx = ctx.clone();

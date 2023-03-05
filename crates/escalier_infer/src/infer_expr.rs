@@ -8,12 +8,10 @@ use escalier_ast::types::{
 use escalier_ast::values::*;
 
 use crate::context::Context;
-use crate::expand_type::get_obj_type;
 use crate::infer_pattern::PatternUsage;
 use crate::scheme::get_type_param_map;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
-use crate::unify::unify;
 use crate::util::*;
 
 use crate::checker::Checker;
@@ -75,7 +73,7 @@ impl Checker {
                 call_type.provenance =
                     Some(Box::from(Provenance::Expr(Box::from(expr.to_owned()))));
 
-                let s3 = unify(&call_type, &lam_type, ctx)?;
+                let s3 = self.unify(&call_type, &lam_type, ctx)?;
 
                 ss.push(s3);
 
@@ -95,7 +93,7 @@ impl Checker {
 
                 let (s1, t) = self.infer_expr(ctx, expr, false)?;
                 ss.push(s1);
-                let t = get_obj_type(&t, ctx)?;
+                let t = self.get_obj_type(&t, ctx)?;
 
                 for arg in args {
                     let (arg_s, mut arg_t) = self.infer_expr(ctx, &mut arg.expr, false)?;
@@ -167,7 +165,7 @@ impl Checker {
                                 type_args: None,
                             }));
 
-                            if let Ok(s3) = unify(&call_type, &lam_type, ctx) {
+                            if let Ok(s3) = self.unify(&call_type, &lam_type, ctx) {
                                 ss.push(s3);
 
                                 let s = compose_many_subs(&ss.clone());
@@ -217,7 +215,7 @@ impl Checker {
                     t: tv.clone(),
                     optional: false,
                 };
-                let s2 = unify(
+                let s2 = self.unify(
                     &Type::from(TypeKind::Lam(types::TLam {
                         params: vec![param],
                         ret: Box::from(tv),
@@ -281,8 +279,11 @@ impl Checker {
                             let (s1, t1) = self.infer_expr(ctx, cond, false)?;
                             let (s2, t2) = self.infer_block(consequent, ctx)?;
                             let (s3, t3) = self.infer_block(alternate, ctx)?;
-                            let s4 =
-                                unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
+                            let s4 = self.unify(
+                                &t1,
+                                &Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                                ctx,
+                            )?;
 
                             let s = compose_many_subs(&[s1, s2, s3, s4]);
                             let t = union_types(&t2, &t3);
@@ -318,8 +319,11 @@ impl Checker {
                     _ => {
                         let (s1, t1) = self.infer_expr(ctx, cond, false)?;
                         let (s2, t2) = self.infer_block(consequent, ctx)?;
-                        let s3 =
-                            unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)), ctx)?;
+                        let s3 = self.unify(
+                            &t1,
+                            &Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                            ctx,
+                        )?;
 
                         let s = compose_many_subs(&[s1, s2, s3]);
 
@@ -387,7 +391,7 @@ impl Checker {
                             }));
 
                             let s1 = compose_many_subs(&ss);
-                            let s2 = unify(&call_type, &t, ctx)?;
+                            let s2 = self.unify(&call_type, &t, ctx)?;
 
                             let s = compose_subs(&s2, &s1);
                             let t = ret_type;
@@ -463,7 +467,7 @@ impl Checker {
                     let (ret_s, ret_t) =
                         self.infer_type_ann_with_params(rt_type_ann, ctx, &type_params_map)?;
                     ss.push(ret_s);
-                    ss.push(unify(&body_t, &ret_t, ctx)?);
+                    ss.push(self.unify(&body_t, &ret_t, ctx)?);
                 }
 
                 let t = Type::from(TypeKind::Lam(types::TLam {
@@ -504,7 +508,7 @@ impl Checker {
                     todo!("handle update assignment operators");
                 }
 
-                let s = unify(&rt, &lt, ctx)?;
+                let s = self.unify(&rt, &lt, ctx)?;
 
                 let s = compose_many_subs(&[rs, ls, s]);
                 let t = rt; // This is JavaScript's behavior
@@ -535,8 +539,8 @@ impl Checker {
                 // time and set the result to be appropriate number literal.
                 let (s1, t1) = self.infer_expr(ctx, left, false)?;
                 let (s2, t2) = self.infer_expr(ctx, right, false)?;
-                let s3 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
-                let s4 = unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
+                let s3 = self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
+                let s4 = self.unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
 
                 let s = compose_many_subs(&[s1, s2, s3, s4]);
 
@@ -589,7 +593,7 @@ impl Checker {
             }
             ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
                 let (s1, t1) = self.infer_expr(ctx, arg, false)?;
-                let s2 = unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
+                let s2 = self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
 
                 let s = compose_many_subs(&[s1, s2]);
                 let t = match op {
@@ -666,7 +670,7 @@ impl Checker {
                     type_args: Some(vec![inner_t.clone()]),
                 }));
 
-                let s2 = unify(&t1, &promise_t, ctx)?;
+                let s2 = self.unify(&t1, &promise_t, ctx)?;
                 let s = compose_subs(&s2, &s1);
 
                 Ok((s, inner_t))
@@ -826,22 +830,22 @@ impl Checker {
             },
             TypeKind::Object(obj) => self.get_prop_value(obj, prop, ctx, is_lvalue, obj_t.mutable),
             TypeKind::Ref(_) => {
-                let mut t = get_obj_type(obj_t, ctx)?;
+                let mut t = self.get_obj_type(obj_t, ctx)?;
                 t.mutable = obj_t.mutable;
                 self.infer_property_type(&mut t, prop, ctx, is_lvalue)
             }
             TypeKind::Lit(_) => {
-                let mut t = get_obj_type(obj_t, ctx)?;
+                let mut t = self.get_obj_type(obj_t, ctx)?;
                 self.infer_property_type(&mut t, prop, ctx, is_lvalue)
             }
             TypeKind::Keyword(_) => {
-                let mut t = get_obj_type(obj_t, ctx)?;
+                let mut t = self.get_obj_type(obj_t, ctx)?;
                 self.infer_property_type(&mut t, prop, ctx, is_lvalue)
             }
             TypeKind::Array(type_param) => {
                 let type_param = type_param.clone();
 
-                let mut t = get_obj_type(obj_t, ctx)?;
+                let mut t = self.get_obj_type(obj_t, ctx)?;
                 t.mutable = obj_t.mutable;
 
                 let (s, mut t) = self.infer_property_type(&mut t, prop, ctx, is_lvalue)?;
@@ -1062,7 +1066,7 @@ impl Checker {
                         } else {
                             for indexer in indexers {
                                 let key_clone = indexer.key.t.clone();
-                                let result = unify(&prop_t_clone, &key_clone, ctx);
+                                let result = self.unify(&prop_t_clone, &key_clone, ctx);
                                 if result.is_ok() {
                                     let key_s = result?;
                                     let s = compose_subs(&key_s, &prop_s_clone);

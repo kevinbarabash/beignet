@@ -6,7 +6,6 @@ use crate::context::{Binding, Context};
 use crate::scheme::Scheme;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
-use crate::unify::unify;
 use crate::util::compose_many_subs;
 
 use crate::checker::Checker;
@@ -178,7 +177,7 @@ impl Checker {
                         let (ret_s, ret_t) =
                             self.infer_type_ann_with_params(ret_type_ann, ctx, &type_params_map)?;
                         ss.push(ret_s);
-                        ss.push(unify(&body_t, &ret_t, ctx)?);
+                        ss.push(self.unify(&body_t, &ret_t, ctx)?);
                     } else if kind != &MethodKind::Setter {
                         return Err(vec![TypeError::MethodsMustHaveTypes]);
                     }

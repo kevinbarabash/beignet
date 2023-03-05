@@ -7,7 +7,6 @@ use crate::assump::Assump;
 use crate::context::{Binding, Context};
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
-use crate::unify::unify;
 use crate::update::update_pattern;
 use crate::util::*;
 
@@ -38,7 +37,7 @@ impl Checker {
 
                 // Allowing type_ann_ty to be a subtype of pat_type because
                 // only non-refutable patterns can have type annotations.
-                let s = unify(&type_ann_t, &pat_type, ctx)?;
+                let s = self.unify(&type_ann_t, &pat_type, ctx)?;
                 let s = compose_subs(&s, &type_ann_s);
 
                 // Substs are applied to any new variables introduced.  This handles
@@ -67,10 +66,10 @@ impl Checker {
         let s = match pu {
             // Assign: The inferred type of the init value must be a sub-type
             // of the pattern it's being assigned to.
-            PatternUsage::Assign => unify(&init.1, &pt, ctx)?,
+            PatternUsage::Assign => self.unify(&init.1, &pt, ctx)?,
             // Matching: The pattern must be a sub-type of the expression
             // it's being matched against
-            PatternUsage::Match => unify(&pt, &init.1, ctx)?,
+            PatternUsage::Match => self.unify(&pt, &init.1, ctx)?,
         };
 
         // infer_pattern can generate a non-empty Subst when the pattern includes
