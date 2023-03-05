@@ -967,3 +967,47 @@ fn top_leve_return() {
     ]);
     "###);
 }
+
+#[test]
+fn multiple_returns_stress_test() {
+    let src = r#"
+    let foo = (cond: boolean) => {
+        let bar = () => {
+            if (cond) {
+                return 5;
+            };
+        };
+        if (cond) {
+            return bar();
+        };
+        return 10;
+    };
+    "#;
+
+    let (js, _) = compile(src);
+    insta::assert_snapshot!(js, @r###"
+    export const foo = (cond)=>{
+        const bar = ()=>{
+            let $temp_0;
+            if (cond) {
+                return 5;
+            }
+            $temp_0;
+        };
+        let $temp_1;
+        if (cond) {
+            return bar();
+        }
+        $temp_1;
+        return 10;
+    };
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut ctx = Context::default();
+    infer_prog(&mut program, &mut ctx).unwrap();
+    let result = codegen_d_ts(&program, &ctx);
+
+    insta::assert_snapshot!(result, @"export declare const foo: (cond: boolean) => 10 | 5;
+");
+}
