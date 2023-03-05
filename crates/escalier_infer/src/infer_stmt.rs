@@ -223,17 +223,17 @@ pub fn infer_block_or_expr(
             let mut visitor = FindReturnsVisitor::default();
             block.drive_mut(&mut visitor);
 
-            let types = visitor
-                .ret_stmts
-                .iter()
-                .map(|ret| match &ret.arg {
-                    Some(arg) => match &arg.inferred_type {
-                        Some(t) => t.to_owned(),
-                        None => todo!("generate a type var as the return type?"),
-                    },
-                    None => Type::from(TypeKind::Keyword(TKeyword::Undefined)),
-                })
-                .collect::<Vec<_>>();
+            let mut types = vec![];
+            for ret in &visitor.ret_stmts {
+                match &ret.arg {
+                    Some(arg) => {
+                        if let Some(t) = &arg.inferred_type {
+                            types.push(t.to_owned());
+                        }
+                    }
+                    None => types.push(Type::from(TypeKind::Keyword(TKeyword::Undefined))),
+                }
+            }
 
             let t = if types.is_empty() {
                 Type::from(TypeKind::Keyword(TKeyword::Undefined))
