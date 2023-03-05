@@ -144,7 +144,7 @@ pub fn expand_alias_type(alias: &TRef, ctx: &mut Context) -> Result<Type, Vec<Ty
 }
 
 #[derive(VisitorMut)]
-#[visitor(Type(enter))]
+#[visitor(TInferType(enter))]
 struct FindInferTypesVisitor {
     infer_types: Vec<TInferType>,
 }
@@ -155,10 +155,8 @@ impl FindInferTypesVisitor {
             infer_types: vec![],
         }
     }
-    fn enter_type(&mut self, t: &mut Type) {
-        if let TypeKind::InferType(it) = &t.kind {
-            self.infer_types.push(it.to_owned());
-        }
+    fn enter_t_infer_type(&mut self, t: &mut TInferType) {
+        self.infer_types.push(t.to_owned());
     }
 }
 
