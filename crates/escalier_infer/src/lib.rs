@@ -3518,4 +3518,24 @@ mod tests {
 
         assert_eq!(get_value_type("result", &ctx), "undefined");
     }
+
+    #[test]
+    fn return_with_no_arg() {
+        let src = r#"
+        let foo = () => {
+            return;
+        };
+        let result = foo();
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("result", &ctx), "undefined");
+    }
+
+    #[test]
+    #[should_panic = "TypeError::MissingTypeAnnotation"]
+    fn declare_without_type_ann() {
+        let src = "declare const foo;";
+        infer_prog(src);
+    }
 }

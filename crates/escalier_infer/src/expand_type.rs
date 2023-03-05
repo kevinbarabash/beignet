@@ -16,7 +16,6 @@ use crate::util::{get_property_type, replace_aliases_rec, union_many_types, unio
 // `expand_type` is used to expand types that `unify` doesn't know how to unify
 // into something that it does know how to unify.
 pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
-    eprintln!("expand_type({t}, ctx);");
     match &t.kind {
         TypeKind::Var(_) => Ok(t.to_owned()),
         TypeKind::App(_) => Ok(t.to_owned()),
@@ -38,10 +37,7 @@ pub fn expand_type(t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> 
                 // We don't bother expanding interfaces since unifying them based
                 // on their properties is expensive.
                 TypeKind::Object(obj) if obj.is_interface => Ok(t.to_owned()),
-                scheme_kind => {
-                    eprintln!("scheme_kind = {scheme_kind:#?}");
-                    expand_alias_type(alias, ctx)
-                }
+                _ => expand_alias_type(alias, ctx),
             }
         }
         TypeKind::Tuple(_) => Ok(t.to_owned()),

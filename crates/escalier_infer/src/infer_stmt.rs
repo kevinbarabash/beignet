@@ -19,7 +19,6 @@ pub fn infer_stmt(
     ctx: &mut Context,
     top_level: bool,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
-    eprintln!("infer_stmt");
     match &mut stmt.kind {
         StmtKind::VarDecl(VarDecl {
             declare,
@@ -174,7 +173,6 @@ pub fn infer_stmt(
 }
 
 pub fn infer_block(body: &mut Block, ctx: &mut Context) -> Result<(Subst, Type), Vec<TypeError>> {
-    eprintln!("infer_block");
     let mut new_ctx = ctx.clone();
     let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
     let mut s = Subst::new();

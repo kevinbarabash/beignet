@@ -24,7 +24,6 @@ pub fn infer_expr(
     expr: &mut Expr,
     is_lvalue: bool,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
-    eprintln!("infer_expr");
     let result = match &mut expr.kind {
         ExprKind::App(App {
             lam,

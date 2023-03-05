@@ -950,3 +950,20 @@ fn class_inside_function() {
     insta::assert_snapshot!(result, @"export declare const foo: () => Point;
 ");
 }
+
+#[test]
+#[should_panic = "return statements aren't allowed at the top level"]
+fn top_leve_return() {
+    let src = r#"
+    return 5;
+    "#;
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
+    export const add = (a, b)=>a + b;
+    export const sum = add(...[
+        5,
+        10
+    ]);
+    "###);
+}

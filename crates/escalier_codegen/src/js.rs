@@ -147,12 +147,7 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
                 })),
 
                 values::StmtKind::ReturnStmt(values::ReturnStmt { arg }) => {
-                    ModuleItem::Stmt(Stmt::Return(ReturnStmt {
-                        span: DUMMY_SP,
-                        arg: arg
-                            .as_ref()
-                            .map(|arg| Box::from(build_expr(arg.as_ref(), &mut stmts, ctx))),
-                    }))
+                    panic!("return statements aren't allowed at the top level")
                 }
             };
 
