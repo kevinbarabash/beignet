@@ -146,7 +146,7 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
                     ))),
                 })),
 
-                values::StmtKind::ReturnStmt(values::ReturnStmt { arg }) => {
+                values::StmtKind::ReturnStmt(_) => {
                     panic!("return statements aren't allowed at the top level")
                 }
             };
