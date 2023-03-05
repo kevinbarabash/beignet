@@ -123,9 +123,16 @@ pub fn infer_stmt(
 
         StmtKind::ExprStmt(expr) => {
             let (s, t) = infer_expr(ctx, expr, false)?;
+
             // We ignore the type that was inferred, we only care that
             // it succeeds since we aren't assigning it to variable.
             update_expr(expr, &s);
+
+            let t = if top_level {
+                close_over(&s, &t, ctx)
+            } else {
+                t
+            };
 
             Ok((s, t))
         }

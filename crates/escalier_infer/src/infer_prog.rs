@@ -2,10 +2,8 @@ use escalier_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
 use escalier_ast::values::*;
 
 use crate::context::Context;
-use crate::infer_expr::infer_expr as infer_expr_rec;
 use crate::infer_stmt::infer_stmt;
 use crate::type_error::TypeError;
-use crate::util::close_over;
 
 pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<TypeError>> {
     // TODO: replace with Class type once it exists
@@ -52,9 +50,4 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
     } else {
         Err(reports)
     }
-}
-
-pub fn infer_expr(ctx: &mut Context, expr: &mut Expr) -> Result<Type, Vec<TypeError>> {
-    let (s, t) = infer_expr_rec(ctx, expr, false)?;
-    Ok(close_over(&s, &t, ctx))
 }
