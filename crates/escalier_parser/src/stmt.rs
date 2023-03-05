@@ -10,9 +10,6 @@ pub fn parse_statement(
     node: &tree_sitter::Node,
     src: &str,
 ) -> Result<Option<Statement>, ParseError> {
-    let kind = node.kind();
-    eprintln!("parse_statement: kind = {kind}");
-
     let kind = match node.kind() {
         "lexical_declaration" => {
             return parse_declaration(node, false, src);
@@ -114,7 +111,6 @@ fn parse_declaration(
     declare: bool,
     src: &str,
 ) -> Result<Option<Statement>, ParseError> {
-    eprintln!("node.kind = {}", node.kind());
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing declaration"));
@@ -193,7 +189,6 @@ fn parse_declaration(
 }
 
 fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Option<Statement>, ParseError> {
-    eprintln!("node.kind = {}", node.kind());
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing declaration"));

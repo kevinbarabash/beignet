@@ -3538,4 +3538,98 @@ mod tests {
         let src = "declare const foo;";
         infer_prog(src);
     }
+
+    #[test]
+    fn multiple_return_statements() {
+        let src = r#"
+        let foo = (cond: boolean) => {
+            if (cond) {
+                return 5;
+            };
+            return 10;
+        };
+        let result = foo(true);
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("result", &ctx), "10 | 5");
+    }
+
+    #[test]
+    fn multiple_returns_flatten_unions() {
+        let src = r#"
+        let foo = (cond1: boolean, cond2: boolean) => {
+            let result1 = if (cond1) {
+                5;
+            } else {
+                10;
+            };
+            if (cond2) {
+                return result1;
+            };
+            return 15;
+        };
+        let result = foo(true, false);
+        "#;
+        let ctx = infer_prog(src);
+
+        // TODO: Figure out why type literal `15` has no provenance, it
+        // should at least link by to the expression it was inferred from.
+        assert_eq!(get_value_type("result", &ctx), "10 | 15 | 5");
+    }
+
+    #[test]
+    fn exclude_returns_in_lambdas_defined_in_the_block() {
+        let src = r#"
+        let foo = (cond: boolean) => {
+            let bar = () => {
+                if (cond) {
+                    return 5;
+                };
+            };
+            if (cond) {
+                return "hello";
+            };
+            return 10;
+        };
+        let result = foo(true);
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("result", &ctx), "\"hello\" | 10");
+    }
+
+    #[test]
+    fn multiple_returns_stress_test() {
+        let src = r#"
+        let foo = (cond: boolean) => {
+            let bar = () => {
+                if (cond) {
+                    return 5;
+                };
+            };
+            if (cond) {
+                return bar();
+            };
+            return 10;
+        };
+        let result = foo(true);
+        "#;
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("result", &ctx), "10 | 5");
+    }
+
+    #[test]
+    #[should_panic = "TypeError::CantFindIdent: baz,TypeError::CantFindIdent: foo"]
+    fn use_undefined_ident() {
+        let src = r#"
+        let foo = () => {
+            let bar = baz;
+            return 10;
+        };
+        let result = foo();
+        "#;
+        infer_prog(src);
+    }
 }

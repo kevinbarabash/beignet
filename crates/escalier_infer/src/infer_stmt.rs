@@ -1,3 +1,4 @@
+use derive_visitor::{DriveMut, VisitorMut};
 use escalier_ast::types::{TKeyword, TRef, Type, TypeKind};
 use escalier_ast::values::*;
 
@@ -190,22 +191,54 @@ pub fn infer_block(body: &mut Block, ctx: &mut Context) -> Result<(Subst, Type),
     Ok((s, t))
 }
 
+#[derive(VisitorMut, Default, Debug)]
+#[visitor(ReturnStmt(enter), Lambda(enter, exit))]
+struct FindReturnsVisitor {
+    pub ret_stmts: Vec<ReturnStmt>,
+    pub lambda_count: u32,
+}
+
+impl FindReturnsVisitor {
+    fn enter_lambda(&mut self, _: &mut Lambda) {
+        self.lambda_count += 1;
+    }
+    fn exit_lambda(&mut self, _: &mut Lambda) {
+        self.lambda_count -= 1;
+    }
+    fn enter_return_stmt(&mut self, ret_stmt: &mut ReturnStmt) {
+        if self.lambda_count == 0 {
+            self.ret_stmts.push(ret_stmt.to_owned());
+        }
+    }
+}
+
 pub fn infer_block_or_expr(
     body: &mut BlockOrExpr,
     ctx: &mut Context,
 ) -> Result<(Subst, Type), Vec<TypeError>> {
     match body {
         BlockOrExpr::Block(block) => {
-            let (s, t) = infer_block(block, ctx)?;
+            let (s, _) = infer_block(block, ctx)?;
 
-            let t = if let Some(last) = block.stmts.last() {
-                if let StmtKind::ReturnStmt(_) = &last.kind {
-                    t
-                } else {
-                    Type::from(TypeKind::Keyword(TKeyword::Undefined))
+            let mut visitor = FindReturnsVisitor::default();
+            block.drive_mut(&mut visitor);
+
+            let mut types = vec![];
+            for ret in &visitor.ret_stmts {
+                match &ret.arg {
+                    Some(arg) => {
+                        if let Some(t) = &arg.inferred_type {
+                            types.push(t.to_owned());
+                        }
+                    }
+                    None => types.push(Type::from(TypeKind::Keyword(TKeyword::Undefined))),
                 }
-            } else {
+            }
+
+            let t = if types.is_empty() {
                 Type::from(TypeKind::Keyword(TKeyword::Undefined))
+            } else {
+                union_many_types(&types)
             };
 
             Ok((s, t))
