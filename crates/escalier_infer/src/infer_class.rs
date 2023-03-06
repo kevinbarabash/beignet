@@ -2,25 +2,21 @@ use escalier_ast::types::*;
 use escalier_ast::values::{class::*, Lambda, PatternKind};
 use im::hashmap::HashMap;
 
-use crate::context::{Binding, Context};
+use crate::context::Binding;
 use crate::scheme::Scheme;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::util::compose_many_subs;
 
-use crate::checker::Checker;
+use crate::checker::{Checker, ScopeKind};
 
 fn is_promise(t: &Type) -> bool {
     matches!(&t, Type {kind: TypeKind::Ref(TRef { name, .. }), ..} if name == "Promise")
 }
 
 impl Checker {
-    pub fn infer_class(
-        &mut self,
-        ctx: &mut Context,
-        class: &mut Class,
-    ) -> Result<(Subst, Type), Vec<TypeError>> {
-        let interface = self.infer_interface_from_class(ctx, class)?;
+    pub fn infer_class(&mut self, class: &mut Class) -> Result<(Subst, Type), Vec<TypeError>> {
+        let interface = self.infer_interface_from_class(class)?;
 
         let class_name = class.ident.name.to_owned();
 
@@ -30,8 +26,7 @@ impl Checker {
         for member in &mut class.body {
             match member {
                 ClassMember::Constructor(Constructor { params, body }) => {
-                    let mut new_ctx = ctx.clone();
-                    new_ctx.is_async = false; // Constructors cannot be async
+                    self.push_scope(ScopeKind::Sync); // Constructors cannot be async
 
                     // Constructors can't have type parameters.
                     let type_params_map = HashMap::default();
@@ -39,7 +34,7 @@ impl Checker {
                     let mut iter = params.iter_mut();
                     iter.next(); // skip `self`
                     let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = iter
-                        .map(|e_param| self.infer_fn_param(e_param, &mut new_ctx, &type_params_map))
+                        .map(|e_param| self.infer_fn_param(e_param, &type_params_map))
                         .collect();
                     let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
@@ -50,11 +45,12 @@ impl Checker {
                         mutable: false, // this should be false since we don't want to allow `self` to be re-assigned
                         t: interface_t,
                     };
-                    new_ctx.insert_binding("self".to_string(), binding);
-                    let (body_s, _body_t) = self.infer_block(body, &mut new_ctx)?;
+                    self.current_scope
+                        .insert_binding("self".to_string(), binding);
+                    let (body_s, _body_t) = self.infer_block(body)?;
                     ss.push(body_s);
 
-                    ctx.count = new_ctx.count;
+                    self.pop_scope();
 
                     let type_args = class.type_params.as_ref().map(|type_params| {
                         type_params
@@ -110,8 +106,8 @@ impl Checker {
                         type_params,
                     } = lambda;
 
-                    let mut new_ctx = ctx.clone();
-                    new_ctx.is_async = is_async.to_owned();
+                    self.push_scope(ScopeKind::from(*is_async));
+                    self.current_scope.is_async = is_async.to_owned();
 
                     // TODO: aggregate method type params with class type params
                     // This maps type params to type refs with the same name.
@@ -123,7 +119,8 @@ impl Checker {
                                     name: param.name.name.to_owned(),
                                     type_args: None,
                                 }));
-                                new_ctx.insert_type(param.name.name.clone(), t.clone());
+                                self.current_scope
+                                    .insert_type(param.name.name.clone(), t.clone());
                                 Ok((param.name.name.to_owned(), t))
                             })
                             .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
@@ -148,7 +145,7 @@ impl Checker {
                                 return Err(vec![TypeError::MethodsMustHaveTypes]);
                             }
 
-                            self.infer_fn_param(e_param, &mut new_ctx, &type_params_map)
+                            self.infer_fn_param(e_param, &type_params_map)
                         })
                         .collect();
                     let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
@@ -159,12 +156,13 @@ impl Checker {
                         mutable: false, // this should be false since we don't want to allow `self` to be re-assigned
                         t: interface_t,
                     };
-                    new_ctx.insert_binding("self".to_string(), binding);
+                    self.current_scope
+                        .insert_binding("self".to_string(), binding);
 
-                    let (body_s, mut body_t) = self.infer_block_or_expr(body, &mut new_ctx)?;
+                    let (body_s, mut body_t) = self.infer_block_or_expr(body)?;
                     ss.push(body_s);
 
-                    ctx.count = new_ctx.count;
+                    self.pop_scope();
 
                     if *is_async && !is_promise(&body_t) {
                         body_t = Type::from(TypeKind::Ref(TRef {
@@ -175,9 +173,9 @@ impl Checker {
 
                     if let Some(ret_type_ann) = return_type {
                         let (ret_s, ret_t) =
-                            self.infer_type_ann_with_params(ret_type_ann, ctx, &type_params_map)?;
+                            self.infer_type_ann_with_params(ret_type_ann, &type_params_map)?;
                         ss.push(ret_s);
-                        ss.push(self.unify(&body_t, &ret_t, ctx)?);
+                        ss.push(self.unify(&body_t, &ret_t)?);
                     } else if kind != &MethodKind::Setter {
                         return Err(vec![TypeError::MethodsMustHaveTypes]);
                     }
@@ -188,11 +186,8 @@ impl Checker {
                         MethodKind::Method => {
                             let ret_t = match &mut lambda.return_type {
                                 Some(type_ann) => {
-                                    let (s, t) = self.infer_type_ann_with_params(
-                                        type_ann,
-                                        ctx,
-                                        &type_params_map,
-                                    )?;
+                                    let (s, t) = self
+                                        .infer_type_ann_with_params(type_ann, &type_params_map)?;
                                     ss.push(s);
                                     t
                                 }
@@ -223,7 +218,7 @@ impl Checker {
                         MethodKind::Getter => {
                             let ret_t = match &mut lambda.return_type {
                                 Some(type_ann) => {
-                                    let (s, t) = self.infer_type_ann(type_ann, ctx, type_params)?;
+                                    let (s, t) = self.infer_type_ann(type_ann, type_params)?;
                                     ss.push(s);
                                     t
                                 }
@@ -271,12 +266,12 @@ impl Checker {
                     // as part of the class declaration b/c it doesn't make sense
                     // to assign them in the constructor.
                     let (_s, t) = if let Some(type_ann) = type_ann {
-                        self.infer_type_ann(type_ann, ctx, &mut None)?
+                        self.infer_type_ann(type_ann, &mut None)?
                     } else if let Some(value) = value {
-                        self.infer_expr(ctx, value, false)?
+                        self.infer_expr(value, false)?
                     } else {
                         return Err(vec![TypeError::PropertiesMustHaveTypes]);
-                        // (Subst::default(), ctx.fresh_var())
+                        // (Subst::default(), self.current_scope.fresh_var())
                     };
 
                     let elem = TObjElem::Prop(TProp {
@@ -322,7 +317,7 @@ impl Checker {
             type_params,
         };
         eprintln!("infer_class, scheme = {scheme}");
-        ctx.insert_scheme(class_name, scheme);
+        self.current_scope.insert_scheme(class_name, scheme);
 
         // TODO: capture all of the subsitutions and return them
         let s = Subst::default();
@@ -332,11 +327,7 @@ impl Checker {
         Ok((s, statics_t))
     }
 
-    fn infer_interface_from_class(
-        &mut self,
-        ctx: &mut Context,
-        class: &mut Class,
-    ) -> Result<Scheme, Vec<TypeError>> {
+    fn infer_interface_from_class(&mut self, class: &mut Class) -> Result<Scheme, Vec<TypeError>> {
         let mut instance_elems: Vec<TObjElem> = vec![];
 
         for member in &mut class.body {
@@ -370,7 +361,8 @@ impl Checker {
                                     name: param.name.name.to_owned(),
                                     type_args: None,
                                 }));
-                                ctx.insert_type(param.name.name.clone(), t.clone());
+                                self.current_scope
+                                    .insert_type(param.name.name.clone(), t.clone());
                                 Ok((param.name.name.to_owned(), t))
                             })
                             .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
@@ -388,18 +380,19 @@ impl Checker {
                         }
                     }
 
-                    // We create a new Context here so that bindings inferred from
-                    // function params aren't added to the current context.
-                    let mut new_ctx = ctx.clone();
+                    // We create a new Scope here so that bindings inferred from
+                    // function params aren't added to the current scope.
+                    self.push_scope(ScopeKind::Sync); // TODO: add support for async methods
                     let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = iter
                         .map(|e_param| {
                             if e_param.type_ann.is_none() {
                                 return Err(vec![TypeError::MethodsMustHaveTypes]);
                             }
 
-                            self.infer_fn_param(e_param, &mut new_ctx, &type_params_map)
+                            self.infer_fn_param(e_param, &type_params_map)
                         })
                         .collect();
+                    self.pop_scope();
                     let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
                     let name = TPropKey::StringKey(key.name.to_owned());
@@ -408,11 +401,8 @@ impl Checker {
                         MethodKind::Method => {
                             let ret_t = match &mut lambda.return_type {
                                 Some(type_ann) => {
-                                    let (s, t) = self.infer_type_ann_with_params(
-                                        type_ann,
-                                        ctx,
-                                        &type_params_map,
-                                    )?;
+                                    let (s, t) = self
+                                        .infer_type_ann_with_params(type_ann, &type_params_map)?;
                                     ss.push(s);
                                     t
                                 }
@@ -443,7 +433,7 @@ impl Checker {
                         MethodKind::Getter => {
                             let ret_t = match &mut lambda.return_type {
                                 Some(type_ann) => {
-                                    let (s, t) = self.infer_type_ann(type_ann, ctx, type_params)?;
+                                    let (s, t) = self.infer_type_ann(type_ann, type_params)?;
                                     ss.push(s);
                                     t
                                 }
@@ -493,12 +483,12 @@ impl Checker {
                     // as part of the class declaration b/c it doesn't make sense
                     // to assign them in the constructor.
                     let (_s, t) = if let Some(type_ann) = type_ann {
-                        self.infer_type_ann(type_ann, ctx, &mut None)?
+                        self.infer_type_ann(type_ann, &mut None)?
                     } else if let Some(value) = value {
-                        self.infer_expr(ctx, value, false)?
+                        self.infer_expr(value, false)?
                     } else {
                         return Err(vec![TypeError::PropertiesMustHaveTypes]);
-                        // (Subst::default(), ctx.fresh_var())
+                        // (Subst::default(), self.current_scope.fresh_var())
                     };
 
                     let elem = TObjElem::Prop(TProp {

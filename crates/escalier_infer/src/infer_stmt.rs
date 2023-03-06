@@ -2,7 +2,7 @@ use derive_visitor::{DriveMut, VisitorMut};
 use escalier_ast::types::{TKeyword, TRef, Type, TypeKind};
 use escalier_ast::values::*;
 
-use crate::context::{Context, Env};
+use crate::context::Env;
 use crate::infer_pattern::*;
 use crate::scheme::generalize;
 use crate::substitutable::Subst;
@@ -11,13 +11,12 @@ use crate::type_error::TypeError;
 use crate::update::*;
 use crate::util::*;
 
-use crate::checker::Checker;
+use crate::checker::{Checker, ScopeKind};
 
 impl Checker {
     pub fn infer_stmt(
         &mut self,
         stmt: &mut Statement,
-        ctx: &mut Context,
         top_level: bool,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         match &mut stmt.kind {
@@ -33,13 +32,12 @@ impl Checker {
                         // An initial value should always be used when using a normal
                         // `let` statement
                         let init = init.as_mut().unwrap();
-                        let inferred_init = self.infer_expr(ctx, init, false)?;
+                        let inferred_init = self.infer_expr(init, false)?;
 
                         let s = self.infer_pattern_and_init(
                             pattern,
                             type_ann.as_mut(),
                             &inferred_init,
-                            ctx,
                             &PatternUsage::Assign,
                             top_level,
                         )?;
@@ -56,15 +54,15 @@ impl Checker {
                             PatternKind::Ident(BindingIdent { name, .. }) => {
                                 match type_ann {
                                     Some(type_ann) => {
-                                        let (s, t) =
-                                            self.infer_type_ann(type_ann, ctx, &mut None)?;
+                                        let (s, t) = self.infer_type_ann(type_ann, &mut None)?;
 
                                         let t = if top_level {
-                                            close_over(&s, &t, ctx)
+                                            close_over(&s, &t, &self.current_scope)
                                         } else {
                                             t
                                         };
-                                        ctx.insert_value(name.to_owned(), t.to_owned());
+                                        self.current_scope
+                                            .insert_value(name.to_owned(), t.to_owned());
 
                                         update_type_ann(type_ann, &s);
                                         update_pattern(pattern, &s);
@@ -90,29 +88,30 @@ impl Checker {
                 type_params,
                 ..
             }) => {
-                let (s, t) = self.infer_type_ann(type_ann, ctx, type_params)?;
+                let (s, t) = self.infer_type_ann(type_ann, type_params)?;
 
                 let t = t.apply(&s);
 
                 let empty_env = Env::default();
                 let scheme = generalize(&empty_env, &t);
 
-                ctx.insert_scheme(name.to_owned(), scheme);
+                self.current_scope.insert_scheme(name.to_owned(), scheme);
 
                 update_type_ann(type_ann, &s);
 
                 Ok((s, t))
             }
             StmtKind::ClassDecl(ClassDecl { ident, class }) => {
-                let (s, t) = self.infer_class(ctx, class)?;
+                let (s, t) = self.infer_class(class)?;
 
                 let t = t.apply(&s);
 
                 // This follows the same pattern found in lib.es5.d.ts.
                 let name = ident.name.to_owned();
                 eprintln!("inserting {name}Constructor = {t}");
-                ctx.insert_type(format!("{name}Constructor"), t.to_owned());
-                ctx.insert_value(
+                self.current_scope
+                    .insert_type(format!("{name}Constructor"), t.to_owned());
+                self.current_scope.insert_value(
                     name.to_owned(),
                     Type::from(TypeKind::Ref(TRef {
                         name: format!("{name}Constructor"),
@@ -124,14 +123,14 @@ impl Checker {
             }
 
             StmtKind::ExprStmt(expr) => {
-                let (s, t) = self.infer_expr(ctx, expr, false)?;
+                let (s, t) = self.infer_expr(expr, false)?;
 
                 // We ignore the type that was inferred, we only care that
                 // it succeeds since we aren't assigning it to variable.
                 update_expr(expr, &s);
 
                 let t = if top_level {
-                    close_over(&s, &t, ctx)
+                    close_over(&s, &t, &self.current_scope)
                 } else {
                     t
                 };
@@ -143,27 +142,26 @@ impl Checker {
                 expr,
                 body,
             }) => {
-                let elem_t = ctx.fresh_var();
+                let elem_t = self.current_scope.fresh_var(None);
                 let array_t = Type::from(TypeKind::Array(Box::from(elem_t.clone())));
 
-                let (_expr_s, expr_t) = self.infer_expr(ctx, expr, false)?;
+                let (_expr_s, expr_t) = self.infer_expr(expr, false)?;
 
-                let s1 = self.unify(&expr_t, &array_t, ctx)?;
+                let s1 = self.unify(&expr_t, &array_t)?;
                 let elem_t = elem_t.apply(&s1);
 
-                let mut new_ctx = ctx.clone();
+                self.push_scope(ScopeKind::Inherit);
                 let s2 = self.infer_pattern_and_init(
                     pattern,
                     None,
                     &(Subst::new(), elem_t),
-                    &mut new_ctx,
                     &PatternUsage::Assign,
                     top_level,
                 )?;
 
-                let (s3, _) = self.infer_block(body, &mut new_ctx)?;
+                let (s3, _) = self.infer_block(body)?;
 
-                ctx.count = new_ctx.count;
+                self.pop_scope();
 
                 let s = compose_many_subs(&[s3, s2, s1]);
                 let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
@@ -171,7 +169,7 @@ impl Checker {
                 Ok((s, t))
             }
             StmtKind::ReturnStmt(ReturnStmt { arg }) => match arg {
-                Some(arg) => self.infer_expr(ctx, arg.as_mut(), false),
+                Some(arg) => self.infer_expr(arg.as_mut(), false),
                 None => {
                     let s = Subst::default();
                     let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
@@ -182,24 +180,20 @@ impl Checker {
         }
     }
 
-    pub fn infer_block(
-        &mut self,
-        body: &mut Block,
-        ctx: &mut Context,
-    ) -> Result<(Subst, Type), Vec<TypeError>> {
-        let mut new_ctx = ctx.clone();
+    pub fn infer_block(&mut self, body: &mut Block) -> Result<(Subst, Type), Vec<TypeError>> {
+        self.push_scope(ScopeKind::Inherit);
+
         let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
         let mut s = Subst::new();
 
         for stmt in &mut body.stmts {
-            new_ctx = new_ctx.clone();
-            let (new_s, new_t) = self.infer_stmt(stmt, &mut new_ctx, false)?;
+            let (new_s, new_t) = self.infer_stmt(stmt, false)?;
 
             t = new_t.apply(&s);
             s = compose_subs(&new_s, &s);
         }
 
-        ctx.count = new_ctx.count;
+        self.pop_scope();
 
         Ok((s, t))
     }
@@ -207,11 +201,10 @@ impl Checker {
     pub fn infer_block_or_expr(
         &mut self,
         body: &mut BlockOrExpr,
-        ctx: &mut Context,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         match body {
             BlockOrExpr::Block(block) => {
-                let (s, _) = self.infer_block(block, ctx)?;
+                let (s, _) = self.infer_block(block)?;
 
                 let mut visitor = FindReturnsVisitor::default();
                 block.drive_mut(&mut visitor);
@@ -236,7 +229,7 @@ impl Checker {
 
                 Ok((s, t))
             }
-            BlockOrExpr::Expr(expr) => self.infer_expr(ctx, expr, false),
+            BlockOrExpr::Expr(expr) => self.infer_expr(expr, false),
         }
     }
 }

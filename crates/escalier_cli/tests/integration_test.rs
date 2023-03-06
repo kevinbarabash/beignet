@@ -9,12 +9,11 @@ pub fn messages(report: &[TypeError]) -> Vec<String> {
 }
 
 fn infer(input: &str) -> String {
-    let mut ctx = escalier_infer::Context::default();
     let prog = parse(input).unwrap();
     let mut stmt = prog.body.get(0).unwrap().to_owned();
-    let mut checker = Checker {};
+    let mut checker = Checker::default();
     let result = match &stmt.kind {
-        StmtKind::ExprStmt(_) => checker.infer_stmt(&mut stmt, &mut ctx, true),
+        StmtKind::ExprStmt(_) => checker.infer_stmt(&mut stmt, true),
         _ => Err(vec![TypeError::Unspecified]),
     };
     match result {

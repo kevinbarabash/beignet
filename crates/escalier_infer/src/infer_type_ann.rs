@@ -3,11 +3,10 @@ use std::iter::Iterator;
 
 use escalier_ast::types::{
     self as types, Provenance, TConditionalType, TFnParam, TIndex, TIndexAccess, TIndexKey,
-    TInferType, TMappedType, TObjElem, TObject, TProp, TPropKey, TVar, Type, TypeKind,
+    TInferType, TMappedType, TObjElem, TObject, TProp, TPropKey, Type, TypeKind,
 };
 use escalier_ast::values::*;
 
-use crate::context::Context;
 use crate::infer_fn_param::pattern_to_tpat;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
@@ -19,7 +18,6 @@ impl Checker {
     pub fn infer_type_ann(
         &mut self,
         type_ann: &mut TypeAnn,
-        ctx: &mut Context,
         type_params: &mut Option<Vec<TypeParam>>,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         let mut type_params = if type_params.is_none() {
@@ -41,13 +39,10 @@ impl Checker {
                     let tv = match &mut param.constraint {
                         Some(type_ann) => {
                             // TODO: push `s` on to `ss`
-                            let (_s, t) = self.infer_type_ann(type_ann, ctx, &mut None)?;
-                            Type::from(TypeKind::Var(TVar {
-                                id: ctx.fresh_id(),
-                                constraint: Some(Box::from(t)),
-                            }))
+                            let (_s, t) = self.infer_type_ann(type_ann, &mut None)?;
+                            self.current_scope.fresh_var(Some(Box::from(t)))
                         }
-                        None => ctx.fresh_var(),
+                        None => self.current_scope.fresh_var(None),
                     };
 
                     Ok((param.name.name.to_owned(), tv))
@@ -56,22 +51,20 @@ impl Checker {
             None => HashMap::default(),
         };
 
-        self.infer_type_ann_with_params(type_ann, ctx, &type_param_map)
+        self.infer_type_ann_with_params(type_ann, &type_param_map)
     }
 
     pub fn infer_type_ann_with_params(
         &mut self,
         type_ann: &mut TypeAnn,
-        ctx: &mut Context,
         type_param_map: &HashMap<String, Type>,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
-        self.infer_type_ann_rec(type_ann, ctx, type_param_map)
+        self.infer_type_ann_rec(type_ann, type_param_map)
     }
 
     fn infer_type_ann_rec(
         &mut self,
         type_ann: &mut TypeAnn,
-        ctx: &mut Context,
         type_param_map: &HashMap<String, Type>,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         let (s, mut t) = match &mut type_ann.kind {
@@ -81,7 +74,7 @@ impl Checker {
 
                 for param in &mut lam.params {
                     let (param_s, param_t) =
-                        self.infer_type_ann_rec(&mut param.type_ann, ctx, type_param_map)?;
+                        self.infer_type_ann_rec(&mut param.type_ann, type_param_map)?;
                     ss.push(param_s);
                     params.push(TFnParam {
                         pat: pattern_to_tpat(&param.pat),
@@ -90,7 +83,7 @@ impl Checker {
                     });
                 }
 
-                let (ret_s, ret_t) = self.infer_type_ann_rec(&mut lam.ret, ctx, type_param_map)?;
+                let (ret_s, ret_t) = self.infer_type_ann_rec(&mut lam.ret, type_param_map)?;
                 let ret = Box::from(ret_t);
                 ss.push(ret_s);
 
@@ -123,13 +116,10 @@ impl Checker {
                     match elem {
                         escalier_ast::values::TObjElem::Index(index) => {
                             let (index_s, index_t) =
-                                self.infer_type_ann_rec(&mut index.type_ann, ctx, type_param_map)?;
+                                self.infer_type_ann_rec(&mut index.type_ann, type_param_map)?;
 
-                            let (key_s, key_t) = self.infer_type_ann_rec(
-                                &mut index.key.type_ann,
-                                ctx,
-                                type_param_map,
-                            )?;
+                            let (key_s, key_t) =
+                                self.infer_type_ann_rec(&mut index.key.type_ann, type_param_map)?;
 
                             ss.push(index_s);
                             ss.push(key_s);
@@ -151,7 +141,7 @@ impl Checker {
                         }
                         escalier_ast::values::TObjElem::Prop(prop) => {
                             let (prop_s, prop_t) =
-                                self.infer_type_ann_rec(&mut prop.type_ann, ctx, type_param_map)?;
+                                self.infer_type_ann_rec(&mut prop.type_ann, type_param_map)?;
 
                             ss.push(prop_s);
                             elems.push(TObjElem::Prop(TProp {
@@ -190,7 +180,7 @@ impl Checker {
                     if let Some(type_params) = type_params {
                         for param in type_params {
                             let (type_arg_s, type_arg_t) =
-                                self.infer_type_ann_rec(param, ctx, type_param_map)?;
+                                self.infer_type_ann_rec(param, type_param_map)?;
                             ss.push(type_arg_s);
                             type_args.push(type_arg_t);
                         }
@@ -214,7 +204,7 @@ impl Checker {
                 let mut ss: Vec<Subst> = vec![];
 
                 for t in &mut union.types {
-                    let (s, t) = self.infer_type_ann_rec(t, ctx, type_param_map)?;
+                    let (s, t) = self.infer_type_ann_rec(t, type_param_map)?;
 
                     ss.push(s);
                     ts.push(t);
@@ -230,7 +220,7 @@ impl Checker {
                 let mut ss: Vec<Subst> = vec![];
 
                 for t in &mut intersection.types {
-                    let (s, t) = self.infer_type_ann_rec(t, ctx, type_param_map)?;
+                    let (s, t) = self.infer_type_ann_rec(t, type_param_map)?;
 
                     ss.push(s);
                     ts.push(t);
@@ -246,7 +236,7 @@ impl Checker {
                 let mut ss: Vec<Subst> = vec![];
 
                 for t in &mut tuple.types {
-                    let (s, t) = self.infer_type_ann_rec(t, ctx, type_param_map)?;
+                    let (s, t) = self.infer_type_ann_rec(t, type_param_map)?;
 
                     ss.push(s);
                     ts.push(t);
@@ -258,22 +248,22 @@ impl Checker {
                 Ok((s, t))
             }
             TypeAnnKind::Array(ArrayType { elem_type, .. }) => {
-                let (elem_s, elem_t) = self.infer_type_ann_rec(elem_type, ctx, type_param_map)?;
+                let (elem_s, elem_t) = self.infer_type_ann_rec(elem_type, type_param_map)?;
                 let s = elem_s;
                 let t = Type::from(TypeKind::Array(Box::from(elem_t)));
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
             TypeAnnKind::KeyOf(KeyOfType { type_ann, .. }) => {
-                let (arg_s, arg_t) = self.infer_type_ann_rec(type_ann, ctx, type_param_map)?;
+                let (arg_s, arg_t) = self.infer_type_ann_rec(type_ann, type_param_map)?;
                 let s = arg_s;
                 let t = Type::from(TypeKind::KeyOf(Box::from(arg_t)));
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
-            TypeAnnKind::Query(QueryType { expr, .. }) => self.infer_expr(ctx, expr, false),
+            TypeAnnKind::Query(QueryType { expr, .. }) => self.infer_expr(expr, false),
             TypeAnnKind::Mutable(MutableType { type_ann, .. }) => {
-                let (s, mut t) = self.infer_type_ann_rec(type_ann, ctx, type_param_map)?;
+                let (s, mut t) = self.infer_type_ann_rec(type_ann, type_param_map)?;
 
                 match &t.kind {
                     TypeKind::Keyword(_) => {
@@ -306,9 +296,8 @@ impl Checker {
                 index_type,
                 ..
             }) => {
-                let (obj_s, obj_t) = self.infer_type_ann_rec(obj_type, ctx, type_param_map)?;
-                let (index_s, index_t) =
-                    self.infer_type_ann_rec(index_type, ctx, type_param_map)?;
+                let (obj_s, obj_t) = self.infer_type_ann_rec(obj_type, type_param_map)?;
+                let (index_s, index_t) = self.infer_type_ann_rec(index_type, type_param_map)?;
 
                 let s = compose_many_subs(&[obj_s, index_s]);
                 let t = Type::from(TypeKind::IndexAccess(TIndexAccess {
@@ -328,12 +317,12 @@ impl Checker {
             }) => {
                 if let Some(constraint) = &mut type_param.constraint {
                     let (constraint_s, constraint_t) =
-                        self.infer_type_ann_rec(constraint.as_mut(), ctx, type_param_map)?;
+                        self.infer_type_ann_rec(constraint.as_mut(), type_param_map)?;
 
                     constraint.inferred_type = Some(constraint_t.clone());
 
                     let (type_ann_s, type_ann_t) =
-                        self.infer_type_ann_rec(type_ann, ctx, type_param_map)?;
+                        self.infer_type_ann_rec(type_ann, type_param_map)?;
 
                     // QUESTION: Do we need to apply `constraint_s` to `type_ann_t`?
                     type_ann.inferred_type = Some(type_ann_t.clone());
@@ -372,10 +361,10 @@ impl Checker {
                 false_type: alternate,
                 ..
             }) => {
-                let (check_s, check_t) = self.infer_type_ann_rec(left, ctx, type_param_map)?;
-                let (extends_s, extends_t) = self.infer_type_ann_rec(right, ctx, type_param_map)?;
-                let (true_s, true_t) = self.infer_type_ann_rec(consequent, ctx, type_param_map)?;
-                let (false_s, false_t) = self.infer_type_ann_rec(alternate, ctx, type_param_map)?;
+                let (check_s, check_t) = self.infer_type_ann_rec(left, type_param_map)?;
+                let (extends_s, extends_t) = self.infer_type_ann_rec(right, type_param_map)?;
+                let (true_s, true_t) = self.infer_type_ann_rec(consequent, type_param_map)?;
+                let (false_s, false_t) = self.infer_type_ann_rec(alternate, type_param_map)?;
 
                 let t = Type::from(TypeKind::ConditionalType(TConditionalType {
                     check_type: Box::from(check_t),

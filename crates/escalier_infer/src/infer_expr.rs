@@ -7,19 +7,17 @@ use escalier_ast::types::{
 };
 use escalier_ast::values::*;
 
-use crate::context::Context;
 use crate::infer_pattern::PatternUsage;
 use crate::scheme::get_type_param_map;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::util::*;
 
-use crate::checker::Checker;
+use crate::checker::{Checker, ScopeKind};
 
 impl Checker {
     pub fn infer_expr(
         &mut self,
-        ctx: &mut Context,
         expr: &mut Expr,
         is_lvalue: bool,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
@@ -32,11 +30,11 @@ impl Checker {
                 let mut ss: Vec<Subst> = vec![];
                 let mut arg_types: Vec<Type> = vec![];
 
-                let (s1, lam_type) = self.infer_expr(ctx, lam, false)?;
+                let (s1, lam_type) = self.infer_expr(lam, false)?;
                 ss.push(s1);
 
                 for arg in args {
-                    let (arg_s, mut arg_t) = self.infer_expr(ctx, &mut arg.expr, false)?;
+                    let (arg_s, mut arg_t) = self.infer_expr(&mut arg.expr, false)?;
                     ss.push(arg_s);
                     if arg.spread.is_some() {
                         match &mut arg_t.kind {
@@ -48,12 +46,12 @@ impl Checker {
                     }
                 }
 
-                let ret_type = ctx.fresh_var();
+                let ret_type = self.current_scope.fresh_var(None);
                 let type_args = match type_args {
                     Some(type_args) => {
                         let tuples = type_args
                             .iter_mut()
-                            .map(|type_arg| self.infer_type_ann(type_arg, ctx, &mut None))
+                            .map(|type_arg| self.infer_type_ann(type_arg, &mut None))
                             .collect::<Result<Vec<_>, _>>()?;
                         let (mut subs, types): (Vec<_>, Vec<_>) = tuples.iter().cloned().unzip();
                         ss.append(&mut subs);
@@ -73,7 +71,7 @@ impl Checker {
                 call_type.provenance =
                     Some(Box::from(Provenance::Expr(Box::from(expr.to_owned()))));
 
-                let s3 = self.unify(&call_type, &lam_type, ctx)?;
+                let s3 = self.unify(&call_type, &lam_type)?;
 
                 ss.push(s3);
 
@@ -91,12 +89,12 @@ impl Checker {
                 let mut ss: Vec<Subst> = vec![];
                 let mut arg_types: Vec<Type> = vec![];
 
-                let (s1, t) = self.infer_expr(ctx, expr, false)?;
+                let (s1, t) = self.infer_expr(expr, false)?;
                 ss.push(s1);
-                let t = self.get_obj_type(&t, ctx)?;
+                let t = self.get_obj_type(&t)?;
 
                 for arg in args {
-                    let (arg_s, mut arg_t) = self.infer_expr(ctx, &mut arg.expr, false)?;
+                    let (arg_s, mut arg_t) = self.infer_expr(&mut arg.expr, false)?;
                     ss.push(arg_s);
                     if arg.spread.is_some() {
                         match &mut arg_t.kind {
@@ -133,13 +131,13 @@ impl Checker {
                                             type_params.iter().zip(type_args)
                                         {
                                             let (s, t) =
-                                                self.infer_type_ann(type_arg, ctx, &mut None)?;
+                                                self.infer_type_ann(type_arg, &mut None)?;
                                             ss.push(s);
                                             type_param_map.insert(type_param.name.to_string(), t);
                                         }
                                         type_param_map
                                     } else {
-                                        get_type_param_map(ctx, type_params)
+                                        get_type_param_map(&self.current_scope, type_params)
                                     }
                                 }
                                 None => HashMap::new(),
@@ -158,14 +156,14 @@ impl Checker {
                             lam_type.provenance =
                                 Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
 
-                            let ret_type = ctx.fresh_var();
+                            let ret_type = self.current_scope.fresh_var(None);
                             let call_type = Type::from(TypeKind::App(types::TApp {
                                 args: arg_types.clone(),
                                 ret: Box::from(ret_type.clone()),
                                 type_args: None,
                             }));
 
-                            if let Ok(s3) = self.unify(&call_type, &lam_type, ctx) {
+                            if let Ok(s3) = self.unify(&call_type, &lam_type) {
                                 ss.push(s3);
 
                                 let s = compose_many_subs(&ss.clone());
@@ -204,9 +202,9 @@ impl Checker {
                 }
             }
             ExprKind::Fix(Fix { expr, .. }) => {
-                let (s1, t) = self.infer_expr(ctx, expr, false)?;
+                let (s1, t) = self.infer_expr(expr, false)?;
                 eprintln!("t = {t}");
-                let tv = ctx.fresh_var();
+                let tv = self.current_scope.fresh_var(None);
                 let param = TFnParam {
                     pat: TPat::Ident(types::BindingIdent {
                         name: String::from("fix_param"),
@@ -222,7 +220,6 @@ impl Checker {
                         type_params: None,
                     })),
                     &t,
-                    ctx,
                 )?;
 
                 let s = compose_subs(&s2, &s1);
@@ -237,7 +234,7 @@ impl Checker {
             }
             ExprKind::Ident(Ident { name, .. }) => {
                 let s = Subst::default();
-                let t = ctx.lookup_value_and_instantiate(name)?;
+                let t = self.current_scope.lookup_value_and_instantiate(name)?;
 
                 Ok((s, t))
             }
@@ -251,24 +248,23 @@ impl Checker {
                     match &mut cond.kind {
                         ExprKind::LetExpr(LetExpr { pat, expr, .. }) => {
                             // TODO: warn if the pattern isn't refutable
-                            let mut new_ctx = ctx.clone();
-                            let init = self.infer_expr(ctx, expr, false)?;
+                            let init = self.infer_expr(expr, false)?;
+                            self.push_scope(ScopeKind::Inherit);
                             let s1 = self.infer_pattern_and_init(
                                 pat,
                                 None,
                                 &init,
-                                &mut new_ctx,
                                 &PatternUsage::Match,
                                 false,
                             )?;
 
-                            let (s2, t2) = self.infer_block(consequent, &mut new_ctx)?;
+                            let (s2, t2) = self.infer_block(consequent)?;
 
-                            ctx.count = new_ctx.count;
+                            self.pop_scope();
 
                             let s = compose_subs(&s2, &s1);
 
-                            let (s3, t3) = self.infer_block(alternate, ctx)?;
+                            let (s3, t3) = self.infer_block(alternate)?;
 
                             let s = compose_subs(&s3, &s);
                             let t = union_types(&t2, &t3);
@@ -276,14 +272,11 @@ impl Checker {
                             Ok((s, t))
                         }
                         _ => {
-                            let (s1, t1) = self.infer_expr(ctx, cond, false)?;
-                            let (s2, t2) = self.infer_block(consequent, ctx)?;
-                            let (s3, t3) = self.infer_block(alternate, ctx)?;
-                            let s4 = self.unify(
-                                &t1,
-                                &Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                                ctx,
-                            )?;
+                            let (s1, t1) = self.infer_expr(cond, false)?;
+                            let (s2, t2) = self.infer_block(consequent)?;
+                            let (s3, t3) = self.infer_block(alternate)?;
+                            let s4 =
+                                self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)))?;
 
                             let s = compose_many_subs(&[s1, s2, s3, s4]);
                             let t = union_types(&t2, &t3);
@@ -294,20 +287,19 @@ impl Checker {
                 }
                 None => match &mut cond.kind {
                     ExprKind::LetExpr(LetExpr { pat, expr, .. }) => {
-                        let mut new_ctx = ctx.clone();
-                        let init = self.infer_expr(ctx, expr, false)?;
+                        let init = self.infer_expr(expr, false)?;
+                        self.push_scope(ScopeKind::Inherit);
                         let s1 = self.infer_pattern_and_init(
                             pat,
                             None,
                             &init,
-                            &mut new_ctx,
                             &PatternUsage::Match,
                             false,
                         )?;
 
-                        let (s2, t2) = self.infer_block(consequent, &mut new_ctx)?;
+                        let (s2, t2) = self.infer_block(consequent)?;
 
-                        ctx.count = new_ctx.count;
+                        self.pop_scope();
 
                         let s = compose_subs(&s2, &s1);
 
@@ -317,13 +309,10 @@ impl Checker {
                         Ok((s, t))
                     }
                     _ => {
-                        let (s1, t1) = self.infer_expr(ctx, cond, false)?;
-                        let (s2, t2) = self.infer_block(consequent, ctx)?;
-                        let s3 = self.unify(
-                            &t1,
-                            &Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                            ctx,
-                        )?;
+                        let (s1, t1) = self.infer_expr(cond, false)?;
+                        let (s2, t2) = self.infer_block(consequent)?;
+                        let s3 =
+                            self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)))?;
 
                         let s = compose_many_subs(&[s1, s2, s3]);
 
@@ -343,7 +332,7 @@ impl Checker {
                 let first_char = name.chars().next().unwrap();
                 // JSXElement's starting with an uppercase char are user defined.
                 if first_char.is_uppercase() {
-                    let t = ctx.lookup_value_and_instantiate(name)?;
+                    let t = self.current_scope.lookup_value_and_instantiate(name)?;
                     match &t.kind {
                         TypeKind::Lam(_) => {
                             let mut ss: Vec<_> = vec![];
@@ -358,12 +347,12 @@ impl Checker {
                                             kind,
                                             inferred_type: None,
                                         };
-                                        self.infer_expr(ctx, &mut expr, false)?
+                                        self.infer_expr(&mut expr, false)?
                                     }
                                     JSXAttrValue::JSXExprContainer(JSXExprContainer {
                                         expr,
                                         ..
-                                    }) => self.infer_expr(ctx, expr, false)?,
+                                    }) => self.infer_expr(expr, false)?,
                                 };
                                 ss.push(s);
 
@@ -391,7 +380,7 @@ impl Checker {
                             }));
 
                             let s1 = compose_many_subs(&ss);
-                            let s2 = self.unify(&call_type, &t, ctx)?;
+                            let s2 = self.unify(&call_type, &t)?;
 
                             let s = compose_subs(&s2, &s1);
                             let t = ret_type;
@@ -419,8 +408,8 @@ impl Checker {
                 type_params,
                 ..
             }) => {
-                let mut new_ctx = ctx.clone();
-                new_ctx.is_async = is_async.to_owned();
+                self.push_scope(ScopeKind::Inherit);
+                self.current_scope.is_async = is_async.to_owned();
 
                 let type_params_map: HashMap<String, Type> = match type_params {
                     Some(type_params) => type_params
@@ -429,16 +418,13 @@ impl Checker {
                             let tv = match &mut type_param.constraint {
                                 Some(type_ann) => {
                                     // TODO: push `s` on to `ss`
-                                    let (_s, t) =
-                                        self.infer_type_ann(type_ann, &mut new_ctx, &mut None)?;
-                                    Type::from(TypeKind::Var(TVar {
-                                        id: new_ctx.fresh_id(),
-                                        constraint: Some(Box::from(t)),
-                                    }))
+                                    let (_s, t) = self.infer_type_ann(type_ann, &mut None)?;
+                                    self.current_scope.fresh_var(Some(Box::from(t)))
                                 }
-                                None => new_ctx.fresh_var(),
+                                None => self.current_scope.fresh_var(None),
                             };
-                            new_ctx.insert_type(type_param.name.name.clone(), tv.clone());
+                            self.current_scope
+                                .insert_type(type_param.name.name.clone(), tv.clone());
                             Ok((type_param.name.name.to_owned(), tv))
                         })
                         .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
@@ -447,14 +433,14 @@ impl Checker {
 
                 let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = params
                     .iter_mut()
-                    .map(|e_param| self.infer_fn_param(e_param, &mut new_ctx, &type_params_map))
+                    .map(|e_param| self.infer_fn_param(e_param, &type_params_map))
                     .collect();
                 let (mut ss, t_params): (Vec<_>, Vec<_>) = params?.iter().cloned().unzip();
 
-                let (body_s, mut body_t) = self.infer_block_or_expr(body, &mut new_ctx)?;
+                let (body_s, mut body_t) = self.infer_block_or_expr(body)?;
                 ss.push(body_s);
 
-                ctx.count = new_ctx.count;
+                self.pop_scope();
 
                 if *is_async && !is_promise(&body_t) {
                     body_t = Type::from(TypeKind::Ref(types::TRef {
@@ -465,9 +451,9 @@ impl Checker {
 
                 if let Some(rt_type_ann) = rt_type_ann {
                     let (ret_s, ret_t) =
-                        self.infer_type_ann_with_params(rt_type_ann, ctx, &type_params_map)?;
+                        self.infer_type_ann_with_params(rt_type_ann, &type_params_map)?;
                     ss.push(ret_s);
-                    ss.push(self.unify(&body_t, &ret_t, ctx)?);
+                    ss.push(self.unify(&body_t, &ret_t)?);
                 }
 
                 let t = Type::from(TypeKind::Lam(types::TLam {
@@ -490,7 +476,7 @@ impl Checker {
                 // - if it does, check if its mutable or not
                 if let ExprKind::Ident(id) = &assign.left.kind {
                     let name = &id.name;
-                    let binding = ctx.lookup_binding(name)?;
+                    let binding = self.current_scope.lookup_binding(name)?;
                     if !binding.mutable {
                         return Err(vec![TypeError::NonMutableBindingAssignment(Box::from(
                             assign.to_owned(),
@@ -500,15 +486,15 @@ impl Checker {
 
                 // This is similar to infer let, but without the type annotation and
                 // with pat being an expression instead of a pattern.
-                let (rs, rt) = self.infer_expr(ctx, &mut assign.right, false)?;
+                let (rs, rt) = self.infer_expr(&mut assign.right, false)?;
                 // TODO: figure out how to get the type of a setter
-                let (ls, lt) = self.infer_expr(ctx, &mut assign.left, true)?;
+                let (ls, lt) = self.infer_expr(&mut assign.left, true)?;
 
                 if assign.op != AssignOp::Eq {
                     todo!("handle update assignment operators");
                 }
 
-                let s = self.unify(&rt, &lt, ctx)?;
+                let s = self.unify(&rt, &lt)?;
 
                 let s = compose_many_subs(&[rs, ls, s]);
                 let t = rt; // This is JavaScript's behavior
@@ -537,10 +523,10 @@ impl Checker {
                 // differently from arithmetic operators
                 // TODO: if both are literals, compute the result at compile
                 // time and set the result to be appropriate number literal.
-                let (s1, t1) = self.infer_expr(ctx, left, false)?;
-                let (s2, t2) = self.infer_expr(ctx, right, false)?;
-                let s3 = self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
-                let s4 = self.unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
+                let (s1, t1) = self.infer_expr(left, false)?;
+                let (s2, t2) = self.infer_expr(right, false)?;
+                let s3 = self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)))?;
+                let s4 = self.unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number)))?;
 
                 let s = compose_many_subs(&[s1, s2, s3, s4]);
 
@@ -592,8 +578,8 @@ impl Checker {
                 Ok((s, t))
             }
             ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
-                let (s1, t1) = self.infer_expr(ctx, arg, false)?;
-                let s2 = self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)), ctx)?;
+                let (s1, t1) = self.infer_expr(arg, false)?;
+                let s2 = self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)))?;
 
                 let s = compose_many_subs(&[s1, s2]);
                 let t = match op {
@@ -611,7 +597,8 @@ impl Checker {
                         PropOrSpread::Prop(p) => {
                             match p.as_mut() {
                                 Prop::Shorthand(Ident { name, .. }) => {
-                                    let t = ctx.lookup_value_and_instantiate(name)?;
+                                    let t =
+                                        self.current_scope.lookup_value_and_instantiate(name)?;
                                     elems.push(types::TObjElem::Prop(types::TProp {
                                         name: TPropKey::StringKey(name.to_owned()),
                                         optional: false,
@@ -620,7 +607,7 @@ impl Checker {
                                     }));
                                 }
                                 Prop::KeyValue(KeyValueProp { key, value, .. }) => {
-                                    let (s, t) = self.infer_expr(ctx, value, false)?;
+                                    let (s, t) = self.infer_expr(value, false)?;
                                     ss.push(s);
                                     // TODO: check if the inferred type is T | undefined and use that
                                     // determine the value of optional
@@ -634,7 +621,7 @@ impl Checker {
                             }
                         }
                         PropOrSpread::Spread(SpreadElement { expr, .. }) => {
-                            let (s, t) = self.infer_expr(ctx, expr, false)?;
+                            let (s, t) = self.infer_expr(expr, false)?;
                             ss.push(s);
                             spread_types.push(t);
                         }
@@ -659,18 +646,18 @@ impl Checker {
                 Ok((s, t))
             }
             ExprKind::Await(Await { expr, .. }) => {
-                if !ctx.is_async() {
+                if !self.current_scope.is_async() {
                     return Err(vec![TypeError::AwaitOutsideOfAsync]);
                 }
 
-                let (s1, t1) = self.infer_expr(ctx, expr, false)?;
-                let inner_t = ctx.fresh_var();
+                let (s1, t1) = self.infer_expr(expr, false)?;
+                let inner_t = self.current_scope.fresh_var(None);
                 let promise_t = Type::from(TypeKind::Ref(types::TRef {
                     name: String::from("Promise"),
                     type_args: Some(vec![inner_t.clone()]),
                 }));
 
-                let s2 = self.unify(&t1, &promise_t, ctx)?;
+                let s2 = self.unify(&t1, &promise_t)?;
                 let s = compose_subs(&s2, &s1);
 
                 Ok((s, inner_t))
@@ -683,7 +670,7 @@ impl Checker {
                     let expr = elem.expr.as_mut();
                     match elem.spread {
                         Some(_) => {
-                            let (s, mut t) = self.infer_expr(ctx, expr, false)?;
+                            let (s, mut t) = self.infer_expr(expr, false)?;
                             ss.push(s);
                             match &mut t.kind {
                                 TypeKind::Tuple(types) => ts.append(types),
@@ -693,7 +680,7 @@ impl Checker {
                             }
                         }
                         None => {
-                            let (s, t) = self.infer_expr(ctx, expr, false)?;
+                            let (s, t) = self.infer_expr(expr, false)?;
                             ss.push(s);
                             ts.push(t);
                         }
@@ -706,9 +693,8 @@ impl Checker {
                 Ok((s, t))
             }
             ExprKind::Member(Member { obj, prop, .. }) => {
-                let (obj_s, mut obj_t) = self.infer_expr(ctx, obj, false)?;
-                let (prop_s, prop_t) =
-                    self.infer_property_type(&mut obj_t, prop, ctx, is_lvalue)?;
+                let (obj_s, mut obj_t) = self.infer_expr(obj, false)?;
+                let (prop_s, prop_t) = self.infer_property_type(&mut obj_t, prop, is_lvalue)?;
 
                 let s = compose_subs(&prop_s, &obj_s);
                 let t = prop_t;
@@ -727,7 +713,7 @@ impl Checker {
                 let t = Type::from(TypeKind::Keyword(TKeyword::String));
                 let result: Result<Vec<(Subst, Type)>, Vec<TypeError>> = exprs
                     .iter_mut()
-                    .map(|expr| self.infer_expr(ctx, expr, false))
+                    .map(|expr| self.infer_expr(expr, false))
                     .collect();
                 // We ignore the types of expressions if there are any because any expression
                 // in JavaScript has a string representation.
@@ -748,20 +734,19 @@ impl Checker {
                 let mut ss: Vec<Subst> = vec![];
                 let mut ts: Vec<Type> = vec![];
                 for arm in arms {
-                    let mut new_ctx = ctx.clone();
-                    let init = self.infer_expr(ctx, expr, false)?;
+                    let init = self.infer_expr(expr, false)?;
+                    self.push_scope(ScopeKind::Inherit);
                     let s1 = self.infer_pattern_and_init(
                         &mut arm.pattern,
                         None,
                         &init,
-                        &mut new_ctx,
                         &PatternUsage::Match,
                         false,
                     )?;
 
-                    let (s2, t2) = self.infer_block(&mut arm.body, &mut new_ctx)?;
+                    let (s2, t2) = self.infer_block(&mut arm.body)?;
 
-                    ctx.count = new_ctx.count;
+                    self.pop_scope();
 
                     let s = compose_subs(&s2, &s1);
                     let t = t2;
@@ -798,13 +783,13 @@ impl Checker {
             // This is only need for classes that are expressions.  Allowing this
             // seems like a bad idea.
             ExprKind::Class(_) => todo!(),
-            ExprKind::DoExpr(DoExpr { body }) => self.infer_block(body, ctx),
+            ExprKind::DoExpr(DoExpr { body }) => self.infer_block(body),
         };
 
         let (s, mut t) = result?;
 
-        // QUESTION: Do we need to update ctx.types as well?
-        ctx.values = ctx.values.apply(&s);
+        // QUESTION: Do we need to update self.current_scope.types as well?
+        self.current_scope.values = self.current_scope.values.apply(&s);
 
         expr.inferred_type = Some(t.clone());
         t.provenance = Some(Box::from(Provenance::from(expr)));
@@ -816,39 +801,38 @@ impl Checker {
         &mut self,
         obj_t: &mut Type,
         prop: &mut MemberProp,
-        ctx: &mut Context,
         is_lvalue: bool,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         // TODO: figure out when we have to copy .mutable from `obj_t` to the `t`
         // being returned.
         match &mut obj_t.kind {
             TypeKind::Var(TVar { constraint, .. }) => match constraint {
-                Some(constraint) => self.infer_property_type(constraint, prop, ctx, is_lvalue),
+                Some(constraint) => self.infer_property_type(constraint, prop, is_lvalue),
                 None => Err(vec![TypeError::PossiblyNotAnObject(Box::from(
                     obj_t.to_owned(),
                 ))]),
             },
-            TypeKind::Object(obj) => self.get_prop_value(obj, prop, ctx, is_lvalue, obj_t.mutable),
+            TypeKind::Object(obj) => self.get_prop_value(obj, prop, is_lvalue, obj_t.mutable),
             TypeKind::Ref(_) => {
-                let mut t = self.get_obj_type(obj_t, ctx)?;
+                let mut t = self.get_obj_type(obj_t)?;
                 t.mutable = obj_t.mutable;
-                self.infer_property_type(&mut t, prop, ctx, is_lvalue)
+                self.infer_property_type(&mut t, prop, is_lvalue)
             }
             TypeKind::Lit(_) => {
-                let mut t = self.get_obj_type(obj_t, ctx)?;
-                self.infer_property_type(&mut t, prop, ctx, is_lvalue)
+                let mut t = self.get_obj_type(obj_t)?;
+                self.infer_property_type(&mut t, prop, is_lvalue)
             }
             TypeKind::Keyword(_) => {
-                let mut t = self.get_obj_type(obj_t, ctx)?;
-                self.infer_property_type(&mut t, prop, ctx, is_lvalue)
+                let mut t = self.get_obj_type(obj_t)?;
+                self.infer_property_type(&mut t, prop, is_lvalue)
             }
             TypeKind::Array(type_param) => {
                 let type_param = type_param.clone();
 
-                let mut t = self.get_obj_type(obj_t, ctx)?;
+                let mut t = self.get_obj_type(obj_t)?;
                 t.mutable = obj_t.mutable;
 
-                let (s, mut t) = self.infer_property_type(&mut t, prop, ctx, is_lvalue)?;
+                let (s, mut t) = self.infer_property_type(&mut t, prop, is_lvalue)?;
 
                 // Replaces `this` with `mut <type_param>[]`
                 let rep_t = Type {
@@ -876,7 +860,7 @@ impl Checker {
                             return Ok((s, t));
                         }
 
-                        let scheme = ctx.lookup_scheme("Array")?;
+                        let scheme = self.current_scope.lookup_scheme("Array")?;
 
                         let mut type_param_map: HashMap<String, Type> = HashMap::new();
                         let type_param = Type::from(TypeKind::Union(elem_types.to_owned()));
@@ -887,10 +871,10 @@ impl Checker {
                         let mut t = replace_aliases_rec(&scheme.t, &type_param_map);
                         t.mutable = obj_t.mutable;
 
-                        self.infer_property_type(&mut t, prop, ctx, is_lvalue)
+                        self.infer_property_type(&mut t, prop, is_lvalue)
                     }
                     MemberProp::Computed(ComputedPropName { expr, .. }) => {
-                        let (prop_s, prop_t) = self.infer_expr(ctx, expr, false)?;
+                        let (prop_s, prop_t) = self.infer_expr(expr, false)?;
 
                         match &prop_t.kind {
                             TypeKind::Keyword(TKeyword::Number) => {
@@ -920,7 +904,7 @@ impl Checker {
             }
             TypeKind::Intersection(types) => {
                 for t in types {
-                    let result = self.infer_property_type(t, prop, ctx, is_lvalue);
+                    let result = self.infer_property_type(t, prop, is_lvalue);
                     if result.is_ok() {
                         return result;
                     }
@@ -937,7 +921,6 @@ impl Checker {
         &mut self,
         obj: &TObject,
         prop: &mut MemberProp,
-        ctx: &mut Context,
         is_lvalue: bool,
         obj_is_mutable: bool,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
@@ -992,7 +975,7 @@ impl Checker {
                 Err(vec![TypeError::MissingKey(name.to_owned())])
             }
             MemberProp::Computed(ComputedPropName { expr, .. }) => {
-                let (prop_s, prop_t) = self.infer_expr(ctx, expr, false)?;
+                let (prop_s, prop_t) = self.infer_expr(expr, false)?;
 
                 let prop_t_clone = prop_t.clone();
                 let prop_s_clone = prop_s.clone();
@@ -1066,7 +1049,7 @@ impl Checker {
                         } else {
                             for indexer in indexers {
                                 let key_clone = indexer.key.t.clone();
-                                let result = self.unify(&prop_t_clone, &key_clone, ctx);
+                                let result = self.unify(&prop_t_clone, &key_clone);
                                 if result.is_ok() {
                                     let key_s = result?;
                                     let s = compose_subs(&key_s, &prop_s_clone);

@@ -81,12 +81,7 @@ pub fn get_type_param_map(ctx: &Context, type_params: &[TypeParam]) -> HashMap<S
             default: _, // TODO: figure out what to do for defaults
         } = type_param;
 
-        // TODO: make a helper for this
-        let t = Type::from(TypeKind::Var(TVar {
-            id: ctx.fresh_id(),
-            constraint: constraint.to_owned(),
-        }));
-
+        let t = ctx.fresh_var(constraint.to_owned());
         type_param_map.insert(name.to_owned(), t);
     }
 
@@ -168,13 +163,13 @@ mod tests {
                     name: TPropKey::StringKey(String::from("a")),
                     optional: false,
                     mutable: false,
-                    t: ctx.fresh_var(),
+                    t: ctx.fresh_var(None),
                 }),
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("b")),
                     optional: false,
                     mutable: false,
-                    t: ctx.fresh_var(),
+                    t: ctx.fresh_var(None),
                 }),
             ],
             is_interface: false,
@@ -190,7 +185,7 @@ mod tests {
     fn test_generalize_with_reused_type_vars() {
         let ctx = Context::default();
 
-        let tv = ctx.fresh_var();
+        let tv = ctx.fresh_var(None);
         let t = Type::from(TypeKind::Object(TObject {
             elems: vec![
                 TObjElem::Prop(TProp {
@@ -245,7 +240,7 @@ mod tests {
     fn test_generalize_lam_to_scheme() {
         let ctx = Context::default();
 
-        let tv = ctx.fresh_var();
+        let tv = ctx.fresh_var(None);
 
         let lam = TLam {
             type_params: None,
@@ -263,7 +258,7 @@ mod tests {
                         name: "b".to_string(),
                         mutable: false,
                     }),
-                    t: ctx.fresh_var(),
+                    t: ctx.fresh_var(None),
                     optional: false,
                 },
             ],
