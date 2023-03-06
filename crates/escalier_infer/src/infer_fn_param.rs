@@ -13,7 +13,7 @@ impl Checker {
     // NOTE: The caller is responsible for inserting any new variables introduced
     // into the appropriate context.
     pub fn infer_fn_param(
-        &self,
+        &mut self,
         param: &mut EFnParam,
         ctx: &mut Context,
         type_param_map: &HashMap<String, Type>,

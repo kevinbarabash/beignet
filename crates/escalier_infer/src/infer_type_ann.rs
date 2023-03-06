@@ -17,7 +17,7 @@ use crate::checker::Checker;
 
 impl Checker {
     pub fn infer_type_ann(
-        &self,
+        &mut self,
         type_ann: &mut TypeAnn,
         ctx: &mut Context,
         type_params: &mut Option<Vec<TypeParam>>,
@@ -60,7 +60,7 @@ impl Checker {
     }
 
     pub fn infer_type_ann_with_params(
-        &self,
+        &mut self,
         type_ann: &mut TypeAnn,
         ctx: &mut Context,
         type_param_map: &HashMap<String, Type>,
@@ -69,7 +69,7 @@ impl Checker {
     }
 
     fn infer_type_ann_rec(
-        &self,
+        &mut self,
         type_ann: &mut TypeAnn,
         ctx: &mut Context,
         type_param_map: &HashMap<String, Type>,

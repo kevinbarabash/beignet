@@ -17,7 +17,7 @@ use crate::checker::Checker;
 impl Checker {
     // `expand_type` is used to expand types that `unify` doesn't know how to unify
     // into something that it does know how to unify.
-    pub fn expand_type(&self, t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
+    pub fn expand_type(&mut self, t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
         match &t.kind {
             TypeKind::Var(_) => Ok(t.to_owned()),
             TypeKind::App(_) => Ok(t.to_owned()),
@@ -71,7 +71,7 @@ impl Checker {
     }
 
     pub fn expand_alias_type(
-        &self,
+        &mut self,
         alias: &TRef,
         ctx: &mut Context,
     ) -> Result<Type, Vec<TypeError>> {
@@ -153,7 +153,7 @@ impl Checker {
     }
 
     fn expand_conditional_type(
-        &self,
+        &mut self,
         cond: &TConditionalType,
         ctx: &mut Context,
     ) -> Result<Type, Vec<TypeError>> {
@@ -189,7 +189,7 @@ impl Checker {
     }
 
     fn expand_index_access(
-        &self,
+        &mut self,
         access: &TIndexAccess,
         ctx: &mut Context,
         // NOTE: This option serves a similar purpose to TypeScript's
@@ -303,7 +303,7 @@ impl Checker {
     }
 
     fn get_obj_type_from_mapped_type(
-        &self,
+        &mut self,
         mapped: &TMappedType,
         ctx: &mut Context,
     ) -> Result<Type, Vec<TypeError>> {
@@ -325,7 +325,7 @@ impl Checker {
     // TODO: This should only be used to process object types and arrays/tuples
     // all other types (number, string, etc.) should be passed through.
     fn expand_mapped_type(
-        &self,
+        &mut self,
         mapped: &TMappedType,
         ctx: &mut Context,
     ) -> Result<Type, Vec<TypeError>> {
@@ -448,7 +448,11 @@ impl Checker {
     // to be optional.
     // TODO: Update this to return more than just props, we need it to handle methods
     // and indexers as well.
-    fn get_prop_by_name(&self, elems: &[TObjElem], name: &str) -> Result<TProp, Vec<TypeError>> {
+    fn get_prop_by_name(
+        &mut self,
+        elems: &[TObjElem],
+        name: &str,
+    ) -> Result<TProp, Vec<TypeError>> {
         for elem in elems {
             match elem {
                 TObjElem::Method(method) => {
@@ -529,7 +533,7 @@ impl Checker {
         Err(vec![TypeError::MissingKey(name.to_owned())])
     }
 
-    fn expand_keyof(&self, t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
+    fn expand_keyof(&mut self, t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
         if let TypeKind::KeyOf(t) = &t.kind {
             return self.expand_keyof(t, ctx);
         }
@@ -593,7 +597,7 @@ impl Checker {
         }
     }
 
-    pub fn get_obj_type(&self, t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
+    pub fn get_obj_type(&mut self, t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
         match &t.kind {
             TypeKind::Var(_) => Err(vec![TypeError::CantInferTypeFromItKeys]),
             TypeKind::Ref(alias) => {
@@ -809,7 +813,7 @@ mod tests {
     fn get_keyof(name: &str, ctx: &mut Context) -> String {
         match ctx.lookup_type(name, true) {
             Ok(t) => {
-                let checker = Checker {};
+                let mut checker = Checker {};
                 let t = checker.expand_keyof(&t, ctx).unwrap();
                 format!("{t}")
             }
@@ -943,7 +947,7 @@ mod tests {
         let b: Obj[Key] = "hello";
         "#;
         let mut ctx = infer_prog(src);
-        let checker = Checker {};
+        let mut checker = Checker {};
 
         let a = ctx.lookup_type("A", false).unwrap();
         let a = checker.expand_type(&a, &mut ctx).unwrap();

@@ -16,7 +16,7 @@ fn is_promise(t: &Type) -> bool {
 
 impl Checker {
     pub fn infer_class(
-        &self,
+        &mut self,
         ctx: &mut Context,
         class: &mut Class,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
@@ -333,7 +333,7 @@ impl Checker {
     }
 
     fn infer_interface_from_class(
-        &self,
+        &mut self,
         ctx: &mut Context,
         class: &mut Class,
     ) -> Result<Scheme, Vec<TypeError>> {

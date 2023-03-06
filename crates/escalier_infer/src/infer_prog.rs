@@ -37,8 +37,7 @@ pub fn infer_prog(prog: &mut Program, ctx: &mut Context) -> Result<Context, Vec<
     ctx.insert_type(String::from("JSXElement"), jsx_element_type);
 
     let mut reports: Vec<TypeError> = vec![];
-
-    let checker = Checker {};
+    let mut checker = Checker {};
 
     // TODO: figure out how report multiple errors
     for stmt in &mut prog.body {

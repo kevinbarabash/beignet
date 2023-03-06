@@ -15,7 +15,7 @@ use crate::checker::Checker;
 
 impl Checker {
     pub fn infer_stmt(
-        &self,
+        &mut self,
         stmt: &mut Statement,
         ctx: &mut Context,
         top_level: bool,
@@ -33,11 +33,12 @@ impl Checker {
                         // An initial value should always be used when using a normal
                         // `let` statement
                         let init = init.as_mut().unwrap();
+                        let inferred_init = self.infer_expr(ctx, init, false)?;
 
                         let s = self.infer_pattern_and_init(
                             pattern,
                             type_ann.as_mut(),
-                            &self.infer_expr(ctx, init, false)?,
+                            &inferred_init,
                             ctx,
                             &PatternUsage::Assign,
                             top_level,
@@ -182,7 +183,7 @@ impl Checker {
     }
 
     pub fn infer_block(
-        &self,
+        &mut self,
         body: &mut Block,
         ctx: &mut Context,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
@@ -204,7 +205,7 @@ impl Checker {
     }
 
     pub fn infer_block_or_expr(
-        &self,
+        &mut self,
         body: &mut BlockOrExpr,
         ctx: &mut Context,
     ) -> Result<(Subst, Type), Vec<TypeError>> {

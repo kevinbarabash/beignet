@@ -18,7 +18,7 @@ use crate::checker::Checker;
 
 impl Checker {
     pub fn infer_expr(
-        &self,
+        &mut self,
         ctx: &mut Context,
         expr: &mut Expr,
         is_lvalue: bool,
@@ -813,7 +813,7 @@ impl Checker {
     }
 
     fn infer_property_type(
-        &self,
+        &mut self,
         obj_t: &mut Type,
         prop: &mut MemberProp,
         ctx: &mut Context,
@@ -934,7 +934,7 @@ impl Checker {
     }
 
     fn get_prop_value(
-        &self,
+        &mut self,
         obj: &TObject,
         prop: &mut MemberProp,
         ctx: &mut Context,

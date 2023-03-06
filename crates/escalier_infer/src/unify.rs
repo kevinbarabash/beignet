@@ -17,7 +17,12 @@ use crate::checker::Checker;
 
 impl Checker {
     // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
-    pub fn unify(&self, t1: &Type, t2: &Type, ctx: &mut Context) -> Result<Subst, Vec<TypeError>> {
+    pub fn unify(
+        &mut self,
+        t1: &Type,
+        t2: &Type,
+        ctx: &mut Context,
+    ) -> Result<Subst, Vec<TypeError>> {
         // All binding must be done first
         match (&t1.kind, &t2.kind) {
             // If both are type variables...
@@ -659,10 +664,12 @@ impl Checker {
             // destructure and object created from a class (which is modeled as an
             // interface) we need call `expand_alias_type` directly.
             (TypeKind::Object(_), TypeKind::Ref(alias)) => {
-                self.unify(t1, &self.expand_alias_type(alias, ctx)?, ctx)
+                let alias_t = self.expand_alias_type(alias, ctx)?;
+                self.unify(t1, &alias_t, ctx)
             }
             (TypeKind::Ref(alias), TypeKind::Object(_)) => {
-                self.unify(&self.expand_alias_type(alias, ctx)?, t2, ctx)
+                let alias_t = self.expand_alias_type(alias, ctx)?;
+                self.unify(&alias_t, t2, ctx)
             }
             (TypeKind::Ref(alias1), TypeKind::Ref(alias2)) => {
                 if alias1.name == alias2.name {
@@ -690,21 +697,48 @@ impl Checker {
             // (TypeKind::Ref(alias), TypeKind::Regex(_)) if alias.name == "RegExp" => {
             //     Ok(Subst::default())
             // }
-            (_, TypeKind::Ref(alias)) => self.unify(t1, &self.expand_alias_type(alias, ctx)?, ctx),
-            (TypeKind::Ref(alias), _) => self.unify(&self.expand_alias_type(alias, ctx)?, t2, ctx),
-            (_, TypeKind::MappedType(_)) => self.unify(t1, &self.expand_type(t2, ctx)?, ctx),
-            (TypeKind::MappedType(_), _) => self.unify(&self.expand_type(t1, ctx)?, t2, ctx),
-            (_, TypeKind::IndexAccess(_)) => self.unify(t1, &self.expand_type(t2, ctx)?, ctx),
-            (TypeKind::IndexAccess(_), _) => self.unify(&self.expand_type(t1, ctx)?, t2, ctx),
-            (_, TypeKind::InferType(_)) => self.unify(t1, &self.expand_type(t2, ctx)?, ctx),
-            (TypeKind::InferType(_), _) => self.unify(&self.expand_type(t1, ctx)?, t2, ctx),
+            (_, TypeKind::Ref(alias)) => {
+                let alias_t = self.expand_alias_type(alias, ctx)?;
+                self.unify(t1, &alias_t, ctx)
+            }
+            (TypeKind::Ref(alias), _) => {
+                let alias_t = self.expand_alias_type(alias, ctx)?;
+                self.unify(&alias_t, t2, ctx)
+            }
+            (_, TypeKind::MappedType(_)) => {
+                let t2 = self.expand_type(t2, ctx)?;
+                self.unify(t1, &t2, ctx)
+            }
+            (TypeKind::MappedType(_), _) => {
+                let t1 = self.expand_type(t1, ctx)?;
+                self.unify(&t1, t2, ctx)
+            }
+            (_, TypeKind::IndexAccess(_)) => {
+                let t2 = self.expand_type(t2, ctx)?;
+                self.unify(t1, &t2, ctx)
+            }
+            (TypeKind::IndexAccess(_), _) => {
+                let t1 = self.expand_type(t1, ctx)?;
+                self.unify(&t1, t2, ctx)
+            }
+            (_, TypeKind::InferType(_)) => {
+                let t2 = self.expand_type(t2, ctx)?;
+                self.unify(t1, &t2, ctx)
+            }
+            (TypeKind::InferType(_), _) => {
+                let t1 = self.expand_type(t1, ctx)?;
+                self.unify(&t1, t2, ctx)
+            }
             (TypeKind::Array(_), TypeKind::Rest(rest_arg)) => {
                 self.unify(t1, rest_arg.as_ref(), ctx)
             }
             (TypeKind::Tuple(_), TypeKind::Rest(rest_arg)) => {
                 self.unify(t1, rest_arg.as_ref(), ctx)
             }
-            (_, TypeKind::KeyOf(_)) => self.unify(t1, &self.expand_type(t2, ctx)?, ctx),
+            (_, TypeKind::KeyOf(_)) => {
+                let t2 = self.expand_type(t2, ctx)?;
+                self.unify(t1, &t2, ctx)
+            }
             (TypeKind::Keyword(keyword1), TypeKind::Keyword(keyword2)) => {
                 match (keyword1, keyword2) {
                     (TKeyword::Number, TKeyword::Number) => Ok(Subst::new()),
@@ -751,7 +785,7 @@ impl Checker {
     }
 
     fn bind(
-        &self,
+        &mut self,
         tv: &TVar,
         t: &Type,
         rel: Relation,
@@ -862,7 +896,7 @@ mod tests {
     #[test]
     fn literals_are_subtypes_of_corresponding_keywords() -> Result<(), Vec<TypeError>> {
         let mut ctx = Context::default();
-        let checker = Checker {};
+        let mut checker = Checker {};
         let result = checker.unify(
             &Type::from(num("5")),
             &Type::from(TypeKind::Keyword(TKeyword::Number)),
@@ -944,7 +978,7 @@ mod tests {
             is_interface: false,
         }));
 
-        let checker = Checker {};
+        let mut checker = Checker {};
         let result = checker.unify(&t1, &t2, &mut ctx)?;
         assert_eq!(result, Subst::default());
 

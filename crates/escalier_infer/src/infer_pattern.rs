@@ -16,7 +16,7 @@ impl Checker {
     // NOTE: The caller is responsible for inserting any new variables introduced
     // into the appropriate context.
     pub fn infer_pattern(
-        &self,
+        &mut self,
         pat: &mut Pattern,
         type_ann: Option<&mut TypeAnn>,
         ctx: &mut Context,
@@ -51,7 +51,7 @@ impl Checker {
     }
 
     pub fn infer_pattern_and_init(
-        &self,
+        &mut self,
         pattern: &mut Pattern,
         type_ann: Option<&mut TypeAnn>,
         init: &(Subst, Type),
