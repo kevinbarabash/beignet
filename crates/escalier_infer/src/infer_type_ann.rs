@@ -40,9 +40,9 @@ impl Checker {
                         Some(type_ann) => {
                             // TODO: push `s` on to `ss`
                             let (_s, t) = self.infer_type_ann(type_ann, &mut None)?;
-                            self.current_scope.fresh_var(Some(Box::from(t)))
+                            self.fresh_var(Some(Box::from(t)))
                         }
-                        None => self.current_scope.fresh_var(None),
+                        None => self.fresh_var(None),
                     };
 
                     Ok((param.name.name.to_owned(), tv))

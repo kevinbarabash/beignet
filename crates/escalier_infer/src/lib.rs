@@ -21,7 +21,7 @@ pub use checker::Checker;
 pub use context::*;
 pub use infer_prog::*;
 pub use infer_stmt::*;
-pub use scheme::{get_sub_and_type_params, instantiate, Scheme};
+pub use scheme::{get_sub_and_type_params, Scheme};
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
 pub use util::{close_over, immutable_obj_type, normalize, replace_aliases_rec};
@@ -92,8 +92,8 @@ mod tests {
         }
     }
 
-    fn get_type_type(name: &str, ctx: &Context) -> String {
-        match ctx.lookup_type(name, false) {
+    fn get_type_type(name: &str, checker: &mut Checker) -> String {
+        match checker.lookup_type(name, false) {
             Ok(t) => format!("{t}"),
             Err(_) => panic!("Couldn't find type with name '{name}'"),
         }
@@ -2347,8 +2347,8 @@ mod tests {
         "#;
 
         let ctx = infer_prog(src);
-
-        assert_eq!(get_type_type("CoordName", &ctx), "keyof Point");
+        let mut checker = Checker::from(ctx);
+        assert_eq!(get_type_type("CoordName", &mut checker), "keyof Point");
     }
 
     #[test]
@@ -2361,9 +2361,9 @@ mod tests {
         "#;
 
         let ctx = infer_prog(src);
-
-        assert_eq!(get_type_type("Foo", &ctx), r#"{bar: "baz"}"#);
-        assert_eq!(get_type_type("FooBar", &ctx), r#""baz""#);
+        let mut checker = Checker::from(ctx);
+        assert_eq!(get_type_type("Foo", &mut checker), r#"{bar: "baz"}"#);
+        assert_eq!(get_type_type("FooBar", &mut checker), r#""baz""#);
     }
 
     #[test]
@@ -3156,14 +3156,15 @@ mod tests {
         "#;
 
         let ctx = infer_prog(src);
+        let mut checker = Checker::from(ctx);
 
-        let it = ctx.lookup_type("Foo", false).unwrap();
+        let it = checker.lookup_type("Foo", false).unwrap();
         assert_eq!(
             format!("{it}"),
             "{msg: string, add(self, x: number, y: number): number, get bar(self): boolean}"
         );
 
-        let mut_it = ctx.lookup_type("Foo", true).unwrap();
+        let mut_it = checker.lookup_type("Foo", true).unwrap();
         assert_eq!(
             format!("{mut_it}"),
             "{msg: string, add(self, x: number, y: number): number, set_msg(mut self, msg: string): undefined, get bar(self): boolean, set bar(mut self, value: boolean)}"

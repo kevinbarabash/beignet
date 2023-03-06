@@ -7,7 +7,6 @@ use escalier_ast::types::{
 use escalier_ast::values::{ExprKind, TypeAnn, TypeAnnKind};
 use types::TKeyword;
 
-use crate::scheme::{instantiate_callable, instantiate_gen_lam};
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::util::*;
@@ -161,7 +160,7 @@ impl Checker {
             // NOTE: this arm is only hit by the `infer_skk` test case
             (TypeKind::Lam(_), TypeKind::App(_)) => self.unify(t2, t1),
             (TypeKind::App(app), TypeKind::Lam(lam)) => {
-                let lam = instantiate_gen_lam(&self.current_scope, lam, app.type_args.as_ref());
+                let lam = self.instantiate_gen_lam(lam, app.type_args.as_ref());
                 let mut s = Subst::new();
 
                 let maybe_rest_param = if let Some(param) = lam.params.last() {
@@ -331,7 +330,7 @@ impl Checker {
                             let t = if call.type_params.is_some() {
                                 lam
                             } else {
-                                instantiate_callable(&self.current_scope, call)
+                                self.instantiate_callable(call)
                             };
                             eprintln!("callable instantiated as {t}");
                             Some(t)

@@ -9,8 +9,8 @@ use escalier_ast::types::*;
 use crate::context::Context;
 use crate::substitutable::{Subst, Substitutable};
 
-fn get_mapping(t: &Type) -> HashMap<i32, Type> {
-    let mapping: HashMap<i32, Type> = t
+fn get_mapping(t: &Type) -> HashMap<u32, Type> {
+    let mapping: HashMap<u32, Type> = t
         .ftv()
         .iter()
         .enumerate()
@@ -18,7 +18,7 @@ fn get_mapping(t: &Type) -> HashMap<i32, Type> {
             (
                 key.id,
                 Type::from(TypeKind::Var(TVar {
-                    id: index as i32,
+                    id: index as u32,
                     constraint: key.constraint.clone(),
                 })),
             )
@@ -89,7 +89,7 @@ pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
 #[derive(VisitorMut)]
 #[visitor(Type(exit))]
 struct NormalizeVisitor {
-    mapping: HashMap<i32, Type>,
+    mapping: HashMap<u32, Type>,
 }
 
 impl NormalizeVisitor {
@@ -461,6 +461,7 @@ pub fn immutable_obj_type(obj: &TObject) -> Option<TObject> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::checker::Checker;
 
     #[test]
     fn test_compose_subs() {
@@ -497,8 +498,8 @@ mod tests {
 
     #[test]
     fn test_close_over() {
-        let ctx = Context::default();
-        let tv = ctx.fresh_var(None);
+        let mut checker = Checker::default();
+        let tv = checker.fresh_var(None);
         let lam = TLam {
             type_params: None,
             params: vec![
@@ -515,7 +516,7 @@ mod tests {
                         name: "b".to_string(),
                         mutable: false,
                     }),
-                    t: ctx.fresh_var(None),
+                    t: checker.fresh_var(None),
                     optional: false,
                 },
             ],
@@ -523,7 +524,7 @@ mod tests {
         };
         let t = Type::from(TypeKind::Lam(lam));
         let s = Subst::default();
-        let result = close_over(&s, &t, &ctx);
+        let result = close_over(&s, &t, &checker.current_scope);
 
         assert_eq!(result.to_string(), "<A, B>(a: A, b: B) => A");
     }

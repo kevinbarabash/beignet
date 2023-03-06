@@ -9,7 +9,7 @@ use crate::context::Binding;
 use crate::infer_regex::parse_regex;
 use crate::scheme::Scheme;
 
-pub type Subst = HashMap<i32, Type>;
+pub type Subst = HashMap<u32, Type>;
 
 pub trait Substitutable {
     fn apply(&self, subs: &Subst) -> Self;

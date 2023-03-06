@@ -6,9 +6,11 @@ use std::iter::Iterator;
 
 use escalier_ast::types::*;
 
-use crate::context::{Context, Env};
+use crate::context::Env;
 use crate::substitutable::{Subst, Substitutable};
 use crate::util::{replace_aliases_in_lam, replace_aliases_rec};
+
+use crate::checker::Checker;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Scheme {
@@ -71,91 +73,92 @@ pub fn generalize(env: &Env, t: &Type) -> Scheme {
     }
 }
 
-pub fn get_type_param_map(ctx: &Context, type_params: &[TypeParam]) -> HashMap<String, Type> {
-    let mut type_param_map = HashMap::new();
+impl Checker {
+    pub fn get_type_param_map(&mut self, type_params: &[TypeParam]) -> HashMap<String, Type> {
+        let mut type_param_map = HashMap::new();
 
-    for type_param in type_params {
-        let TypeParam {
-            name,
-            constraint,
-            default: _, // TODO: figure out what to do for defaults
-        } = type_param;
+        for type_param in type_params {
+            let TypeParam {
+                name,
+                constraint,
+                default: _, // TODO: figure out what to do for defaults
+            } = type_param;
 
-        let t = ctx.fresh_var(constraint.to_owned());
-        type_param_map.insert(name.to_owned(), t);
+            let t = self.fresh_var(constraint.to_owned());
+            type_param_map.insert(name.to_owned(), t);
+        }
+
+        type_param_map
     }
 
-    type_param_map
-}
+    pub fn instantiate(&mut self, sc: &Scheme) -> Type {
+        let type_param_map = match &sc.type_params {
+            Some(type_params) => self.get_type_param_map(type_params),
+            None => HashMap::new(),
+        };
 
-pub fn instantiate(ctx: &Context, sc: &Scheme) -> Type {
-    let type_param_map = match &sc.type_params {
-        Some(type_params) => get_type_param_map(ctx, type_params),
-        None => HashMap::new(),
-    };
-
-    // TODO: name functions so it's more obvious when a function is mutating
-    // it's args.
-    replace_aliases_rec(&sc.t, &type_param_map)
-}
-
-pub fn instantiate_gen_lam(ctx: &Context, lam: &TLam, type_args: Option<&Vec<Type>>) -> TLam {
-    if lam.type_params.is_none() {
-        return lam.to_owned();
+        // TODO: name functions so it's more obvious when a function is mutating
+        // it's args.
+        replace_aliases_rec(&sc.t, &type_param_map)
     }
 
-    // TODO: check if `type_args` conform the the constraints in `type_params`
-    let type_param_map = match &lam.type_params {
-        Some(type_params) => match type_args {
-            Some(type_args) => {
-                let mut map: HashMap<String, Type> = HashMap::new();
-                for (type_param, type_arg) in type_params.iter().zip(type_args) {
-                    map.insert(type_param.name.to_owned(), type_arg.to_owned());
+    pub fn instantiate_gen_lam(&mut self, lam: &TLam, type_args: Option<&Vec<Type>>) -> TLam {
+        if lam.type_params.is_none() {
+            return lam.to_owned();
+        }
+
+        // TODO: check if `type_args` conform the the constraints in `type_params`
+        let type_param_map = match &lam.type_params {
+            Some(type_params) => match type_args {
+                Some(type_args) => {
+                    let mut map: HashMap<String, Type> = HashMap::new();
+                    for (type_param, type_arg) in type_params.iter().zip(type_args) {
+                        map.insert(type_param.name.to_owned(), type_arg.to_owned());
+                    }
+                    map
                 }
-                map
-            }
-            None => get_type_param_map(ctx, type_params),
-        },
-        None => HashMap::new(),
-    };
+                None => self.get_type_param_map(type_params),
+            },
+            None => HashMap::new(),
+        };
 
-    let lam = TLam {
-        type_params: None,
-        ..lam.to_owned()
-    };
+        let lam = TLam {
+            type_params: None,
+            ..lam.to_owned()
+        };
 
-    replace_aliases_in_lam(&lam, &type_param_map)
-}
+        replace_aliases_in_lam(&lam, &type_param_map)
+    }
 
-// TODO: Update to acception optional type args
-pub fn instantiate_callable(ctx: &Context, callable: &TCallable) -> Type {
-    let TCallable {
-        type_params,
-        params,
-        ret,
-    } = callable;
+    // TODO: Update to acception optional type args
+    pub fn instantiate_callable(&mut self, callable: &TCallable) -> Type {
+        let TCallable {
+            type_params,
+            params,
+            ret,
+        } = callable;
 
-    let type_param_map = match type_params {
-        Some(type_params) => get_type_param_map(ctx, type_params),
-        None => HashMap::new(),
-    };
-    let t = Type::from(TypeKind::Lam(TLam {
-        params: params.to_owned(),
-        ret: ret.to_owned(),
-        type_params: None,
-    }));
+        let type_param_map = match type_params {
+            Some(type_params) => self.get_type_param_map(type_params),
+            None => HashMap::new(),
+        };
+        let t = Type::from(TypeKind::Lam(TLam {
+            params: params.to_owned(),
+            ret: ret.to_owned(),
+            type_params: None,
+        }));
 
-    replace_aliases_rec(&t, &type_param_map)
+        replace_aliases_rec(&t, &type_param_map)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::Context;
 
     #[test]
     fn test_generalize_with_unique_type_vars() {
-        let ctx = Context::default();
+        let mut checker = Checker::default();
 
         let t = Type::from(TypeKind::Object(TObject {
             elems: vec![
@@ -163,13 +166,13 @@ mod tests {
                     name: TPropKey::StringKey(String::from("a")),
                     optional: false,
                     mutable: false,
-                    t: ctx.fresh_var(None),
+                    t: checker.fresh_var(None),
                 }),
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("b")),
                     optional: false,
                     mutable: false,
-                    t: ctx.fresh_var(None),
+                    t: checker.fresh_var(None),
                 }),
             ],
             is_interface: false,
@@ -183,9 +186,9 @@ mod tests {
 
     #[test]
     fn test_generalize_with_reused_type_vars() {
-        let ctx = Context::default();
+        let mut checker = Checker::default();
 
-        let tv = ctx.fresh_var(None);
+        let tv = checker.fresh_var(None);
         let t = Type::from(TypeKind::Object(TObject {
             elems: vec![
                 TObjElem::Prop(TProp {
@@ -238,9 +241,9 @@ mod tests {
 
     #[test]
     fn test_generalize_lam_to_scheme() {
-        let ctx = Context::default();
+        let mut checker = Checker::default();
 
-        let tv = ctx.fresh_var(None);
+        let tv = checker.fresh_var(None);
 
         let lam = TLam {
             type_params: None,
@@ -258,7 +261,7 @@ mod tests {
                         name: "b".to_string(),
                         mutable: false,
                     }),
-                    t: ctx.fresh_var(None),
+                    t: checker.fresh_var(None),
                     optional: false,
                 },
             ],
@@ -297,8 +300,8 @@ mod tests {
             type_params: None,
         };
 
-        let ctx = Context::default();
-        let t = instantiate(&ctx, &sc);
+        let mut checker = Checker::default();
+        let t = checker.instantiate(&sc);
 
         assert_eq!(t.to_string(), "{a: number, b: string}");
     }
@@ -345,8 +348,8 @@ mod tests {
             ]),
         };
 
-        let ctx = Context::default();
-        let t = instantiate(&ctx, &sc);
+        let mut checker = Checker::default();
+        let t = checker.instantiate(&sc);
 
         assert_eq!(t.to_string(), "{a: t1, b: t2}");
     }
@@ -386,8 +389,8 @@ mod tests {
             }]),
         };
 
-        let ctx = Context::default();
-        let t = instantiate(&ctx, &sc);
+        let mut checker = Checker::default();
+        let t = checker.instantiate(&sc);
 
         assert_eq!(t.to_string(), "{a: t1, b: t1}");
     }
@@ -434,15 +437,15 @@ mod tests {
             ]),
         };
 
-        let ctx = Context::default();
-        let t = instantiate(&ctx, &sc);
+        let mut checker = Checker::default();
+        let t = checker.instantiate(&sc);
 
         insta::assert_debug_snapshot!(t);
     }
 
     #[test]
     fn test_instantiate_gen_lam() {
-        let ctx = Context::default();
+        let mut checker = Checker::default();
 
         let gen_lam = TLam {
             type_params: Some(vec![
@@ -487,7 +490,7 @@ mod tests {
             }))),
         };
 
-        let lam = instantiate_gen_lam(&ctx, &gen_lam, None);
+        let lam = checker.instantiate_gen_lam(&gen_lam, None);
 
         assert_eq!(lam.to_string(), "(a: t1, b: t2) => t1");
     }

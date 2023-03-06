@@ -50,7 +50,7 @@ impl Checker {
             TypeKind::MappedType(mapped) => self.expand_mapped_type(mapped),
             TypeKind::ConditionalType(cond) => self.expand_conditional_type(cond),
             TypeKind::InferType(TInferType { name }) => {
-                let t = self.current_scope.fresh_var(None);
+                let t = self.fresh_var(None);
 
                 // We use insert_scheme() here instead of insert_type() because we
                 // don't want to generalize the type being inserted.  If we didn't
@@ -162,7 +162,7 @@ impl Checker {
 
         let mut type_param_map: HashMap<String, Type> = HashMap::new();
         for infer_t in infer_types {
-            type_param_map.insert(infer_t.name.to_owned(), self.current_scope.fresh_var(None));
+            type_param_map.insert(infer_t.name.to_owned(), self.fresh_var(None));
         }
 
         replace_infer_types(&mut extends_type, &type_param_map);
@@ -599,19 +599,19 @@ impl Checker {
             TypeKind::Object(_) => Ok(t.to_owned()),
             TypeKind::Lit(lit) => {
                 let t = match lit {
-                    TLit::Num(_) => self.current_scope.lookup_type("Number", false)?,
-                    TLit::Bool(_) => self.current_scope.lookup_type("Boolean", false)?,
-                    TLit::Str(_) => self.current_scope.lookup_type("String", false)?,
+                    TLit::Num(_) => self.lookup_type("Number", false)?,
+                    TLit::Bool(_) => self.lookup_type("Boolean", false)?,
+                    TLit::Str(_) => self.lookup_type("String", false)?,
                 };
                 Ok(t)
             }
             TypeKind::Keyword(keyword) => {
                 let t = match keyword {
-                    TKeyword::Number => self.current_scope.lookup_type("Number", false)?,
-                    TKeyword::Boolean => self.current_scope.lookup_type("Boolean", false)?,
-                    TKeyword::Self_ => self.current_scope.lookup_type("Self", false)?, // TODO:
-                    TKeyword::String => self.current_scope.lookup_type("String", false)?,
-                    TKeyword::Symbol => self.current_scope.lookup_type("Symbol", false)?,
+                    TKeyword::Number => self.lookup_type("Number", false)?,
+                    TKeyword::Boolean => self.lookup_type("Boolean", false)?,
+                    TKeyword::Self_ => self.lookup_type("Self", false)?, // TODO:
+                    TKeyword::String => self.lookup_type("String", false)?,
+                    TKeyword::Symbol => self.lookup_type("Symbol", false)?,
                     TKeyword::Object => {
                         // NOTE: Structural typing allows for extra elems in any object
                         // so this should be a good equivalent for the `object` keyword.
@@ -651,7 +651,7 @@ impl Checker {
                 // be the union of all element types in the tuple.
                 let scheme = self.current_scope.lookup_scheme("Array")?;
 
-                // let array_t = self.current_scope.lookup_type("Array", t.mutable)?;
+                // let array_t = self.lookup_type("Array", t.mutable)?;
                 if let TypeKind::Object(TObject {
                     elems: array_elems,
                     is_interface: _,
@@ -692,7 +692,7 @@ impl Checker {
 
                 Ok(t)
             }
-            TypeKind::Lam(_) => self.current_scope.lookup_type("Function", false),
+            TypeKind::Lam(_) => self.lookup_type("Function", false),
             TypeKind::App(_) => todo!(), // What does this even mean?
             TypeKind::Union(_) => todo!(),
             TypeKind::Intersection(_) => {
@@ -794,10 +794,9 @@ mod tests {
         crate::infer_prog(&mut prog, &mut ctx).unwrap()
     }
 
-    fn get_keyof(name: &str, ctx: &mut Context) -> String {
-        match ctx.lookup_type(name, true) {
+    fn get_keyof(name: &str, checker: &mut Checker) -> String {
+        match checker.lookup_type(name, true) {
             Ok(t) => {
-                let mut checker = Checker::from(ctx.to_owned());
                 let t = checker.expand_keyof(&t).unwrap();
                 format!("{t}")
             }
@@ -810,9 +809,9 @@ mod tests {
         let src = r#"
         type t = {x: number, y: number};
         "#;
-        let mut ctx = infer_prog(src);
-
-        assert_eq!(get_keyof("t", &mut ctx), r#""x" | "y""#);
+        let ctx = infer_prog(src);
+        let mut checker = Checker::from(ctx);
+        assert_eq!(get_keyof("t", &mut checker), r#""x" | "y""#);
     }
 
     #[test]
@@ -821,9 +820,9 @@ mod tests {
         let src = r#"
         type t = {a: number, b: boolean} & {b: string, c: number};
         "#;
-        let mut ctx = infer_prog(src);
-
-        assert_eq!(get_keyof("t", &mut ctx), r#""a" | "b" | "c""#);
+        let ctx = infer_prog(src);
+        let mut checker = Checker::from(ctx);
+        assert_eq!(get_keyof("t", &mut checker), r#""a" | "b" | "c""#);
     }
 
     #[test]
@@ -835,9 +834,9 @@ mod tests {
         };
         type t = number;
         "#;
-        let mut ctx = infer_prog(src);
-
-        assert_eq!(get_keyof("t", &mut ctx), r#""toFixed" | "toString""#);
+        let ctx = infer_prog(src);
+        let mut checker = Checker::from(ctx);
+        assert_eq!(get_keyof("t", &mut checker), r#""toFixed" | "toString""#);
     }
 
     #[test]
@@ -850,10 +849,10 @@ mod tests {
         };
         type t = string;
         "#;
-        let mut ctx = infer_prog(src);
-
+        let ctx = infer_prog(src);
+        let mut checker = Checker::from(ctx);
         assert_eq!(
-            get_keyof("t", &mut ctx),
+            get_keyof("t", &mut checker),
             r#""length" | "toLowerCase" | "toUpperCase""#
         );
     }
@@ -868,9 +867,9 @@ mod tests {
         };
         type t = number[];
         "#;
-        let mut ctx = infer_prog(src);
-
-        assert_eq!(get_keyof("t", &mut ctx), r#""length" | "map" | number"#);
+        let ctx = infer_prog(src);
+        let mut checker = Checker::from(ctx);
+        assert_eq!(get_keyof("t", &mut checker), r#""length" | "map" | number"#);
     }
 
     #[test]
@@ -884,10 +883,10 @@ mod tests {
         };
         type t = mut number[];
         "#;
-        let mut ctx = infer_prog(src);
-
+        let ctx = infer_prog(src);
+        let mut checker = Checker::from(ctx);
         assert_eq!(
-            get_keyof("t", &mut ctx),
+            get_keyof("t", &mut checker),
             r#""length" | "map" | "sort" | number"#
         );
     }
@@ -901,9 +900,12 @@ mod tests {
         };
         type t = [1, 2, 3];
         "#;
-        let mut ctx = infer_prog(src);
-
-        assert_eq!(get_keyof("t", &mut ctx), r#""length" | "map" | 0 | 1 | 2"#);
+        let ctx = infer_prog(src);
+        let mut checker = Checker::from(ctx);
+        assert_eq!(
+            get_keyof("t", &mut checker),
+            r#""length" | "map" | 0 | 1 | 2"#
+        );
     }
 
     #[test]
@@ -916,9 +918,9 @@ mod tests {
         };
         type t = () => boolean;
         "#;
-        let mut ctx = infer_prog(src);
-
-        assert_eq!(get_keyof("t", &mut ctx), r#""apply" | "bind" | "call""#);
+        let ctx = infer_prog(src);
+        let mut checker = Checker::from(ctx);
+        assert_eq!(get_keyof("t", &mut checker), r#""apply" | "bind" | "call""#);
     }
 
     #[test]
@@ -933,12 +935,12 @@ mod tests {
         let ctx = infer_prog(src);
         let mut checker = Checker::from(ctx);
 
-        let a = checker.current_scope.lookup_type("A", false).unwrap();
+        let a = checker.lookup_type("A", false).unwrap();
         let a = checker.expand_type(&a).unwrap();
         let result = format!("{a}");
         assert_eq!(result, r#"number"#);
 
-        let b = checker.current_scope.lookup_type("B", false).unwrap();
+        let b = checker.lookup_type("B", false).unwrap();
         let b = checker.expand_type(&b).unwrap();
         let result = format!("{b}");
         assert_eq!(result, r#"string"#);
