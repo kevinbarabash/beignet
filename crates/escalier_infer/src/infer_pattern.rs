@@ -96,7 +96,7 @@ fn infer_pattern_rec(
 ) -> Result<Type, Vec<TypeError>> {
     let result: Result<Type, Vec<TypeError>> = match &mut pat.kind {
         PatternKind::Ident(values::BindingIdent { name, mutable, .. }) => {
-            let tv = ctx.fresh_var();
+            let tv = ctx.fresh_var(None);
             if assump
                 .insert(
                     name.to_owned(),
@@ -114,7 +114,7 @@ fn infer_pattern_rec(
         PatternKind::Wildcard => {
             // Same as Pattern::Ident but we don't insert an assumption since
             // we don't want to bind it to a variable.
-            let tv = ctx.fresh_var();
+            let tv = ctx.fresh_var(None);
             Ok(tv)
         }
         PatternKind::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
@@ -205,7 +205,7 @@ fn infer_pattern_rec(
                         // default values.
                         // TODO: handle default values
 
-                        let tv = ctx.fresh_var();
+                        let tv = ctx.fresh_var(None);
                         if assump
                             .insert(
                                 ident.name.to_owned(),

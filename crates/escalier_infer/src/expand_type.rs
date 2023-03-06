@@ -50,7 +50,7 @@ impl Checker {
             TypeKind::MappedType(mapped) => self.expand_mapped_type(mapped),
             TypeKind::ConditionalType(cond) => self.expand_conditional_type(cond),
             TypeKind::InferType(TInferType { name }) => {
-                let t = self.current_scope.fresh_var();
+                let t = self.current_scope.fresh_var(None);
 
                 // We use insert_scheme() here instead of insert_type() because we
                 // don't want to generalize the type being inserted.  If we didn't
@@ -162,7 +162,7 @@ impl Checker {
 
         let mut type_param_map: HashMap<String, Type> = HashMap::new();
         for infer_t in infer_types {
-            type_param_map.insert(infer_t.name.to_owned(), self.current_scope.fresh_var());
+            type_param_map.insert(infer_t.name.to_owned(), self.current_scope.fresh_var(None));
         }
 
         replace_infer_types(&mut extends_type, &type_param_map);
@@ -797,10 +797,7 @@ mod tests {
     fn get_keyof(name: &str, ctx: &mut Context) -> String {
         match ctx.lookup_type(name, true) {
             Ok(t) => {
-                let mut checker = Checker {
-                    current_scope: ctx.to_owned(),
-                    parent_scopes: vec![],
-                };
+                let mut checker = Checker::from(ctx.to_owned());
                 let t = checker.expand_keyof(&t).unwrap();
                 format!("{t}")
             }
@@ -934,10 +931,7 @@ mod tests {
         let b: Obj[Key] = "hello";
         "#;
         let ctx = infer_prog(src);
-        let mut checker = Checker {
-            current_scope: ctx,
-            parent_scopes: vec![],
-        };
+        let mut checker = Checker::from(ctx);
 
         let a = checker.current_scope.lookup_type("A", false).unwrap();
         let a = checker.expand_type(&a).unwrap();

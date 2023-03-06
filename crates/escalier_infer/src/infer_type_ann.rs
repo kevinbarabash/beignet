@@ -3,7 +3,7 @@ use std::iter::Iterator;
 
 use escalier_ast::types::{
     self as types, Provenance, TConditionalType, TFnParam, TIndex, TIndexAccess, TIndexKey,
-    TInferType, TMappedType, TObjElem, TObject, TProp, TPropKey, TVar, Type, TypeKind,
+    TInferType, TMappedType, TObjElem, TObject, TProp, TPropKey, Type, TypeKind,
 };
 use escalier_ast::values::*;
 
@@ -40,12 +40,9 @@ impl Checker {
                         Some(type_ann) => {
                             // TODO: push `s` on to `ss`
                             let (_s, t) = self.infer_type_ann(type_ann, &mut None)?;
-                            Type::from(TypeKind::Var(TVar {
-                                id: self.current_scope.fresh_id(),
-                                constraint: Some(Box::from(t)),
-                            }))
+                            self.current_scope.fresh_var(Some(Box::from(t)))
                         }
-                        None => self.current_scope.fresh_var(),
+                        None => self.current_scope.fresh_var(None),
                     };
 
                     Ok((param.name.name.to_owned(), tv))

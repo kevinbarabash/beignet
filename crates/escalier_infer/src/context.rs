@@ -125,16 +125,16 @@ impl Context {
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    pub fn fresh_id(&self) -> i32 {
+    fn fresh_id(&self) -> i32 {
         let id = self.count.get() + 1;
         self.count.set(id);
         id
     }
 
-    pub fn fresh_var(&self) -> Type {
+    pub fn fresh_var(&self, constraint: Option<Box<Type>>) -> Type {
         Type::from(TypeKind::Var(TVar {
             id: self.fresh_id(),
-            constraint: None,
+            constraint,
         }))
     }
 }

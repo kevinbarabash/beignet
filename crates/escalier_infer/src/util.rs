@@ -498,7 +498,7 @@ mod tests {
     #[test]
     fn test_close_over() {
         let ctx = Context::default();
-        let tv = ctx.fresh_var();
+        let tv = ctx.fresh_var(None);
         let lam = TLam {
             type_params: None,
             params: vec![
@@ -515,7 +515,7 @@ mod tests {
                         name: "b".to_string(),
                         mutable: false,
                     }),
-                    t: ctx.fresh_var(),
+                    t: ctx.fresh_var(None),
                     optional: false,
                 },
             ],

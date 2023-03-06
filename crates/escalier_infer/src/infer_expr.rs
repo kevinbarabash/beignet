@@ -13,7 +13,7 @@ use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::util::*;
 
-use crate::checker::Checker;
+use crate::checker::{Checker, ScopeKind};
 
 impl Checker {
     pub fn infer_expr(
@@ -46,7 +46,7 @@ impl Checker {
                     }
                 }
 
-                let ret_type = self.current_scope.fresh_var();
+                let ret_type = self.current_scope.fresh_var(None);
                 let type_args = match type_args {
                     Some(type_args) => {
                         let tuples = type_args
@@ -156,7 +156,7 @@ impl Checker {
                             lam_type.provenance =
                                 Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
 
-                            let ret_type = self.current_scope.fresh_var();
+                            let ret_type = self.current_scope.fresh_var(None);
                             let call_type = Type::from(TypeKind::App(types::TApp {
                                 args: arg_types.clone(),
                                 ret: Box::from(ret_type.clone()),
@@ -204,7 +204,7 @@ impl Checker {
             ExprKind::Fix(Fix { expr, .. }) => {
                 let (s1, t) = self.infer_expr(expr, false)?;
                 eprintln!("t = {t}");
-                let tv = self.current_scope.fresh_var();
+                let tv = self.current_scope.fresh_var(None);
                 let param = TFnParam {
                     pat: TPat::Ident(types::BindingIdent {
                         name: String::from("fix_param"),
@@ -249,7 +249,7 @@ impl Checker {
                         ExprKind::LetExpr(LetExpr { pat, expr, .. }) => {
                             // TODO: warn if the pattern isn't refutable
                             let init = self.infer_expr(expr, false)?;
-                            self.push_scope(); // TODO: move this before infer_expr?
+                            self.push_scope(ScopeKind::Inherit);
                             let s1 = self.infer_pattern_and_init(
                                 pat,
                                 None,
@@ -288,7 +288,7 @@ impl Checker {
                 None => match &mut cond.kind {
                     ExprKind::LetExpr(LetExpr { pat, expr, .. }) => {
                         let init = self.infer_expr(expr, false)?;
-                        self.push_scope(); // TODO: move this before infer_expr?
+                        self.push_scope(ScopeKind::Inherit);
                         let s1 = self.infer_pattern_and_init(
                             pat,
                             None,
@@ -408,7 +408,7 @@ impl Checker {
                 type_params,
                 ..
             }) => {
-                self.push_scope();
+                self.push_scope(ScopeKind::Inherit);
                 self.current_scope.is_async = is_async.to_owned();
 
                 let type_params_map: HashMap<String, Type> = match type_params {
@@ -419,12 +419,9 @@ impl Checker {
                                 Some(type_ann) => {
                                     // TODO: push `s` on to `ss`
                                     let (_s, t) = self.infer_type_ann(type_ann, &mut None)?;
-                                    Type::from(TypeKind::Var(TVar {
-                                        id: self.current_scope.fresh_id(),
-                                        constraint: Some(Box::from(t)),
-                                    }))
+                                    self.current_scope.fresh_var(Some(Box::from(t)))
                                 }
-                                None => self.current_scope.fresh_var(),
+                                None => self.current_scope.fresh_var(None),
                             };
                             self.current_scope
                                 .insert_type(type_param.name.name.clone(), tv.clone());
@@ -654,7 +651,7 @@ impl Checker {
                 }
 
                 let (s1, t1) = self.infer_expr(expr, false)?;
-                let inner_t = self.current_scope.fresh_var();
+                let inner_t = self.current_scope.fresh_var(None);
                 let promise_t = Type::from(TypeKind::Ref(types::TRef {
                     name: String::from("Promise"),
                     type_args: Some(vec![inner_t.clone()]),
@@ -738,7 +735,7 @@ impl Checker {
                 let mut ts: Vec<Type> = vec![];
                 for arm in arms {
                     let init = self.infer_expr(expr, false)?;
-                    self.push_scope(); // TODO: move this before infer_expr?
+                    self.push_scope(ScopeKind::Inherit);
                     let s1 = self.infer_pattern_and_init(
                         &mut arm.pattern,
                         None,

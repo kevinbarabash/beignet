@@ -8,7 +8,7 @@ use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::util::compose_many_subs;
 
-use crate::checker::Checker;
+use crate::checker::{Checker, ScopeKind};
 
 fn is_promise(t: &Type) -> bool {
     matches!(&t, Type {kind: TypeKind::Ref(TRef { name, .. }), ..} if name == "Promise")
@@ -26,8 +26,7 @@ impl Checker {
         for member in &mut class.body {
             match member {
                 ClassMember::Constructor(Constructor { params, body }) => {
-                    self.push_scope();
-                    self.current_scope.is_async = false; // Constructors cannot be async
+                    self.push_scope(ScopeKind::Sync); // Constructors cannot be async
 
                     // Constructors can't have type parameters.
                     let type_params_map = HashMap::default();
@@ -107,7 +106,7 @@ impl Checker {
                         type_params,
                     } = lambda;
 
-                    self.push_scope();
+                    self.push_scope(ScopeKind::from(*is_async));
                     self.current_scope.is_async = is_async.to_owned();
 
                     // TODO: aggregate method type params with class type params
@@ -383,7 +382,7 @@ impl Checker {
 
                     // We create a new Scope here so that bindings inferred from
                     // function params aren't added to the current scope.
-                    self.push_scope();
+                    self.push_scope(ScopeKind::Sync); // TODO: add support for async methods
                     let params: Result<Vec<(Subst, TFnParam)>, Vec<TypeError>> = iter
                         .map(|e_param| {
                             if e_param.type_ann.is_none() {

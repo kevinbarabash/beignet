@@ -28,8 +28,8 @@ pub struct InterfaceCollector {
 pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
     match type_ann {
         TsType::TsKeywordType(keyword) => match &keyword.kind {
-            TsKeywordTypeKind::TsAnyKeyword => Ok(ctx.fresh_var()),
-            TsKeywordTypeKind::TsUnknownKeyword => Ok(ctx.fresh_var()),
+            TsKeywordTypeKind::TsAnyKeyword => Ok(ctx.fresh_var(None)),
+            TsKeywordTypeKind::TsUnknownKeyword => Ok(ctx.fresh_var(None)),
             TsKeywordTypeKind::TsNumberKeyword => {
                 Ok(Type::from(TypeKind::Keyword(TKeyword::Number)))
             }

@@ -11,7 +11,7 @@ use crate::type_error::TypeError;
 use crate::update::*;
 use crate::util::*;
 
-use crate::checker::Checker;
+use crate::checker::{Checker, ScopeKind};
 
 impl Checker {
     pub fn infer_stmt(
@@ -142,7 +142,7 @@ impl Checker {
                 expr,
                 body,
             }) => {
-                let elem_t = self.current_scope.fresh_var();
+                let elem_t = self.current_scope.fresh_var(None);
                 let array_t = Type::from(TypeKind::Array(Box::from(elem_t.clone())));
 
                 let (_expr_s, expr_t) = self.infer_expr(expr, false)?;
@@ -150,7 +150,7 @@ impl Checker {
                 let s1 = self.unify(&expr_t, &array_t)?;
                 let elem_t = elem_t.apply(&s1);
 
-                self.push_scope();
+                self.push_scope(ScopeKind::Inherit);
                 let s2 = self.infer_pattern_and_init(
                     pattern,
                     None,
@@ -181,13 +181,12 @@ impl Checker {
     }
 
     pub fn infer_block(&mut self, body: &mut Block) -> Result<(Subst, Type), Vec<TypeError>> {
-        self.push_scope();
+        self.push_scope(ScopeKind::Inherit);
 
         let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
         let mut s = Subst::new();
 
         for stmt in &mut body.stmts {
-            self.current_scope = self.current_scope.clone();
             let (new_s, new_t) = self.infer_stmt(stmt, false)?;
 
             t = new_t.apply(&s);
