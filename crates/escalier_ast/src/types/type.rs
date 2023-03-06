@@ -50,7 +50,7 @@ pub struct TIndexAccess {
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TVar {
     #[drive(skip)]
-    pub id: i32, // This should never be mutated
+    pub id: u32, // This should never be mutated
     pub constraint: Option<Box<Type>>,
 }
 

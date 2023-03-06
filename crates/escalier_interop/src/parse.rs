@@ -9,7 +9,7 @@ use swc_ecma_visit::*;
 use escalier_ast::types::{
     self as types, RestPat, TCallable, TConditionalType, TFnParam, TIndex, TIndexAccess, TIndexKey,
     TKeyword, TLam, TMappedType, TMappedTypeChangeProp, TObjElem, TObject, TPat, TProp, TPropKey,
-    TRef, Type, TypeKind, TypeParam,
+    TRef, TVar, Type, TypeKind, TypeParam,
 };
 use escalier_ast::values::{Lit, DUMMY_LOC};
 use escalier_infer::{get_sub_and_type_params, Context, Scheme, Subst, Substitutable};
@@ -28,8 +28,22 @@ pub struct InterfaceCollector {
 pub fn infer_ts_type_ann(type_ann: &TsType, ctx: &Context) -> Result<Type, String> {
     match type_ann {
         TsType::TsKeywordType(keyword) => match &keyword.kind {
-            TsKeywordTypeKind::TsAnyKeyword => Ok(ctx.fresh_var(None)),
-            TsKeywordTypeKind::TsUnknownKeyword => Ok(ctx.fresh_var(None)),
+            TsKeywordTypeKind::TsAnyKeyword => {
+                // TODO: update to use Checker
+                // Ok(ctx.fresh_var(None))
+                Ok(Type::from(TypeKind::Var(TVar {
+                    id: 0,
+                    constraint: None,
+                })))
+            }
+            TsKeywordTypeKind::TsUnknownKeyword => {
+                // TODO: update to use Checker
+                // Ok(ctx.fresh_var(None))
+                Ok(Type::from(TypeKind::Var(TVar {
+                    id: 0,
+                    constraint: None,
+                })))
+            }
             TsKeywordTypeKind::TsNumberKeyword => {
                 Ok(Type::from(TypeKind::Keyword(TKeyword::Number)))
             }

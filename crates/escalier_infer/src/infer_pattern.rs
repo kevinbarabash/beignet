@@ -4,7 +4,7 @@ use escalier_ast::types::{self as types, Provenance, TObject, TPropKey, Type, Ty
 use escalier_ast::values::{self as values, *};
 
 use crate::assump::Assump;
-use crate::context::{Binding, Context};
+use crate::context::Binding;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::update::update_pattern;
@@ -24,7 +24,7 @@ impl Checker {
         // Keeps track of all of the variables the need to be introduced by this pattern.
         let mut new_vars: HashMap<String, Binding> = HashMap::new();
 
-        let pat_type = infer_pattern_rec(pat, &self.current_scope, &mut new_vars)?;
+        let pat_type = self.infer_pattern_rec(pat, &mut new_vars)?;
 
         // If the pattern had a type annotation associated with it, we infer type of the
         // type annotation and add a constraint between the types of the pattern and its
@@ -87,178 +87,180 @@ impl Checker {
 
         Ok(s)
     }
-}
 
-fn infer_pattern_rec(
-    pat: &mut Pattern,
-    ctx: &Context,
-    assump: &mut Assump,
-) -> Result<Type, Vec<TypeError>> {
-    let result: Result<Type, Vec<TypeError>> = match &mut pat.kind {
-        PatternKind::Ident(values::BindingIdent { name, mutable, .. }) => {
-            let tv = ctx.fresh_var(None);
-            if assump
-                .insert(
-                    name.to_owned(),
-                    Binding {
-                        mutable: *mutable,
-                        t: tv.clone(),
-                    },
-                )
-                .is_some()
-            {
-                return Err(vec![TypeError::DuplicateIdentInPat(name.to_owned())]);
-            }
-            Ok(tv)
-        }
-        PatternKind::Wildcard => {
-            // Same as Pattern::Ident but we don't insert an assumption since
-            // we don't want to bind it to a variable.
-            let tv = ctx.fresh_var(None);
-            Ok(tv)
-        }
-        PatternKind::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
-        PatternKind::Is(IsPat { ident, is_id, .. }) => {
-            let kind = match is_id.name.as_str() {
-                "string" => TypeKind::Keyword(types::TKeyword::String),
-                "number" => TypeKind::Keyword(types::TKeyword::Number),
-                "boolean" => TypeKind::Keyword(types::TKeyword::Boolean),
-                // The alias type will be used for `instanceof` of checks, but
-                // only if the definition of the alias is an object type with a
-                // `constructor` method.
-                name => TypeKind::Ref(types::TRef {
-                    name: name.to_owned(),
-                    type_args: None,
-                }),
-            };
-            let t = Type::from(kind);
-            if assump
-                .insert(
-                    ident.name.to_owned(),
-                    Binding {
-                        mutable: false,
-                        t: t.clone(),
-                    },
-                )
-                .is_some()
-            {
-                return Err(vec![TypeError::DuplicateIdentInPat(ident.name.to_owned())]);
-            }
-            Ok(t)
-        }
-        PatternKind::Rest(RestPat { arg, .. }) => {
-            let t = infer_pattern_rec(arg, ctx, assump)?;
-            Ok(Type::from(TypeKind::Rest(Box::from(t))))
-        }
-        PatternKind::Array(ArrayPat { elems, .. }) => {
-            let elems: Result<Vec<Type>, Vec<TypeError>> = elems
-                .iter_mut()
-                .map(|elem| {
-                    match elem {
-                        Some(elem) => match &mut elem.pattern.kind {
-                            PatternKind::Rest(rest) => {
-                                let rest_ty = infer_pattern_rec(&mut rest.arg, ctx, assump)?;
-                                Ok(Type::from(TypeKind::Rest(Box::from(rest_ty))))
-                            }
-                            _ => {
-                                // TODO: handle elem.init when inferring the element's pattern
-                                // since this can have an impact on the type the assumption we
-                                // insert.
-                                infer_pattern_rec(&mut elem.pattern, ctx, assump)
-                            }
+    fn infer_pattern_rec(
+        &mut self,
+        pat: &mut Pattern,
+        assump: &mut Assump,
+    ) -> Result<Type, Vec<TypeError>> {
+        let result: Result<Type, Vec<TypeError>> = match &mut pat.kind {
+            PatternKind::Ident(values::BindingIdent { name, mutable, .. }) => {
+                let tv = self.fresh_var(None);
+                if assump
+                    .insert(
+                        name.to_owned(),
+                        Binding {
+                            mutable: *mutable,
+                            t: tv.clone(),
                         },
-                        None => {
-                            // TODO: figure how to ignore gaps in the array
-                            todo!()
-                        }
-                    }
-                })
-                .collect();
-
-            Ok(Type::from(TypeKind::Tuple(elems?)))
-        }
-        // TODO: infer type_params
-        PatternKind::Object(ObjectPat { props, .. }) => {
-            let mut rest_opt_ty: Option<Type> = None;
-            let mut elems: Vec<types::TObjElem> = vec![];
-
-            for prop in props {
-                match prop {
-                    // re-assignment, e.g. {x: new_x, y: new_y} = point
-                    ObjectPatProp::KeyValue(KeyValuePatProp { key, value, .. }) => {
-                        // We ignore `init` for now, we can come back later to handle
-                        // default values.
-                        // TODO: handle default values
-
-                        // TODO: bubble the error up from infer_patter_rec() if there is one.
-                        let value_type = infer_pattern_rec(value, ctx, assump)?;
-
-                        elems.push(types::TObjElem::Prop(types::TProp {
-                            name: TPropKey::StringKey(key.name.to_owned()),
-                            optional: false,
+                    )
+                    .is_some()
+                {
+                    return Err(vec![TypeError::DuplicateIdentInPat(name.to_owned())]);
+                }
+                Ok(tv)
+            }
+            PatternKind::Wildcard => {
+                // Same as Pattern::Ident but we don't insert an assumption since
+                // we don't want to bind it to a variable.
+                let tv = self.fresh_var(None);
+                Ok(tv)
+            }
+            PatternKind::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
+            PatternKind::Is(IsPat { ident, is_id, .. }) => {
+                let kind = match is_id.name.as_str() {
+                    "string" => TypeKind::Keyword(types::TKeyword::String),
+                    "number" => TypeKind::Keyword(types::TKeyword::Number),
+                    "boolean" => TypeKind::Keyword(types::TKeyword::Boolean),
+                    // The alias type will be used for `instanceof` of checks, but
+                    // only if the definition of the alias is an object type with a
+                    // `constructor` method.
+                    name => TypeKind::Ref(types::TRef {
+                        name: name.to_owned(),
+                        type_args: None,
+                    }),
+                };
+                let t = Type::from(kind);
+                if assump
+                    .insert(
+                        ident.name.to_owned(),
+                        Binding {
                             mutable: false,
-                            t: value_type,
-                        }))
-                    }
-                    ObjectPatProp::Shorthand(ShorthandPatProp { ident, .. }) => {
-                        // We ignore `init` for now, we can come back later to handle
-                        // default values.
-                        // TODO: handle default values
-
-                        let tv = ctx.fresh_var(None);
-                        if assump
-                            .insert(
-                                ident.name.to_owned(),
-                                Binding {
-                                    mutable: false,
-                                    t: tv.clone(),
-                                },
-                            )
-                            .is_some()
-                        {
-                            todo!("return an error");
+                            t: t.clone(),
+                        },
+                    )
+                    .is_some()
+                {
+                    return Err(vec![TypeError::DuplicateIdentInPat(ident.name.to_owned())]);
+                }
+                Ok(t)
+            }
+            PatternKind::Rest(RestPat { arg, .. }) => {
+                let t = self.infer_pattern_rec(arg, assump)?;
+                Ok(Type::from(TypeKind::Rest(Box::from(t))))
+            }
+            PatternKind::Array(ArrayPat { elems, .. }) => {
+                let elems: Result<Vec<Type>, Vec<TypeError>> = elems
+                    .iter_mut()
+                    .map(|elem| {
+                        match elem {
+                            Some(elem) => match &mut elem.pattern.kind {
+                                PatternKind::Rest(rest) => {
+                                    let rest_ty = self.infer_pattern_rec(&mut rest.arg, assump)?;
+                                    Ok(Type::from(TypeKind::Rest(Box::from(rest_ty))))
+                                }
+                                _ => {
+                                    // TODO: handle elem.init when inferring the element's pattern
+                                    // since this can have an impact on the type the assumption we
+                                    // insert.
+                                    self.infer_pattern_rec(&mut elem.pattern, assump)
+                                }
+                            },
+                            None => {
+                                // TODO: figure how to ignore gaps in the array
+                                todo!()
+                            }
                         }
+                    })
+                    .collect();
 
-                        elems.push(types::TObjElem::Prop(types::TProp {
-                            name: TPropKey::StringKey(ident.name.to_owned()),
-                            optional: false,
-                            mutable: false,
-                            t: tv,
-                        }))
-                    }
-                    ObjectPatProp::Rest(rest) => {
-                        if rest_opt_ty.is_some() {
-                            // TODO: return an Err() instead of panicking.
-                            panic!("Maximum one rest pattern allowed in object patterns")
+                Ok(Type::from(TypeKind::Tuple(elems?)))
+            }
+            // TODO: infer type_params
+            PatternKind::Object(ObjectPat { props, .. }) => {
+                let mut rest_opt_ty: Option<Type> = None;
+                let mut elems: Vec<types::TObjElem> = vec![];
+
+                for prop in props {
+                    match prop {
+                        // re-assignment, e.g. {x: new_x, y: new_y} = point
+                        ObjectPatProp::KeyValue(KeyValuePatProp { key, value, .. }) => {
+                            // We ignore `init` for now, we can come back later to handle
+                            // default values.
+                            // TODO: handle default values
+
+                            // TODO: bubble the error up from infer_patter_rec() if there is one.
+                            let value_type = self.infer_pattern_rec(value, assump)?;
+
+                            elems.push(types::TObjElem::Prop(types::TProp {
+                                name: TPropKey::StringKey(key.name.to_owned()),
+                                optional: false,
+                                mutable: false,
+                                t: value_type,
+                            }))
                         }
-                        // TypeScript doesn't support spreading/rest in types so instead we
-                        // do the following conversion:
-                        // {x, y, ...rest} -> {x: A, y: B} & C
-                        // TODO: bubble the error up from infer_patter_rec() if there is one.
-                        rest_opt_ty = Some(infer_pattern_rec(&mut rest.arg, ctx, assump)?);
+                        ObjectPatProp::Shorthand(ShorthandPatProp { ident, .. }) => {
+                            // We ignore `init` for now, we can come back later to handle
+                            // default values.
+                            // TODO: handle default values
+
+                            let tv = self.fresh_var(None);
+                            if assump
+                                .insert(
+                                    ident.name.to_owned(),
+                                    Binding {
+                                        mutable: false,
+                                        t: tv.clone(),
+                                    },
+                                )
+                                .is_some()
+                            {
+                                todo!("return an error");
+                            }
+
+                            elems.push(types::TObjElem::Prop(types::TProp {
+                                name: TPropKey::StringKey(ident.name.to_owned()),
+                                optional: false,
+                                mutable: false,
+                                t: tv,
+                            }))
+                        }
+                        ObjectPatProp::Rest(rest) => {
+                            if rest_opt_ty.is_some() {
+                                // TODO: return an Err() instead of panicking.
+                                panic!("Maximum one rest pattern allowed in object patterns")
+                            }
+                            // TypeScript doesn't support spreading/rest in types so instead we
+                            // do the following conversion:
+                            // {x, y, ...rest} -> {x: A, y: B} & C
+                            // TODO: bubble the error up from infer_patter_rec() if there is one.
+                            rest_opt_ty = Some(self.infer_pattern_rec(&mut rest.arg, assump)?);
+                        }
                     }
                 }
+
+                let obj_type = Type::from(TypeKind::Object(TObject {
+                    elems,
+                    is_interface: false,
+                }));
+
+                match rest_opt_ty {
+                    // TODO: Replace this with a proper Rest/Spread type
+                    // See https://github.com/microsoft/TypeScript/issues/10727
+                    Some(rest_ty) => {
+                        Ok(Type::from(TypeKind::Intersection(vec![obj_type, rest_ty])))
+                    }
+                    None => Ok(obj_type),
+                }
             }
+        };
+        let mut t = result?;
 
-            let obj_type = Type::from(TypeKind::Object(TObject {
-                elems,
-                is_interface: false,
-            }));
+        pat.inferred_type = Some(t.clone());
+        t.provenance = Some(Box::from(Provenance::Pattern(Box::from(pat.to_owned()))));
 
-            match rest_opt_ty {
-                // TODO: Replace this with a proper Rest/Spread type
-                // See https://github.com/microsoft/TypeScript/issues/10727
-                Some(rest_ty) => Ok(Type::from(TypeKind::Intersection(vec![obj_type, rest_ty]))),
-                None => Ok(obj_type),
-            }
-        }
-    };
-    let mut t = result?;
-
-    pat.inferred_type = Some(t.clone());
-    t.provenance = Some(Box::from(Provenance::Pattern(Box::from(pat.to_owned()))));
-
-    Ok(t)
+        Ok(t)
+    }
 }
 
 #[derive(Debug)]

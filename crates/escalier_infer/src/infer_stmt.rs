@@ -142,7 +142,7 @@ impl Checker {
                 expr,
                 body,
             }) => {
-                let elem_t = self.current_scope.fresh_var(None);
+                let elem_t = self.fresh_var(None);
                 let array_t = Type::from(TypeKind::Array(Box::from(elem_t.clone())));
 
                 let (_expr_s, expr_t) = self.infer_expr(expr, false)?;

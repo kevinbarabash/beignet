@@ -1,11 +1,12 @@
 use escalier_ast::types::*;
 use im::hashmap::HashMap;
-use std::cell::Cell;
 
 use crate::assump::Assump;
-use crate::scheme::{generalize, instantiate, Scheme};
+use crate::scheme::{generalize, Scheme};
 use crate::type_error::TypeError;
 use crate::util::immutable_obj_type;
+
+use crate::checker::Checker;
 
 pub type Env = HashMap<String, Scheme>;
 
@@ -15,23 +16,11 @@ pub struct Binding {
     pub t: Type,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Context {
     pub values: HashMap<String, Binding>,
     pub types: Env,
     pub is_async: bool,
-    pub count: Cell<i32>,
-}
-
-impl Default for Context {
-    fn default() -> Self {
-        Self {
-            values: HashMap::default(),
-            types: HashMap::default(),
-            is_async: false,
-            count: Cell::from(0),
-        }
-    }
 }
 
 impl Context {
@@ -98,9 +87,15 @@ impl Context {
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
+}
 
-    pub fn lookup_type(&self, name: &str, mutable: bool) -> Result<Type, Vec<TypeError>> {
-        let mut t = self._lookup_type(name)?;
+impl Checker {
+    pub fn lookup_type(&mut self, name: &str, mutable: bool) -> Result<Type, Vec<TypeError>> {
+        let mut t = if let Some(scheme) = self.current_scope.types.get(name) {
+            self.instantiate(&scheme.clone())
+        } else {
+            return Err(vec![TypeError::CantFindIdent(name.to_owned())]);
+        };
 
         if !mutable {
             if let TypeKind::Object(obj) = &t.kind {
@@ -116,25 +111,5 @@ impl Context {
         // TODO: convert mutable type to immutable type of `mutable` is true
 
         Ok(t)
-    }
-
-    pub fn _lookup_type(&self, name: &str) -> Result<Type, Vec<TypeError>> {
-        if let Some(scheme) = self.types.get(name) {
-            return Ok(instantiate(self, scheme));
-        }
-        Err(vec![TypeError::CantFindIdent(name.to_owned())])
-    }
-
-    fn fresh_id(&self) -> i32 {
-        let id = self.count.get() + 1;
-        self.count.set(id);
-        id
-    }
-
-    pub fn fresh_var(&self, constraint: Option<Box<Type>>) -> Type {
-        Type::from(TypeKind::Var(TVar {
-            id: self.fresh_id(),
-            constraint,
-        }))
     }
 }

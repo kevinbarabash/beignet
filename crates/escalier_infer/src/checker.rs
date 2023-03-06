@@ -1,9 +1,11 @@
+use escalier_ast::types::{TVar, Type, TypeKind};
+
 use crate::context::Context;
 
-#[derive(Default)]
 pub struct Checker {
     pub current_scope: Context,
     parent_scopes: Vec<Context>,
+    next_id: u32,
 }
 
 impl From<Context> for Checker {
@@ -11,6 +13,17 @@ impl From<Context> for Checker {
         Checker {
             current_scope: ctx,
             parent_scopes: vec![],
+            next_id: 1,
+        }
+    }
+}
+
+impl Default for Checker {
+    fn default() -> Self {
+        Checker {
+            current_scope: Context::default(),
+            parent_scopes: vec![],
+            next_id: 1,
         }
     }
 }
@@ -42,8 +55,13 @@ impl Checker {
     }
 
     pub fn pop_scope(&mut self) {
-        let mut parent_scope = self.parent_scopes.pop().unwrap();
-        parent_scope.count = self.current_scope.count.clone();
+        let parent_scope = self.parent_scopes.pop().unwrap();
         self.current_scope = parent_scope;
+    }
+
+    pub fn fresh_var(&mut self, constraint: Option<Box<Type>>) -> Type {
+        let id = self.next_id;
+        self.next_id = id + 1;
+        Type::from(TypeKind::Var(TVar { id, constraint }))
     }
 }

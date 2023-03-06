@@ -8,7 +8,6 @@ use escalier_ast::types::{
 use escalier_ast::values::*;
 
 use crate::infer_pattern::PatternUsage;
-use crate::scheme::get_type_param_map;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::util::*;
@@ -46,7 +45,7 @@ impl Checker {
                     }
                 }
 
-                let ret_type = self.current_scope.fresh_var(None);
+                let ret_type = self.fresh_var(None);
                 let type_args = match type_args {
                     Some(type_args) => {
                         let tuples = type_args
@@ -137,7 +136,7 @@ impl Checker {
                                         }
                                         type_param_map
                                     } else {
-                                        get_type_param_map(&self.current_scope, type_params)
+                                        self.get_type_param_map(type_params)
                                     }
                                 }
                                 None => HashMap::new(),
@@ -156,7 +155,7 @@ impl Checker {
                             lam_type.provenance =
                                 Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
 
-                            let ret_type = self.current_scope.fresh_var(None);
+                            let ret_type = self.fresh_var(None);
                             let call_type = Type::from(TypeKind::App(types::TApp {
                                 args: arg_types.clone(),
                                 ret: Box::from(ret_type.clone()),
@@ -204,7 +203,7 @@ impl Checker {
             ExprKind::Fix(Fix { expr, .. }) => {
                 let (s1, t) = self.infer_expr(expr, false)?;
                 eprintln!("t = {t}");
-                let tv = self.current_scope.fresh_var(None);
+                let tv = self.fresh_var(None);
                 let param = TFnParam {
                     pat: TPat::Ident(types::BindingIdent {
                         name: String::from("fix_param"),
@@ -419,9 +418,9 @@ impl Checker {
                                 Some(type_ann) => {
                                     // TODO: push `s` on to `ss`
                                     let (_s, t) = self.infer_type_ann(type_ann, &mut None)?;
-                                    self.current_scope.fresh_var(Some(Box::from(t)))
+                                    self.fresh_var(Some(Box::from(t)))
                                 }
-                                None => self.current_scope.fresh_var(None),
+                                None => self.fresh_var(None),
                             };
                             self.current_scope
                                 .insert_type(type_param.name.name.clone(), tv.clone());
@@ -651,7 +650,7 @@ impl Checker {
                 }
 
                 let (s1, t1) = self.infer_expr(expr, false)?;
-                let inner_t = self.current_scope.fresh_var(None);
+                let inner_t = self.fresh_var(None);
                 let promise_t = Type::from(TypeKind::Ref(types::TRef {
                     name: String::from("Promise"),
                     type_args: Some(vec![inner_t.clone()]),
