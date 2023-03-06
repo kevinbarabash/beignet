@@ -1,7 +1,7 @@
 use std::fs;
 
 use escalier_ast::values::Program;
-use escalier_infer::{expand_type, TypeError};
+use escalier_infer::{Checker, TypeError};
 use escalier_interop::parse::*;
 use escalier_parser::parse;
 
@@ -384,7 +384,8 @@ fn infer_partial() {
     "#;
     let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("PartialObj", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -401,7 +402,8 @@ fn infer_required() {
     "#;
     let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("RequiredObj", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -418,7 +420,8 @@ fn infer_readonly() {
     "#;
     let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{a: number, b?: string, c: boolean, d?: number}");
@@ -432,7 +435,8 @@ fn infer_readonly_with_indexer_only() {
     "#;
     let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{[key: string]: boolean}");
@@ -446,7 +450,8 @@ fn infer_readonly_with_indexer_and_other_properties() {
     "#;
     let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -463,7 +468,8 @@ fn infer_pick() {
     "#;
     let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("PickObj", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{a: number, b?: string}");
@@ -499,17 +505,20 @@ fn infer_partial_with_getters_and_setters_on_class_instance() {
     let (_, mut ctx) = infer_prog(src);
 
     let t = ctx.lookup_type("T1", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "number | undefined");
 
     let t = ctx.lookup_type("T2", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "string | undefined");
 
     let t = ctx.lookup_type("T3", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "() => boolean | undefined"); // should be (() => boolean) | undefined
 }
@@ -544,7 +553,8 @@ fn infer_exclude() {
     let result = format!("{}", t);
     assert_eq!(result, "Exclude<\"a\" | \"b\" | \"c\", \"a\" | \"b\">");
 
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
 
     assert_eq!(result, "\"c\"");
@@ -571,7 +581,8 @@ fn infer_out_of_order_exclude() {
     let mut ctx = escalier_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let t = ctx.lookup_type("T1", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "\"c\"");
 }
@@ -588,7 +599,8 @@ fn infer_omit() {
     let result = format!("{}", t);
     assert_eq!(result, "Omit<Obj, \"b\" | \"c\">");
 
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
 
     assert_eq!(result, "{a: number, mut d?: number}");
@@ -605,7 +617,8 @@ fn infer_omit_string() {
     let result = format!("{}", t);
     assert_eq!(result, "Omit<String, \"length\">");
 
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
 
     assert!(!result.contains("length: number"));
@@ -619,7 +632,8 @@ fn infer_method_type_with_indexed_access() {
     let (_, mut ctx) = infer_prog(src);
     let t = ctx.lookup_type("T1", false).unwrap();
 
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
 
     assert_eq!(result, "(pos: number) => string");
@@ -640,17 +654,20 @@ fn infer_getter_setter_types_with_indexed_access() {
     let (_, mut ctx) = infer_prog(src);
 
     let t = ctx.lookup_type("T1", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "number");
 
     let t = ctx.lookup_type("T2", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "string");
 
     let t = ctx.lookup_type("T3", false).unwrap();
-    let t = expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {};
+    let t = checker.expand_type(&t, &mut ctx).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "() => boolean");
 }

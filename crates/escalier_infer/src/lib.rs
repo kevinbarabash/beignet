@@ -1,4 +1,5 @@
 mod assump;
+mod checker;
 mod context;
 mod expand_type;
 mod infer_class;
@@ -13,12 +14,11 @@ mod scheme;
 mod substitutable;
 mod type_error;
 mod unify;
-mod unify_mut;
 mod update;
 mod util;
 
+pub use checker::Checker;
 pub use context::*;
-pub use expand_type::expand_type;
 pub use infer_prog::*;
 pub use infer_stmt::*;
 pub use scheme::{get_sub_and_type_params, instantiate, Scheme};
