@@ -382,10 +382,13 @@ fn infer_partial() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type PartialObj = Partial<Obj>;
     "#;
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("PartialObj", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
+    let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -400,10 +403,13 @@ fn infer_required() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type RequiredObj = Required<Obj>;
     "#;
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("RequiredObj", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
+    let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -418,10 +424,13 @@ fn infer_readonly() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type ReadonlyObj = Readonly<Obj>;
     "#;
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
+    let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{a: number, b?: string, c: boolean, d?: number}");
@@ -433,10 +442,13 @@ fn infer_readonly_with_indexer_only() {
     type Obj = {[key: string]: boolean};
     type ReadonlyObj = Readonly<Obj>;
     "#;
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
+    let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{[key: string]: boolean}");
@@ -448,10 +460,13 @@ fn infer_readonly_with_indexer_and_other_properties() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number, [key: number]: boolean};
     type ReadonlyObj = Readonly<Obj>;
     "#;
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("ReadonlyObj", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
+    let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(
@@ -466,10 +481,13 @@ fn infer_pick() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type PickObj = Pick<Obj, "a" | "b">;
     "#;
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("PickObj", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
+    let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "{a: number, b?: string}");
@@ -502,23 +520,24 @@ fn infer_partial_with_getters_and_setters_on_class_instance() {
     type T3 = PartialFoo["qux"];
     "#;
 
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
 
-    let t = ctx.lookup_type("T1", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let t = checker.current_scope.lookup_type("T1", false).unwrap();
+    let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "number | undefined");
 
-    let t = ctx.lookup_type("T2", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let t = checker.current_scope.lookup_type("T2", false).unwrap();
+    let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "string | undefined");
 
-    let t = ctx.lookup_type("T3", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let t = checker.current_scope.lookup_type("T3", false).unwrap();
+    let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "() => boolean | undefined"); // should be (() => boolean) | undefined
 }
@@ -547,14 +566,17 @@ fn infer_exclude() {
     let src = r#"
     type T1 = Exclude<"a" | "b" | "c", "a" | "b">;
     "#;
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("T1", false).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "Exclude<\"a\" | \"b\" | \"c\", \"a\" | \"b\">");
 
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
+    let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
 
     assert_eq!(result, "\"c\"");
@@ -578,11 +600,14 @@ fn infer_out_of_order_exclude() {
             panic!("Error parsing expression");
         }
     };
-    let mut ctx = escalier_infer::infer_prog(&mut prog, &mut ctx).unwrap();
+    let ctx = escalier_infer::infer_prog(&mut prog, &mut ctx).unwrap();
 
     let t = ctx.lookup_type("T1", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
+    let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "\"c\"");
 }
@@ -593,14 +618,17 @@ fn infer_omit() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type T1 = Omit<Obj, "b" | "c">;
     "#;
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("T1", false).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "Omit<Obj, \"b\" | \"c\">");
 
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
+    let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
 
     assert_eq!(result, "{a: number, mut d?: number}");
@@ -611,14 +639,17 @@ fn infer_omit_string() {
     let src = r#"
     type T1 = Omit<String, "length">;
     "#;
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("T1", false).unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "Omit<String, \"length\">");
 
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
+    let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
 
     assert!(!result.contains("length: number"));
@@ -629,11 +660,14 @@ fn infer_method_type_with_indexed_access() {
     let src = r#"
     type T1 = String["charAt"];
     "#;
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
     let t = ctx.lookup_type("T1", false).unwrap();
 
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
+    let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
 
     assert_eq!(result, "(pos: number) => string");
@@ -651,23 +685,24 @@ fn infer_getter_setter_types_with_indexed_access() {
     type T2 = Foo["baz"];
     type T3 = Foo["qux"];
     "#;
-    let (_, mut ctx) = infer_prog(src);
+    let (_, ctx) = infer_prog(src);
+    let mut checker = Checker {
+        current_scope: ctx,
+        parent_scopes: vec![],
+    };
 
-    let t = ctx.lookup_type("T1", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let t = checker.current_scope.lookup_type("T1", false).unwrap();
+    let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "number");
 
-    let t = ctx.lookup_type("T2", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let t = checker.current_scope.lookup_type("T2", false).unwrap();
+    let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "string");
 
-    let t = ctx.lookup_type("T3", false).unwrap();
-    let mut checker = Checker {};
-    let t = checker.expand_type(&t, &mut ctx).unwrap();
+    let t = checker.current_scope.lookup_type("T3", false).unwrap();
+    let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "() => boolean");
 }

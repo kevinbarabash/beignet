@@ -3,7 +3,7 @@ use im::hashmap::HashMap;
 use escalier_ast::types::{self as types, TFnParam, TKeyword, TPat, Type, TypeKind};
 use escalier_ast::values::*;
 
-use crate::context::{Binding, Context};
+use crate::context::Binding;
 use crate::substitutable::Subst;
 use crate::type_error::TypeError;
 
@@ -15,11 +15,10 @@ impl Checker {
     pub fn infer_fn_param(
         &mut self,
         param: &mut EFnParam,
-        ctx: &mut Context,
         type_param_map: &HashMap<String, Type>,
     ) -> Result<(Subst, TFnParam), Vec<TypeError>> {
         let (ps, mut pa, pt) =
-            self.infer_pattern(&mut param.pat, param.type_ann.as_mut(), ctx, type_param_map)?;
+            self.infer_pattern(&mut param.pat, param.type_ann.as_mut(), type_param_map)?;
 
         // TypeScript annotates rest params using an array type so we do the
         // same thing by converting top-level rest types to array types.
@@ -52,7 +51,7 @@ impl Checker {
             optional: param.optional,
         };
 
-        ctx.insert_bindings(&pa);
+        self.current_scope.insert_bindings(&pa);
 
         Ok((ps, param))
     }

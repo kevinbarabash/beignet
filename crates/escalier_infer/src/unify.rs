@@ -7,7 +7,6 @@ use escalier_ast::types::{
 use escalier_ast::values::{ExprKind, TypeAnn, TypeAnnKind};
 use types::TKeyword;
 
-use crate::context::Context;
 use crate::scheme::{instantiate_callable, instantiate_gen_lam};
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
@@ -17,12 +16,7 @@ use crate::checker::Checker;
 
 impl Checker {
     // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
-    pub fn unify(
-        &mut self,
-        t1: &Type,
-        t2: &Type,
-        ctx: &mut Context,
-    ) -> Result<Subst, Vec<TypeError>> {
+    pub fn unify(&mut self, t1: &Type, t2: &Type) -> Result<Subst, Vec<TypeError>> {
         // All binding must be done first
         match (&t1.kind, &t2.kind) {
             // If both are type variables...
@@ -39,7 +33,7 @@ impl Checker {
                             // then we want to make sure that substitution we create
                             // has the other type variable pointing to the one that
                             // was inferred from the type reference.
-                            return self.bind(tv2, t1, Relation::SuperType, ctx);
+                            return self.bind(tv2, t1, Relation::SuperType);
                         }
                     }
                 }
@@ -51,24 +45,24 @@ impl Checker {
                             ..
                         } = type_ann.as_ref()
                         {
-                            return self.bind(tv1, t2, Relation::SubType, ctx);
+                            return self.bind(tv1, t2, Relation::SubType);
                         }
                     }
                 }
 
-                return self.bind(tv1, t2, Relation::SubType, ctx);
+                return self.bind(tv1, t2, Relation::SubType);
             }
             (TypeKind::Var(tv), _) => {
-                return self.bind(tv, t2, Relation::SubType, ctx);
+                return self.bind(tv, t2, Relation::SubType);
             }
             (_, TypeKind::Var(tv)) => {
-                return self.bind(tv, t1, Relation::SuperType, ctx);
+                return self.bind(tv, t1, Relation::SuperType);
             }
             _ => (),
         };
 
         if t1.mutable && t2.mutable {
-            return self.unify_mut(t1, t2, ctx);
+            return self.unify_mut(t1, t2);
         }
         if t2.mutable {
             // TODO: extract this into a `isLitExpr` helper that checks if the expression
@@ -123,10 +117,10 @@ impl Checker {
                 // this to support having different lengths of params.
                 if app1.args.len() == app2.args.len() {
                     for (p1, p2) in app1.args.iter().zip(app2.args.iter()) {
-                        let s1 = self.unify(&p1.apply(&s), &p2.apply(&s), ctx)?;
+                        let s1 = self.unify(&p1.apply(&s), &p2.apply(&s))?;
                         s = compose_subs(&s, &s1);
                     }
-                    let s1 = self.unify(&app1.ret.apply(&s), &app2.ret.apply(&s), ctx)?;
+                    let s1 = self.unify(&app1.ret.apply(&s), &app2.ret.apply(&s))?;
                     Ok(compose_subs(&s, &s1))
                 } else {
                     Err(vec![TypeError::UnificationError(
@@ -152,10 +146,10 @@ impl Checker {
                         // function will pass to the callback.
                         let pt2 = p2.get_type();
                         let pt1 = p1.get_type();
-                        let s1 = self.unify(&pt2.apply(&s), &pt1.apply(&s), ctx)?;
+                        let s1 = self.unify(&pt2.apply(&s), &pt1.apply(&s))?;
                         s = compose_subs(&s, &s1);
                     }
-                    let s1 = self.unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s), ctx)?;
+                    let s1 = self.unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s))?;
                     Ok(compose_subs(&s, &s1))
                 } else {
                     Err(vec![TypeError::UnificationError(
@@ -165,9 +159,9 @@ impl Checker {
                 }
             }
             // NOTE: this arm is only hit by the `infer_skk` test case
-            (TypeKind::Lam(_), TypeKind::App(_)) => self.unify(t2, t1, ctx),
+            (TypeKind::Lam(_), TypeKind::App(_)) => self.unify(t2, t1),
             (TypeKind::App(app), TypeKind::Lam(lam)) => {
-                let lam = instantiate_gen_lam(ctx, lam, app.type_args.as_ref());
+                let lam = instantiate_gen_lam(&self.current_scope, lam, app.type_args.as_ref());
                 let mut s = Subst::new();
 
                 let maybe_rest_param = if let Some(param) = lam.params.last() {
@@ -306,7 +300,7 @@ impl Checker {
                 let mut reports: Vec<TypeError> = vec![];
                 for (p1, p2) in args.iter_mut().zip(params.iter_mut()) {
                     // Each argument must be a subtype of the corresponding param.
-                    match self.unify(&p1.apply(&s), &p2.apply(&s), ctx) {
+                    match self.unify(&p1.apply(&s), &p2.apply(&s)) {
                         Ok(s1) => s = compose_subs(&s, &s1),
                         Err(mut report) => reports.append(&mut report),
                     }
@@ -319,7 +313,7 @@ impl Checker {
                 // Unify return types
                 // Once #352 has been addressed we'll be able to also report
                 // unification errors with return types.
-                let s_ret = self.unify(&app.ret.apply(&s), &lam.ret.apply(&s), ctx)?;
+                let s_ret = self.unify(&app.ret.apply(&s), &lam.ret.apply(&s))?;
                 Ok(compose_subs(&s, &s_ret))
             }
             (TypeKind::App(_), TypeKind::Object(obj)) => {
@@ -337,7 +331,7 @@ impl Checker {
                             let t = if call.type_params.is_some() {
                                 lam
                             } else {
-                                instantiate_callable(ctx, call)
+                                instantiate_callable(&self.current_scope, call)
                             };
                             eprintln!("callable instantiated as {t}");
                             Some(t)
@@ -357,7 +351,7 @@ impl Checker {
                     ))])
                 } else {
                     for callable in callables.iter_mut() {
-                        let result = self.unify(t1, callable, ctx);
+                        let result = self.unify(t1, callable);
                         if result.is_ok() {
                             return result;
                         }
@@ -368,7 +362,7 @@ impl Checker {
             }
             (TypeKind::App(_), TypeKind::Intersection(types)) => {
                 for t in types {
-                    let result = self.unify(t1, t, ctx);
+                    let result = self.unify(t1, t);
                     if result.is_ok() {
                         return result;
                     }
@@ -399,7 +393,7 @@ impl Checker {
                                         let t1 = get_property_type(prop1);
                                         let t2 = get_property_type(&prop2);
 
-                                        if let Ok(s) = self.unify(&t1, &t2, ctx) {
+                                        if let Ok(s) = self.unify(&t1, &t2) {
                                             has_matching_value = true;
                                             ss.push(s);
                                         }
@@ -475,7 +469,7 @@ impl Checker {
 
                 let mut reports: Vec<TypeError> = vec![];
                 for (t1, t2) in before1.iter_mut().zip(before2.iter_mut()) {
-                    match self.unify(t1, t2, ctx) {
+                    match self.unify(t1, t2) {
                         Ok(s) => ss.push(s),
                         Err(mut report) => reports.append(&mut report),
                     }
@@ -485,11 +479,11 @@ impl Checker {
                     let rest1: Vec<_> = types1.drain(0..rest_len).collect();
                     let mut after1: Vec<_> = types1;
 
-                    let s = self.unify(&Type::from(TypeKind::Tuple(rest1)), &rest2, ctx)?;
+                    let s = self.unify(&Type::from(TypeKind::Tuple(rest1)), &rest2)?;
                     ss.push(s);
 
                     for (t1, t2) in after1.iter_mut().zip(after2.iter_mut()) {
-                        match self.unify(t1, t2, ctx) {
+                        match self.unify(t1, t2) {
                             Ok(s) => ss.push(s),
                             Err(mut report) => reports.append(&mut report),
                         }
@@ -510,16 +504,15 @@ impl Checker {
                     // TODO: take the union of all of the types in tuple_types
                     // Right now if array_type is a type variable, we unify right
                     // away and then the other types in tuple_types are ignored
-                    let s = self.unify(&union_many_types(tuple_types), array_type, ctx)?;
+                    let s = self.unify(&union_many_types(tuple_types), array_type)?;
                     Ok(s)
                 }
             }
             (TypeKind::Array(array_type_1), TypeKind::Array(array_type_2)) => {
-                self.unify(array_type_1, array_type_2, ctx)
+                self.unify(array_type_1, array_type_2)
             }
             (TypeKind::Union(types), _) => {
-                let result: Result<Vec<_>, _> =
-                    types.iter().map(|t1| self.unify(t1, t2, ctx)).collect();
+                let result: Result<Vec<_>, _> = types.iter().map(|t1| self.unify(t1, t2)).collect();
                 let ss = result?; // This is only okay if all calls to is_subtype are okay
                 Ok(compose_many_subs_with_context(&ss))
             }
@@ -528,7 +521,7 @@ impl Checker {
                 let mut ss = vec![];
                 for t2 in types.iter() {
                     // Should we stop after the first successful call to self.unify()?
-                    if let Ok(s) = self.unify(t1, t2, ctx) {
+                    if let Ok(s) = self.unify(t1, t2) {
                         b = true;
                         ss.push(s);
                     }
@@ -559,7 +552,7 @@ impl Checker {
                 let obj_type = &mut simplify_intersection(&obj_types);
 
                 match rest_types.len() {
-                    0 => self.unify(t1, obj_type, ctx),
+                    0 => self.unify(t1, obj_type),
                     1 => {
                         let all_obj_elems = match &obj_type.kind {
                             TypeKind::Object(obj) => obj.elems.to_owned(),
@@ -582,7 +575,6 @@ impl Checker {
                                 is_interface: false,
                             })),
                             obj_type,
-                            ctx,
                         )?;
 
                         let rest_type = rest_types.get_mut(0).unwrap();
@@ -592,7 +584,6 @@ impl Checker {
                                 is_interface: false,
                             })),
                             rest_type,
-                            ctx,
                         )?;
 
                         let s = compose_subs(&s2, &s1);
@@ -618,7 +609,7 @@ impl Checker {
                 let obj_type = &mut simplify_intersection(&obj_types);
 
                 match rest_types.len() {
-                    0 => self.unify(obj_type, t2, ctx),
+                    0 => self.unify(obj_type, t2),
                     1 => {
                         let all_obj_elems = match &obj_type.kind {
                             TypeKind::Object(obj) => obj.elems.to_owned(),
@@ -641,7 +632,6 @@ impl Checker {
                                 elems: obj_elems,
                                 is_interface: false,
                             })),
-                            ctx,
                         )?;
 
                         let rest_type = rest_types.get_mut(0).unwrap();
@@ -651,7 +641,6 @@ impl Checker {
                                 elems: rest_elems,
                                 is_interface: false,
                             })),
-                            ctx,
                         )?;
 
                         let s = compose_subs(&s_rest, &s_obj);
@@ -664,12 +653,12 @@ impl Checker {
             // destructure and object created from a class (which is modeled as an
             // interface) we need call `expand_alias_type` directly.
             (TypeKind::Object(_), TypeKind::Ref(alias)) => {
-                let alias_t = self.expand_alias_type(alias, ctx)?;
-                self.unify(t1, &alias_t, ctx)
+                let alias_t = self.expand_alias_type(alias)?;
+                self.unify(t1, &alias_t)
             }
             (TypeKind::Ref(alias), TypeKind::Object(_)) => {
-                let alias_t = self.expand_alias_type(alias, ctx)?;
-                self.unify(&alias_t, t2, ctx)
+                let alias_t = self.expand_alias_type(alias)?;
+                self.unify(&alias_t, t2)
             }
             (TypeKind::Ref(alias1), TypeKind::Ref(alias2)) => {
                 if alias1.name == alias2.name {
@@ -679,7 +668,7 @@ impl Checker {
                             let result: Result<Vec<_>, _> = tp1
                                 .iter()
                                 .zip(tp2.iter())
-                                .map(|(t1, t2)| self.unify(t1, t2, ctx))
+                                .map(|(t1, t2)| self.unify(t1, t2))
                                 .collect();
                             let ss = result?; // This is only okay if all calls to is_subtype are okay
                             Ok(compose_many_subs_with_context(&ss))
@@ -698,46 +687,42 @@ impl Checker {
             //     Ok(Subst::default())
             // }
             (_, TypeKind::Ref(alias)) => {
-                let alias_t = self.expand_alias_type(alias, ctx)?;
-                self.unify(t1, &alias_t, ctx)
+                let alias_t = self.expand_alias_type(alias)?;
+                self.unify(t1, &alias_t)
             }
             (TypeKind::Ref(alias), _) => {
-                let alias_t = self.expand_alias_type(alias, ctx)?;
-                self.unify(&alias_t, t2, ctx)
+                let alias_t = self.expand_alias_type(alias)?;
+                self.unify(&alias_t, t2)
             }
             (_, TypeKind::MappedType(_)) => {
-                let t2 = self.expand_type(t2, ctx)?;
-                self.unify(t1, &t2, ctx)
+                let t2 = self.expand_type(t2)?;
+                self.unify(t1, &t2)
             }
             (TypeKind::MappedType(_), _) => {
-                let t1 = self.expand_type(t1, ctx)?;
-                self.unify(&t1, t2, ctx)
+                let t1 = self.expand_type(t1)?;
+                self.unify(&t1, t2)
             }
             (_, TypeKind::IndexAccess(_)) => {
-                let t2 = self.expand_type(t2, ctx)?;
-                self.unify(t1, &t2, ctx)
+                let t2 = self.expand_type(t2)?;
+                self.unify(t1, &t2)
             }
             (TypeKind::IndexAccess(_), _) => {
-                let t1 = self.expand_type(t1, ctx)?;
-                self.unify(&t1, t2, ctx)
+                let t1 = self.expand_type(t1)?;
+                self.unify(&t1, t2)
             }
             (_, TypeKind::InferType(_)) => {
-                let t2 = self.expand_type(t2, ctx)?;
-                self.unify(t1, &t2, ctx)
+                let t2 = self.expand_type(t2)?;
+                self.unify(t1, &t2)
             }
             (TypeKind::InferType(_), _) => {
-                let t1 = self.expand_type(t1, ctx)?;
-                self.unify(&t1, t2, ctx)
+                let t1 = self.expand_type(t1)?;
+                self.unify(&t1, t2)
             }
-            (TypeKind::Array(_), TypeKind::Rest(rest_arg)) => {
-                self.unify(t1, rest_arg.as_ref(), ctx)
-            }
-            (TypeKind::Tuple(_), TypeKind::Rest(rest_arg)) => {
-                self.unify(t1, rest_arg.as_ref(), ctx)
-            }
+            (TypeKind::Array(_), TypeKind::Rest(rest_arg)) => self.unify(t1, rest_arg.as_ref()),
+            (TypeKind::Tuple(_), TypeKind::Rest(rest_arg)) => self.unify(t1, rest_arg.as_ref()),
             (_, TypeKind::KeyOf(_)) => {
-                let t2 = self.expand_type(t2, ctx)?;
-                self.unify(t1, &t2, ctx)
+                let t2 = self.expand_type(t2)?;
+                self.unify(t1, &t2)
             }
             (TypeKind::Keyword(keyword1), TypeKind::Keyword(keyword2)) => {
                 match (keyword1, keyword2) {
@@ -772,7 +757,7 @@ impl Checker {
         result
     }
 
-    fn unify_mut(&self, t1: &Type, t2: &Type, _ctx: &Context) -> Result<Subst, Vec<TypeError>> {
+    fn unify_mut(&self, t1: &Type, t2: &Type) -> Result<Subst, Vec<TypeError>> {
         if t1 == t2 {
             eprintln!("unify_mut: {t1} == {t2}");
             Ok(Subst::new())
@@ -784,13 +769,7 @@ impl Checker {
         }
     }
 
-    fn bind(
-        &mut self,
-        tv: &TVar,
-        t: &Type,
-        rel: Relation,
-        ctx: &mut Context,
-    ) -> Result<Subst, Vec<TypeError>> {
+    fn bind(&mut self, tv: &TVar, t: &Type, rel: Relation) -> Result<Subst, Vec<TypeError>> {
         // | t == TVar a     = return nullSubst
         // | occursCheck a t = throwError $ InfiniteType a t
         // | otherwise       = return $ Map.singleton a t
@@ -837,8 +816,8 @@ impl Checker {
                         // We only care whether the `self.unify()` call fails or not.  If it succeeds,
                         // that indicates that type `t` is a subtype of constraint `c`.
                         match rel {
-                            Relation::SubType => self.unify(constraint, t, ctx)?,
-                            Relation::SuperType => self.unify(t, constraint, ctx)?,
+                            Relation::SubType => self.unify(constraint, t)?,
+                            Relation::SuperType => self.unify(t, constraint)?,
                         };
 
                         // If the `t` is a type variable, but has no constraints then return a
@@ -895,26 +874,22 @@ mod tests {
 
     #[test]
     fn literals_are_subtypes_of_corresponding_keywords() -> Result<(), Vec<TypeError>> {
-        let mut ctx = Context::default();
-        let mut checker = Checker {};
+        let mut checker = Checker::default();
         let result = checker.unify(
             &Type::from(num("5")),
             &Type::from(TypeKind::Keyword(TKeyword::Number)),
-            &mut ctx,
         )?;
         assert_eq!(result, Subst::default());
 
         let result = checker.unify(
             &Type::from(str("hello")),
             &Type::from(TypeKind::Keyword(TKeyword::String)),
-            &mut ctx,
         )?;
         assert_eq!(result, Subst::default());
 
         let result = checker.unify(
             &Type::from(bool(&true)),
             &Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-            &mut ctx,
         )?;
         assert_eq!(result, Subst::default());
 
@@ -923,8 +898,6 @@ mod tests {
 
     #[test]
     fn object_subtypes() -> Result<(), Vec<TypeError>> {
-        let mut ctx = Context::default();
-
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
                 name: TPropKey::StringKey(String::from("foo")),
@@ -978,8 +951,8 @@ mod tests {
             is_interface: false,
         }));
 
-        let mut checker = Checker {};
-        let result = checker.unify(&t1, &t2, &mut ctx)?;
+        let mut checker = Checker::default();
+        let result = checker.unify(&t1, &t2)?;
         assert_eq!(result, Subst::default());
 
         Ok(())

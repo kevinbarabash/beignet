@@ -457,7 +457,7 @@ fn destructuring_function_object_params() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
@@ -480,7 +480,7 @@ fn destructuring_function_array_params() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const foo: ([a, b]: readonly [number, number]) => number;
@@ -499,7 +499,7 @@ fn function_with_rest_param() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const foo: (x: number, ...y: readonly number[]) => number;
@@ -518,7 +518,7 @@ fn function_with_optional_param() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const foo: (x: number, y?: number) => number;
@@ -537,7 +537,7 @@ fn function_with_optional_param_and_rest_param() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const foo: (x?: number, ...y: readonly number[]) => number | undefined;
@@ -556,7 +556,7 @@ fn generic_function() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const fst: <A>(a: A, b: A) => A;
@@ -575,7 +575,7 @@ fn constrained_generic_function() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const fst: <A extends number | string>(a: A, b: A) => A;
@@ -599,7 +599,7 @@ fn variable_declaration_with_destructuring() {
     // TODO: Support destructuring in top-level decls
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
@@ -698,7 +698,7 @@ fn mutable_array() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const arr: number[];
@@ -713,7 +713,7 @@ fn mutable_obj() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     // This should be:
@@ -739,7 +739,7 @@ fn mutable_indexer() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"
@@ -809,7 +809,7 @@ fn for_of_loop() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @r###"export declare const sum: number;
@@ -841,7 +841,7 @@ fn for_loop_inside_fn() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const sum: (arr: readonly number[]) => number;
@@ -872,7 +872,7 @@ fn type_decl_inside_block() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const result: number;
@@ -903,7 +903,7 @@ fn type_decl_inside_block_with_escape() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     // TODO: How do we ensure that types defined within a block can't escape?
@@ -944,7 +944,7 @@ fn class_inside_function() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const foo: () => Point;
@@ -1005,7 +1005,7 @@ fn multiple_returns_stress_test() {
 
     let mut program = parse(src).unwrap();
     let mut ctx = Context::default();
-    infer_prog(&mut program, &mut ctx).unwrap();
+    let ctx = infer_prog(&mut program, &mut ctx).unwrap();
     let result = codegen_d_ts(&program, &ctx);
 
     insta::assert_snapshot!(result, @"export declare const foo: (cond: boolean) => 10 | 5;

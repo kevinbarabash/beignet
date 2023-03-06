@@ -6,7 +6,6 @@ use escalier_ast::types::{
 use im::hashmap::HashMap;
 use itertools::Itertools;
 
-use crate::context::Context;
 use crate::scheme::Scheme;
 use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
@@ -17,7 +16,7 @@ use crate::checker::Checker;
 impl Checker {
     // `expand_type` is used to expand types that `unify` doesn't know how to unify
     // into something that it does know how to unify.
-    pub fn expand_type(&mut self, t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
+    pub fn expand_type(&mut self, t: &Type) -> Result<Type, Vec<TypeError>> {
         match &t.kind {
             TypeKind::Var(_) => Ok(t.to_owned()),
             TypeKind::App(_) => Ok(t.to_owned()),
@@ -34,24 +33,24 @@ impl Checker {
                 } else {
                     &alias.name
                 };
-                let scheme = ctx.lookup_scheme(name)?;
+                let scheme = self.current_scope.lookup_scheme(name)?;
                 match &scheme.t.kind {
                     // We don't bother expanding interfaces since unifying them based
                     // on their properties is expensive.
                     TypeKind::Object(obj) if obj.is_interface => Ok(t.to_owned()),
-                    _ => self.expand_alias_type(alias, ctx),
+                    _ => self.expand_alias_type(alias),
                 }
             }
             TypeKind::Tuple(_) => Ok(t.to_owned()),
             TypeKind::Array(_) => Ok(t.to_owned()),
             TypeKind::Rest(_) => Ok(t.to_owned()),
             TypeKind::This => todo!(),
-            TypeKind::KeyOf(t) => self.expand_keyof(t, ctx),
-            TypeKind::IndexAccess(access) => self.expand_index_access(access, ctx, true),
-            TypeKind::MappedType(mapped) => self.expand_mapped_type(mapped, ctx),
-            TypeKind::ConditionalType(cond) => self.expand_conditional_type(cond, ctx),
+            TypeKind::KeyOf(t) => self.expand_keyof(t),
+            TypeKind::IndexAccess(access) => self.expand_index_access(access, true),
+            TypeKind::MappedType(mapped) => self.expand_mapped_type(mapped),
+            TypeKind::ConditionalType(cond) => self.expand_conditional_type(cond),
             TypeKind::InferType(TInferType { name }) => {
-                let t = ctx.fresh_var();
+                let t = self.current_scope.fresh_var();
 
                 // We use insert_scheme() here instead of insert_type() because we
                 // don't want to generalize the type being inserted.  If we didn't
@@ -63,25 +62,21 @@ impl Checker {
                     t: Box::from(t.to_owned()),
                     type_params: None,
                 };
-                ctx.insert_scheme(name.to_owned(), scheme);
+                self.current_scope.insert_scheme(name.to_owned(), scheme);
 
                 Ok(t)
             }
         }
     }
 
-    pub fn expand_alias_type(
-        &mut self,
-        alias: &TRef,
-        ctx: &mut Context,
-    ) -> Result<Type, Vec<TypeError>> {
+    pub fn expand_alias_type(&mut self, alias: &TRef) -> Result<Type, Vec<TypeError>> {
         let name = &alias.name;
-        let scheme = ctx.lookup_scheme(name)?;
+        let scheme = self.current_scope.lookup_scheme(name)?;
 
         // Replaces qualifiers in the type with the corresponding type params
         // from the alias type.
         match (&alias.type_args, &scheme.type_params) {
-            (None, None) => self.expand_type(&scheme.t, ctx),
+            (None, None) => self.expand_type(&scheme.t),
             (None, Some(_)) => Err(vec![TypeError::TypeInstantiationFailure]),
             (Some(_), None) => Err(vec![TypeError::TypeInstantiationFailure]),
             (Some(type_args), Some(type_params)) => {
@@ -96,7 +91,7 @@ impl Checker {
                 // TODO: figure out how to make both tests pass.
                 let type_args = type_args
                     .iter()
-                    .map(|arg| self.expand_type(arg, ctx))
+                    .map(|arg| self.expand_type(arg))
                     .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
                 let mut type_param_map: HashMap<String, Type> = HashMap::new();
@@ -134,12 +129,12 @@ impl Checker {
                                     type_param_map
                                         .insert(tref.name.to_owned(), check_arg.to_owned());
                                     let t = replace_aliases_rec(&scheme.t, &type_param_map);
-                                    self.expand_type(&t, ctx)
+                                    self.expand_type(&t)
                                 })
                                 .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
                             let t = union_many_types(&types);
-                            return self.expand_type(&t, ctx);
+                            return self.expand_type(&t);
                         }
                     }
                 }
@@ -147,16 +142,12 @@ impl Checker {
                 // Handle the default case by replacing type variables that match type
                 // params with the corresponding type args.
                 let t = replace_aliases_rec(&scheme.t, &type_param_map);
-                self.expand_type(&t, ctx)
+                self.expand_type(&t)
             }
         }
     }
 
-    fn expand_conditional_type(
-        &mut self,
-        cond: &TConditionalType,
-        ctx: &mut Context,
-    ) -> Result<Type, Vec<TypeError>> {
+    fn expand_conditional_type(&mut self, cond: &TConditionalType) -> Result<Type, Vec<TypeError>> {
         let TConditionalType {
             check_type,
             extends_type,
@@ -171,12 +162,12 @@ impl Checker {
 
         let mut type_param_map: HashMap<String, Type> = HashMap::new();
         for infer_t in infer_types {
-            type_param_map.insert(infer_t.name.to_owned(), ctx.fresh_var());
+            type_param_map.insert(infer_t.name.to_owned(), self.current_scope.fresh_var());
         }
 
         replace_infer_types(&mut extends_type, &type_param_map);
 
-        let t = match self.unify(&check_type, &extends_type, ctx) {
+        let t = match self.unify(&check_type, &extends_type) {
             Ok(s) => {
                 let true_type = replace_aliases_rec(true_type, &type_param_map);
                 let t = true_type.apply(&s);
@@ -185,19 +176,18 @@ impl Checker {
             Err(_) => false_type.to_owned(),
         };
 
-        self.expand_type(t.as_ref(), ctx)
+        self.expand_type(t.as_ref())
     }
 
     fn expand_index_access(
         &mut self,
         access: &TIndexAccess,
-        ctx: &mut Context,
         // NOTE: This option serves a similar purpose to TypeScript's
         // `exactOptionalPropertyTypes` setting.
         include_undefined_in_optional_props: bool,
     ) -> Result<Type, Vec<TypeError>> {
-        let obj = self.get_obj_type(access.object.as_ref(), ctx)?;
-        let index = self.expand_type(access.index.as_ref(), ctx)?;
+        let obj = self.get_obj_type(access.object.as_ref())?;
+        let index = self.expand_type(access.index.as_ref())?;
 
         match &index.kind {
             TypeKind::Ref(_alias) => todo!(),
@@ -305,18 +295,17 @@ impl Checker {
     fn get_obj_type_from_mapped_type(
         &mut self,
         mapped: &TMappedType,
-        ctx: &mut Context,
     ) -> Result<Type, Vec<TypeError>> {
         if let Some(constraint) = &mapped.type_param.constraint {
             if let TypeKind::KeyOf(t) = &constraint.kind {
-                return self.get_obj_type(t.as_ref(), ctx);
+                return self.get_obj_type(t.as_ref());
             }
 
             // TODO: look at constraint.provenence to see if it's a keyof type
         }
 
         if let TypeKind::IndexAccess(access) = &mapped.t.kind {
-            self.get_obj_type(access.object.as_ref(), ctx)
+            self.get_obj_type(access.object.as_ref())
         } else {
             Err(vec![TypeError::Unspecified])
         }
@@ -324,14 +313,10 @@ impl Checker {
 
     // TODO: This should only be used to process object types and arrays/tuples
     // all other types (number, string, etc.) should be passed through.
-    fn expand_mapped_type(
-        &mut self,
-        mapped: &TMappedType,
-        ctx: &mut Context,
-    ) -> Result<Type, Vec<TypeError>> {
+    fn expand_mapped_type(&mut self, mapped: &TMappedType) -> Result<Type, Vec<TypeError>> {
         let constraint = mapped.type_param.constraint.as_ref().unwrap();
-        let keys = self.expand_type(constraint, ctx)?;
-        let obj = self.get_obj_type_from_mapped_type(mapped, ctx)?;
+        let keys = self.expand_type(constraint)?;
+        let obj = self.get_obj_type_from_mapped_type(mapped)?;
 
         let old_elems = match &obj.kind {
             TypeKind::Object(TObject {
@@ -354,9 +339,7 @@ impl Checker {
                 let t = replace_aliases_rec(mapped.t.as_ref(), &type_arg_map);
 
                 let t = match &t.kind {
-                    TypeKind::IndexAccess(access) => {
-                        self.expand_index_access(access, ctx, false)?
-                    }
+                    TypeKind::IndexAccess(access) => self.expand_index_access(access, false)?,
                     // TODO: recursively replace all indexed access types in `t`,
                     // only processing a top-level indexed access is insufficient.
                     _ => t,
@@ -533,12 +516,12 @@ impl Checker {
         Err(vec![TypeError::MissingKey(name.to_owned())])
     }
 
-    fn expand_keyof(&mut self, t: &Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
+    fn expand_keyof(&mut self, t: &Type) -> Result<Type, Vec<TypeError>> {
         if let TypeKind::KeyOf(t) = &t.kind {
-            return self.expand_keyof(t, ctx);
+            return self.expand_keyof(t);
         }
 
-        let obj_t = self.get_obj_type(t, ctx)?;
+        let obj_t = self.get_obj_type(t)?;
 
         match &obj_t.kind {
             TypeKind::Object(TObject {
@@ -597,7 +580,7 @@ impl Checker {
         }
     }
 
-    pub fn get_obj_type(&mut self, t: &'_ Type, ctx: &mut Context) -> Result<Type, Vec<TypeError>> {
+    pub fn get_obj_type(&mut self, t: &'_ Type) -> Result<Type, Vec<TypeError>> {
         match &t.kind {
             TypeKind::Var(_) => Err(vec![TypeError::CantInferTypeFromItKeys]),
             TypeKind::Ref(alias) => {
@@ -610,25 +593,25 @@ impl Checker {
                     alias.to_owned()
                 };
 
-                let t = self.expand_alias_type(&alias, ctx)?;
-                self.get_obj_type(&t, ctx)
+                let t = self.expand_alias_type(&alias)?;
+                self.get_obj_type(&t)
             }
             TypeKind::Object(_) => Ok(t.to_owned()),
             TypeKind::Lit(lit) => {
                 let t = match lit {
-                    TLit::Num(_) => ctx.lookup_type("Number", false)?,
-                    TLit::Bool(_) => ctx.lookup_type("Boolean", false)?,
-                    TLit::Str(_) => ctx.lookup_type("String", false)?,
+                    TLit::Num(_) => self.current_scope.lookup_type("Number", false)?,
+                    TLit::Bool(_) => self.current_scope.lookup_type("Boolean", false)?,
+                    TLit::Str(_) => self.current_scope.lookup_type("String", false)?,
                 };
                 Ok(t)
             }
             TypeKind::Keyword(keyword) => {
                 let t = match keyword {
-                    TKeyword::Number => ctx.lookup_type("Number", false)?,
-                    TKeyword::Boolean => ctx.lookup_type("Boolean", false)?,
-                    TKeyword::Self_ => ctx.lookup_type("Self", false)?, // TODO:
-                    TKeyword::String => ctx.lookup_type("String", false)?,
-                    TKeyword::Symbol => ctx.lookup_type("Symbol", false)?,
+                    TKeyword::Number => self.current_scope.lookup_type("Number", false)?,
+                    TKeyword::Boolean => self.current_scope.lookup_type("Boolean", false)?,
+                    TKeyword::Self_ => self.current_scope.lookup_type("Self", false)?, // TODO:
+                    TKeyword::String => self.current_scope.lookup_type("String", false)?,
+                    TKeyword::Symbol => self.current_scope.lookup_type("Symbol", false)?,
                     TKeyword::Object => {
                         // NOTE: Structural typing allows for extra elems in any object
                         // so this should be a good equivalent for the `object` keyword.
@@ -666,9 +649,9 @@ impl Checker {
 
                 // TODO: Provide a type arg when instantiating "Array".  It should
                 // be the union of all element types in the tuple.
-                let scheme = ctx.lookup_scheme("Array")?;
+                let scheme = self.current_scope.lookup_scheme("Array")?;
 
-                // let array_t = ctx.lookup_type("Array", t.mutable)?;
+                // let array_t = self.current_scope.lookup_type("Array", t.mutable)?;
                 if let TypeKind::Object(TObject {
                     elems: array_elems,
                     is_interface: _,
@@ -697,7 +680,7 @@ impl Checker {
                 Ok(t)
             }
             TypeKind::Array(type_arg) => {
-                let scheme = ctx.lookup_scheme("Array")?;
+                let scheme = self.current_scope.lookup_scheme("Array")?;
 
                 let mut type_param_map: HashMap<String, Type> = HashMap::new();
                 if let Some(type_params) = scheme.type_params {
@@ -709,7 +692,7 @@ impl Checker {
 
                 Ok(t)
             }
-            TypeKind::Lam(_) => ctx.lookup_type("Function", false),
+            TypeKind::Lam(_) => self.current_scope.lookup_type("Function", false),
             TypeKind::App(_) => todo!(), // What does this even mean?
             TypeKind::Union(_) => todo!(),
             TypeKind::Intersection(_) => {
@@ -720,14 +703,14 @@ impl Checker {
             }
             TypeKind::Rest(_) => todo!(), // What does this even mean?
             TypeKind::This => todo!(),    // Depends on what this is referencing
-            TypeKind::KeyOf(t) => self.expand_keyof(t, ctx),
+            TypeKind::KeyOf(t) => self.expand_keyof(t),
             TypeKind::IndexAccess(access) => {
-                let t = self.expand_index_access(access, ctx, true)?;
-                self.get_obj_type(&t, ctx)
+                let t = self.expand_index_access(access, true)?;
+                self.get_obj_type(&t)
             }
             TypeKind::MappedType(mapped) => {
-                let t = self.expand_mapped_type(mapped, ctx)?;
-                self.get_obj_type(&t, ctx)
+                let t = self.expand_mapped_type(mapped)?;
+                self.get_obj_type(&t)
             }
             TypeKind::ConditionalType(_) => {
                 todo!() // We have to evaluate the ConditionalType first
@@ -802,6 +785,7 @@ const NEVER_TYPE: Type = Type {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::context::Context;
     use escalier_parser::*;
 
     fn infer_prog(input: &str) -> Context {
@@ -813,8 +797,11 @@ mod tests {
     fn get_keyof(name: &str, ctx: &mut Context) -> String {
         match ctx.lookup_type(name, true) {
             Ok(t) => {
-                let mut checker = Checker {};
-                let t = checker.expand_keyof(&t, ctx).unwrap();
+                let mut checker = Checker {
+                    current_scope: ctx.to_owned(),
+                    parent_scopes: vec![],
+                };
+                let t = checker.expand_keyof(&t).unwrap();
                 format!("{t}")
             }
             Err(_) => panic!("Couldn't find type with name '{name}'"),
@@ -946,16 +933,19 @@ mod tests {
         type B = Obj[Key];
         let b: Obj[Key] = "hello";
         "#;
-        let mut ctx = infer_prog(src);
-        let mut checker = Checker {};
+        let ctx = infer_prog(src);
+        let mut checker = Checker {
+            current_scope: ctx,
+            parent_scopes: vec![],
+        };
 
-        let a = ctx.lookup_type("A", false).unwrap();
-        let a = checker.expand_type(&a, &mut ctx).unwrap();
+        let a = checker.current_scope.lookup_type("A", false).unwrap();
+        let a = checker.expand_type(&a).unwrap();
         let result = format!("{a}");
         assert_eq!(result, r#"number"#);
 
-        let b = ctx.lookup_type("B", false).unwrap();
-        let b = checker.expand_type(&b, &mut ctx).unwrap();
+        let b = checker.current_scope.lookup_type("B", false).unwrap();
+        let b = checker.expand_type(&b).unwrap();
         let result = format!("{b}");
         assert_eq!(result, r#"string"#);
     }
