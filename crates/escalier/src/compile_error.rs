@@ -14,3 +14,15 @@ impl fmt::Display for CompileError {
         write!(fmt, "CompileError")
     }
 }
+
+impl From<ParseError> for CompileError {
+    fn from(error: ParseError) -> Self {
+        CompileError::ParseError(error)
+    }
+}
+
+impl From<Vec<TypeError>> for CompileError {
+    fn from(errors: Vec<TypeError>) -> Self {
+        CompileError::TypeError(errors)
+    }
+}

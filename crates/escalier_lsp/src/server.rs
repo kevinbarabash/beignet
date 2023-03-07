@@ -63,10 +63,10 @@ impl LanguageServer {
                 // NOTE: This is slow so we'll want to do this once once
                 // on startup and re-use the results.
                 eprintln!("parsing .d.ts");
-                let mut ctx = match parse_dts(&self.lib) {
-                    Ok(ctx) => {
+                let mut checker = match parse_dts(&self.lib) {
+                    Ok(checker) => {
                         eprintln!("success");
-                        ctx
+                        checker
                     }
                     Err(_) => {
                         eprintln!("error");
@@ -89,7 +89,7 @@ impl LanguageServer {
 
                 // Update TypeError to implement Error + Sync + Send
                 eprintln!("inferring types");
-                escalier_infer::infer_prog(&mut prog, &mut ctx).unwrap();
+                escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
                 let end = SystemTime::now()
                     .duration_since(UNIX_EPOCH)

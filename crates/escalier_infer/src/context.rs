@@ -112,4 +112,12 @@ impl Checker {
 
         Ok(t)
     }
+
+    pub fn lookup_value(&self, name: &str) -> Result<Type, Vec<TypeError>> {
+        self.current_scope.lookup_value(name)
+    }
+
+    pub fn lookup_scheme(&self, name: &str) -> Result<Scheme, Vec<TypeError>> {
+        self.current_scope.lookup_scheme(name)
+    }
 }
