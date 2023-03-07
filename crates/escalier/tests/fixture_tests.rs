@@ -107,8 +107,7 @@ fn compile(input: &str, lib: &str) -> Result<(String, String, String), CompileEr
     let (js, srcmap) = escalier_codegen::js::codegen_js(input, &program);
 
     // TODO: return errors as part of CompileResult
-    let ctx = parse_dts(lib).unwrap();
-    let mut checker = Checker::from(ctx);
+    let mut checker = parse_dts(lib).unwrap();
     infer_prog(&mut program, &mut checker)?;
     let dts = escalier_codegen::d_ts::codegen_d_ts(&program, &checker.current_scope);
 

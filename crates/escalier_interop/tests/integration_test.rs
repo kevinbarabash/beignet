@@ -13,7 +13,7 @@ static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
 fn infer_prog(src: &str) -> (Program, escalier_infer::Context) {
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
-    let ctx = parse_dts(&lib).unwrap();
+    let mut checker = parse_dts(&lib).unwrap();
 
     let result = parse(src);
     let mut prog = match result {
@@ -23,7 +23,6 @@ fn infer_prog(src: &str) -> (Program, escalier_infer::Context) {
             panic!("Error parsing expression");
         }
     };
-    let mut checker = Checker::from(ctx);
     match escalier_infer::infer_prog(&mut prog, &mut checker) {
         Ok(_) => (prog, checker.current_scope),
         Err(error) => {
@@ -38,7 +37,7 @@ fn infer_prog(src: &str) -> (Program, escalier_infer::Context) {
 }
 
 fn infer_prog_with_type_error(lib: &str, src: &str) -> Vec<String> {
-    let ctx = parse_dts(lib).unwrap();
+    let mut checker = parse_dts(lib).unwrap();
 
     let result = parse(src);
     let mut prog = match result {
@@ -48,7 +47,6 @@ fn infer_prog_with_type_error(lib: &str, src: &str) -> Vec<String> {
             panic!("Error parsing expression");
         }
     };
-    let mut checker = Checker::from(ctx);
     match escalier_infer::infer_prog(&mut prog, &mut checker) {
         Ok(_) => panic!("was expect infer_prog() to return an error"),
         Err(report) => messages(&report),
@@ -175,7 +173,7 @@ fn infer_callable_results_on_interface() {
         bar: boolean;
     }
     "#;
-    let ctx = parse_dts(lib).unwrap();
+    let mut checker = parse_dts(lib).unwrap();
 
     let src = r#"
     declare let foo: Foo;
@@ -191,7 +189,6 @@ fn infer_callable_results_on_interface() {
             panic!("Error parsing expression");
         }
     };
-    let mut checker = Checker::from(ctx);
     escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_value("num").unwrap());
@@ -212,7 +209,7 @@ fn infer_index_value_on_interface() {
         bar: boolean;
     }
     "#;
-    let ctx = parse_dts(lib).unwrap();
+    let mut checker = parse_dts(lib).unwrap();
 
     let src = r#"
     declare let foo: Foo;
@@ -227,7 +224,7 @@ fn infer_index_value_on_interface() {
             panic!("Error parsing expression");
         }
     };
-    let mut checker = Checker::from(ctx);
+
     escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_value("num").unwrap());
@@ -244,7 +241,7 @@ fn infer_generic_index_value_on_interface() {
         bar: boolean;
     }
     "#;
-    let ctx = parse_dts(lib).unwrap();
+    let mut checker = parse_dts(lib).unwrap();
 
     let src = r#"
     declare let foo: Foo;
@@ -258,7 +255,7 @@ fn infer_generic_index_value_on_interface() {
             panic!("Error parsing expression");
         }
     };
-    let mut checker = Checker::from(ctx);
+
     escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_value("id").unwrap());
@@ -299,7 +296,7 @@ fn instantiating_generic_interfaces() {
         baz(x: T): any;
     }
     "#;
-    let ctx = parse_dts(lib).unwrap();
+    let mut checker = parse_dts(lib).unwrap();
 
     let src = r#"
     declare let foo: Foo<number>;
@@ -313,7 +310,7 @@ fn instantiating_generic_interfaces() {
             panic!("Error parsing expression");
         }
     };
-    let mut checker = Checker::from(ctx);
+
     escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_value("bar").unwrap());
@@ -328,7 +325,7 @@ fn interface_with_generic_method() {
         baz: T;
     }
     "#;
-    let ctx = parse_dts(lib).unwrap();
+    let mut checker = parse_dts(lib).unwrap();
 
     let src = r#"
     declare let foo: Foo<number>;
@@ -342,7 +339,7 @@ fn interface_with_generic_method() {
             panic!("Error parsing expression");
         }
     };
-    let mut checker = Checker::from(ctx);
+
     escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_value("bar").unwrap());
@@ -360,7 +357,7 @@ fn merging_generic_interfaces() {
         baz(x: T): string;
     }
     "#;
-    let ctx = parse_dts(lib).unwrap();
+    let mut checker = parse_dts(lib).unwrap();
 
     let src = r#"
     declare let foo: Foo<number>;
@@ -373,7 +370,7 @@ fn merging_generic_interfaces() {
             panic!("Error parsing expression");
         }
     };
-    let mut checker = Checker::from(ctx);
+
     escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_scheme("Foo").unwrap());
@@ -570,7 +567,7 @@ fn infer_out_of_order_exclude() {
     let lib = r#"
     type Exclude<U, T> = T extends U ? never : T;
     "#;
-    let ctx = parse_dts(lib).unwrap();
+    let mut checker = parse_dts(lib).unwrap();
 
     let src = r#"
     type T1 = Exclude<"a" | "b", "a" | "b" | "c">;
@@ -583,7 +580,6 @@ fn infer_out_of_order_exclude() {
             panic!("Error parsing expression");
         }
     };
-    let mut checker = Checker::from(ctx);
     escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let t = checker.lookup_type("T1", false).unwrap();

@@ -9,27 +9,16 @@ use swc_ecma_visit::*;
 use escalier_ast::types::{
     self as types, RestPat, TCallable, TConditionalType, TFnParam, TIndex, TIndexAccess, TIndexKey,
     TKeyword, TLam, TMappedType, TMappedTypeChangeProp, TObjElem, TObject, TPat, TProp, TPropKey,
-    TRef, TVar, Type, TypeKind, TypeParam,
+    TRef, Type, TypeKind, TypeParam,
 };
 use escalier_ast::values::{Lit, DUMMY_LOC};
-use escalier_infer::{get_sub_and_type_params, Context, Scheme, Subst, Substitutable};
+use escalier_infer::{self, get_sub_and_type_params, Scheme, Subst, Substitutable};
 
+use crate::checker::Checker;
 use crate::overrides::maybe_override_string_methods;
 use crate::util;
 
-#[derive(Default, Debug, Clone)]
-pub struct Checker {
-    pub ctx: Context,
-    pub next_id: u32,
-}
-
 impl Checker {
-    pub fn fresh_var(&mut self, constraint: Option<Box<Type>>) -> Type {
-        let id = self.next_id;
-        self.next_id = id + 1;
-        Type::from(TypeKind::Var(TVar { id, constraint }))
-    }
-
     pub fn infer_ts_type_ann(&mut self, type_ann: &TsType) -> Result<Type, String> {
         match type_ann {
             TsType::TsKeywordType(keyword) => match &keyword.kind {
@@ -770,7 +759,7 @@ impl Visit for InterfaceCollector {
         match self.checker.infer_type_alias_decl(decl) {
             Ok(scheme) => {
                 eprintln!("inferring: {name} as scheme: {scheme}");
-                self.checker.ctx.insert_scheme(name, scheme)
+                self.checker.insert_scheme(name, scheme)
             }
             Err(err) => {
                 eprintln!("couldn't infer {name}, {err:#?}")
@@ -818,7 +807,7 @@ impl Visit for InterfaceCollector {
                             // TODO: capture errors and store them in self.errors
                             let t = self.checker.infer_ts_type_ann(&type_ann.type_ann).unwrap();
                             let name = bi.id.sym.to_string();
-                            self.checker.ctx.insert_value(name, t)
+                            self.checker.insert_value(name, t)
                         }
                         None => todo!(),
                     }
@@ -834,7 +823,7 @@ impl Visit for InterfaceCollector {
     }
 }
 
-pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
+pub fn parse_dts(d_ts_source: &str) -> Result<escalier_infer::Checker, Error> {
     let cm = Arc::<SourceMap>::default();
     let fm = cm.new_source_file(FileName::Anon, d_ts_source.to_owned());
 
@@ -853,8 +842,6 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
         Some(&comments),
         &mut errors,
     )?;
-
-    eprintln!("after parse_file_as_module");
 
     let mut collector = InterfaceCollector {
         checker: Checker::default(),
@@ -881,12 +868,12 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
             let name = name.to_owned();
             match collector.checker.infer_interface_decl(&decl, mutable) {
                 Ok(new_scheme) => {
-                    match collector.checker.ctx.lookup_scheme(&name).ok() {
+                    match collector.checker.lookup_scheme(&name).ok() {
                         Some(old_scheme) => {
                             let merged_scheme = util::merge_schemes(&old_scheme, &new_scheme);
-                            collector.checker.ctx.insert_scheme(name, merged_scheme);
+                            collector.checker.insert_scheme(name, merged_scheme);
                         }
-                        None => collector.checker.ctx.insert_scheme(name, new_scheme),
+                        None => collector.checker.insert_scheme(name, new_scheme),
                     };
                 }
                 Err(_) => eprintln!("couldn't infer {name}"),
@@ -894,7 +881,10 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Context, Error> {
         }
     }
 
-    eprintln!("after visit_with");
-
-    Ok(collector.checker.ctx)
+    let checker = escalier_infer::Checker {
+        current_scope: collector.checker.current_scope,
+        next_id: collector.checker.next_id,
+        parent_scopes: vec![],
+    };
+    Ok(checker)
 }

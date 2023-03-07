@@ -4,8 +4,8 @@ use crate::context::Context;
 
 pub struct Checker {
     pub current_scope: Context,
-    parent_scopes: Vec<Context>,
-    next_id: u32,
+    pub next_id: u32,
+    pub parent_scopes: Vec<Context>,
 }
 
 impl From<Context> for Checker {
