@@ -28,6 +28,7 @@ pub use util::{close_over, immutable_obj_type, normalize, replace_aliases_rec};
 
 #[cfg(test)]
 mod tests {
+    use escalier_ast::types::*;
     use escalier_parser::*;
 
     use super::*;
@@ -93,7 +94,7 @@ mod tests {
     }
 
     fn get_type_type(name: &str, checker: &mut Checker) -> String {
-        match checker.lookup_type(name, false) {
+        match checker.lookup_type(name) {
             Ok(t) => format!("{t}"),
             Err(_) => panic!("Couldn't find type with name '{name}'"),
         }
@@ -3155,13 +3156,22 @@ mod tests {
 
         let mut checker = infer_prog(src);
 
-        let it = checker.lookup_type("Foo", false).unwrap();
+        let mut it = checker.lookup_type("Foo").unwrap();
+        if let TypeKind::Object(obj) = &it.kind {
+            if let Some(obj) = immutable_obj_type(obj) {
+                it = Type {
+                    kind: TypeKind::Object(obj),
+                    mutable: false,
+                    provenance: it.provenance,
+                }
+            }
+        }
         assert_eq!(
             format!("{it}"),
             "{msg: string, add(self, x: number, y: number): number, get bar(self): boolean}"
         );
 
-        let mut_it = checker.lookup_type("Foo", true).unwrap();
+        let mut_it = checker.lookup_type("Foo").unwrap();
         assert_eq!(
             format!("{mut_it}"),
             "{msg: string, add(self, x: number, y: number): number, set_msg(mut self, msg: string): undefined, get bar(self): boolean, set bar(mut self, value: boolean)}"
