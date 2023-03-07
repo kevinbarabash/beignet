@@ -784,14 +784,14 @@ const NEVER_TYPE: Type = Type {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::context::Context;
+    use crate::checker::Checker;
     use escalier_parser::*;
 
-    fn infer_prog(input: &str) -> Context {
+    fn infer_prog(input: &str) -> Checker {
         let mut prog = parse(input).unwrap();
-        let mut ctx: Context = Context::default();
-        crate::infer_prog(&mut prog, &mut ctx).unwrap()
+        let mut checker = Checker::default();
+        crate::infer_prog(&mut prog, &mut checker).unwrap();
+        checker
     }
 
     fn get_keyof(name: &str, checker: &mut Checker) -> String {
@@ -809,8 +809,7 @@ mod tests {
         let src = r#"
         type t = {x: number, y: number};
         "#;
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
         assert_eq!(get_keyof("t", &mut checker), r#""x" | "y""#);
     }
 
@@ -820,8 +819,7 @@ mod tests {
         let src = r#"
         type t = {a: number, b: boolean} & {b: string, c: number};
         "#;
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
         assert_eq!(get_keyof("t", &mut checker), r#""a" | "b" | "c""#);
     }
 
@@ -834,8 +832,7 @@ mod tests {
         };
         type t = number;
         "#;
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
         assert_eq!(get_keyof("t", &mut checker), r#""toFixed" | "toString""#);
     }
 
@@ -849,8 +846,7 @@ mod tests {
         };
         type t = string;
         "#;
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
         assert_eq!(
             get_keyof("t", &mut checker),
             r#""length" | "toLowerCase" | "toUpperCase""#
@@ -867,8 +863,7 @@ mod tests {
         };
         type t = number[];
         "#;
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
         assert_eq!(get_keyof("t", &mut checker), r#""length" | "map" | number"#);
     }
 
@@ -883,8 +878,7 @@ mod tests {
         };
         type t = mut number[];
         "#;
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
         assert_eq!(
             get_keyof("t", &mut checker),
             r#""length" | "map" | "sort" | number"#
@@ -900,8 +894,7 @@ mod tests {
         };
         type t = [1, 2, 3];
         "#;
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
         assert_eq!(
             get_keyof("t", &mut checker),
             r#""length" | "map" | 0 | 1 | 2"#
@@ -918,8 +911,7 @@ mod tests {
         };
         type t = () => boolean;
         "#;
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
         assert_eq!(get_keyof("t", &mut checker), r#""apply" | "bind" | "call""#);
     }
 
@@ -932,8 +924,7 @@ mod tests {
         type B = Obj[Key];
         let b: Obj[Key] = "hello";
         "#;
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
 
         let a = checker.lookup_type("A", false).unwrap();
         let a = checker.expand_type(&a).unwrap();

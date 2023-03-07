@@ -49,21 +49,16 @@ pub unsafe extern "C" fn deallocate(ptr: *mut c_void, length: usize) {
 }
 
 fn _compile(input: &str, lib: &str) -> Result<(String, String, String, String), CompileError> {
-    let mut program = match escalier_parser::parse(input) {
-        Ok(program) => program,
-        Err(error) => return Err(CompileError::ParseError(error)),
-    };
+    let mut program = escalier_parser::parse(input)?;
     let ast = format!("{program:#?}");
 
     let (js, srcmap) = escalier_codegen::js::codegen_js(input, &program);
 
     // TODO: return errors as part of CompileResult
-    let mut ctx = parse_dts(lib).unwrap();
-    let ctx = match infer_prog(&mut program, &mut ctx) {
-        Ok(ctx) => ctx,
-        Err(error) => return Err(CompileError::TypeError(error)),
-    };
-    let dts = escalier_codegen::d_ts::codegen_d_ts(&program, &ctx);
+    let ctx = parse_dts(lib).unwrap();
+    let mut checker = Checker::from(ctx);
+    infer_prog(&mut program, &mut checker)?;
+    let dts = escalier_codegen::d_ts::codegen_d_ts(&program, &checker.current_scope);
 
     Ok((js, srcmap, dts, ast))
 }

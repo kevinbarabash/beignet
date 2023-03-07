@@ -39,10 +39,10 @@ fn infer_prog(src: &str) -> (Program, escalier_infer::Context) {
         }
     };
     // println!("prog = {:#?}", &prog);
-    let mut ctx = escalier_infer::Context::default();
+    let mut checker = escalier_infer::Checker::default();
 
-    match escalier_infer::infer_prog(&mut prog, &mut ctx) {
-        Ok(ctx) => (prog, ctx),
+    match escalier_infer::infer_prog(&mut prog, &mut checker) {
+        Ok(()) => (prog, checker.current_scope),
         Err(error) => {
             let message = error
                 .iter()
@@ -63,9 +63,9 @@ fn infer_prog_with_type_error(src: &str) -> Vec<String> {
             panic!("Error parsing expression");
         }
     };
-    let mut ctx = escalier_infer::Context::default();
+    let mut checker = escalier_infer::Checker::default();
 
-    match escalier_infer::infer_prog(&mut prog, &mut ctx) {
+    match escalier_infer::infer_prog(&mut prog, &mut checker) {
         Ok(_) => panic!("was expect infer_prog() to return an error"),
         Err(report) => messages(&report),
     }

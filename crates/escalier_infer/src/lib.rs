@@ -37,10 +37,10 @@ mod tests {
     }
 
     fn infer(input: &str) -> String {
-        let mut ctx = Context::default();
+        let mut checker = Checker::default();
         let mut prog = parse(&format!("let x = {input};")).unwrap();
-        match infer_prog::infer_prog(&mut prog, &mut ctx) {
-            Ok(ctx) => get_value_type("x", &ctx),
+        match infer_prog::infer_prog(&mut prog, &mut checker) {
+            Ok(()) => get_value_type("x", &checker),
             Err(error) => {
                 let message = error
                     .iter()
@@ -52,11 +52,11 @@ mod tests {
         }
     }
 
-    fn infer_prog(input: &str) -> Context {
+    fn infer_prog(input: &str) -> Checker {
         let mut prog = parse(input).unwrap();
-        let mut ctx: Context = Context::default();
-        match infer_prog::infer_prog(&mut prog, &mut ctx) {
-            Ok(ctx) => ctx,
+        let mut checker: Checker = Checker::default();
+        match infer_prog::infer_prog(&mut prog, &mut checker) {
+            Ok(()) => checker,
             Err(error) => {
                 let message = error
                     .iter()
@@ -77,16 +77,16 @@ mod tests {
                 panic!("Error parsing expression");
             }
         };
-        let mut ctx = Context::default();
+        let mut checker = Checker::default();
 
-        match infer_prog::infer_prog(&mut prog, &mut ctx) {
+        match infer_prog::infer_prog(&mut prog, &mut checker) {
             Ok(_) => panic!("was expect infer_prog() to return an error"),
             Err(report) => messages(&report),
         }
     }
 
-    fn get_value_type(name: &str, ctx: &Context) -> String {
-        match ctx.lookup_value(name) {
+    fn get_value_type(name: &str, checker: &Checker) -> String {
+        match checker.current_scope.lookup_value(name) {
             Ok(t) => format!("{t}"),
             Err(_) => panic!("Couldn't find type with name '{name}'"),
         }
@@ -2346,8 +2346,7 @@ mod tests {
         let y: CoordName = "y";
         "#;
 
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
         assert_eq!(get_type_type("CoordName", &mut checker), "keyof Point");
     }
 
@@ -2360,8 +2359,7 @@ mod tests {
         type FooBar = typeof foo.bar;
         "#;
 
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
         assert_eq!(get_type_type("Foo", &mut checker), r#"{bar: "baz"}"#);
         assert_eq!(get_type_type("FooBar", &mut checker), r#""baz""#);
     }
@@ -2428,8 +2426,8 @@ mod tests {
         let src = "let add = (a, b) => a + b;";
 
         let mut prog = parse(src).unwrap();
-        let mut ctx: Context = Context::default();
-        infer_prog::infer_prog(&mut prog, &mut ctx).unwrap();
+        let mut checker = Checker::default();
+        infer_prog::infer_prog(&mut prog, &mut checker).unwrap();
 
         insta::assert_debug_snapshot!(prog);
     }
@@ -2882,8 +2880,8 @@ mod tests {
         "#;
 
         let mut prog = parse(src).unwrap();
-        let mut ctx: Context = Context::default();
-        match infer_prog::infer_prog(&mut prog, &mut ctx) {
+        let mut checker = Checker::default();
+        match infer_prog::infer_prog(&mut prog, &mut checker) {
             Ok(_) => panic!("expected an error"),
             Err(report) => {
                 eprintln!("{report:#?}");
@@ -2907,8 +2905,8 @@ mod tests {
         "#;
 
         let mut prog = parse(src).unwrap();
-        let mut ctx: Context = Context::default();
-        match infer_prog::infer_prog(&mut prog, &mut ctx) {
+        let mut checker = Checker::default();
+        match infer_prog::infer_prog(&mut prog, &mut checker) {
             Ok(_) => panic!("expected an error"),
             Err(report) => {
                 eprintln!("{report:#?}");
@@ -3155,8 +3153,7 @@ mod tests {
         }
         "#;
 
-        let ctx = infer_prog(src);
-        let mut checker = Checker::from(ctx);
+        let mut checker = infer_prog(src);
 
         let it = checker.lookup_type("Foo", false).unwrap();
         assert_eq!(

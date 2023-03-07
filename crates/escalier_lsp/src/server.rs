@@ -13,6 +13,7 @@ use lsp_types::*;
 
 use escalier_ast::types::Type;
 use escalier_ast::values::{Expr, Pattern, Position, Program, SourceLocation, Statement, TypeAnn};
+use escalier_infer::Checker;
 use escalier_interop::parse::parse_dts;
 use escalier_parser::parse;
 
@@ -63,7 +64,7 @@ impl LanguageServer {
                 // NOTE: This is slow so we'll want to do this once once
                 // on startup and re-use the results.
                 eprintln!("parsing .d.ts");
-                let mut ctx = match parse_dts(&self.lib) {
+                let ctx = match parse_dts(&self.lib) {
                     Ok(ctx) => {
                         eprintln!("success");
                         ctx
@@ -89,7 +90,8 @@ impl LanguageServer {
 
                 // Update TypeError to implement Error + Sync + Send
                 eprintln!("inferring types");
-                escalier_infer::infer_prog(&mut prog, &mut ctx).unwrap();
+                let mut checker = Checker::from(ctx);
+                escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
                 let end = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
