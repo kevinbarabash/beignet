@@ -6,7 +6,7 @@ use std::iter::Iterator;
 
 use escalier_ast::types::*;
 
-use crate::context::Context;
+use crate::context::Scope;
 use crate::substitutable::{Subst, Substitutable};
 
 fn get_mapping(t: &Type) -> HashMap<u32, Type> {
@@ -28,7 +28,7 @@ fn get_mapping(t: &Type) -> HashMap<u32, Type> {
     mapping
 }
 
-pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
+pub fn close_over(s: &Subst, t: &Type, scope: &Scope) -> Type {
     let t = t.apply(s);
 
     let tvs = t.ftv();
@@ -83,7 +83,7 @@ pub fn close_over(s: &Subst, t: &Type, ctx: &Context) -> Type {
         }
     };
 
-    normalize(&t, ctx)
+    normalize(&t, scope)
 }
 
 #[derive(VisitorMut)]
@@ -104,7 +104,7 @@ impl NormalizeVisitor {
     }
 }
 
-pub fn normalize(t: &Type, _ctx: &Context) -> Type {
+pub fn normalize(t: &Type, _scope: &Scope) -> Type {
     let mapping = get_mapping(t);
     let mut t = t.clone();
     let mut visitor = NormalizeVisitor { mapping };

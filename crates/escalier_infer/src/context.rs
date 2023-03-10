@@ -15,15 +15,14 @@ pub struct Binding {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct Context {
+pub struct Scope {
     values: HashMap<String, Binding>,
     types: Env,
     pub is_async: bool,
 }
 
-// TODO: Rename this to `Scope` and create `Context` trait which both `Scope`
-// and `Checker` and implement.
-impl Context {
+// TODO: create `Context` trait which both `Scope` and `Checker` can implement.
+impl Scope {
     pub fn insert_binding(&mut self, name: String, b: Binding) {
         self.values.insert(name, b);
     }

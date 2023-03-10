@@ -29,7 +29,7 @@ fn infer(input: &str) -> String {
     }
 }
 
-fn infer_prog(src: &str) -> (Program, escalier_infer::Context) {
+fn infer_prog(src: &str) -> (Program, escalier_infer::Scope) {
     let result = parse(src);
     let mut prog = match result {
         Ok(prog) => prog,

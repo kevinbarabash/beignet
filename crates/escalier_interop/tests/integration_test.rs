@@ -11,7 +11,7 @@ pub fn messages(report: &[TypeError]) -> Vec<String> {
 
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
-fn infer_prog(src: &str) -> (Program, escalier_infer::Context) {
+fn infer_prog(src: &str) -> (Program, escalier_infer::Scope) {
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
     let mut checker = parse_dts(&lib).unwrap();
 

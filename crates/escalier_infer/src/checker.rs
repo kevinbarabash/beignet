@@ -1,15 +1,15 @@
 use escalier_ast::types::{TVar, Type, TypeKind};
 
-use crate::context::Context;
+use crate::context::Scope;
 
 pub struct Checker {
-    pub current_scope: Context,
+    pub current_scope: Scope,
     pub next_id: u32,
-    pub parent_scopes: Vec<Context>,
+    pub parent_scopes: Vec<Scope>,
 }
 
-impl From<Context> for Checker {
-    fn from(ctx: Context) -> Self {
+impl From<Scope> for Checker {
+    fn from(ctx: Scope) -> Self {
         Checker {
             current_scope: ctx,
             parent_scopes: vec![],
@@ -21,7 +21,7 @@ impl From<Context> for Checker {
 impl Default for Checker {
     fn default() -> Self {
         Checker {
-            current_scope: Context::default(),
+            current_scope: Scope::default(),
             parent_scopes: vec![],
             next_id: 1,
         }
