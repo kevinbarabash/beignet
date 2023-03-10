@@ -56,23 +56,16 @@ impl Context for Scope {
     }
 
     fn apply(&mut self, s: &Subst) {
-        // QUESTION: Do we need to update self.current_scope.types as well?
+        // QUESTION: Do we need to update self.types as well?
         self.values = self.values.apply(s);
     }
 }
 
 impl Checker {
+    // TODO: move this to the `Context` trait
     pub fn lookup_type(&mut self, name: &str) -> Result<Type, Vec<TypeError>> {
         let scheme = self.lookup_scheme(name)?;
         let t = self.instantiate(&scheme);
         Ok(t)
-    }
-
-    pub fn lookup_value(&self, name: &str) -> Result<Type, Vec<TypeError>> {
-        self.current_scope.lookup_value(name)
-    }
-
-    pub fn lookup_scheme(&self, name: &str) -> Result<Scheme, Vec<TypeError>> {
-        self.current_scope.lookup_scheme(name)
     }
 }

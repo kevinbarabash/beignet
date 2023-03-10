@@ -53,7 +53,7 @@ impl Checker {
         };
 
         for (name, binding) in pa {
-            self.current_scope.insert_binding(name, binding);
+            self.insert_binding(name, binding);
         }
 
         Ok((ps, param))

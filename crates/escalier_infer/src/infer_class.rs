@@ -46,8 +46,7 @@ impl Checker {
                         mutable: false, // this should be false since we don't want to allow `self` to be re-assigned
                         t: interface_t,
                     };
-                    self.current_scope
-                        .insert_binding("self".to_string(), binding);
+                    self.insert_binding("self".to_string(), binding);
                     let (body_s, _body_t) = self.infer_block(body)?;
                     ss.push(body_s);
 
@@ -120,8 +119,7 @@ impl Checker {
                                     name: param.name.name.to_owned(),
                                     type_args: None,
                                 }));
-                                self.current_scope
-                                    .insert_type(param.name.name.clone(), t.clone());
+                                self.insert_type(param.name.name.clone(), t.clone());
                                 Ok((param.name.name.to_owned(), t))
                             })
                             .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
@@ -157,8 +155,7 @@ impl Checker {
                         mutable: false, // this should be false since we don't want to allow `self` to be re-assigned
                         t: interface_t,
                     };
-                    self.current_scope
-                        .insert_binding("self".to_string(), binding);
+                    self.insert_binding("self".to_string(), binding);
 
                     let (body_s, mut body_t) = self.infer_block_or_expr(body)?;
                     ss.push(body_s);
@@ -272,7 +269,7 @@ impl Checker {
                         self.infer_expr(value, false)?
                     } else {
                         return Err(vec![TypeError::PropertiesMustHaveTypes]);
-                        // (Subst::default(), self.current_scope.fresh_var())
+                        // (Subst::default(), self.fresh_var())
                     };
 
                     let elem = TObjElem::Prop(TProp {
@@ -318,7 +315,7 @@ impl Checker {
             type_params,
         };
         eprintln!("infer_class, scheme = {scheme}");
-        self.current_scope.insert_scheme(class_name, scheme);
+        self.insert_scheme(class_name, scheme);
 
         // TODO: capture all of the subsitutions and return them
         let s = Subst::default();
@@ -362,8 +359,7 @@ impl Checker {
                                     name: param.name.name.to_owned(),
                                     type_args: None,
                                 }));
-                                self.current_scope
-                                    .insert_type(param.name.name.clone(), t.clone());
+                                self.insert_type(param.name.name.clone(), t.clone());
                                 Ok((param.name.name.to_owned(), t))
                             })
                             .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
@@ -489,7 +485,7 @@ impl Checker {
                         self.infer_expr(value, false)?
                     } else {
                         return Err(vec![TypeError::PropertiesMustHaveTypes]);
-                        // (Subst::default(), self.current_scope.fresh_var())
+                        // (Subst::default(), self.fresh_var())
                     };
 
                     let elem = TObjElem::Prop(TProp {

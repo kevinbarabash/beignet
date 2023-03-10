@@ -6,7 +6,6 @@ use std::iter::Iterator;
 
 use escalier_ast::types::*;
 
-use crate::scope::Scope;
 use crate::substitutable::{Subst, Substitutable};
 
 fn get_mapping(t: &Type) -> HashMap<u32, Type> {
@@ -28,7 +27,7 @@ fn get_mapping(t: &Type) -> HashMap<u32, Type> {
     mapping
 }
 
-pub fn close_over(s: &Subst, t: &Type, scope: &Scope) -> Type {
+pub fn close_over(s: &Subst, t: &Type) -> Type {
     let t = t.apply(s);
 
     let tvs = t.ftv();
@@ -83,7 +82,7 @@ pub fn close_over(s: &Subst, t: &Type, scope: &Scope) -> Type {
         }
     };
 
-    normalize(&t, scope)
+    normalize(&t)
 }
 
 #[derive(VisitorMut)]
@@ -104,7 +103,7 @@ impl NormalizeVisitor {
     }
 }
 
-pub fn normalize(t: &Type, _scope: &Scope) -> Type {
+pub fn normalize(t: &Type) -> Type {
     let mapping = get_mapping(t);
     let mut t = t.clone();
     let mut visitor = NormalizeVisitor { mapping };
@@ -524,7 +523,7 @@ mod tests {
         };
         let t = Type::from(TypeKind::Lam(lam));
         let s = Subst::default();
-        let result = close_over(&s, &t, &checker.current_scope);
+        let result = close_over(&s, &t);
 
         assert_eq!(result.to_string(), "<A, B>(a: A, b: B) => A");
     }

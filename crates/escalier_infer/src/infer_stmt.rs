@@ -57,13 +57,8 @@ impl Checker {
                                     Some(type_ann) => {
                                         let (s, t) = self.infer_type_ann(type_ann, &mut None)?;
 
-                                        let t = if top_level {
-                                            close_over(&s, &t, &self.current_scope)
-                                        } else {
-                                            t
-                                        };
-                                        self.current_scope
-                                            .insert_value(name.to_owned(), t.to_owned());
+                                        let t = if top_level { close_over(&s, &t) } else { t };
+                                        self.insert_value(name.to_owned(), t.to_owned());
 
                                         update_type_ann(type_ann, &s);
                                         update_pattern(pattern, &s);
@@ -96,7 +91,7 @@ impl Checker {
                 let empty_env = Env::default();
                 let scheme = generalize(&empty_env, &t);
 
-                self.current_scope.insert_scheme(name.to_owned(), scheme);
+                self.insert_scheme(name.to_owned(), scheme);
 
                 update_type_ann(type_ann, &s);
 
@@ -110,9 +105,8 @@ impl Checker {
                 // This follows the same pattern found in lib.es5.d.ts.
                 let name = ident.name.to_owned();
                 eprintln!("inserting {name}Constructor = {t}");
-                self.current_scope
-                    .insert_type(format!("{name}Constructor"), t.to_owned());
-                self.current_scope.insert_value(
+                self.insert_type(format!("{name}Constructor"), t.to_owned());
+                self.insert_value(
                     name.to_owned(),
                     Type::from(TypeKind::Ref(TRef {
                         name: format!("{name}Constructor"),
@@ -130,11 +124,7 @@ impl Checker {
                 // it succeeds since we aren't assigning it to variable.
                 update_expr(expr, &s);
 
-                let t = if top_level {
-                    close_over(&s, &t, &self.current_scope)
-                } else {
-                    t
-                };
+                let t = if top_level { close_over(&s, &t) } else { t };
 
                 Ok((s, t))
             }

@@ -1,6 +1,11 @@
 use escalier_ast::types::{TVar, Type, TypeKind};
 
+use crate::binding::Binding;
+use crate::context::Context;
+use crate::scheme::Scheme;
 use crate::scope::Scope;
+use crate::substitutable::Subst;
+use crate::type_error::TypeError;
 
 pub struct Checker {
     pub current_scope: Scope,
@@ -25,6 +30,40 @@ impl Default for Checker {
             parent_scopes: vec![],
             next_id: 1,
         }
+    }
+}
+
+impl Context for Checker {
+    fn insert_binding(&mut self, name: String, b: Binding) {
+        self.current_scope.insert_binding(name, b);
+    }
+
+    fn insert_value(&mut self, name: String, t: Type) {
+        self.current_scope.insert_value(name, t);
+    }
+
+    fn insert_type(&mut self, name: String, t: Type) {
+        self.current_scope.insert_type(name, t);
+    }
+
+    fn insert_scheme(&mut self, name: String, scheme: Scheme) {
+        self.current_scope.insert_scheme(name, scheme);
+    }
+
+    fn lookup_binding(&self, name: &str) -> Result<Binding, Vec<TypeError>> {
+        self.current_scope.lookup_binding(name)
+    }
+
+    fn lookup_value(&self, name: &str) -> Result<Type, Vec<TypeError>> {
+        self.current_scope.lookup_value(name)
+    }
+
+    fn lookup_scheme(&self, name: &str) -> Result<Scheme, Vec<TypeError>> {
+        self.current_scope.lookup_scheme(name)
+    }
+
+    fn apply(&mut self, s: &Subst) {
+        self.current_scope.apply(s);
     }
 }
 

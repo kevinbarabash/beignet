@@ -79,9 +79,9 @@ impl Checker {
 
         for (name, mut binding) in pa {
             if top_level {
-                binding.t = close_over(&s, &binding.t, &self.current_scope);
+                binding.t = close_over(&s, &binding.t);
             }
-            self.current_scope.insert_binding(name, binding);
+            self.insert_binding(name, binding);
         }
 
         update_pattern(pattern, &s);

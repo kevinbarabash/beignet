@@ -34,7 +34,7 @@ impl Checker {
                 } else {
                     &alias.name
                 };
-                let scheme = self.current_scope.lookup_scheme(name)?;
+                let scheme = self.lookup_scheme(name)?;
                 match &scheme.t.kind {
                     // We don't bother expanding interfaces since unifying them based
                     // on their properties is expensive.
@@ -63,7 +63,7 @@ impl Checker {
                     t: Box::from(t.to_owned()),
                     type_params: None,
                 };
-                self.current_scope.insert_scheme(name.to_owned(), scheme);
+                self.insert_scheme(name.to_owned(), scheme);
 
                 Ok(t)
             }
@@ -72,7 +72,7 @@ impl Checker {
 
     pub fn expand_alias_type(&mut self, alias: &TRef) -> Result<Type, Vec<TypeError>> {
         let name = &alias.name;
-        let scheme = self.current_scope.lookup_scheme(name)?;
+        let scheme = self.lookup_scheme(name)?;
 
         // Replaces qualifiers in the type with the corresponding type params
         // from the alias type.
@@ -650,7 +650,7 @@ impl Checker {
 
                 // TODO: Provide a type arg when instantiating "Array".  It should
                 // be the union of all element types in the tuple.
-                let scheme = self.current_scope.lookup_scheme("Array")?;
+                let scheme = self.lookup_scheme("Array")?;
 
                 // let array_t = self.lookup_type("Array", t.mutable)?;
                 if let TypeKind::Object(TObject {
@@ -681,7 +681,7 @@ impl Checker {
                 Ok(t)
             }
             TypeKind::Array(type_arg) => {
-                let scheme = self.current_scope.lookup_scheme("Array")?;
+                let scheme = self.lookup_scheme("Array")?;
 
                 let mut type_param_map: HashMap<String, Type> = HashMap::new();
                 if let Some(type_params) = scheme.type_params {
