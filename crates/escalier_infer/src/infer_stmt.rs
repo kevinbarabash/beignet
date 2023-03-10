@@ -2,9 +2,9 @@ use derive_visitor::{DriveMut, VisitorMut};
 use escalier_ast::types::{TKeyword, TRef, Type, TypeKind};
 use escalier_ast::values::*;
 
-use crate::context::Env;
 use crate::infer_pattern::*;
 use crate::scheme::generalize;
+use crate::scope::Env;
 use crate::substitutable::Subst;
 use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;

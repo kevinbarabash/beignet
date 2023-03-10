@@ -4,7 +4,7 @@ use escalier_ast::types::{self as types, Provenance, TObject, TPropKey, Type, Ty
 use escalier_ast::values::{self as values, *};
 
 use crate::assump::Assump;
-use crate::context::Binding;
+use crate::scope::Binding;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::update::update_pattern;

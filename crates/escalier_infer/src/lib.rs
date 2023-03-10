@@ -1,6 +1,5 @@
 mod assump;
 mod checker;
-mod context;
 mod expand_type;
 mod infer_class;
 mod infer_expr;
@@ -11,6 +10,7 @@ mod infer_regex;
 mod infer_stmt;
 mod infer_type_ann;
 mod scheme;
+mod scope;
 mod substitutable;
 mod type_error;
 mod unify;
@@ -18,10 +18,10 @@ mod update;
 mod util;
 
 pub use checker::Checker;
-pub use context::*;
 pub use infer_prog::*;
 pub use infer_stmt::*;
 pub use scheme::{get_sub_and_type_params, Scheme};
+pub use scope::*;
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
 pub use util::{close_over, immutable_obj_type, normalize, replace_aliases_rec};

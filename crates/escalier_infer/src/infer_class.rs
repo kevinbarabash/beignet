@@ -2,8 +2,8 @@ use escalier_ast::types::*;
 use escalier_ast::values::{class::*, Lambda, PatternKind};
 use im::hashmap::HashMap;
 
-use crate::context::Binding;
 use crate::scheme::Scheme;
+use crate::scope::Binding;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::util::compose_many_subs;

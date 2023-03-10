@@ -6,7 +6,7 @@ use std::iter::Iterator;
 
 use escalier_ast::types::*;
 
-use crate::context::Scope;
+use crate::scope::Scope;
 use crate::substitutable::{Subst, Substitutable};
 
 fn get_mapping(t: &Type) -> HashMap<u32, Type> {

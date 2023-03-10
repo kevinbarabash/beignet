@@ -6,7 +6,7 @@ use std::iter::Iterator;
 
 use escalier_ast::types::*;
 
-use crate::context::Env;
+use crate::scope::Env;
 use crate::substitutable::{Subst, Substitutable};
 use crate::util::{replace_aliases_in_lam, replace_aliases_rec};
 

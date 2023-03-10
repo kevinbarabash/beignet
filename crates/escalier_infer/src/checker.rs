@@ -1,6 +1,6 @@
 use escalier_ast::types::{TVar, Type, TypeKind};
 
-use crate::context::Scope;
+use crate::scope::Scope;
 
 pub struct Checker {
     pub current_scope: Scope,
