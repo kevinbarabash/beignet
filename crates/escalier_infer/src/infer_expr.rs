@@ -786,8 +786,7 @@ impl Checker {
 
         let (s, mut t) = result?;
 
-        // QUESTION: Do we need to update self.current_scope.types as well?
-        self.current_scope.values = self.current_scope.values.apply(&s);
+        self.current_scope.apply(&s);
 
         expr.inferred_type = Some(t.clone());
         t.provenance = Some(Box::from(Provenance::from(expr)));

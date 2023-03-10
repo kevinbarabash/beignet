@@ -11,10 +11,13 @@ use escalier_ast::types::{
     TPat, TPropKey, TSetter, TVar, Type, TypeKind, TypeParam,
 };
 use escalier_ast::{types, values};
-use escalier_infer::{immutable_obj_type, Context};
+use escalier_infer::{immutable_obj_type, Context, TypeError};
 
-pub fn codegen_d_ts(program: &values::Program, ctx: &Context) -> String {
-    print_d_ts(&build_d_ts(program, ctx))
+pub fn codegen_d_ts(
+    program: &values::Program,
+    ctx: &Context,
+) -> core::result::Result<String, Vec<TypeError>> {
+    Ok(print_d_ts(&build_d_ts(program, ctx)?))
 }
 
 fn print_d_ts(program: &Program) -> String {
@@ -63,7 +66,10 @@ fn build_type_params_from_type_params(
     })
 }
 
-fn build_d_ts(program: &values::Program, ctx: &Context) -> Program {
+fn build_d_ts(
+    program: &values::Program,
+    ctx: &Context,
+) -> core::result::Result<Program, Vec<TypeError>> {
     // TODO: Create a common `Export` type
     let mut type_exports: BTreeSet<String> = BTreeSet::new();
     let mut value_exports: BTreeSet<String> = BTreeSet::new();
@@ -97,93 +103,83 @@ fn build_d_ts(program: &values::Program, ctx: &Context) -> Program {
     let mut body: Vec<ModuleItem> = vec![];
 
     for name in type_exports {
-        match ctx.types.get(&name) {
-            Some(scheme) => {
-                let type_params =
-                    build_type_params_from_type_params(scheme.type_params.as_ref(), ctx);
+        let scheme = ctx.lookup_scheme(&name)?;
 
-                if let TypeKind::Object(obj) = &scheme.t.kind {
-                    let mutable_decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(
-                        TsTypeAliasDecl {
+        let type_params = build_type_params_from_type_params(scheme.type_params.as_ref(), ctx);
+
+        if let TypeKind::Object(obj) = &scheme.t.kind {
+            let mutable_decl =
+                ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(TsTypeAliasDecl {
+                    span: DUMMY_SP,
+                    declare: true,
+                    id: build_ident(&name),
+                    type_params: type_params.clone(),
+                    type_ann: Box::from(build_obj_type(obj, ctx)),
+                }))));
+            body.push(mutable_decl);
+
+            if !name.ends_with("Constructor") {
+                if let Some(obj) = immutable_obj_type(obj) {
+                    let immutable_decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(
+                        Box::from(TsTypeAliasDecl {
                             span: DUMMY_SP,
                             declare: true,
-                            id: build_ident(&name),
-                            type_params: type_params.clone(),
-                            type_ann: Box::from(build_obj_type(obj, ctx)),
-                        },
-                    ))));
-                    body.push(mutable_decl);
-
-                    if !name.ends_with("Constructor") {
-                        if let Some(obj) = immutable_obj_type(obj) {
-                            let immutable_decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(
-                                Box::from(TsTypeAliasDecl {
-                                    span: DUMMY_SP,
-                                    declare: true,
-                                    id: build_ident(format!("Readonly{name}").as_str()),
-                                    type_params,
-                                    type_ann: Box::from(build_obj_type(&obj, ctx)),
-                                }),
-                            )));
-
-                            body.push(immutable_decl);
-                        }
-                    }
-                } else {
-                    let decl = ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(
-                        TsTypeAliasDecl {
-                            span: DUMMY_SP,
-                            declare: true,
-                            id: build_ident(&name),
+                            id: build_ident(format!("Readonly{name}").as_str()),
                             type_params,
-                            type_ann: Box::from(build_type(&scheme.t, None, ctx)),
-                        },
-                    ))));
+                            type_ann: Box::from(build_obj_type(&obj, ctx)),
+                        }),
+                    )));
 
-                    body.push(decl);
+                    body.push(immutable_decl);
                 }
             }
-            None => panic!("Can't find type '{name}' in current scope"),
+        } else {
+            let decl =
+                ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(Box::from(TsTypeAliasDecl {
+                    span: DUMMY_SP,
+                    declare: true,
+                    id: build_ident(&name),
+                    type_params,
+                    type_ann: Box::from(build_type(&scheme.t, None, ctx)),
+                }))));
+
+            body.push(decl);
         }
     }
 
     for name in value_exports {
-        match ctx.values.get(&name) {
-            Some(binding) => {
-                let pat = Pat::Ident(BindingIdent {
-                    id: build_ident(&name),
-                    type_ann: Some(Box::from(TsTypeAnn {
-                        span: DUMMY_SP,
-                        type_ann: Box::from(build_type(&binding.t, None, ctx)),
-                    })),
-                });
+        let binding = ctx.lookup_binding(&name)?;
+        let pat = Pat::Ident(BindingIdent {
+            id: build_ident(&name),
+            type_ann: Some(Box::from(TsTypeAnn {
+                span: DUMMY_SP,
+                type_ann: Box::from(build_type(&binding.t, None, ctx)),
+            })),
+        });
 
-                let decl = ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+        let decl = ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+            span: DUMMY_SP,
+            decl: Decl::Var(Box::from(VarDecl {
+                span: DUMMY_SP,
+                kind: VarDeclKind::Const,
+                declare: true,
+                decls: vec![VarDeclarator {
                     span: DUMMY_SP,
-                    decl: Decl::Var(Box::from(VarDecl {
-                        span: DUMMY_SP,
-                        kind: VarDeclKind::Const,
-                        declare: true,
-                        decls: vec![VarDeclarator {
-                            span: DUMMY_SP,
-                            name: pat,
-                            init: None,
-                            definite: false,
-                        }],
-                    })),
-                }));
+                    name: pat,
+                    init: None,
+                    definite: false,
+                }],
+            })),
+        }));
 
-                body.push(decl);
-            }
-            None => panic!("Can't find value '{name}' in current scope"),
-        }
+        body.push(decl);
     }
 
-    Program::Module(Module {
+    Ok(Program::Module(Module {
         span: DUMMY_SP,
         body,
         shebang: None,
-    })
+    }))
 }
 
 // TODO: create a trait for this and then provide multiple implementations

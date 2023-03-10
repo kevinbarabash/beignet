@@ -1,10 +1,10 @@
 use escalier_ast::types::*;
 use im::hashmap::HashMap;
 
-use crate::scheme::{generalize, Scheme};
-use crate::type_error::TypeError;
-
 use crate::checker::Checker;
+use crate::scheme::{generalize, Scheme};
+use crate::substitutable::{Subst, Substitutable};
+use crate::type_error::TypeError;
 
 pub type Env = HashMap<String, Scheme>;
 
@@ -16,11 +16,13 @@ pub struct Binding {
 
 #[derive(Clone, Debug, Default)]
 pub struct Context {
-    pub values: HashMap<String, Binding>,
-    pub types: Env,
+    values: HashMap<String, Binding>,
+    types: Env,
     pub is_async: bool,
 }
 
+// TODO: Rename this to `Scope` and create `Context` trait which both `Scope`
+// and `Checker` and implement.
 impl Context {
     pub fn insert_binding(&mut self, name: String, b: Binding) {
         self.values.insert(name, b);
@@ -56,6 +58,11 @@ impl Context {
             return Ok(scheme.to_owned());
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
+    }
+
+    pub fn apply(&mut self, s: &Subst) {
+        // QUESTION: Do we need to update self.current_scope.types as well?
+        self.values = self.values.apply(s);
     }
 }
 

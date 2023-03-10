@@ -57,7 +57,7 @@ fn _compile(input: &str, lib: &str) -> Result<(String, String, String, String), 
     // TODO: return errors as part of CompileResult
     let mut checker = parse_dts(lib).unwrap();
     infer_prog(&mut program, &mut checker)?;
-    let dts = escalier_codegen::d_ts::codegen_d_ts(&program, &checker.current_scope);
+    let dts = escalier_codegen::d_ts::codegen_d_ts(&program, &checker.current_scope)?;
 
     Ok((js, srcmap, dts, ast))
 }

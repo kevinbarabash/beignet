@@ -142,13 +142,15 @@ fn infer_i_combinator() {
 }
 
 #[test]
-fn infer_k_combinator_not_curried() {
+fn infer_k_combinator_not_curried() -> Result<(), Vec<TypeError>> {
     let (program, ctx) = infer_prog("let K = (x, y) => x;");
-    let result = format!("{}", ctx.lookup_value("K").unwrap());
+    let result = format!("{}", ctx.lookup_value("K")?);
     insta::assert_snapshot!(result, @"<A, B>(x: A, y: B) => A");
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
     insta::assert_snapshot!(result, @"export declare const K: <A, B>(x: A, y: B) => A;\n");
+
+    Ok(())
 }
 
 #[test]
@@ -212,33 +214,37 @@ fn infer_adding_numbers() {
 }
 
 #[test]
-fn infer_decl() {
+fn infer_decl() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let foo = (a, b) => a + b;
     let bar = "hello";
     "#;
     let (program, ctx) = infer_prog(src);
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const bar: "hello";
     export declare const foo: (a: number, b: number) => number;
     "###);
+
+    Ok(())
 }
 
 #[test]
-fn infer_with_subtyping() {
+fn infer_with_subtyping() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let foo = (a, b) => a + b;
     let bar = foo(5, 10);
     "#;
     let (program, ctx) = infer_prog(src);
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const bar: number;
     export declare const foo: (a: number, b: number) => number;
     "###);
+
+    Ok(())
 }
 
 #[test]
@@ -282,17 +288,19 @@ fn infer_if_else_with_widening_of_top_level_vars() {
 }
 
 #[test]
-fn infer_if_else_with_multiple_widenings() {
+fn infer_if_else_with_multiple_widenings() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let x = if (true) { 5 } else if (false) { 10 } else { 15 };
     "#;
     let (program, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.lookup_value("x").unwrap());
+    let result = format!("{}", ctx.lookup_value("x")?);
     assert_eq!(result, "10 | 15 | 5");
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
     insta::assert_snapshot!(result, @"export declare const x: 10 | 15 | 5;
 ");
+
+    Ok(())
 }
 
 #[test]
@@ -339,15 +347,17 @@ fn infer_inequalities() {
 }
 
 #[test]
-fn infer_let_rec_until() {
+fn infer_let_rec_until() -> Result<(), Vec<TypeError>> {
     let src = "let rec until = (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) };";
     let (program, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.lookup_value("until").unwrap());
+    let result = format!("{}", ctx.lookup_value("until")?);
     insta::assert_snapshot!(result, @"<A>(p: (A) => boolean, f: (A) => A, x: A) => A");
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
     insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A;
 ");
+
+    Ok(())
 }
 
 #[test]
@@ -386,21 +396,23 @@ fn infer_async() {
 }
 
 #[test]
-fn infer_async_math() {
+fn infer_async_math() -> Result<(), Vec<TypeError>> {
     let src = "let add = async (a, b) => await a() + await b();";
     let (program, ctx) = infer_prog(src);
-    let result = format!("{}", ctx.lookup_value("add").unwrap());
+    let result = format!("{}", ctx.lookup_value("add")?);
     assert_eq!(
         result,
         "(a: () => Promise<number>, b: () => Promise<number>) => Promise<number>"
     );
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
     insta::assert_snapshot!(result, @"export declare const add: (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;\n");
+
+    Ok(())
 }
 
 #[test]
-fn codegen_let_rec() {
+fn codegen_let_rec() -> Result<(), Vec<TypeError>> {
     let src = "let rec f = () => f();";
     let (program, ctx) = infer_prog(src);
     let (js, _) = codegen_js(src, &program);
@@ -408,13 +420,15 @@ fn codegen_let_rec() {
     insta::assert_snapshot!(js, @"export const f = ()=>f();
 ");
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @"export declare const f: <A>() => A;\n");
+
+    Ok(())
 }
 
 #[test]
-fn codegen_if_else() {
+fn codegen_if_else() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let cond = true;
     let result = if (cond) { 5 } else { 5 };
@@ -433,16 +447,18 @@ fn codegen_if_else() {
     export const result = $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const cond: true;
     export declare const result: 5;
     "###);
+
+    Ok(())
 }
 
 #[test]
-fn codegen_object() {
+fn codegen_object() -> Result<(), Vec<TypeError>> {
     let src = "let point = {x: 5, y: 10};";
     let (program, ctx) = infer_prog(src);
     let (js, _) = codegen_js(src, &program);
@@ -454,7 +470,7 @@ fn codegen_object() {
     };
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const point: {
@@ -462,10 +478,12 @@ fn codegen_object() {
         readonly y: 10;
     };
     "###);
+
+    Ok(())
 }
 
 #[test]
-fn codegen_async_math() {
+fn codegen_async_math() -> Result<(), Vec<TypeError>> {
     let src = "let add = async (a, b) => await a() + await b();";
     let (program, ctx) = infer_prog(src);
 
@@ -474,9 +492,11 @@ fn codegen_async_math() {
     insta::assert_snapshot!(js, @"export const add = async (a, b)=>await a() + await b();
 ");
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @"export declare const add: (a: () => Promise<number>, b: () => Promise<number>) => Promise<number>;\n");
+
+    Ok(())
 }
 
 #[test]
@@ -725,7 +745,7 @@ fn infer_react_component() {
 }
 
 #[test]
-fn codegen_code_with_type_delcarations() {
+fn codegen_code_with_type_delcarations() -> Result<(), Vec<TypeError>> {
     let src = r#"
     type Point = {x: number, y: number};
     let point: Point = {x: 5, y: 10};
@@ -741,7 +761,7 @@ fn codegen_code_with_type_delcarations() {
     };
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"
     declare type Point = {
@@ -750,6 +770,8 @@ fn codegen_code_with_type_delcarations() {
     };
     export declare const point: Point;
     "###);
+
+    Ok(())
 }
 
 #[test]
@@ -824,7 +846,7 @@ fn infer_function_overloading_with_incorrect_args() {
 }
 
 #[test]
-fn codegen_object_type_with_optional_property() {
+fn codegen_object_type_with_optional_property() -> Result<(), Vec<TypeError>> {
     let src = r#"
     type Point = {x?: number, y: number};
     let point: Point = {y: 10};
@@ -839,7 +861,7 @@ fn codegen_object_type_with_optional_property() {
     };
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"
     declare type Point = {
@@ -848,6 +870,8 @@ fn codegen_object_type_with_optional_property() {
     };
     export declare const point: Point;
     "###);
+
+    Ok(())
 }
 
 #[test]
@@ -874,7 +898,7 @@ fn infer_block_with_multiple_non_let_lines() {
 }
 
 #[test]
-fn codegen_block_with_multiple_non_let_lines() {
+fn codegen_block_with_multiple_non_let_lines() -> Result<(), Vec<TypeError>> {
     let src = "let result = do {let x = 5; x + 0; x };";
     let (program, ctx) = infer_prog(src);
     let (js, _) = codegen_js(src, &program);
@@ -888,10 +912,12 @@ fn codegen_block_with_multiple_non_let_lines() {
     }export const result = $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @"export declare const result: 5;
 ");
+
+    Ok(())
 }
 
 #[test]
@@ -1315,7 +1341,7 @@ fn infer_if_let_with_is() {
 }
 
 #[test]
-fn codegen_if_let() {
+fn codegen_if_let() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let p = {x: 5, y: 10};
     if (let {x, y} = p) {
@@ -1339,7 +1365,7 @@ fn codegen_if_let() {
     }$temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const p: {
@@ -1347,10 +1373,12 @@ fn codegen_if_let() {
         readonly y: 10;
     };
     "###);
+
+    Ok(())
 }
 
 #[test]
-fn codegen_if_let_with_rename() {
+fn codegen_if_let_with_rename() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let p = {x: 5, y: 10};
     if (let {x: a, y: b} = p) {
@@ -1374,7 +1402,7 @@ fn codegen_if_let_with_rename() {
     }$temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const p: {
@@ -1382,6 +1410,8 @@ fn codegen_if_let_with_rename() {
         readonly y: 10;
     };
     "###);
+
+    Ok(())
 }
 
 #[test]
@@ -1398,7 +1428,7 @@ fn infer_if_let_with_type_error() {
 }
 
 #[test]
-fn infer_if_let_refutable_pattern_obj() {
+fn infer_if_let_refutable_pattern_obj() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let p = {x: 5, y: 10};
     if (let {x: 5, y} = p) {
@@ -1408,10 +1438,7 @@ fn infer_if_let_refutable_pattern_obj() {
 
     let (program, ctx) = infer_prog(src);
 
-    assert_eq!(
-        format!("{}", ctx.lookup_value("p").unwrap()),
-        "{x: 5, y: 10}"
-    );
+    assert_eq!(format!("{}", ctx.lookup_value("p")?), "{x: 5, y: 10}");
 
     let (js, _) = codegen_js(src, &program);
     insta::assert_snapshot!(js, @r###"
@@ -1428,7 +1455,7 @@ fn infer_if_let_refutable_pattern_obj() {
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const p: {
@@ -1436,10 +1463,12 @@ fn infer_if_let_refutable_pattern_obj() {
         readonly y: 10;
     };
     "###);
+
+    Ok(())
 }
 
 #[test]
-fn infer_if_let_refutable_pattern_nested_obj() {
+fn infer_if_let_refutable_pattern_nested_obj() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let action = {type: "moveto", point: {x: 5, y: 10}};
     if (let {type: "moveto", point: {x, y}} = action) {
@@ -1467,7 +1496,7 @@ fn infer_if_let_refutable_pattern_nested_obj() {
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const action: {
@@ -1478,10 +1507,12 @@ fn infer_if_let_refutable_pattern_nested_obj() {
         };
     };
     "###);
+
+    Ok(())
 }
 
 #[test]
-fn infer_if_let_refutable_pattern_with_disjoint_union() {
+fn infer_if_let_refutable_pattern_with_disjoint_union() -> Result<(), Vec<TypeError>> {
     let src = r#"
     type Point = {x: number, y: number};
     type Action = {type: "moveto", point: Point} | {type: "lineto", point: Point};
@@ -1507,7 +1538,7 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"
     declare type Action = {
@@ -1523,10 +1554,12 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() {
     };
     export declare const action: Action;
     "###);
+
+    Ok(())
 }
 
 #[test]
-fn infer_if_let_refutable_pattern_array() {
+fn infer_if_let_refutable_pattern_array() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let p = [5, 10];
     if (let [5, y] = p) {
@@ -1553,14 +1586,16 @@ fn infer_if_let_refutable_pattern_array() {
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @"export declare const p: readonly [5, 10];
 ");
+
+    Ok(())
 }
 
 #[test]
-fn infer_if_let_refutable_pattern_nested_array() {
+fn infer_if_let_refutable_pattern_nested_array() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let action = ["moveto", [5, 10]];
     if (let ["moveto", [x, y]] = action) {
@@ -1588,14 +1623,16 @@ fn infer_if_let_refutable_pattern_nested_array() {
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @r###"export declare const action: readonly ["moveto", readonly [5, 10]];
 "###);
+
+    Ok(())
 }
 
 #[test]
-fn codegen_if_let_with_is_prim() {
+fn codegen_if_let_with_is_prim() -> Result<(), Vec<TypeError>> {
     let src = r#"
     declare let b: string | number;
     if (let a is number = b) {
@@ -1617,10 +1654,12 @@ fn codegen_if_let_with_is_prim() {
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
 
     insta::assert_snapshot!(result, @"export declare const b: number | string;
 ");
+
+    Ok(())
 }
 
 #[test]
@@ -1681,7 +1720,7 @@ fn codegen_if_let_with_is_class() {
 }
 
 #[test]
-fn codegen_array() {
+fn codegen_array() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let arr: string[] = ["hello", "world"];
     "#;
@@ -1696,7 +1735,9 @@ fn codegen_array() {
     ];
     "###);
 
-    let result = codegen_d_ts(&program, &ctx);
+    let result = codegen_d_ts(&program, &ctx)?;
     insta::assert_snapshot!(result, @"export declare const arr: readonly string[];
 ");
+
+    Ok(())
 }
