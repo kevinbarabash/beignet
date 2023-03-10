@@ -2,7 +2,6 @@ use escalier_ast::types::*;
 use im::hashmap::HashMap;
 
 use crate::binding::Binding;
-use crate::checker::Checker;
 use crate::context::Context;
 use crate::scheme::{generalize, Scheme};
 use crate::substitutable::{Subst, Substitutable};
@@ -58,14 +57,5 @@ impl Context for Scope {
     fn apply(&mut self, s: &Subst) {
         // QUESTION: Do we need to update self.types as well?
         self.values = self.values.apply(s);
-    }
-}
-
-impl Checker {
-    // TODO: move this to the `Context` trait
-    pub fn lookup_type(&mut self, name: &str) -> Result<Type, Vec<TypeError>> {
-        let scheme = self.lookup_scheme(name)?;
-        let t = self.instantiate(&scheme);
-        Ok(t)
     }
 }

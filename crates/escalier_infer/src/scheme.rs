@@ -6,8 +6,10 @@ use std::iter::Iterator;
 
 use escalier_ast::types::*;
 
+use crate::context::Context;
 use crate::scope::Env;
 use crate::substitutable::{Subst, Substitutable};
+use crate::type_error::TypeError;
 use crate::util::{replace_aliases_in_lam, replace_aliases_rec};
 
 use crate::checker::Checker;
@@ -74,6 +76,12 @@ pub fn generalize(env: &Env, t: &Type) -> Scheme {
 }
 
 impl Checker {
+    pub fn lookup_type(&mut self, name: &str) -> Result<Type, Vec<TypeError>> {
+        let scheme = self.lookup_scheme(name)?;
+        let t = self.instantiate(&scheme);
+        Ok(t)
+    }
+
     pub fn get_type_param_map(&mut self, type_params: &[TypeParam]) -> HashMap<String, Type> {
         let mut type_param_map = HashMap::new();
 
