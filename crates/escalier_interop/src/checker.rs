@@ -1,9 +1,9 @@
 use escalier_ast::types::{TVar, Type, TypeKind};
-use escalier_infer::{self, Context, Scheme, TypeError};
+use escalier_infer::{self, Scheme, Scope, TypeError};
 
 #[derive(Default, Debug, Clone)]
 pub struct Checker {
-    pub current_scope: Context,
+    pub current_scope: Scope,
     pub next_id: u32,
 }
 

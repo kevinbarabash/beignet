@@ -599,19 +599,19 @@ impl Checker {
             TypeKind::Object(_) => Ok(t.to_owned()),
             TypeKind::Lit(lit) => {
                 let t = match lit {
-                    TLit::Num(_) => self.lookup_type("Number", false)?,
-                    TLit::Bool(_) => self.lookup_type("Boolean", false)?,
-                    TLit::Str(_) => self.lookup_type("String", false)?,
+                    TLit::Num(_) => self.lookup_type("Number")?,
+                    TLit::Bool(_) => self.lookup_type("Boolean")?,
+                    TLit::Str(_) => self.lookup_type("String")?,
                 };
                 Ok(t)
             }
             TypeKind::Keyword(keyword) => {
                 let t = match keyword {
-                    TKeyword::Number => self.lookup_type("Number", false)?,
-                    TKeyword::Boolean => self.lookup_type("Boolean", false)?,
-                    TKeyword::Self_ => self.lookup_type("Self", false)?, // TODO:
-                    TKeyword::String => self.lookup_type("String", false)?,
-                    TKeyword::Symbol => self.lookup_type("Symbol", false)?,
+                    TKeyword::Number => self.lookup_type("Number")?,
+                    TKeyword::Boolean => self.lookup_type("Boolean")?,
+                    TKeyword::Self_ => self.lookup_type("Self")?, // TODO:
+                    TKeyword::String => self.lookup_type("String")?,
+                    TKeyword::Symbol => self.lookup_type("Symbol")?,
                     TKeyword::Object => {
                         // NOTE: Structural typing allows for extra elems in any object
                         // so this should be a good equivalent for the `object` keyword.
@@ -692,7 +692,7 @@ impl Checker {
 
                 Ok(t)
             }
-            TypeKind::Lam(_) => self.lookup_type("Function", false),
+            TypeKind::Lam(_) => self.lookup_type("Function"),
             TypeKind::App(_) => todo!(), // What does this even mean?
             TypeKind::Union(_) => todo!(),
             TypeKind::Intersection(_) => {
@@ -795,7 +795,7 @@ mod tests {
     }
 
     fn get_keyof(name: &str, checker: &mut Checker) -> String {
-        match checker.lookup_type(name, true) {
+        match checker.lookup_type(name) {
             Ok(t) => {
                 let t = checker.expand_keyof(&t).unwrap();
                 format!("{t}")
@@ -926,12 +926,12 @@ mod tests {
         "#;
         let mut checker = infer_prog(src);
 
-        let a = checker.lookup_type("A", false).unwrap();
+        let a = checker.lookup_type("A").unwrap();
         let a = checker.expand_type(&a).unwrap();
         let result = format!("{a}");
         assert_eq!(result, r#"number"#);
 
-        let b = checker.lookup_type("B", false).unwrap();
+        let b = checker.lookup_type("B").unwrap();
         let b = checker.expand_type(&b).unwrap();
         let result = format!("{b}");
         assert_eq!(result, r#"string"#);

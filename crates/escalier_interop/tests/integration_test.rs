@@ -11,7 +11,7 @@ pub fn messages(report: &[TypeError]) -> Vec<String> {
 
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
-fn infer_prog(src: &str) -> (Program, escalier_infer::Context) {
+fn infer_prog(src: &str) -> (Program, escalier_infer::Scope) {
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
     let mut checker = parse_dts(&lib).unwrap();
 
@@ -388,7 +388,7 @@ fn infer_partial() {
     "#;
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
-    let t = checker.lookup_type("PartialObj", false).unwrap();
+    let t = checker.lookup_type("PartialObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
@@ -406,7 +406,7 @@ fn infer_required() {
     "#;
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
-    let t = checker.lookup_type("RequiredObj", false).unwrap();
+    let t = checker.lookup_type("RequiredObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
@@ -424,7 +424,7 @@ fn infer_readonly() {
     "#;
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
-    let t = checker.lookup_type("ReadonlyObj", false).unwrap();
+    let t = checker.lookup_type("ReadonlyObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
@@ -439,7 +439,7 @@ fn infer_readonly_with_indexer_only() {
     "#;
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
-    let t = checker.lookup_type("ReadonlyObj", false).unwrap();
+    let t = checker.lookup_type("ReadonlyObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
@@ -454,7 +454,7 @@ fn infer_readonly_with_indexer_and_other_properties() {
     "#;
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
-    let t = checker.lookup_type("ReadonlyObj", false).unwrap();
+    let t = checker.lookup_type("ReadonlyObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
@@ -472,7 +472,7 @@ fn infer_pick() {
     "#;
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
-    let t = checker.lookup_type("PickObj", false).unwrap();
+    let t = checker.lookup_type("PickObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
     let result = format!("{}", t);
@@ -509,17 +509,17 @@ fn infer_partial_with_getters_and_setters_on_class_instance() {
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
 
-    let t = checker.lookup_type("T1", false).unwrap();
+    let t = checker.lookup_type("T1").unwrap();
     let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "number | undefined");
 
-    let t = checker.lookup_type("T2", false).unwrap();
+    let t = checker.lookup_type("T2").unwrap();
     let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "string | undefined");
 
-    let t = checker.lookup_type("T3", false).unwrap();
+    let t = checker.lookup_type("T3").unwrap();
     let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "() => boolean | undefined"); // should be (() => boolean) | undefined
@@ -551,7 +551,7 @@ fn infer_exclude() {
     "#;
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
-    let t = checker.lookup_type("T1", false).unwrap();
+    let t = checker.lookup_type("T1").unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "Exclude<\"a\" | \"b\" | \"c\", \"a\" | \"b\">");
@@ -582,7 +582,7 @@ fn infer_out_of_order_exclude() {
     };
     escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
-    let t = checker.lookup_type("T1", false).unwrap();
+    let t = checker.lookup_type("T1").unwrap();
     let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "\"c\"");
@@ -596,7 +596,7 @@ fn infer_omit() {
     "#;
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
-    let t = checker.lookup_type("T1", false).unwrap();
+    let t = checker.lookup_type("T1").unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "Omit<Obj, \"b\" | \"c\">");
@@ -614,7 +614,7 @@ fn infer_omit_string() {
     "#;
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
-    let t = checker.lookup_type("T1", false).unwrap();
+    let t = checker.lookup_type("T1").unwrap();
 
     let result = format!("{}", t);
     assert_eq!(result, "Omit<String, \"length\">");
@@ -632,7 +632,7 @@ fn infer_method_type_with_indexed_access() {
     "#;
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
-    let t = checker.lookup_type("T1", false).unwrap();
+    let t = checker.lookup_type("T1").unwrap();
 
     let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
@@ -655,17 +655,17 @@ fn infer_getter_setter_types_with_indexed_access() {
     let (_, ctx) = infer_prog(src);
     let mut checker = Checker::from(ctx);
 
-    let t = checker.lookup_type("T1", false).unwrap();
+    let t = checker.lookup_type("T1").unwrap();
     let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "number");
 
-    let t = checker.lookup_type("T2", false).unwrap();
+    let t = checker.lookup_type("T2").unwrap();
     let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "string");
 
-    let t = checker.lookup_type("T3", false).unwrap();
+    let t = checker.lookup_type("T3").unwrap();
     let t = checker.expand_type(&t).unwrap();
     let result = format!("{}", t);
     assert_eq!(result, "() => boolean");

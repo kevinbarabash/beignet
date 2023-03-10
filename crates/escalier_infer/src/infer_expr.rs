@@ -233,7 +233,7 @@ impl Checker {
             }
             ExprKind::Ident(Ident { name, .. }) => {
                 let s = Subst::default();
-                let t = self.current_scope.lookup_value_and_instantiate(name)?;
+                let t = self.current_scope.lookup_value(name)?;
 
                 Ok((s, t))
             }
@@ -331,7 +331,7 @@ impl Checker {
                 let first_char = name.chars().next().unwrap();
                 // JSXElement's starting with an uppercase char are user defined.
                 if first_char.is_uppercase() {
-                    let t = self.current_scope.lookup_value_and_instantiate(name)?;
+                    let t = self.current_scope.lookup_value(name)?;
                     match &t.kind {
                         TypeKind::Lam(_) => {
                             let mut ss: Vec<_> = vec![];
@@ -596,8 +596,7 @@ impl Checker {
                         PropOrSpread::Prop(p) => {
                             match p.as_mut() {
                                 Prop::Shorthand(Ident { name, .. }) => {
-                                    let t =
-                                        self.current_scope.lookup_value_and_instantiate(name)?;
+                                    let t = self.current_scope.lookup_value(name)?;
                                     elems.push(types::TObjElem::Prop(types::TProp {
                                         name: TPropKey::StringKey(name.to_owned()),
                                         optional: false,
@@ -645,7 +644,7 @@ impl Checker {
                 Ok((s, t))
             }
             ExprKind::Await(Await { expr, .. }) => {
-                if !self.current_scope.is_async() {
+                if !self.current_scope.is_async {
                     return Err(vec![TypeError::AwaitOutsideOfAsync]);
                 }
 
@@ -787,8 +786,7 @@ impl Checker {
 
         let (s, mut t) = result?;
 
-        // QUESTION: Do we need to update self.current_scope.types as well?
-        self.current_scope.values = self.current_scope.values.apply(&s);
+        self.current_scope.apply(&s);
 
         expr.inferred_type = Some(t.clone());
         t.provenance = Some(Box::from(Provenance::from(expr)));

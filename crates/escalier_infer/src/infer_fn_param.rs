@@ -51,7 +51,9 @@ impl Checker {
             optional: param.optional,
         };
 
-        self.current_scope.insert_bindings(&pa);
+        for (name, binding) in pa {
+            self.current_scope.insert_binding(name, binding);
+        }
 
         Ok((ps, param))
     }

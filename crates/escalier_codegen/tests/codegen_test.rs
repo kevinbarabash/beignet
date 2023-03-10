@@ -1,6 +1,6 @@
 use escalier_codegen::d_ts::codegen_d_ts;
 use escalier_codegen::js::codegen_js;
-use escalier_infer::{infer_prog, Checker};
+use escalier_infer::{infer_prog, Checker, TypeError};
 use escalier_parser::parse;
 
 fn compile(input: &str) -> (String, String) {
@@ -446,7 +446,7 @@ fn codegen_block_with_multiple_non_let_lines() {
 }
 
 #[test]
-fn destructuring_function_object_params() {
+fn destructuring_function_object_params() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let foo = ({x, y: b}) => x + b;
     "#;
@@ -458,7 +458,7 @@ fn destructuring_function_object_params() {
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
     infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const foo: ({ x , y: b  }: {
@@ -466,10 +466,12 @@ fn destructuring_function_object_params() {
         readonly y: number;
     }) => number;
     "###);
+
+    Ok(())
 }
 
 #[test]
-fn destructuring_function_array_params() {
+fn destructuring_function_array_params() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let foo = ([a, b]) => a + b;
     "#;
@@ -480,15 +482,17 @@ fn destructuring_function_array_params() {
 
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
-    infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    infer_prog(&mut program, &mut checker)?;
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @"export declare const foo: ([a, b]: readonly [number, number]) => number;
 ");
+
+    Ok(())
 }
 
 #[test]
-fn function_with_rest_param() {
+fn function_with_rest_param() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let foo = (x: number, ...y: number[]) => x;
     "#;
@@ -499,15 +503,17 @@ fn function_with_rest_param() {
 
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
-    infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    infer_prog(&mut program, &mut checker)?;
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @"export declare const foo: (x: number, ...y: readonly number[]) => number;
 ");
+
+    Ok(())
 }
 
 #[test]
-fn function_with_optional_param() {
+fn function_with_optional_param() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let foo = (x: number, y?: number) => x;
     "#;
@@ -518,15 +524,17 @@ fn function_with_optional_param() {
 
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
-    infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    infer_prog(&mut program, &mut checker)?;
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @"export declare const foo: (x: number, y?: number) => number;
 ");
+
+    Ok(())
 }
 
 #[test]
-fn function_with_optional_param_and_rest_param() {
+fn function_with_optional_param_and_rest_param() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let foo = (x?: number, ...y: number[]) => x;
     "#;
@@ -537,15 +545,17 @@ fn function_with_optional_param_and_rest_param() {
 
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
-    infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    infer_prog(&mut program, &mut checker)?;
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @"export declare const foo: (x?: number, ...y: readonly number[]) => number | undefined;
 ");
+
+    Ok(())
 }
 
 #[test]
-fn generic_function() {
+fn generic_function() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let fst = <T>(a: T, b: T) => a;
     "#;
@@ -556,15 +566,17 @@ fn generic_function() {
 
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
-    infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    infer_prog(&mut program, &mut checker)?;
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @"export declare const fst: <A>(a: A, b: A) => A;
 ");
+
+    Ok(())
 }
 
 #[test]
-fn constrained_generic_function() {
+fn constrained_generic_function() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let fst = <T extends number | string>(a: T, b: T) => a;
     "#;
@@ -576,14 +588,16 @@ fn constrained_generic_function() {
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
     infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @"export declare const fst: <A extends number | string>(a: A, b: A) => A;
 ");
+
+    Ok(())
 }
 
 #[test]
-fn variable_declaration_with_destructuring() {
+fn variable_declaration_with_destructuring() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let [x, y] = [5, 10];
     "#;
@@ -600,12 +614,14 @@ fn variable_declaration_with_destructuring() {
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
     infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const x: 5;
     export declare const y: 10;
     "###);
+
+    Ok(())
 }
 
 #[test]
@@ -682,7 +698,7 @@ fn spread_args() {
 }
 
 #[test]
-fn mutable_array() {
+fn mutable_array() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let arr: mut number[] = [1, 2, 3];
     "#;
@@ -699,14 +715,16 @@ fn mutable_array() {
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
     infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @"export declare const arr: number[];
 ");
+
+    Ok(())
 }
 
 #[test]
-fn mutable_obj() {
+fn mutable_obj() -> Result<(), Vec<TypeError>> {
     let src = r#"
     type Point = {mut x: number, mut y: number};
     "#;
@@ -714,7 +732,7 @@ fn mutable_obj() {
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
     infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     // This should be:
     // declare type MutablePoint = {x: number; y: number};
@@ -729,10 +747,12 @@ fn mutable_obj() {
         readonly y: number;
     };
     "###);
+
+    Ok(())
 }
 
 #[test]
-fn mutable_indexer() {
+fn mutable_indexer() -> Result<(), Vec<TypeError>> {
     let src = r#"
     type Dict = {mut [key: string]: string};
     "#;
@@ -740,7 +760,7 @@ fn mutable_indexer() {
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
     infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @r###"
     declare type Dict = {
@@ -750,6 +770,8 @@ fn mutable_indexer() {
         readonly [key: string]: string;
     };
     "###);
+
+    Ok(())
 }
 
 #[test]
@@ -787,7 +809,7 @@ fn class_with_methods() {
 }
 
 #[test]
-fn for_of_loop() {
+fn for_of_loop() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let mut sum: number = 0;
     for (const num in [1, 2, 3]) {
@@ -810,14 +832,16 @@ fn for_of_loop() {
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
     infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @r###"export declare const sum: number;
     "###);
+
+    Ok(())
 }
 
 #[test]
-fn for_loop_inside_fn() {
+fn for_loop_inside_fn() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let sum = (arr: number[]) => {
         let mut result: number = 0;
@@ -842,14 +866,16 @@ fn for_loop_inside_fn() {
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
     infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @"export declare const sum: (arr: readonly number[]) => number;
 ");
+
+    Ok(())
 }
 
 #[test]
-fn type_decl_inside_block() {
+fn type_decl_inside_block() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let result = do {
         type Point = {x: number, y: number};
@@ -873,14 +899,16 @@ fn type_decl_inside_block() {
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
     infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @"export declare const result: number;
 ");
+
+    Ok(())
 }
 
 #[test]
-fn type_decl_inside_block_with_escape() {
+fn type_decl_inside_block_with_escape() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let result = do {
         type Point = {x: number, y: number};
@@ -904,15 +932,17 @@ fn type_decl_inside_block_with_escape() {
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
     infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     // TODO: How do we ensure that types defined within a block can't escape?
     insta::assert_snapshot!(result, @"export declare const result: Point;
 ");
+
+    Ok(())
 }
 
 #[test]
-fn class_inside_function() {
+fn class_inside_function() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let foo = () => {
         class Point {
@@ -944,11 +974,13 @@ fn class_inside_function() {
 
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
-    infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    infer_prog(&mut program, &mut checker)?;
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @"export declare const foo: () => Point;
 ");
+
+    Ok(())
 }
 
 #[test]
@@ -969,7 +1001,7 @@ fn top_leve_return() {
 }
 
 #[test]
-fn multiple_returns_stress_test() {
+fn multiple_returns_stress_test() -> Result<(), Vec<TypeError>> {
     let src = r#"
     let foo = (cond: boolean) => {
         let bar = () => {
@@ -1005,9 +1037,11 @@ fn multiple_returns_stress_test() {
 
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
-    infer_prog(&mut program, &mut checker).unwrap();
-    let result = codegen_d_ts(&program, &checker.current_scope);
+    infer_prog(&mut program, &mut checker)?;
+    let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @"export declare const foo: (cond: boolean) => 10 | 5;
 ");
+
+    Ok(())
 }
