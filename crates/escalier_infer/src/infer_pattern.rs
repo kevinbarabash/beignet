@@ -4,7 +4,8 @@ use escalier_ast::types::{self as types, Provenance, TObject, TPropKey, Type, Ty
 use escalier_ast::values::{self as values, *};
 
 use crate::assump::Assump;
-use crate::scope::Binding;
+use crate::binding::Binding;
+use crate::context::Context;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::update::update_pattern;
@@ -78,9 +79,9 @@ impl Checker {
 
         for (name, mut binding) in pa {
             if top_level {
-                binding.t = close_over(&s, &binding.t, &self.current_scope);
+                binding.t = close_over(&s, &binding.t);
             }
-            self.current_scope.insert_binding(name, binding);
+            self.insert_binding(name, binding);
         }
 
         update_pattern(pattern, &s);

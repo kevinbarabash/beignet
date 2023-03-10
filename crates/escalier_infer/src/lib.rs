@@ -1,5 +1,7 @@
 mod assump;
+mod binding;
 mod checker;
+mod context;
 mod expand_type;
 mod infer_class;
 mod infer_expr;
@@ -18,6 +20,7 @@ mod update;
 mod util;
 
 pub use checker::Checker;
+pub use context::Context;
 pub use infer_prog::*;
 pub use infer_stmt::*;
 pub use scheme::{get_sub_and_type_params, Scheme};

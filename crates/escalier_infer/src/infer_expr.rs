@@ -7,6 +7,7 @@ use escalier_ast::types::{
 };
 use escalier_ast::values::*;
 
+use crate::context::Context;
 use crate::infer_pattern::PatternUsage;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
@@ -233,7 +234,7 @@ impl Checker {
             }
             ExprKind::Ident(Ident { name, .. }) => {
                 let s = Subst::default();
-                let t = self.current_scope.lookup_value(name)?;
+                let t = self.lookup_value(name)?;
 
                 Ok((s, t))
             }
@@ -331,7 +332,7 @@ impl Checker {
                 let first_char = name.chars().next().unwrap();
                 // JSXElement's starting with an uppercase char are user defined.
                 if first_char.is_uppercase() {
-                    let t = self.current_scope.lookup_value(name)?;
+                    let t = self.lookup_value(name)?;
                     match &t.kind {
                         TypeKind::Lam(_) => {
                             let mut ss: Vec<_> = vec![];
@@ -422,8 +423,7 @@ impl Checker {
                                 }
                                 None => self.fresh_var(None),
                             };
-                            self.current_scope
-                                .insert_type(type_param.name.name.clone(), tv.clone());
+                            self.insert_type(type_param.name.name.clone(), tv.clone());
                             Ok((type_param.name.name.to_owned(), tv))
                         })
                         .collect::<Result<HashMap<String, Type>, Vec<TypeError>>>()?,
@@ -475,7 +475,7 @@ impl Checker {
                 // - if it does, check if its mutable or not
                 if let ExprKind::Ident(id) = &assign.left.kind {
                     let name = &id.name;
-                    let binding = self.current_scope.lookup_binding(name)?;
+                    let binding = self.lookup_binding(name)?;
                     if !binding.mutable {
                         return Err(vec![TypeError::NonMutableBindingAssignment(Box::from(
                             assign.to_owned(),
@@ -596,7 +596,7 @@ impl Checker {
                         PropOrSpread::Prop(p) => {
                             match p.as_mut() {
                                 Prop::Shorthand(Ident { name, .. }) => {
-                                    let t = self.current_scope.lookup_value(name)?;
+                                    let t = self.lookup_value(name)?;
                                     elems.push(types::TObjElem::Prop(types::TProp {
                                         name: TPropKey::StringKey(name.to_owned()),
                                         optional: false,
@@ -786,7 +786,7 @@ impl Checker {
 
         let (s, mut t) = result?;
 
-        self.current_scope.apply(&s);
+        self.apply(&s);
 
         expr.inferred_type = Some(t.clone());
         t.provenance = Some(Box::from(Provenance::from(expr)));
@@ -857,7 +857,7 @@ impl Checker {
                             return Ok((s, t));
                         }
 
-                        let scheme = self.current_scope.lookup_scheme("Array")?;
+                        let scheme = self.lookup_scheme("Array")?;
 
                         let mut type_param_map: HashMap<String, Type> = HashMap::new();
                         let type_param = Type::from(TypeKind::Union(elem_types.to_owned()));

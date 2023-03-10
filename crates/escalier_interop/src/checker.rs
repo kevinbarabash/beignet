@@ -1,5 +1,5 @@
 use escalier_ast::types::{TVar, Type, TypeKind};
-use escalier_infer::{self, Scheme, Scope, TypeError};
+use escalier_infer::{self, Context, Scheme, Scope, TypeError};
 
 #[derive(Default, Debug, Clone)]
 pub struct Checker {

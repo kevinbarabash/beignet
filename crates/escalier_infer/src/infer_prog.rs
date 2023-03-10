@@ -1,6 +1,7 @@
 use escalier_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
 use escalier_ast::values::*;
 
+use crate::context::Context;
 use crate::type_error::TypeError;
 
 use crate::checker::Checker;
@@ -19,9 +20,7 @@ pub fn infer_prog(prog: &mut Program, checker: &mut Checker) -> Result<(), Vec<T
         elems,
         is_interface: true,
     }));
-    checker
-        .current_scope
-        .insert_type(String::from("Promise"), promise_type);
+    checker.insert_type(String::from("Promise"), promise_type);
     // TODO: replace with Class type once it exists
     // We use {_name: "JSXElement"} to differentiate it from other
     // object types.
@@ -35,9 +34,7 @@ pub fn infer_prog(prog: &mut Program, checker: &mut Checker) -> Result<(), Vec<T
         elems,
         is_interface: true,
     }));
-    checker
-        .current_scope
-        .insert_type(String::from("JSXElement"), jsx_element_type);
+    checker.insert_type(String::from("JSXElement"), jsx_element_type);
 
     let mut reports: Vec<TypeError> = vec![];
 
