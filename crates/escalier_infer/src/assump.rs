@@ -1,5 +1,5 @@
 use im::hashmap::HashMap;
 
-use crate::scope::Binding;
+use crate::binding::Binding;
 
 pub type Assump = HashMap<String, Binding>;

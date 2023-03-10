@@ -7,6 +7,7 @@ use escalier_ast::types::{
 };
 use escalier_ast::values::*;
 
+use crate::context::Context;
 use crate::infer_pattern::PatternUsage;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;

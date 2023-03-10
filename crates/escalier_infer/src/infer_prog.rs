@@ -1,6 +1,7 @@
 use escalier_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
 use escalier_ast::values::*;
 
+use crate::context::Context;
 use crate::type_error::TypeError;
 
 use crate::checker::Checker;

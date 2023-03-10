@@ -3,7 +3,8 @@ use im::hashmap::HashMap;
 use escalier_ast::types::{self as types, TFnParam, TKeyword, TPat, Type, TypeKind};
 use escalier_ast::values::*;
 
-use crate::scope::Binding;
+use crate::binding::Binding;
+use crate::context::Context;
 use crate::substitutable::Subst;
 use crate::type_error::TypeError;
 

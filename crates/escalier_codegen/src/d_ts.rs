@@ -11,7 +11,7 @@ use escalier_ast::types::{
     TPat, TPropKey, TSetter, TVar, Type, TypeKind, TypeParam,
 };
 use escalier_ast::{types, values};
-use escalier_infer::{immutable_obj_type, Scope, TypeError};
+use escalier_infer::{immutable_obj_type, Context, Scope, TypeError};
 
 pub fn codegen_d_ts(
     program: &values::Program,

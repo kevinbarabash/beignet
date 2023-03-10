@@ -2,6 +2,7 @@ use derive_visitor::{DriveMut, VisitorMut};
 use escalier_ast::types::{TKeyword, TRef, Type, TypeKind};
 use escalier_ast::values::*;
 
+use crate::context::Context;
 use crate::infer_pattern::*;
 use crate::scheme::generalize;
 use crate::scope::Env;

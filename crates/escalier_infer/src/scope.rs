@@ -1,18 +1,14 @@
 use escalier_ast::types::*;
 use im::hashmap::HashMap;
 
+use crate::binding::Binding;
 use crate::checker::Checker;
+use crate::context::Context;
 use crate::scheme::{generalize, Scheme};
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 
 pub type Env = HashMap<String, Scheme>;
-
-#[derive(Clone, Debug)]
-pub struct Binding {
-    pub mutable: bool,
-    pub t: Type,
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct Scope {
@@ -22,44 +18,44 @@ pub struct Scope {
 }
 
 // TODO: create `Context` trait which both `Scope` and `Checker` can implement.
-impl Scope {
-    pub fn insert_binding(&mut self, name: String, b: Binding) {
+impl Context for Scope {
+    fn insert_binding(&mut self, name: String, b: Binding) {
         self.values.insert(name, b);
     }
 
-    pub fn insert_value(&mut self, name: String, t: Type) {
+    fn insert_value(&mut self, name: String, t: Type) {
         self.insert_binding(name, Binding { mutable: false, t });
     }
 
-    pub fn insert_type(&mut self, name: String, t: Type) {
+    fn insert_type(&mut self, name: String, t: Type) {
         let scheme = generalize(&self.types, &t);
         self.insert_scheme(name, scheme);
     }
 
-    pub fn insert_scheme(&mut self, name: String, scheme: Scheme) {
+    fn insert_scheme(&mut self, name: String, scheme: Scheme) {
         self.types.insert(name, scheme);
     }
 
-    pub fn lookup_binding(&self, name: &str) -> Result<Binding, Vec<TypeError>> {
+    fn lookup_binding(&self, name: &str) -> Result<Binding, Vec<TypeError>> {
         if let Some(b) = self.values.get(name) {
             return Ok(b.to_owned());
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    pub fn lookup_value(&self, name: &str) -> Result<Type, Vec<TypeError>> {
+    fn lookup_value(&self, name: &str) -> Result<Type, Vec<TypeError>> {
         let b = self.lookup_binding(name)?;
         Ok(b.t)
     }
 
-    pub fn lookup_scheme(&self, name: &str) -> Result<Scheme, Vec<TypeError>> {
+    fn lookup_scheme(&self, name: &str) -> Result<Scheme, Vec<TypeError>> {
         if let Some(scheme) = self.types.get(name) {
             return Ok(scheme.to_owned());
         }
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    pub fn apply(&mut self, s: &Subst) {
+    fn apply(&mut self, s: &Subst) {
         // QUESTION: Do we need to update self.current_scope.types as well?
         self.values = self.values.apply(s);
     }

@@ -1,7 +1,7 @@
 use std::fs;
 
 use escalier_ast::values::Program;
-use escalier_infer::{Checker, TypeError};
+use escalier_infer::{Checker, Context, TypeError};
 use escalier_interop::parse::*;
 use escalier_parser::parse;
 

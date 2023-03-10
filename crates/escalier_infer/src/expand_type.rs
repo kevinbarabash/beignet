@@ -6,6 +6,7 @@ use escalier_ast::types::{
 use im::hashmap::HashMap;
 use itertools::Itertools;
 
+use crate::context::Context;
 use crate::scheme::Scheme;
 use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;

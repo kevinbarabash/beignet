@@ -5,9 +5,9 @@ use std::iter::IntoIterator;
 
 use escalier_ast::types::*;
 
+use crate::binding::Binding;
 use crate::infer_regex::parse_regex;
 use crate::scheme::Scheme;
-use crate::scope::Binding;
 
 pub type Subst = HashMap<u32, Type>;
 
