@@ -252,7 +252,7 @@ impl Checker {
                             self.push_scope(ScopeKind::Inherit);
                             let s1 = self.infer_pattern_and_init(
                                 pat,
-                                None,
+                                &mut None,
                                 &init,
                                 &PatternUsage::Match,
                                 false,
@@ -291,7 +291,7 @@ impl Checker {
                         self.push_scope(ScopeKind::Inherit);
                         let s1 = self.infer_pattern_and_init(
                             pat,
-                            None,
+                            &mut None,
                             &init,
                             &PatternUsage::Match,
                             false,
@@ -736,7 +736,7 @@ impl Checker {
                     self.push_scope(ScopeKind::Inherit);
                     let s1 = self.infer_pattern_and_init(
                         &mut arm.pattern,
-                        None,
+                        &mut None,
                         &init,
                         &PatternUsage::Match,
                         false,

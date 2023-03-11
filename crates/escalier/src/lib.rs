@@ -9,7 +9,7 @@ pub mod compile_error;
 pub mod diagnostics;
 
 use crate::compile_error::CompileError;
-use crate::diagnostics::get_diagnostics;
+use crate::diagnostics::get_diagnostics_from_compile_error;
 
 #[repr(C)]
 pub struct WasmString {
@@ -87,15 +87,15 @@ pub unsafe extern "C" fn compile(input: *const c_char, lib: *const c_char) -> *c
             };
             Box::into_raw(Box::new(result))
         }
-        Err(report) => {
-            let diagnostics = get_diagnostics(report, input);
+        Err(e) => {
+            let diagnostics = get_diagnostics_from_compile_error(e, input);
             let result = CompileResult {
                 js: string_to_wasm_string(""),
                 srcmap: string_to_wasm_string(""),
                 dts: string_to_wasm_string(""),
                 ast: string_to_wasm_string(""),
                 // TODO: update report to exclude Escalier source code locations
-                error: string_to_wasm_string(&diagnostics.join("\n")),
+                error: string_to_wasm_string(&diagnostics),
             };
             Box::into_raw(Box::new(result))
         }

@@ -1,11 +1,12 @@
 use std::fmt;
 
-use escalier_infer::TypeError;
+use escalier_infer::{Diagnostic, TypeError};
 use escalier_parser::ParseError;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CompileError {
     TypeError(Vec<TypeError>),
+    Diagnostic(Vec<Diagnostic>),
     ParseError(ParseError),
 }
 

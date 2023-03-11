@@ -19,7 +19,7 @@ impl Checker {
         type_param_map: &HashMap<String, Type>,
     ) -> Result<(Subst, TFnParam), Vec<TypeError>> {
         let (ps, mut pa, pt) =
-            self.infer_pattern(&mut param.pat, param.type_ann.as_mut(), type_param_map)?;
+            self.infer_pattern(&mut param.pat, &mut param.type_ann, type_param_map)?;
 
         // TypeScript annotates rest params using an array type so we do the
         // same thing by converting top-level rest types to array types.
