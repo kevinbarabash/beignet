@@ -2,23 +2,26 @@ use escalier_ast::types::{TVar, Type, TypeKind};
 
 use crate::binding::Binding;
 use crate::context::Context;
+use crate::diagnostic::Diagnostic;
 use crate::scheme::Scheme;
 use crate::scope::Scope;
 use crate::substitutable::Subst;
 use crate::type_error::TypeError;
 
 pub struct Checker {
-    pub current_scope: Scope,
     pub next_id: u32,
+    pub current_scope: Scope,
     pub parent_scopes: Vec<Scope>,
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 impl From<Scope> for Checker {
-    fn from(ctx: Scope) -> Self {
+    fn from(scope: Scope) -> Self {
         Checker {
-            current_scope: ctx,
-            parent_scopes: vec![],
             next_id: 1,
+            current_scope: scope,
+            parent_scopes: vec![],
+            diagnostics: vec![],
         }
     }
 }
@@ -26,9 +29,10 @@ impl From<Scope> for Checker {
 impl Default for Checker {
     fn default() -> Self {
         Checker {
+            next_id: 1,
             current_scope: Scope::default(),
             parent_scopes: vec![],
-            next_id: 1,
+            diagnostics: vec![],
         }
     }
 }

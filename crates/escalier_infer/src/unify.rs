@@ -299,6 +299,7 @@ impl Checker {
                 let mut reports: Vec<TypeError> = vec![];
                 for (p1, p2) in args.iter_mut().zip(params.iter_mut()) {
                     // Each argument must be a subtype of the corresponding param.
+                    // TODO: collect unification errors as diagnostics
                     match self.unify(&p1.apply(&s), &p2.apply(&s)) {
                         Ok(s1) => s = compose_subs(&s, &s1),
                         Err(mut report) => reports.append(&mut report),

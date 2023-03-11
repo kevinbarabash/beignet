@@ -6,6 +6,7 @@ use escalier_ast::values::{self as values, *};
 use crate::assump::Assump;
 use crate::binding::Binding;
 use crate::context::Context;
+use crate::diagnostic::Diagnostic;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::update::update_pattern;
@@ -19,7 +20,7 @@ impl Checker {
     pub fn infer_pattern(
         &mut self,
         pat: &mut Pattern,
-        type_ann: Option<&mut TypeAnn>,
+        type_ann: &mut Option<TypeAnn>,
         type_param_map: &HashMap<String, Type>,
     ) -> Result<(Subst, Assump, Type), Vec<TypeError>> {
         // Keeps track of all of the variables the need to be introduced by this pattern.
@@ -53,19 +54,34 @@ impl Checker {
     pub fn infer_pattern_and_init(
         &mut self,
         pattern: &mut Pattern,
-        type_ann: Option<&mut TypeAnn>,
+        type_ann: &mut Option<TypeAnn>,
         init: &(Subst, Type),
         pu: &PatternUsage,
         top_level: bool,
     ) -> Result<Subst, Vec<TypeError>> {
         let type_param_map = HashMap::new();
+        // Recoverable errors:
+        // - let [a, b] = [1, 2, 3];
+        // - let {a, b} = {a: 1, b: 2, c: 3};
+        // - let a: number = "hello";
         let (ps, pa, pt) = self.infer_pattern(pattern, type_ann, &type_param_map)?;
 
         // Unifies initializer and pattern.
         let s = match pu {
             // Assign: The inferred type of the init value must be a sub-type
             // of the pattern it's being assigned to.
-            PatternUsage::Assign => self.unify(&init.1, &pt)?,
+            PatternUsage::Assign => match (&type_ann, self.unify(&init.1, &pt)) {
+                (_, Ok(s)) => s,
+                (None, Err(e)) => return Err(e),
+                (Some(_), Err(reasons)) => {
+                    self.diagnostics.push(Diagnostic {
+                        code: 1,
+                        message: format!("{} is not assignable to {pt}", init.1),
+                        reasons,
+                    });
+                    Subst::default()
+                }
+            },
             // Matching: The pattern must be a sub-type of the expression
             // it's being matched against
             PatternUsage::Match => self.unify(&pt, &init.1)?,

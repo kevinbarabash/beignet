@@ -41,13 +41,3 @@ Error: Incompatible types
    ·              ───┬───  
    ·                 ╰───── "world"
 ───╯
-
-Error: Incompatible types
-   ╭─[<unknown>:8:17]
-   │
- 8 │ let b: number = "5";
-   ·        ───┬──   ─┬─  
-   ·           ╰────────── number
-   ·                  │   
-   ·                  ╰─── "5"
-───╯

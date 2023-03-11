@@ -2,6 +2,7 @@ mod assump;
 mod binding;
 mod checker;
 mod context;
+mod diagnostic;
 mod expand_type;
 mod infer_class;
 mod infer_expr;
@@ -21,6 +22,7 @@ mod util;
 
 pub use checker::Checker;
 pub use context::Context;
+pub use diagnostic::Diagnostic;
 pub use infer_prog::*;
 pub use infer_stmt::*;
 pub use scheme::{get_sub_and_type_params, Scheme};
@@ -38,6 +40,15 @@ mod tests {
 
     pub fn messages(report: &[TypeError]) -> Vec<String> {
         report.iter().map(|error| error.to_string()).collect()
+    }
+
+    pub fn diagnostic_message(checker: &Checker) -> String {
+        checker
+            .diagnostics
+            .iter()
+            .map(|d| d.to_string())
+            .collect::<Vec<String>>()
+            .join("\n")
     }
 
     fn infer(input: &str) -> String {
@@ -347,16 +358,21 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = r#"TypeError::UnificationError: "hello", boolean,TypeError::UnificationError: true, string"#]
     fn infer_destructuring_tuple_with_incorrect_type_annotation() {
         let src = r#"
         let [a, b, c]: [number, boolean, string] = [5, "hello", true];
         "#;
-        let ctx = infer_prog(src);
+        let checker = infer_prog(src);
 
-        assert_eq!(get_value_type("a", &ctx), "number");
-        assert_eq!(get_value_type("b", &ctx), "boolean");
-        assert_eq!(get_value_type("c", &ctx), "string");
+        assert_eq!(get_value_type("a", &checker), "number");
+        assert_eq!(get_value_type("b", &checker), "boolean");
+        assert_eq!(get_value_type("c", &checker), "string");
+
+        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        ESC_1 - [5, "hello", true] is not assignable to [number, boolean, string]:
+        ├ TypeError::UnificationError: "hello", boolean
+        └ TypeError::UnificationError: true, string
+        "###);
     }
 
     #[test]
@@ -371,13 +387,17 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::NotEnoughElementsToUnpack"]
     fn infer_destructuring_tuple_extra_init_elems_too_many_elements_to_unpack_with_type_annotation()
     {
         let src = r#"
         let [a, b, c, d]: [number, boolean, string, number] = [5, true, "hello"];
         "#;
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        ESC_1 - [5, true, "hello"] is not assignable to [number, boolean, string, number]:
+        └ TypeError::NotEnoughElementsToUnpack
+        "###);
     }
 
     #[test]
@@ -564,9 +584,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: {x: 5}, {x: number, y: number}"]
     fn obj_assignment_with_type_annotation_missing_properties() {
-        infer_prog("let p: {x: number, y: number} = {x: 5};");
+        let checker = infer_prog("let p: {x: number, y: number} = {x: 5};");
+
+        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        ESC_1 - {x: 5} is not assignable to {x: number, y: number}:
+        └ TypeError::UnificationError: {x: 5}, {x: number, y: number}
+        "###);
     }
 
     #[test]
@@ -2226,11 +2250,16 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: 5, string"]
     fn assign_tuple_with_to_array_with_incompatible_types() {
-        let src = r#"let arr: string[] = ["hello", 5];"#;
+        let src = r#"let arr: string[] = [true, 5];"#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        // TODO: report all of the elements that aren't strings
+        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        ESC_1 - [true, 5] is not assignable to string[]:
+        └ TypeError::UnificationError: 5, string
+        "###);
     }
 
     #[test]
@@ -2269,7 +2298,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: number, string"]
     fn pattern_matching_with_disjoint_union_incorrect_result_type() {
         // The return type of a `match` expression is the union of all of the return types of
         // each of the arms.  If you want to ensure that all arms return a common type then you'll
@@ -2284,7 +2312,12 @@ mod tests {
         };
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        ESC_1 - number | string is not assignable to string:
+        └ TypeError::UnificationError: number, string
+        "###);
     }
 
     #[test]
@@ -2634,14 +2667,18 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnexpectedImutableValue"]
     fn test_mutable_array_cannot_be_assigned_immutable_tuple() {
         let src = r#"
         let tuple = [1, 2, 3];
         let mut_arr: mut number[] = tuple;
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        ESC_1 - [1, 2, 3] is not assignable to mut number[]:
+        └ TypeError::UnexpectedImutableValue
+        "###);
     }
 
     #[test]
@@ -2679,14 +2716,18 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: mut number[], mut number | string[]"]
     fn test_mutable_array_cannot_be_assigned_to_mutable_subtype() {
         let src = r#"
         declare let arr1: mut number[];
         let arr2: mut (number | string)[] = arr1;
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        ESC_1 - mut number[] is not assignable to mut number | string[]:
+        └ TypeError::UnificationError: mut number[], mut number | string[]
+        "###);
     }
 
     #[test]
@@ -2937,14 +2978,18 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: {x: 5}, {x: number, y: number}"]
     fn object_assignment_not_enough_properties() {
         let src = r#"
         type Point = {x: number, y: number};
         
         let p: Point = {x: 5};
         "#;
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        ESC_1 - {x: 5} is not assignable to Point:
+        └ TypeError::UnificationError: {x: 5}, {x: number, y: number}
+        "###);
     }
 
     #[test]
@@ -2962,14 +3007,18 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: {x: \"hello\"}, {x?: number, y?: number}"]
     fn object_assignment_with_optional_properties_wrong_type() {
         let src = r#"
         type Point = {x?: number, y?: number};
         
         let p: Point = {x: "hello"};
         "#;
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        ESC_1 - {x: "hello"} is not assignable to Point:
+        └ TypeError::UnificationError: {x: "hello"}, {x?: number, y?: number}
+        "###);
     }
 
     #[test]
@@ -3642,5 +3691,34 @@ mod tests {
         let result = foo();
         "#;
         infer_prog(src);
+    }
+
+    #[test]
+    fn recoverable_error_1() {
+        let src = r#"
+        let a: number = "hello";
+        let b: number = true;
+        let c = a + b;
+        "#;
+        let checker = infer_prog(src);
+        for d in checker.diagnostics {
+            eprintln!("{d:#?}");
+        }
+    }
+
+    // TODO: Update unify() to report func call args that are the wrong type
+    // as diagnostics instead of hard errors.  We need to make sure whatever
+    // solution we come up with supports calling overloaded functions.
+    #[test]
+    #[ignore]
+    fn recoverable_error_2() {
+        let src = r#"
+        declare let add: (x: number, y: number) => number;
+        let sum = add("hello", true);
+        "#;
+        let checker = infer_prog(src);
+        for d in checker.diagnostics {
+            eprintln!("{}", d.message);
+        }
     }
 }

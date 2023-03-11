@@ -37,7 +37,7 @@ impl Checker {
 
                         let s = self.infer_pattern_and_init(
                             pattern,
-                            type_ann.as_mut(),
+                            type_ann,
                             &inferred_init,
                             &PatternUsage::Assign,
                             top_level,
@@ -144,7 +144,7 @@ impl Checker {
                 self.push_scope(ScopeKind::Inherit);
                 let s2 = self.infer_pattern_and_init(
                     pattern,
-                    None,
+                    &mut None,
                     &(Subst::new(), elem_t),
                     &PatternUsage::Assign,
                     top_level,
