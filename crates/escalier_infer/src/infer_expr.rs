@@ -256,7 +256,6 @@ impl Checker {
                                 &mut None,
                                 &init,
                                 &PatternUsage::Match,
-                                false,
                             )?;
 
                             let (s2, t2) = self.infer_block(consequent)?;
@@ -295,7 +294,6 @@ impl Checker {
                             &mut None,
                             &init,
                             &PatternUsage::Match,
-                            false,
                         )?;
 
                         let (s2, t2) = self.infer_block(consequent)?;
@@ -762,7 +760,6 @@ impl Checker {
                         &mut None,
                         &init,
                         &PatternUsage::Match,
-                        false,
                     )?;
 
                     let (s2, t2) = self.infer_block(&mut arm.body)?;

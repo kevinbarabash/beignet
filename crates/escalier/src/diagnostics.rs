@@ -71,10 +71,10 @@ fn type_errors_to_string(errors: &[TypeError], src: &str) -> String {
                         None
                     };
                     if let Some(expr) = expr {
-                        if let ExprKind::Lambda(lam) = &expr.kind {
+                        if let ExprKind::Lambda(_) = &expr.kind {
                             // TODO: Add a span to lam.params so that we don't
                             // have to compute it here.
-                            eprintln!("params = {:#?}", lam.params)
+                            // eprintln!("params = {:#?}", lam.params)
                         }
                     }
                     // TODO: figure out how to get a span for just the function

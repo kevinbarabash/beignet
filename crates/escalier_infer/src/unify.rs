@@ -9,7 +9,7 @@ use types::TKeyword;
 
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
-use crate::util::*;
+use crate::{util::*, Diagnostic};
 
 use crate::checker::Checker;
 
@@ -296,18 +296,22 @@ impl Checker {
                 };
 
                 // Unify args with params
-                let mut reports: Vec<TypeError> = vec![];
+                let mut reasons: Vec<TypeError> = vec![];
                 for (p1, p2) in args.iter_mut().zip(params.iter_mut()) {
                     // Each argument must be a subtype of the corresponding param.
                     // TODO: collect unification errors as diagnostics
                     match self.unify(&p1.apply(&s), &p2.apply(&s)) {
                         Ok(s1) => s = compose_subs(&s, &s1),
-                        Err(mut report) => reports.append(&mut report),
+                        Err(mut report) => reasons.append(&mut report),
                     }
                 }
 
-                if !reports.is_empty() {
-                    return Err(reports);
+                if !reasons.is_empty() {
+                    self.current_report.push(Diagnostic {
+                        code: 1,
+                        message: "args don't match expected params".to_string(),
+                        reasons,
+                    });
                 }
 
                 // Unify return types
@@ -350,23 +354,32 @@ impl Checker {
                         t1.to_owned(),
                     ))])
                 } else {
+                    self.push_report();
                     for callable in callables.iter_mut() {
                         let result = self.unify(t1, callable);
-                        if result.is_ok() {
+                        if self.current_report.is_empty() {
+                            self.pop_report();
                             return result;
                         }
+                        self.current_report = vec![];
                     }
+                    self.pop_report();
                     // TODO: include a report of which callable signatures were tried
                     Err(vec![TypeError::NoValidCallable])
                 }
             }
             (TypeKind::App(_), TypeKind::Intersection(types)) => {
+                self.push_report();
                 for t in types {
                     let result = self.unify(t1, t);
-                    if result.is_ok() {
+                    if self.current_report.is_empty() {
+                        self.pop_report();
                         return result;
                     }
+                    self.current_report = vec![];
                 }
+                self.pop_report();
+                // TODO: include reports for all call mismatches if we get here
                 Err(vec![TypeError::NoValidOverload])
             }
             (TypeKind::Object(obj1), TypeKind::Object(obj2)) => {

@@ -40,7 +40,6 @@ impl Checker {
                             type_ann,
                             &inferred_init,
                             &PatternUsage::Assign,
-                            top_level,
                         )?;
 
                         // TODO: Update `infer_pattern_and_init` to do this for us.
@@ -57,6 +56,7 @@ impl Checker {
                                     Some(type_ann) => {
                                         let (s, t) = self.infer_type_ann(type_ann, &mut None)?;
 
+                                        // `declare` var decls should always appear at the top level
                                         let t = if top_level { close_over(&s, &t) } else { t };
                                         self.insert_value(name.to_owned(), t.to_owned());
 
@@ -147,7 +147,6 @@ impl Checker {
                     &mut None,
                     &(Subst::new(), elem_t),
                     &PatternUsage::Assign,
-                    top_level,
                 )?;
 
                 let (s3, _) = self.infer_block(body)?;

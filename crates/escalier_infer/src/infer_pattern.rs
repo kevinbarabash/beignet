@@ -57,7 +57,6 @@ impl Checker {
         type_ann: &mut Option<TypeAnn>,
         init: &(Subst, Type),
         pu: &PatternUsage,
-        top_level: bool,
     ) -> Result<Subst, Vec<TypeError>> {
         let type_param_map = HashMap::new();
         // Recoverable errors:
@@ -94,7 +93,7 @@ impl Checker {
         let pa = pa.apply(&s);
 
         for (name, mut binding) in pa {
-            if top_level {
+            if let TypeKind::Lam(_) = binding.t.kind {
                 binding.t = close_over(&s, &binding.t);
             }
             self.insert_binding(name, binding);
