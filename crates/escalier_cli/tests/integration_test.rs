@@ -8,15 +8,6 @@ fn messages(report: &[TypeError]) -> Vec<String> {
     report.iter().map(|error| error.to_string()).collect()
 }
 
-fn diagnostic_message(checker: &Checker) -> String {
-    checker
-        .diagnostics
-        .iter()
-        .map(|d| d.to_string())
-        .collect::<Vec<String>>()
-        .join("\n")
-}
-
 pub fn current_report_message(checker: &Checker) -> String {
     checker
         .current_report
@@ -553,7 +544,7 @@ fn infer_let_decl_with_incorrect_type_ann() {
 
     let (_, checker) = infer_prog(src);
 
-    insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - 10 is not assignable to string:
     └ TypeError::UnificationError: 10, string
     "###);
@@ -659,7 +650,7 @@ fn infer_tuple_with_type_annotation_and_incorrect_element() {
 
     let (_, checker) = infer_prog(src);
 
-    insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - [1, "two", 3] is not assignable to [number, string, boolean]:
     └ TypeError::UnificationError: 3, boolean
     "###);
@@ -670,7 +661,7 @@ fn infer_tuple_with_not_enough_elements() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two"];"#;
     let (_, checker) = infer_prog(src);
 
-    insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - [1, "two"] is not assignable to [number, string, boolean]:
     └ TypeError::NotEnoughElementsToUnpack
     "###);

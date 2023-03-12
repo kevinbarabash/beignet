@@ -14,7 +14,6 @@ pub struct Checker {
     pub next_id: u32,
     pub current_scope: Scope,
     pub parent_scopes: Vec<Scope>,
-    pub diagnostics: Vec<Diagnostic>,
     pub current_report: Report,
     pub parent_reports: Vec<Report>,
 }
@@ -34,7 +33,6 @@ impl Default for Checker {
             next_id: 1,
             current_scope: Scope::default(),
             parent_scopes: vec![],
-            diagnostics: vec![],
             current_report: vec![],
             parent_reports: vec![],
         }

@@ -74,7 +74,7 @@ impl Checker {
                 (_, Ok(s)) => s,
                 (None, Err(e)) => return Err(e),
                 (Some(_), Err(reasons)) => {
-                    self.diagnostics.push(Diagnostic {
+                    self.current_report.push(Diagnostic {
                         code: 1,
                         message: format!("{} is not assignable to {pt}", init.1),
                         reasons,

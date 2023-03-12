@@ -42,15 +42,6 @@ mod tests {
         report.iter().map(|error| error.to_string()).collect()
     }
 
-    pub fn diagnostic_message(checker: &Checker) -> String {
-        checker
-            .diagnostics
-            .iter()
-            .map(|d| d.to_string())
-            .collect::<Vec<String>>()
-            .join("\n")
-    }
-
     pub fn current_report_message(checker: &Checker) -> String {
         checker
             .current_report
@@ -377,7 +368,7 @@ mod tests {
         assert_eq!(get_value_type("b", &checker), "boolean");
         assert_eq!(get_value_type("c", &checker), "string");
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - [5, "hello", true] is not assignable to [number, boolean, string]:
         ├ TypeError::UnificationError: "hello", boolean
         └ TypeError::UnificationError: true, string
@@ -403,7 +394,7 @@ mod tests {
         "#;
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - [5, true, "hello"] is not assignable to [number, boolean, string, number]:
         └ TypeError::NotEnoughElementsToUnpack
         "###);
@@ -596,7 +587,7 @@ mod tests {
     fn obj_assignment_with_type_annotation_missing_properties() {
         let checker = infer_prog("let p: {x: number, y: number} = {x: 5};");
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - {x: 5} is not assignable to {x: number, y: number}:
         └ TypeError::UnificationError: {x: 5}, {x: number, y: number}
         "###);
@@ -2280,7 +2271,7 @@ mod tests {
         let checker = infer_prog(src);
 
         // TODO: report all of the elements that aren't strings
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - [true, 5] is not assignable to string[]:
         └ TypeError::UnificationError: 5, string
         "###);
@@ -2338,7 +2329,7 @@ mod tests {
 
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - number | string is not assignable to string:
         └ TypeError::UnificationError: number, string
         "###);
@@ -2699,7 +2690,7 @@ mod tests {
 
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - [1, 2, 3] is not assignable to mut number[]:
         └ TypeError::UnexpectedImutableValue
         "###);
@@ -2748,7 +2739,7 @@ mod tests {
 
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - mut number[] is not assignable to mut number | string[]:
         └ TypeError::UnificationError: mut number[], mut number | string[]
         "###);
@@ -3010,7 +3001,7 @@ mod tests {
         "#;
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - {x: 5} is not assignable to Point:
         └ TypeError::UnificationError: {x: 5}, {x: number, y: number}
         "###);
@@ -3039,7 +3030,7 @@ mod tests {
         "#;
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - {x: "hello"} is not assignable to Point:
         └ TypeError::UnificationError: {x: "hello"}, {x?: number, y?: number}
         "###);
@@ -3725,9 +3716,14 @@ mod tests {
         let c = a + b;
         "#;
         let checker = infer_prog(src);
-        for d in checker.diagnostics {
-            eprintln!("{d:#?}");
-        }
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - "hello" is not assignable to number:
+        └ TypeError::UnificationError: "hello", number
+
+        ESC_1 - true is not assignable to number:
+        └ TypeError::UnificationError: true, number
+        "###);
     }
 
     // TODO: Update unify() to report func call args that are the wrong type
@@ -3741,9 +3737,8 @@ mod tests {
         let sum = add("hello", true);
         "#;
         let checker = infer_prog(src);
-        for d in checker.diagnostics {
-            eprintln!("{}", d.message);
-        }
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###""###);
     }
 
     #[test]
@@ -3758,9 +3753,13 @@ mod tests {
         let sum = checker.lookup_value("sum")?;
         assert_eq!(sum.to_string(), "number");
 
-        for d in checker.current_report {
-            eprintln!("{}", d);
-        }
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - "hello" is not a number:
+        └ TypeError::UnificationError: "hello", number
+
+        ESC_1 - true is not a number:
+        └ TypeError::UnificationError: true, number
+        "###);
 
         Ok(())
     }
