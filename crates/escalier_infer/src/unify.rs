@@ -744,6 +744,7 @@ impl Checker {
                 if v1 == v2 {
                     Ok(Subst::new())
                 } else {
+                    // TODO: add this error to the current report
                     Err(vec![TypeError::UnificationError(
                         Box::from(t1.to_owned()),
                         Box::from(t2.to_owned()),

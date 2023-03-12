@@ -17,6 +17,15 @@ fn diagnostic_message(checker: &Checker) -> String {
         .join("\n")
 }
 
+pub fn current_report_message(checker: &Checker) -> String {
+    checker
+        .current_report
+        .iter()
+        .map(|d| d.to_string())
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
 fn infer(input: &str) -> String {
     let prog = parse(input).unwrap();
     let mut stmt = prog.body.get(0).unwrap().to_owned();
@@ -123,16 +132,35 @@ fn infer_let_fn_with_param_types() {
 }
 
 #[test]
-#[should_panic = "TypeError::UnificationError: string, number"]
 fn infer_fn_with_incorrect_param_types() {
-    infer("(a: string, b: boolean) => a + b;");
+    let (_, checker) = infer_prog("(a: string, b: boolean) => a + b;");
+
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
+    ESC_1 - string is not a number:
+    └ TypeError::UnificationError: string, number
+
+    ESC_1 - boolean is not a number:
+    └ TypeError::UnificationError: boolean, number
+    "###);
 }
 
 #[test]
-#[should_panic = "TypeError::UnificationError: string, number"]
-fn infer_let_fn_with_incorrect_param_types() {
+fn infer_let_fn_with_incorrect_param_types() -> Result<(), Vec<TypeError>> {
     let src = "let add = (a: string, b: boolean) => a + b;";
-    infer_prog(src);
+    let (_, checker) = infer_prog(src);
+
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
+    ESC_1 - string is not a number:
+    └ TypeError::UnificationError: string, number
+
+    ESC_1 - boolean is not a number:
+    └ TypeError::UnificationError: boolean, number
+    "###);
+
+    let t = checker.lookup_value("add")?;
+    assert_eq!(t.to_string(), "(a: string, b: boolean) => number");
+
+    Ok(())
 }
 
 #[test]
@@ -1422,7 +1450,6 @@ fn codegen_if_let_with_rename() -> Result<(), Vec<TypeError>> {
 }
 
 #[test]
-#[should_panic = r#"TypeError::UnificationError: "hello", number"#]
 fn infer_if_let_with_type_error() {
     let src = r#"
     let p = {x: "hello", y: "world"};
@@ -1431,7 +1458,15 @@ fn infer_if_let_with_type_error() {
     };
     "#;
 
-    infer_prog(src);
+    let (_, checker) = infer_prog(src);
+
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
+    ESC_1 - "hello" is not a number:
+    └ TypeError::UnificationError: "hello", number
+
+    ESC_1 - "world" is not a number:
+    └ TypeError::UnificationError: "world", number
+    "###);
 }
 
 #[test]

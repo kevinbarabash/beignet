@@ -51,6 +51,15 @@ mod tests {
             .join("\n")
     }
 
+    pub fn current_report_message(checker: &Checker) -> String {
+        checker
+            .current_report
+            .iter()
+            .map(|d| d.to_string())
+            .collect::<Vec<String>>()
+            .join("\n")
+    }
+
     fn infer(input: &str) -> String {
         let mut checker = Checker::default();
         let mut prog = parse(&format!("let x = {input};")).unwrap();
@@ -784,7 +793,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: string, number"]
     fn infer_if_let_refutable_is_unification_failure() {
         let src = r#"
         declare let a: string | number;
@@ -793,7 +801,12 @@ mod tests {
         };
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - string is not a number:
+        └ TypeError::UnificationError: string, number
+        "###);
     }
 
     #[test]
@@ -907,7 +920,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: string, number"]
     fn infer_if_let_disjoint_union_incorrect_match() {
         let src = r#"
         declare let action: {type: "foo", num: number} | {type: "bar", str: string};
@@ -918,7 +930,12 @@ mod tests {
         };
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - string is not a number:
+        └ TypeError::UnificationError: string, number
+        "###);
     }
 
     #[test]
@@ -1216,17 +1233,20 @@ mod tests {
         infer_prog(src);
     }
 
-    // TODO: make this test case return an error
     #[test]
-    #[should_panic = "TypeError::UnificationError: string, number"]
     fn lambda_with_incorrect_param_type() {
         let src = r#"
         let add = (a: number, b: string): number => {
-            a + b
+            return a + b;
         };
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - string is not a number:
+        └ TypeError::UnificationError: string, number
+        "###);
     }
 
     #[test]
@@ -2215,11 +2235,15 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: true, number"]
     fn detect_type_errors_inside_template_literal_expressions() {
         let src = r#"let str = `hello, ${5 + true}!`;"#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - true is not a number:
+        └ TypeError::UnificationError: true, number
+        "###);
     }
 
     #[test]
@@ -3720,5 +3744,24 @@ mod tests {
         for d in checker.diagnostics {
             eprintln!("{}", d.message);
         }
+    }
+
+    #[test]
+    fn recoverable_error_3() -> Result<(), Vec<TypeError>> {
+        let src = r#"
+        declare let add: (x: number, y: number) => number;
+        let sum = add(1 + "hello", true - 2);
+        "#;
+
+        let checker = infer_prog(src);
+
+        let sum = checker.lookup_value("sum")?;
+        assert_eq!(sum.to_string(), "number");
+
+        for d in checker.current_report {
+            eprintln!("{}", d);
+        }
+
+        Ok(())
     }
 }

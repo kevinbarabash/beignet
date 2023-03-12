@@ -11,7 +11,7 @@ use crate::context::Context;
 use crate::infer_pattern::PatternUsage;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
-use crate::util::*;
+use crate::{util::*, Diagnostic};
 
 use crate::checker::{Checker, ScopeKind};
 
@@ -21,6 +21,7 @@ impl Checker {
         expr: &mut Expr,
         is_lvalue: bool,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
+        self.push_report();
         let result = match &mut expr.kind {
             ExprKind::App(App {
                 lam,
@@ -524,8 +525,28 @@ impl Checker {
                 // time and set the result to be appropriate number literal.
                 let (s1, t1) = self.infer_expr(left, false)?;
                 let (s2, t2) = self.infer_expr(right, false)?;
-                let s3 = self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)))?;
-                let s4 = self.unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number)))?;
+                let s3 = match self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number))) {
+                    Ok(s) => s,
+                    Err(reasons) => {
+                        self.current_report.push(Diagnostic {
+                            code: 1,
+                            message: format!("{t1} is not a number"),
+                            reasons,
+                        });
+                        Subst::default()
+                    }
+                };
+                let s4 = match self.unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number))) {
+                    Ok(s) => s,
+                    Err(reasons) => {
+                        self.current_report.push(Diagnostic {
+                            code: 1,
+                            message: format!("{t2} is not a number"),
+                            reasons,
+                        });
+                        Subst::default()
+                    }
+                };
 
                 let s = compose_many_subs(&[s1, s2, s3, s4]);
 
@@ -573,6 +594,8 @@ impl Checker {
                         BinOp::LtEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
                     },
                 };
+
+                eprintln!("t = {t}");
 
                 Ok((s, t))
             }
@@ -790,6 +813,8 @@ impl Checker {
 
         expr.inferred_type = Some(t.clone());
         t.provenance = Some(Box::from(Provenance::from(expr)));
+
+        self.pop_report();
 
         Ok((s, t))
     }

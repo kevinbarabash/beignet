@@ -884,8 +884,7 @@ pub fn parse_dts(d_ts_source: &str) -> Result<escalier_infer::Checker, Error> {
     let checker = escalier_infer::Checker {
         next_id: collector.checker.next_id,
         current_scope: collector.checker.current_scope,
-        parent_scopes: vec![],
-        diagnostics: vec![], // TODO: report issues when parsing .d.ts files
+        ..escalier_infer::Checker::default()
     };
     Ok(checker)
 }
