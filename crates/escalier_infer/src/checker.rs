@@ -8,7 +8,7 @@ use crate::scope::Scope;
 use crate::substitutable::Subst;
 use crate::type_error::TypeError;
 
-type Report = Vec<Diagnostic>;
+pub type Report = Vec<Diagnostic>;
 
 pub struct Checker {
     pub next_id: u32,

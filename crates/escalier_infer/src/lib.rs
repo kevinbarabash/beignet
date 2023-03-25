@@ -20,7 +20,7 @@ mod unify;
 mod update;
 mod util;
 
-pub use checker::Checker;
+pub use checker::{Checker, Report};
 pub use context::Context;
 pub use diagnostic::Diagnostic;
 pub use infer_prog::*;
