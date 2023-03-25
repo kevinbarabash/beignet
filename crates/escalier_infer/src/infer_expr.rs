@@ -13,7 +13,7 @@ use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::{util::*, Diagnostic};
 
-use crate::checker::{Checker, ScopeKind};
+use crate::checker::{Checker, Report, ScopeKind};
 
 impl Checker {
     pub fn infer_expr(
@@ -107,13 +107,16 @@ impl Checker {
                     }
                 }
 
-                let mut results = vec![];
+                let mut results: Vec<(Subst, Type, Report)> = vec![];
+                // TODO: Try to unify this with the case in `unify()`
+                // which tries to unify `App` and `Obj`.
                 if let TypeKind::Object(TObject {
                     elems,
                     is_interface: _,
                 }) = t.kind
                 {
                     for elem in elems {
+                        self.push_report();
                         if let TObjElem::Constructor(callable) = &elem {
                             let TCallable {
                                 type_params,
@@ -178,9 +181,11 @@ impl Checker {
                                 t.mutable = false;
 
                                 // return (s3 `compose` s2 `compose` s1, apply s3 tv)
-                                results.push((s, t));
+                                results.push((s, t, self.current_report.clone()));
+                                self.current_report = vec![]; // reset report
                             }
                         }
+                        self.pop_report(); // current_report should be empty when doing this
                     }
                 }
 
@@ -194,7 +199,15 @@ impl Checker {
 
                 // Pick the result with the lowest number of of free type variables
                 match results.get(0) {
-                    Some(result) => Ok(result.to_owned()),
+                    Some((s, t, report)) => {
+                        // NOTE: This is a bit hacky.  We do this because we only
+                        // want to report recoverable errors from the result that
+                        // we're using.
+                        self.push_report();
+                        self.current_report = report.to_owned();
+                        self.pop_report();
+                        Ok((s.to_owned(), t.to_owned()))
+                    }
                     None => {
                         // TODO: update this to communicate that we couldn't find a
                         // valid constructor for the given arguments
