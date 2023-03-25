@@ -1,3 +1,4 @@
+args don't match expected params:
 Error: Incompatible types
    ╭─[<unknown>:2:23]
    │
@@ -20,6 +21,19 @@ Error: Incompatible types
    ·                                   ╰───── "world"
 ───╯
 
+number is not assignable to string:
+Error: Incompatible types
+   ╭─[<unknown>:1:45]
+   │
+ 1 │ let add = (a: number, b: number): number => a + b;
+   ·                                             ──┬──  
+   ·                                               ╰──── number
+ 2 │ let sum: string = add("hello", "world");
+   ·          ───┬──  
+   ·             ╰──── string
+───╯
+
+args don't match expected params:
 Error: Incompatible types
    ╭─[<unknown>:5:5]
    │
@@ -40,4 +54,15 @@ Error: Incompatible types
  5 │ add("hello", "world");
    ·              ───┬───  
    ·                 ╰───── "world"
+───╯
+
+"5" is not assignable to number:
+Error: Incompatible types
+   ╭─[<unknown>:8:17]
+   │
+ 8 │ let b: number = "5";
+   ·        ───┬──   ─┬─  
+   ·           ╰────────── number
+   ·                  │   
+   ·                  ╰─── "5"
 ───╯

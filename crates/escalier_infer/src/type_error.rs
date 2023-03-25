@@ -3,7 +3,7 @@ use std::fmt;
 use escalier_ast::types::Type;
 use escalier_ast::values::{Assign, Statement};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TypeError {
     UnificationError(Box<Type>, Box<Type>),
     UnificationIsUndecidable,

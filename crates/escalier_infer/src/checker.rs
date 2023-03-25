@@ -8,20 +8,21 @@ use crate::scope::Scope;
 use crate::substitutable::Subst;
 use crate::type_error::TypeError;
 
+pub type Report = Vec<Diagnostic>;
+
 pub struct Checker {
     pub next_id: u32,
     pub current_scope: Scope,
     pub parent_scopes: Vec<Scope>,
-    pub diagnostics: Vec<Diagnostic>,
+    pub current_report: Report,
+    pub parent_reports: Vec<Report>,
 }
 
 impl From<Scope> for Checker {
     fn from(scope: Scope) -> Self {
         Checker {
-            next_id: 1,
             current_scope: scope,
-            parent_scopes: vec![],
-            diagnostics: vec![],
+            ..Checker::default()
         }
     }
 }
@@ -32,7 +33,8 @@ impl Default for Checker {
             next_id: 1,
             current_scope: Scope::default(),
             parent_scopes: vec![],
-            diagnostics: vec![],
+            current_report: vec![],
+            parent_reports: vec![],
         }
     }
 }
@@ -88,8 +90,9 @@ impl From<bool> for ScopeKind {
 
 impl Checker {
     pub fn push_scope(&mut self, scope_kind: ScopeKind) {
-        self.parent_scopes.push(self.current_scope.to_owned());
-        self.current_scope = self.current_scope.clone();
+        let mut scope = self.current_scope.clone();
+        std::mem::swap(&mut scope, &mut self.current_scope);
+        self.parent_scopes.push(scope);
         match scope_kind {
             ScopeKind::Inherit => (),
             ScopeKind::Async => self.current_scope.is_async = true,
@@ -98,8 +101,20 @@ impl Checker {
     }
 
     pub fn pop_scope(&mut self) {
-        let parent_scope = self.parent_scopes.pop().unwrap();
-        self.current_scope = parent_scope;
+        self.current_scope = self.parent_scopes.pop().unwrap();
+    }
+
+    pub fn push_report(&mut self) {
+        let mut report: Report = vec![];
+        std::mem::swap(&mut report, &mut self.current_report);
+        self.parent_reports.push(report);
+    }
+
+    // TODO: merge any diagnostics into the parent report when popping
+    pub fn pop_report(&mut self) {
+        let mut report = self.current_report.clone();
+        self.current_report = self.parent_reports.pop().unwrap();
+        self.current_report.append(&mut report);
     }
 
     pub fn fresh_var(&mut self, constraint: Option<Box<Type>>) -> Type {

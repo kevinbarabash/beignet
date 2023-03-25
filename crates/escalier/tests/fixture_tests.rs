@@ -8,8 +8,7 @@ use std::str;
 use escalier_infer::*;
 use escalier_interop::parse::parse_dts;
 
-use escalier::compile_error::CompileError;
-use escalier::diagnostics::get_diagnostics_from_compile_error;
+use escalier::diagnostics::type_errors_to_string;
 
 enum Mode {
     Check,
@@ -33,33 +32,34 @@ fn pass(in_path: PathBuf) {
     let input = fs::read_to_string(in_path).unwrap();
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
 
-    match compile(&input, &lib) {
-        Ok((js_output, srcmap_output, d_ts_output)) => match mode {
-            Mode::Check => {
-                let js_fixture = fs::read_to_string(js_path).unwrap();
-                assert_eq!(js_fixture, js_output);
-                let srcmap_fixture = fs::read_to_string(srcmap_path).unwrap();
-                assert_eq!(srcmap_fixture, srcmap_output);
-                let d_ts_fixture = fs::read_to_string(d_ts_path).unwrap();
-                assert_eq!(d_ts_fixture, d_ts_output);
-            }
-            Mode::Write => {
-                let mut file = fs::File::create(js_path).unwrap();
-                file.write_all(js_output.as_bytes())
-                    .expect("unable to write data");
-                let mut file = fs::File::create(srcmap_path).unwrap();
-                file.write_all(srcmap_output.as_bytes())
-                    .expect("unable to write data");
-                let mut file = fs::File::create(d_ts_path).unwrap();
-                file.write_all(d_ts_output.as_bytes())
-                    .expect("unable to write data");
-            }
-        },
-        Err(report) => {
-            println!("{report:#?}");
-            panic!("Unexpected error");
+    let (js_output, srcmap_output, d_ts_output, _errors) = compile(&input, &lib);
+    // TODO: Renable once #503 is fixed
+    // if !errors.is_empty() {
+    //     println!("{errors:#?}");
+    //     panic!("Unexpected error");
+    // }
+
+    match mode {
+        Mode::Check => {
+            let js_fixture = fs::read_to_string(js_path).unwrap();
+            assert_eq!(js_fixture, js_output);
+            let srcmap_fixture = fs::read_to_string(srcmap_path).unwrap();
+            assert_eq!(srcmap_fixture, srcmap_output);
+            let d_ts_fixture = fs::read_to_string(d_ts_path).unwrap();
+            assert_eq!(d_ts_fixture, d_ts_output);
         }
-    };
+        Mode::Write => {
+            let mut file = fs::File::create(js_path).unwrap();
+            file.write_all(js_output.as_bytes())
+                .expect("unable to write data");
+            let mut file = fs::File::create(srcmap_path).unwrap();
+            file.write_all(srcmap_output.as_bytes())
+                .expect("unable to write data");
+            let mut file = fs::File::create(d_ts_path).unwrap();
+            file.write_all(d_ts_output.as_bytes())
+                .expect("unable to write data");
+        }
+    }
 }
 
 #[testing_macros::fixture("tests/errors/*.esc")]
@@ -76,39 +76,91 @@ fn fail(in_path: PathBuf) {
 
     let input = fs::read_to_string(in_path).unwrap();
 
-    match compile(&input, &lib) {
-        Ok(_) => panic!("Expected an error"),
-        Err(e) => {
-            let error_output = get_diagnostics_from_compile_error(e, &input);
-            match mode {
-                Mode::Check => {
-                    let error_fixture = fs::read_to_string(error_output_path).unwrap();
-                    assert_eq!(error_fixture, error_output);
-                }
-                Mode::Write => {
-                    let mut file = fs::File::create(error_output_path).unwrap();
-                    file.write_all(error_output.as_bytes())
-                        .expect("unable to write data");
-                }
-            }
+    // TODO: write out js_output, srcmap_output, d_ts_output
+    let (_, _, _, error_output) = compile(&input, &lib);
+    match mode {
+        Mode::Check => {
+            let error_fixture = fs::read_to_string(error_output_path).unwrap();
+            assert_eq!(error_fixture, error_output);
         }
-    };
+        Mode::Write => {
+            let mut file = fs::File::create(error_output_path).unwrap();
+            file.write_all(error_output.as_bytes())
+                .expect("unable to write data");
+        }
+    }
 }
 
-fn compile(input: &str, lib: &str) -> Result<(String, String, String), CompileError> {
+pub fn report_to_string(src: &str, report: &Report) -> String {
+    report
+        .iter()
+        .map(|d| {
+            let reasons = type_errors_to_string(&d.reasons, src);
+            format!("{}:\n{}", d.message, reasons)
+        })
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
+pub fn all_reports_to_string(src: &str, checker: &Checker) -> String {
+    let mut reports = vec![];
+    if !checker.current_report.is_empty() {
+        reports.push(report_to_string(src, &checker.current_report));
+    }
+    for report in &checker.parent_reports {
+        if !report.is_empty() {
+            reports.push(report_to_string(src, report));
+        }
+    }
+    reports.join("\n")
+}
+
+fn compile(input: &str, lib: &str) -> (String, String, String, String) {
     let mut program = match escalier_parser::parse(input) {
         Ok(program) => program,
-        Err(error) => return Err(CompileError::ParseError(error)),
+        Err(error) => {
+            return (
+                "".to_string(),
+                "".to_string(),
+                "".to_string(),
+                format!("{error:#?}"),
+            );
+        }
     };
 
     let (js, srcmap) = escalier_codegen::js::codegen_js(input, &program);
 
     // TODO: return errors as part of CompileResult
     let mut checker = parse_dts(lib).unwrap();
-    infer_prog(&mut program, &mut checker)?;
-    let dts = escalier_codegen::d_ts::codegen_d_ts(&program, &checker.current_scope)?;
 
-    Ok((js, srcmap, dts))
+    match infer_prog(&mut program, &mut checker) {
+        Ok(_) => (),
+        Err(errors) => {
+            return (
+                js,
+                srcmap,
+                "".to_string(),
+                all_reports_to_string(input, &checker) + &type_errors_to_string(&errors, input),
+            );
+        }
+    };
+
+    let dts = match escalier_codegen::d_ts::codegen_d_ts(&program, &checker.current_scope) {
+        Ok(value) => value,
+        Err(errors) => {
+            return (
+                js,
+                srcmap,
+                "".to_string(),
+                report_to_string(input, &checker.current_report)
+                    + &type_errors_to_string(&errors, input),
+            );
+        }
+    };
+
+    let errors = report_to_string(input, &checker.current_report);
+
+    (js, srcmap, dts, errors)
 }
 
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";

@@ -9,8 +9,8 @@ use escalier_infer::TypeError;
 use crate::compile_error::CompileError;
 
 fn get_provenance_spans(t1: &Type, t2: &Type) -> Option<(Span, Span)> {
-    let prov1 = t1.provenance.as_ref().unwrap();
-    let prov2 = t2.provenance.as_ref().unwrap();
+    let prov1 = t1.provenance.as_ref()?;
+    let prov2 = t2.provenance.as_ref()?;
     match (prov1.get_span(), prov2.get_span()) {
         (Some(span1), Some(span2)) => Some((span1, span2)),
         (_, _) => None,
@@ -41,7 +41,7 @@ fn get_diagnostic_string(
     None
 }
 
-fn type_errors_to_string(errors: &[TypeError], src: &str) -> String {
+pub fn type_errors_to_string(errors: &[TypeError], src: &str) -> String {
     errors
         .iter()
         .filter_map(|error| {
@@ -71,10 +71,10 @@ fn type_errors_to_string(errors: &[TypeError], src: &str) -> String {
                         None
                     };
                     if let Some(expr) = expr {
-                        if let ExprKind::Lambda(lam) = &expr.kind {
+                        if let ExprKind::Lambda(_) = &expr.kind {
                             // TODO: Add a span to lam.params so that we don't
                             // have to compute it here.
-                            eprintln!("params = {:#?}", lam.params)
+                            // eprintln!("params = {:#?}", lam.params)
                         }
                     }
                     // TODO: figure out how to get a span for just the function

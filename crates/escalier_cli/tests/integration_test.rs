@@ -4,13 +4,9 @@ use escalier_infer::TypeError;
 use escalier_infer::*;
 use escalier_parser::parse;
 
-fn messages(report: &[TypeError]) -> Vec<String> {
-    report.iter().map(|error| error.to_string()).collect()
-}
-
-fn diagnostic_message(checker: &Checker) -> String {
+pub fn current_report_message(checker: &Checker) -> String {
     checker
-        .diagnostics
+        .current_report
         .iter()
         .map(|d| d.to_string())
         .collect::<Vec<String>>()
@@ -63,23 +59,6 @@ fn infer_prog(src: &str) -> (Program, Checker) {
     }
 }
 
-fn infer_prog_with_type_error(src: &str) -> Vec<String> {
-    let result = parse(src);
-    let mut prog = match result {
-        Ok(prog) => prog,
-        Err(err) => {
-            println!("err = {:?}", err);
-            panic!("Error parsing expression");
-        }
-    };
-    let mut checker = escalier_infer::Checker::default();
-
-    match escalier_infer::infer_prog(&mut prog, &mut checker) {
-        Ok(_) => panic!("was expect infer_prog() to return an error"),
-        Err(report) => messages(&report),
-    }
-}
-
 #[test]
 fn infer_number_literal() {
     assert_eq!(infer("5;"), "5");
@@ -123,16 +102,35 @@ fn infer_let_fn_with_param_types() {
 }
 
 #[test]
-#[should_panic = "TypeError::UnificationError: string, number"]
 fn infer_fn_with_incorrect_param_types() {
-    infer("(a: string, b: boolean) => a + b;");
+    let (_, checker) = infer_prog("(a: string, b: boolean) => a + b;");
+
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
+    ESC_1 - string is not a number:
+    └ TypeError::UnificationError: string, number
+
+    ESC_1 - boolean is not a number:
+    └ TypeError::UnificationError: boolean, number
+    "###);
 }
 
 #[test]
-#[should_panic = "TypeError::UnificationError: string, number"]
-fn infer_let_fn_with_incorrect_param_types() {
+fn infer_let_fn_with_incorrect_param_types() -> Result<(), Vec<TypeError>> {
     let src = "let add = (a: string, b: boolean) => a + b;";
-    infer_prog(src);
+    let (_, checker) = infer_prog(src);
+
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
+    ESC_1 - string is not a number:
+    └ TypeError::UnificationError: string, number
+
+    ESC_1 - boolean is not a number:
+    └ TypeError::UnificationError: boolean, number
+    "###);
+
+    let t = checker.lookup_value("add")?;
+    assert_eq!(t.to_string(), "(a: string, b: boolean) => number");
+
+    Ok(())
 }
 
 #[test]
@@ -525,7 +523,7 @@ fn infer_let_decl_with_incorrect_type_ann() {
 
     let (_, checker) = infer_prog(src);
 
-    insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - 10 is not assignable to string:
     └ TypeError::UnificationError: 10, string
     "###);
@@ -589,13 +587,17 @@ fn calling_a_fn_with_an_obj_subtype() {
 }
 
 #[test]
-#[should_panic = "TypeError::UnificationError: {x: 5}, {x: number, y: number}"]
 fn calling_a_fn_with_an_obj_missing_a_property() {
     let src = r#"
     declare let mag: (p: {x: number, y: number}) => number;
     let result = mag({x: 5});
     "#;
-    infer_prog(src);
+    let (_, checker) = infer_prog(src);
+
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
+    ESC_1 - args don't match expected params:
+    └ TypeError::UnificationError: {x: 5}, {x: number, y: number}
+    "###);
 }
 
 #[test]
@@ -631,7 +633,7 @@ fn infer_tuple_with_type_annotation_and_incorrect_element() {
 
     let (_, checker) = infer_prog(src);
 
-    insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - [1, "two", 3] is not assignable to [number, string, boolean]:
     └ TypeError::UnificationError: 3, boolean
     "###);
@@ -642,7 +644,7 @@ fn infer_tuple_with_not_enough_elements() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two"];"#;
     let (_, checker) = infer_prog(src);
 
-    insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - [1, "two"] is not assignable to [number, string, boolean]:
     └ TypeError::NotEnoughElementsToUnpack
     "###);
@@ -842,14 +844,13 @@ fn infer_function_overloading() {
 }
 
 #[test]
+#[should_panic = "TypeError::NoValidOverload"]
 fn infer_function_overloading_with_incorrect_args() {
     let src = r#"
     declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string);
     let bool = add(true, false);
     "#;
-    let error_messages = infer_prog_with_type_error(src);
-
-    assert_eq!(error_messages, vec!["TypeError::NoValidOverload"]);
+    infer_prog(src);
 }
 
 #[test]
@@ -1010,7 +1011,6 @@ fn infer_with_constrained_polymorphism_success() {
 
 #[test]
 // TODO: figure out how to get the type constraints in the error message
-#[should_panic = r#"TypeError::UnificationError: {bar: "hello"}, {bar: t4}"#]
 fn infer_with_constrained_polymorphism_failiure() {
     let src = r#"
     type Foo<T> = {bar: T};
@@ -1019,8 +1019,14 @@ fn infer_with_constrained_polymorphism_failiure() {
     "#;
     let (_, checker) = infer_prog(src);
 
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
+    ESC_1 - args don't match expected params:
+    └ TypeError::UnificationError: {bar: "hello"}, {bar: t4}
+    "###);
+
     let result = format!("{}", checker.lookup_value("bar").unwrap());
-    assert_eq!(result, "\"hello\"");
+    // TODO: this should be "number"
+    assert_eq!(result, "t4");
 }
 
 #[test]
@@ -1272,13 +1278,19 @@ fn infer_jsx() {
 }
 
 #[test]
-#[should_panic = r#"TypeError::UnificationError: "hello", number,TypeError::UnificationError: "world", number"#]
 fn incorrect_args() {
     let src = r#"
     let add = (a, b) => a + b;
     add("hello", "world");
     "#;
-    infer_prog(src);
+
+    let (_, checker) = infer_prog(src);
+
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
+    ESC_1 - args don't match expected params:
+    ├ TypeError::UnificationError: "hello", number
+    └ TypeError::UnificationError: "world", number
+    "###);
 }
 
 #[test]
@@ -1422,7 +1434,6 @@ fn codegen_if_let_with_rename() -> Result<(), Vec<TypeError>> {
 }
 
 #[test]
-#[should_panic = r#"TypeError::UnificationError: "hello", number"#]
 fn infer_if_let_with_type_error() {
     let src = r#"
     let p = {x: "hello", y: "world"};
@@ -1431,7 +1442,15 @@ fn infer_if_let_with_type_error() {
     };
     "#;
 
-    infer_prog(src);
+    let (_, checker) = infer_prog(src);
+
+    insta::assert_snapshot!(current_report_message(&checker), @r###"
+    ESC_1 - "hello" is not a number:
+    └ TypeError::UnificationError: "hello", number
+
+    ESC_1 - "world" is not a number:
+    └ TypeError::UnificationError: "world", number
+    "###);
 }
 
 #[test]

@@ -1,3 +1,4 @@
+args don't match expected params:
 Error: Incompatible types
    ╭─[<unknown>:2:15]
    │
@@ -19,7 +20,6 @@ Error: Incompatible types
    ·                        ───┬───  
    ·                           ╰───── "world"
 ───╯
-
 Error: Not enough args provided
    ╭─[<unknown>:3:1]
    │

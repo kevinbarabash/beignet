@@ -6,7 +6,7 @@ use std::fmt;
 
 use crate::type_error::TypeError;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Diagnostic {
     pub code: u32,
     pub message: String,

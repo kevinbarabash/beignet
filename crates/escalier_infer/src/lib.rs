@@ -20,7 +20,7 @@ mod unify;
 mod update;
 mod util;
 
-pub use checker::Checker;
+pub use checker::{Checker, Report};
 pub use context::Context;
 pub use diagnostic::Diagnostic;
 pub use infer_prog::*;
@@ -42,9 +42,9 @@ mod tests {
         report.iter().map(|error| error.to_string()).collect()
     }
 
-    pub fn diagnostic_message(checker: &Checker) -> String {
+    pub fn current_report_message(checker: &Checker) -> String {
         checker
-            .diagnostics
+            .current_report
             .iter()
             .map(|d| d.to_string())
             .collect::<Vec<String>>()
@@ -368,7 +368,7 @@ mod tests {
         assert_eq!(get_value_type("b", &checker), "boolean");
         assert_eq!(get_value_type("c", &checker), "string");
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - [5, "hello", true] is not assignable to [number, boolean, string]:
         ├ TypeError::UnificationError: "hello", boolean
         └ TypeError::UnificationError: true, string
@@ -394,7 +394,7 @@ mod tests {
         "#;
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - [5, true, "hello"] is not assignable to [number, boolean, string, number]:
         └ TypeError::NotEnoughElementsToUnpack
         "###);
@@ -587,7 +587,7 @@ mod tests {
     fn obj_assignment_with_type_annotation_missing_properties() {
         let checker = infer_prog("let p: {x: number, y: number} = {x: 5};");
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - {x: 5} is not assignable to {x: number, y: number}:
         └ TypeError::UnificationError: {x: 5}, {x: number, y: number}
         "###);
@@ -784,7 +784,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: string, number"]
     fn infer_if_let_refutable_is_unification_failure() {
         let src = r#"
         declare let a: string | number;
@@ -793,7 +792,12 @@ mod tests {
         };
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - string is not a number:
+        └ TypeError::UnificationError: string, number
+        "###);
     }
 
     #[test]
@@ -907,7 +911,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: string, number"]
     fn infer_if_let_disjoint_union_incorrect_match() {
         let src = r#"
         declare let action: {type: "foo", num: number} | {type: "bar", str: string};
@@ -918,7 +921,12 @@ mod tests {
         };
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - string is not a number:
+        └ TypeError::UnificationError: string, number
+        "###);
     }
 
     #[test]
@@ -1044,18 +1052,20 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: true, 5,TypeError::UnificationError: false, 10,TypeError::CantFindIdent: run"]
-    fn calling_generic_lambda_inside_lambda() {
+    fn calling_generic_lambda_inside_lambda() -> Result<(), Vec<TypeError>> {
         let src = r#"
         let run = () => {
             let fst = (a, b) => a;
-            [fst(5, 10), fst(true, false)]
+            return [fst(5, 10), fst(true, false)];
         };
         let result = run();
         "#;
-        let ctx = infer_prog(src);
+        let checker = infer_prog(src);
 
-        assert_eq!(get_value_type("result", &ctx), "[5, true]");
+        let result = checker.lookup_value("result")?;
+        assert_eq!(result.to_string(), "[5, true]");
+
+        Ok(())
     }
 
     #[test]
@@ -1216,17 +1226,20 @@ mod tests {
         infer_prog(src);
     }
 
-    // TODO: make this test case return an error
     #[test]
-    #[should_panic = "TypeError::UnificationError: string, number"]
     fn lambda_with_incorrect_param_type() {
         let src = r#"
         let add = (a: number, b: string): number => {
-            a + b
+            return a + b;
         };
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - string is not a number:
+        └ TypeError::UnificationError: string, number
+        "###);
     }
 
     #[test]
@@ -1242,14 +1255,23 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = r#"TypeError::UnificationError: "hello", number,TypeError::UnificationError: true, number"#]
-    fn call_lam_with_wrong_types() {
+    fn call_lam_with_wrong_types() -> Result<(), Vec<TypeError>> {
         let src = r#"
         declare let add: (a: number, b: number) => number;
         let sum = add("hello", true);
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        ├ TypeError::UnificationError: "hello", number
+        └ TypeError::UnificationError: true, number
+        "###);
+        let sum = checker.lookup_value("sum")?;
+        assert_eq!(sum.to_string(), "number");
+
+        Ok(())
     }
 
     #[test]
@@ -1300,7 +1322,18 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: (x: t1, y: t2, z: t3) => true, (a: number, b: number) => boolean"]
+    fn pass_callback_whose_params_are_supertypes_of_expected_callback_with_generics() {
+        let src = r#"
+        declare let fold_num: (cb: (a: 5, b: 10) => boolean, seed: number) => number;
+        let result = fold_num((x, y) => true, 0);
+        "#;
+
+        let ctx = infer_prog(src);
+
+        assert_eq!(get_value_type("result", &ctx), "number");
+    }
+
+    #[test]
     fn pass_callback_with_too_many_params() {
         // This is not allowed because `fold_num` can't provide all of the params
         // that the callback is expecting.
@@ -1309,7 +1342,12 @@ mod tests {
         let result = fold_num((x, y, z) => true, 0);
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        └ TypeError::UnificationError: (x: t1, y: t2, z: t3) => true, (a: number, b: number) => boolean
+        "###);
     }
 
     // TODO: TypeScript takes the union of the params when unifying them
@@ -1384,7 +1422,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = r#"TypeError::UnificationError: "hello", number,TypeError::UnificationError: true, number"#]
     fn spread_param_tuples_with_incorrect_types() {
         let src = r#"
         declare let add: (a: number, b: number) => number;
@@ -1392,7 +1429,13 @@ mod tests {
         let result = add(...args);
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        ├ TypeError::UnificationError: "hello", number
+        └ TypeError::UnificationError: true, number
+        "###);
     }
 
     #[test]
@@ -1426,7 +1469,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = r#"TypeError::UnificationError: "hello", number"#]
     fn rest_param_with_arg_spread_and_incorrect_type() {
         // TODO: handle the spread directly in infer_expr()
         let src = r#"
@@ -1435,7 +1477,12 @@ mod tests {
         let result = fst(5, ...mixed);
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        └ TypeError::UnificationError: "hello", number
+        "###);
     }
 
     #[test]
@@ -1451,14 +1498,18 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = r#"TypeError::UnificationError: "hello", number"#]
     fn rest_param_with_incorrect_arg_type() {
         let src = r#"
         let fst = (a: number, ...b: number[]) => a;
         let result = fst(5, 10, "hello");
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        └ TypeError::UnificationError: "hello", number
+        "###);
     }
 
     #[test]
@@ -1807,7 +1858,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationIsUndecidable"]
     fn infer_obj_from_spread_undecidable() {
         let src = r#"
         type Point = {x: number, y: number, z: number};
@@ -1816,7 +1866,12 @@ mod tests {
             mag({...p, ...q, z: 0})
         };
         "#;
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        └ TypeError::UnificationIsUndecidable
+        "###);
     }
 
     #[test]
@@ -2130,7 +2185,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: {msg: 5}, {msg: string}"]
     fn jsx_custom_element_with_incorrect_props() {
         let src = r#"
         type Props = {msg: string};
@@ -2138,11 +2192,16 @@ mod tests {
         let elem = <Foo msg={5} />;
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        // TODO: Add custom error handling for JSX props
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        └ TypeError::UnificationError: {msg: 5}, {msg: string}
+        "###);
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: {}, {msg: string}"]
     fn jsx_custom_element_with_missing_prop() {
         let src = r#"
         type Props = {msg: string};
@@ -2150,7 +2209,13 @@ mod tests {
         let elem = <Foo />;
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        // TODO: Add custom error handling for JSX props
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        └ TypeError::UnificationError: {}, {msg: string}
+        "###);
     }
 
     #[test]
@@ -2215,11 +2280,15 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: true, number"]
     fn detect_type_errors_inside_template_literal_expressions() {
         let src = r#"let str = `hello, ${5 + true}!`;"#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - true is not a number:
+        └ TypeError::UnificationError: true, number
+        "###);
     }
 
     #[test]
@@ -2256,7 +2325,7 @@ mod tests {
         let checker = infer_prog(src);
 
         // TODO: report all of the elements that aren't strings
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - [true, 5] is not assignable to string[]:
         └ TypeError::UnificationError: 5, string
         "###);
@@ -2314,7 +2383,7 @@ mod tests {
 
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - number | string is not assignable to string:
         └ TypeError::UnificationError: number, string
         "###);
@@ -2532,7 +2601,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: string, number,TypeError::UnificationError: string, number"]
     fn test_constrained_generic_function_failed_constraint() {
         let src = r#"
         let add = <T extends number>(a: T, b: T): T => a + b;
@@ -2541,20 +2609,31 @@ mod tests {
         let string_sum = add(a, b);
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        ├ TypeError::UnificationError: string, number
+        └ TypeError::UnificationError: string, number
+        "###);
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: number, string,TypeError::UnificationError: number, string"]
     fn test_constrained_generic_function_failed_constraint_external_decl() {
         let src = r#"
-        declare let add: <T extends string>(a: T, b: T) => T;
+        declare let concat: <T extends string>(a: T, b: T) => T;
         let a: number = 5;
         let b: number = 10;
-        let number_sum = add(a, b);
+        let number_sum = concat(a, b);
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        ├ TypeError::UnificationError: number, string
+        └ TypeError::UnificationError: number, string
+        "###);
     }
 
     #[test]
@@ -2675,7 +2754,7 @@ mod tests {
 
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - [1, 2, 3] is not assignable to mut number[]:
         └ TypeError::UnexpectedImutableValue
         "###);
@@ -2724,14 +2803,13 @@ mod tests {
 
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - mut number[] is not assignable to mut number | string[]:
         └ TypeError::UnificationError: mut number[], mut number | string[]
         "###);
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: mut string[], mut number[]"]
     fn test_mutable_arrays_wrong_types() {
         let src = r#"
         declare let sort: (num_arr: mut number[]) => undefined;
@@ -2739,11 +2817,15 @@ mod tests {
         sort(arr);
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        └ TypeError::UnificationError: mut string[], mut number[]
+        "###);
     }
 
     #[test]
-    #[should_panic = "TypeError::UnexpectedImutableValue"]
     fn test_mutable_array_error() {
         // TODO: How do we differentiate assigning a literal vs. a variable?
         let src = r#"
@@ -2752,7 +2834,12 @@ mod tests {
         sort(arr);
         "#;
 
-        infer_prog(src);
+        let checker = infer_prog(src);
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - args don't match expected params:
+        └ TypeError::UnexpectedImutableValue
+        "###);
     }
 
     #[test]
@@ -2986,7 +3073,7 @@ mod tests {
         "#;
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - {x: 5} is not assignable to Point:
         └ TypeError::UnificationError: {x: 5}, {x: number, y: number}
         "###);
@@ -3015,7 +3102,7 @@ mod tests {
         "#;
         let checker = infer_prog(src);
 
-        insta::assert_snapshot!(diagnostic_message(&checker), @r###"
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - {x: "hello"} is not assignable to Point:
         └ TypeError::UnificationError: {x: "hello"}, {x?: number, y?: number}
         "###);
@@ -3701,24 +3788,36 @@ mod tests {
         let c = a + b;
         "#;
         let checker = infer_prog(src);
-        for d in checker.diagnostics {
-            eprintln!("{d:#?}");
-        }
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - "hello" is not assignable to number:
+        └ TypeError::UnificationError: "hello", number
+
+        ESC_1 - true is not assignable to number:
+        └ TypeError::UnificationError: true, number
+        "###);
     }
 
-    // TODO: Update unify() to report func call args that are the wrong type
-    // as diagnostics instead of hard errors.  We need to make sure whatever
-    // solution we come up with supports calling overloaded functions.
     #[test]
-    #[ignore]
-    fn recoverable_error_2() {
+    fn recoverable_error_3() -> Result<(), Vec<TypeError>> {
         let src = r#"
         declare let add: (x: number, y: number) => number;
-        let sum = add("hello", true);
+        let sum = add(1 + "hello", true - 2);
         "#;
+
         let checker = infer_prog(src);
-        for d in checker.diagnostics {
-            eprintln!("{}", d.message);
-        }
+
+        let sum = checker.lookup_value("sum")?;
+        assert_eq!(sum.to_string(), "number");
+
+        insta::assert_snapshot!(current_report_message(&checker), @r###"
+        ESC_1 - "hello" is not a number:
+        └ TypeError::UnificationError: "hello", number
+
+        ESC_1 - true is not a number:
+        └ TypeError::UnificationError: true, number
+        "###);
+
+        Ok(())
     }
 }
