@@ -269,6 +269,10 @@ impl Checker {
                             params.extend(tuple.to_owned()); // Add each type from the tuple type
 
                             if args.len() < params.len() {
+                                // TODO: include how many args were expected, right now
+                                // we count a rest tuple as a single arg.
+                                // TODO: figure out how to merge errors from a Result::Err()
+                                // with the error reports in self.
                                 return Err(vec![TypeError::TooFewArguments(
                                     Box::from(t1.to_owned()),
                                     Box::from(t2.to_owned()),

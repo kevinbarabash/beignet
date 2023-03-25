@@ -9,7 +9,7 @@ use escalier_infer::*;
 use escalier_interop::parse::parse_dts;
 
 use escalier::compile_error::CompileError;
-use escalier::diagnostics::get_diagnostics_from_compile_error;
+use escalier::diagnostics::{get_diagnostics_from_compile_error, type_errors_to_string};
 
 enum Mode {
     Check,
@@ -34,7 +34,7 @@ fn pass(in_path: PathBuf) {
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
 
     match compile(&input, &lib) {
-        Ok((js_output, srcmap_output, d_ts_output)) => match mode {
+        Ok((js_output, srcmap_output, d_ts_output, _)) => match mode {
             Mode::Check => {
                 let js_fixture = fs::read_to_string(js_path).unwrap();
                 assert_eq!(js_fixture, js_output);
@@ -77,7 +77,17 @@ fn fail(in_path: PathBuf) {
     let input = fs::read_to_string(in_path).unwrap();
 
     match compile(&input, &lib) {
-        Ok(_) => panic!("Expected an error"),
+        Ok((_, _, _, error_output)) => match mode {
+            Mode::Check => {
+                let error_fixture = fs::read_to_string(error_output_path).unwrap();
+                assert_eq!(error_fixture, error_output);
+            }
+            Mode::Write => {
+                let mut file = fs::File::create(error_output_path).unwrap();
+                file.write_all(error_output.as_bytes())
+                    .expect("unable to write data");
+            }
+        },
         Err(e) => {
             let error_output = get_diagnostics_from_compile_error(e, &input);
             match mode {
@@ -95,7 +105,24 @@ fn fail(in_path: PathBuf) {
     };
 }
 
-fn compile(input: &str, lib: &str) -> Result<(String, String, String), CompileError> {
+pub fn current_report_message(src: &str, checker: &Checker) -> String {
+    checker
+        .current_report
+        .iter()
+        .map(|d| {
+            let reasons = type_errors_to_string(&d.reasons, src);
+            format!("{}:\n{}", d.message, reasons)
+        })
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
+// TODO:
+// Instead of Result<(String, String, String, String), CompileError> maybe we should
+// return (Option<String>, Option<String>, Option<String>, Option<String>). This way
+// we can still compile the output even if it doesn't type check.  This also makes it
+// easier to combine the output of recoverable errors with those that are not.
+fn compile(input: &str, lib: &str) -> Result<(String, String, String, String), CompileError> {
     let mut program = match escalier_parser::parse(input) {
         Ok(program) => program,
         Err(error) => return Err(CompileError::ParseError(error)),
@@ -105,10 +132,19 @@ fn compile(input: &str, lib: &str) -> Result<(String, String, String), CompileEr
 
     // TODO: return errors as part of CompileResult
     let mut checker = parse_dts(lib).unwrap();
-    infer_prog(&mut program, &mut checker)?;
+    match infer_prog(&mut program, &mut checker) {
+        Ok(_) => (),
+        Err(errors) => {
+            eprintln!("current_report = {:#?}", checker.current_report);
+            eprintln!("parent_reports = {:#?}", checker.parent_reports);
+            return Err(CompileError::TypeError(errors));
+        }
+    };
     let dts = escalier_codegen::d_ts::codegen_d_ts(&program, &checker.current_scope)?;
 
-    Ok((js, srcmap, dts))
+    let errors = current_report_message(input, &checker);
+
+    Ok((js, srcmap, dts, errors))
 }
 
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";

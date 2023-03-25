@@ -1287,10 +1287,8 @@ fn incorrect_args() {
     let (_, checker) = infer_prog(src);
 
     insta::assert_snapshot!(current_report_message(&checker), @r###"
-    ESC_1 - "hello" is not a number:
-    └ TypeError::UnificationError: "hello", number
-
-    ESC_1 - "world" is not a number:
+    ESC_1 - args don't match expected params:
+    ├ TypeError::UnificationError: "hello", number
     └ TypeError::UnificationError: "world", number
     "###);
 }
