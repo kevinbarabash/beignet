@@ -32,12 +32,10 @@ fn pass(in_path: PathBuf) {
     let input = fs::read_to_string(in_path).unwrap();
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
 
-    let (js_output, srcmap_output, d_ts_output, _errors) = compile(&input, &lib);
-    // TODO: Renable once #503 is fixed
-    // if !errors.is_empty() {
-    //     println!("{errors:#?}");
-    //     panic!("Unexpected error");
-    // }
+    let (js_output, srcmap_output, d_ts_output, errors) = compile(&input, &lib);
+    if !errors.is_empty() {
+        panic!("Unexpected error(s): {errors:#?}");
+    }
 
     match mode {
         Mode::Check => {

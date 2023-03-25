@@ -78,7 +78,7 @@ impl Checker {
 
         // Replaces qualifiers in the type with the corresponding type params
         // from the alias type.
-        let result = match (&alias.type_args, &scheme.type_params) {
+        match (&alias.type_args, &scheme.type_params) {
             (None, None) => self.expand_type(&scheme.t),
             (None, Some(_)) => Err(vec![TypeError::TypeInstantiationFailure]),
             (Some(_), None) => Err(vec![TypeError::TypeInstantiationFailure]),
@@ -147,11 +147,7 @@ impl Checker {
                 let t = replace_aliases_rec(&scheme.t, &type_param_map);
                 self.expand_type(&t)
             }
-        };
-        if let Ok(t) = &result {
-            eprintln!("expanded type = {:}", t);
-        };
-        result
+        }
     }
 
     fn expand_conditional_type(&mut self, cond: &TConditionalType) -> Result<Type, Vec<TypeError>> {
