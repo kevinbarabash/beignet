@@ -872,12 +872,8 @@ impl Checker {
                 let (s, mut t) = self.infer_property_type(&mut t, prop, is_lvalue)?;
 
                 // Replaces `this` with `mut <type_param>[]`
-                let rep_t = Type {
-                    id: self.fresh_id(),
-                    kind: TypeKind::Array(type_param),
-                    provenance: None,
-                    mutable: obj_t.mutable,
-                };
+                let mut rep_t = self.from_type_kind(TypeKind::Array(type_param));
+                rep_t.mutable = true;
                 replace_this(&mut t, &rep_t);
 
                 Ok((s, t))

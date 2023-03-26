@@ -3298,12 +3298,9 @@ mod tests {
         let mut it = checker.lookup_type("Foo").unwrap();
         if let TypeKind::Object(obj) = &it.kind {
             if let Some(obj) = immutable_obj_type(obj) {
-                it = Type {
-                    id: checker.fresh_id(),
-                    kind: TypeKind::Object(obj),
-                    mutable: false,
-                    provenance: it.provenance,
-                }
+                let provenance = it.provenance;
+                it = checker.from_type_kind(TypeKind::Object(obj));
+                it.provenance = provenance;
             }
         }
         assert_eq!(

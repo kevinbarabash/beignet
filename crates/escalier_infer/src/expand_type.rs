@@ -413,15 +413,11 @@ impl Checker {
             .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
         // NOTE: Applying a mapped type to a interface will return non-interface
-        let t = Type {
-            id: self.fresh_id(),
-            kind: TypeKind::Object(TObject {
-                elems: new_elems,
-                is_interface: false,
-            }),
-            mutable: false,
-            provenance: None, // TODO: fill this in
-        };
+        // TODO: set provenance on t
+        let t = self.from_type_kind(TypeKind::Object(TObject {
+            elems: new_elems,
+            is_interface: false,
+        }));
 
         Ok(t)
     }

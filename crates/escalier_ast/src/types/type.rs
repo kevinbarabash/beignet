@@ -170,22 +170,6 @@ impl PartialEq for Type {
     }
 }
 
-// impl From<TypeKind> for Type {
-//     fn from(kind: TypeKind) -> Self {
-//         Type {
-//             kind,
-//             provenance: None,
-//             mutable: false,
-//         }
-//     }
-// }
-
-// impl From<TLit> for Type {
-//     fn from(lit: TLit) -> Self {
-//         Type::from(TypeKind::Lit(lit))
-//     }
-// }
-
 impl fmt::Display for Type {
     // TODO: add in parentheses where necessary to get the precedence right
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

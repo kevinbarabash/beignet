@@ -51,15 +51,10 @@ pub fn get_sub_and_type_params(
 
         sub.insert(
             tv.id,
-            Type {
-                id: checker.fresh_id(),
-                kind: TypeKind::Ref(TRef {
-                    name: name.to_owned(),
-                    type_args: None,
-                }),
-                provenance: None,
-                mutable: false,
-            },
+            checker.from_type_kind(TypeKind::Ref(TRef {
+                name: name.to_owned(),
+                type_args: None,
+            })),
         );
     }
 

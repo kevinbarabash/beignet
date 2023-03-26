@@ -169,12 +169,10 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
         }
         TsType::TsArrayType(array) => {
             let elem_type = infer_ts_type_ann(checker, &array.elem_type)?;
-            Ok(Type {
-                id: checker.fresh_id(),
-                kind: TypeKind::Array(Box::from(elem_type)),
-                mutable: true,
-                provenance: None, // TODO: link back to the TypeScript source type annotation
-            })
+            // TODO: link back to the TypeScript source type annotation
+            let mut t = checker.from_type_kind(TypeKind::Array(Box::from(elem_type)));
+            t.mutable = true;
+            Ok(t)
         }
         TsType::TsTupleType(_) => Err(String::from("can't parse tuple type yet")),
         TsType::TsOptionalType(_) => Err(String::from("can't parse optional type yet")),

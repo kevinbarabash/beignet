@@ -16,18 +16,9 @@ use crate::checker::Checker;
 fn get_param_type(param: &TFnParam, checker: &'_ mut Checker) -> Type {
     match param.optional {
         true => {
-            let undefined = Type {
-                id: checker.fresh_id(),
-                kind: TypeKind::Keyword(TKeyword::Undefined),
-                provenance: None, // TODO: map this back to the `?`
-                mutable: false,
-            };
-            Type {
-                id: checker.fresh_id(),
-                kind: TypeKind::Union(vec![param.t.to_owned(), undefined]),
-                provenance: None,
-                mutable: false,
-            }
+            // TODO: map this back to the `?`
+            let undefined = checker.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
+            checker.from_type_kind(TypeKind::Union(vec![param.t.to_owned(), undefined]))
         }
         false => param.t.to_owned(),
     }

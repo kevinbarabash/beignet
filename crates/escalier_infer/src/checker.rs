@@ -1,5 +1,6 @@
 use escalier_ast::types::{TKeyword, TLit, TVar, Type, TypeKind};
 use escalier_ast::values::{Keyword, Lit};
+use im::HashMap;
 
 use crate::binding::Binding;
 use crate::context::Context;
@@ -14,6 +15,7 @@ pub type Report = Vec<Diagnostic>;
 #[derive(Debug, Clone)]
 pub struct Checker {
     pub next_id: u32,
+    pub types: HashMap<u32, Type>,
     pub current_scope: Scope,
     pub parent_scopes: Vec<Scope>,
     pub current_report: Report,
@@ -33,6 +35,7 @@ impl Default for Checker {
     fn default() -> Self {
         Checker {
             next_id: 1,
+            types: HashMap::default(),
             current_scope: Scope::default(),
             parent_scopes: vec![],
             current_report: vec![],
@@ -137,12 +140,15 @@ impl Checker {
     }
 
     pub fn from_type_kind(&mut self, kind: TypeKind) -> Type {
-        Type {
-            id: self.fresh_id(),
+        let id = self.fresh_id();
+        let t = Type {
+            id,
             kind,
             provenance: None,
             mutable: false,
-        }
+        };
+        self.types.insert(id, t.to_owned());
+        t
     }
 
     pub fn from_type_lit(&mut self, lit: TLit) -> Type {

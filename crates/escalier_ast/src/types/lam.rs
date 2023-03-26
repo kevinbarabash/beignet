@@ -37,23 +37,6 @@ pub struct TFnParam {
 }
 
 impl TFnParam {
-    // pub fn get_type<'a>(&self, checker: &'a mut Checker) -> Type {
-    //     match self.optional {
-    //         true => {
-    //             let undefined = Type {
-    //                 kind: TypeKind::Keyword(TKeyword::Undefined),
-    //                 provenance: None, // TODO: map this back to the `?`
-    //                 mutable: false,
-    //             };
-    //             Type {
-    //                 kind: TypeKind::Union(vec![self.t.to_owned(), undefined]),
-    //                 provenance: None,
-    //                 mutable: false,
-    //             }
-    //         }
-    //         false => self.t.to_owned(),
-    //     }
-    // }
     pub fn get_name(&self, index: &usize) -> String {
         match &self.pat {
             TPat::Ident(bi) => bi.name.to_owned(),
