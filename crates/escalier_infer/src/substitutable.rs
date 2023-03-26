@@ -33,6 +33,7 @@ impl Substitutable for Type {
                         // TODO: apply the constraint and then check if the replacement
                         // is a subtype of it.
                         return Type {
+                            id: self.id,
                             kind: replacement.kind.to_owned(),
                             mutable: replacement.mutable,
                             provenance,
@@ -83,11 +84,11 @@ impl Substitutable for Type {
                         ) = (&pattern.kind, &flags.kind)
                         {
                             if flags.contains('g') {
-                                return Type::from(TypeKind::Array(Box::from(Type::from(
-                                    TypeKind::Keyword(TKeyword::String),
-                                ))));
+                                let string =
+                                    checker.from_type_kind(TypeKind::Keyword(TKeyword::String));
+                                return checker.from_type_kind(TypeKind::Array(Box::from(string)));
                             } else {
-                                return parse_regex(pattern);
+                                return parse_regex(pattern, checker);
                             }
                         }
                     }

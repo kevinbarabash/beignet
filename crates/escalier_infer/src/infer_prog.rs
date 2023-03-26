@@ -1,4 +1,4 @@
-use escalier_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
+use escalier_ast::types::{TObjElem, TObject, TProp, TPropKey, TypeKind};
 use escalier_ast::values::*;
 
 use crate::type_error::TypeError;
@@ -13,9 +13,9 @@ pub fn infer_prog(prog: &mut Program, checker: &mut Checker) -> Result<(), Vec<T
         name: TPropKey::StringKey(String::from("_name")),
         optional: false,
         mutable: false,
-        t: Type::from(Lit::str(String::from("Promise"), 0..0, DUMMY_LOC)),
+        t: checker.from_lit(Lit::str(String::from("Promise"), 0..0, DUMMY_LOC)),
     })];
-    let promise_type = Type::from(TypeKind::Object(TObject {
+    let promise_type = checker.from_type_kind(TypeKind::Object(TObject {
         elems,
         is_interface: true,
     }));
@@ -27,9 +27,9 @@ pub fn infer_prog(prog: &mut Program, checker: &mut Checker) -> Result<(), Vec<T
         name: TPropKey::StringKey(String::from("_name")),
         optional: false,
         mutable: false,
-        t: Type::from(Lit::str(String::from("JSXElement"), 0..0, DUMMY_LOC)),
+        t: checker.from_lit(Lit::str(String::from("JSXElement"), 0..0, DUMMY_LOC)),
     })];
-    let jsx_element_type = Type::from(TypeKind::Object(TObject {
+    let jsx_element_type = checker.from_type_kind(TypeKind::Object(TObject {
         elems,
         is_interface: true,
     }));

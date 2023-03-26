@@ -88,7 +88,7 @@ impl Checker {
                 ss.push(ret_s);
 
                 let s = compose_many_subs(&ss, self);
-                let t = Type::from(TypeKind::Lam(types::TLam {
+                let t = self.from_type_kind(TypeKind::Lam(types::TLam {
                     type_params: None,
                     params,
                     ret,
@@ -98,13 +98,13 @@ impl Checker {
             }
             TypeAnnKind::Lit(lit) => {
                 let s = Subst::new();
-                let t = Type::from(lit.to_owned());
+                let t = self.from_lit(lit.to_owned());
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
             TypeAnnKind::Keyword(KeywordType { keyword, .. }) => {
                 let s = Subst::new();
-                let t = Type::from(keyword.to_owned());
+                let t = self.from_keyword(keyword.to_owned());
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
@@ -155,7 +155,7 @@ impl Checker {
                 }
 
                 let s = compose_many_subs(&ss, self);
-                let t = Type::from(TypeKind::Object(TObject {
+                let t = self.from_type_kind(TypeKind::Object(TObject {
                     elems,
                     is_interface: false,
                 }));
@@ -187,7 +187,7 @@ impl Checker {
                     }
 
                     let s = compose_many_subs(&ss, self);
-                    let t = Type::from(TypeKind::Ref(types::TRef {
+                    let t = self.from_type_kind(TypeKind::Ref(types::TRef {
                         name: name.to_owned(),
                         type_args: if type_args.is_empty() {
                             None
@@ -211,7 +211,7 @@ impl Checker {
                 }
 
                 let s = compose_many_subs(&ss, self);
-                let t = Type::from(TypeKind::Union(ts));
+                let t = self.from_type_kind(TypeKind::Union(ts));
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
@@ -227,7 +227,7 @@ impl Checker {
                 }
 
                 let s = compose_many_subs(&ss, self);
-                let t = Type::from(TypeKind::Intersection(ts));
+                let t = self.from_type_kind(TypeKind::Intersection(ts));
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
@@ -243,21 +243,21 @@ impl Checker {
                 }
 
                 let s = compose_many_subs(&ss, self);
-                let t = Type::from(TypeKind::Tuple(ts));
+                let t = self.from_type_kind(TypeKind::Tuple(ts));
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
             TypeAnnKind::Array(ArrayType { elem_type, .. }) => {
                 let (elem_s, elem_t) = self.infer_type_ann_rec(elem_type, type_param_map)?;
                 let s = elem_s;
-                let t = Type::from(TypeKind::Array(Box::from(elem_t)));
+                let t = self.from_type_kind(TypeKind::Array(Box::from(elem_t)));
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
             TypeAnnKind::KeyOf(KeyOfType { type_ann, .. }) => {
                 let (arg_s, arg_t) = self.infer_type_ann_rec(type_ann, type_param_map)?;
                 let s = arg_s;
-                let t = Type::from(TypeKind::KeyOf(Box::from(arg_t)));
+                let t = self.from_type_kind(TypeKind::KeyOf(Box::from(arg_t)));
                 type_ann.inferred_type = Some(t.clone());
                 Ok((s, t))
             }
@@ -284,7 +284,7 @@ impl Checker {
                 Ok((s, t))
             }
             TypeAnnKind::Infer(InferType { name }) => {
-                let t = Type::from(TypeKind::InferType(TInferType {
+                let t = self.from_type_kind(TypeKind::InferType(TInferType {
                     name: name.to_owned(),
                 }));
                 let s = Subst::new();
@@ -300,7 +300,7 @@ impl Checker {
                 let (index_s, index_t) = self.infer_type_ann_rec(index_type, type_param_map)?;
 
                 let s = compose_many_subs(&[obj_s, index_s], self);
-                let t = Type::from(TypeKind::IndexAccess(TIndexAccess {
+                let t = self.from_type_kind(TypeKind::IndexAccess(TIndexAccess {
                     object: Box::from(obj_t),
                     index: Box::from(index_t),
                 }));
@@ -327,7 +327,7 @@ impl Checker {
                     // QUESTION: Do we need to apply `constraint_s` to `type_ann_t`?
                     type_ann.inferred_type = Some(type_ann_t.clone());
 
-                    let t = Type::from(TypeKind::MappedType(TMappedType {
+                    let t = self.from_type_kind(TypeKind::MappedType(TMappedType {
                         type_param: types::TypeParam {
                             name: type_param.name.name.to_owned(),
                             constraint: Some(Box::from(constraint_t)),
@@ -366,7 +366,7 @@ impl Checker {
                 let (true_s, true_t) = self.infer_type_ann_rec(consequent, type_param_map)?;
                 let (false_s, false_t) = self.infer_type_ann_rec(alternate, type_param_map)?;
 
-                let t = Type::from(TypeKind::ConditionalType(TConditionalType {
+                let t = self.from_type_kind(TypeKind::ConditionalType(TConditionalType {
                     check_type: Box::from(check_t),
                     extends_type: Box::from(extends_t),
                     true_type: Box::from(true_t),

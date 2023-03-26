@@ -28,7 +28,10 @@ impl fmt::Display for Scheme {
     }
 }
 
-pub fn get_sub_and_type_params(tvars: &[TVar]) -> (Subst, Option<Vec<TypeParam>>) {
+pub fn get_sub_and_type_params(
+    tvars: &[TVar],
+    checker: &'_ mut Checker,
+) -> (Subst, Option<Vec<TypeParam>>) {
     if tvars.is_empty() {
         return (Subst::new(), None);
     }
@@ -48,14 +51,10 @@ pub fn get_sub_and_type_params(tvars: &[TVar]) -> (Subst, Option<Vec<TypeParam>>
 
         sub.insert(
             tv.id,
-            Type {
-                kind: TypeKind::Ref(TRef {
-                    name: name.to_owned(),
-                    type_args: None,
-                }),
-                provenance: None,
-                mutable: false,
-            },
+            checker.from_type_kind(TypeKind::Ref(TRef {
+                name: name.to_owned(),
+                type_args: None,
+            })),
         );
     }
 
@@ -66,7 +65,7 @@ pub fn generalize(t: &Type, checker: &'_ mut Checker) -> Scheme {
     let env = &checker.current_scope.types;
     let tvars: Vec<TVar> = t.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id);
 
-    let (sub, type_params) = get_sub_and_type_params(&tvars);
+    let (sub, type_params) = get_sub_and_type_params(&tvars, checker);
 
     Scheme {
         t: Box::from(t.apply(&sub, checker)),
@@ -149,7 +148,7 @@ impl Checker {
             Some(type_params) => self.get_type_param_map(type_params),
             None => HashMap::new(),
         };
-        let t = Type::from(TypeKind::Lam(TLam {
+        let t = self.from_type_kind(TypeKind::Lam(TLam {
             params: params.to_owned(),
             ret: ret.to_owned(),
             type_params: None,
@@ -167,19 +166,21 @@ mod tests {
     fn test_generalize_with_unique_type_vars() {
         let mut checker = Checker::default();
 
-        let t = Type::from(TypeKind::Object(TObject {
+        let a_t = checker.fresh_var(None);
+        let b_t = checker.fresh_var(None);
+        let t = checker.from_type_kind(TypeKind::Object(TObject {
             elems: vec![
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("a")),
                     optional: false,
                     mutable: false,
-                    t: checker.fresh_var(None),
+                    t: a_t,
                 }),
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("b")),
                     optional: false,
                     mutable: false,
-                    t: checker.fresh_var(None),
+                    t: b_t,
                 }),
             ],
             is_interface: false,
@@ -195,7 +196,7 @@ mod tests {
         let mut checker = Checker::default();
 
         let tv = checker.fresh_var(None);
-        let t = Type::from(TypeKind::Object(TObject {
+        let t = checker.from_type_kind(TypeKind::Object(TObject {
             elems: vec![
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("a")),
@@ -221,20 +222,21 @@ mod tests {
     #[test]
     fn test_generalize_with_no_type_vars() {
         let mut checker = Checker::default();
-
-        let t = Type::from(TypeKind::Object(TObject {
+        let a_t = checker.from_type_kind(TypeKind::Keyword(TKeyword::Number));
+        let b_t = checker.from_type_kind(TypeKind::Keyword(TKeyword::String));
+        let t = checker.from_type_kind(TypeKind::Object(TObject {
             elems: vec![
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("a")),
                     optional: false,
                     mutable: false,
-                    t: Type::from(TypeKind::Keyword(TKeyword::Number)),
+                    t: a_t,
                 }),
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("b")),
                     optional: false,
                     mutable: false,
-                    t: Type::from(TypeKind::Keyword(TKeyword::String)),
+                    t: b_t,
                 }),
             ],
             is_interface: false,
@@ -273,7 +275,7 @@ mod tests {
             ],
             ret: Box::from(tv),
         };
-        let t = Type::from(TypeKind::Lam(lam));
+        let t = checker.from_type_kind(TypeKind::Lam(lam));
 
         let gen_lam = generalize(&t, &mut checker);
 
@@ -282,19 +284,22 @@ mod tests {
 
     #[test]
     fn test_instantiate_scheme_without_no_type_params() {
-        let t = Type::from(TypeKind::Object(TObject {
+        let mut checker = Checker::default();
+        let a_t = checker.from_type_kind(TypeKind::Keyword(TKeyword::Number));
+        let b_t = checker.from_type_kind(TypeKind::Keyword(TKeyword::String));
+        let t = checker.from_type_kind(TypeKind::Object(TObject {
             elems: vec![
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("a")),
                     optional: false,
                     mutable: false,
-                    t: Type::from(TypeKind::Keyword(TKeyword::Number)),
+                    t: a_t,
                 }),
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("b")),
                     optional: false,
                     mutable: false,
-                    t: Type::from(TypeKind::Keyword(TKeyword::String)),
+                    t: b_t,
                 }),
             ],
             is_interface: false,
@@ -305,7 +310,6 @@ mod tests {
             type_params: None,
         };
 
-        let mut checker = Checker::default();
         let t = checker.instantiate(&sc);
 
         assert_eq!(t.to_string(), "{a: number, b: string}");
@@ -313,25 +317,30 @@ mod tests {
 
     #[test]
     fn test_instantiate_scheme_with_multiple_type_params() {
-        let t = Type::from(TypeKind::Object(TObject {
+        let mut checker = Checker::default();
+
+        let a_t = checker.from_type_kind(TypeKind::Ref(TRef {
+            name: "A".to_string(),
+            type_args: None,
+        }));
+        let b_t = checker.from_type_kind(TypeKind::Ref(TRef {
+            name: "B".to_string(),
+            type_args: None,
+        }));
+
+        let t = checker.from_type_kind(TypeKind::Object(TObject {
             elems: vec![
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("a")),
                     optional: false,
                     mutable: false,
-                    t: Type::from(TypeKind::Ref(TRef {
-                        name: "A".to_string(),
-                        type_args: None,
-                    })),
+                    t: a_t,
                 }),
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("b")),
                     optional: false,
                     mutable: false,
-                    t: Type::from(TypeKind::Ref(TRef {
-                        name: "B".to_string(),
-                        type_args: None,
-                    })),
+                    t: b_t,
                 }),
             ],
             is_interface: false,
@@ -353,33 +362,37 @@ mod tests {
             ]),
         };
 
-        let mut checker = Checker::default();
         let t = checker.instantiate(&sc);
 
-        assert_eq!(t.to_string(), "{a: t1, b: t2}");
+        assert_eq!(t.to_string(), "{a: t4, b: t6}");
     }
 
     #[test]
     fn test_instantiate_scheme_with_repeated_type_param() {
-        let t = Type::from(TypeKind::Object(TObject {
+        let mut checker = Checker::default();
+
+        let a1_t = checker.from_type_kind(TypeKind::Ref(TRef {
+            name: "A".to_string(),
+            type_args: None,
+        }));
+        let a2_t = checker.from_type_kind(TypeKind::Ref(TRef {
+            name: "A".to_string(),
+            type_args: None,
+        }));
+
+        let t = checker.from_type_kind(TypeKind::Object(TObject {
             elems: vec![
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("a")),
                     optional: false,
                     mutable: false,
-                    t: Type::from(TypeKind::Ref(TRef {
-                        name: "A".to_string(),
-                        type_args: None,
-                    })),
+                    t: a1_t,
                 }),
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("b")),
                     optional: false,
                     mutable: false,
-                    t: Type::from(TypeKind::Ref(TRef {
-                        name: "A".to_string(),
-                        type_args: None,
-                    })),
+                    t: a2_t,
                 }),
             ],
             is_interface: false,
@@ -394,33 +407,37 @@ mod tests {
             }]),
         };
 
-        let mut checker = Checker::default();
         let t = checker.instantiate(&sc);
 
-        assert_eq!(t.to_string(), "{a: t1, b: t1}");
+        assert_eq!(t.to_string(), "{a: t4, b: t4}");
     }
 
     #[test]
     fn test_instantiate_scheme_with_constrained_type_param() {
-        let t = Type::from(TypeKind::Object(TObject {
+        let mut checker = Checker::default();
+
+        let a_t = checker.from_type_kind(TypeKind::Ref(TRef {
+            name: "A".to_string(),
+            type_args: None,
+        }));
+        let b_t = checker.from_type_kind(TypeKind::Ref(TRef {
+            name: "B".to_string(),
+            type_args: None,
+        }));
+
+        let t = checker.from_type_kind(TypeKind::Object(TObject {
             elems: vec![
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("a")),
                     optional: false,
                     mutable: false,
-                    t: Type::from(TypeKind::Ref(TRef {
-                        name: "A".to_string(),
-                        type_args: None,
-                    })),
+                    t: a_t,
                 }),
                 TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(String::from("b")),
                     optional: false,
                     mutable: false,
-                    t: Type::from(TypeKind::Ref(TRef {
-                        name: "B".to_string(),
-                        type_args: None,
-                    })),
+                    t: b_t,
                 }),
             ],
             is_interface: false,
@@ -436,13 +453,14 @@ mod tests {
                 },
                 TypeParam {
                     name: "B".to_string(),
-                    constraint: Some(Box::from(Type::from(TypeKind::Keyword(TKeyword::String)))),
+                    constraint: Some(Box::from(
+                        checker.from_type_kind(TypeKind::Keyword(TKeyword::String)),
+                    )),
                     default: None,
                 },
             ]),
         };
 
-        let mut checker = Checker::default();
         let t = checker.instantiate(&sc);
 
         insta::assert_debug_snapshot!(t);
@@ -461,7 +479,9 @@ mod tests {
                 },
                 TypeParam {
                     name: "B".to_string(),
-                    constraint: Some(Box::from(Type::from(TypeKind::Keyword(TKeyword::String)))),
+                    constraint: Some(Box::from(
+                        checker.from_type_kind(TypeKind::Keyword(TKeyword::String)),
+                    )),
                     default: None,
                 },
             ]),
@@ -471,7 +491,7 @@ mod tests {
                         name: "a".to_string(),
                         mutable: false,
                     }),
-                    t: Type::from(TypeKind::Ref(TRef {
+                    t: checker.from_type_kind(TypeKind::Ref(TRef {
                         name: "A".to_string(),
                         type_args: None,
                     })),
@@ -482,14 +502,14 @@ mod tests {
                         name: "b".to_string(),
                         mutable: false,
                     }),
-                    t: Type::from(TypeKind::Ref(TRef {
+                    t: checker.from_type_kind(TypeKind::Ref(TRef {
                         name: "B".to_string(),
                         type_args: None,
                     })),
                     optional: false,
                 },
             ],
-            ret: Box::from(Type::from(TypeKind::Ref(TRef {
+            ret: Box::from(checker.from_type_kind(TypeKind::Ref(TRef {
                 name: "A".to_string(),
                 type_args: None,
             }))),
@@ -497,6 +517,6 @@ mod tests {
 
         let lam = checker.instantiate_gen_lam(&gen_lam, None);
 
-        assert_eq!(lam.to_string(), "(a: t1, b: t2) => t1");
+        assert_eq!(lam.to_string(), "(a: t5, b: t7) => t5");
     }
 }

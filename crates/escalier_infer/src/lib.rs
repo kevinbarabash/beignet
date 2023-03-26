@@ -534,7 +534,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: {x: 5, y: 10}, {foo: t1}"]
+    #[should_panic = "TypeError::UnificationError: {x: 5, y: 10}, {foo: t8}"]
     fn missing_property_when_destructuring() {
         infer_prog("let {foo} = {x: 5, y: 10};");
     }
@@ -638,7 +638,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::UnificationError: {a: string, b: boolean}, {c: t1}"]
+    #[should_panic = "TypeError::UnificationError: {a: string, b: boolean}, {c: t5}"]
     fn obj_destructuring_with_type_annotation_missing_param() {
         infer("({c}: {a: string, b: boolean}) => c");
     }
@@ -896,7 +896,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = r#"TypeError::UnificationError: {type: "bar", num: t1}, {type: "bar", str: string} | {type: "foo", num: number}"#]
+    #[should_panic = r#"TypeError::UnificationError: {type: "bar", num: t13}, {type: "bar", str: string} | {type: "foo", num: number}"#]
     fn infer_if_let_disjoint_union_no_matches() {
         let src = r#"
         declare let action: {type: "foo", num: number} | {type: "bar", str: string};
@@ -1346,7 +1346,7 @@ mod tests {
 
         insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - args don't match expected params:
-        └ TypeError::UnificationError: (x: t1, y: t2, z: t3) => true, (a: number, b: number) => boolean
+        └ TypeError::UnificationError: (x: t12, y: t14, z: t16) => true, (a: number, b: number) => boolean
         "###);
     }
 
@@ -2649,7 +2649,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "TypeError::PossiblyNotAnObject: t1 might not be an object"]
+    #[should_panic = "TypeError::PossiblyNotAnObject: t5 might not be an object"]
     fn test_type_param_member_access_errors() {
         let src = r#"
         let getBar = <T>(obj: T): T => {
@@ -3298,11 +3298,9 @@ mod tests {
         let mut it = checker.lookup_type("Foo").unwrap();
         if let TypeKind::Object(obj) = &it.kind {
             if let Some(obj) = immutable_obj_type(obj) {
-                it = Type {
-                    kind: TypeKind::Object(obj),
-                    mutable: false,
-                    provenance: it.provenance,
-                }
+                let provenance = it.provenance;
+                it = checker.from_type_kind(TypeKind::Object(obj));
+                it.provenance = provenance;
             }
         }
         assert_eq!(

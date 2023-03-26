@@ -39,7 +39,8 @@ impl Checker {
                     if arg.spread.is_some() {
                         match &mut arg_t.kind {
                             TypeKind::Tuple(types) => arg_types.append(types),
-                            _ => arg_types.push(Type::from(TypeKind::Rest(Box::from(arg_t)))),
+                            _ => arg_types
+                                .push(self.from_type_kind(TypeKind::Rest(Box::from(arg_t)))),
                         }
                     } else {
                         arg_types.push(arg_t);
@@ -63,7 +64,7 @@ impl Checker {
                 // Are we missing an `apply()` call here?
                 // Maybe, I could see us needing an apply to handle generic functions properly
                 // s3       <- unify (apply s2 t1) (TArr t2 tv)
-                let mut call_type = Type::from(TypeKind::App(types::TApp {
+                let mut call_type = self.from_type_kind(TypeKind::App(types::TApp {
                     args: arg_types,
                     ret: Box::from(ret_type.clone()),
                     type_args,
@@ -99,7 +100,8 @@ impl Checker {
                     if arg.spread.is_some() {
                         match &mut arg_t.kind {
                             TypeKind::Tuple(types) => arg_types.append(types),
-                            _ => arg_types.push(Type::from(TypeKind::Rest(Box::from(arg_t)))),
+                            _ => arg_types
+                                .push(self.from_type_kind(TypeKind::Rest(Box::from(arg_t)))),
                         }
                     } else {
                         arg_types.push(arg_t);
@@ -146,7 +148,7 @@ impl Checker {
                                 None => HashMap::new(),
                             };
 
-                            let lam_type = Type::from(TypeKind::Lam(TLam {
+                            let lam_type = self.from_type_kind(TypeKind::Lam(TLam {
                                 params: params.to_owned(),
                                 ret: ret.to_owned(),
                                 type_params: None,
@@ -160,7 +162,7 @@ impl Checker {
                                 Some(Box::from(Provenance::TObjElem(Box::from(elem.to_owned()))));
 
                             let ret_type = self.fresh_var(None);
-                            let call_type = Type::from(TypeKind::App(types::TApp {
+                            let call_type = self.from_type_kind(TypeKind::App(types::TApp {
                                 args: arg_types.clone(),
                                 ret: Box::from(ret_type.clone()),
                                 type_args: None,
@@ -216,7 +218,6 @@ impl Checker {
             }
             ExprKind::Fix(Fix { expr, .. }) => {
                 let (s1, t) = self.infer_expr(expr, false)?;
-                eprintln!("t = {t}");
                 let tv = self.fresh_var(None);
                 let param = TFnParam {
                     pat: TPat::Ident(types::BindingIdent {
@@ -226,14 +227,12 @@ impl Checker {
                     t: tv.clone(),
                     optional: false,
                 };
-                let s2 = self.unify(
-                    &Type::from(TypeKind::Lam(types::TLam {
-                        params: vec![param],
-                        ret: Box::from(tv),
-                        type_params: None,
-                    })),
-                    &t,
-                )?;
+                let lam_t = self.from_type_kind(TypeKind::Lam(types::TLam {
+                    params: vec![param],
+                    ret: Box::from(tv),
+                    type_params: None,
+                }));
+                let s2 = self.unify(&lam_t, &t)?;
 
                 let s = compose_subs(&s2, &s1, self);
                 // This leaves the function param names intact and returns a TLam
@@ -279,7 +278,7 @@ impl Checker {
                             let (s3, t3) = self.infer_block(alternate)?;
 
                             let s = compose_subs(&s3, &s, self);
-                            let t = union_types(&t2, &t3);
+                            let t = union_types(&t2, &t3, self);
 
                             Ok((s, t))
                         }
@@ -287,11 +286,11 @@ impl Checker {
                             let (s1, t1) = self.infer_expr(cond, false)?;
                             let (s2, t2) = self.infer_block(consequent)?;
                             let (s3, t3) = self.infer_block(alternate)?;
-                            let s4 =
-                                self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)))?;
+                            let boolean = self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean));
+                            let s4 = self.unify(&t1, &boolean)?;
 
                             let s = compose_many_subs(&[s1, s2, s3, s4], self);
-                            let t = union_types(&t2, &t3);
+                            let t = union_types(&t2, &t3, self);
 
                             Ok((s, t))
                         }
@@ -314,21 +313,21 @@ impl Checker {
 
                         let s = compose_subs(&s2, &s1, self);
 
-                        let undefined = Type::from(TypeKind::Keyword(TKeyword::Undefined));
-                        let t = union_types(&t2, &undefined);
+                        let undefined = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
+                        let t = union_types(&t2, &undefined, self);
 
                         Ok((s, t))
                     }
                     _ => {
                         let (s1, t1) = self.infer_expr(cond, false)?;
                         let (s2, t2) = self.infer_block(consequent)?;
-                        let s3 =
-                            self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)))?;
+                        let boolean = self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean));
+                        let s3 = self.unify(&t1, &boolean)?;
 
                         let s = compose_many_subs(&[s1, s2, s3], self);
 
-                        let undefined = Type::from(TypeKind::Keyword(TKeyword::Undefined));
-                        let t = union_types(&t2, &undefined);
+                        let undefined = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
+                        let t = union_types(&t2, &undefined, self);
 
                         Ok((s, t))
                     }
@@ -376,16 +375,17 @@ impl Checker {
                                 elems.push(types::TObjElem::Prop(prop));
                             }
 
-                            let ret_type = Type::from(TypeKind::Ref(types::TRef {
+                            let ret_type = self.from_type_kind(TypeKind::Ref(types::TRef {
                                 name: String::from("JSXElement"),
                                 type_args: None,
                             }));
 
-                            let call_type = Type::from(TypeKind::App(types::TApp {
-                                args: vec![Type::from(TypeKind::Object(TObject {
-                                    elems,
-                                    is_interface: false,
-                                }))],
+                            let arg_type = self.from_type_kind(TypeKind::Object(TObject {
+                                elems,
+                                is_interface: false,
+                            }));
+                            let call_type = self.from_type_kind(TypeKind::App(types::TApp {
+                                args: vec![arg_type],
                                 ret: Box::from(ret_type.clone()),
                                 type_args: None,
                             }));
@@ -404,7 +404,7 @@ impl Checker {
 
                 let s = Subst::default();
                 // TODO: check props on JSXInstrinsics
-                let t = Type::from(TypeKind::Ref(types::TRef {
+                let t = self.from_type_kind(TypeKind::Ref(types::TRef {
                     name: String::from("JSXElement"),
                     type_args: None,
                 }));
@@ -453,7 +453,7 @@ impl Checker {
                 self.pop_scope();
 
                 if *is_async && !is_promise(&body_t) {
-                    body_t = Type::from(TypeKind::Ref(types::TRef {
+                    body_t = self.from_type_kind(TypeKind::Ref(types::TRef {
                         name: String::from("Promise"),
                         type_args: Some(vec![body_t]),
                     }))
@@ -466,7 +466,7 @@ impl Checker {
                     ss.push(self.unify(&body_t, &ret_t)?);
                 }
 
-                let t = Type::from(TypeKind::Lam(types::TLam {
+                let t = self.from_type_kind(TypeKind::Lam(types::TLam {
                     params: t_params,
                     ret: Box::from(body_t.clone()),
                     type_params: None,
@@ -516,13 +516,13 @@ impl Checker {
             }
             ExprKind::Lit(lit) => {
                 let s = Subst::new();
-                let t = Type::from(lit.to_owned());
+                let t = self.from_lit(lit.to_owned());
 
                 Ok((s, t))
             }
             ExprKind::Keyword(keyword) => {
                 let s = Subst::new();
-                let t = Type::from(keyword.to_owned());
+                let t = self.from_keyword(keyword.to_owned());
 
                 Ok((s, t))
             }
@@ -535,7 +535,8 @@ impl Checker {
                 // time and set the result to be appropriate number literal.
                 let (s1, t1) = self.infer_expr(left, false)?;
                 let (s2, t2) = self.infer_expr(right, false)?;
-                let s3 = match self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number))) {
+                let number = self.from_type_kind(TypeKind::Keyword(TKeyword::Number));
+                let s3 = match self.unify(&t1, &number) {
                     Ok(s) => s,
                     Err(reasons) => {
                         self.current_report.push(Diagnostic {
@@ -546,7 +547,8 @@ impl Checker {
                         Subst::default()
                     }
                 };
-                let s4 = match self.unify(&t2, &Type::from(TypeKind::Keyword(TKeyword::Number))) {
+                let number = self.from_type_kind(TypeKind::Keyword(TKeyword::Number));
+                let s4 = match self.unify(&t2, &number) {
                     Ok(s) => s,
                     Err(reasons) => {
                         self.current_report.push(Diagnostic {
@@ -572,36 +574,38 @@ impl Checker {
                         }?;
                         match op {
                             BinOp::Add => {
-                                Type::from(TypeKind::Lit(TLit::Num((n1 + n2).to_string())))
+                                self.from_type_kind(TypeKind::Lit(TLit::Num((n1 + n2).to_string())))
                             }
                             BinOp::Sub => {
-                                Type::from(TypeKind::Lit(TLit::Num((n1 - n2).to_string())))
+                                self.from_type_kind(TypeKind::Lit(TLit::Num((n1 - n2).to_string())))
                             }
                             BinOp::Mul => {
-                                Type::from(TypeKind::Lit(TLit::Num((n1 * n2).to_string())))
+                                self.from_type_kind(TypeKind::Lit(TLit::Num((n1 * n2).to_string())))
                             }
                             BinOp::Div => {
-                                Type::from(TypeKind::Lit(TLit::Num((n1 / n2).to_string())))
+                                self.from_type_kind(TypeKind::Lit(TLit::Num((n1 / n2).to_string())))
                             }
-                            BinOp::EqEq => Type::from(TypeKind::Lit(TLit::Bool(n1 == n2))),
-                            BinOp::NotEq => Type::from(TypeKind::Lit(TLit::Bool(n1 != n2))),
-                            BinOp::Gt => Type::from(TypeKind::Lit(TLit::Bool(n1 > n2))),
-                            BinOp::GtEq => Type::from(TypeKind::Lit(TLit::Bool(n1 >= n2))),
-                            BinOp::Lt => Type::from(TypeKind::Lit(TLit::Bool(n1 < n2))),
-                            BinOp::LtEq => Type::from(TypeKind::Lit(TLit::Bool(n1 <= n2))),
+                            BinOp::EqEq => self.from_type_kind(TypeKind::Lit(TLit::Bool(n1 == n2))),
+                            BinOp::NotEq => {
+                                self.from_type_kind(TypeKind::Lit(TLit::Bool(n1 != n2)))
+                            }
+                            BinOp::Gt => self.from_type_kind(TypeKind::Lit(TLit::Bool(n1 > n2))),
+                            BinOp::GtEq => self.from_type_kind(TypeKind::Lit(TLit::Bool(n1 >= n2))),
+                            BinOp::Lt => self.from_type_kind(TypeKind::Lit(TLit::Bool(n1 < n2))),
+                            BinOp::LtEq => self.from_type_kind(TypeKind::Lit(TLit::Bool(n1 <= n2))),
                         }
                     }
                     _ => match op {
-                        BinOp::Add => Type::from(TypeKind::Keyword(TKeyword::Number)),
-                        BinOp::Sub => Type::from(TypeKind::Keyword(TKeyword::Number)),
-                        BinOp::Mul => Type::from(TypeKind::Keyword(TKeyword::Number)),
-                        BinOp::Div => Type::from(TypeKind::Keyword(TKeyword::Number)),
-                        BinOp::EqEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                        BinOp::NotEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                        BinOp::Gt => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                        BinOp::GtEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                        BinOp::Lt => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
-                        BinOp::LtEq => Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                        BinOp::Add => self.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
+                        BinOp::Sub => self.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
+                        BinOp::Mul => self.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
+                        BinOp::Div => self.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
+                        BinOp::EqEq => self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
+                        BinOp::NotEq => self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
+                        BinOp::Gt => self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
+                        BinOp::GtEq => self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
+                        BinOp::Lt => self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
+                        BinOp::LtEq => self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
                     },
                 };
 
@@ -611,11 +615,12 @@ impl Checker {
             }
             ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
                 let (s1, t1) = self.infer_expr(arg, false)?;
-                let s2 = self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)))?;
+                let number = self.from_type_kind(TypeKind::Keyword(TKeyword::Number));
+                let s2 = self.unify(&t1, &number)?;
 
                 let s = compose_many_subs(&[s1, s2], self);
                 let t = match op {
-                    UnaryOp::Minus => Type::from(TypeKind::Keyword(TKeyword::Number)),
+                    UnaryOp::Minus => self.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
                 };
 
                 Ok((s, t))
@@ -661,17 +666,17 @@ impl Checker {
 
                 let s = compose_many_subs(&ss, self);
                 let t = if spread_types.is_empty() {
-                    Type::from(TypeKind::Object(TObject {
+                    self.from_type_kind(TypeKind::Object(TObject {
                         elems,
                         is_interface: false,
                     }))
                 } else {
                     let mut all_types = spread_types;
-                    all_types.push(Type::from(TypeKind::Object(TObject {
+                    all_types.push(self.from_type_kind(TypeKind::Object(TObject {
                         elems,
                         is_interface: false,
                     })));
-                    simplify_intersection(&all_types)
+                    simplify_intersection(&all_types, self)
                 };
 
                 Ok((s, t))
@@ -683,7 +688,7 @@ impl Checker {
 
                 let (s1, t1) = self.infer_expr(expr, false)?;
                 let inner_t = self.fresh_var(None);
-                let promise_t = Type::from(TypeKind::Ref(types::TRef {
+                let promise_t = self.from_type_kind(TypeKind::Ref(types::TRef {
                     name: String::from("Promise"),
                     type_args: Some(vec![inner_t.clone()]),
                 }));
@@ -719,7 +724,7 @@ impl Checker {
                 }
 
                 let s = compose_many_subs(&ss, self);
-                let t = Type::from(TypeKind::Tuple(ts));
+                let t = self.from_type_kind(TypeKind::Tuple(ts));
 
                 Ok((s, t))
             }
@@ -733,7 +738,7 @@ impl Checker {
                 Ok((s, t))
             }
             ExprKind::Empty => {
-                let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+                let t = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
                 let s = Subst::default();
 
                 Ok((s, t))
@@ -741,7 +746,7 @@ impl Checker {
             ExprKind::TemplateLiteral(TemplateLiteral {
                 exprs, quasis: _, ..
             }) => {
-                let t = Type::from(TypeKind::Keyword(TKeyword::String));
+                let t = self.from_type_kind(TypeKind::Keyword(TKeyword::String));
                 let result: Result<Vec<(Subst, Type)>, Vec<TypeError>> = exprs
                     .iter_mut()
                     .map(|expr| self.infer_expr(expr, false))
@@ -786,21 +791,22 @@ impl Checker {
                 }
 
                 let s = compose_many_subs(&ss, self);
-                let t = union_many_types(&ts);
+                let t = union_many_types(&ts, self);
 
                 Ok((s, t))
             }
             ExprKind::Regex(Regex { pattern, flags }) => {
                 let s = Subst::default();
-                let t = Type::from(TypeKind::Ref(TRef {
+                let regex_str_t =
+                    self.from_type_kind(TypeKind::Lit(types::TLit::Str(pattern.to_owned())));
+                let regex_flag_t =
+                    self.from_type_kind(TypeKind::Lit(types::TLit::Str(match flags {
+                        Some(flags) => flags.to_owned(),
+                        None => "".to_string(),
+                    })));
+                let t = self.from_type_kind(TypeKind::Ref(TRef {
                     name: "RegExp".to_string(),
-                    type_args: Some(vec![
-                        Type::from(TypeKind::Lit(types::TLit::Str(pattern.to_owned()))),
-                        Type::from(TypeKind::Lit(types::TLit::Str(match flags {
-                            Some(flags) => flags.to_owned(),
-                            None => "".to_string(),
-                        }))),
-                    ]),
+                    type_args: Some(vec![regex_str_t, regex_flag_t]),
                 }));
 
                 //     TypeKind::Regex(TRegex {
@@ -866,11 +872,8 @@ impl Checker {
                 let (s, mut t) = self.infer_property_type(&mut t, prop, is_lvalue)?;
 
                 // Replaces `this` with `mut <type_param>[]`
-                let rep_t = Type {
-                    kind: TypeKind::Array(type_param),
-                    provenance: None,
-                    mutable: obj_t.mutable,
-                };
+                let mut rep_t = self.from_type_kind(TypeKind::Array(type_param));
+                rep_t.mutable = true;
                 replace_this(&mut t, &rep_t);
 
                 Ok((s, t))
@@ -884,7 +887,7 @@ impl Checker {
                     // TODO: lookup methods on Array.prototype
                     MemberProp::Ident(Ident { name, .. }) => {
                         if name == "length" {
-                            let t = Type::from(TypeKind::Lit(types::TLit::Num(
+                            let t = self.from_type_kind(TypeKind::Lit(types::TLit::Num(
                                 elem_types.len().to_string(),
                             )));
                             let s = Subst::default();
@@ -894,7 +897,8 @@ impl Checker {
                         let scheme = self.lookup_scheme("Array")?;
 
                         let mut type_param_map: HashMap<String, Type> = HashMap::new();
-                        let type_param = Type::from(TypeKind::Union(elem_types.to_owned()));
+                        let type_param =
+                            self.from_type_kind(TypeKind::Union(elem_types.to_owned()));
                         if let Some(type_params) = scheme.type_params {
                             type_param_map.insert(type_params[0].name.to_owned(), type_param);
                         }
@@ -911,8 +915,10 @@ impl Checker {
                             TypeKind::Keyword(TKeyword::Number) => {
                                 // TODO: remove duplicate types
                                 let mut elem_types = elem_types.to_owned();
-                                elem_types.push(Type::from(TypeKind::Keyword(TKeyword::Undefined)));
-                                let t = Type::from(TypeKind::Union(elem_types));
+                                elem_types.push(
+                                    self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined)),
+                                );
+                                let t = self.from_type_kind(TypeKind::Union(elem_types));
                                 Ok((prop_s, t))
                             }
                             TypeKind::Lit(types::TLit::Num(index)) => {
@@ -971,7 +977,7 @@ impl Checker {
                                     return Err(vec![TypeError::PropertyIsNotMutable]);
                                 }
 
-                                let t = get_property_type(prop);
+                                let t = get_property_type(prop, self);
                                 return Ok((Subst::default(), t));
                             }
                         }
@@ -991,7 +997,7 @@ impl Checker {
                             }
 
                             if method.name == TPropKey::StringKey(name.to_owned()) {
-                                let t = Type::from(TypeKind::Lam(types::TLam {
+                                let t = self.from_type_kind(TypeKind::Lam(types::TLam {
                                     params: method.params.to_owned(),
                                     ret: method.ret.to_owned(),
                                     type_params: method.type_params.to_owned(),
@@ -1030,8 +1036,9 @@ impl Checker {
 
                         // We can't tell if the property is in the object or not because the
                         // key is a string whose exact value is unknown at compile time.
-                        value_types.push(Type::from(TypeKind::Keyword(TKeyword::Undefined)));
-                        let t = Type::from(TypeKind::Union(value_types));
+                        value_types
+                            .push(self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined)));
+                        let t = self.from_type_kind(TypeKind::Union(value_types));
 
                         Ok((prop_s, t))
                     }
@@ -1088,8 +1095,8 @@ impl Checker {
                                     // NOTE: Since access any indexer could result in an `undefined`
                                     // we include `| undefined` in the return type here.
                                     let undefined =
-                                        Type::from(TypeKind::Keyword(TKeyword::Undefined));
-                                    let t = union_types(&indexer.t, &undefined);
+                                        self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
+                                    let t = union_types(&indexer.t, &undefined, self);
                                     return Ok((s, t));
                                 }
                             }

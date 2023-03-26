@@ -1,9 +1,13 @@
 use std::collections::BTreeMap;
 
-use escalier_ast::types::{TObjElem, TObject, TPropKey, Type, TypeKind};
-use escalier_infer::Scheme;
+use escalier_ast::types::{TObjElem, TObject, TPropKey, TypeKind};
+use escalier_infer::{Checker, Scheme};
 
-pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
+pub fn merge_schemes<'a>(
+    old_scheme: &Scheme,
+    new_scheme: &Scheme,
+    checker: &'a mut Checker,
+) -> Scheme {
     let type_params_1 = &old_scheme.type_params;
     let type_params_2 = &new_scheme.type_params;
 
@@ -173,7 +177,7 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme) -> Scheme {
                 elems.push(elem.to_owned());
             }
 
-            Type::from(TypeKind::Object(TObject {
+            checker.from_type_kind(TypeKind::Object(TObject {
                 elems,
                 // NOTE: This function is called from the code parsing interfaces
                 // so this should always be true.
@@ -199,15 +203,16 @@ mod tests {
 
     #[test]
     fn if_obj_is_not_mutating_all_methods_are_not_mutating() {
+        let mut checker = Checker::default();
         let old_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
             is_mutating: false,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: old_elems,
                 is_interface: true,
             }))),
@@ -216,19 +221,19 @@ mod tests {
         let new_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("bar")),
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
             is_mutating: false,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: new_elems,
                 is_interface: true,
             }))),
             type_params: None,
         };
 
-        let result = merge_schemes(&old_scheme, &new_scheme);
+        let result = merge_schemes(&old_scheme, &new_scheme, &mut checker);
         assert_eq!(
             result.to_string(),
             "{bar(self): boolean, foo(self): boolean}"
@@ -237,15 +242,16 @@ mod tests {
 
     #[test]
     fn new_is_mutating_and_old_is_mutating_with_different_method_names() {
+        let mut checker = Checker::default();
         let old_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
             is_mutating: true,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: old_elems,
                 is_interface: true,
             }))),
@@ -254,19 +260,19 @@ mod tests {
         let new_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("bar")),
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
             is_mutating: true,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: new_elems,
                 is_interface: true,
             }))),
             type_params: None,
         };
 
-        let result = merge_schemes(&old_scheme, &new_scheme);
+        let result = merge_schemes(&old_scheme, &new_scheme, &mut checker);
         assert_eq!(
             result.to_string(),
             "{bar(mut self): boolean, foo(mut self): boolean}"
@@ -275,15 +281,16 @@ mod tests {
 
     #[test]
     fn old_is_mutating_and_new_is_not_mutating_with_same_method_names() {
+        let mut checker = Checker::default();
         let old_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
             is_mutating: true,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: old_elems,
                 is_interface: true,
             }))),
@@ -292,33 +299,34 @@ mod tests {
         let new_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
             is_mutating: false,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: new_elems,
                 is_interface: true,
             }))),
             type_params: None,
         };
 
-        let result = merge_schemes(&old_scheme, &new_scheme);
+        let result = merge_schemes(&old_scheme, &new_scheme, &mut checker);
         assert_eq!(result.to_string(), "{foo(self): boolean}");
     }
 
     #[test]
     fn old_is_not_mutating_and_new_is_mutating_with_same_method_names() {
+        let mut checker = Checker::default();
         let old_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
             is_mutating: false,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: old_elems,
                 is_interface: true,
             }))),
@@ -327,34 +335,35 @@ mod tests {
         let new_elems = vec![TObjElem::Method(TMethod {
             name: TPropKey::StringKey(String::from("foo")),
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
             is_mutating: true,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: new_elems,
                 is_interface: true,
             }))),
             type_params: None,
         };
 
-        let result = merge_schemes(&old_scheme, &new_scheme);
+        let result = merge_schemes(&old_scheme, &new_scheme, &mut checker);
         assert_eq!(result.to_string(), "{foo(self): boolean}");
     }
 
     #[test]
     fn old_index_mut_new_index_immut() {
+        let mut checker = Checker::default();
         let old_elems = vec![TObjElem::Index(TIndex {
             key: TIndexKey {
                 name: "key".to_string(),
-                t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+                t: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Number))),
             },
-            t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+            t: checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
             mutable: true,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: old_elems,
                 is_interface: true,
             }))),
@@ -363,20 +372,20 @@ mod tests {
         let new_elems = vec![TObjElem::Index(TIndex {
             key: TIndexKey {
                 name: "key".to_string(),
-                t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+                t: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Number))),
             },
-            t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+            t: checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
             mutable: false,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: new_elems,
                 is_interface: true,
             }))),
             type_params: None,
         };
 
-        let result = merge_schemes(&old_scheme, &new_scheme);
+        let result = merge_schemes(&old_scheme, &new_scheme, &mut checker);
         assert_eq!(
             result.to_string(),
             "{mut [key: number]: boolean, [key: number]: boolean}"
@@ -385,16 +394,17 @@ mod tests {
 
     #[test]
     fn old_index_immut_new_index_mut() {
+        let mut checker = Checker::default();
         let old_elems = vec![TObjElem::Index(TIndex {
             key: TIndexKey {
                 name: "key".to_string(),
-                t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+                t: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Number))),
             },
-            t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+            t: checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
             mutable: false,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: old_elems,
                 is_interface: true,
             }))),
@@ -403,20 +413,20 @@ mod tests {
         let new_elems = vec![TObjElem::Index(TIndex {
             key: TIndexKey {
                 name: "key".to_string(),
-                t: Box::from(Type::from(TypeKind::Keyword(TKeyword::Number))),
+                t: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Number))),
             },
-            t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+            t: checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
             mutable: true,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: new_elems,
                 is_interface: true,
             }))),
             type_params: None,
         };
 
-        let result = merge_schemes(&old_scheme, &new_scheme);
+        let result = merge_schemes(&old_scheme, &new_scheme, &mut checker);
         assert_eq!(
             result.to_string(),
             "{[key: number]: boolean, mut [key: number]: boolean}"
@@ -425,13 +435,14 @@ mod tests {
 
     #[test]
     fn callables() {
+        let mut checker = Checker::default();
         let old_elems = vec![TObjElem::Call(TCallable {
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: old_elems,
                 is_interface: true,
             }))),
@@ -439,30 +450,31 @@ mod tests {
         };
         let new_elems = vec![TObjElem::Call(TCallable {
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: new_elems,
                 is_interface: true,
             }))),
             type_params: None,
         };
 
-        let result = merge_schemes(&old_scheme, &new_scheme);
+        let result = merge_schemes(&old_scheme, &new_scheme, &mut checker);
         assert_eq!(result.to_string(), "{() => boolean, () => boolean}");
     }
 
     #[test]
     fn constructors() {
+        let mut checker = Checker::default();
         let old_elems = vec![TObjElem::Constructor(TCallable {
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
         })];
         let old_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: old_elems,
                 is_interface: true,
             }))),
@@ -470,18 +482,18 @@ mod tests {
         };
         let new_elems = vec![TObjElem::Constructor(TCallable {
             params: vec![],
-            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Boolean))),
+            ret: Box::from(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean))),
             type_params: None,
         })];
         let new_scheme = Scheme {
-            t: Box::from(Type::from(TypeKind::Object(TObject {
+            t: Box::from(checker.from_type_kind(TypeKind::Object(TObject {
                 elems: new_elems,
                 is_interface: true,
             }))),
             type_params: None,
         };
 
-        let result = merge_schemes(&old_scheme, &new_scheme);
+        let result = merge_schemes(&old_scheme, &new_scheme, &mut checker);
         assert_eq!(result.to_string(), "{new () => boolean, new () => boolean}");
     }
 }

@@ -4,7 +4,6 @@ use swc_atoms::{Atom, JsWord};
 use swc_common::{self, BytePos, SyntaxContext};
 use swc_ecma_ast;
 
-use crate::types::{TLit, Type, TypeKind};
 use crate::values::common::{SourceLocation, Span};
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
@@ -135,20 +134,6 @@ impl From<&Lit> for swc_ecma_ast::Expr {
                 });
                 swc_ecma_ast::Expr::Lit(lit)
             }
-        }
-    }
-}
-
-impl From<Lit> for Type {
-    fn from(lit: Lit) -> Self {
-        Type {
-            kind: TypeKind::Lit(match lit {
-                Lit::Num(n) => TLit::Num(n.value),
-                Lit::Bool(b) => TLit::Bool(b.value),
-                Lit::Str(s) => TLit::Str(s.value),
-            }),
-            provenance: None,
-            mutable: false,
         }
     }
 }

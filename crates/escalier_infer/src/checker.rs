@@ -1,4 +1,6 @@
-use escalier_ast::types::{TVar, Type, TypeKind};
+use escalier_ast::types::{TKeyword, TLit, TVar, Type, TypeKind};
+use escalier_ast::values::{Keyword, Lit};
+use im::HashMap;
 
 use crate::binding::Binding;
 use crate::context::Context;
@@ -13,6 +15,7 @@ pub type Report = Vec<Diagnostic>;
 #[derive(Debug, Clone)]
 pub struct Checker {
     pub next_id: u32,
+    pub types: HashMap<u32, Type>,
     pub current_scope: Scope,
     pub parent_scopes: Vec<Scope>,
     pub current_report: Report,
@@ -32,6 +35,7 @@ impl Default for Checker {
     fn default() -> Self {
         Checker {
             next_id: 1,
+            types: HashMap::default(),
             current_scope: Scope::default(),
             parent_scopes: vec![],
             current_report: vec![],
@@ -125,8 +129,50 @@ impl Checker {
     }
 
     pub fn fresh_var(&mut self, constraint: Option<Box<Type>>) -> Type {
+        let id = self.fresh_id();
+        self.from_type_kind(TypeKind::Var(TVar { id, constraint }))
+    }
+
+    pub fn fresh_id(&mut self) -> u32 {
         let id = self.next_id;
         self.next_id = id + 1;
-        Type::from(TypeKind::Var(TVar { id, constraint }))
+        id
+    }
+
+    pub fn from_type_kind(&mut self, kind: TypeKind) -> Type {
+        let id = self.fresh_id();
+        let t = Type {
+            id,
+            kind,
+            provenance: None,
+            mutable: false,
+        };
+        self.types.insert(id, t.to_owned());
+        t
+    }
+
+    pub fn from_type_lit(&mut self, lit: TLit) -> Type {
+        self.from_type_kind(TypeKind::Lit(lit))
+    }
+
+    pub fn from_keyword(&mut self, keyword: Keyword) -> Type {
+        self.from_type_kind(TypeKind::Keyword(match keyword {
+            Keyword::Number => TKeyword::Number,
+            Keyword::String => TKeyword::String,
+            Keyword::Boolean => TKeyword::Boolean,
+            Keyword::Null => TKeyword::Null,
+            Keyword::Symbol => TKeyword::Symbol,
+            Keyword::Undefined => TKeyword::Undefined,
+            Keyword::Self_ => TKeyword::Self_,
+            Keyword::Never => TKeyword::Never,
+        }))
+    }
+
+    pub fn from_lit(&mut self, lit: Lit) -> Type {
+        self.from_type_kind(TypeKind::Lit(match lit {
+            Lit::Num(n) => TLit::Num(n.value),
+            Lit::Bool(b) => TLit::Bool(b.value),
+            Lit::Str(s) => TLit::Str(s.value),
+        }))
     }
 }
