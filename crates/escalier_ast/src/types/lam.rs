@@ -2,9 +2,8 @@ use derive_visitor::{Drive, DriveMut};
 use itertools::join;
 use std::fmt;
 
-use crate::types::keyword::TKeyword;
 use crate::types::pat::TPat;
-use crate::types::r#type::{Type, TypeKind};
+use crate::types::r#type::Type;
 use crate::types::TypeParam;
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
@@ -38,7 +37,7 @@ pub struct TFnParam {
 }
 
 impl TFnParam {
-    // pub fn get_type(&self) -> Type {
+    // pub fn get_type<'a>(&self, checker: &'a mut Checker) -> Type {
     //     match self.optional {
     //         true => {
     //             let undefined = Type {

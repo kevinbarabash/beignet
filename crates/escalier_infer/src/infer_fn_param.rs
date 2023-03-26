@@ -33,13 +33,11 @@ impl Checker {
             // ...we replace all bindings with new bindings where the type `T` is
             // updated to `T | undefined`.
             if let Some((name, binding)) = pa.iter().find(|(_, value)| pt == value.t) {
+                let undefined = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
                 let binding = Binding {
                     mutable: binding.mutable,
                     // TODO: copy over the provenance from binding.t
-                    t: self.from_type_kind(TypeKind::Union(vec![
-                        binding.t.to_owned(),
-                        self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined)),
-                    ])),
+                    t: self.from_type_kind(TypeKind::Union(vec![binding.t.to_owned(), undefined])),
                 };
                 pa.insert(name.to_owned(), binding);
             };

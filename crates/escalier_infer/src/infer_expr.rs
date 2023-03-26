@@ -218,7 +218,6 @@ impl Checker {
             }
             ExprKind::Fix(Fix { expr, .. }) => {
                 let (s1, t) = self.infer_expr(expr, false)?;
-                eprintln!("t = {t}");
                 let tv = self.fresh_var(None);
                 let param = TFnParam {
                     pat: TPat::Ident(types::BindingIdent {
@@ -228,14 +227,12 @@ impl Checker {
                     t: tv.clone(),
                     optional: false,
                 };
-                let s2 = self.unify(
-                    &self.from_type_kind(TypeKind::Lam(types::TLam {
-                        params: vec![param],
-                        ret: Box::from(tv),
-                        type_params: None,
-                    })),
-                    &t,
-                )?;
+                let lam_t = self.from_type_kind(TypeKind::Lam(types::TLam {
+                    params: vec![param],
+                    ret: Box::from(tv),
+                    type_params: None,
+                }));
+                let s2 = self.unify(&lam_t, &t)?;
 
                 let s = compose_subs(&s2, &s1, self);
                 // This leaves the function param names intact and returns a TLam
@@ -281,7 +278,7 @@ impl Checker {
                             let (s3, t3) = self.infer_block(alternate)?;
 
                             let s = compose_subs(&s3, &s, self);
-                            let t = union_types(&t2, &t3);
+                            let t = union_types(&t2, &t3, self);
 
                             Ok((s, t))
                         }
@@ -289,13 +286,11 @@ impl Checker {
                             let (s1, t1) = self.infer_expr(cond, false)?;
                             let (s2, t2) = self.infer_block(consequent)?;
                             let (s3, t3) = self.infer_block(alternate)?;
-                            let s4 = self.unify(
-                                &t1,
-                                &self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
-                            )?;
+                            let boolean = self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean));
+                            let s4 = self.unify(&t1, &boolean)?;
 
                             let s = compose_many_subs(&[s1, s2, s3, s4], self);
-                            let t = union_types(&t2, &t3);
+                            let t = union_types(&t2, &t3, self);
 
                             Ok((s, t))
                         }
@@ -319,22 +314,20 @@ impl Checker {
                         let s = compose_subs(&s2, &s1, self);
 
                         let undefined = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
-                        let t = union_types(&t2, &undefined);
+                        let t = union_types(&t2, &undefined, self);
 
                         Ok((s, t))
                     }
                     _ => {
                         let (s1, t1) = self.infer_expr(cond, false)?;
                         let (s2, t2) = self.infer_block(consequent)?;
-                        let s3 = self.unify(
-                            &t1,
-                            &self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
-                        )?;
+                        let boolean = self.from_type_kind(TypeKind::Keyword(TKeyword::Boolean));
+                        let s3 = self.unify(&t1, &boolean)?;
 
                         let s = compose_many_subs(&[s1, s2, s3], self);
 
                         let undefined = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
-                        let t = union_types(&t2, &undefined);
+                        let t = union_types(&t2, &undefined, self);
 
                         Ok((s, t))
                     }
@@ -387,11 +380,12 @@ impl Checker {
                                 type_args: None,
                             }));
 
+                            let arg_type = self.from_type_kind(TypeKind::Object(TObject {
+                                elems,
+                                is_interface: false,
+                            }));
                             let call_type = self.from_type_kind(TypeKind::App(types::TApp {
-                                args: vec![self.from_type_kind(TypeKind::Object(TObject {
-                                    elems,
-                                    is_interface: false,
-                                }))],
+                                args: vec![arg_type],
                                 ret: Box::from(ret_type.clone()),
                                 type_args: None,
                             }));
@@ -541,10 +535,8 @@ impl Checker {
                 // time and set the result to be appropriate number literal.
                 let (s1, t1) = self.infer_expr(left, false)?;
                 let (s2, t2) = self.infer_expr(right, false)?;
-                let s3 = match self.unify(
-                    &t1,
-                    &self.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
-                ) {
+                let number = self.from_type_kind(TypeKind::Keyword(TKeyword::Number));
+                let s3 = match self.unify(&t1, &number) {
                     Ok(s) => s,
                     Err(reasons) => {
                         self.current_report.push(Diagnostic {
@@ -555,10 +547,8 @@ impl Checker {
                         Subst::default()
                     }
                 };
-                let s4 = match self.unify(
-                    &t2,
-                    &self.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
-                ) {
+                let number = self.from_type_kind(TypeKind::Keyword(TKeyword::Number));
+                let s4 = match self.unify(&t2, &number) {
                     Ok(s) => s,
                     Err(reasons) => {
                         self.current_report.push(Diagnostic {
@@ -625,10 +615,8 @@ impl Checker {
             }
             ExprKind::UnaryExpr(UnaryExpr { op, arg, .. }) => {
                 let (s1, t1) = self.infer_expr(arg, false)?;
-                let s2 = self.unify(
-                    &t1,
-                    &self.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
-                )?;
+                let number = self.from_type_kind(TypeKind::Keyword(TKeyword::Number));
+                let s2 = self.unify(&t1, &number)?;
 
                 let s = compose_many_subs(&[s1, s2], self);
                 let t = match op {
@@ -688,7 +676,7 @@ impl Checker {
                         elems,
                         is_interface: false,
                     })));
-                    simplify_intersection(&all_types)
+                    simplify_intersection(&all_types, self)
                 };
 
                 Ok((s, t))
@@ -803,21 +791,22 @@ impl Checker {
                 }
 
                 let s = compose_many_subs(&ss, self);
-                let t = union_many_types(&ts);
+                let t = union_many_types(&ts, self);
 
                 Ok((s, t))
             }
             ExprKind::Regex(Regex { pattern, flags }) => {
                 let s = Subst::default();
+                let regex_str_t =
+                    self.from_type_kind(TypeKind::Lit(types::TLit::Str(pattern.to_owned())));
+                let regex_flag_t =
+                    self.from_type_kind(TypeKind::Lit(types::TLit::Str(match flags {
+                        Some(flags) => flags.to_owned(),
+                        None => "".to_string(),
+                    })));
                 let t = self.from_type_kind(TypeKind::Ref(TRef {
                     name: "RegExp".to_string(),
-                    type_args: Some(vec![
-                        self.from_type_kind(TypeKind::Lit(types::TLit::Str(pattern.to_owned()))),
-                        self.from_type_kind(TypeKind::Lit(types::TLit::Str(match flags {
-                            Some(flags) => flags.to_owned(),
-                            None => "".to_string(),
-                        }))),
-                    ]),
+                    type_args: Some(vec![regex_str_t, regex_flag_t]),
                 }));
 
                 //     TypeKind::Regex(TRegex {
@@ -992,7 +981,7 @@ impl Checker {
                                     return Err(vec![TypeError::PropertyIsNotMutable]);
                                 }
 
-                                let t = get_property_type(prop);
+                                let t = get_property_type(prop, self);
                                 return Ok((Subst::default(), t));
                             }
                         }
@@ -1111,7 +1100,7 @@ impl Checker {
                                     // we include `| undefined` in the return type here.
                                     let undefined =
                                         self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
-                                    let t = union_types(&indexer.t, &undefined);
+                                    let t = union_types(&indexer.t, &undefined, self);
                                     return Ok((s, t));
                                 }
                             }

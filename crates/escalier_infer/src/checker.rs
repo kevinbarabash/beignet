@@ -126,10 +126,8 @@ impl Checker {
     }
 
     pub fn fresh_var(&mut self, constraint: Option<Box<Type>>) -> Type {
-        self.from_type_kind(TypeKind::Var(TVar {
-            id: self.fresh_id(),
-            constraint,
-        }))
+        let id = self.fresh_id();
+        self.from_type_kind(TypeKind::Var(TVar { id, constraint }))
     }
 
     pub fn fresh_id(&mut self) -> u32 {
@@ -171,20 +169,4 @@ impl Checker {
             Lit::Str(s) => TLit::Str(s.value),
         }))
     }
-
-    // impl From<TypeKind> for Type {
-    //     fn from(kind: TypeKind) -> Self {
-    //         Type {
-    //             kind,
-    //             provenance: None,
-    //             mutable: false,
-    //         }
-    //     }
-    // }
-
-    // impl From<TLit> for Type {
-    //     fn from(lit: TLit) -> Self {
-    //         Type::from(TypeKind::Lit(lit))
-    //     }
-    // }
 }

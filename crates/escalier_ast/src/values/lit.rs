@@ -4,7 +4,6 @@ use swc_atoms::{Atom, JsWord};
 use swc_common::{self, BytePos, SyntaxContext};
 use swc_ecma_ast;
 
-use crate::types::{TLit, Type, TypeKind};
 use crate::values::common::{SourceLocation, Span};
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]

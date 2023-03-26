@@ -1,7 +1,5 @@
 use std::fmt;
 
-use crate::types::{TKeyword, Type, TypeKind};
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Keyword {
     Number,
@@ -28,22 +26,3 @@ impl fmt::Display for Keyword {
         }
     }
 }
-
-// impl From<Keyword> for Type {
-//     fn from(keyword: Keyword) -> Self {
-//         Type {
-//             kind: TypeKind::Keyword(match keyword {
-//                 Keyword::Number => TKeyword::Number,
-//                 Keyword::String => TKeyword::String,
-//                 Keyword::Boolean => TKeyword::Boolean,
-//                 Keyword::Null => TKeyword::Null,
-//                 Keyword::Symbol => TKeyword::Symbol,
-//                 Keyword::Undefined => TKeyword::Undefined,
-//                 Keyword::Self_ => TKeyword::Self_,
-//                 Keyword::Never => TKeyword::Never,
-//             }),
-//             provenance: None,
-//             mutable: false,
-//         }
-//     }
-// }

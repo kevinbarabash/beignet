@@ -70,8 +70,6 @@ impl Checker {
     }
 
     pub fn expand_alias_type(&mut self, alias: &TRef) -> Result<Type, Vec<TypeError>> {
-        eprintln!("expanding alias named {}", alias.name);
-        eprintln!("expanding alias type_args {:#?}", alias.type_args);
         let name = &alias.name;
         let scheme = self.lookup_scheme(name)?;
 
@@ -135,7 +133,7 @@ impl Checker {
                                 })
                                 .collect::<Result<Vec<_>, Vec<TypeError>>>()?;
 
-                            let t = union_many_types(&types);
+                            let t = union_many_types(&types, self);
                             return self.expand_type(&t);
                         }
                     }
@@ -229,7 +227,7 @@ impl Checker {
                                 match (&prop.name, lit) {
                                     (TPropKey::StringKey(key), TLit::Str(str)) if key == str => {
                                         if include_undefined_in_optional_props {
-                                            return Ok(get_property_type(prop));
+                                            return Ok(get_property_type(prop, self));
                                         } else {
                                             return Ok(prop.t.to_owned());
                                         }
@@ -238,7 +236,7 @@ impl Checker {
                                     // in a tuple.
                                     (TPropKey::NumberKey(key), TLit::Num(num)) if key == num => {
                                         if include_undefined_in_optional_props {
-                                            return Ok(get_property_type(prop));
+                                            return Ok(get_property_type(prop, self));
                                         } else {
                                             return Ok(prop.t.to_owned());
                                         }
@@ -251,12 +249,12 @@ impl Checker {
                                     (TKeyword::Number, TLit::Num(_)) => {
                                         let undefined = self
                                             .from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
-                                        return Ok(union_types(&index.t, &undefined));
+                                        return Ok(union_types(&index.t, &undefined, self));
                                     }
                                     (TKeyword::String, TLit::Str(_)) => {
                                         let undefined = self
                                             .from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
-                                        return Ok(union_types(&index.t, &undefined));
+                                        return Ok(union_types(&index.t, &undefined, self));
                                     }
                                     _ => (),
                                 },
@@ -486,11 +484,10 @@ impl Checker {
                         TPropKey::NumberKey(key) => key,
                     };
                     if key == name {
+                        let undefined = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
                         let t = self.from_type_kind(TypeKind::Lam(TLam {
                             params: vec![setter.param.to_owned()],
-                            ret: Box::from(
-                                self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined)),
-                            ),
+                            ret: Box::from(undefined),
                             type_params: None,
                         }));
                         return Ok(TProp {
@@ -579,7 +576,7 @@ impl Checker {
                     })
                     .collect();
 
-                Ok(union_many_types(&elems))
+                Ok(union_many_types(&elems, self))
             }
             _ => Ok(NEVER_TYPE),
         }

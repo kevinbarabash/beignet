@@ -105,15 +105,12 @@ impl Checker {
 
                 // This follows the same pattern found in lib.es5.d.ts.
                 let name = ident.name.to_owned();
-                eprintln!("inserting {name}Constructor = {t}");
                 self.insert_type(format!("{name}Constructor"), t.to_owned());
-                self.insert_value(
-                    name.to_owned(),
-                    self.from_type_kind(TypeKind::Ref(TRef {
-                        name: format!("{name}Constructor"),
-                        type_args: None,
-                    })),
-                );
+                let constructor_t = self.from_type_kind(TypeKind::Ref(TRef {
+                    name: format!("{name}Constructor"),
+                    type_args: None,
+                }));
+                self.insert_value(name, constructor_t);
 
                 Ok((s, t))
             }
@@ -221,7 +218,7 @@ impl Checker {
                 let t = if types.is_empty() {
                     self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined))
                 } else {
-                    union_many_types(&types)
+                    union_many_types(&types, self)
                 };
 
                 Ok((s, t))

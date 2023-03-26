@@ -2,8 +2,13 @@ use derive_visitor::{Drive, DriveMut, Visitor, VisitorMut};
 use swc_ecma_ast::TsInterfaceDecl;
 
 use escalier_ast::types::*;
+use escalier_infer::Checker;
 
-pub fn maybe_override_string_methods(decl: &TsInterfaceDecl, elem: &TObjElem) -> Option<TObjElem> {
+pub fn maybe_override_string_methods<'a>(
+    decl: &TsInterfaceDecl,
+    elem: &TObjElem,
+    checker: &'a mut Checker,
+) -> Option<TObjElem> {
     if decl.id.sym.to_string() == "String" {
         if let TObjElem::Method(method) = &elem {
             let mut visitor = HasTypeRefVisitor::new("RegExp");
@@ -48,7 +53,7 @@ pub fn maybe_override_string_methods(decl: &TsInterfaceDecl, elem: &TObjElem) ->
                 // `RegExpMatchArray` types with versions that are
                 // passed `TPattern` and `TFlags` as type arguments.
                 let mut elem = TObjElem::Method(method);
-                let mut regex_visitor = RegExpVisitor {};
+                let mut regex_visitor = RegExpVisitor { checker };
                 elem.drive_mut(&mut regex_visitor);
 
                 return Some(elem);
@@ -89,9 +94,11 @@ impl HasTypeRefVisitor {
 
 #[derive(VisitorMut)]
 #[visitor(Type(enter))]
-struct RegExpVisitor {}
+struct RegExpVisitor<'a> {
+    checker: &'a mut Checker,
+}
 
-impl RegExpVisitor {
+impl<'a> RegExpVisitor<'a> {
     fn enter_type(&mut self, t: &mut Type) {
         match &t.kind {
             TypeKind::Ref(alias)
@@ -102,11 +109,11 @@ impl RegExpVisitor {
                 t.kind = TypeKind::Ref(TRef {
                     name: alias.name.to_owned(),
                     type_args: Some(vec![
-                        Type::from(TypeKind::Ref(TRef {
+                        self.checker.from_type_kind(TypeKind::Ref(TRef {
                             name: "TPattern".to_string(),
                             type_args: None,
                         })),
-                        Type::from(TypeKind::Ref(TRef {
+                        self.checker.from_type_kind(TypeKind::Ref(TRef {
                             name: "TFlags".to_string(),
                             type_args: None,
                         })),

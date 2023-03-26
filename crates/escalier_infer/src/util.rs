@@ -9,7 +9,7 @@ use escalier_ast::types::*;
 use crate::checker::Checker;
 use crate::substitutable::{Subst, Substitutable};
 
-fn get_mapping(t: &Type) -> HashMap<u32, Type> {
+fn get_mapping(t: &Type, checker: &'_ mut Checker) -> HashMap<u32, Type> {
     let mapping: HashMap<u32, Type> = t
         .ftv()
         .iter()
@@ -17,7 +17,7 @@ fn get_mapping(t: &Type) -> HashMap<u32, Type> {
         .map(|(index, key)| {
             (
                 key.id,
-                Type::from(TypeKind::Var(TVar {
+                checker.from_type_kind(TypeKind::Var(TVar {
                     id: index as u32,
                     constraint: key.constraint.clone(),
                 })),
@@ -51,7 +51,7 @@ pub fn close_over<'a>(s: &Subst, t: &Type, checker: &'a mut Checker) -> Type {
                 let mut char_code: u32 = 65;
                 for tv in tvs {
                     let c = char::from_u32(char_code).unwrap();
-                    let t = Type::from(TypeKind::Ref(TRef {
+                    let t = checker.from_type_kind(TypeKind::Ref(TRef {
                         name: c.to_string(),
                         type_args: None,
                     }));
@@ -64,7 +64,7 @@ pub fn close_over<'a>(s: &Subst, t: &Type, checker: &'a mut Checker) -> Type {
                     char_code += 1;
                 }
 
-                let t = Type::from(TypeKind::Lam(TLam {
+                let t = checker.from_type_kind(TypeKind::Lam(TLam {
                     params: params.to_owned(),
                     ret: ret.to_owned(),
                     type_params: if type_params.is_empty() {
@@ -83,7 +83,7 @@ pub fn close_over<'a>(s: &Subst, t: &Type, checker: &'a mut Checker) -> Type {
         }
     };
 
-    normalize(&t)
+    normalize(&t, checker)
 }
 
 #[derive(VisitorMut)]
@@ -104,8 +104,8 @@ impl NormalizeVisitor {
     }
 }
 
-pub fn normalize(t: &Type) -> Type {
-    let mapping = get_mapping(t);
+pub fn normalize(t: &Type, checker: &'_ mut Checker) -> Type {
+    let mapping = get_mapping(t, checker);
     let mut t = t.clone();
     let mut visitor = NormalizeVisitor { mapping };
     t.drive_mut(&mut visitor);
@@ -116,7 +116,7 @@ pub fn normalize(t: &Type) -> Type {
 // TODO: handle optional properties correctly
 // Maybe we can have a function that will canonicalize objects by converting
 // `x: T | undefined` to `x?: T`
-pub fn simplify_intersection(in_types: &[Type]) -> Type {
+pub fn simplify_intersection(in_types: &[Type], checker: &'_ mut Checker) -> Type {
     let obj_types: Vec<_> = in_types
         .iter()
         .filter_map(|t| match &t.kind {
@@ -155,7 +155,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
             let t: Type = if types.len() == 1 {
                 types[0].clone()
             } else {
-                Type::from(TypeKind::Intersection(types))
+                checker.from_type_kind(TypeKind::Intersection(types))
             };
             TObjElem::Prop(TProp {
                 name: TPropKey::StringKey(name.to_owned()),
@@ -188,7 +188,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     let mut out_types = vec![];
     out_types.append(&mut not_obj_types);
     if !elems.is_empty() {
-        out_types.push(Type::from(TypeKind::Object(TObject {
+        out_types.push(checker.from_type_kind(TypeKind::Object(TObject {
             elems,
             is_interface: false,
         })));
@@ -199,7 +199,7 @@ pub fn simplify_intersection(in_types: &[Type]) -> Type {
     if out_types.len() == 1 {
         out_types[0].clone()
     } else {
-        Type::from(TypeKind::Intersection(out_types))
+        checker.from_type_kind(TypeKind::Intersection(out_types))
     }
 }
 
@@ -210,12 +210,12 @@ pub fn flatten_types(t: &Type) -> Vec<Type> {
     }
 }
 
-pub fn union_types(t1: &Type, t2: &Type) -> Type {
-    union_many_types(&[t1.to_owned(), t2.to_owned()])
+pub fn union_types<'a>(t1: &Type, t2: &Type, checker: &'a mut Checker) -> Type {
+    union_many_types(&[t1.to_owned(), t2.to_owned()], checker)
 }
 
 // TODO: remove any extraneous 'never' types
-pub fn union_many_types(ts: &[Type]) -> Type {
+pub fn union_many_types(ts: &[Type], checker: &'_ mut Checker) -> Type {
     let types: Vec<_> = ts.iter().flat_map(flatten_types).collect();
 
     let types_set: BTreeSet<_> = types.iter().cloned().collect();
@@ -237,7 +237,7 @@ pub fn union_many_types(ts: &[Type]) -> Type {
                     TLit::Bool(_) => TypeKind::Keyword(TKeyword::Boolean),
                     TLit::Str(_) => TypeKind::Keyword(TKeyword::String),
                 };
-                !keyword_types.contains(&Type::from(kind))
+                !keyword_types.contains(&checker.from_type_kind(kind))
             }
             _ => false,
         })
@@ -261,9 +261,9 @@ pub fn union_many_types(ts: &[Type]) -> Type {
         .collect();
 
     match types.len() {
-        0 => Type::from(TypeKind::Keyword(TKeyword::Never)),
+        0 => checker.from_type_kind(TypeKind::Keyword(TKeyword::Never)),
         1 => types[0].clone(),
-        _ => Type::from(TypeKind::Union(types)),
+        _ => checker.from_type_kind(TypeKind::Union(types)),
     }
 }
 
@@ -302,7 +302,7 @@ fn compose_subs_with_context<'a>(s1: &Subst, s2: &Subst, checker: &'a mut Checke
     for (tv, t) in s1 {
         match result.get(tv) {
             Some(t1) => {
-                let t = union_types(t, t1);
+                let t = union_types(t, t1, checker);
                 result.insert(*tv, t)
             }
             None => result.insert(*tv, t.to_owned()),
@@ -317,13 +317,13 @@ pub fn compose_many_subs_with_context(subs: &[Subst], checker: &'_ mut Checker) 
     })
 }
 
-pub fn get_property_type(prop: &TProp) -> Type {
+pub fn get_property_type(prop: &TProp, checker: &'_ mut Checker) -> Type {
     let t = prop.t.to_owned();
     match prop.optional {
-        true => Type::from(TypeKind::Union(vec![
-            t,
-            Type::from(TypeKind::Keyword(TKeyword::Undefined)),
-        ])),
+        true => {
+            let undefined = checker.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
+            checker.from_type_kind(TypeKind::Union(vec![t, undefined]))
+        }
         false => t,
     }
 }
@@ -472,14 +472,14 @@ mod tests {
 
         s2.insert(
             3,
-            Type::from(TypeKind::Var(TVar {
+            checker.from_type_kind(TypeKind::Var(TVar {
                 id: 5,
                 constraint: None,
             })),
         );
         s2.insert(
             2,
-            Type::from(TypeKind::Var(TVar {
+            checker.from_type_kind(TypeKind::Var(TVar {
                 id: 4,
                 constraint: None,
             })),
@@ -487,7 +487,7 @@ mod tests {
 
         s1.insert(
             4,
-            Type::from(TypeKind::Var(TVar {
+            checker.from_type_kind(TypeKind::Var(TVar {
                 id: 2,
                 constraint: None,
             })),
@@ -524,7 +524,7 @@ mod tests {
             ],
             ret: Box::from(tv),
         };
-        let t = Type::from(TypeKind::Lam(lam));
+        let t = checker.from_type_kind(TypeKind::Lam(lam));
         let s = Subst::default();
         let result = close_over(&s, &t, &mut checker);
 

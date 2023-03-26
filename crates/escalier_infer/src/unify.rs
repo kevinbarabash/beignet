@@ -2,7 +2,7 @@ use std::cmp;
 use std::collections::BTreeSet;
 
 use escalier_ast::types::{
-    self as types, Provenance, TLam, TObjElem, TObject, TVar, Type, TypeKind,
+    self as types, Provenance, TFnParam, TLam, TObjElem, TObject, TVar, Type, TypeKind,
 };
 use escalier_ast::values::{ExprKind, TypeAnn, TypeAnnKind};
 use types::TKeyword;
@@ -13,6 +13,30 @@ use crate::{util::*, Diagnostic};
 
 use crate::checker::Checker;
 
+fn get_param_type(param: &TFnParam, checker: &'_ mut Checker) -> Type {
+    match param.optional {
+        true => {
+            let undefined = Type {
+                id: checker.fresh_id(),
+                kind: TypeKind::Keyword(TKeyword::Undefined),
+                provenance: None, // TODO: map this back to the `?`
+                mutable: false,
+            };
+            Type {
+                id: checker.fresh_id(),
+                kind: TypeKind::Union(vec![param.t.to_owned(), undefined]),
+                provenance: None,
+                mutable: false,
+            }
+        }
+        false => param.t.to_owned(),
+    }
+}
+
+fn get_param_types(params: &[TFnParam], checker: &'_ mut Checker) -> Vec<Type> {
+    params.iter().map(|p| get_param_type(p, checker)).collect()
+}
+
 impl Checker {
     // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
     pub fn unify(&mut self, t1: &Type, t2: &Type) -> Result<Subst, Vec<TypeError>> {
@@ -20,7 +44,6 @@ impl Checker {
         match (&t1.kind, &t2.kind) {
             // If both are type variables...
             (TypeKind::Var(tv1), TypeKind::Var(tv2)) => {
-                eprintln!("*** unifying two type variables ***");
                 // ...and one of them was inferred from a type reference, e.g. T,
                 if let Some(provenance) = &t1.provenance {
                     if let Provenance::TypeAnn(type_ann) = provenance.as_ref() {
@@ -147,8 +170,8 @@ impl Checker {
                         // NOTE: The order of params is reversed.  This allows a callback
                         // whose params can accept more values (are supertypes) than the
                         // function will pass to the callback.
-                        let pt2 = p2.get_type().apply(&s, self);
-                        let pt1 = p1.get_type().apply(&s, self);
+                        let pt2 = get_param_type(p2, self).apply(&s, self);
+                        let pt1 = get_param_type(p1, self).apply(&s, self);
                         let s1 = self.unify(&pt2, &pt1)?;
                         s = compose_subs(&s, &s1, self);
                     }
@@ -247,8 +270,7 @@ impl Checker {
                             // the rest param array.
                             rest_param.mutable = false;
 
-                            let mut params: Vec<_> =
-                                lam.params.iter().map(|p| p.get_type()).collect();
+                            let mut params = get_param_types(&lam.params, self);
                             params.pop(); // Remove rest type
                             params.push(rest_param); // Add array type
 
@@ -271,8 +293,7 @@ impl Checker {
                             (args, params)
                         }
                         TypeKind::Tuple(tuple) => {
-                            let mut params: Vec<_> =
-                                lam.params.iter().map(|p| p.get_type()).collect();
+                            let mut params = get_param_types(&lam.params, self);
                             params.pop(); // Remove rest type
                             params.extend(tuple.to_owned()); // Add each type from the tuple type
 
@@ -293,7 +314,7 @@ impl Checker {
                         _ => panic!("{rest_param} cannot be used as a rest param"),
                     },
                     None => {
-                        let params = lam.params.iter().map(|p| p.get_type()).collect();
+                        let params = get_param_types(&lam.params, self);
 
                         if args.len() < lam.params.len() - optional_count {
                             return Err(vec![TypeError::TooFewArguments(
@@ -419,8 +440,8 @@ impl Checker {
                                     if prop1.name == prop2.name {
                                         has_matching_key = true;
 
-                                        let t1 = get_property_type(prop1);
-                                        let t2 = get_property_type(&prop2);
+                                        let t1 = get_property_type(prop1, self);
+                                        let t2 = get_property_type(&prop2, self);
 
                                         if let Ok(s) = self.unify(&t1, &t2) {
                                             has_matching_value = true;
@@ -508,7 +529,8 @@ impl Checker {
                     let rest1: Vec<_> = types1.drain(0..rest_len).collect();
                     let mut after1: Vec<_> = types1;
 
-                    let s = self.unify(&self.from_type_kind(TypeKind::Tuple(rest1)), &rest2)?;
+                    let new_rest_type = self.from_type_kind(TypeKind::Tuple(rest1));
+                    let s = self.unify(&new_rest_type, &rest2)?;
                     ss.push(s);
 
                     for (t1, t2) in after1.iter_mut().zip(after2.iter_mut()) {
@@ -533,7 +555,8 @@ impl Checker {
                     // TODO: take the union of all of the types in tuple_types
                     // Right now if array_type is a type variable, we unify right
                     // away and then the other types in tuple_types are ignored
-                    let s = self.unify(&union_many_types(tuple_types), array_type)?;
+                    let union_t = union_many_types(tuple_types, self);
+                    let s = self.unify(&union_t, array_type)?;
                     Ok(s)
                 }
             }
@@ -578,7 +601,7 @@ impl Checker {
                     .collect();
                 // TODO: check for other variants, if there are we should error
 
-                let obj_type = &mut simplify_intersection(&obj_types);
+                let obj_type = &mut simplify_intersection(&obj_types, self);
 
                 match rest_types.len() {
                     0 => self.unify(t1, obj_type),
@@ -598,22 +621,18 @@ impl Checker {
                                 })
                             });
 
-                        let s1 = self.unify(
-                            &self.from_type_kind(TypeKind::Object(TObject {
-                                elems: obj_elems,
-                                is_interface: false,
-                            })),
-                            obj_type,
-                        )?;
+                        let new_obj_type = self.from_type_kind(TypeKind::Object(TObject {
+                            elems: obj_elems,
+                            is_interface: false,
+                        }));
+                        let s1 = self.unify(&new_obj_type, obj_type)?;
 
                         let rest_type = rest_types.get_mut(0).unwrap();
-                        let s2 = self.unify(
-                            &self.from_type_kind(TypeKind::Object(TObject {
-                                elems: rest_elems,
-                                is_interface: false,
-                            })),
-                            rest_type,
-                        )?;
+                        let new_rest_type = self.from_type_kind(TypeKind::Object(TObject {
+                            elems: rest_elems,
+                            is_interface: false,
+                        }));
+                        let s2 = self.unify(&new_rest_type, rest_type)?;
 
                         let s = compose_subs(&s2, &s1, self);
                         Ok(s)
@@ -635,7 +654,7 @@ impl Checker {
                     .collect();
                 // TODO: check for other variants, if there are we should error
 
-                let obj_type = &mut simplify_intersection(&obj_types);
+                let obj_type = &mut simplify_intersection(&obj_types, self);
 
                 match rest_types.len() {
                     0 => self.unify(obj_type, t2),
@@ -655,22 +674,18 @@ impl Checker {
                                 })
                             });
 
-                        let s_obj = self.unify(
-                            obj_type,
-                            &self.from_type_kind(TypeKind::Object(TObject {
-                                elems: obj_elems,
-                                is_interface: false,
-                            })),
-                        )?;
+                        let new_obj_type = self.from_type_kind(TypeKind::Object(TObject {
+                            elems: obj_elems,
+                            is_interface: false,
+                        }));
+                        let s_obj = self.unify(obj_type, &new_obj_type)?;
 
                         let rest_type = rest_types.get_mut(0).unwrap();
-                        let s_rest = self.unify(
-                            rest_type,
-                            &self.from_type_kind(TypeKind::Object(TObject {
-                                elems: rest_elems,
-                                is_interface: false,
-                            })),
-                        )?;
+                        let new_rest_type = self.from_type_kind(TypeKind::Object(TObject {
+                            elems: rest_elems,
+                            is_interface: false,
+                        }));
+                        let s_rest = self.unify(rest_type, &new_rest_type)?;
 
                         let s = compose_subs(&s_rest, &s_obj, self);
                         Ok(s)
@@ -905,22 +920,19 @@ mod tests {
     #[test]
     fn literals_are_subtypes_of_corresponding_keywords() -> Result<(), Vec<TypeError>> {
         let mut checker = Checker::default();
-        let result = checker.unify(
-            &checker.from_lit(num("5")),
-            &checker.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
-        )?;
+        let t1 = checker.from_lit(num("5"));
+        let t2 = checker.from_type_kind(TypeKind::Keyword(TKeyword::Number));
+        let result = checker.unify(&t1, &t2)?;
         assert_eq!(result, Subst::default());
 
-        let result = checker.unify(
-            &checker.from_lit(str("hello")),
-            &checker.from_type_kind(TypeKind::Keyword(TKeyword::String)),
-        )?;
+        let t1 = checker.from_lit(str("hello"));
+        let t2 = checker.from_type_kind(TypeKind::Keyword(TKeyword::String));
+        let result = checker.unify(&t1, &t2)?;
         assert_eq!(result, Subst::default());
 
-        let result = checker.unify(
-            &checker.from_lit(bool(&true)),
-            &checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
-        )?;
+        let t1 = checker.from_lit(bool(&true));
+        let t2 = checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean));
+        let result = checker.unify(&t1, &t2)?;
         assert_eq!(result, Subst::default());
 
         Ok(())
@@ -935,13 +947,13 @@ mod tests {
                 name: TPropKey::StringKey(String::from("foo")),
                 optional: false,
                 mutable: false,
-                t: checker.from_type_kind(num("5")),
+                t: checker.from_lit(num("5")),
             }),
             types::TObjElem::Prop(types::TProp {
                 name: TPropKey::StringKey(String::from("bar")),
                 optional: false,
                 mutable: false,
-                t: checker.from_type_kind(bool(&true)),
+                t: checker.from_lit(bool(&true)),
             }),
             // Having extra properties is okay
             types::TObjElem::Prop(types::TProp {

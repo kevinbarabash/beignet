@@ -6,28 +6,28 @@ use escalier_ast::types::*;
 use crate::checker::Checker;
 
 struct RegexVisitor<'a> {
-    pub checker: &'a Checker,
+    pub checker: &'a mut Checker,
     pub optional_count: u32,
     pub elems: Vec<Type>,
     pub groups: Vec<TObjElem>,
 }
 
-impl Visitor for RegexVisitor<'a> {
+impl<'a> Visitor for RegexVisitor<'a> {
     type Output = Type;
     type Err = String;
 
     fn finish(self) -> Result<Self::Output, Self::Err> {
         let elems = self.elems.clone();
-        let tuple = Type::from(TypeKind::Tuple(elems));
+        let tuple = self.checker.from_type_kind(TypeKind::Tuple(elems));
 
         let t = if self.groups.is_empty() {
             tuple
         } else {
-            let groups = Type::from(TypeKind::Object(TObject {
+            let groups = self.checker.from_type_kind(TypeKind::Object(TObject {
                 elems: self.groups,
                 is_interface: false,
             }));
-            let obj = Type::from(TypeKind::Object(TObject {
+            let obj = self.checker.from_type_kind(TypeKind::Object(TObject {
                 elems: vec![TObjElem::Prop(TProp {
                     name: TPropKey::StringKey("groups".to_string()),
                     mutable: false,
@@ -37,14 +37,17 @@ impl Visitor for RegexVisitor<'a> {
                 is_interface: false,
             }));
 
-            Type::from(TypeKind::Intersection(vec![tuple, obj]))
+            self.checker
+                .from_type_kind(TypeKind::Intersection(vec![tuple, obj]))
         };
         Ok(t)
     }
 
     fn start(&mut self) {
-        self.elems
-            .push(Type::from(TypeKind::Keyword(TKeyword::String)));
+        self.elems.push(
+            self.checker
+                .from_type_kind(TypeKind::Keyword(TKeyword::String)),
+        );
     }
     fn visit_pre(&mut self, hir: &Hir) -> Result<(), Self::Err> {
         match hir.kind() {
@@ -87,27 +90,41 @@ impl Visitor for RegexVisitor<'a> {
             regex_syntax::hir::HirKind::Group(group) => {
                 match &group.kind {
                     regex_syntax::hir::GroupKind::CaptureIndex(_) => {
-                        let mut t = Type::from(TypeKind::Keyword(TKeyword::String));
+                        let mut t = self
+                            .checker
+                            .from_type_kind(TypeKind::Keyword(TKeyword::String));
                         if self.optional_count > 0 {
-                            let undefined = Type::from(TypeKind::Keyword(TKeyword::Undefined));
-                            t = Type::from(TypeKind::Union(vec![t, undefined]));
+                            let undefined = self
+                                .checker
+                                .from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
+                            t = self
+                                .checker
+                                .from_type_kind(TypeKind::Union(vec![t, undefined]));
                         }
                         self.elems.push(t);
                     }
                     regex_syntax::hir::GroupKind::CaptureName { name, index: _ } => {
                         // named capture groups also appear in the same array
                         // as regular capture groups
-                        let mut t = Type::from(TypeKind::Keyword(TKeyword::String));
+                        let mut t = self
+                            .checker
+                            .from_type_kind(TypeKind::Keyword(TKeyword::String));
                         if self.optional_count > 0 {
-                            let undefined = Type::from(TypeKind::Keyword(TKeyword::Undefined));
-                            t = Type::from(TypeKind::Union(vec![t, undefined]));
+                            let undefined = self
+                                .checker
+                                .from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
+                            t = self
+                                .checker
+                                .from_type_kind(TypeKind::Union(vec![t, undefined]));
                         }
                         self.elems.push(t);
                         self.groups.push(TObjElem::Prop(TProp {
                             name: TPropKey::NumberKey(name.to_string()),
                             optional: self.optional_count > 0,
                             mutable: false,
-                            t: Type::from(TypeKind::Keyword(TKeyword::String)),
+                            t: self
+                                .checker
+                                .from_type_kind(TypeKind::Keyword(TKeyword::String)),
                         }));
                     }
                     regex_syntax::hir::GroupKind::NonCapturing => (),
@@ -123,7 +140,7 @@ impl Visitor for RegexVisitor<'a> {
     }
 }
 
-pub fn parse_regex(pattern: &str, checker: &mut Checker) -> Type {
+pub fn parse_regex(pattern: &str, checker: &'_ mut Checker) -> Type {
     let hir = Parser::new()
         .parse(&pattern.replace("(?<", "(?P<"))
         .unwrap();
@@ -142,19 +159,22 @@ mod tests {
 
     #[test]
     fn no_capture_groups() {
-        let t = parse_regex("foo|bar");
+        let mut checker = Checker::default();
+        let t = parse_regex("foo|bar", &mut checker);
         assert_eq!(t.to_string(), "[string]");
     }
 
     #[test]
     fn capture_groups() {
-        let t = parse_regex("(foo)(bar)");
+        let mut checker = Checker::default();
+        let t = parse_regex("(foo)(bar)", &mut checker);
         assert_eq!(t.to_string(), "[string, string, string]");
     }
 
     #[test]
     fn optional_capture_groups() {
-        let t = parse_regex("(foo)|(bar)");
+        let mut checker = Checker::default();
+        let t = parse_regex("(foo)|(bar)", &mut checker);
         assert_eq!(
             t.to_string(),
             "[string, string | undefined, string | undefined]"
@@ -163,13 +183,15 @@ mod tests {
 
     #[test]
     fn some_optional_capture_groups() {
-        let t = parse_regex("(foo)+(bar)?");
+        let mut checker = Checker::default();
+        let t = parse_regex("(foo)+(bar)?", &mut checker);
         assert_eq!(t.to_string(), "[string, string, string | undefined]");
     }
 
     #[test]
     fn named_capture_groups() {
-        let t = parse_regex("(?<x>\\d+),(?<y>\\d+)");
+        let mut checker = Checker::default();
+        let t = parse_regex("(?<x>\\d+),(?<y>\\d+)", &mut checker);
         assert_eq!(
             t.to_string(),
             "[string, string, string] & {groups: {x: string, y: string}}"
@@ -178,7 +200,8 @@ mod tests {
 
     #[test]
     fn optional_name_capture_groups() {
-        let t = parse_regex("(?<x>\\d+)|(?<y>\\d+)");
+        let mut checker = Checker::default();
+        let t = parse_regex("(?<x>\\d+)|(?<y>\\d+)", &mut checker);
         assert_eq!(
             t.to_string(),
             "[string, string | undefined, string | undefined] & {groups: {x?: string, y?: string}}",
@@ -187,7 +210,8 @@ mod tests {
 
     #[test]
     fn some_optional_named_capture_groups_and_non_capturing_group() {
-        let t = parse_regex("(?<x>\\d+),(?<y>\\d+)(?:,(?<z>\\d+))?");
+        let mut checker = Checker::default();
+        let t = parse_regex("(?<x>\\d+),(?<y>\\d+)(?:,(?<z>\\d+))?", &mut checker);
         assert_eq!(
             t.to_string(),
             "[string, string, string, string | undefined] & {groups: {x: string, y: string, z?: string}}",
