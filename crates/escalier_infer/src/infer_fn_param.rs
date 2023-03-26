@@ -24,7 +24,7 @@ impl Checker {
         // TypeScript annotates rest params using an array type so we do the
         // same thing by converting top-level rest types to array types.
         let pt = if let TypeKind::Rest(arg) = &pt.kind {
-            Type::from(TypeKind::Array(arg.to_owned()))
+            self.from_type_kind(TypeKind::Array(arg.to_owned()))
         } else {
             pt
         };
@@ -37,9 +37,9 @@ impl Checker {
                 let binding = Binding {
                     mutable: binding.mutable,
                     // TODO: copy over the provenance from binding.t
-                    t: Type::from(TypeKind::Union(vec![
+                    t: self.from_type_kind(TypeKind::Union(vec![
                         binding.t.to_owned(),
-                        Type::from(TypeKind::Keyword(TKeyword::Undefined)),
+                        self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined)),
                     ])),
                 };
                 pa.insert(name.to_owned(), binding);

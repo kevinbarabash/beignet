@@ -3,14 +3,16 @@ use regex_syntax::Parser;
 
 use escalier_ast::types::*;
 
-#[derive(Default)]
-struct RegexVisitor {
+use crate::checker::Checker;
+
+struct RegexVisitor<'a> {
+    pub checker: &'a Checker,
     pub optional_count: u32,
     pub elems: Vec<Type>,
     pub groups: Vec<TObjElem>,
 }
 
-impl Visitor for RegexVisitor {
+impl Visitor for RegexVisitor<'a> {
     type Output = Type;
     type Err = String;
 
@@ -121,11 +123,16 @@ impl Visitor for RegexVisitor {
     }
 }
 
-pub fn parse_regex(pattern: &str) -> Type {
+pub fn parse_regex(pattern: &str, checker: &mut Checker) -> Type {
     let hir = Parser::new()
         .parse(&pattern.replace("(?<", "(?P<"))
         .unwrap();
-    let visitor = RegexVisitor::default();
+    let visitor = RegexVisitor {
+        checker,
+        elems: vec![],
+        groups: vec![],
+        optional_count: 0,
+    };
     visit(&hir, visitor).unwrap()
 }
 

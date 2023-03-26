@@ -45,7 +45,7 @@ impl Checker {
                         // TODO: Update `infer_pattern_and_init` to do this for us.
                         update_expr(init, &s);
 
-                        let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+                        let t = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
 
                         Ok((s, t))
                     }
@@ -108,7 +108,7 @@ impl Checker {
                 self.insert_type(format!("{name}Constructor"), t.to_owned());
                 self.insert_value(
                     name.to_owned(),
-                    Type::from(TypeKind::Ref(TRef {
+                    self.from_type_kind(TypeKind::Ref(TRef {
                         name: format!("{name}Constructor"),
                         type_args: None,
                     })),
@@ -134,7 +134,7 @@ impl Checker {
                 body,
             }) => {
                 let elem_t = self.fresh_var(None);
-                let array_t = Type::from(TypeKind::Array(Box::from(elem_t.clone())));
+                let array_t = self.from_type_kind(TypeKind::Array(Box::from(elem_t.clone())));
 
                 let (_expr_s, expr_t) = self.infer_expr(expr, false)?;
 
@@ -154,7 +154,7 @@ impl Checker {
                 self.pop_scope();
 
                 let s = compose_many_subs(&[s3, s2, s1]);
-                let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+                let t = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
 
                 Ok((s, t))
             }
@@ -162,7 +162,7 @@ impl Checker {
                 Some(arg) => self.infer_expr(arg.as_mut(), false),
                 None => {
                     let s = Subst::default();
-                    let t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+                    let t = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
 
                     Ok((s, t))
                 }
@@ -173,7 +173,7 @@ impl Checker {
     pub fn infer_block(&mut self, body: &mut Block) -> Result<(Subst, Type), Vec<TypeError>> {
         self.push_scope(ScopeKind::Inherit);
 
-        let mut t = Type::from(TypeKind::Keyword(TKeyword::Undefined));
+        let mut t = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
         let mut s = Subst::new();
 
         for stmt in &mut body.stmts {
@@ -207,12 +207,14 @@ impl Checker {
                                 types.push(t.to_owned());
                             }
                         }
-                        None => types.push(Type::from(TypeKind::Keyword(TKeyword::Undefined))),
+                        None => {
+                            types.push(self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined)))
+                        }
                     }
                 }
 
                 let t = if types.is_empty() {
-                    Type::from(TypeKind::Keyword(TKeyword::Undefined))
+                    self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined))
                 } else {
                     union_many_types(&types)
                 };

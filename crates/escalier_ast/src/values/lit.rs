@@ -139,19 +139,19 @@ impl From<&Lit> for swc_ecma_ast::Expr {
     }
 }
 
-impl From<Lit> for Type {
-    fn from(lit: Lit) -> Self {
-        Type {
-            kind: TypeKind::Lit(match lit {
-                Lit::Num(n) => TLit::Num(n.value),
-                Lit::Bool(b) => TLit::Bool(b.value),
-                Lit::Str(s) => TLit::Str(s.value),
-            }),
-            provenance: None,
-            mutable: false,
-        }
-    }
-}
+// impl From<Lit> for Type {
+//     fn from(lit: Lit) -> Self {
+//         Type {
+//             kind: TypeKind::Lit(match lit {
+//                 Lit::Num(n) => TLit::Num(n.value),
+//                 Lit::Bool(b) => TLit::Bool(b.value),
+//                 Lit::Str(s) => TLit::Str(s.value),
+//             }),
+//             provenance: None,
+//             mutable: false,
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

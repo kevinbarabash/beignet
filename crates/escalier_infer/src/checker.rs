@@ -1,4 +1,5 @@
-use escalier_ast::types::{TVar, Type, TypeKind};
+use escalier_ast::types::{TKeyword, TLit, TVar, Type, TypeKind};
+use escalier_ast::values::{Keyword, Lit};
 
 use crate::binding::Binding;
 use crate::context::Context;
@@ -118,8 +119,65 @@ impl Checker {
     }
 
     pub fn fresh_var(&mut self, constraint: Option<Box<Type>>) -> Type {
+        self.from_type_kind(TypeKind::Var(TVar {
+            id: self.fresh_id(),
+            constraint,
+        }))
+    }
+
+    pub fn fresh_id(&mut self) -> u32 {
         let id = self.next_id;
         self.next_id = id + 1;
-        Type::from(TypeKind::Var(TVar { id, constraint }))
+        id
     }
+
+    pub fn from_type_kind(&mut self, kind: TypeKind) -> Type {
+        Type {
+            id: self.fresh_id(),
+            kind,
+            provenance: None,
+            mutable: false,
+        }
+    }
+
+    pub fn from_type_lit(&mut self, lit: TLit) -> Type {
+        self.from_type_kind(TypeKind::Lit(lit))
+    }
+
+    pub fn from_keyword(&mut self, keyword: Keyword) -> Type {
+        self.from_type_kind(TypeKind::Keyword(match keyword {
+            Keyword::Number => TKeyword::Number,
+            Keyword::String => TKeyword::String,
+            Keyword::Boolean => TKeyword::Boolean,
+            Keyword::Null => TKeyword::Null,
+            Keyword::Symbol => TKeyword::Symbol,
+            Keyword::Undefined => TKeyword::Undefined,
+            Keyword::Self_ => TKeyword::Self_,
+            Keyword::Never => TKeyword::Never,
+        }))
+    }
+
+    pub fn from_lit(&mut self, lit: Lit) -> Type {
+        self.from_type_kind(TypeKind::Lit(match lit {
+            Lit::Num(n) => TLit::Num(n.value),
+            Lit::Bool(b) => TLit::Bool(b.value),
+            Lit::Str(s) => TLit::Str(s.value),
+        }))
+    }
+
+    // impl From<TypeKind> for Type {
+    //     fn from(kind: TypeKind) -> Self {
+    //         Type {
+    //             kind,
+    //             provenance: None,
+    //             mutable: false,
+    //         }
+    //     }
+    // }
+
+    // impl From<TLit> for Type {
+    //     fn from(lit: TLit) -> Self {
+    //         Type::from(TypeKind::Lit(lit))
+    //     }
+    // }
 }

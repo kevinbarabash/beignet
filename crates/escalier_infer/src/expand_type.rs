@@ -205,7 +205,7 @@ impl Checker {
                             TObjElem::Method(method) => match (&method.name, lit) {
                                 (TPropKey::StringKey(key), TLit::Str(str)) if key == str => {
                                     // TODO: dedupe with infer_expr.rs and self.get_prop_by_name() below
-                                    let t = Type::from(TypeKind::Lam(TLam {
+                                    let t = self.from_type_kind(TypeKind::Lam(TLam {
                                         params: method.params.to_owned(),
                                         ret: method.ret.to_owned(),
                                         type_params: method.type_params.to_owned(),
@@ -250,13 +250,13 @@ impl Checker {
                             TObjElem::Index(index) => match &index.key.t.kind {
                                 TypeKind::Keyword(keyword) => match (keyword, lit) {
                                     (TKeyword::Number, TLit::Num(_)) => {
-                                        let undefined =
-                                            Type::from(TypeKind::Keyword(TKeyword::Undefined));
+                                        let undefined = self
+                                            .from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
                                         return Ok(union_types(&index.t, &undefined));
                                     }
                                     (TKeyword::String, TLit::Str(_)) => {
-                                        let undefined =
-                                            Type::from(TypeKind::Keyword(TKeyword::Undefined));
+                                        let undefined = self
+                                            .from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
                                         return Ok(union_types(&index.t, &undefined));
                                     }
                                     _ => (),
@@ -417,6 +417,7 @@ impl Checker {
 
         // NOTE: Applying a mapped type to a interface will return non-interface
         let t = Type {
+            id: self.fresh_id(),
             kind: TypeKind::Object(TObject {
                 elems: new_elems,
                 is_interface: false,
@@ -447,7 +448,7 @@ impl Checker {
                         TPropKey::NumberKey(key) => key,
                     };
                     // TODO: dedupe with infer_expr.rs and expand_index_access() above
-                    let t = Type::from(TypeKind::Lam(TLam {
+                    let t = self.from_type_kind(TypeKind::Lam(TLam {
                         params: method.params.to_owned(),
                         ret: method.ret.to_owned(),
                         type_params: method.type_params.to_owned(),
@@ -467,7 +468,7 @@ impl Checker {
                         TPropKey::NumberKey(key) => key,
                     };
                     if key == name {
-                        let t = Type::from(TypeKind::Lam(TLam {
+                        let t = self.from_type_kind(TypeKind::Lam(TLam {
                             params: vec![],
                             ret: getter.ret.to_owned(),
                             type_params: None,
@@ -486,9 +487,11 @@ impl Checker {
                         TPropKey::NumberKey(key) => key,
                     };
                     if key == name {
-                        let t = Type::from(TypeKind::Lam(TLam {
+                        let t = self.from_type_kind(TypeKind::Lam(TLam {
                             params: vec![setter.param.to_owned()],
-                            ret: Box::from(Type::from(TypeKind::Keyword(TKeyword::Undefined))),
+                            ret: Box::from(
+                                self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined)),
+                            ),
                             type_params: None,
                         }));
                         return Ok(TProp {
@@ -542,36 +545,36 @@ impl Checker {
                                 ..
                             }) => Some(t.as_ref().to_owned()),
                             TObjElem::Prop(prop) => match &prop.name {
-                                escalier_ast::types::TPropKey::StringKey(str) => {
-                                    Some(Type::from(TypeKind::Lit(TLit::Str(str.to_owned()))))
-                                }
-                                escalier_ast::types::TPropKey::NumberKey(num) => {
-                                    Some(Type::from(TypeKind::Lit(TLit::Num(num.to_owned()))))
-                                }
+                                escalier_ast::types::TPropKey::StringKey(str) => Some(
+                                    self.from_type_kind(TypeKind::Lit(TLit::Str(str.to_owned()))),
+                                ),
+                                escalier_ast::types::TPropKey::NumberKey(num) => Some(
+                                    self.from_type_kind(TypeKind::Lit(TLit::Num(num.to_owned()))),
+                                ),
                             },
                             TObjElem::Method(method) => match &method.name {
-                                escalier_ast::types::TPropKey::StringKey(str) => {
-                                    Some(Type::from(TypeKind::Lit(TLit::Str(str.to_owned()))))
-                                }
-                                escalier_ast::types::TPropKey::NumberKey(num) => {
-                                    Some(Type::from(TypeKind::Lit(TLit::Num(num.to_owned()))))
-                                }
+                                escalier_ast::types::TPropKey::StringKey(str) => Some(
+                                    self.from_type_kind(TypeKind::Lit(TLit::Str(str.to_owned()))),
+                                ),
+                                escalier_ast::types::TPropKey::NumberKey(num) => Some(
+                                    self.from_type_kind(TypeKind::Lit(TLit::Num(num.to_owned()))),
+                                ),
                             },
                             TObjElem::Getter(getter) => match &getter.name {
-                                escalier_ast::types::TPropKey::StringKey(str) => {
-                                    Some(Type::from(TypeKind::Lit(TLit::Str(str.to_owned()))))
-                                }
-                                escalier_ast::types::TPropKey::NumberKey(num) => {
-                                    Some(Type::from(TypeKind::Lit(TLit::Num(num.to_owned()))))
-                                }
+                                escalier_ast::types::TPropKey::StringKey(str) => Some(
+                                    self.from_type_kind(TypeKind::Lit(TLit::Str(str.to_owned()))),
+                                ),
+                                escalier_ast::types::TPropKey::NumberKey(num) => Some(
+                                    self.from_type_kind(TypeKind::Lit(TLit::Num(num.to_owned()))),
+                                ),
                             },
                             TObjElem::Setter(setter) => match &setter.name {
-                                escalier_ast::types::TPropKey::StringKey(str) => {
-                                    Some(Type::from(TypeKind::Lit(TLit::Str(str.to_owned()))))
-                                }
-                                escalier_ast::types::TPropKey::NumberKey(num) => {
-                                    Some(Type::from(TypeKind::Lit(TLit::Num(num.to_owned()))))
-                                }
+                                escalier_ast::types::TPropKey::StringKey(str) => Some(
+                                    self.from_type_kind(TypeKind::Lit(TLit::Str(str.to_owned()))),
+                                ),
+                                escalier_ast::types::TPropKey::NumberKey(num) => Some(
+                                    self.from_type_kind(TypeKind::Lit(TLit::Num(num.to_owned()))),
+                                ),
                             },
                         }
                     })
@@ -622,7 +625,7 @@ impl Checker {
                         // situations the elements have to match exactly.  This can
                         // likely be addressed by special-casing unification with `object`
                         // types.
-                        Type::from(TypeKind::Object(TObject {
+                        self.from_type_kind(TypeKind::Object(TObject {
                             elems: vec![],
                             is_interface: false,
                         }))
@@ -675,7 +678,7 @@ impl Checker {
                     }
                 };
 
-                let t = Type::from(TypeKind::Object(TObject {
+                let t = self.from_type_kind(TypeKind::Object(TObject {
                     elems,
                     is_interface: false,
                 }));
@@ -780,6 +783,7 @@ fn replace_infer_types(t: &mut Type, type_param_map: &HashMap<String, Type>) {
 }
 
 const NEVER_TYPE: Type = Type {
+    id: 0, // Checker's initial id is 1
     kind: TypeKind::Keyword(TKeyword::Never),
     provenance: None,
     mutable: false,

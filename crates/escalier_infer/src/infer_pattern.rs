@@ -132,7 +132,7 @@ impl Checker {
                 let tv = self.fresh_var(None);
                 Ok(tv)
             }
-            PatternKind::Lit(LitPat { lit, .. }) => Ok(Type::from(lit.to_owned())),
+            PatternKind::Lit(LitPat { lit, .. }) => Ok(self.from_lit(lit.to_owned())),
             PatternKind::Is(IsPat { ident, is_id, .. }) => {
                 let kind = match is_id.name.as_str() {
                     "string" => TypeKind::Keyword(types::TKeyword::String),
@@ -146,7 +146,7 @@ impl Checker {
                         type_args: None,
                     }),
                 };
-                let t = Type::from(kind);
+                let t = self.from_type_kind(kind);
                 if assump
                     .insert(
                         ident.name.to_owned(),
@@ -163,7 +163,7 @@ impl Checker {
             }
             PatternKind::Rest(RestPat { arg, .. }) => {
                 let t = self.infer_pattern_rec(arg, assump)?;
-                Ok(Type::from(TypeKind::Rest(Box::from(t))))
+                Ok(self.from_type_kind(TypeKind::Rest(Box::from(t))))
             }
             PatternKind::Array(ArrayPat { elems, .. }) => {
                 let elems: Result<Vec<Type>, Vec<TypeError>> = elems
@@ -173,7 +173,7 @@ impl Checker {
                             Some(elem) => match &mut elem.pattern.kind {
                                 PatternKind::Rest(rest) => {
                                     let rest_ty = self.infer_pattern_rec(&mut rest.arg, assump)?;
-                                    Ok(Type::from(TypeKind::Rest(Box::from(rest_ty))))
+                                    Ok(self.from_type_kind(TypeKind::Rest(Box::from(rest_ty))))
                                 }
                                 _ => {
                                     // TODO: handle elem.init when inferring the element's pattern
@@ -190,7 +190,7 @@ impl Checker {
                     })
                     .collect();
 
-                Ok(Type::from(TypeKind::Tuple(elems?)))
+                Ok(self.from_type_kind(TypeKind::Tuple(elems?)))
             }
             // TODO: infer type_params
             PatternKind::Object(ObjectPat { props, .. }) => {
@@ -255,7 +255,7 @@ impl Checker {
                     }
                 }
 
-                let obj_type = Type::from(TypeKind::Object(TObject {
+                let obj_type = self.from_type_kind(TypeKind::Object(TObject {
                     elems,
                     is_interface: false,
                 }));
@@ -264,7 +264,7 @@ impl Checker {
                     // TODO: Replace this with a proper Rest/Spread type
                     // See https://github.com/microsoft/TypeScript/issues/10727
                     Some(rest_ty) => {
-                        Ok(Type::from(TypeKind::Intersection(vec![obj_type, rest_ty])))
+                        Ok(self.from_type_kind(TypeKind::Intersection(vec![obj_type, rest_ty])))
                     }
                     None => Ok(obj_type),
                 }

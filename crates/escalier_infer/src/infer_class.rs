@@ -56,7 +56,7 @@ impl Checker {
                         type_params
                             .iter()
                             .map(|type_param| {
-                                Type::from(TypeKind::Ref(TRef {
+                                self.from_type_kind(TypeKind::Ref(TRef {
                                     name: type_param.name.name.to_owned(),
                                     type_args: None,
                                 }))
@@ -77,7 +77,7 @@ impl Checker {
 
                     let elem = TObjElem::Constructor(TCallable {
                         params: t_params,
-                        ret: Box::from(Type::from(TypeKind::Ref(TRef {
+                        ret: Box::from(self.from_type_kind(TypeKind::Ref(TRef {
                             name: class_name.to_owned(),
                             type_args,
                         }))),
@@ -115,7 +115,7 @@ impl Checker {
                         Some(params) => params
                             .iter_mut()
                             .map(|param| {
-                                let t = Type::from(TypeKind::Ref(TRef {
+                                let t = self.from_type_kind(TypeKind::Ref(TRef {
                                     name: param.name.name.to_owned(),
                                     type_args: None,
                                 }));
@@ -163,7 +163,7 @@ impl Checker {
                     self.pop_scope();
 
                     if *is_async && !is_promise(&body_t) {
-                        body_t = Type::from(TypeKind::Ref(TRef {
+                        body_t = self.from_type_kind(TypeKind::Ref(TRef {
                             name: String::from("Promise"),
                             type_args: Some(vec![body_t]),
                         }))
@@ -288,12 +288,12 @@ impl Checker {
             }
         }
 
-        let statics_t = Type::from(TypeKind::Object(TObject {
+        let statics_t = self.from_type_kind(TypeKind::Object(TObject {
             elems: statics_elems,
             is_interface: false,
         }));
 
-        let instance_t = Type::from(TypeKind::Object(TObject {
+        let instance_t = self.from_type_kind(TypeKind::Object(TObject {
             elems: instance_elems,
             is_interface: true,
         }));
@@ -355,7 +355,7 @@ impl Checker {
                         Some(params) => params
                             .iter_mut()
                             .map(|param| {
-                                let t = Type::from(TypeKind::Ref(TRef {
+                                let t = self.from_type_kind(TypeKind::Ref(TRef {
                                     name: param.name.name.to_owned(),
                                     type_args: None,
                                 }));
@@ -500,7 +500,7 @@ impl Checker {
             }
         }
 
-        let instance_t = Type::from(TypeKind::Object(TObject {
+        let instance_t = self.from_type_kind(TypeKind::Object(TObject {
             elems: instance_elems,
             is_interface: true,
         }));

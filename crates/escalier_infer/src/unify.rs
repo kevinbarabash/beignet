@@ -228,9 +228,11 @@ impl Checker {
                             // the last arg being a tuple type and the last param being
                             // an array type.
                             for _ in 0..max_regular_arg_count - regular_arg_count {
-                                args.push(Type::from(TypeKind::Keyword(TKeyword::Undefined)));
+                                args.push(
+                                    self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined)),
+                                );
                             }
-                            args.push(Type::from(TypeKind::Tuple(rest_args.to_owned())));
+                            args.push(self.from_type_kind(TypeKind::Tuple(rest_args.to_owned())));
 
                             let mut rest_param = rest_param.clone();
                             // NOTE: We intentionally change the mutability of the rest
@@ -331,7 +333,7 @@ impl Checker {
                     .filter_map(|elem| match elem {
                         TObjElem::Call(call) => {
                             eprintln!("handling callable");
-                            let lam = Type::from(TypeKind::Lam(TLam {
+                            let lam = self.from_type_kind(TypeKind::Lam(TLam {
                                 params: call.params.to_owned(),
                                 ret: call.ret.to_owned(),
                                 type_params: None, // TODO
@@ -496,7 +498,7 @@ impl Checker {
                     let rest1: Vec<_> = types1.drain(0..rest_len).collect();
                     let mut after1: Vec<_> = types1;
 
-                    let s = self.unify(&Type::from(TypeKind::Tuple(rest1)), &rest2)?;
+                    let s = self.unify(&self.from_type_kind(TypeKind::Tuple(rest1)), &rest2)?;
                     ss.push(s);
 
                     for (t1, t2) in after1.iter_mut().zip(after2.iter_mut()) {
@@ -587,7 +589,7 @@ impl Checker {
                             });
 
                         let s1 = self.unify(
-                            &Type::from(TypeKind::Object(TObject {
+                            &self.from_type_kind(TypeKind::Object(TObject {
                                 elems: obj_elems,
                                 is_interface: false,
                             })),
@@ -596,7 +598,7 @@ impl Checker {
 
                         let rest_type = rest_types.get_mut(0).unwrap();
                         let s2 = self.unify(
-                            &Type::from(TypeKind::Object(TObject {
+                            &self.from_type_kind(TypeKind::Object(TObject {
                                 elems: rest_elems,
                                 is_interface: false,
                             })),
@@ -645,7 +647,7 @@ impl Checker {
 
                         let s_obj = self.unify(
                             obj_type,
-                            &Type::from(TypeKind::Object(TObject {
+                            &self.from_type_kind(TypeKind::Object(TObject {
                                 elems: obj_elems,
                                 is_interface: false,
                             })),
@@ -654,7 +656,7 @@ impl Checker {
                         let rest_type = rest_types.get_mut(0).unwrap();
                         let s_rest = self.unify(
                             rest_type,
-                            &Type::from(TypeKind::Object(TObject {
+                            &self.from_type_kind(TypeKind::Object(TObject {
                                 elems: rest_elems,
                                 is_interface: false,
                             })),
@@ -820,7 +822,7 @@ impl Checker {
                             let t: Type = if types.len() == 1 {
                                 types.get(0).unwrap().to_owned()
                             } else {
-                                Type::from(TypeKind::Union(types))
+                                self.from_type_kind(TypeKind::Union(types))
                             };
 
                             return Ok(Subst::from(vec![(tv.id.to_owned(), t)]));
@@ -847,7 +849,7 @@ impl Checker {
                         {
                             let s: Subst = Subst::from(vec![(
                                 id.to_owned(),
-                                Type::from(TypeKind::Var(tv.to_owned())),
+                                self.from_type_kind(TypeKind::Var(tv.to_owned())),
                             )]);
                             return Ok(s);
                         }
@@ -894,20 +896,20 @@ mod tests {
     fn literals_are_subtypes_of_corresponding_keywords() -> Result<(), Vec<TypeError>> {
         let mut checker = Checker::default();
         let result = checker.unify(
-            &Type::from(num("5")),
-            &Type::from(TypeKind::Keyword(TKeyword::Number)),
+            &checker.from_lit(num("5")),
+            &checker.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
         )?;
         assert_eq!(result, Subst::default());
 
         let result = checker.unify(
-            &Type::from(str("hello")),
-            &Type::from(TypeKind::Keyword(TKeyword::String)),
+            &checker.from_lit(str("hello")),
+            &checker.from_type_kind(TypeKind::Keyword(TKeyword::String)),
         )?;
         assert_eq!(result, Subst::default());
 
         let result = checker.unify(
-            &Type::from(bool(&true)),
-            &Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+            &checker.from_lit(bool(&true)),
+            &checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
         )?;
         assert_eq!(result, Subst::default());
 
@@ -916,28 +918,30 @@ mod tests {
 
     #[test]
     fn object_subtypes() -> Result<(), Vec<TypeError>> {
+        let mut checker = Checker::default();
+
         let elems = vec![
             types::TObjElem::Prop(types::TProp {
                 name: TPropKey::StringKey(String::from("foo")),
                 optional: false,
                 mutable: false,
-                t: Type::from(num("5")),
+                t: checker.from_type_kind(num("5")),
             }),
             types::TObjElem::Prop(types::TProp {
                 name: TPropKey::StringKey(String::from("bar")),
                 optional: false,
                 mutable: false,
-                t: Type::from(bool(&true)),
+                t: checker.from_type_kind(bool(&true)),
             }),
             // Having extra properties is okay
             types::TObjElem::Prop(types::TProp {
                 name: TPropKey::StringKey(String::from("baz")),
                 optional: false,
                 mutable: false,
-                t: Type::from(TypeKind::Keyword(TKeyword::String)),
+                t: checker.from_type_kind(TypeKind::Keyword(TKeyword::String)),
             }),
         ];
-        let t1 = Type::from(TypeKind::Object(TObject {
+        let t1 = checker.from_type_kind(TypeKind::Object(TObject {
             elems,
             is_interface: false,
         }));
@@ -947,13 +951,13 @@ mod tests {
                 name: TPropKey::StringKey(String::from("foo")),
                 optional: false,
                 mutable: false,
-                t: Type::from(TypeKind::Keyword(TKeyword::Number)),
+                t: checker.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
             }),
             types::TObjElem::Prop(types::TProp {
                 name: TPropKey::StringKey(String::from("bar")),
                 optional: true,
                 mutable: false,
-                t: Type::from(TypeKind::Keyword(TKeyword::Boolean)),
+                t: checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)),
             }),
             // It's okay for qux to not appear in the subtype since
             // it's an optional property.
@@ -961,15 +965,14 @@ mod tests {
                 name: TPropKey::StringKey(String::from("qux")),
                 optional: true,
                 mutable: false,
-                t: Type::from(TypeKind::Keyword(TKeyword::String)),
+                t: checker.from_type_kind(TypeKind::Keyword(TKeyword::String)),
             }),
         ];
-        let t2 = Type::from(TypeKind::Object(TObject {
+        let t2 = checker.from_type_kind(TypeKind::Object(TObject {
             elems,
             is_interface: false,
         }));
 
-        let mut checker = Checker::default();
         let result = checker.unify(&t1, &t2)?;
         assert_eq!(result, Subst::default());
 
@@ -984,8 +987,8 @@ mod tests {
     //     let ctx = Context::default();
 
     //     let result = self.unify(
-    //         &Type::from(TypeKind::Keyword(TKeyword::Number)),
-    //         &Type::from(num("5")),
+    //         &self.from_type_kind(TypeKind::Keyword(TKeyword::Number)),
+    //         &self.from_type_kind(num("5")),
     //         &ctx,
     //     );
 

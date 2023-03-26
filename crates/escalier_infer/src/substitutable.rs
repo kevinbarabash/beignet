@@ -32,6 +32,7 @@ impl Substitutable for Type {
                         // TODO: apply the constraint and then check if the replacement
                         // is a subtype of it.
                         return Type {
+                            id: self.id,
                             kind: replacement.kind.to_owned(),
                             mutable: replacement.mutable,
                             provenance,
