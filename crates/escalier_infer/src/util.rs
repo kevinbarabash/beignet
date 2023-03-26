@@ -6,6 +6,7 @@ use std::iter::Iterator;
 
 use escalier_ast::types::*;
 
+use crate::checker::Checker;
 use crate::substitutable::{Subst, Substitutable};
 
 fn get_mapping(t: &Type) -> HashMap<u32, Type> {
@@ -27,8 +28,8 @@ fn get_mapping(t: &Type) -> HashMap<u32, Type> {
     mapping
 }
 
-pub fn close_over(s: &Subst, t: &Type) -> Type {
-    let t = t.apply(s);
+pub fn close_over<'a>(s: &Subst, t: &Type, checker: &'a mut Checker) -> Type {
+    let t = t.apply(s, checker);
 
     let tvs = t.ftv();
 
@@ -73,7 +74,7 @@ pub fn close_over(s: &Subst, t: &Type) -> Type {
                     },
                 }));
 
-                t.apply(&sub)
+                t.apply(&sub, checker)
             }
             _ => {
                 eprintln!("t = {t}");
@@ -266,11 +267,11 @@ pub fn union_many_types(ts: &[Type]) -> Type {
     }
 }
 
-pub fn compose_subs(s2: &Subst, s1: &Subst) -> Subst {
+pub fn compose_subs<'a>(s2: &Subst, s1: &Subst, checker: &'a mut Checker) -> Subst {
     let mut result: Subst = s1
         .iter()
         .map(|(tv, t)| {
-            let t = t.apply(s2);
+            let t = t.apply(s2, checker);
             (*tv, t)
         })
         .collect();
@@ -282,18 +283,19 @@ pub fn compose_subs(s2: &Subst, s1: &Subst) -> Subst {
 
 // subs are composed from left to right with ones to the right
 // being applied to all of the ones to the left.
-pub fn compose_many_subs(subs: &[Subst]) -> Subst {
-    subs.iter()
-        .fold(Subst::new(), |accum, next| compose_subs(&accum, next))
+pub fn compose_many_subs(subs: &[Subst], checker: &'_ mut Checker) -> Subst {
+    subs.iter().fold(Subst::new(), |accum, next| {
+        compose_subs(&accum, next, checker)
+    })
 }
 
 // If are multiple entries for the same type variable, this function merges
 // them into a union type (simplifying the type if possible).
-fn compose_subs_with_context(s1: &Subst, s2: &Subst) -> Subst {
+fn compose_subs_with_context<'a>(s1: &Subst, s2: &Subst, checker: &'a mut Checker) -> Subst {
     let mut result: Subst = s2
         .iter()
         .map(|(tv, t)| {
-            let t = t.apply(s1);
+            let t = t.apply(s1, checker);
             (*tv, t)
         })
         .collect();
@@ -309,9 +311,9 @@ fn compose_subs_with_context(s1: &Subst, s2: &Subst) -> Subst {
     result
 }
 
-pub fn compose_many_subs_with_context(subs: &[Subst]) -> Subst {
+pub fn compose_many_subs_with_context(subs: &[Subst], checker: &'_ mut Checker) -> Subst {
     subs.iter().fold(Subst::new(), |accum, next| {
-        compose_subs_with_context(&accum, next)
+        compose_subs_with_context(&accum, next, checker)
     })
 }
 
@@ -464,6 +466,7 @@ mod tests {
 
     #[test]
     fn test_compose_subs() {
+        let mut checker = Checker::default();
         let mut s2 = Subst::new();
         let mut s1 = Subst::new();
 
@@ -490,7 +493,7 @@ mod tests {
             })),
         );
 
-        let s = compose_subs(&s2, &s1);
+        let s = compose_subs(&s2, &s1, &mut checker);
 
         eprintln!("s = {s:#?}");
     }
@@ -523,7 +526,7 @@ mod tests {
         };
         let t = Type::from(TypeKind::Lam(lam));
         let s = Subst::default();
-        let result = close_over(&s, &t);
+        let result = close_over(&s, &t, &mut checker);
 
         assert_eq!(result.to_string(), "<A, B>(a: A, b: B) => A");
     }
