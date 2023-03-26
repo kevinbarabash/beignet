@@ -7,7 +7,6 @@ use escalier_ast::types::{
 };
 use escalier_ast::values::*;
 
-use crate::context::Context;
 use crate::infer_pattern::PatternUsage;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
@@ -76,8 +75,8 @@ impl Checker {
 
                 ss.push(s3);
 
-                let s = compose_many_subs(&ss);
-                let t = ret_type.apply(&s);
+                let s = compose_many_subs(&ss, self);
+                let t = ret_type.apply(&s, self);
 
                 // return (s3 `compose` s2 `compose` s1, apply s3 tv)
                 Ok((s, t))
@@ -170,8 +169,8 @@ impl Checker {
                             if let Ok(s3) = self.unify(&call_type, &lam_type) {
                                 ss.push(s3);
 
-                                let s = compose_many_subs(&ss.clone());
-                                let mut t = ret_type.apply(&s);
+                                let s = compose_many_subs(&ss.clone(), self);
+                                let mut t = ret_type.apply(&s, self);
                                 // NOTE: This is only necessary for TypeScript constructors
                                 // since they return mutable instances by definition.
                                 // We allow immutable objects to be converted to mutable
@@ -236,7 +235,7 @@ impl Checker {
                     &t,
                 )?;
 
-                let s = compose_subs(&s2, &s1);
+                let s = compose_subs(&s2, &s1, self);
                 // This leaves the function param names intact and returns a TLam
                 // instead of a TApp.
                 let t = match t.kind {
@@ -275,11 +274,11 @@ impl Checker {
 
                             self.pop_scope();
 
-                            let s = compose_subs(&s2, &s1);
+                            let s = compose_subs(&s2, &s1, self);
 
                             let (s3, t3) = self.infer_block(alternate)?;
 
-                            let s = compose_subs(&s3, &s);
+                            let s = compose_subs(&s3, &s, self);
                             let t = union_types(&t2, &t3);
 
                             Ok((s, t))
@@ -291,7 +290,7 @@ impl Checker {
                             let s4 =
                                 self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)))?;
 
-                            let s = compose_many_subs(&[s1, s2, s3, s4]);
+                            let s = compose_many_subs(&[s1, s2, s3, s4], self);
                             let t = union_types(&t2, &t3);
 
                             Ok((s, t))
@@ -313,7 +312,7 @@ impl Checker {
 
                         self.pop_scope();
 
-                        let s = compose_subs(&s2, &s1);
+                        let s = compose_subs(&s2, &s1, self);
 
                         let undefined = Type::from(TypeKind::Keyword(TKeyword::Undefined));
                         let t = union_types(&t2, &undefined);
@@ -326,7 +325,7 @@ impl Checker {
                         let s3 =
                             self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Boolean)))?;
 
-                        let s = compose_many_subs(&[s1, s2, s3]);
+                        let s = compose_many_subs(&[s1, s2, s3], self);
 
                         let undefined = Type::from(TypeKind::Keyword(TKeyword::Undefined));
                         let t = union_types(&t2, &undefined);
@@ -391,10 +390,10 @@ impl Checker {
                                 type_args: None,
                             }));
 
-                            let s1 = compose_many_subs(&ss);
+                            let s1 = compose_many_subs(&ss, self);
                             let s2 = self.unify(&call_type, &t)?;
 
-                            let s = compose_subs(&s2, &s1);
+                            let s = compose_subs(&s2, &s1, self);
                             let t = ret_type;
 
                             return Ok((s, t));
@@ -473,8 +472,8 @@ impl Checker {
                     type_params: None,
                 }));
 
-                let s = compose_many_subs(&ss);
-                let t = t.apply(&s);
+                let s = compose_many_subs(&ss, self);
+                let t = t.apply(&s, self);
 
                 // TODO: Update the inferred_type on each param to equal the
                 // corresponding type from t_params.
@@ -507,7 +506,7 @@ impl Checker {
 
                 let s = self.unify(&rt, &lt)?;
 
-                let s = compose_many_subs(&[rs, ls, s]);
+                let s = compose_many_subs(&[rs, ls, s], self);
                 let t = rt; // This is JavaScript's behavior
 
                 Ok((s, t))
@@ -559,7 +558,7 @@ impl Checker {
                     }
                 };
 
-                let s = compose_many_subs(&[s1, s2, s3, s4]);
+                let s = compose_many_subs(&[s1, s2, s3, s4], self);
 
                 let t = match (&t1.kind, &t2.kind) {
                     (TypeKind::Lit(TLit::Num(n1)), TypeKind::Lit(TLit::Num(n2))) => {
@@ -614,7 +613,7 @@ impl Checker {
                 let (s1, t1) = self.infer_expr(arg, false)?;
                 let s2 = self.unify(&t1, &Type::from(TypeKind::Keyword(TKeyword::Number)))?;
 
-                let s = compose_many_subs(&[s1, s2]);
+                let s = compose_many_subs(&[s1, s2], self);
                 let t = match op {
                     UnaryOp::Minus => Type::from(TypeKind::Keyword(TKeyword::Number)),
                 };
@@ -660,7 +659,7 @@ impl Checker {
                     }
                 }
 
-                let s = compose_many_subs(&ss);
+                let s = compose_many_subs(&ss, self);
                 let t = if spread_types.is_empty() {
                     Type::from(TypeKind::Object(TObject {
                         elems,
@@ -690,7 +689,7 @@ impl Checker {
                 }));
 
                 let s2 = self.unify(&t1, &promise_t)?;
-                let s = compose_subs(&s2, &s1);
+                let s = compose_subs(&s2, &s1, self);
 
                 Ok((s, inner_t))
             }
@@ -719,7 +718,7 @@ impl Checker {
                     }
                 }
 
-                let s = compose_many_subs(&ss);
+                let s = compose_many_subs(&ss, self);
                 let t = Type::from(TypeKind::Tuple(ts));
 
                 Ok((s, t))
@@ -728,7 +727,7 @@ impl Checker {
                 let (obj_s, mut obj_t) = self.infer_expr(obj, false)?;
                 let (prop_s, prop_t) = self.infer_property_type(&mut obj_t, prop, is_lvalue)?;
 
-                let s = compose_subs(&prop_s, &obj_s);
+                let s = compose_subs(&prop_s, &obj_s, self);
                 let t = prop_t;
 
                 Ok((s, t))
@@ -750,7 +749,7 @@ impl Checker {
                 // We ignore the types of expressions if there are any because any expression
                 // in JavaScript has a string representation.
                 let (ss, _): (Vec<_>, Vec<_>) = result?.iter().cloned().unzip();
-                let s = compose_many_subs(&ss);
+                let s = compose_many_subs(&ss, self);
 
                 Ok((s, t))
             }
@@ -779,14 +778,14 @@ impl Checker {
 
                     self.pop_scope();
 
-                    let s = compose_subs(&s2, &s1);
+                    let s = compose_subs(&s2, &s1, self);
                     let t = t2;
 
                     ss.push(s);
                     ts.push(t);
                 }
 
-                let s = compose_many_subs(&ss);
+                let s = compose_many_subs(&ss, self);
                 let t = union_many_types(&ts);
 
                 Ok((s, t))
@@ -1084,7 +1083,7 @@ impl Checker {
                                 let result = self.unify(&prop_t_clone, &key_clone);
                                 if result.is_ok() {
                                     let key_s = result?;
-                                    let s = compose_subs(&key_s, &prop_s_clone);
+                                    let s = compose_subs(&key_s, &prop_s_clone, self);
                                     // TODO: handle generic indexers
                                     // NOTE: Since access any indexer could result in an `undefined`
                                     // we include `| undefined` in the return type here.

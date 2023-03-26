@@ -1,16 +1,17 @@
 use escalier_ast::types::*;
 
 use crate::binding::Binding;
+use crate::checker::Checker;
 use crate::scheme::Scheme;
 use crate::substitutable::Subst;
 use crate::type_error::TypeError;
 
 pub trait Context {
-    fn apply(&mut self, s: &Subst);
+    fn apply<'a>(&mut self, s: &Subst, checker: &'a mut Checker);
 
     fn insert_binding(&mut self, name: String, b: Binding);
     fn insert_value(&mut self, name: String, t: Type);
-    fn insert_type(&mut self, name: String, t: Type);
+    fn insert_type(&mut self, name: String, t: Type, checker: &'_ mut Checker);
     fn insert_scheme(&mut self, name: String, scheme: Scheme);
 
     fn lookup_binding(&self, name: &str) -> Result<Binding, Vec<TypeError>>;

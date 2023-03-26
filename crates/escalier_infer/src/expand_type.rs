@@ -6,7 +6,6 @@ use escalier_ast::types::{
 use im::hashmap::HashMap;
 use itertools::Itertools;
 
-use crate::context::Context;
 use crate::scheme::Scheme;
 use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
@@ -173,7 +172,7 @@ impl Checker {
         let t = match self.unify(&check_type, &extends_type) {
             Ok(s) => {
                 let true_type = replace_aliases_rec(true_type, &type_param_map);
-                let t = true_type.apply(&s);
+                let t = true_type.apply(&s, self);
                 Box::from(t)
             }
             Err(_) => false_type.to_owned(),

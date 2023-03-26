@@ -4,7 +4,6 @@ use escalier_ast::types::{self as types, TFnParam, TKeyword, TPat, Type, TypeKin
 use escalier_ast::values::*;
 
 use crate::binding::Binding;
-use crate::context::Context;
 use crate::substitutable::Subst;
 use crate::type_error::TypeError;
 

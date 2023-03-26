@@ -3,7 +3,6 @@ use escalier_ast::values::{class::*, Lambda, PatternKind};
 use im::hashmap::HashMap;
 
 use crate::binding::Binding;
-use crate::context::Context;
 use crate::scheme::Scheme;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
@@ -84,8 +83,8 @@ impl Checker {
                         type_params,
                     });
 
-                    let s = compose_many_subs(&ss);
-                    let t = elem.apply(&s);
+                    let s = compose_many_subs(&ss, self);
+                    let t = elem.apply(&s, self);
 
                     statics_elems.push(t);
                 }
@@ -239,8 +238,8 @@ impl Checker {
                         }
                     };
 
-                    let s = compose_many_subs(&ss);
-                    let t = elem.apply(&s);
+                    let s = compose_many_subs(&ss, self);
+                    let t = elem.apply(&s, self);
 
                     if *is_static {
                         statics_elems.push(t.clone());
@@ -455,8 +454,8 @@ impl Checker {
                         }
                     };
 
-                    let s = compose_many_subs(&ss);
-                    let t = elem.apply(&s);
+                    let s = compose_many_subs(&ss, self);
+                    let t = elem.apply(&s, self);
 
                     instance_elems.push(t);
                 }
