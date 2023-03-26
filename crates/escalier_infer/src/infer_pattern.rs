@@ -5,7 +5,6 @@ use escalier_ast::values::{self as values, *};
 
 use crate::assump::Assump;
 use crate::binding::Binding;
-use crate::context::Context;
 use crate::diagnostic::Diagnostic;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
@@ -39,12 +38,12 @@ impl Checker {
                 // Allowing type_ann_ty to be a subtype of pat_type because
                 // only non-refutable patterns can have type annotations.
                 let s = self.unify(&type_ann_t, &pat_type)?;
-                let s = compose_subs(&s, &type_ann_s);
+                let s = compose_subs(&s, &type_ann_s, self);
 
                 // Substs are applied to any new variables introduced.  This handles
                 // the situation where explicit types have be provided for function
                 // parameters.
-                let new_vars = new_vars.apply(&s);
+                let new_vars = new_vars.apply(&s, self);
                 Ok((s, new_vars, type_ann_t))
             }
             None => Ok((Subst::new(), new_vars, pat_type)),
@@ -88,13 +87,13 @@ impl Checker {
 
         // infer_pattern can generate a non-empty Subst when the pattern includes
         // a type annotation.
-        let s = compose_subs(&ps, &s);
-        let s = compose_subs(&init.0, &s);
-        let pa = pa.apply(&s);
+        let s = compose_subs(&ps, &s, self);
+        let s = compose_subs(&init.0, &s, self);
+        let pa = pa.apply(&s, self);
 
         for (name, mut binding) in pa {
             if let TypeKind::Lam(_) = binding.t.kind {
-                binding.t = close_over(&s, &binding.t);
+                binding.t = close_over(&s, &binding.t, self);
             }
             self.insert_binding(name, binding);
         }

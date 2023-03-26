@@ -2,10 +2,8 @@ use derive_visitor::{DriveMut, VisitorMut};
 use escalier_ast::types::{TKeyword, TRef, Type, TypeKind};
 use escalier_ast::values::*;
 
-use crate::context::Context;
 use crate::infer_pattern::*;
 use crate::scheme::generalize;
-use crate::scope::Env;
 use crate::substitutable::Subst;
 use crate::substitutable::Substitutable;
 use crate::type_error::TypeError;
@@ -57,7 +55,11 @@ impl Checker {
                                         let (s, t) = self.infer_type_ann(type_ann, &mut None)?;
 
                                         // `declare` var decls should always appear at the top level
-                                        let t = if top_level { close_over(&s, &t) } else { t };
+                                        let t = if top_level {
+                                            close_over(&s, &t, self)
+                                        } else {
+                                            t
+                                        };
                                         self.insert_value(name.to_owned(), t.to_owned());
 
                                         update_type_ann(type_ann, &s);
@@ -86,10 +88,9 @@ impl Checker {
             }) => {
                 let (s, t) = self.infer_type_ann(type_ann, type_params)?;
 
-                let t = t.apply(&s);
+                let t = t.apply(&s, self);
 
-                let empty_env = Env::default();
-                let scheme = generalize(&empty_env, &t);
+                let scheme = generalize(&t, self);
 
                 self.insert_scheme(name.to_owned(), scheme);
 
@@ -100,7 +101,7 @@ impl Checker {
             StmtKind::ClassDecl(ClassDecl { ident, class }) => {
                 let (s, t) = self.infer_class(class)?;
 
-                let t = t.apply(&s);
+                let t = t.apply(&s, self);
 
                 // This follows the same pattern found in lib.es5.d.ts.
                 let name = ident.name.to_owned();
@@ -124,7 +125,11 @@ impl Checker {
                 // it succeeds since we aren't assigning it to variable.
                 update_expr(expr, &s);
 
-                let t = if top_level { close_over(&s, &t) } else { t };
+                let t = if top_level {
+                    close_over(&s, &t, self)
+                } else {
+                    t
+                };
 
                 Ok((s, t))
             }
@@ -139,7 +144,7 @@ impl Checker {
                 let (_expr_s, expr_t) = self.infer_expr(expr, false)?;
 
                 let s1 = self.unify(&expr_t, &array_t)?;
-                let elem_t = elem_t.apply(&s1);
+                let elem_t = elem_t.apply(&s1, self);
 
                 self.push_scope(ScopeKind::Inherit);
                 let s2 = self.infer_pattern_and_init(
@@ -153,7 +158,7 @@ impl Checker {
 
                 self.pop_scope();
 
-                let s = compose_many_subs(&[s3, s2, s1]);
+                let s = compose_many_subs(&[s3, s2, s1], self);
                 let t = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
 
                 Ok((s, t))
@@ -179,8 +184,8 @@ impl Checker {
         for stmt in &mut body.stmts {
             let (new_s, new_t) = self.infer_stmt(stmt, false)?;
 
-            t = new_t.apply(&s);
-            s = compose_subs(&new_s, &s);
+            t = new_t.apply(&s, self);
+            s = compose_subs(&new_s, &s, self);
         }
 
         self.pop_scope();

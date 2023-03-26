@@ -116,11 +116,15 @@ impl Checker {
                 // this to support having different lengths of params.
                 if app1.args.len() == app2.args.len() {
                     for (p1, p2) in app1.args.iter().zip(app2.args.iter()) {
-                        let s1 = self.unify(&p1.apply(&s), &p2.apply(&s))?;
-                        s = compose_subs(&s, &s1);
+                        let p1 = p1.apply(&s, self);
+                        let p2 = p2.apply(&s, self);
+                        let s1 = self.unify(&p1, &p2)?;
+                        s = compose_subs(&s, &s1, self);
                     }
-                    let s1 = self.unify(&app1.ret.apply(&s), &app2.ret.apply(&s))?;
-                    Ok(compose_subs(&s, &s1))
+                    let app1_ret = app1.ret.apply(&s, self);
+                    let app2_ret = app2.ret.apply(&s, self);
+                    let s1 = self.unify(&app1_ret, &app2_ret)?;
+                    Ok(compose_subs(&s, &s1, self))
                 } else {
                     Err(vec![TypeError::UnificationError(
                         Box::from(t1.to_owned()),
@@ -143,13 +147,15 @@ impl Checker {
                         // NOTE: The order of params is reversed.  This allows a callback
                         // whose params can accept more values (are supertypes) than the
                         // function will pass to the callback.
-                        let pt2 = p2.get_type();
-                        let pt1 = p1.get_type();
-                        let s1 = self.unify(&pt2.apply(&s), &pt1.apply(&s))?;
-                        s = compose_subs(&s, &s1);
+                        let pt2 = p2.get_type().apply(&s, self);
+                        let pt1 = p1.get_type().apply(&s, self);
+                        let s1 = self.unify(&pt2, &pt1)?;
+                        s = compose_subs(&s, &s1, self);
                     }
-                    let s1 = self.unify(&lam1.ret.apply(&s), &lam2.ret.apply(&s))?;
-                    Ok(compose_subs(&s, &s1))
+                    let lam1_ret = lam1.ret.apply(&s, self);
+                    let lam2_ret = lam2.ret.apply(&s, self);
+                    let s1 = self.unify(&lam1_ret, &lam2_ret)?;
+                    Ok(compose_subs(&s, &s1, self))
                 } else {
                     Err(vec![TypeError::UnificationError(
                         Box::from(t1.to_owned()),
@@ -306,8 +312,10 @@ impl Checker {
                 for (p1, p2) in args.iter_mut().zip(params.iter_mut()) {
                     // Each argument must be a subtype of the corresponding param.
                     // TODO: collect unification errors as diagnostics
-                    match self.unify(&p1.apply(&s), &p2.apply(&s)) {
-                        Ok(s1) => s = compose_subs(&s, &s1),
+                    let p1 = p1.apply(&s, self);
+                    let p2 = p2.apply(&s, self);
+                    match self.unify(&p1, &p2) {
+                        Ok(s1) => s = compose_subs(&s, &s1, self),
                         Err(mut report) => reasons.append(&mut report),
                     }
                 }
@@ -323,8 +331,10 @@ impl Checker {
                 // Unify return types
                 // Once #352 has been addressed we'll be able to also report
                 // unification errors with return types.
-                let s_ret = self.unify(&app.ret.apply(&s), &lam.ret.apply(&s))?;
-                Ok(compose_subs(&s, &s_ret))
+                let app_ret = app.ret.apply(&s, self);
+                let lam_ret = lam.ret.apply(&s, self);
+                let s_ret = self.unify(&app_ret, &lam_ret)?;
+                Ok(compose_subs(&s, &s_ret, self))
             }
             (TypeKind::App(_), TypeKind::Object(obj)) => {
                 let mut callables: Vec<_> = obj
@@ -424,7 +434,7 @@ impl Checker {
                         }
 
                         if has_matching_value {
-                            return Ok(compose_many_subs(&ss));
+                            return Ok(compose_many_subs(&ss, self));
                         }
 
                         // If there's no matching key...
@@ -448,7 +458,7 @@ impl Checker {
                     .collect();
 
                 let ss = result?;
-                Ok(compose_many_subs(&ss))
+                Ok(compose_many_subs(&ss, self))
             }
             (TypeKind::Tuple(types1), TypeKind::Tuple(types2)) => {
                 let mut before2: Vec<Type> = vec![];
@@ -510,7 +520,7 @@ impl Checker {
                 }
 
                 if reports.is_empty() {
-                    Ok(compose_many_subs(&ss))
+                    Ok(compose_many_subs(&ss, self))
                 } else {
                     Err(reports)
                 }
@@ -533,7 +543,7 @@ impl Checker {
             (TypeKind::Union(types), _) => {
                 let result: Result<Vec<_>, _> = types.iter().map(|t1| self.unify(t1, t2)).collect();
                 let ss = result?; // This is only okay if all calls to is_subtype are okay
-                Ok(compose_many_subs_with_context(&ss))
+                Ok(compose_many_subs_with_context(&ss, self))
             }
             (_, TypeKind::Union(types)) => {
                 let mut b = false;
@@ -547,7 +557,7 @@ impl Checker {
                 }
 
                 match b {
-                    true => Ok(compose_many_subs(&ss)),
+                    true => Ok(compose_many_subs(&ss, self)),
                     false => Err(vec![TypeError::UnificationError(
                         Box::from(t1.to_owned()),
                         Box::from(t2.to_owned()),
@@ -605,7 +615,7 @@ impl Checker {
                             rest_type,
                         )?;
 
-                        let s = compose_subs(&s2, &s1);
+                        let s = compose_subs(&s2, &s1, self);
                         Ok(s)
                     }
                     _ => Err(vec![TypeError::UnificationIsUndecidable]),
@@ -662,7 +672,7 @@ impl Checker {
                             })),
                         )?;
 
-                        let s = compose_subs(&s_rest, &s_obj);
+                        let s = compose_subs(&s_rest, &s_obj, self);
                         Ok(s)
                     }
                     _ => Err(vec![TypeError::UnificationIsUndecidable]),
@@ -690,7 +700,7 @@ impl Checker {
                                 .map(|(t1, t2)| self.unify(t1, t2))
                                 .collect();
                             let ss = result?; // This is only okay if all calls to is_subtype are okay
-                            Ok(compose_many_subs_with_context(&ss))
+                            Ok(compose_many_subs_with_context(&ss, self))
                         }
                         (None, None) => Ok(Subst::default()),
                         _ => Err(vec![TypeError::AliasTypeMismatch]),

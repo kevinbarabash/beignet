@@ -2,6 +2,7 @@ use escalier_ast::types::*;
 use im::hashmap::HashMap;
 
 use crate::binding::Binding;
+use crate::checker::Checker;
 use crate::context::Context;
 use crate::scheme::{generalize, Scheme};
 use crate::substitutable::{Subst, Substitutable};
@@ -11,8 +12,8 @@ pub type Env = HashMap<String, Scheme>;
 
 #[derive(Clone, Debug, Default)]
 pub struct Scope {
-    values: HashMap<String, Binding>,
-    types: Env,
+    pub values: HashMap<String, Binding>,
+    pub types: Env,
     pub is_async: bool,
 }
 
@@ -26,8 +27,8 @@ impl Context for Scope {
         self.insert_binding(name, Binding { mutable: false, t });
     }
 
-    fn insert_type(&mut self, name: String, t: Type) {
-        let scheme = generalize(&self.types, &t);
+    fn insert_type(&mut self, name: String, t: Type, checker: &'_ mut Checker) {
+        let scheme = generalize(&t, checker);
         self.insert_scheme(name, scheme);
     }
 
@@ -54,8 +55,8 @@ impl Context for Scope {
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    fn apply(&mut self, s: &Subst) {
+    fn apply<'a>(&mut self, s: &Subst, checker: &'a mut Checker) {
         // QUESTION: Do we need to update self.types as well?
-        self.values = self.values.apply(s);
+        self.values = self.values.apply(s, checker);
     }
 }

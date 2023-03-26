@@ -6,8 +6,6 @@ use std::iter::Iterator;
 
 use escalier_ast::types::*;
 
-use crate::context::Context;
-use crate::scope::Env;
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 use crate::util::{replace_aliases_in_lam, replace_aliases_rec};
@@ -64,13 +62,14 @@ pub fn get_sub_and_type_params(tvars: &[TVar]) -> (Subst, Option<Vec<TypeParam>>
     (sub, Some(type_params))
 }
 
-pub fn generalize(env: &Env, t: &Type) -> Scheme {
+pub fn generalize(t: &Type, checker: &'_ mut Checker) -> Scheme {
+    let env = &checker.current_scope.types;
     let tvars: Vec<TVar> = t.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id);
 
     let (sub, type_params) = get_sub_and_type_params(&tvars);
 
     Scheme {
-        t: Box::from(t.apply(&sub)),
+        t: Box::from(t.apply(&sub, checker)),
         type_params,
     }
 }
@@ -186,8 +185,7 @@ mod tests {
             is_interface: false,
         }));
 
-        let env = Env::new();
-        let sc = generalize(&env, &t);
+        let sc = generalize(&t, &mut checker);
 
         assert_eq!(sc.to_string(), "<A, B>{a: A, b: B}");
     }
@@ -215,8 +213,7 @@ mod tests {
             is_interface: false,
         }));
 
-        let env = Env::new();
-        let sc = generalize(&env, &t);
+        let sc = generalize(&t, &mut checker);
 
         assert_eq!(sc.to_string(), "<A>{a: A, b: A}");
     }
@@ -243,8 +240,7 @@ mod tests {
             is_interface: false,
         }));
 
-        let env = Env::new();
-        let sc = generalize(&env, &t);
+        let sc = generalize(&t, &mut checker);
 
         assert_eq!(sc.to_string(), "{a: number, b: string}");
     }
@@ -279,8 +275,7 @@ mod tests {
         };
         let t = checker.from_type_kind(TypeKind::Lam(lam));
 
-        let env = Env::new();
-        let gen_lam = generalize(&env, &t);
+        let gen_lam = generalize(&t, &mut checker);
 
         assert_eq!(gen_lam.to_string(), "<A, B>(a: A, b: B) => A");
     }

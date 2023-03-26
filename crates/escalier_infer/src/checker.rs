@@ -4,13 +4,14 @@ use escalier_ast::values::{Keyword, Lit};
 use crate::binding::Binding;
 use crate::context::Context;
 use crate::diagnostic::Diagnostic;
-use crate::scheme::Scheme;
+use crate::scheme::{generalize, Scheme};
 use crate::scope::Scope;
-use crate::substitutable::Subst;
+use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
 
 pub type Report = Vec<Diagnostic>;
 
+#[derive(Debug, Clone)]
 pub struct Checker {
     pub next_id: u32,
     pub current_scope: Scope,
@@ -40,37 +41,43 @@ impl Default for Checker {
     }
 }
 
-impl Context for Checker {
-    fn insert_binding(&mut self, name: String, b: Binding) {
+impl Checker {
+    pub fn insert_binding(&mut self, name: String, b: Binding) {
         self.current_scope.insert_binding(name, b);
     }
 
-    fn insert_value(&mut self, name: String, t: Type) {
+    pub fn insert_value(&mut self, name: String, t: Type) {
         self.current_scope.insert_value(name, t);
     }
 
-    fn insert_type(&mut self, name: String, t: Type) {
-        self.current_scope.insert_type(name, t);
+    pub fn insert_type(&mut self, name: String, t: Type) {
+        // self.current_scope.insert_type(name, t, self);
+        let scheme = generalize(&t, self);
+        self.insert_scheme(name, scheme);
     }
 
-    fn insert_scheme(&mut self, name: String, scheme: Scheme) {
+    pub fn insert_scheme(&mut self, name: String, scheme: Scheme) {
         self.current_scope.insert_scheme(name, scheme);
     }
 
-    fn lookup_binding(&self, name: &str) -> Result<Binding, Vec<TypeError>> {
+    pub fn lookup_binding(&self, name: &str) -> Result<Binding, Vec<TypeError>> {
         self.current_scope.lookup_binding(name)
     }
 
-    fn lookup_value(&self, name: &str) -> Result<Type, Vec<TypeError>> {
+    pub fn lookup_value(&self, name: &str) -> Result<Type, Vec<TypeError>> {
         self.current_scope.lookup_value(name)
     }
 
-    fn lookup_scheme(&self, name: &str) -> Result<Scheme, Vec<TypeError>> {
+    pub fn lookup_scheme(&self, name: &str) -> Result<Scheme, Vec<TypeError>> {
         self.current_scope.lookup_scheme(name)
     }
 
-    fn apply(&mut self, s: &Subst) {
-        self.current_scope.apply(s);
+    pub fn apply(&'_ mut self, s: &Subst) {
+        let values = self.current_scope.values.clone();
+        self.current_scope.values = values
+            .iter()
+            .map(|(k, v)| (k.to_owned(), v.apply(s, self)))
+            .collect();
     }
 }
 
