@@ -8,7 +8,7 @@ use escalier_ast::types::*;
 
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;
-use crate::util::{replace_aliases_in_lam, replace_aliases_rec};
+use crate::util::{get_tvar_constraint, replace_aliases_in_lam, replace_aliases_rec};
 
 use crate::checker::Checker;
 
@@ -29,28 +29,28 @@ impl fmt::Display for Scheme {
 }
 
 pub fn get_sub_and_type_params(
-    tvars: &[TVar],
+    tv_ids: &[u32],
     checker: &'_ mut Checker,
 ) -> (Subst, Option<Vec<TypeParam>>) {
-    if tvars.is_empty() {
+    if tv_ids.is_empty() {
         return (Subst::new(), None);
     }
 
     let mut sub = Subst::new();
     let mut type_params: Vec<TypeParam> = vec![];
 
-    for (i, tv) in tvars.iter().enumerate() {
+    for (i, tv_id) in tv_ids.iter().enumerate() {
         let c = char::from_u32((i + 65) as u32).unwrap();
         let name = c.to_string();
 
         type_params.push(TypeParam {
             name: name.to_owned(),
-            constraint: tv.constraint.clone(),
+            constraint: get_tvar_constraint(checker, tv_id),
             default: None,
         });
 
         sub.insert(
-            tv.id,
+            tv_id.to_owned(),
             checker.from_type_kind(TypeKind::Ref(TRef {
                 name: name.to_owned(),
                 type_args: None,
@@ -58,14 +58,18 @@ pub fn get_sub_and_type_params(
         );
     }
 
+    eprintln!("sub = {sub:#?}");
+
     (sub, Some(type_params))
 }
 
 pub fn generalize(t: &Type, checker: &'_ mut Checker) -> Scheme {
     let env = &checker.current_scope.types;
-    let tvars: Vec<TVar> = t.ftv().uniq_via(env.ftv(), |a, b| a.id == b.id);
+    let tv_ids: Vec<_> = t.ftv().uniq_via(env.ftv(), |a, b| a == b);
 
-    let (sub, type_params) = get_sub_and_type_params(&tvars, checker);
+    let (sub, type_params) = get_sub_and_type_params(&tv_ids, checker);
+
+    eprintln!("applying sub to {t}");
 
     Scheme {
         t: Box::from(t.apply(&sub, checker)),

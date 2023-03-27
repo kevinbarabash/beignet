@@ -335,7 +335,11 @@ pub fn build_ts_fn_type_with_args(
 pub fn build_type(t: &Type, type_params: Option<&TsTypeParamDecl>, scope: &Scope) -> TsType {
     let mutable = t.mutable;
     match &t.kind {
-        TypeKind::Var(TVar { id, constraint: _ }) => {
+        TypeKind::Var(TVar {
+            id,
+            constraint: _,
+            solution: _,
+        }) => {
             // TODO: handle constraints on type variables
             // This will likely be easier if we stop using type variables for
             // type parameters.

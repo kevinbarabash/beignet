@@ -29,7 +29,9 @@ pub use scheme::{get_sub_and_type_params, Scheme};
 pub use scope::*;
 pub use substitutable::{Subst, Substitutable};
 pub use type_error::TypeError;
-pub use util::{close_over, immutable_obj_type, normalize, replace_aliases_rec};
+pub use util::{
+    close_over, get_tvar_constraint, immutable_obj_type, normalize, replace_aliases_rec,
+};
 
 #[cfg(test)]
 mod tests {

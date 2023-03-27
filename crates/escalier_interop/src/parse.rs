@@ -12,10 +12,12 @@ use escalier_ast::types::{
     TRef, Type, TypeKind, TypeParam,
 };
 use escalier_ast::values::{Lit, DUMMY_LOC};
-use escalier_infer::{self, get_sub_and_type_params, Checker, Scheme, Subst, Substitutable};
+use escalier_infer::{
+    self, get_sub_and_type_params, get_tvar_constraint, Checker, Scheme, Subst, Substitutable,
+};
 
 use crate::overrides::maybe_override_string_methods;
-use crate::util;
+use crate::util::merge_schemes;
 
 pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<Type, String> {
     match type_ann {
@@ -426,21 +428,21 @@ fn infer_method_sig(
     let name = get_key_name(sig.key.as_ref())?;
 
     // If there are any free type variables, add them to `type_params`.
-    let mut tvs = params.ftv();
-    tvs.append(&mut ret.ftv());
+    let mut tv_ids = params.ftv();
+    tv_ids.append(&mut ret.ftv());
 
     let mut sub: Subst = Subst::default();
     let mut char_code: u32 = 65; // TODO: avoid naming collisions
-    for tv in tvs {
+    for tv_id in tv_ids {
         let c = char::from_u32(char_code).unwrap();
         let t = checker.from_type_kind(TypeKind::Ref(TRef {
             name: c.to_string(),
             type_args: None,
         }));
-        sub.insert(tv.id, t);
+        sub.insert(tv_id, t);
         type_params.push(TypeParam {
             name: c.to_string(),
-            constraint: tv.constraint,
+            constraint: get_tvar_constraint(checker, &tv_id),
             default: None,
         });
         char_code += 1;
@@ -880,11 +882,8 @@ pub fn parse_dts(d_ts_source: &str) -> Result<escalier_infer::Checker, Error> {
                 Ok(new_scheme) => {
                     match collector.checker.lookup_scheme(&name).ok() {
                         Some(old_scheme) => {
-                            let merged_scheme = util::merge_schemes(
-                                &old_scheme,
-                                &new_scheme,
-                                &mut collector.checker,
-                            );
+                            let merged_scheme =
+                                merge_schemes(&old_scheme, &new_scheme, &mut collector.checker);
                             collector.checker.insert_scheme(name, merged_scheme);
                         }
                         None => collector.checker.insert_scheme(name, new_scheme),

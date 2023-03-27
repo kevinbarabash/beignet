@@ -15,7 +15,7 @@ pub type Subst = HashMap<u32, Type>;
 pub trait Substitutable {
     fn apply<'a>(&self, subs: &Subst, checker: &'a mut Checker) -> Self;
     // The vector return must not contain any `TVar`s with the same `id`.
-    fn ftv(&self) -> Vec<TVar>;
+    fn ftv(&self) -> Vec<u32>;
 }
 
 impl Substitutable for Type {
@@ -32,14 +32,12 @@ impl Substitutable for Type {
 
                         // TODO: apply the constraint and then check if the replacement
                         // is a subtype of it.
-                        let t = Type {
+                        return Type {
                             id: self.id,
                             kind: replacement.kind.to_owned(),
                             mutable: replacement.mutable,
                             provenance,
                         };
-                        checker.types.insert(self.id, t.clone());
-                        return t;
                     }
                     None => {
                         if let Some(constraint) = &tv.constraint {
@@ -90,9 +88,7 @@ impl Substitutable for Type {
                                     checker.from_type_kind(TypeKind::Keyword(TKeyword::String));
                                 return checker.from_type_kind(TypeKind::Array(Box::from(string)));
                             } else {
-                                let t = parse_regex(pattern, checker);
-                                checker.types.insert(self.id, t.clone());
-                                return t;
+                                return parse_regex(pattern, checker);
                             }
                         }
                     }
@@ -137,18 +133,16 @@ impl Substitutable for Type {
 
         norm_type(&mut t);
 
-        checker.types.insert(self.id, t.clone());
-
         t
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         match &self.kind {
             TypeKind::Var(tv) => {
-                let mut result = vec![tv.to_owned()];
+                let mut result = vec![tv.id.to_owned()];
                 if let Some(constraint) = &tv.constraint {
                     result.append(&mut constraint.ftv());
                 }
-                result.unique_via(|a, b| a.id == b.id)
+                result.unique_via(|a, b| a == b)
             }
             TypeKind::App(TApp {
                 args,
@@ -158,7 +152,7 @@ impl Substitutable for Type {
                 let mut result = args.ftv();
                 result.append(&mut ret.ftv());
                 result.append(&mut type_args.ftv());
-                result.unique_via(|a, b| a.id == b.id)
+                result.unique_via(|a, b| a == b)
             }
             TypeKind::Lam(lam) => lam.ftv(),
             TypeKind::Lit(_) => vec![],
@@ -213,7 +207,7 @@ impl Substitutable for Scheme {
             type_params: self.type_params.apply(sub, checker),
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         let mut result = self.t.ftv();
         result.append(&mut self.type_params.ftv());
         result
@@ -234,7 +228,7 @@ impl Substitutable for TypeParam {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         let mut result = vec![];
         if let Some(constraint) = &self.constraint {
             result.append(&mut constraint.ftv());
@@ -259,7 +253,7 @@ impl Substitutable for TMethod {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         let mut result = self.params.ftv();
         result.append(&mut self.ret.ftv());
         result.append(&mut self.type_params.ftv());
@@ -274,7 +268,7 @@ impl Substitutable for TGetter {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         self.ret.ftv()
     }
 }
@@ -286,7 +280,7 @@ impl Substitutable for TSetter {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         self.param.ftv()
     }
 }
@@ -303,7 +297,7 @@ impl Substitutable for TObjElem {
             TObjElem::Setter(setter) => TObjElem::Setter(setter.apply(sub, checker)),
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         match self {
             TObjElem::Call(qlam) => qlam.ftv(),
             TObjElem::Constructor(qlam) => qlam.ftv(),
@@ -324,10 +318,10 @@ impl Substitutable for TLam {
             ret: Box::from(self.ret.apply(sub, checker)),
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         let mut result = self.params.ftv();
         result.append(&mut self.ret.ftv());
-        result.unique_via(|a, b| a.id == b.id)
+        result.unique_via(|a, b| a == b)
     }
 }
 
@@ -341,7 +335,7 @@ impl Substitutable for TRef {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         match &self.type_args {
             Some(type_args) => type_args.ftv(),
             None => vec![],
@@ -361,7 +355,7 @@ impl Substitutable for TCallable {
             type_params: self.type_params.apply(sub, checker),
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         let mut result = self.params.ftv();
         result.append(&mut self.ret.ftv());
         result.append(&mut self.type_params.ftv());
@@ -376,7 +370,7 @@ impl Substitutable for TIndex {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         self.t.ftv()
     }
 }
@@ -388,7 +382,7 @@ impl Substitutable for TProp {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         self.t.ftv()
     }
 }
@@ -400,7 +394,7 @@ impl Substitutable for TFnParam {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         self.t.ftv()
     }
 }
@@ -414,7 +408,7 @@ where
             .map(|(k, v)| (k.to_owned(), v.apply(sub, checker)))
             .collect()
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         // we can't use iter_values() here because it's a consuming iterator
         self.iter().flat_map(|(_, b)| b.ftv()).collect()
     }
@@ -427,7 +421,7 @@ where
     fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
         self.iter().map(|elem| elem.apply(sub, checker)).collect()
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         self.iter().flat_map(|c| c.ftv()).collect()
     }
 }
@@ -439,7 +433,7 @@ where
     fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
         self.as_ref().map(|val| val.apply(sub, checker))
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         self.as_ref()
             .map(|val| val.to_owned().ftv())
             .unwrap_or_default()
@@ -453,7 +447,7 @@ impl Substitutable for Binding {
             ..self.to_owned()
         }
     }
-    fn ftv(&self) -> Vec<TVar> {
+    fn ftv(&self) -> Vec<u32> {
         self.t.ftv()
     }
 }

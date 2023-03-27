@@ -9,17 +9,29 @@ use escalier_ast::types::*;
 use crate::checker::Checker;
 use crate::substitutable::{Subst, Substitutable};
 
+pub fn get_tvar_constraint(checker: &'_ mut Checker, id: &u32) -> Option<Box<Type>> {
+    match checker.types.get(id) {
+        Some(t) => match &t.kind {
+            TypeKind::Var(TVar { constraint, .. }) => constraint.as_ref().map(|c| c.to_owned()),
+            _ => None,
+        },
+        None => todo!(),
+    }
+}
+
 fn get_mapping(t: &Type, checker: &'_ mut Checker) -> HashMap<u32, Type> {
     let mapping: HashMap<u32, Type> = t
         .ftv()
         .iter()
         .enumerate()
         .map(|(index, key)| {
+            let constraint = get_tvar_constraint(checker, key);
             (
-                key.id,
+                key.to_owned(),
                 checker.from_type_kind(TypeKind::Var(TVar {
                     id: index as u32,
-                    constraint: key.constraint.clone(),
+                    constraint,
+                    solution: None,
                 })),
             )
         })
@@ -31,9 +43,9 @@ fn get_mapping(t: &Type, checker: &'_ mut Checker) -> HashMap<u32, Type> {
 pub fn close_over<'a>(s: &Subst, t: &Type, checker: &'a mut Checker) -> Type {
     let t = t.apply(s, checker);
 
-    let tvs = t.ftv();
+    let tv_ids = t.ftv();
 
-    let t = if tvs.is_empty() {
+    let t = if tv_ids.is_empty() {
         t
     } else {
         match &t.kind {
@@ -49,16 +61,16 @@ pub fn close_over<'a>(s: &Subst, t: &Type, checker: &'a mut Checker) -> Type {
                 let mut type_params: Vec<TypeParam> = vec![];
                 let mut sub: Subst = Subst::default();
                 let mut char_code: u32 = 65;
-                for tv in tvs {
+                for tv_id in tv_ids {
                     let c = char::from_u32(char_code).unwrap();
                     let t = checker.from_type_kind(TypeKind::Ref(TRef {
                         name: c.to_string(),
                         type_args: None,
                     }));
-                    sub.insert(tv.id, t);
+                    sub.insert(tv_id, t);
                     type_params.push(TypeParam {
                         name: c.to_string(),
-                        constraint: tv.constraint,
+                        constraint: get_tvar_constraint(checker, &tv_id),
                         default: None,
                     });
                     char_code += 1;
@@ -400,8 +412,6 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
         shadowed_type_param_names: vec![],
     };
     t.drive_mut(&mut visitor);
-    // TODO: give this a new id and insert it into checker.types.
-    eprintln!("replace_aliases_rec: t = {t}");
     t
 }
 
@@ -477,6 +487,7 @@ mod tests {
             checker.from_type_kind(TypeKind::Var(TVar {
                 id: 5,
                 constraint: None,
+                solution: None,
             })),
         );
         s2.insert(
@@ -484,6 +495,7 @@ mod tests {
             checker.from_type_kind(TypeKind::Var(TVar {
                 id: 4,
                 constraint: None,
+                solution: None,
             })),
         );
 
@@ -492,6 +504,7 @@ mod tests {
             checker.from_type_kind(TypeKind::Var(TVar {
                 id: 2,
                 constraint: None,
+                solution: None,
             })),
         );
 

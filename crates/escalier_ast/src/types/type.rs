@@ -51,6 +51,8 @@ pub struct TIndexAccess {
 pub struct TVar {
     #[drive(skip)]
     pub id: u32, // This should never be mutated
+    #[drive(skip)]
+    pub solution: Option<u32>,
     pub constraint: Option<Box<Type>>,
 }
 

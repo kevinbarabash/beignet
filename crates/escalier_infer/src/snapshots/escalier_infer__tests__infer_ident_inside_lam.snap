@@ -71,6 +71,7 @@ Program {
                                                                 kind: Var(
                                                                     TVar {
                                                                         id: 5,
+                                                                        solution: None,
                                                                         constraint: None,
                                                                     },
                                                                 ),
@@ -112,6 +113,7 @@ Program {
                                                                                     kind: Var(
                                                                                         TVar {
                                                                                             id: 5,
+                                                                                            solution: None,
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
@@ -148,6 +150,7 @@ Program {
                                                                 kind: Var(
                                                                     TVar {
                                                                         id: 6,
+                                                                        solution: None,
                                                                         constraint: None,
                                                                     },
                                                                 ),
@@ -189,6 +192,7 @@ Program {
                                                                                     kind: Var(
                                                                                         TVar {
                                                                                             id: 6,
+                                                                                            solution: None,
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
@@ -263,6 +267,7 @@ Program {
                                                                             kind: Var(
                                                                                 TVar {
                                                                                     id: 5,
+                                                                                    solution: None,
                                                                                     constraint: None,
                                                                                 },
                                                                             ),
@@ -305,6 +310,7 @@ Program {
                                                                             kind: Var(
                                                                                 TVar {
                                                                                     id: 6,
+                                                                                    solution: None,
                                                                                     constraint: None,
                                                                                 },
                                                                             ),
@@ -387,6 +393,7 @@ Program {
                                                                         kind: Var(
                                                                             TVar {
                                                                                 id: 5,
+                                                                                solution: None,
                                                                                 constraint: None,
                                                                             },
                                                                         ),
@@ -434,6 +441,7 @@ Program {
                                                                         kind: Var(
                                                                             TVar {
                                                                                 id: 6,
+                                                                                solution: None,
                                                                                 constraint: None,
                                                                             },
                                                                         ),
@@ -496,6 +504,7 @@ Program {
                                                                                 kind: Var(
                                                                                     TVar {
                                                                                         id: 5,
+                                                                                        solution: None,
                                                                                         constraint: None,
                                                                                     },
                                                                                 ),
@@ -538,6 +547,7 @@ Program {
                                                                                 kind: Var(
                                                                                     TVar {
                                                                                         id: 6,
+                                                                                        solution: None,
                                                                                         constraint: None,
                                                                                     },
                                                                                 ),
@@ -590,6 +600,7 @@ Program {
                                                                                     kind: Var(
                                                                                         TVar {
                                                                                             id: 5,
+                                                                                            solution: None,
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
@@ -631,6 +642,7 @@ Program {
                                                                                                         kind: Var(
                                                                                                             TVar {
                                                                                                                 id: 5,
+                                                                                                                solution: None,
                                                                                                                 constraint: None,
                                                                                                             },
                                                                                                         ),
@@ -667,6 +679,7 @@ Program {
                                                                                     kind: Var(
                                                                                         TVar {
                                                                                             id: 6,
+                                                                                            solution: None,
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
@@ -708,6 +721,7 @@ Program {
                                                                                                         kind: Var(
                                                                                                             TVar {
                                                                                                                 id: 6,
+                                                                                                                solution: None,
                                                                                                                 constraint: None,
                                                                                                             },
                                                                                                         ),
@@ -782,6 +796,7 @@ Program {
                                                                                                 kind: Var(
                                                                                                     TVar {
                                                                                                         id: 5,
+                                                                                                        solution: None,
                                                                                                         constraint: None,
                                                                                                     },
                                                                                                 ),
@@ -824,6 +839,7 @@ Program {
                                                                                                 kind: Var(
                                                                                                     TVar {
                                                                                                         id: 6,
+                                                                                                        solution: None,
                                                                                                         constraint: None,
                                                                                                     },
                                                                                                 ),
@@ -923,6 +939,7 @@ Program {
                                                                     kind: Var(
                                                                         TVar {
                                                                             id: 5,
+                                                                            solution: None,
                                                                             constraint: None,
                                                                         },
                                                                     ),
@@ -981,6 +998,7 @@ Program {
                                                                     kind: Var(
                                                                         TVar {
                                                                             id: 6,
+                                                                            solution: None,
                                                                             constraint: None,
                                                                         },
                                                                     ),
@@ -1054,6 +1072,7 @@ Program {
                                                                             kind: Var(
                                                                                 TVar {
                                                                                     id: 5,
+                                                                                    solution: None,
                                                                                     constraint: None,
                                                                                 },
                                                                             ),
@@ -1107,6 +1126,7 @@ Program {
                                                                             kind: Var(
                                                                                 TVar {
                                                                                     id: 6,
+                                                                                    solution: None,
                                                                                     constraint: None,
                                                                                 },
                                                                             ),
@@ -1162,6 +1182,7 @@ Program {
                                                                     kind: Var(
                                                                         TVar {
                                                                             id: 5,
+                                                                            solution: None,
                                                                             constraint: None,
                                                                         },
                                                                     ),
@@ -1203,6 +1224,7 @@ Program {
                                                                                         kind: Var(
                                                                                             TVar {
                                                                                                 id: 5,
+                                                                                                solution: None,
                                                                                                 constraint: None,
                                                                                             },
                                                                                         ),
@@ -1239,6 +1261,7 @@ Program {
                                                                     kind: Var(
                                                                         TVar {
                                                                             id: 6,
+                                                                            solution: None,
                                                                             constraint: None,
                                                                         },
                                                                     ),
@@ -1280,6 +1303,7 @@ Program {
                                                                                         kind: Var(
                                                                                             TVar {
                                                                                                 id: 6,
+                                                                                                solution: None,
                                                                                                 constraint: None,
                                                                                             },
                                                                                         ),
@@ -1354,6 +1378,7 @@ Program {
                                                                                 kind: Var(
                                                                                     TVar {
                                                                                         id: 5,
+                                                                                        solution: None,
                                                                                         constraint: None,
                                                                                     },
                                                                                 ),
@@ -1396,6 +1421,7 @@ Program {
                                                                                 kind: Var(
                                                                                     TVar {
                                                                                         id: 6,
+                                                                                        solution: None,
                                                                                         constraint: None,
                                                                                     },
                                                                                 ),

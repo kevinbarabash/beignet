@@ -133,7 +133,11 @@ impl Checker {
         // self.from_type_kind(TypeKind::Var(TVar { id, constraint }))
         let t = Type {
             id,
-            kind: TypeKind::Var(TVar { id, constraint }),
+            kind: TypeKind::Var(TVar {
+                id,
+                constraint,
+                solution: None,
+            }),
             provenance: None,
             mutable: false,
         };

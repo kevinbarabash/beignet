@@ -34,11 +34,19 @@ impl Checker {
         // Verify that both t1 and t2 are always in self.types and they the types
         // passed to unify() match what's in self.types.
         match self.types.get(&t1.id) {
-            Some(_cached_t1) => (),
+            Some(cached_t1) => {
+                if cached_t1 != t1 {
+                    eprintln!("cached_t1 != t1 : {cached_t1} != {t1}");
+                }
+            }
             None => panic!("Couldn't find {t1} in self.types, t1.id = {}", t1.id),
         }
         match self.types.get(&t2.id) {
-            Some(_cached_t2) => (),
+            Some(cached_t2) => {
+                if cached_t2 != t2 {
+                    eprintln!("cached_t2 != t2 : {cached_t2} != {t2}");
+                }
+            }
             None => panic!("Couldn't find {t2} in self.types, t2.id = {}", t2.id),
         }
 
@@ -826,7 +834,7 @@ impl Checker {
                 Ok(Subst::default())
             }
             _ => {
-                if occurs_check(tv, t) {
+                if t.ftv().contains(&tv.id) {
                     // Union types are a special case since `t1` unifies trivially with `t1 | t2 | ... tn`
                     if let TypeKind::Union(elem_types) = &t.kind {
                         let elem_types_without_id: Vec<Type> = elem_types
@@ -871,6 +879,7 @@ impl Checker {
                         // substitution from the one that has no constraints to the one that does.
                         if let TypeKind::Var(TVar {
                             id,
+                            solution: None,
                             constraint: None,
                         }) = t.kind
                         {
@@ -895,10 +904,6 @@ impl Checker {
 enum Relation {
     SubType,
     SuperType,
-}
-
-fn occurs_check(tv: &TVar, t: &Type) -> bool {
-    t.ftv().contains(tv)
 }
 
 #[cfg(test)]
