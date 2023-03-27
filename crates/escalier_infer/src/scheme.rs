@@ -364,7 +364,7 @@ mod tests {
 
         let t = checker.instantiate(&sc);
 
-        assert_eq!(t.to_string(), "{a: t4, b: t6}");
+        assert_eq!(t.to_string(), "{a: t4, b: t5}");
     }
 
     #[test]
@@ -517,6 +517,6 @@ mod tests {
 
         let lam = checker.instantiate_gen_lam(&gen_lam, None);
 
-        assert_eq!(lam.to_string(), "(a: t5, b: t7) => t5");
+        assert_eq!(lam.to_string(), "(a: t5, b: t6) => t5");
     }
 }

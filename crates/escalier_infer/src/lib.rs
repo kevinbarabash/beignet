@@ -1346,7 +1346,7 @@ mod tests {
 
         insta::assert_snapshot!(current_report_message(&checker), @r###"
         ESC_1 - args don't match expected params:
-        └ TypeError::UnificationError: (x: t12, y: t14, z: t16) => true, (a: number, b: number) => boolean
+        └ TypeError::UnificationError: (x: t12, y: t13, z: t14) => true, (a: number, b: number) => boolean
         "###);
     }
 

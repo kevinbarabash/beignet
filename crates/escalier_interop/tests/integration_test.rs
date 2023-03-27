@@ -1,7 +1,7 @@
 use std::fs;
 
 use escalier_ast::values::Program;
-use escalier_infer::{Checker, Context, TypeError};
+use escalier_infer::{Checker, TypeError};
 use escalier_interop::parse::*;
 use escalier_parser::parse;
 
@@ -11,7 +11,7 @@ pub fn messages(report: &[TypeError]) -> Vec<String> {
 
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
-fn infer_prog(src: &str) -> (Program, escalier_infer::Scope) {
+fn infer_prog(src: &str) -> (Program, Checker) {
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
     let mut checker = parse_dts(&lib).unwrap();
 
@@ -28,7 +28,7 @@ fn infer_prog(src: &str) -> (Program, escalier_infer::Scope) {
             if !checker.current_report.is_empty() {
                 panic!("was expect infer_prog() to return no errors");
             }
-            (prog, checker.current_scope)
+            (prog, checker)
         }
         Err(error) => {
             let message = error
@@ -391,8 +391,7 @@ fn infer_partial() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type PartialObj = Partial<Obj>;
     "#;
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
     let t = checker.lookup_type("PartialObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
@@ -409,8 +408,7 @@ fn infer_required() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type RequiredObj = Required<Obj>;
     "#;
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
     let t = checker.lookup_type("RequiredObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
@@ -427,8 +425,7 @@ fn infer_readonly() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type ReadonlyObj = Readonly<Obj>;
     "#;
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
     let t = checker.lookup_type("ReadonlyObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
@@ -442,8 +439,7 @@ fn infer_readonly_with_indexer_only() {
     type Obj = {[key: string]: boolean};
     type ReadonlyObj = Readonly<Obj>;
     "#;
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
     let t = checker.lookup_type("ReadonlyObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
@@ -457,8 +453,7 @@ fn infer_readonly_with_indexer_and_other_properties() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number, [key: number]: boolean};
     type ReadonlyObj = Readonly<Obj>;
     "#;
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
     let t = checker.lookup_type("ReadonlyObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
@@ -475,8 +470,7 @@ fn infer_pick() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type PickObj = Pick<Obj, "a" | "b">;
     "#;
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
     let t = checker.lookup_type("PickObj").unwrap();
     let t = checker.expand_type(&t).unwrap();
 
@@ -511,8 +505,7 @@ fn infer_partial_with_getters_and_setters_on_class_instance() {
     type T3 = PartialFoo["qux"];
     "#;
 
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
 
     let t = checker.lookup_type("T1").unwrap();
     let t = checker.expand_type(&t).unwrap();
@@ -554,8 +547,7 @@ fn infer_exclude() {
     let src = r#"
     type T1 = Exclude<"a" | "b" | "c", "a" | "b">;
     "#;
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
     let t = checker.lookup_type("T1").unwrap();
 
     let result = format!("{}", t);
@@ -599,8 +591,7 @@ fn infer_omit() {
     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
     type T1 = Omit<Obj, "b" | "c">;
     "#;
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
     let t = checker.lookup_type("T1").unwrap();
 
     let result = format!("{}", t);
@@ -617,8 +608,7 @@ fn infer_omit_string() {
     let src = r#"
     type T1 = Omit<String, "length">;
     "#;
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
     let t = checker.lookup_type("T1").unwrap();
 
     let result = format!("{}", t);
@@ -635,8 +625,7 @@ fn infer_method_type_with_indexed_access() {
     let src = r#"
     type T1 = String["charAt"];
     "#;
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
     let t = checker.lookup_type("T1").unwrap();
 
     let t = checker.expand_type(&t).unwrap();
@@ -657,8 +646,7 @@ fn infer_getter_setter_types_with_indexed_access() {
     type T2 = Foo["baz"];
     type T3 = Foo["qux"];
     "#;
-    let (_, ctx) = infer_prog(src);
-    let mut checker = Checker::from(ctx);
+    let (_, mut checker) = infer_prog(src);
 
     let t = checker.lookup_type("T1").unwrap();
     let t = checker.expand_type(&t).unwrap();

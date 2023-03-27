@@ -31,6 +31,17 @@ fn get_param_types(params: &[TFnParam], checker: &'_ mut Checker) -> Vec<Type> {
 impl Checker {
     // Returns Ok(substitions) if t2 admits all values from t1 and an Err() otherwise.
     pub fn unify(&mut self, t1: &Type, t2: &Type) -> Result<Subst, Vec<TypeError>> {
+        // Verify that both t1 and t2 are always in self.types and they the types
+        // passed to unify() match what's in self.types.
+        match self.types.get(&t1.id) {
+            Some(_cached_t1) => (),
+            None => panic!("Couldn't find {t1} in self.types, t1.id = {}", t1.id),
+        }
+        match self.types.get(&t2.id) {
+            Some(_cached_t2) => (),
+            None => panic!("Couldn't find {t2} in self.types, t2.id = {}", t2.id),
+        }
+
         // All binding must be done first
         match (&t1.kind, &t2.kind) {
             // If both are type variables...

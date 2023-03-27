@@ -63,7 +63,7 @@ Program {
                                                     kind: Keyword(
                                                         Number,
                                                     ),
-                                                    id: 6,
+                                                    id: 5,
                                                     mutable: false,
                                                     provenance: Some(
                                                         Type(
@@ -74,7 +74,7 @@ Program {
                                                                         constraint: None,
                                                                     },
                                                                 ),
-                                                                id: 6,
+                                                                id: 5,
                                                                 mutable: false,
                                                                 provenance: Some(
                                                                     Pattern(
@@ -115,7 +115,7 @@ Program {
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
-                                                                                    id: 6,
+                                                                                    id: 5,
                                                                                     mutable: false,
                                                                                     provenance: None,
                                                                                 },
@@ -140,18 +140,18 @@ Program {
                                                     kind: Keyword(
                                                         Number,
                                                     ),
-                                                    id: 8,
+                                                    id: 6,
                                                     mutable: false,
                                                     provenance: Some(
                                                         Type(
                                                             Type {
                                                                 kind: Var(
                                                                     TVar {
-                                                                        id: 7,
+                                                                        id: 6,
                                                                         constraint: None,
                                                                     },
                                                                 ),
-                                                                id: 8,
+                                                                id: 6,
                                                                 mutable: false,
                                                                 provenance: Some(
                                                                     Pattern(
@@ -188,11 +188,11 @@ Program {
                                                                                 Type {
                                                                                     kind: Var(
                                                                                         TVar {
-                                                                                            id: 7,
+                                                                                            id: 6,
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
-                                                                                    id: 8,
+                                                                                    id: 6,
                                                                                     mutable: false,
                                                                                     provenance: None,
                                                                                 },
@@ -211,7 +211,7 @@ Program {
                                             kind: Keyword(
                                                 Number,
                                             ),
-                                            id: 11,
+                                            id: 9,
                                             mutable: false,
                                             provenance: Some(
                                                 Expr(
@@ -266,7 +266,7 @@ Program {
                                                                                     constraint: None,
                                                                                 },
                                                                             ),
-                                                                            id: 6,
+                                                                            id: 5,
                                                                             mutable: false,
                                                                             provenance: None,
                                                                         },
@@ -304,11 +304,11 @@ Program {
                                                                         Type {
                                                                             kind: Var(
                                                                                 TVar {
-                                                                                    id: 7,
+                                                                                    id: 6,
                                                                                     constraint: None,
                                                                                 },
                                                                             ),
-                                                                            id: 8,
+                                                                            id: 6,
                                                                             mutable: false,
                                                                             provenance: None,
                                                                         },
@@ -321,7 +321,7 @@ Program {
                                                                 kind: Keyword(
                                                                     Number,
                                                                 ),
-                                                                id: 11,
+                                                                id: 9,
                                                                 mutable: false,
                                                                 provenance: None,
                                                             },
@@ -333,7 +333,7 @@ Program {
                                         type_params: None,
                                     },
                                 ),
-                                id: 14,
+                                id: 11,
                                 mutable: false,
                                 provenance: Some(
                                     Expr(
@@ -390,7 +390,7 @@ Program {
                                                                                 constraint: None,
                                                                             },
                                                                         ),
-                                                                        id: 6,
+                                                                        id: 5,
                                                                         mutable: false,
                                                                         provenance: None,
                                                                     },
@@ -433,11 +433,11 @@ Program {
                                                                     Type {
                                                                         kind: Var(
                                                                             TVar {
-                                                                                id: 7,
+                                                                                id: 6,
                                                                                 constraint: None,
                                                                             },
                                                                         ),
-                                                                        id: 8,
+                                                                        id: 6,
                                                                         mutable: false,
                                                                         provenance: None,
                                                                     },
@@ -499,7 +499,7 @@ Program {
                                                                                         constraint: None,
                                                                                     },
                                                                                 ),
-                                                                                id: 6,
+                                                                                id: 5,
                                                                                 mutable: false,
                                                                                 provenance: None,
                                                                             },
@@ -537,11 +537,11 @@ Program {
                                                                             Type {
                                                                                 kind: Var(
                                                                                     TVar {
-                                                                                        id: 7,
+                                                                                        id: 6,
                                                                                         constraint: None,
                                                                                     },
                                                                                 ),
-                                                                                id: 8,
+                                                                                id: 6,
                                                                                 mutable: false,
                                                                                 provenance: None,
                                                                             },
@@ -554,7 +554,7 @@ Program {
                                                                     kind: Keyword(
                                                                         Number,
                                                                     ),
-                                                                    id: 11,
+                                                                    id: 9,
                                                                     mutable: false,
                                                                     provenance: None,
                                                                 },
@@ -582,7 +582,7 @@ Program {
                                                                         kind: Keyword(
                                                                             Number,
                                                                         ),
-                                                                        id: 6,
+                                                                        id: 5,
                                                                         mutable: false,
                                                                         provenance: Some(
                                                                             Type(
@@ -593,7 +593,7 @@ Program {
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
-                                                                                    id: 6,
+                                                                                    id: 5,
                                                                                     mutable: false,
                                                                                     provenance: Some(
                                                                                         Pattern(
@@ -634,7 +634,7 @@ Program {
                                                                                                                 constraint: None,
                                                                                                             },
                                                                                                         ),
-                                                                                                        id: 6,
+                                                                                                        id: 5,
                                                                                                         mutable: false,
                                                                                                         provenance: None,
                                                                                                     },
@@ -659,18 +659,18 @@ Program {
                                                                         kind: Keyword(
                                                                             Number,
                                                                         ),
-                                                                        id: 8,
+                                                                        id: 6,
                                                                         mutable: false,
                                                                         provenance: Some(
                                                                             Type(
                                                                                 Type {
                                                                                     kind: Var(
                                                                                         TVar {
-                                                                                            id: 7,
+                                                                                            id: 6,
                                                                                             constraint: None,
                                                                                         },
                                                                                     ),
-                                                                                    id: 8,
+                                                                                    id: 6,
                                                                                     mutable: false,
                                                                                     provenance: Some(
                                                                                         Pattern(
@@ -707,11 +707,11 @@ Program {
                                                                                                     Type {
                                                                                                         kind: Var(
                                                                                                             TVar {
-                                                                                                                id: 7,
+                                                                                                                id: 6,
                                                                                                                 constraint: None,
                                                                                                             },
                                                                                                         ),
-                                                                                                        id: 8,
+                                                                                                        id: 6,
                                                                                                         mutable: false,
                                                                                                         provenance: None,
                                                                                                     },
@@ -730,7 +730,7 @@ Program {
                                                                 kind: Keyword(
                                                                     Number,
                                                                 ),
-                                                                id: 11,
+                                                                id: 9,
                                                                 mutable: false,
                                                                 provenance: Some(
                                                                     Expr(
@@ -785,7 +785,7 @@ Program {
                                                                                                         constraint: None,
                                                                                                     },
                                                                                                 ),
-                                                                                                id: 6,
+                                                                                                id: 5,
                                                                                                 mutable: false,
                                                                                                 provenance: None,
                                                                                             },
@@ -823,11 +823,11 @@ Program {
                                                                                             Type {
                                                                                                 kind: Var(
                                                                                                     TVar {
-                                                                                                        id: 7,
+                                                                                                        id: 6,
                                                                                                         constraint: None,
                                                                                                     },
                                                                                                 ),
-                                                                                                id: 8,
+                                                                                                id: 6,
                                                                                                 mutable: false,
                                                                                                 provenance: None,
                                                                                             },
@@ -840,7 +840,7 @@ Program {
                                                                                     kind: Keyword(
                                                                                         Number,
                                                                                     ),
-                                                                                    id: 11,
+                                                                                    id: 9,
                                                                                     mutable: false,
                                                                                     provenance: None,
                                                                                 },
@@ -852,7 +852,7 @@ Program {
                                                             type_params: None,
                                                         },
                                                     ),
-                                                    id: 12,
+                                                    id: 10,
                                                     mutable: false,
                                                     provenance: None,
                                                 },
@@ -915,7 +915,7 @@ Program {
                                                         kind: Keyword(
                                                             Number,
                                                         ),
-                                                        id: 6,
+                                                        id: 5,
                                                         mutable: false,
                                                         provenance: Some(
                                                             Type(
@@ -926,7 +926,7 @@ Program {
                                                                             constraint: None,
                                                                         },
                                                                     ),
-                                                                    id: 6,
+                                                                    id: 5,
                                                                     mutable: false,
                                                                     provenance: None,
                                                                 },
@@ -973,18 +973,18 @@ Program {
                                                         kind: Keyword(
                                                             Number,
                                                         ),
-                                                        id: 8,
+                                                        id: 6,
                                                         mutable: false,
                                                         provenance: Some(
                                                             Type(
                                                                 Type {
                                                                     kind: Var(
                                                                         TVar {
-                                                                            id: 7,
+                                                                            id: 6,
                                                                             constraint: None,
                                                                         },
                                                                     ),
-                                                                    id: 8,
+                                                                    id: 6,
                                                                     mutable: false,
                                                                     provenance: None,
                                                                 },
@@ -1046,7 +1046,7 @@ Program {
                                                                 kind: Keyword(
                                                                     Number,
                                                                 ),
-                                                                id: 6,
+                                                                id: 5,
                                                                 mutable: false,
                                                                 provenance: Some(
                                                                     Type(
@@ -1057,7 +1057,7 @@ Program {
                                                                                     constraint: None,
                                                                                 },
                                                                             ),
-                                                                            id: 6,
+                                                                            id: 5,
                                                                             mutable: false,
                                                                             provenance: None,
                                                                         },
@@ -1099,18 +1099,18 @@ Program {
                                                                 kind: Keyword(
                                                                     Number,
                                                                 ),
-                                                                id: 8,
+                                                                id: 6,
                                                                 mutable: false,
                                                                 provenance: Some(
                                                                     Type(
                                                                         Type {
                                                                             kind: Var(
                                                                                 TVar {
-                                                                                    id: 7,
+                                                                                    id: 6,
                                                                                     constraint: None,
                                                                                 },
                                                                             ),
-                                                                            id: 8,
+                                                                            id: 6,
                                                                             mutable: false,
                                                                             provenance: None,
                                                                         },
@@ -1126,7 +1126,7 @@ Program {
                                                     kind: Keyword(
                                                         Number,
                                                     ),
-                                                    id: 11,
+                                                    id: 9,
                                                     mutable: false,
                                                     provenance: None,
                                                 },
@@ -1154,7 +1154,7 @@ Program {
                                                         kind: Keyword(
                                                             Number,
                                                         ),
-                                                        id: 6,
+                                                        id: 5,
                                                         mutable: false,
                                                         provenance: Some(
                                                             Type(
@@ -1165,7 +1165,7 @@ Program {
                                                                             constraint: None,
                                                                         },
                                                                     ),
-                                                                    id: 6,
+                                                                    id: 5,
                                                                     mutable: false,
                                                                     provenance: Some(
                                                                         Pattern(
@@ -1206,7 +1206,7 @@ Program {
                                                                                                 constraint: None,
                                                                                             },
                                                                                         ),
-                                                                                        id: 6,
+                                                                                        id: 5,
                                                                                         mutable: false,
                                                                                         provenance: None,
                                                                                     },
@@ -1231,18 +1231,18 @@ Program {
                                                         kind: Keyword(
                                                             Number,
                                                         ),
-                                                        id: 8,
+                                                        id: 6,
                                                         mutable: false,
                                                         provenance: Some(
                                                             Type(
                                                                 Type {
                                                                     kind: Var(
                                                                         TVar {
-                                                                            id: 7,
+                                                                            id: 6,
                                                                             constraint: None,
                                                                         },
                                                                     ),
-                                                                    id: 8,
+                                                                    id: 6,
                                                                     mutable: false,
                                                                     provenance: Some(
                                                                         Pattern(
@@ -1279,11 +1279,11 @@ Program {
                                                                                     Type {
                                                                                         kind: Var(
                                                                                             TVar {
-                                                                                                id: 7,
+                                                                                                id: 6,
                                                                                                 constraint: None,
                                                                                             },
                                                                                         ),
-                                                                                        id: 8,
+                                                                                        id: 6,
                                                                                         mutable: false,
                                                                                         provenance: None,
                                                                                     },
@@ -1302,7 +1302,7 @@ Program {
                                                 kind: Keyword(
                                                     Number,
                                                 ),
-                                                id: 11,
+                                                id: 9,
                                                 mutable: false,
                                                 provenance: Some(
                                                     Expr(
@@ -1357,7 +1357,7 @@ Program {
                                                                                         constraint: None,
                                                                                     },
                                                                                 ),
-                                                                                id: 6,
+                                                                                id: 5,
                                                                                 mutable: false,
                                                                                 provenance: None,
                                                                             },
@@ -1395,11 +1395,11 @@ Program {
                                                                             Type {
                                                                                 kind: Var(
                                                                                     TVar {
-                                                                                        id: 7,
+                                                                                        id: 6,
                                                                                         constraint: None,
                                                                                     },
                                                                                 ),
-                                                                                id: 8,
+                                                                                id: 6,
                                                                                 mutable: false,
                                                                                 provenance: None,
                                                                             },
@@ -1412,7 +1412,7 @@ Program {
                                                                     kind: Keyword(
                                                                         Number,
                                                                     ),
-                                                                    id: 11,
+                                                                    id: 9,
                                                                     mutable: false,
                                                                     provenance: None,
                                                                 },
@@ -1424,7 +1424,7 @@ Program {
                                             type_params: None,
                                         },
                                     ),
-                                    id: 12,
+                                    id: 10,
                                     mutable: false,
                                     provenance: None,
                                 },

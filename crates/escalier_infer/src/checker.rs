@@ -130,7 +130,15 @@ impl Checker {
 
     pub fn fresh_var(&mut self, constraint: Option<Box<Type>>) -> Type {
         let id = self.fresh_id();
-        self.from_type_kind(TypeKind::Var(TVar { id, constraint }))
+        // self.from_type_kind(TypeKind::Var(TVar { id, constraint }))
+        let t = Type {
+            id,
+            kind: TypeKind::Var(TVar { id, constraint }),
+            provenance: None,
+            mutable: false,
+        };
+        self.types.insert(id, t.to_owned());
+        t
     }
 
     pub fn fresh_id(&mut self) -> u32 {

@@ -400,6 +400,8 @@ pub fn replace_aliases_rec(t: &Type, type_param_map: &HashMap<String, Type>) -> 
         shadowed_type_param_names: vec![],
     };
     t.drive_mut(&mut visitor);
+    // TODO: give this a new id and insert it into checker.types.
+    eprintln!("replace_aliases_rec: t = {t}");
     t
 }
 

@@ -1021,12 +1021,12 @@ fn infer_with_constrained_polymorphism_failiure() {
 
     insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - args don't match expected params:
-    └ TypeError::UnificationError: {bar: "hello"}, {bar: t21}
+    └ TypeError::UnificationError: {bar: "hello"}, {bar: t18}
     "###);
 
     let result = format!("{}", checker.lookup_value("bar").unwrap());
     // TODO: this should be "number"
-    assert_eq!(result, "t21");
+    assert_eq!(result, "t18");
 }
 
 #[test]

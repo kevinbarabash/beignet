@@ -32,12 +32,14 @@ impl Substitutable for Type {
 
                         // TODO: apply the constraint and then check if the replacement
                         // is a subtype of it.
-                        return Type {
+                        let t = Type {
                             id: self.id,
                             kind: replacement.kind.to_owned(),
                             mutable: replacement.mutable,
                             provenance,
                         };
+                        checker.types.insert(self.id, t.clone());
+                        return t;
                     }
                     None => {
                         if let Some(constraint) = &tv.constraint {
@@ -88,7 +90,9 @@ impl Substitutable for Type {
                                     checker.from_type_kind(TypeKind::Keyword(TKeyword::String));
                                 return checker.from_type_kind(TypeKind::Array(Box::from(string)));
                             } else {
-                                return parse_regex(pattern, checker);
+                                let t = parse_regex(pattern, checker);
+                                checker.types.insert(self.id, t.clone());
+                                return t;
                             }
                         }
                     }
@@ -132,6 +136,8 @@ impl Substitutable for Type {
         };
 
         norm_type(&mut t);
+
+        checker.types.insert(self.id, t.clone());
 
         t
     }
