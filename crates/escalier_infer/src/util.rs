@@ -19,33 +19,12 @@ pub fn get_tvar_constraint(checker: &'_ mut Checker, id: &u32) -> Option<Box<Typ
     }
 }
 
-fn get_mapping(t: &Type, checker: &'_ mut Checker) -> HashMap<u32, Type> {
-    let mapping: HashMap<u32, Type> = t
-        .ftv()
-        .iter()
-        .enumerate()
-        .map(|(index, key)| {
-            let constraint = get_tvar_constraint(checker, key);
-            (
-                key.to_owned(),
-                checker.from_type_kind(TypeKind::Var(TVar {
-                    id: index as u32,
-                    constraint,
-                    solution: None,
-                })),
-            )
-        })
-        .collect();
-
-    mapping
-}
-
 pub fn close_over<'a>(s: &Subst, t: &Type, checker: &'a mut Checker) -> Type {
     let t = t.apply(s, checker);
 
     let tv_ids = t.ftv();
 
-    let t = if tv_ids.is_empty() {
+    if tv_ids.is_empty() {
         t
     } else {
         match &t.kind {
@@ -93,35 +72,7 @@ pub fn close_over<'a>(s: &Subst, t: &Type, checker: &'a mut Checker) -> Type {
                 panic!("We shouldn't have any free type variables when closing over non-lambdas")
             }
         }
-    };
-
-    normalize(&t, checker)
-}
-
-#[derive(VisitorMut)]
-#[visitor(Type(exit))]
-struct NormalizeVisitor {
-    mapping: HashMap<u32, Type>,
-}
-
-impl NormalizeVisitor {
-    fn exit_type(&mut self, t: &mut Type) {
-        if let TypeKind::Var(tv) = &t.kind {
-            if let Some(rep_t) = self.mapping.get(&tv.id) {
-                t.kind = rep_t.kind.to_owned();
-                t.mutable = rep_t.mutable;
-                t.provenance = rep_t.provenance.to_owned();
-            }
-        }
     }
-}
-
-pub fn normalize(t: &Type, checker: &'_ mut Checker) -> Type {
-    let mapping = get_mapping(t, checker);
-    let mut t = t.clone();
-    let mut visitor = NormalizeVisitor { mapping };
-    t.drive_mut(&mut visitor);
-    t
 }
 
 // TODO: make this recursive
