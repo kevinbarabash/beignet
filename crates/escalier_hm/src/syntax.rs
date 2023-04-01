@@ -12,6 +12,11 @@ pub struct Identifier {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Number {
+    pub value: String,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Apply {
     pub func: Box<Syntax>,
     pub args: Vec<Syntax>,
@@ -35,6 +40,7 @@ pub struct Letrec {
 pub enum Syntax {
     Lambda(Lambda),
     Identifier(Identifier),
+    Number(Number),
     Apply(Apply),
     Let(Let),
     Letrec(Letrec),
@@ -52,6 +58,9 @@ impl fmt::Display for Syntax {
             }
             Syntax::Identifier(Identifier { name }) => {
                 write!(f, "{}", name)
+            }
+            Syntax::Number(Number { value }) => {
+                write!(f, "{}", value)
             }
             Syntax::Apply(Apply { func, args }) => {
                 let args = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();

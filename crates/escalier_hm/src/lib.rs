@@ -1,9 +1,4 @@
 // Based on https://github.com/tcr/rust-hindley-milner/blob/master/src/lib.rs
-#[macro_use]
-extern crate maplit;
-#[macro_use]
-extern crate lazy_static;
-
 mod syntax;
 mod types;
 
@@ -51,23 +46,15 @@ pub fn new_variable(a: &mut Vec<Type>) -> ArenaType {
 }
 
 /// A binary type constructor which builds function types
-pub fn new_operator(a: &mut Vec<Type>, name: &str, types: &[ArenaType]) -> ArenaType {
-    let t = Type::new_operator(a.len(), name, types);
+pub fn new_constructor(a: &mut Vec<Type>, name: &str, types: &[ArenaType]) -> ArenaType {
+    let t = Type::new_constructor(a.len(), name, types);
     a.push(t);
     a.len() - 1
 }
 
-// Basic types are constructed with a nullary type constructor
-lazy_static! {
-    // Basic integer
-    static ref INTEGER: Type = Type::new_operator(0, "int", &[]);
-    // Basic bool
-    static ref BOOL: Type = Type::new_operator(1, "bool", &[]);
-}
-
 // Type inference machinery
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Env(HashMap<String, ArenaType>);
 
 /// Computes the type of the expression given by node.
@@ -99,6 +86,7 @@ pub fn analyse(
 ) -> ArenaType {
     match node {
         Syntax::Identifier(Identifier { name }) => get_type(a, name, env, non_generic),
+        Syntax::Number(Number { value: _ }) => new_constructor(a, "int", &[]),
         Syntax::Apply(Apply { func, args }) => {
             let fun_type = analyse(a, func, env, non_generic);
             let arg_types = args
@@ -161,8 +149,6 @@ fn get_type(
     if let Some(value) = env.0.get(name) {
         let mat = non_generic.iter().cloned().collect::<Vec<_>>();
         fresh(a, *value, &mat)
-    } else if is_integer_literal(name) {
-        0 //INTEGER.id
     } else {
         //raise ParseError("Undefined symbol {0}".format(name))
         panic!("Undefined symbol {:?}", name);
@@ -179,7 +165,7 @@ fn get_type(
 ///     non_generic: A set of non-generic TypeVariables
 fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaType {
     // A mapping of TypeVariables to TypeVariables
-    let mut mappings = hashmap![];
+    let mut mappings = HashMap::default();
 
     fn freshrec(
         a: &mut Vec<Type>,
@@ -207,7 +193,7 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
                     .iter()
                     .map(|x| freshrec(a, *x, mappings, non_generic))
                     .collect::<Vec<_>>();
-                new_operator(a, &con.name, &b)
+                new_constructor(a, &con.name, &b)
             }
             TypeKind::Function(func) => {
                 let params = func
@@ -381,17 +367,6 @@ fn occurs_in(a: &mut Vec<Type>, t: ArenaType, types: &[ArenaType]) -> bool {
     false
 }
 
-/// Checks whether name is an integer literal string.
-///
-/// Args:
-///     name: The identifier to check
-///
-/// Returns:
-///     True if name is an integer literal, otherwise False
-fn is_integer_literal(name: &str) -> bool {
-    name.parse::<isize>().is_ok()
-}
-
 //=====================================================
 
 #[cfg(test)]
@@ -429,33 +404,69 @@ mod tests {
     }
 
     pub fn new_identifier(name: &str) -> Syntax {
+        // TODO: Check that `name` is a valid identifier
         Syntax::Identifier(Identifier {
             name: name.to_string(),
         })
     }
 
+    pub fn new_number(value: &str) -> Syntax {
+        Syntax::Number(Number {
+            value: value.to_string(),
+        })
+    }
+
     fn test_env() -> (Vec<Type>, Env) {
-        let mut a = vec![INTEGER.clone(), BOOL.clone()];
+        let mut a = vec![];
+        let mut my_env = Env::default();
+
         let var1 = new_variable(&mut a);
         let var2 = new_variable(&mut a);
-        let pair_type = new_operator(&mut a, "*", &[var1, var2]);
+        let pair_type = new_constructor(&mut a, "*", &[var1, var2]);
+        my_env.0.insert(
+            "pair".to_string(),
+            new_function(&mut a, &[var1, var2], pair_type),
+        );
 
+        let bool_t = new_constructor(&mut a, "bool", &[]);
         let var3 = new_variable(&mut a);
+        my_env.0.insert(
+            "cond".to_string(),
+            // NOTE: We must use `var3` for the if and else clauses as well as
+            // the return type so that they're all inferred as the same type.
+            new_function(&mut a, &[bool_t, var3, var3], var3),
+        );
 
-        let my_env = Env(hashmap![
-            "pair".to_string() => {
-                new_function(&mut a, &[var1, var2], pair_type)
-            },
-            "true".to_string() => 1,
-            "cond".to_string() => {
-                new_function(&mut a, &[1, var3, var3], var3)
-            },
-            "zero".to_string() => new_function(&mut a, &[0], 1),
-            "pred".to_string() => new_function(&mut a, &[0], 0),
-            "times".to_string() => {
-                new_function(&mut a, &[0, 0], 0)
-            },
-        ]);
+        let int_t = new_constructor(&mut a, "int", &[]);
+        let bool_t = new_constructor(&mut a, "bool", &[]);
+        my_env
+            .0
+            .insert("zero".to_string(), new_function(&mut a, &[int_t], bool_t));
+
+        let int1_t = new_constructor(&mut a, "int", &[]);
+        let int2_t = new_constructor(&mut a, "int", &[]);
+        my_env
+            .0
+            .insert("pred".to_string(), new_function(&mut a, &[int1_t], int2_t));
+
+        // It isn't necessary to create separate instances of `int` for each of
+        // these.  When interferring types from code we'll want separate instances
+        // so that we can link each back to the expression from which it was
+        // inferred.
+        let int1_t = new_constructor(&mut a, "int", &[]);
+        let int2_t = new_constructor(&mut a, "int", &[]);
+        let int3_t = new_constructor(&mut a, "int", &[]);
+        my_env.0.insert(
+            "times".to_string(),
+            new_function(&mut a, &[int1_t, int2_t], int3_t),
+        );
+
+        my_env
+            .0
+            .insert("true".to_string(), new_constructor(&mut a, "bool", &[]));
+        my_env
+            .0
+            .insert("false".to_string(), new_constructor(&mut a, "bool", &[]));
 
         (a, my_env)
     }
@@ -478,7 +489,7 @@ mod tests {
                     new_identifier("cond"), // cond(zero(n), 1, times(n, factorial(pred(n)))
                     &[
                         new_apply(new_identifier("zero"), &[new_identifier("n")]),
-                        new_identifier("1"),
+                        new_number("1"),
                         new_apply(
                             // times(n, factorial(pred(n))
                             new_identifier("times"),
@@ -493,16 +504,16 @@ mod tests {
                     ],
                 ),
             ), // in
-            new_apply(new_identifier("factorial"), &[new_identifier("5")]),
+            new_apply(new_identifier("factorial"), &[new_number("5")]),
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
+        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
         assert_eq!(
             a[t].as_string(
                 &a,
                 &mut Namer {
                     value: 'a',
-                    set: hashmap![],
+                    set: HashMap::default(),
                 }
             ),
             r#"int"#
@@ -520,13 +531,13 @@ mod tests {
             new_apply(
                 new_identifier("pair"),
                 &[
-                    new_apply(new_identifier("x"), &[new_identifier("3")]),
+                    new_apply(new_identifier("x"), &[new_number("3")]),
                     new_apply(new_identifier("x"), &[new_identifier("true")]),
                 ],
             ),
         );
 
-        let _ = analyse(&mut a, &syntax, &my_env, &hashset![]);
+        let _ = analyse(&mut a, &syntax, &my_env, &HashSet::default());
     }
 
     #[should_panic = "Undefined symbol \"f\""]
@@ -538,12 +549,12 @@ mod tests {
         let syntax = new_apply(
             new_identifier("pair"),
             &[
-                new_apply(new_identifier("f"), &[new_identifier("4")]),
+                new_apply(new_identifier("f"), &[new_number("4")]),
                 new_apply(new_identifier("f"), &[new_identifier("true")]),
             ],
         );
 
-        let _ = analyse(&mut a, &syntax, &my_env, &hashset![]);
+        let _ = analyse(&mut a, &syntax, &my_env, &HashSet::default());
     }
 
     #[test]
@@ -553,7 +564,7 @@ mod tests {
         let pair = new_apply(
             new_identifier("pair"),
             &[
-                new_apply(new_identifier("f"), &[new_identifier("4")]),
+                new_apply(new_identifier("f"), &[new_number("4")]),
                 new_apply(new_identifier("f"), &[new_identifier("true")]),
             ],
         );
@@ -561,13 +572,13 @@ mod tests {
         // let f = (fn x => x) in ((pair (f 4)) (f true))
         let syntax = new_let("f", new_lambda(&["x"], new_identifier("x")), pair);
 
-        let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
+        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
         assert_eq!(
             a[t].as_string(
                 &a,
                 &mut Namer {
                     value: 'a',
-                    set: hashmap![],
+                    set: HashMap::default(),
                 }
             ),
             r#"(int * bool)"#
@@ -585,13 +596,13 @@ mod tests {
             new_apply(new_identifier("f"), &[new_identifier("f")]),
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
+        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
         assert_eq!(
             a[t].as_string(
                 &a,
                 &mut Namer {
                     value: 'a',
-                    set: hashmap![],
+                    set: HashMap::default(),
                 }
             ),
             r#"int"#
@@ -605,17 +616,17 @@ mod tests {
         // let g = fn f => 5 in g g
         let syntax = new_let(
             "g",
-            new_lambda(&["f"], new_identifier("5")),
+            new_lambda(&["f"], new_number("5")),
             new_apply(new_identifier("g"), &[new_identifier("g")]),
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
+        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
         assert_eq!(
             a[t].as_string(
                 &a,
                 &mut Namer {
                     value: 'a',
-                    set: hashmap![],
+                    set: HashMap::default(),
                 }
             ),
             r#"int"#
@@ -636,20 +647,20 @@ mod tests {
                 new_apply(
                     new_identifier("pair"),
                     &[
-                        new_apply(new_identifier("f"), &[new_identifier("3")]),
+                        new_apply(new_identifier("f"), &[new_number("3")]),
                         new_apply(new_identifier("f"), &[new_identifier("true")]),
                     ],
                 ),
             ),
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
+        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
         assert_eq!(
             a[t].as_string(
                 &a,
                 &mut Namer {
                     value: 'a',
-                    set: hashmap![],
+                    set: HashMap::default(),
                 }
             ),
             r#"(a -> (a * a))"#
@@ -676,13 +687,13 @@ mod tests {
             ),
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
+        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
         assert_eq!(
             a[t].as_string(
                 &a,
                 &mut Namer {
                     value: 'a',
-                    set: hashmap![],
+                    set: HashMap::default(),
                 }
             ),
             r#"((a -> b) -> ((b -> c) -> (a -> c)))"#
@@ -703,13 +714,13 @@ mod tests {
             ),
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
+        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
         assert_eq!(
             a[t].as_string(
                 &a,
                 &mut Namer {
                     value: 'a',
-                    set: hashmap![],
+                    set: HashMap::default(),
                 }
             ),
             r#"((a -> b), (b -> c), a -> c)"#
