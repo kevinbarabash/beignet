@@ -10,7 +10,7 @@ use std::fmt;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Syntax {
     Lambda {
-        v: String,
+        params: Vec<String>,
         body: Box<Syntax>,
     },
     Identifier {
@@ -36,8 +36,12 @@ impl fmt::Display for Syntax {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Syntax::*;
         match self {
-            Lambda { v, body } => {
-                write!(f, "(fn {v} => {body})")
+            Lambda { params, body } => {
+                let params = params
+                    .iter()
+                    .map(|param| param.to_string())
+                    .collect::<Vec<_>>();
+                write!(f, "(fn ({}) => {body})", params.join(", "))
             }
             Identifier { name } => {
                 write!(f, "{}", name)
@@ -282,14 +286,18 @@ pub fn analyse(
             unify(a, first, fun_type);
             result_type
         }
-        Lambda { v, body } => {
-            let arg_type = new_variable(a);
+        Lambda { params, body } => {
+            let mut param_types = vec![];
             let mut new_env = env.clone();
-            new_env.0.insert(v.clone(), arg_type);
             let mut new_non_generic = non_generic.clone();
-            new_non_generic.insert(arg_type);
+            for param in params {
+                let arg_type = new_variable(a);
+                new_env.0.insert(param.clone(), arg_type);
+                new_non_generic.insert(arg_type);
+                param_types.push(arg_type);
+            }
             let result_type = analyse(a, body, &new_env, &new_non_generic);
-            new_function(a, &[arg_type], result_type)
+            new_function(a, &param_types, result_type)
         }
         Let { defn, v, body } => {
             let defn_type = analyse(a, defn, env, non_generic);
@@ -584,9 +592,9 @@ fn is_integer_literal(name: &str) -> bool {
 mod tests {
     use super::*;
 
-    pub fn new_lambda(v: &str, body: Syntax) -> Syntax {
+    pub fn new_lambda(params: &[&str], body: Syntax) -> Syntax {
         Syntax::Lambda {
-            v: v.to_string(),
+            params: params.iter().map(|x| x.to_string()).collect(),
             body: Box::new(body),
         }
     }
@@ -659,7 +667,7 @@ mod tests {
         let syntax = new_letrec(
             "factorial", // letrec factorial =
             new_lambda(
-                "n", // fn n =>
+                &["n"], // fn n =>
                 new_apply(
                     new_identifier("cond"), // cond(zero(n), 1, times(n, factorial(pred(n)))
                     &[
@@ -702,7 +710,7 @@ mod tests {
 
         // fn x => (pair(x(3) (x(true)))
         let syntax = new_lambda(
-            "x",
+            &["x"],
             new_apply(
                 new_identifier("pair"),
                 &[
@@ -745,7 +753,7 @@ mod tests {
         );
 
         // let f = (fn x => x) in ((pair (f 4)) (f true))
-        let syntax = new_let("f", new_lambda("x", new_identifier("x")), pair);
+        let syntax = new_let("f", new_lambda(&["x"], new_identifier("x")), pair);
 
         let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
         assert_eq!(
@@ -766,7 +774,10 @@ mod tests {
         let (mut a, my_env) = test_env();
 
         // fn f => f f (fail)
-        let syntax = new_lambda("f", new_apply(new_identifier("f"), &[new_identifier("f")]));
+        let syntax = new_lambda(
+            &["f"],
+            new_apply(new_identifier("f"), &[new_identifier("f")]),
+        );
 
         let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
         assert_eq!(
@@ -788,7 +799,7 @@ mod tests {
         // let g = fn f => 5 in g g
         let syntax = new_let(
             "g",
-            new_lambda("f", new_identifier("5")),
+            new_lambda(&["f"], new_identifier("5")),
             new_apply(new_identifier("g"), &[new_identifier("g")]),
         );
 
@@ -812,10 +823,10 @@ mod tests {
         // example that demonstrates generic and non-generic variables:
         // fn g => let f = fn x => g in pair (f 3, f true)
         let syntax = new_lambda(
-            "g",
+            &["g"],
             new_let(
                 "f",
-                new_lambda("x", new_identifier("g")),
+                new_lambda(&["x"], new_identifier("g")),
                 new_apply(
                     new_identifier("pair"),
                     &[
@@ -846,11 +857,11 @@ mod tests {
         // Function composition
         // fn f (fn g (fn arg (f g arg)))
         let syntax = new_lambda(
-            "f",
+            &["f"],
             new_lambda(
-                "g",
+                &["g"],
                 new_lambda(
-                    "arg",
+                    &["arg"],
                     new_apply(
                         new_identifier("g"),
                         &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
@@ -877,18 +888,12 @@ mod tests {
         let (mut a, my_env) = test_env();
 
         // Function composition
-        // fn f (fn g (fn arg (f g arg)))
+        // (fn (f, g, arg) -> (f g arg))
         let syntax = new_lambda(
-            "f",
-            new_lambda(
-                "g",
-                new_lambda(
-                    "arg",
-                    new_apply(
-                        new_identifier("g"),
-                        &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
-                    ),
-                ),
+            &["f", "g", "arg"],
+            new_apply(
+                new_identifier("g"),
+                &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
             ),
         );
 
@@ -901,7 +906,7 @@ mod tests {
                     set: hashmap![],
                 }
             ),
-            r#"((a -> b) -> ((b -> c) -> (a -> c)))"#
+            r#"((a -> b), (b -> c), a -> c)"#
         );
     }
 }
