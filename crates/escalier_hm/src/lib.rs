@@ -18,7 +18,7 @@ pub enum Syntax {
     },
     Apply {
         func: Box<Syntax>,
-        arg: Box<Syntax>,
+        args: Vec<Syntax>,
     },
     Let {
         v: String,
@@ -42,8 +42,9 @@ impl fmt::Display for Syntax {
             Identifier { name } => {
                 write!(f, "{}", name)
             }
-            Apply { func, arg } => {
-                write!(f, "({func} {arg})")
+            Apply { func, args } => {
+                let args = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
+                write!(f, "{func}({})", args.join(", "))
             }
             Let { v, defn, body } => {
                 write!(f, "(let {v} = {defn} in {body})",)
@@ -74,6 +75,11 @@ pub enum Type {
         id: ArenaType,
         name: String,
         types: Vec<ArenaType>,
+    },
+    Function {
+        id: ArenaType,
+        params: Vec<ArenaType>,
+        ret: ArenaType,
     },
 }
 
@@ -122,10 +128,19 @@ impl Type {
         }
     }
 
+    fn new_function(idx: ArenaType, param_types: &[ArenaType], ret_type: ArenaType) -> Type {
+        Type::Function {
+            id: idx,
+            params: param_types.to_vec(),
+            ret: ret_type,
+        }
+    }
+
     fn id(&self) -> usize {
         match self {
             Type::Variable { id, .. } => *id,
             Type::Operator { id, .. } => *id,
+            Type::Function { id, .. } => *id,
         }
     }
 
@@ -169,6 +184,16 @@ impl Type {
                     format!("{} {}", name, coll.join(" "))
                 }
             },
+            Type::Function { params, ret, .. } => {
+                let params = params
+                    .iter()
+                    .map(|param| a[*param].as_string(a, namer))
+                    .collect::<Vec<_>>();
+
+                let ret = a[*ret].as_string(a, namer);
+
+                format!("({} -> {ret})", params.join(", "))
+            }
         }
     }
 }
@@ -183,8 +208,8 @@ impl Type {
 //}
 
 /// A binary type constructor which builds function types
-pub fn new_function(a: &mut Vec<Type>, from_type: ArenaType, to_type: ArenaType) -> ArenaType {
-    let t = Type::new_operator(a.len(), "->", &[from_type, to_type]);
+pub fn new_function(a: &mut Vec<Type>, params: &[ArenaType], ret: ArenaType) -> ArenaType {
+    let t = Type::new_function(a.len(), params, ret);
     a.push(t);
     a.len() - 1
 }
@@ -246,11 +271,14 @@ pub fn analyse(
     use Syntax::*;
     match node {
         Identifier { name } => get_type(a, name, env, non_generic),
-        Apply { func, arg } => {
+        Apply { func, args } => {
             let fun_type = analyse(a, func, env, non_generic);
-            let arg_type = analyse(a, arg, env, non_generic);
+            let arg_types = args
+                .iter()
+                .map(|arg| analyse(a, arg, env, non_generic))
+                .collect::<Vec<_>>();
             let result_type = new_variable(a);
-            let first = new_function(a, arg_type, result_type);
+            let first = new_function(a, &arg_types, result_type);
             unify(a, first, fun_type);
             result_type
         }
@@ -261,7 +289,7 @@ pub fn analyse(
             let mut new_non_generic = non_generic.clone();
             new_non_generic.insert(arg_type);
             let result_type = analyse(a, body, &new_env, &new_non_generic);
-            new_function(a, arg_type, result_type)
+            new_function(a, &[arg_type], result_type)
         }
         Let { defn, v, body } => {
             let defn_type = analyse(a, defn, env, non_generic);
@@ -347,6 +375,14 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
                     .collect::<Vec<_>>();
                 new_operator(a, name, &b)
             }
+            Type::Function { params, ret, .. } => {
+                let params = params
+                    .iter()
+                    .map(|x| freshrec(a, *x, mappings, non_generic))
+                    .collect::<Vec<_>>();
+                let ret = freshrec(a, ret, mappings, non_generic);
+                new_function(a, &params, ret)
+            }
         }
     }
 
@@ -369,7 +405,10 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
 fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) {
     let a = prune(alloc, t1);
     let b = prune(alloc, t2);
-    match (alloc.get(a).unwrap().clone(), alloc.get(b).unwrap().clone()) {
+    let a_t = alloc.get(a).unwrap().clone();
+    let b_t = alloc.get(b).unwrap().clone();
+    eprintln!("unify {:?} {:?}", a_t, b_t);
+    match (a_t, b_t) {
         (Type::Variable { .. }, _) => {
             if a != b {
                 if occurs_in_type(alloc, a, b) {
@@ -379,6 +418,7 @@ fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) {
                 alloc.get_mut(a).unwrap().set_instance(b);
             }
         }
+        // QUESTION: why reverse the order here?
         (Type::Operator { .. }, Type::Variable { .. }) => unify(alloc, b, a),
         (
             Type::Operator {
@@ -399,6 +439,28 @@ fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) {
             for (p, q) in a_types.iter().zip(b_types.iter()) {
                 unify(alloc, *p, *q);
             }
+        }
+        // QUESTION: why reverse the order here?
+        (Type::Function { .. }, Type::Variable { .. }) => unify(alloc, b, a),
+        (
+            Type::Function {
+                params: a_params,
+                ret: a_ret,
+                ..
+            },
+            Type::Function {
+                params: b_params,
+                ret: b_ret,
+                ..
+            },
+        ) => {
+            for (p, q) in a_params.iter().zip(b_params.iter()) {
+                unify(alloc, *p, *q);
+            }
+            unify(alloc, a_ret, b_ret);
+        }
+        (l, r) => {
+            panic!("type mismatch: unify({l:?}, {r:?}) failed");
         }
     }
 }
@@ -481,7 +543,8 @@ fn occurs_in_type(a: &mut Vec<Type>, v: ArenaType, type2: ArenaType) -> bool {
         return true;
     }
     match a.get(pruned_type2).unwrap().clone() {
-        Type::Operator { ref types, .. } => occurs_in(a, v, types),
+        Type::Operator { types, .. } => occurs_in(a, v, &types),
+        Type::Function { params, ret, .. } => occurs_in(a, v, &params) || occurs_in_type(a, v, ret),
         _ => false,
     }
 }
@@ -528,10 +591,10 @@ mod tests {
         }
     }
 
-    pub fn new_apply(func: Syntax, arg: Syntax) -> Syntax {
+    pub fn new_apply(func: Syntax, args: &[Syntax]) -> Syntax {
         Syntax::Apply {
             func: Box::new(func),
-            arg: Box::new(arg),
+            args: args.to_owned(),
         }
     }
 
@@ -567,20 +630,16 @@ mod tests {
 
         let my_env = Env(hashmap![
             "pair".to_string() => {
-                let right = new_function(&mut a, var2, pair_type);
-                new_function(&mut a, var1, right)
+                new_function(&mut a, &[var1, var2], pair_type)
             },
             "true".to_string() => 1,
             "cond".to_string() => {
-                let right = new_function(&mut a, var3, var3);
-                let right = new_function(&mut a, var3, right);
-                new_function(&mut a, 1, right)
+                new_function(&mut a, &[1, var3, var3], var3)
             },
-            "zero".to_string() => new_function(&mut a, 0, 1),
-            "pred".to_string() => new_function(&mut a, 0, 0),
+            "zero".to_string() => new_function(&mut a, &[0], 1),
+            "pred".to_string() => new_function(&mut a, &[0], 0),
             "times".to_string() => {
-                let right = new_function(&mut a, 0, 0);
-                new_function(&mut a, 0, right)
+                new_function(&mut a, &[0, 0], 0)
             },
         ]);
 
@@ -602,25 +661,25 @@ mod tests {
             new_lambda(
                 "n", // fn n =>
                 new_apply(
-                    new_apply(
-                        // cond (zero n) 1
-                        new_apply(
-                            new_identifier("cond"), // cond (zero n)
-                            new_apply(new_identifier("zero"), new_identifier("n")),
-                        ),
+                    new_identifier("cond"), // cond(zero(n), 1, times(n, factorial(pred(n)))
+                    &[
+                        new_apply(new_identifier("zero"), &[new_identifier("n")]),
                         new_identifier("1"),
-                    ),
-                    new_apply(
-                        // times n
-                        new_apply(new_identifier("times"), new_identifier("n")),
                         new_apply(
-                            new_identifier("factorial"),
-                            new_apply(new_identifier("pred"), new_identifier("n")),
+                            // times(n, factorial(pred(n))
+                            new_identifier("times"),
+                            &[
+                                new_identifier("n"),
+                                new_apply(
+                                    new_identifier("factorial"),
+                                    &[new_apply(new_identifier("pred"), &[new_identifier("n")])],
+                                ),
+                            ],
                         ),
-                    ),
+                    ],
                 ),
             ), // in
-            new_apply(new_identifier("factorial"), new_identifier("5")),
+            new_apply(new_identifier("factorial"), &[new_identifier("5")]),
         );
 
         let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
@@ -645,29 +704,29 @@ mod tests {
         let syntax = new_lambda(
             "x",
             new_apply(
-                new_apply(
-                    new_identifier("pair"),
-                    new_apply(new_identifier("x"), new_identifier("3")),
-                ),
-                new_apply(new_identifier("x"), new_identifier("true")),
+                new_identifier("pair"),
+                &[
+                    new_apply(new_identifier("x"), &[new_identifier("3")]),
+                    new_apply(new_identifier("x"), &[new_identifier("true")]),
+                ],
             ),
         );
 
         let _ = analyse(&mut a, &syntax, &my_env, &hashset![]);
     }
 
-    #[should_panic]
+    #[should_panic = "Undefined symbol \"f\""]
     #[test]
     fn test_pair() {
         let (mut a, my_env) = test_env();
 
         // pair(f(3), f(true))
         let syntax = new_apply(
-            new_apply(
-                new_identifier("pair"),
-                new_apply(new_identifier("f"), new_identifier("4")),
-            ),
-            new_apply(new_identifier("f"), new_identifier("true")),
+            new_identifier("pair"),
+            &[
+                new_apply(new_identifier("f"), &[new_identifier("4")]),
+                new_apply(new_identifier("f"), &[new_identifier("true")]),
+            ],
         );
 
         let _ = analyse(&mut a, &syntax, &my_env, &hashset![]);
@@ -678,11 +737,11 @@ mod tests {
         let (mut a, my_env) = test_env();
 
         let pair = new_apply(
-            new_apply(
-                new_identifier("pair"),
-                new_apply(new_identifier("f"), new_identifier("4")),
-            ),
-            new_apply(new_identifier("f"), new_identifier("true")),
+            new_identifier("pair"),
+            &[
+                new_apply(new_identifier("f"), &[new_identifier("4")]),
+                new_apply(new_identifier("f"), &[new_identifier("true")]),
+            ],
         );
 
         // let f = (fn x => x) in ((pair (f 4)) (f true))
@@ -701,13 +760,13 @@ mod tests {
         );
     }
 
-    #[should_panic]
+    #[should_panic = "recursive unification"]
     #[test]
     fn test_recursive() {
         let (mut a, my_env) = test_env();
 
         // fn f => f f (fail)
-        let syntax = new_lambda("f", new_apply(new_identifier("f"), new_identifier("f")));
+        let syntax = new_lambda("f", new_apply(new_identifier("f"), &[new_identifier("f")]));
 
         let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
         assert_eq!(
@@ -730,7 +789,7 @@ mod tests {
         let syntax = new_let(
             "g",
             new_lambda("f", new_identifier("5")),
-            new_apply(new_identifier("g"), new_identifier("g")),
+            new_apply(new_identifier("g"), &[new_identifier("g")]),
         );
 
         let t = analyse(&mut a, &syntax, &my_env, &hashset![]);
@@ -758,11 +817,11 @@ mod tests {
                 "f",
                 new_lambda("x", new_identifier("g")),
                 new_apply(
-                    new_apply(
-                        new_identifier("pair"),
-                        new_apply(new_identifier("f"), new_identifier("3")),
-                    ),
-                    new_apply(new_identifier("f"), new_identifier("true")),
+                    new_identifier("pair"),
+                    &[
+                        new_apply(new_identifier("f"), &[new_identifier("3")]),
+                        new_apply(new_identifier("f"), &[new_identifier("true")]),
+                    ],
                 ),
             ),
         );
@@ -794,7 +853,7 @@ mod tests {
                     "arg",
                     new_apply(
                         new_identifier("g"),
-                        new_apply(new_identifier("f"), new_identifier("arg")),
+                        &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
                     ),
                 ),
             ),
@@ -827,7 +886,7 @@ mod tests {
                     "arg",
                     new_apply(
                         new_identifier("g"),
-                        new_apply(new_identifier("f"), new_identifier("arg")),
+                        &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
                     ),
                 ),
             ),
