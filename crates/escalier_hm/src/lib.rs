@@ -4,92 +4,17 @@ extern crate maplit;
 #[macro_use]
 extern crate lazy_static;
 
+mod syntax;
+mod types;
+
 use std::collections::{HashMap, HashSet};
-use std::fmt;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Syntax {
-    Lambda {
-        params: Vec<String>,
-        body: Box<Syntax>,
-    },
-    Identifier {
-        name: String,
-    },
-    Apply {
-        func: Box<Syntax>,
-        args: Vec<Syntax>,
-    },
-    Let {
-        v: String,
-        defn: Box<Syntax>,
-        body: Box<Syntax>,
-    },
-    Letrec {
-        v: String,
-        defn: Box<Syntax>,
-        body: Box<Syntax>,
-    },
-}
-
-impl fmt::Display for Syntax {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use Syntax::*;
-        match self {
-            Lambda { params, body } => {
-                let params = params
-                    .iter()
-                    .map(|param| param.to_string())
-                    .collect::<Vec<_>>();
-                write!(f, "(fn ({}) => {body})", params.join(", "))
-            }
-            Identifier { name } => {
-                write!(f, "{}", name)
-            }
-            Apply { func, args } => {
-                let args = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
-                write!(f, "{func}({})", args.join(", "))
-            }
-            Let { v, defn, body } => {
-                write!(f, "(let {v} = {defn} in {body})",)
-            }
-            Letrec { v, defn, body } => {
-                write!(f, "(letrec {v} = {defn} in {body})",)
-            }
-        }
-    }
-}
+use crate::syntax::*;
+use crate::types::*;
 
 pub enum Errors {
     InferenceError(String),
     ParseError(String),
-}
-
-// Types and type constructors
-
-pub type ArenaType = usize;
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Type {
-    Variable {
-        id: ArenaType,
-        instance: Option<ArenaType>,
-    },
-    Operator {
-        id: ArenaType,
-        name: String,
-        types: Vec<ArenaType>,
-    },
-    Function {
-        id: ArenaType,
-        params: Vec<ArenaType>,
-        ret: ArenaType,
-    },
-}
-
-pub struct Namer {
-    pub value: char,
-    pub set: HashMap<ArenaType, String>,
 }
 
 impl Namer {
@@ -110,106 +35,6 @@ impl Namer {
         }
     }
 }
-
-/// A type variable standing for an arbitrary type.
-///
-/// All type variables have a unique id, but names are
-/// only assigned lazily, when required.
-
-impl Type {
-    fn new_variable(idx: ArenaType) -> Type {
-        Type::Variable {
-            id: idx,
-            instance: None,
-        }
-    }
-
-    fn new_operator(idx: ArenaType, name: &str, types: &[ArenaType]) -> Type {
-        Type::Operator {
-            id: idx,
-            name: name.to_string(),
-            types: types.to_vec(),
-        }
-    }
-
-    fn new_function(idx: ArenaType, param_types: &[ArenaType], ret_type: ArenaType) -> Type {
-        Type::Function {
-            id: idx,
-            params: param_types.to_vec(),
-            ret: ret_type,
-        }
-    }
-
-    fn id(&self) -> usize {
-        match self {
-            Type::Variable { id, .. } => *id,
-            Type::Operator { id, .. } => *id,
-            Type::Function { id, .. } => *id,
-        }
-    }
-
-    fn set_instance(&mut self, instance: ArenaType) {
-        match self {
-            &mut Type::Variable {
-                instance: ref mut inst,
-                ..
-            } => {
-                *inst = Some(instance);
-            }
-            _ => {
-                unimplemented!()
-            }
-        }
-    }
-
-    fn as_string(&self, a: &Vec<Type>, namer: &mut Namer) -> String {
-        match self {
-            Type::Variable {
-                instance: Some(inst),
-                ..
-            } => a[*inst].as_string(a, namer),
-            Type::Variable { .. } => namer.name(self.id()),
-            Type::Operator {
-                ref types,
-                ref name,
-                ..
-            } => match types.len() {
-                0 => name.clone(),
-                2 => {
-                    let l = a[types[0]].as_string(a, namer);
-                    let r = a[types[1]].as_string(a, namer);
-                    format!("({} {} {})", l, name, r)
-                }
-                _ => {
-                    let mut coll = vec![];
-                    for v in types {
-                        coll.push(a[*v].as_string(a, namer));
-                    }
-                    format!("{} {}", name, coll.join(" "))
-                }
-            },
-            Type::Function { params, ret, .. } => {
-                let params = params
-                    .iter()
-                    .map(|param| a[*param].as_string(a, namer))
-                    .collect::<Vec<_>>();
-
-                let ret = a[*ret].as_string(a, namer);
-
-                format!("({} -> {ret})", params.join(", "))
-            }
-        }
-    }
-}
-
-//impl fmt::Debug for Type {
-//    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//        match self {
-//            write!(f, "TypeVariable(id = {})", self.id)
-//            write!(f, "TypeOperator(name, )", self.id)
-//        }
-//    }
-//}
 
 /// A binary type constructor which builds function types
 pub fn new_function(a: &mut Vec<Type>, params: &[ArenaType], ret: ArenaType) -> ArenaType {
@@ -272,10 +97,9 @@ pub fn analyse(
     env: &Env,
     non_generic: &HashSet<ArenaType>,
 ) -> ArenaType {
-    use Syntax::*;
     match node {
-        Identifier { name } => get_type(a, name, env, non_generic),
-        Apply { func, args } => {
+        Syntax::Identifier(Identifier { name }) => get_type(a, name, env, non_generic),
+        Syntax::Apply(Apply { func, args }) => {
             let fun_type = analyse(a, func, env, non_generic);
             let arg_types = args
                 .iter()
@@ -286,7 +110,7 @@ pub fn analyse(
             unify(a, first, fun_type);
             result_type
         }
-        Lambda { params, body } => {
+        Syntax::Lambda(Lambda { params, body }) => {
             let mut param_types = vec![];
             let mut new_env = env.clone();
             let mut new_non_generic = non_generic.clone();
@@ -299,13 +123,13 @@ pub fn analyse(
             let result_type = analyse(a, body, &new_env, &new_non_generic);
             new_function(a, &param_types, result_type)
         }
-        Let { defn, v, body } => {
+        Syntax::Let(Let { defn, v, body }) => {
             let defn_type = analyse(a, defn, env, non_generic);
             let mut new_env = env.clone();
             new_env.0.insert(v.clone(), defn_type);
             analyse(a, body, &new_env, non_generic)
         }
-        Letrec { defn, v, body } => {
+        Syntax::Letrec(Letrec { defn, v, body }) => {
             let new_type = new_variable(a);
             let mut new_env = env.clone();
             new_env.0.insert(v.clone(), new_type);
@@ -364,31 +188,34 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
         non_generic: &[ArenaType],
     ) -> ArenaType {
         let p = prune(a, tp);
-        match a.get(p).unwrap().clone() {
-            Type::Variable { .. } => {
+        // We clone here because we can't move out of a shared reference.
+        // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
+        match &a.get(p).unwrap().clone().kind {
+            TypeKind::Variable(_) => {
                 if is_generic(a, p, non_generic) {
-                    mappings.entry(p).or_insert(new_variable(a)).clone()
+                    mappings
+                        .entry(p)
+                        .or_insert_with(|| new_variable(a))
+                        .to_owned()
                 } else {
                     p
                 }
             }
-            Type::Operator {
-                ref name,
-                ref types,
-                ..
-            } => {
-                let b = types
+            TypeKind::Constructor(con) => {
+                let b = con
+                    .types
                     .iter()
                     .map(|x| freshrec(a, *x, mappings, non_generic))
                     .collect::<Vec<_>>();
-                new_operator(a, name, &b)
+                new_operator(a, &con.name, &b)
             }
-            Type::Function { params, ret, .. } => {
-                let params = params
+            TypeKind::Function(func) => {
+                let params = func
+                    .params
                     .iter()
                     .map(|x| freshrec(a, *x, mappings, non_generic))
                     .collect::<Vec<_>>();
-                let ret = freshrec(a, ret, mappings, non_generic);
+                let ret = freshrec(a, func.ret, mappings, non_generic);
                 new_function(a, &params, ret)
             }
         }
@@ -413,63 +240,42 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
 fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) {
     let a = prune(alloc, t1);
     let b = prune(alloc, t2);
+    // Why do we clone here?
     let a_t = alloc.get(a).unwrap().clone();
     let b_t = alloc.get(b).unwrap().clone();
-    eprintln!("unify {:?} {:?}", a_t, b_t);
-    match (a_t, b_t) {
-        (Type::Variable { .. }, _) => {
-            if a != b {
-                if occurs_in_type(alloc, a, b) {
-                    // raise InferenceError("recursive unification")
-                    panic!("recursive unification");
-                }
-                alloc.get_mut(a).unwrap().set_instance(b);
-            }
-        }
-        // QUESTION: why reverse the order here?
-        (Type::Operator { .. }, Type::Variable { .. }) => unify(alloc, b, a),
-        (
-            Type::Operator {
-                name: ref a_name,
-                types: ref a_types,
-                ..
-            },
-            Type::Operator {
-                name: ref b_name,
-                types: ref b_types,
-                ..
-            },
-        ) => {
-            if a_name != b_name || a_types.len() != b_types.len() {
-                //raise InferenceError("Type mismatch: {0} != {1}".format(str(a), str(b)))
+    // eprintln!("unify {:?} {:?}", a_t, b_t);
+    match (&a_t.kind, &b_t.kind) {
+        (TypeKind::Variable(_), _) => bind(alloc, a, b),
+        (_, TypeKind::Variable(_)) => bind(alloc, b, a),
+        (TypeKind::Constructor(con_a), TypeKind::Constructor(con_b)) => {
+            // TODO: support type constructors with optional and default type params
+            if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
+                // raise InferenceError("Type mismatch: {0} != {1}".format(str(a), str(b)))
                 panic!("type mismatch");
             }
-            for (p, q) in a_types.iter().zip(b_types.iter()) {
+            for (p, q) in con_a.types.iter().zip(con_b.types.iter()) {
                 unify(alloc, *p, *q);
             }
         }
-        // QUESTION: why reverse the order here?
-        (Type::Function { .. }, Type::Variable { .. }) => unify(alloc, b, a),
-        (
-            Type::Function {
-                params: a_params,
-                ret: a_ret,
-                ..
-            },
-            Type::Function {
-                params: b_params,
-                ret: b_ret,
-                ..
-            },
-        ) => {
-            for (p, q) in a_params.iter().zip(b_params.iter()) {
+        (TypeKind::Function(func_a), TypeKind::Function(func_b)) => {
+            for (p, q) in func_a.params.iter().zip(func_b.params.iter()) {
                 unify(alloc, *p, *q);
             }
-            unify(alloc, a_ret, b_ret);
+            unify(alloc, func_a.ret, func_b.ret);
         }
         (l, r) => {
             panic!("type mismatch: unify({l:?}, {r:?}) failed");
         }
+    }
+}
+
+fn bind(alloc: &mut Vec<Type>, a: usize, b: usize) {
+    if a != b {
+        if occurs_in_type(alloc, a, b) {
+            // raise InferenceError("recursive unification")
+            panic!("recursive unification");
+        }
+        alloc.get_mut(a).unwrap().set_instance(b);
     }
 }
 
@@ -488,26 +294,22 @@ fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) {
 /// Returns:
 ///     An uninstantiated TypeVariable or a TypeOperator
 fn prune(a: &mut Vec<Type>, t: ArenaType) -> ArenaType {
-    let v2 = match a.get(t).unwrap() {
-        //TODO screwed up
-        &Type::Variable { instance, .. } => {
-            if let Some(value) = instance {
-                value
-            } else {
-                return t;
-            }
-        }
+    let v2 = match a.get(t).unwrap().kind {
+        // TODO: handle .unwrap() panicing
+        TypeKind::Variable(Variable {
+            instance: Some(value),
+        }) => value,
         _ => {
             return t;
         }
     };
 
     let value = prune(a, v2);
-    match a.get_mut(t).unwrap() {
-        //TODO screwed up
-        &mut Type::Variable {
+    match &mut a.get_mut(t).unwrap().kind {
+        // TODO: handle .unwrap() panicing
+        TypeKind::Variable(Variable {
             ref mut instance, ..
-        } => {
+        }) => {
             *instance = Some(value);
         }
         _ => {
@@ -550,9 +352,13 @@ fn occurs_in_type(a: &mut Vec<Type>, v: ArenaType, type2: ArenaType) -> bool {
     if pruned_type2 == v {
         return true;
     }
-    match a.get(pruned_type2).unwrap().clone() {
-        Type::Operator { types, .. } => occurs_in(a, v, &types),
-        Type::Function { params, ret, .. } => occurs_in(a, v, &params) || occurs_in_type(a, v, ret),
+    // We clone here because we can't move out of a shared reference.
+    // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
+    match a.get(pruned_type2).unwrap().clone().kind {
+        TypeKind::Constructor(Constructor { types, .. }) => occurs_in(a, v, &types),
+        TypeKind::Function(Function { params, ret, .. }) => {
+            occurs_in(a, v, &params) || occurs_in_type(a, v, ret)
+        }
         _ => false,
     }
 }
@@ -593,39 +399,39 @@ mod tests {
     use super::*;
 
     pub fn new_lambda(params: &[&str], body: Syntax) -> Syntax {
-        Syntax::Lambda {
+        Syntax::Lambda(Lambda {
             params: params.iter().map(|x| x.to_string()).collect(),
             body: Box::new(body),
-        }
+        })
     }
 
     pub fn new_apply(func: Syntax, args: &[Syntax]) -> Syntax {
-        Syntax::Apply {
+        Syntax::Apply(Apply {
             func: Box::new(func),
             args: args.to_owned(),
-        }
+        })
     }
 
     pub fn new_let(v: &str, defn: Syntax, body: Syntax) -> Syntax {
-        Syntax::Let {
+        Syntax::Let(Let {
             v: v.to_string(),
             defn: Box::new(defn),
             body: Box::new(body),
-        }
+        })
     }
 
     pub fn new_letrec(v: &str, defn: Syntax, body: Syntax) -> Syntax {
-        Syntax::Letrec {
+        Syntax::Letrec(Letrec {
             v: v.to_string(),
             defn: Box::new(defn),
             body: Box::new(body),
-        }
+        })
     }
 
     pub fn new_identifier(name: &str) -> Syntax {
-        Syntax::Identifier {
+        Syntax::Identifier(Identifier {
             name: name.to_string(),
-        }
+        })
     }
 
     fn test_env() -> (Vec<Type>, Env) {
