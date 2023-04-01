@@ -46,7 +46,7 @@ impl Type {
         }
     }
 
-    pub fn new_operator(idx: ArenaType, name: &str, types: &[ArenaType]) -> Type {
+    pub fn new_constructor(idx: ArenaType, name: &str, types: &[ArenaType]) -> Type {
         Type {
             id: idx,
             kind: TypeKind::Constructor(Constructor {
