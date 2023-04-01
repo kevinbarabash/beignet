@@ -38,6 +38,12 @@ pub fn new_function(a: &mut Vec<Type>, params: &[ArenaType], ret: ArenaType) -> 
     a.len() - 1
 }
 
+pub fn new_call(a: &mut Vec<Type>, args: &[ArenaType], ret: ArenaType) -> ArenaType {
+    let t = Type::new_call(a.len(), args, ret);
+    a.push(t);
+    a.len() - 1
+}
+
 /// A binary type constructor which builds function types
 pub fn new_variable(a: &mut Vec<Type>) -> ArenaType {
     let t = Type::new_variable(a.len());
@@ -48,6 +54,12 @@ pub fn new_variable(a: &mut Vec<Type>) -> ArenaType {
 /// A binary type constructor which builds function types
 pub fn new_constructor(a: &mut Vec<Type>, name: &str, types: &[ArenaType]) -> ArenaType {
     let t = Type::new_constructor(a.len(), name, types);
+    a.push(t);
+    a.len() - 1
+}
+
+pub fn new_literal(a: &mut Vec<Type>, lit: &Literal) -> ArenaType {
+    let t = Type::new_literal(a.len(), lit);
     a.push(t);
     a.len() - 1
 }
@@ -86,16 +98,35 @@ pub fn analyse(
 ) -> ArenaType {
     match node {
         Syntax::Identifier(Identifier { name }) => get_type(a, name, env, non_generic),
-        Syntax::Number(Number { value: _ }) => new_constructor(a, "int", &[]),
+        Syntax::Number(Number { value }) => new_literal(
+            a,
+            &Literal {
+                kind: LiteralKind::Number(value.to_owned()),
+            },
+        ),
+        Syntax::String(Str { value }) => new_literal(
+            a,
+            &Literal {
+                kind: LiteralKind::String(value.to_owned()),
+            },
+        ),
         Syntax::Apply(Apply { func, args }) => {
-            let fun_type = analyse(a, func, env, non_generic);
+            eprintln!(
+                "func = {func}, args = {}",
+                args.iter()
+                    .map(|arg| arg.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+            let func_type = analyse(a, func, env, non_generic);
+            eprintln!("func_type: {:?}", func_type);
             let arg_types = args
                 .iter()
                 .map(|arg| analyse(a, arg, env, non_generic))
                 .collect::<Vec<_>>();
             let result_type = new_variable(a);
-            let first = new_function(a, &arg_types, result_type);
-            unify(a, first, fun_type);
+            let call_type = new_call(a, &arg_types, result_type);
+            unify(a, call_type, func_type);
             result_type
         }
         Syntax::Lambda(Lambda { params, body }) => {
@@ -195,6 +226,7 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
                     .collect::<Vec<_>>();
                 new_constructor(a, &con.name, &b)
             }
+            TypeKind::Literal(lit) => new_literal(a, &lit),
             TypeKind::Function(func) => {
                 let params = func
                     .params
@@ -203,6 +235,15 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
                     .collect::<Vec<_>>();
                 let ret = freshrec(a, func.ret, mappings, non_generic);
                 new_function(a, &params, ret)
+            }
+            TypeKind::Call(call) => {
+                let args = call
+                    .args
+                    .iter()
+                    .map(|x| freshrec(a, *x, mappings, non_generic))
+                    .collect::<Vec<_>>();
+                let ret = freshrec(a, call.ret, mappings, non_generic);
+                new_call(a, &args, ret)
             }
         }
     }
@@ -249,8 +290,20 @@ fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) {
             }
             unify(alloc, func_a.ret, func_b.ret);
         }
-        (l, r) => {
-            panic!("type mismatch: unify({l:?}, {r:?}) failed");
+        (TypeKind::Call(call), TypeKind::Function(func)) => {
+            for (p, q) in call.args.iter().zip(func.params.iter()) {
+                unify(alloc, *p, *q);
+            }
+            unify(alloc, call.ret, func.ret);
+        }
+        (
+            TypeKind::Literal(Literal {
+                kind: LiteralKind::Number(_),
+            }),
+            TypeKind::Constructor(Constructor { name, .. }),
+        ) if name == "number" => (),
+        (a_kind, b_kind) => {
+            panic!("type mismatch: unify({a_kind:?}, {b_kind:?}) failed");
         }
     }
 }
@@ -416,6 +469,12 @@ mod tests {
         })
     }
 
+    pub fn new_string(value: &str) -> Syntax {
+        Syntax::String(Str {
+            value: value.to_string(),
+        })
+    }
+
     fn test_env() -> (Vec<Type>, Env) {
         let mut a = vec![];
         let mut my_env = Env::default();
@@ -437,28 +496,28 @@ mod tests {
             new_function(&mut a, &[bool_t, var3, var3], var3),
         );
 
-        let int_t = new_constructor(&mut a, "int", &[]);
+        let int_t = new_constructor(&mut a, "number", &[]);
         let bool_t = new_constructor(&mut a, "bool", &[]);
         my_env
             .0
             .insert("zero".to_string(), new_function(&mut a, &[int_t], bool_t));
 
-        let int1_t = new_constructor(&mut a, "int", &[]);
-        let int2_t = new_constructor(&mut a, "int", &[]);
+        let num1_t = new_constructor(&mut a, "number", &[]);
+        let num2_t = new_constructor(&mut a, "number", &[]);
         my_env
             .0
-            .insert("pred".to_string(), new_function(&mut a, &[int1_t], int2_t));
+            .insert("pred".to_string(), new_function(&mut a, &[num1_t], num2_t));
 
-        // It isn't necessary to create separate instances of `int` for each of
+        // It isn't necessary to create separate instances of `number` for each of
         // these.  When interferring types from code we'll want separate instances
         // so that we can link each back to the expression from which it was
         // inferred.
-        let int1_t = new_constructor(&mut a, "int", &[]);
-        let int2_t = new_constructor(&mut a, "int", &[]);
-        let int3_t = new_constructor(&mut a, "int", &[]);
+        let num1_t = new_constructor(&mut a, "number", &[]);
+        let num2_t = new_constructor(&mut a, "number", &[]);
+        let num3_t = new_constructor(&mut a, "number", &[]);
         my_env.0.insert(
             "times".to_string(),
-            new_function(&mut a, &[int1_t, int2_t], int3_t),
+            new_function(&mut a, &[num1_t, num2_t], num3_t),
         );
 
         my_env
@@ -476,6 +535,7 @@ mod tests {
     /// evaluated. Evaluates the expressions, printing the type or errors arising
     /// from each.
 
+    // NOTE: This test requires IfElse and Union types to work correctly.
     #[test]
     fn test_factorial() {
         let (mut a, my_env) = test_env();
@@ -516,7 +576,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"int"#
+            r#"number"#
         );
     }
 
@@ -581,7 +641,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"(int * bool)"#
+            r#"(4 * bool)"#
         );
     }
 
@@ -605,12 +665,12 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"int"#
+            r#"number"#
         );
     }
 
     #[test]
-    fn test_int() {
+    fn test_number_literal() {
         let (mut a, my_env) = test_env();
 
         // let g = fn f => 5 in g g
@@ -629,7 +689,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"int"#
+            r#"5"#
         );
     }
 
@@ -724,6 +784,51 @@ mod tests {
                 }
             ),
             r#"((a -> b), (b -> c), a -> c)"#
+        );
+    }
+
+    #[test]
+    fn test_subtype() {
+        let (mut a, my_env) = test_env();
+
+        let syntax = new_apply(
+            new_identifier("times"),
+            &[new_number("5"), new_number("10")],
+        );
+
+        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"number"#
+        );
+    }
+
+    #[test]
+    #[should_panic = r#"type mismatch: unify(Literal(Literal { kind: String("hello") }), Constructor(Constructor { name: "number", types: [] })) failed"#]
+    fn test_subtype_error() {
+        let (mut a, my_env) = test_env();
+
+        let syntax = new_apply(
+            new_identifier("times"),
+            &[new_number("5"), new_string("hello")],
+        );
+
+        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"number"#
         );
     }
 }

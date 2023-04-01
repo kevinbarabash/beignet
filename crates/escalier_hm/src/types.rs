@@ -15,8 +15,26 @@ pub struct Constructor {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum LiteralKind {
+    Number(String),
+    String(String),
+    Boolean(bool),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Literal {
+    pub kind: LiteralKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Function {
     pub params: Vec<ArenaType>,
+    pub ret: ArenaType,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Call {
+    pub args: Vec<ArenaType>,
     pub ret: ArenaType,
 }
 
@@ -24,7 +42,9 @@ pub struct Function {
 pub enum TypeKind {
     Variable(Variable),
     Constructor(Constructor),
+    Literal(Literal),
     Function(Function),
+    Call(Call),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -56,11 +76,28 @@ impl Type {
         }
     }
 
+    pub fn new_literal(idx: ArenaType, lit: &Literal) -> Type {
+        Type {
+            id: idx,
+            kind: TypeKind::Literal(lit.clone()),
+        }
+    }
+
     pub fn new_function(idx: ArenaType, param_types: &[ArenaType], ret_type: ArenaType) -> Type {
         Type {
             id: idx,
             kind: TypeKind::Function(Function {
                 params: param_types.to_vec(),
+                ret: ret_type,
+            }),
+        }
+    }
+
+    pub fn new_call(idx: ArenaType, arg_types: &[ArenaType], ret_type: ArenaType) -> Type {
+        Type {
+            id: idx,
+            kind: TypeKind::Call(Call {
+                args: arg_types.to_vec(),
                 ret: ret_type,
             }),
         }
@@ -101,6 +138,11 @@ impl Type {
                     format!("{} {}", con.name, coll.join(" "))
                 }
             },
+            TypeKind::Literal(lit) => match &lit.kind {
+                LiteralKind::Number(n) => n.clone(),
+                LiteralKind::String(s) => s.clone(),
+                LiteralKind::Boolean(b) => b.to_string(),
+            },
             TypeKind::Function(func) => {
                 let params = func
                     .params
@@ -111,6 +153,18 @@ impl Type {
                 let ret = a[func.ret].as_string(a, namer);
 
                 format!("({} -> {ret})", params.join(", "))
+            }
+            TypeKind::Call(call) => {
+                let args = call
+                    .args
+                    .iter()
+                    .map(|arg| a[*arg].as_string(a, namer))
+                    .collect::<Vec<_>>();
+
+                let ret = a[call.ret].as_string(a, namer);
+
+                // Should this be formatted more like a function call
+                format!("({} -> {ret})", args.join(", "))
             }
         }
     }
