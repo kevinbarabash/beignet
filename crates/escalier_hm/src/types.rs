@@ -1,6 +1,8 @@
 // Types and type constructors
 use std::collections::HashMap;
 
+use crate::literal::Literal;
+
 pub type ArenaType = usize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -12,18 +14,6 @@ pub struct Variable {
 pub struct Constructor {
     pub name: String,
     pub types: Vec<ArenaType>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum LiteralKind {
-    Number(String),
-    String(String),
-    Boolean(bool),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Literal {
-    pub kind: LiteralKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -153,11 +143,7 @@ impl Type {
                     format!("{} {}", con.name, coll.join(" "))
                 }
             },
-            TypeKind::Literal(lit) => match &lit.kind {
-                LiteralKind::Number(n) => n.clone(),
-                LiteralKind::String(s) => s.clone(),
-                LiteralKind::Boolean(b) => b.to_string(),
-            },
+            TypeKind::Literal(lit) => lit.to_string(),
             TypeKind::Function(func) => {
                 let params = func
                     .params
@@ -192,6 +178,63 @@ impl Type {
             }
         }
     }
+}
+
+/// A binary type constructor which builds function types
+pub fn new_func_type(a: &mut Vec<Type>, params: &[ArenaType], ret: ArenaType) -> ArenaType {
+    let t = Type::new_function(a.len(), params, ret);
+    a.push(t);
+    a.len() - 1
+}
+
+pub fn new_call_type(a: &mut Vec<Type>, args: &[ArenaType], ret: ArenaType) -> ArenaType {
+    let t = Type::new_call(a.len(), args, ret);
+    a.push(t);
+    a.len() - 1
+}
+
+pub fn new_union_type(a: &mut Vec<Type>, types: &[ArenaType]) -> ArenaType {
+    let t = Type::new_union(a.len(), types);
+    a.push(t);
+    a.len() - 1
+}
+
+/// A binary type constructor which builds function types
+pub fn new_var_type(a: &mut Vec<Type>) -> ArenaType {
+    let t = Type::new_variable(a.len());
+    a.push(t);
+    a.len() - 1
+}
+
+/// A binary type constructor which builds function types
+pub fn new_constructor(a: &mut Vec<Type>, name: &str, types: &[ArenaType]) -> ArenaType {
+    let t = Type::new_constructor(a.len(), name, types);
+    a.push(t);
+    a.len() - 1
+}
+
+pub fn new_lit_type(a: &mut Vec<Type>, lit: &Literal) -> ArenaType {
+    let t = Type::new_literal(a.len(), lit);
+    a.push(t);
+    a.len() - 1
+}
+
+pub fn new_num_lit_type(a: &mut Vec<Type>, value: &str) -> ArenaType {
+    let t = Type::new_literal(a.len(), &Literal::Number(value.to_string()));
+    a.push(t);
+    a.len() - 1
+}
+
+pub fn new_str_lit_type(a: &mut Vec<Type>, value: &str) -> ArenaType {
+    let t = Type::new_literal(a.len(), &Literal::String(value.to_string()));
+    a.push(t);
+    a.len() - 1
+}
+
+pub fn new_bool_lit_type(a: &mut Vec<Type>, value: bool) -> ArenaType {
+    let t = Type::new_literal(a.len(), &Literal::Boolean(value));
+    a.push(t);
+    a.len() - 1
 }
 
 //impl fmt::Debug for Type {

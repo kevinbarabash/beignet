@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::literal::Literal;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Lambda {
     pub params: Vec<String>,
@@ -52,8 +54,7 @@ pub struct IfElse {
 pub enum Syntax {
     Lambda(Lambda),
     Identifier(Identifier),
-    Number(Number),
-    String(Str),
+    Literal(Literal),
     Apply(Apply),
     Let(Let),
     Letrec(Letrec),
@@ -73,11 +74,8 @@ impl fmt::Display for Syntax {
             Syntax::Identifier(Identifier { name }) => {
                 write!(f, "{}", name)
             }
-            Syntax::Number(Number { value }) => {
-                write!(f, "{}", value)
-            }
-            Syntax::String(Str { value }) => {
-                write!(f, "{}", value)
+            Syntax::Literal(literal) => {
+                write!(f, "{literal}")
             }
             Syntax::Apply(Apply { func, args }) => {
                 let args = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
