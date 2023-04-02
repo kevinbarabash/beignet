@@ -188,7 +188,7 @@ impl Type {
                     .map(|t| a[*t].as_string(a, namer))
                     .collect::<Vec<_>>();
 
-                format!("{}", types.join(" | "))
+                types.join(" | ")
             }
         }
     }
@@ -206,4 +206,23 @@ impl Type {
 pub struct Namer {
     pub value: char,
     pub set: HashMap<ArenaType, String>,
+}
+
+impl Namer {
+    fn next(&mut self) -> String {
+        let v = self.value;
+        self.value = ((self.value as u8) + 1) as char;
+        format!("{}", v)
+    }
+
+    fn name(&mut self, t: ArenaType) -> String {
+        let k = self.set.get(&t).cloned();
+        if let Some(val) = k {
+            val
+        } else {
+            let v = self.next();
+            self.set.insert(t, v.clone());
+            v
+        }
+    }
 }
