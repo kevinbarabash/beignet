@@ -158,6 +158,19 @@ pub fn analyse(
             unify(a, new_type, defn_type);
             analyse(a, body, &new_env, non_generic)
         }
+        Syntax::IfElse(IfElse {
+            cond,
+            consequent,
+            alternate,
+        }) => {
+            let cond_type = analyse(a, cond, env, non_generic);
+            let bool_type = new_constructor(a, "bool", &[]);
+            unify(a, cond_type, bool_type);
+            let consequent_type = analyse(a, consequent, env, non_generic);
+            let alternate_type = analyse(a, alternate, env, non_generic);
+            // TODO: compute the union of the two types and return that instead
+            alternate_type
+        }
     }
 }
 
@@ -226,7 +239,7 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
                     .collect::<Vec<_>>();
                 new_constructor(a, &con.name, &b)
             }
-            TypeKind::Literal(lit) => new_literal(a, &lit),
+            TypeKind::Literal(lit) => new_literal(a, lit),
             TypeKind::Function(func) => {
                 let params = func
                     .params
@@ -295,6 +308,12 @@ fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) {
                 unify(alloc, *p, *q);
             }
             unify(alloc, call.ret, func.ret);
+        }
+        (TypeKind::Call(call_a), TypeKind::Call(call_b)) => {
+            for (p, q) in call_a.args.iter().zip(call_b.args.iter()) {
+                unify(alloc, *p, *q);
+            }
+            unify(alloc, call_a.ret, call_b.ret);
         }
         (
             TypeKind::Literal(Literal {
@@ -394,11 +413,13 @@ fn occurs_in_type(a: &mut Vec<Type>, v: ArenaType, type2: ArenaType) -> bool {
     // We clone here because we can't move out of a shared reference.
     // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
     match a.get(pruned_type2).unwrap().clone().kind {
+        TypeKind::Variable(_) => false, // leaf node
+        TypeKind::Literal(_) => false,  // leaf node
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(a, v, &types),
-        TypeKind::Function(Function { params, ret, .. }) => {
+        TypeKind::Function(Function { params, ret }) => {
             occurs_in(a, v, &params) || occurs_in_type(a, v, ret)
         }
-        _ => false,
+        TypeKind::Call(Call { args, ret }) => occurs_in(a, v, &args) || occurs_in_type(a, v, ret),
     }
 }
 
@@ -475,6 +496,14 @@ mod tests {
         })
     }
 
+    pub fn new_if_else(cond: Syntax, consequent: Syntax, alternate: Syntax) -> Syntax {
+        Syntax::IfElse(IfElse {
+            cond: Box::new(cond),
+            consequent: Box::new(consequent),
+            alternate: Box::new(alternate),
+        })
+    }
+
     fn test_env() -> (Vec<Type>, Env) {
         let mut a = vec![];
         let mut my_env = Env::default();
@@ -487,14 +516,14 @@ mod tests {
             new_function(&mut a, &[var1, var2], pair_type),
         );
 
-        let bool_t = new_constructor(&mut a, "bool", &[]);
-        let var3 = new_variable(&mut a);
-        my_env.0.insert(
-            "cond".to_string(),
-            // NOTE: We must use `var3` for the if and else clauses as well as
-            // the return type so that they're all inferred as the same type.
-            new_function(&mut a, &[bool_t, var3, var3], var3),
-        );
+        // let bool_t = new_constructor(&mut a, "bool", &[]);
+        // let var3 = new_variable(&mut a);
+        // my_env.0.insert(
+        //     "cond".to_string(),
+        //     // NOTE: We must use `var3` for the if and else clauses as well as
+        //     // the return type so that they're all inferred as the same type.
+        //     new_function(&mut a, &[bool_t, var3, var3], var3),
+        // );
 
         let int_t = new_constructor(&mut a, "number", &[]);
         let bool_t = new_constructor(&mut a, "bool", &[]);
@@ -535,7 +564,7 @@ mod tests {
     /// evaluated. Evaluates the expressions, printing the type or errors arising
     /// from each.
 
-    // NOTE: This test requires IfElse and Union types to work correctly.
+    // NOTE: This test requires Union types to work correctly.
     #[test]
     fn test_factorial() {
         let (mut a, my_env) = test_env();
@@ -545,26 +574,23 @@ mod tests {
             "factorial", // letrec factorial =
             new_lambda(
                 &["n"], // fn n =>
-                new_apply(
-                    new_identifier("cond"), // cond(zero(n), 1, times(n, factorial(pred(n)))
-                    &[
-                        new_apply(new_identifier("zero"), &[new_identifier("n")]),
-                        new_number("1"),
-                        new_apply(
-                            // times(n, factorial(pred(n))
-                            new_identifier("times"),
-                            &[
-                                new_identifier("n"),
-                                new_apply(
-                                    new_identifier("factorial"),
-                                    &[new_apply(new_identifier("pred"), &[new_identifier("n")])],
-                                ),
-                            ],
-                        ),
-                    ],
+                new_if_else(
+                    new_apply(new_identifier("zero"), &[new_identifier("n")]),
+                    new_number("1"),
+                    new_apply(
+                        // times(n, factorial(pred(n))
+                        new_identifier("times"),
+                        &[
+                            new_identifier("n"),
+                            new_apply(
+                                new_identifier("factorial"),
+                                &[new_apply(new_identifier("pred"), &[new_identifier("n")])],
+                            ),
+                        ],
+                    ),
                 ),
             ), // in
-            new_apply(new_identifier("factorial"), &[new_number("5")]),
+            new_identifier("factorial"),
         );
 
         let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
@@ -576,7 +602,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"number"#
+            r#"(number -> number)"#
         );
     }
 
