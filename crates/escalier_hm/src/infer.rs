@@ -27,30 +27,30 @@ use crate::unify::*;
 ///     InferenceError: The type of the expression could not be inferred, for example
 ///         if it is not possible to unify two types such as Integer and Bool
 ///     ParseError: The abstract syntax tree rooted at node could not be parsed
-pub fn infer(
+pub fn infer_expression(
     a: &mut Vec<Type>,
-    node: &Syntax,
+    node: &Expression,
     env: &mut Env,
     non_generic: &HashSet<ArenaType>,
 ) -> Result<ArenaType, Errors> {
     match node {
-        Syntax::Identifier(Identifier { name }) => get_type(a, name, env, non_generic),
-        Syntax::Literal(literal) => {
+        Expression::Identifier(Identifier { name }) => get_type(a, name, env, non_generic),
+        Expression::Literal(literal) => {
             let t = new_lit_type(a, literal);
             Ok(t)
         }
-        Syntax::Apply(Apply { func, args }) => {
-            let func_type = infer(a, func, env, non_generic)?;
+        Expression::Apply(Apply { func, args }) => {
+            let func_type = infer_expression(a, func, env, non_generic)?;
             let arg_types = args
                 .iter()
-                .map(|arg| infer(a, arg, env, non_generic))
+                .map(|arg| infer_expression(a, arg, env, non_generic))
                 .collect::<Result<Vec<_>, _>>()?;
             let result_type = new_var_type(a);
             let call_type = new_call_type(a, &arg_types, result_type);
             unify(a, call_type, func_type)?;
             Ok(result_type)
         }
-        Syntax::Lambda(Lambda { params, body }) => {
+        Expression::Lambda(Lambda { params, body }) => {
             let mut param_types = vec![];
             let mut new_env = env.clone();
             let mut new_non_generic = non_generic.clone();
@@ -60,17 +60,17 @@ pub fn infer(
                 new_non_generic.insert(arg_type);
                 param_types.push(arg_type);
             }
-            let result_type = infer(a, body, &mut new_env, &new_non_generic)?;
+            let result_type = infer_expression(a, body, &mut new_env, &new_non_generic)?;
             let t = new_func_type(a, &param_types, result_type);
             Ok(t)
         }
-        Syntax::Let(Let { defn, var, body }) => {
-            let defn_type = infer(a, defn, env, non_generic)?;
+        Expression::Let(Let { defn, var, body }) => {
+            let defn_type = infer_expression(a, defn, env, non_generic)?;
             let mut new_env = env.clone();
             new_env.0.insert(var.clone(), defn_type);
-            infer(a, body, &mut new_env, non_generic)
+            infer_expression(a, body, &mut new_env, non_generic)
         }
-        Syntax::Letrec(letrec) => {
+        Expression::Letrec(letrec) => {
             let mut new_env = env.clone();
             let mut new_non_generic = non_generic.clone();
 
@@ -81,7 +81,6 @@ pub fn infer(
             for (var, ..) in &letrec.decls {
                 let new_type = new_var_type(a);
                 new_env.0.insert(var.clone(), new_type);
-                env.0.insert(var.clone(), new_type);
                 new_non_generic.insert(new_type);
 
                 new_types.push(new_type);
@@ -90,24 +89,42 @@ pub fn infer(
             // Then infer the defintions and unify them with the new types
 
             for ((.., defn), new_type) in letrec.decls.iter().zip(new_types.iter()) {
-                let defn_type = infer(a, defn, &mut new_env, &new_non_generic)?;
+                let defn_type = infer_expression(a, defn, &mut new_env, &new_non_generic)?;
                 unify(a, *new_type, defn_type)?;
             }
 
-            infer(a, &letrec.body, &mut new_env, non_generic)
+            infer_expression(a, &letrec.body, &mut new_env, non_generic)
         }
-        Syntax::IfElse(IfElse {
+        Expression::IfElse(IfElse {
             cond,
             consequent,
             alternate,
         }) => {
-            let cond_type = infer(a, cond, env, non_generic)?;
+            let cond_type = infer_expression(a, cond, env, non_generic)?;
             let bool_type = new_constructor(a, "boolean", &[]);
             unify(a, cond_type, bool_type)?;
-            let consequent_type = infer(a, consequent, env, non_generic)?;
-            let alternate_type = infer(a, alternate, env, non_generic)?;
+            let consequent_type = infer_expression(a, consequent, env, non_generic)?;
+            let alternate_type = infer_expression(a, alternate, env, non_generic)?;
             let t = new_union_type(a, &[consequent_type, alternate_type]);
             Ok(t)
         }
     }
+}
+
+pub fn infer_program(a: &mut Vec<Type>, node: &Program, env: &mut Env) -> Result<(), Errors> {
+    let non_generic = HashSet::new();
+
+    for stmt in &node.statements {
+        match stmt {
+            Statement::Declaration(Declaration { var, defn }) => {
+                let t = infer_expression(a, defn, env, &non_generic)?;
+                env.0.insert(var.clone(), t);
+            }
+            Statement::Expression(expr) => {
+                infer_expression(a, expr, env, &non_generic)?;
+            }
+        }
+    }
+
+    Ok(())
 }
