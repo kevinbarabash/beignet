@@ -1,9 +1,11 @@
 // Based on https://github.com/tcr/rust-hindley-milner/blob/master/src/lib.rs
+mod literal;
 mod syntax;
 mod types;
 
 use std::collections::{HashMap, HashSet};
 
+use crate::literal::*;
 use crate::syntax::*;
 use crate::types::*;
 
@@ -11,45 +13,6 @@ use crate::types::*;
 pub enum Errors {
     InferenceError(String),
     ParseError(String),
-}
-
-/// A binary type constructor which builds function types
-pub fn new_function(a: &mut Vec<Type>, params: &[ArenaType], ret: ArenaType) -> ArenaType {
-    let t = Type::new_function(a.len(), params, ret);
-    a.push(t);
-    a.len() - 1
-}
-
-pub fn new_call(a: &mut Vec<Type>, args: &[ArenaType], ret: ArenaType) -> ArenaType {
-    let t = Type::new_call(a.len(), args, ret);
-    a.push(t);
-    a.len() - 1
-}
-
-pub fn new_union(a: &mut Vec<Type>, types: &[ArenaType]) -> ArenaType {
-    let t = Type::new_union(a.len(), types);
-    a.push(t);
-    a.len() - 1
-}
-
-/// A binary type constructor which builds function types
-pub fn new_variable(a: &mut Vec<Type>) -> ArenaType {
-    let t = Type::new_variable(a.len());
-    a.push(t);
-    a.len() - 1
-}
-
-/// A binary type constructor which builds function types
-pub fn new_constructor(a: &mut Vec<Type>, name: &str, types: &[ArenaType]) -> ArenaType {
-    let t = Type::new_constructor(a.len(), name, types);
-    a.push(t);
-    a.len() - 1
-}
-
-pub fn new_literal(a: &mut Vec<Type>, lit: &Literal) -> ArenaType {
-    let t = Type::new_literal(a.len(), lit);
-    a.push(t);
-    a.len() - 1
 }
 
 // Type inference machinery
@@ -86,22 +49,8 @@ pub fn analyse(
 ) -> Result<ArenaType, Errors> {
     match node {
         Syntax::Identifier(Identifier { name }) => get_type(a, name, env, non_generic),
-        Syntax::Number(Number { value }) => {
-            let t = new_literal(
-                a,
-                &Literal {
-                    kind: LiteralKind::Number(value.to_owned()),
-                },
-            );
-            Ok(t)
-        }
-        Syntax::String(Str { value }) => {
-            let t = new_literal(
-                a,
-                &Literal {
-                    kind: LiteralKind::String(value.to_owned()),
-                },
-            );
+        Syntax::Literal(literal) => {
+            let t = new_lit_type(a, literal);
             Ok(t)
         }
         Syntax::Apply(Apply { func, args }) => {
@@ -110,8 +59,8 @@ pub fn analyse(
                 .iter()
                 .map(|arg| analyse(a, arg, env, non_generic))
                 .collect::<Result<Vec<_>, _>>()?;
-            let result_type = new_variable(a);
-            let call_type = new_call(a, &arg_types, result_type);
+            let result_type = new_var_type(a);
+            let call_type = new_call_type(a, &arg_types, result_type);
             unify(a, call_type, func_type)?;
             Ok(result_type)
         }
@@ -120,13 +69,13 @@ pub fn analyse(
             let mut new_env = env.clone();
             let mut new_non_generic = non_generic.clone();
             for param in params {
-                let arg_type = new_variable(a);
+                let arg_type = new_var_type(a);
                 new_env.0.insert(param.clone(), arg_type);
                 new_non_generic.insert(arg_type);
                 param_types.push(arg_type);
             }
             let result_type = analyse(a, body, &new_env, &new_non_generic)?;
-            let t = new_function(a, &param_types, result_type);
+            let t = new_func_type(a, &param_types, result_type);
             Ok(t)
         }
         Syntax::Let(Let { defn, v, body }) => {
@@ -136,7 +85,7 @@ pub fn analyse(
             analyse(a, body, &new_env, non_generic)
         }
         Syntax::Letrec(Letrec { defn, v, body }) => {
-            let new_type = new_variable(a);
+            let new_type = new_var_type(a);
             let mut new_env = env.clone();
             new_env.0.insert(v.clone(), new_type);
             let mut new_non_generic = non_generic.clone();
@@ -151,11 +100,11 @@ pub fn analyse(
             alternate,
         }) => {
             let cond_type = analyse(a, cond, env, non_generic)?;
-            let bool_type = new_constructor(a, "bool", &[]);
+            let bool_type = new_constructor(a, "boolean", &[]);
             unify(a, cond_type, bool_type)?;
             let consequent_type = analyse(a, consequent, env, non_generic)?;
             let alternate_type = analyse(a, alternate, env, non_generic)?;
-            let t = new_union(a, &[consequent_type, alternate_type]);
+            let t = new_union_type(a, &[consequent_type, alternate_type]);
             Ok(t)
         }
     }
@@ -214,7 +163,7 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
                 if is_generic(a, p, non_generic) {
                     mappings
                         .entry(p)
-                        .or_insert_with(|| new_variable(a))
+                        .or_insert_with(|| new_var_type(a))
                         .to_owned()
                 } else {
                     p
@@ -228,7 +177,7 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
                     .collect::<Vec<_>>();
                 new_constructor(a, &con.name, &b)
             }
-            TypeKind::Literal(lit) => new_literal(a, lit),
+            TypeKind::Literal(lit) => new_lit_type(a, lit),
             TypeKind::Function(func) => {
                 let params = func
                     .params
@@ -236,7 +185,7 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
                     .map(|x| freshrec(a, *x, mappings, non_generic))
                     .collect::<Vec<_>>();
                 let ret = freshrec(a, func.ret, mappings, non_generic);
-                new_function(a, &params, ret)
+                new_func_type(a, &params, ret)
             }
             TypeKind::Call(call) => {
                 let args = call
@@ -245,7 +194,7 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
                     .map(|x| freshrec(a, *x, mappings, non_generic))
                     .collect::<Vec<_>>();
                 let ret = freshrec(a, call.ret, mappings, non_generic);
-                new_call(a, &args, ret)
+                new_call_type(a, &args, ret)
             }
             TypeKind::Union(union) => {
                 let args = union
@@ -253,7 +202,7 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
                     .iter()
                     .map(|x| freshrec(a, *x, mappings, non_generic))
                     .collect::<Vec<_>>();
-                new_union(a, &args)
+                new_union_type(a, &args)
             }
         }
     }
@@ -315,11 +264,17 @@ fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), Erro
             Ok(())
         }
         (
-            TypeKind::Literal(Literal {
-                kind: LiteralKind::Number(_),
-            }),
+            TypeKind::Literal(Literal::Number(_)),
             TypeKind::Constructor(Constructor { name, .. }),
         ) if name == "number" => Ok(()),
+        (
+            TypeKind::Literal(Literal::String(_)),
+            TypeKind::Constructor(Constructor { name, .. }),
+        ) if name == "string" => Ok(()),
+        (
+            TypeKind::Literal(Literal::Boolean(_)),
+            TypeKind::Constructor(Constructor { name, .. }),
+        ) if name == "boolean" => Ok(()),
         (TypeKind::Union(Union { types }), _) => {
             // All types in the union must be subtypes of t2
             for t in types.iter() {
@@ -504,15 +459,15 @@ mod tests {
     }
 
     pub fn new_number(value: &str) -> Syntax {
-        Syntax::Number(Number {
-            value: value.to_string(),
-        })
+        Syntax::Literal(Literal::Number(value.to_owned()))
     }
 
     pub fn new_string(value: &str) -> Syntax {
-        Syntax::String(Str {
-            value: value.to_string(),
-        })
+        Syntax::Literal(Literal::String(value.to_owned()))
+    }
+
+    pub fn new_boolean(value: bool) -> Syntax {
+        Syntax::Literal(Literal::Boolean(value))
     }
 
     pub fn new_if_else(cond: Syntax, consequent: Syntax, alternate: Syntax) -> Syntax {
@@ -527,34 +482,25 @@ mod tests {
         let mut a = vec![];
         let mut my_env = Env::default();
 
-        let var1 = new_variable(&mut a);
-        let var2 = new_variable(&mut a);
+        let var1 = new_var_type(&mut a);
+        let var2 = new_var_type(&mut a);
         let pair_type = new_constructor(&mut a, "*", &[var1, var2]);
         my_env.0.insert(
             "pair".to_string(),
-            new_function(&mut a, &[var1, var2], pair_type),
+            new_func_type(&mut a, &[var1, var2], pair_type),
         );
 
-        // let bool_t = new_constructor(&mut a, "bool", &[]);
-        // let var3 = new_variable(&mut a);
-        // my_env.0.insert(
-        //     "cond".to_string(),
-        //     // NOTE: We must use `var3` for the if and else clauses as well as
-        //     // the return type so that they're all inferred as the same type.
-        //     new_function(&mut a, &[bool_t, var3, var3], var3),
-        // );
-
         let int_t = new_constructor(&mut a, "number", &[]);
-        let bool_t = new_constructor(&mut a, "bool", &[]);
+        let bool_t = new_constructor(&mut a, "boolean", &[]);
         my_env
             .0
-            .insert("zero".to_string(), new_function(&mut a, &[int_t], bool_t));
+            .insert("zero".to_string(), new_func_type(&mut a, &[int_t], bool_t));
 
         let num1_t = new_constructor(&mut a, "number", &[]);
         let num2_t = new_constructor(&mut a, "number", &[]);
         my_env
             .0
-            .insert("pred".to_string(), new_function(&mut a, &[num1_t], num2_t));
+            .insert("pred".to_string(), new_func_type(&mut a, &[num1_t], num2_t));
 
         // It isn't necessary to create separate instances of `number` for each of
         // these.  When interferring types from code we'll want separate instances
@@ -565,15 +511,19 @@ mod tests {
         let num3_t = new_constructor(&mut a, "number", &[]);
         my_env.0.insert(
             "times".to_string(),
-            new_function(&mut a, &[num1_t, num2_t], num3_t),
+            new_func_type(&mut a, &[num1_t, num2_t], num3_t),
+        );
+        my_env.0.insert(
+            "add".to_string(),
+            new_func_type(&mut a, &[num1_t, num2_t], num3_t),
         );
 
         my_env
             .0
-            .insert("true".to_string(), new_constructor(&mut a, "bool", &[]));
+            .insert("true".to_string(), new_bool_lit_type(&mut a, true));
         my_env
             .0
-            .insert("false".to_string(), new_constructor(&mut a, "bool", &[]));
+            .insert("false".to_string(), new_bool_lit_type(&mut a, false));
 
         (a, my_env)
     }
@@ -638,7 +588,7 @@ mod tests {
                 new_identifier("pair"),
                 &[
                     new_apply(new_identifier("x"), &[new_number("3")]),
-                    new_apply(new_identifier("x"), &[new_identifier("true")]),
+                    new_apply(new_identifier("x"), &[new_boolean(true)]),
                 ],
             ),
         );
@@ -656,7 +606,7 @@ mod tests {
             new_identifier("pair"),
             &[
                 new_apply(new_identifier("f"), &[new_number("4")]),
-                new_apply(new_identifier("f"), &[new_identifier("true")]),
+                new_apply(new_identifier("f"), &[new_boolean(true)]),
             ],
         );
 
@@ -671,7 +621,7 @@ mod tests {
             new_identifier("pair"),
             &[
                 new_apply(new_identifier("f"), &[new_number("4")]),
-                new_apply(new_identifier("f"), &[new_identifier("true")]),
+                new_apply(new_identifier("f"), &[new_boolean(true)]),
             ],
         );
 
@@ -687,7 +637,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"(4 * bool)"#
+            r#"(4 * true)"#
         );
         Ok(())
     }
@@ -746,7 +696,7 @@ mod tests {
                     new_identifier("pair"),
                     &[
                         new_apply(new_identifier("f"), &[new_number("3")]),
-                        new_apply(new_identifier("f"), &[new_identifier("true")]),
+                        new_apply(new_identifier("f"), &[new_boolean(true)]),
                     ],
                 ),
             ),
@@ -855,21 +805,11 @@ mod tests {
     fn test_union_subtype() -> Result<(), Errors> {
         let (mut a, mut my_env) = test_env();
 
-        let lit1 = new_literal(
-            &mut a,
-            &Literal {
-                kind: LiteralKind::Number("5".to_string()),
-            },
-        );
-        let lit2 = new_literal(
-            &mut a,
-            &Literal {
-                kind: LiteralKind::Number("10".to_string()),
-            },
-        );
+        let lit1 = new_num_lit_type(&mut a, "5");
+        let lit2 = new_num_lit_type(&mut a, "10");
         my_env
             .0
-            .insert("foo".to_string(), new_union(&mut a, &[lit1, lit2]));
+            .insert("foo".to_string(), new_union_type(&mut a, &[lit1, lit2]));
 
         let syntax = new_apply(
             new_identifier("times"),
@@ -891,7 +831,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 21, kind: Literal(Literal { kind: String(\\\"hello\\\") }) }, Type { id: 17, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
+    #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 22, kind: Literal(String(\\\"hello\\\")) }, Type { id: 18, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
     fn test_subtype_error() {
         let (mut a, my_env) = test_env();
 
@@ -904,25 +844,15 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 24, kind: Literal(Literal { kind: String(\\\"hello\\\") }) }, Type { id: 19, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
+    #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 25, kind: Literal(String(\\\"hello\\\")) }, Type { id: 20, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
     fn test_union_subtype_error() {
         let (mut a, mut my_env) = test_env();
 
-        let lit1 = new_literal(
-            &mut a,
-            &Literal {
-                kind: LiteralKind::Number("5".to_string()),
-            },
-        );
-        let lit2 = new_literal(
-            &mut a,
-            &Literal {
-                kind: LiteralKind::String("hello".to_string()),
-            },
-        );
+        let lit1 = new_lit_type(&mut a, &Literal::Number("5".to_string()));
+        let lit2 = new_lit_type(&mut a, &Literal::String("hello".to_string()));
         my_env
             .0
-            .insert("foo".to_string(), new_union(&mut a, &[lit1, lit2]));
+            .insert("foo".to_string(), new_union_type(&mut a, &[lit1, lit2]));
 
         let syntax = new_apply(
             new_identifier("times"),
