@@ -17,6 +17,11 @@ pub struct Number {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Str {
+    pub value: String,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Apply {
     pub func: Box<Syntax>,
     pub args: Vec<Syntax>,
@@ -37,13 +42,22 @@ pub struct Letrec {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct IfElse {
+    pub cond: Box<Syntax>,
+    pub consequent: Box<Syntax>,
+    pub alternate: Box<Syntax>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Syntax {
     Lambda(Lambda),
     Identifier(Identifier),
     Number(Number),
+    String(Str),
     Apply(Apply),
     Let(Let),
     Letrec(Letrec),
+    IfElse(IfElse),
 }
 
 impl fmt::Display for Syntax {
@@ -62,6 +76,9 @@ impl fmt::Display for Syntax {
             Syntax::Number(Number { value }) => {
                 write!(f, "{}", value)
             }
+            Syntax::String(Str { value }) => {
+                write!(f, "{}", value)
+            }
             Syntax::Apply(Apply { func, args }) => {
                 let args = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
                 write!(f, "{func}({})", args.join(", "))
@@ -71,6 +88,13 @@ impl fmt::Display for Syntax {
             }
             Syntax::Letrec(Letrec { v, defn, body }) => {
                 write!(f, "(letrec {v} = {defn} in {body})",)
+            }
+            Syntax::IfElse(IfElse {
+                cond,
+                consequent,
+                alternate,
+            }) => {
+                write!(f, "(if {cond} then {consequent} else {alternate})",)
             }
         }
     }
