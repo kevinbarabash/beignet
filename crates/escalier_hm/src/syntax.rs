@@ -31,15 +31,14 @@ pub struct Apply {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Let {
-    pub v: String,
+    pub var: String,
     pub defn: Box<Syntax>,
     pub body: Box<Syntax>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Letrec {
-    pub v: String,
-    pub defn: Box<Syntax>,
+    pub decls: Vec<(String, Box<Syntax>)>, // (var, defn)
     pub body: Box<Syntax>,
 }
 
@@ -81,11 +80,17 @@ impl fmt::Display for Syntax {
                 let args = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
                 write!(f, "{func}({})", args.join(", "))
             }
-            Syntax::Let(Let { v, defn, body }) => {
-                write!(f, "(let {v} = {defn} in {body})",)
+            Syntax::Let(Let { var, defn, body }) => {
+                write!(f, "(let {var} = {defn} in {body})")
             }
-            Syntax::Letrec(Letrec { v, defn, body }) => {
-                write!(f, "(letrec {v} = {defn} in {body})",)
+            Syntax::Letrec(Letrec { decls, body }) => {
+                write!(f, "(letrec ")?;
+                let decls = decls
+                    .iter()
+                    .map(|(var, defn)| format!("{} = {}", var, defn))
+                    .collect::<Vec<_>>();
+                write!(f, "{}", decls.join(" and "))?;
+                write!(f, " in {body})")
             }
             Syntax::IfElse(IfElse {
                 cond,
