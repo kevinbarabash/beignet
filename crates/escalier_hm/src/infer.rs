@@ -30,7 +30,7 @@ use crate::unify::*;
 pub fn infer(
     a: &mut Vec<Type>,
     node: &Syntax,
-    env: &Env,
+    env: &mut Env,
     non_generic: &HashSet<ArenaType>,
 ) -> Result<ArenaType, Errors> {
     match node {
@@ -60,25 +60,53 @@ pub fn infer(
                 new_non_generic.insert(arg_type);
                 param_types.push(arg_type);
             }
-            let result_type = infer(a, body, &new_env, &new_non_generic)?;
+            let result_type = infer(a, body, &mut new_env, &new_non_generic)?;
             let t = new_func_type(a, &param_types, result_type);
             Ok(t)
         }
-        Syntax::Let(Let { defn, v, body }) => {
+        Syntax::Let(Let { defn, var, body }) => {
             let defn_type = infer(a, defn, env, non_generic)?;
             let mut new_env = env.clone();
-            new_env.0.insert(v.clone(), defn_type);
-            infer(a, body, &new_env, non_generic)
+            new_env.0.insert(var.clone(), defn_type);
+            infer(a, body, &mut new_env, non_generic)
         }
-        Syntax::Letrec(Letrec { defn, v, body }) => {
-            let new_type = new_var_type(a);
+        Syntax::Letrec(letrec) => {
             let mut new_env = env.clone();
-            new_env.0.insert(v.clone(), new_type);
             let mut new_non_generic = non_generic.clone();
-            new_non_generic.insert(new_type);
-            let defn_type = infer(a, defn, &new_env, &new_non_generic)?;
-            unify(a, new_type, defn_type)?;
-            infer(a, body, &new_env, non_generic)
+
+            // Create all of the types new types first
+
+            let Let { var, .. } = &letrec.head;
+            let new_head_type = new_var_type(a);
+            new_env.0.insert(var.clone(), new_head_type);
+            env.0.insert(var.clone(), new_head_type);
+            new_non_generic.insert(new_head_type);
+
+            let mut new_body_types = vec![];
+
+            for Let { var, .. } in &letrec.body {
+                let new_type = new_var_type(a);
+                new_env.0.insert(var.clone(), new_type);
+                env.0.insert(var.clone(), new_type);
+                new_non_generic.insert(new_type);
+
+                new_body_types.push(new_type);
+            }
+
+            // Then infer the defintions and unify them with the new types
+
+            let Let { defn, .. } = &letrec.head;
+            let defn_type = infer(a, defn, &mut new_env, &new_non_generic)?;
+            unify(a, new_head_type, defn_type)?;
+
+            for (Let { defn, .. }, new_type) in letrec.body.iter().zip(new_body_types.iter()) {
+                let defn_type = infer(a, defn, &mut new_env, &new_non_generic)?;
+                unify(a, *new_type, defn_type)?;
+            }
+
+            // Does it even make for Letrec to have a body?
+            let Let { body, .. } = &letrec.head;
+            infer(a, body, &mut new_env, non_generic)
         }
         Syntax::IfElse(IfElse {
             cond,

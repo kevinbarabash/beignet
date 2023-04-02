@@ -35,19 +35,18 @@ mod tests {
         })
     }
 
-    pub fn new_let(v: &str, defn: Syntax, body: Syntax) -> Syntax {
+    pub fn new_let(var: &str, defn: Syntax, body: Syntax) -> Syntax {
         Syntax::Let(Let {
-            v: v.to_string(),
+            var: var.to_string(),
             defn: Box::new(defn),
             body: Box::new(body),
         })
     }
 
-    pub fn new_letrec(v: &str, defn: Syntax, body: Syntax) -> Syntax {
+    pub fn new_letrec(head: Let, body: &[Let]) -> Syntax {
         Syntax::Letrec(Letrec {
-            v: v.to_string(),
-            defn: Box::new(defn),
-            body: Box::new(body),
+            head,
+            body: body.to_owned(),
         })
     }
 
@@ -133,36 +132,38 @@ mod tests {
     /// evaluated. Evaluates the expressions, printing the type or errors arising
     /// from each.
 
-    // NOTE: This test requires Union types to work correctly.
     #[test]
     fn test_factorial() -> Result<(), Errors> {
-        let (mut a, my_env) = test_env();
+        let (mut a, mut my_env) = test_env();
 
         // factorial
         let syntax = new_letrec(
-            "factorial", // letrec factorial =
-            new_lambda(
-                &["n"], // fn n =>
-                new_if_else(
-                    new_apply(new_identifier("zero"), &[new_identifier("n")]),
-                    new_number("1"),
-                    new_apply(
-                        // times(n, factorial(pred(n))
-                        new_identifier("times"),
-                        &[
-                            new_identifier("n"),
-                            new_apply(
-                                new_identifier("factorial"),
-                                &[new_apply(new_identifier("pred"), &[new_identifier("n")])],
-                            ),
-                        ],
+            Let {
+                var: "factorial".to_string(), // letrec factorial =
+                defn: Box::from(new_lambda(
+                    &["n"], // fn n =>
+                    new_if_else(
+                        new_apply(new_identifier("zero"), &[new_identifier("n")]),
+                        new_number("1"),
+                        new_apply(
+                            // times(n, factorial(pred(n))
+                            new_identifier("times"),
+                            &[
+                                new_identifier("n"),
+                                new_apply(
+                                    new_identifier("factorial"),
+                                    &[new_apply(new_identifier("pred"), &[new_identifier("n")])],
+                                ),
+                            ],
+                        ),
                     ),
-                ),
-            ), // in
-            new_identifier("factorial"),
+                )), // in
+                body: Box::from(new_identifier("factorial")),
+            },
+            &[], // no additional definitions
         );
 
-        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -176,10 +177,77 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn test_mutual_recursion() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        // NOTE: The definitions of "even" and "odd" are correct from a types
+        // perspective, but incorrect semantically.
+        let syntax = new_letrec(
+            Let {
+                var: "even".to_string(), // letrec even =
+                defn: Box::from(new_lambda(
+                    &["x"], // (x) =>
+                    new_apply(
+                        // times(1, odd(x - 1)) - this casts it to a number
+                        new_identifier("times"),
+                        &[new_apply(
+                            new_identifier("odd"),
+                            &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
+                        )],
+                    ),
+                )), // in
+                body: Box::from(new_identifier("even")),
+            },
+            &[Let {
+                var: "odd".to_string(), // and odd =
+                defn: Box::from(new_lambda(
+                    &["x"], // (x) =>
+                    new_apply(
+                        // times(1, even(x - 1)) - this casts it to a number
+                        new_identifier("times"),
+                        &[new_apply(
+                            new_identifier("even"),
+                            &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
+                        )],
+                    ),
+                )), // in
+                body: Box::from(new_identifier("odd")),
+            }], // no additional definitions
+        );
+
+        infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+
+        let t = my_env.0.get("even").unwrap();
+        assert_eq!(
+            a[*t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"(number -> number)"#
+        );
+        let t = my_env.0.get("odd").unwrap();
+        assert_eq!(
+            a[*t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"(number -> number)"#
+        );
+
+        Ok(())
+    }
+
     #[should_panic]
     #[test]
     fn test_mismatch() {
-        let (mut a, my_env) = test_env();
+        let (mut a, mut my_env) = test_env();
 
         // fn x => (pair(x(3) (x(true)))
         let syntax = new_lambda(
@@ -193,13 +261,13 @@ mod tests {
             ),
         );
 
-        infer(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
+        infer(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
     }
 
     #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"Undefined symbol \\\"f\\\"\")"]
     #[test]
     fn test_pair() {
-        let (mut a, my_env) = test_env();
+        let (mut a, mut my_env) = test_env();
 
         // pair(f(3), f(true))
         let syntax = new_apply(
@@ -210,12 +278,12 @@ mod tests {
             ],
         );
 
-        infer(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
+        infer(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
     }
 
     #[test]
     fn test_mul() -> Result<(), Errors> {
-        let (mut a, my_env) = test_env();
+        let (mut a, mut my_env) = test_env();
 
         let pair = new_apply(
             new_identifier("pair"),
@@ -228,7 +296,7 @@ mod tests {
         // let f = (fn x => x) in ((pair (f 4)) (f true))
         let syntax = new_let("f", new_lambda(&["x"], new_identifier("x")), pair);
 
-        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -245,7 +313,7 @@ mod tests {
     #[should_panic = "recursive unification"]
     #[test]
     fn test_recursive() {
-        let (mut a, my_env) = test_env();
+        let (mut a, mut my_env) = test_env();
 
         // fn f => f f (fail)
         let syntax = new_lambda(
@@ -253,12 +321,12 @@ mod tests {
             new_apply(new_identifier("f"), &[new_identifier("f")]),
         );
 
-        infer(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
+        infer(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
     }
 
     #[test]
     fn test_number_literal() -> Result<(), Errors> {
-        let (mut a, my_env) = test_env();
+        let (mut a, mut my_env) = test_env();
 
         // let g = fn f => 5 in g g
         let syntax = new_let(
@@ -267,7 +335,7 @@ mod tests {
             new_apply(new_identifier("g"), &[new_identifier("g")]),
         );
 
-        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -283,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_generic_nongeneric() -> Result<(), Errors> {
-        let (mut a, my_env) = test_env();
+        let (mut a, mut my_env) = test_env();
 
         // example that demonstrates generic and non-generic variables:
         // fn g => let f = fn x => g in pair (f 3, f true)
@@ -302,7 +370,7 @@ mod tests {
             ),
         );
 
-        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -318,7 +386,7 @@ mod tests {
 
     #[test]
     fn test_composition() -> Result<(), Errors> {
-        let (mut a, my_env) = test_env();
+        let (mut a, mut my_env) = test_env();
 
         // Function composition
         // fn f (fn g (fn arg (f g arg)))
@@ -336,7 +404,7 @@ mod tests {
             ),
         );
 
-        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -352,7 +420,7 @@ mod tests {
 
     #[test]
     fn test_fun() -> Result<(), Errors> {
-        let (mut a, my_env) = test_env();
+        let (mut a, mut my_env) = test_env();
 
         // Function composition
         // (fn (f, g, arg) -> (f g arg))
@@ -364,7 +432,7 @@ mod tests {
             ),
         );
 
-        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -380,14 +448,14 @@ mod tests {
 
     #[test]
     fn test_subtype() -> Result<(), Errors> {
-        let (mut a, my_env) = test_env();
+        let (mut a, mut my_env) = test_env();
 
         let syntax = new_apply(
             new_identifier("times"),
             &[new_number("5"), new_number("10")],
         );
 
-        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -416,7 +484,7 @@ mod tests {
             &[new_identifier("foo"), new_number("2")],
         );
 
-        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -433,14 +501,14 @@ mod tests {
     #[test]
     #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 22, kind: Literal(String(\\\"hello\\\")) }, Type { id: 18, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
     fn test_subtype_error() {
-        let (mut a, my_env) = test_env();
+        let (mut a, mut my_env) = test_env();
 
         let syntax = new_apply(
             new_identifier("times"),
             &[new_number("5"), new_string("hello")],
         );
 
-        infer(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
+        infer(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
     }
 
     #[test]
@@ -459,6 +527,6 @@ mod tests {
             &[new_identifier("foo"), new_number("2")],
         );
 
-        infer(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
+        infer(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
     }
 }
