@@ -76,37 +76,25 @@ pub fn infer(
 
             // Create all of the types new types first
 
-            let Let { var, .. } = &letrec.head;
-            let new_head_type = new_var_type(a);
-            new_env.0.insert(var.clone(), new_head_type);
-            env.0.insert(var.clone(), new_head_type);
-            new_non_generic.insert(new_head_type);
+            let mut new_types = vec![];
 
-            let mut new_body_types = vec![];
-
-            for Let { var, .. } in &letrec.body {
+            for (var, ..) in &letrec.decls {
                 let new_type = new_var_type(a);
                 new_env.0.insert(var.clone(), new_type);
                 env.0.insert(var.clone(), new_type);
                 new_non_generic.insert(new_type);
 
-                new_body_types.push(new_type);
+                new_types.push(new_type);
             }
 
             // Then infer the defintions and unify them with the new types
 
-            let Let { defn, .. } = &letrec.head;
-            let defn_type = infer(a, defn, &mut new_env, &new_non_generic)?;
-            unify(a, new_head_type, defn_type)?;
-
-            for (Let { defn, .. }, new_type) in letrec.body.iter().zip(new_body_types.iter()) {
+            for ((.., defn), new_type) in letrec.decls.iter().zip(new_types.iter()) {
                 let defn_type = infer(a, defn, &mut new_env, &new_non_generic)?;
                 unify(a, *new_type, defn_type)?;
             }
 
-            // Does it even make for Letrec to have a body?
-            let Let { body, .. } = &letrec.head;
-            infer(a, body, &mut new_env, non_generic)
+            infer(a, &letrec.body, &mut new_env, non_generic)
         }
         Syntax::IfElse(IfElse {
             cond,

@@ -43,10 +43,13 @@ mod tests {
         })
     }
 
-    pub fn new_letrec(head: Let, body: &[Let]) -> Syntax {
+    pub fn new_letrec(decls: &[(String, Syntax)], body: Syntax) -> Syntax {
         Syntax::Letrec(Letrec {
-            head,
-            body: body.to_owned(),
+            decls: decls
+                .iter()
+                .map(|(var, defn)| (var.to_owned(), Box::new(defn.to_owned())))
+                .collect(),
+            body: Box::new(body),
         })
     }
 
@@ -138,9 +141,9 @@ mod tests {
 
         // factorial
         let syntax = new_letrec(
-            Let {
-                var: "factorial".to_string(), // letrec factorial =
-                defn: Box::from(new_lambda(
+            &[(
+                "factorial".to_string(),
+                new_lambda(
                     &["n"], // fn n =>
                     new_if_else(
                         new_apply(new_identifier("zero"), &[new_identifier("n")]),
@@ -157,10 +160,9 @@ mod tests {
                             ],
                         ),
                     ),
-                )), // in
-                body: Box::from(new_identifier("factorial")),
-            },
-            &[], // no additional definitions
+                ),
+            )],
+            new_identifier("factorial"),
         );
 
         let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
@@ -184,36 +186,37 @@ mod tests {
         // NOTE: The definitions of "even" and "odd" are correct from a types
         // perspective, but incorrect semantically.
         let syntax = new_letrec(
-            Let {
-                var: "even".to_string(), // letrec even =
-                defn: Box::from(new_lambda(
-                    &["x"], // (x) =>
-                    new_apply(
-                        // times(1, odd(x - 1)) - this casts it to a number
-                        new_identifier("times"),
-                        &[new_apply(
-                            new_identifier("odd"),
-                            &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
-                        )],
+            &[
+                (
+                    "even".to_string(),
+                    new_lambda(
+                        &["x"], // (x) =>
+                        new_apply(
+                            // times(1, odd(x - 1)) - this casts it to a number
+                            new_identifier("times"),
+                            &[new_apply(
+                                new_identifier("odd"),
+                                &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
+                            )],
+                        ),
                     ),
-                )), // in
-                body: Box::from(new_identifier("even")),
-            },
-            &[Let {
-                var: "odd".to_string(), // and odd =
-                defn: Box::from(new_lambda(
-                    &["x"], // (x) =>
-                    new_apply(
-                        // times(1, even(x - 1)) - this casts it to a number
-                        new_identifier("times"),
-                        &[new_apply(
-                            new_identifier("even"),
-                            &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
-                        )],
+                ),
+                (
+                    "odd".to_string(),
+                    new_lambda(
+                        &["x"], // (x) =>
+                        new_apply(
+                            // times(1, even(x - 1)) - this casts it to a number
+                            new_identifier("times"),
+                            &[new_apply(
+                                new_identifier("even"),
+                                &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
+                            )],
+                        ),
                     ),
-                )), // in
-                body: Box::from(new_identifier("odd")),
-            }], // no additional definitions
+                ),
+            ],
+            new_identifier("odd"),
         );
 
         infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
