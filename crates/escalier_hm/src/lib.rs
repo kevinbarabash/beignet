@@ -1,425 +1,25 @@
 // Based on https://github.com/tcr/rust-hindley-milner/blob/master/src/lib.rs
+mod env;
+mod errors;
+mod infer;
 mod literal;
 mod syntax;
 mod types;
+mod unify;
+mod util;
 
-use std::collections::{HashMap, HashSet};
-
-use crate::literal::*;
-use crate::syntax::*;
-use crate::types::*;
-
-#[derive(Debug)]
-pub enum Errors {
-    InferenceError(String),
-    ParseError(String),
-}
-
-// Type inference machinery
-
-#[derive(Clone, Debug, Default)]
-pub struct Env(HashMap<String, ArenaType>);
-
-/// Computes the type of the expression given by node.
-///
-/// The type of the node is computed in the context of the
-/// supplied type environment env. Data types can be introduced into the
-/// language simply by having a predefined set of identifiers in the initial
-/// environment. environment; this way there is no need to change the syntax or, more
-/// importantly, the type-checking program when extending the language.
-///
-/// Args:
-///     node: The root of the abstract syntax tree.
-///     env: The type environment is a mapping of expression identifier names
-///         to type assignments.
-///     non_generic: A set of non-generic variables, or None
-///
-/// Returns:
-///     The computed type of the expression.
-///
-/// Raises:
-///     InferenceError: The type of the expression could not be inferred, for example
-///         if it is not possible to unify two types such as Integer and Bool
-///     ParseError: The abstract syntax tree rooted at node could not be parsed
-pub fn analyse(
-    a: &mut Vec<Type>,
-    node: &Syntax,
-    env: &Env,
-    non_generic: &HashSet<ArenaType>,
-) -> Result<ArenaType, Errors> {
-    match node {
-        Syntax::Identifier(Identifier { name }) => get_type(a, name, env, non_generic),
-        Syntax::Literal(literal) => {
-            let t = new_lit_type(a, literal);
-            Ok(t)
-        }
-        Syntax::Apply(Apply { func, args }) => {
-            let func_type = analyse(a, func, env, non_generic)?;
-            let arg_types = args
-                .iter()
-                .map(|arg| analyse(a, arg, env, non_generic))
-                .collect::<Result<Vec<_>, _>>()?;
-            let result_type = new_var_type(a);
-            let call_type = new_call_type(a, &arg_types, result_type);
-            unify(a, call_type, func_type)?;
-            Ok(result_type)
-        }
-        Syntax::Lambda(Lambda { params, body }) => {
-            let mut param_types = vec![];
-            let mut new_env = env.clone();
-            let mut new_non_generic = non_generic.clone();
-            for param in params {
-                let arg_type = new_var_type(a);
-                new_env.0.insert(param.clone(), arg_type);
-                new_non_generic.insert(arg_type);
-                param_types.push(arg_type);
-            }
-            let result_type = analyse(a, body, &new_env, &new_non_generic)?;
-            let t = new_func_type(a, &param_types, result_type);
-            Ok(t)
-        }
-        Syntax::Let(Let { defn, v, body }) => {
-            let defn_type = analyse(a, defn, env, non_generic)?;
-            let mut new_env = env.clone();
-            new_env.0.insert(v.clone(), defn_type);
-            analyse(a, body, &new_env, non_generic)
-        }
-        Syntax::Letrec(Letrec { defn, v, body }) => {
-            let new_type = new_var_type(a);
-            let mut new_env = env.clone();
-            new_env.0.insert(v.clone(), new_type);
-            let mut new_non_generic = non_generic.clone();
-            new_non_generic.insert(new_type);
-            let defn_type = analyse(a, defn, &new_env, &new_non_generic)?;
-            unify(a, new_type, defn_type)?;
-            analyse(a, body, &new_env, non_generic)
-        }
-        Syntax::IfElse(IfElse {
-            cond,
-            consequent,
-            alternate,
-        }) => {
-            let cond_type = analyse(a, cond, env, non_generic)?;
-            let bool_type = new_constructor(a, "boolean", &[]);
-            unify(a, cond_type, bool_type)?;
-            let consequent_type = analyse(a, consequent, env, non_generic)?;
-            let alternate_type = analyse(a, alternate, env, non_generic)?;
-            let t = new_union_type(a, &[consequent_type, alternate_type]);
-            Ok(t)
-        }
-    }
-}
-
-/// Get the type of identifier name from the type environment env.
-///
-/// Args:
-///     name: The identifier name
-///     env: The type environment mapping from identifier names to types
-///     non_generic: A set of non-generic TypeVariables
-///
-/// Raises:
-///     ParseError: Raised if name is an undefined symbol in the type
-///         environment.
-fn get_type(
-    a: &mut Vec<Type>,
-    name: &str,
-    env: &Env,
-    non_generic: &HashSet<ArenaType>,
-) -> Result<ArenaType, Errors> {
-    if let Some(value) = env.0.get(name) {
-        let mat = non_generic.iter().cloned().collect::<Vec<_>>();
-        Ok(fresh(a, *value, &mat))
-    } else {
-        Err(Errors::InferenceError(format!(
-            "Undefined symbol {:?}",
-            name
-        )))
-    }
-}
-
-/// Makes a copy of a type expression.
-///
-/// The type t is copied. The the generic variables are duplicated and the
-/// non_generic variables are shared.
-///
-/// Args:
-///     t: A type to be copied.
-///     non_generic: A set of non-generic TypeVariables
-fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaType {
-    // A mapping of TypeVariables to TypeVariables
-    let mut mappings = HashMap::default();
-
-    fn freshrec(
-        a: &mut Vec<Type>,
-        tp: ArenaType,
-        mappings: &mut HashMap<ArenaType, ArenaType>,
-        non_generic: &[ArenaType],
-    ) -> ArenaType {
-        let p = prune(a, tp);
-        // We clone here because we can't move out of a shared reference.
-        // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
-        match &a.get(p).unwrap().clone().kind {
-            TypeKind::Variable(_) => {
-                if is_generic(a, p, non_generic) {
-                    mappings
-                        .entry(p)
-                        .or_insert_with(|| new_var_type(a))
-                        .to_owned()
-                } else {
-                    p
-                }
-            }
-            TypeKind::Constructor(con) => {
-                let b = con
-                    .types
-                    .iter()
-                    .map(|x| freshrec(a, *x, mappings, non_generic))
-                    .collect::<Vec<_>>();
-                new_constructor(a, &con.name, &b)
-            }
-            TypeKind::Literal(lit) => new_lit_type(a, lit),
-            TypeKind::Function(func) => {
-                let params = func
-                    .params
-                    .iter()
-                    .map(|x| freshrec(a, *x, mappings, non_generic))
-                    .collect::<Vec<_>>();
-                let ret = freshrec(a, func.ret, mappings, non_generic);
-                new_func_type(a, &params, ret)
-            }
-            TypeKind::Call(call) => {
-                let args = call
-                    .args
-                    .iter()
-                    .map(|x| freshrec(a, *x, mappings, non_generic))
-                    .collect::<Vec<_>>();
-                let ret = freshrec(a, call.ret, mappings, non_generic);
-                new_call_type(a, &args, ret)
-            }
-            TypeKind::Union(union) => {
-                let args = union
-                    .types
-                    .iter()
-                    .map(|x| freshrec(a, *x, mappings, non_generic))
-                    .collect::<Vec<_>>();
-                new_union_type(a, &args)
-            }
-        }
-    }
-
-    freshrec(a, t, &mut mappings, non_generic)
-}
-
-/// Unify the two types t1 and t2.
-///
-/// Makes the types t1 and t2 the same.
-///
-/// Args:
-///     t1: The first type to be made equivalent
-///     t2: The second type to be be equivalent
-///
-/// Returns:
-///     None
-///
-/// Raises:
-///     InferenceError: Raised if the types cannot be unified.
-fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), Errors> {
-    let a = prune(alloc, t1);
-    let b = prune(alloc, t2);
-    // Why do we clone here?
-    let a_t = alloc.get(a).unwrap().clone();
-    let b_t = alloc.get(b).unwrap().clone();
-    match (&a_t.kind, &b_t.kind) {
-        (TypeKind::Variable(_), _) => bind(alloc, a, b),
-        (_, TypeKind::Variable(_)) => bind(alloc, b, a),
-        (TypeKind::Constructor(con_a), TypeKind::Constructor(con_b)) => {
-            // TODO: support type constructors with optional and default type params
-            if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
-                return Err(Errors::InferenceError(format!("type mismatch: {a} != {b}")));
-            }
-            for (p, q) in con_a.types.iter().zip(con_b.types.iter()) {
-                unify(alloc, *p, *q)?;
-            }
-            Ok(())
-        }
-        (TypeKind::Function(func_a), TypeKind::Function(func_b)) => {
-            for (p, q) in func_a.params.iter().zip(func_b.params.iter()) {
-                unify(alloc, *p, *q)?;
-            }
-            unify(alloc, func_a.ret, func_b.ret)?;
-            Ok(())
-        }
-        (TypeKind::Call(call), TypeKind::Function(func)) => {
-            for (p, q) in call.args.iter().zip(func.params.iter()) {
-                unify(alloc, *p, *q)?;
-            }
-            unify(alloc, call.ret, func.ret)?;
-            Ok(())
-        }
-        (TypeKind::Call(call_a), TypeKind::Call(call_b)) => {
-            for (p, q) in call_a.args.iter().zip(call_b.args.iter()) {
-                unify(alloc, *p, *q)?;
-            }
-            unify(alloc, call_a.ret, call_b.ret)?;
-            Ok(())
-        }
-        (
-            TypeKind::Literal(Literal::Number(_)),
-            TypeKind::Constructor(Constructor { name, .. }),
-        ) if name == "number" => Ok(()),
-        (
-            TypeKind::Literal(Literal::String(_)),
-            TypeKind::Constructor(Constructor { name, .. }),
-        ) if name == "string" => Ok(()),
-        (
-            TypeKind::Literal(Literal::Boolean(_)),
-            TypeKind::Constructor(Constructor { name, .. }),
-        ) if name == "boolean" => Ok(()),
-        (TypeKind::Union(Union { types }), _) => {
-            // All types in the union must be subtypes of t2
-            for t in types.iter() {
-                unify(alloc, *t, b)?;
-            }
-            Ok(())
-        }
-        (_, TypeKind::Union(Union { types })) => {
-            for t2 in types.iter() {
-                if unify(alloc, a, *t2).is_ok() {
-                    return Ok(());
-                }
-            }
-
-            Err(Errors::InferenceError(format!(
-                "type mismatch: unify({a_t:?}, {b_t:?}) failed"
-            )))
-        }
-        _ => Err(Errors::InferenceError(format!(
-            "type mismatch: unify({a_t:?}, {b_t:?}) failed"
-        ))),
-    }
-}
-
-fn bind(alloc: &mut Vec<Type>, a: usize, b: usize) -> Result<(), Errors> {
-    if a != b {
-        if occurs_in_type(alloc, a, b) {
-            // raise InferenceError("recursive unification")
-            return Err(Errors::InferenceError("recursive unification".to_string()));
-        }
-        alloc.get_mut(a).unwrap().set_instance(b);
-    }
-    Ok(())
-}
-
-/// Returns the currently defining instance of t.
-///
-/// As a side effect, collapses the list of type instances. The function Prune
-/// is used whenever a type expression has to be inspected: it will always
-/// return a type expression which is either an uninstantiated type variable or
-/// a type operator; i.e. it will skip instantiated variables, and will
-/// actually prune them from expressions to remove long chains of instantiated
-/// variables.
-///
-/// Args:
-///     t: The type to be pruned
-///
-/// Returns:
-///     An uninstantiated TypeVariable or a TypeOperator
-fn prune(a: &mut Vec<Type>, t: ArenaType) -> ArenaType {
-    let v2 = match a.get(t).unwrap().kind {
-        // TODO: handle .unwrap() panicing
-        TypeKind::Variable(Variable {
-            instance: Some(value),
-        }) => value,
-        _ => {
-            return t;
-        }
-    };
-
-    let value = prune(a, v2);
-    match &mut a.get_mut(t).unwrap().kind {
-        // TODO: handle .unwrap() panicing
-        TypeKind::Variable(Variable {
-            ref mut instance, ..
-        }) => {
-            *instance = Some(value);
-        }
-        _ => {
-            return t;
-        }
-    }
-    value
-}
-
-/// Checks whether a given variable occurs in a list of non-generic variables
-///
-/// Note that a variables in such a list may be instantiated to a type term,
-/// in which case the variables contained in the type term are considered
-/// non-generic.
-///
-/// Note: Must be called with v pre-pruned
-///
-/// Args:
-///     v: The TypeVariable to be tested for genericity
-///     non_generic: A set of non-generic TypeVariables
-///
-/// Returns:
-///     True if v is a generic variable, otherwise False
-fn is_generic(a: &mut Vec<Type>, v: ArenaType, non_generic: &[ArenaType]) -> bool {
-    !occurs_in(a, v, non_generic)
-}
-
-/// Checks whether a type variable occurs in a type expression.
-///
-/// Note: Must be called with v pre-pruned
-///
-/// Args:
-///     v:  The TypeVariable to be tested for
-///     type2: The type in which to search
-///
-/// Returns:
-///     True if v occurs in type2, otherwise False
-fn occurs_in_type(a: &mut Vec<Type>, v: ArenaType, type2: ArenaType) -> bool {
-    let pruned_type2 = prune(a, type2);
-    if pruned_type2 == v {
-        return true;
-    }
-    // We clone here because we can't move out of a shared reference.
-    // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
-    match a.get(pruned_type2).unwrap().clone().kind {
-        TypeKind::Variable(_) => false, // leaf node
-        TypeKind::Literal(_) => false,  // leaf node
-        TypeKind::Constructor(Constructor { types, .. }) => occurs_in(a, v, &types),
-        TypeKind::Function(Function { params, ret }) => {
-            occurs_in(a, v, &params) || occurs_in_type(a, v, ret)
-        }
-        TypeKind::Call(Call { args, ret }) => occurs_in(a, v, &args) || occurs_in_type(a, v, ret),
-        TypeKind::Union(Union { types }) => occurs_in(a, v, &types),
-    }
-}
-
-/// Checks whether a types variable occurs in any other types.
-///
-/// Args:
-///     t:  The TypeVariable to be tested for
-///     types: The sequence of types in which to search
-///
-/// Returns:
-///     True if t occurs in any of types, otherwise False
-///
-fn occurs_in(a: &mut Vec<Type>, t: ArenaType, types: &[ArenaType]) -> bool {
-    for t2 in types.iter() {
-        if occurs_in_type(a, t, *t2) {
-            return true;
-        }
-    }
-    false
-}
-
-//=====================================================
+pub use crate::infer::infer;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::{HashMap, HashSet};
+
+    use crate::env::*;
+    use crate::errors::*;
+    use crate::infer::*;
+    use crate::literal::*;
+    use crate::syntax::*;
+    use crate::types::*;
 
     pub fn new_lambda(params: &[&str], body: Syntax) -> Syntax {
         Syntax::Lambda(Lambda {
@@ -562,7 +162,7 @@ mod tests {
             new_identifier("factorial"),
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -593,7 +193,7 @@ mod tests {
             ),
         );
 
-        analyse(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
+        infer(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
     }
 
     #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"Undefined symbol \\\"f\\\"\")"]
@@ -610,7 +210,7 @@ mod tests {
             ],
         );
 
-        analyse(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
+        infer(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
     }
 
     #[test]
@@ -628,7 +228,7 @@ mod tests {
         // let f = (fn x => x) in ((pair (f 4)) (f true))
         let syntax = new_let("f", new_lambda(&["x"], new_identifier("x")), pair);
 
-        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -653,7 +253,7 @@ mod tests {
             new_apply(new_identifier("f"), &[new_identifier("f")]),
         );
 
-        analyse(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
+        infer(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
     }
 
     #[test]
@@ -667,7 +267,7 @@ mod tests {
             new_apply(new_identifier("g"), &[new_identifier("g")]),
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -702,7 +302,7 @@ mod tests {
             ),
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -736,7 +336,7 @@ mod tests {
             ),
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -764,7 +364,7 @@ mod tests {
             ),
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -787,7 +387,7 @@ mod tests {
             &[new_number("5"), new_number("10")],
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -816,7 +416,7 @@ mod tests {
             &[new_identifier("foo"), new_number("2")],
         );
 
-        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default())?;
+        let t = infer(&mut a, &syntax, &my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -840,7 +440,7 @@ mod tests {
             &[new_number("5"), new_string("hello")],
         );
 
-        analyse(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
+        infer(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
     }
 
     #[test]
@@ -859,6 +459,6 @@ mod tests {
             &[new_identifier("foo"), new_number("2")],
         );
 
-        analyse(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
+        infer(&mut a, &syntax, &my_env, &HashSet::default()).unwrap();
     }
 }
