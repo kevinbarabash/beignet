@@ -44,6 +44,12 @@ pub fn new_call(a: &mut Vec<Type>, args: &[ArenaType], ret: ArenaType) -> ArenaT
     a.len() - 1
 }
 
+pub fn new_union(a: &mut Vec<Type>, types: &[ArenaType]) -> ArenaType {
+    let t = Type::new_union(a.len(), types);
+    a.push(t);
+    a.len() - 1
+}
+
 /// A binary type constructor which builds function types
 pub fn new_variable(a: &mut Vec<Type>) -> ArenaType {
     let t = Type::new_variable(a.len());
@@ -111,15 +117,7 @@ pub fn analyse(
             },
         ),
         Syntax::Apply(Apply { func, args }) => {
-            eprintln!(
-                "func = {func}, args = {}",
-                args.iter()
-                    .map(|arg| arg.to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
             let func_type = analyse(a, func, env, non_generic);
-            eprintln!("func_type: {:?}", func_type);
             let arg_types = args
                 .iter()
                 .map(|arg| analyse(a, arg, env, non_generic))
@@ -168,8 +166,7 @@ pub fn analyse(
             unify(a, cond_type, bool_type);
             let consequent_type = analyse(a, consequent, env, non_generic);
             let alternate_type = analyse(a, alternate, env, non_generic);
-            // TODO: compute the union of the two types and return that instead
-            alternate_type
+            new_union(a, &[consequent_type, alternate_type])
         }
     }
 }
@@ -258,6 +255,14 @@ fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> ArenaTyp
                 let ret = freshrec(a, call.ret, mappings, non_generic);
                 new_call(a, &args, ret)
             }
+            TypeKind::Union(union) => {
+                let args = union
+                    .types
+                    .iter()
+                    .map(|x| freshrec(a, *x, mappings, non_generic))
+                    .collect::<Vec<_>>();
+                new_union(a, &args)
+            }
         }
     }
 
@@ -321,6 +326,15 @@ fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) {
             }),
             TypeKind::Constructor(Constructor { name, .. }),
         ) if name == "number" => (),
+        (TypeKind::Union(Union { types }), _) => {
+            // All types in the union must be subtypes of t2
+            for t in types.iter() {
+                unify(alloc, *t, b);
+            }
+        }
+        (_, TypeKind::Union(Union { types: _ })) => {
+            todo!("implement sub-type checking where a union is the super-type");
+        }
         (a_kind, b_kind) => {
             panic!("type mismatch: unify({a_kind:?}, {b_kind:?}) failed");
         }
@@ -420,6 +434,7 @@ fn occurs_in_type(a: &mut Vec<Type>, v: ArenaType, type2: ArenaType) -> bool {
             occurs_in(a, v, &params) || occurs_in_type(a, v, ret)
         }
         TypeKind::Call(Call { args, ret }) => occurs_in(a, v, &args) || occurs_in_type(a, v, ret),
+        TypeKind::Union(Union { types }) => occurs_in(a, v, &types),
     }
 }
 
@@ -836,6 +851,44 @@ mod tests {
     }
 
     #[test]
+    fn test_union_subtype() {
+        let (mut a, mut my_env) = test_env();
+
+        let lit1 = new_literal(
+            &mut a,
+            &Literal {
+                kind: LiteralKind::Number("5".to_string()),
+            },
+        );
+        let lit2 = new_literal(
+            &mut a,
+            &Literal {
+                kind: LiteralKind::Number("10".to_string()),
+            },
+        );
+        my_env
+            .0
+            .insert("foo".to_string(), new_union(&mut a, &[lit1, lit2]));
+
+        let syntax = new_apply(
+            new_identifier("times"),
+            &[new_identifier("foo"), new_number("2")],
+        );
+
+        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"number"#
+        );
+    }
+
+    #[test]
     #[should_panic = r#"type mismatch: unify(Literal(Literal { kind: String("hello") }), Constructor(Constructor { name: "number", types: [] })) failed"#]
     fn test_subtype_error() {
         let (mut a, my_env) = test_env();
@@ -843,6 +896,45 @@ mod tests {
         let syntax = new_apply(
             new_identifier("times"),
             &[new_number("5"), new_string("hello")],
+        );
+
+        let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"number"#
+        );
+    }
+
+    #[test]
+    #[should_panic = r#"type mismatch: unify(Literal(Literal { kind: String("hello") }), Constructor(Constructor { name: "number", types: [] })) failed"#]
+    fn test_union_subtype_error() {
+        let (mut a, mut my_env) = test_env();
+
+        let lit1 = new_literal(
+            &mut a,
+            &Literal {
+                kind: LiteralKind::Number("5".to_string()),
+            },
+        );
+        let lit2 = new_literal(
+            &mut a,
+            &Literal {
+                kind: LiteralKind::String("hello".to_string()),
+            },
+        );
+        my_env
+            .0
+            .insert("foo".to_string(), new_union(&mut a, &[lit1, lit2]));
+
+        let syntax = new_apply(
+            new_identifier("times"),
+            &[new_identifier("foo"), new_number("2")],
         );
 
         let t = analyse(&mut a, &syntax, &my_env, &HashSet::default());

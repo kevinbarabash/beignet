@@ -39,12 +39,18 @@ pub struct Call {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Union {
+    pub types: Vec<ArenaType>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeKind {
     Variable(Variable),
     Constructor(Constructor),
     Literal(Literal),
     Function(Function),
     Call(Call),
+    Union(Union),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -99,6 +105,15 @@ impl Type {
             kind: TypeKind::Call(Call {
                 args: arg_types.to_vec(),
                 ret: ret_type,
+            }),
+        }
+    }
+
+    pub fn new_union(idx: ArenaType, types: &[ArenaType]) -> Type {
+        Type {
+            id: idx,
+            kind: TypeKind::Union(Union {
+                types: types.to_vec(),
             }),
         }
     }
@@ -165,6 +180,15 @@ impl Type {
 
                 // Should this be formatted more like a function call
                 format!("({} -> {ret})", args.join(", "))
+            }
+            TypeKind::Union(union) => {
+                let types = union
+                    .types
+                    .iter()
+                    .map(|t| a[*t].as_string(a, namer))
+                    .collect::<Vec<_>>();
+
+                format!("{}", types.join(" | "))
             }
         }
     }
