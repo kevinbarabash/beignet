@@ -60,7 +60,7 @@ pub fn infer_expression(
                 new_non_generic.insert(arg_type);
                 param_types.push(arg_type);
             }
-            let result_type = infer_expression(a, body, &mut new_env, &new_non_generic)?;
+            let result_type = infer_statement(a, &body[0], &mut new_env, &new_non_generic)?;
             let t = new_func_type(a, &param_types, result_type);
             Ok(t)
         }
@@ -111,19 +111,30 @@ pub fn infer_expression(
     }
 }
 
+pub fn infer_statement(
+    a: &mut Vec<Type>,
+    statement: &Statement,
+    env: &mut Env,
+    non_generic: &HashSet<ArenaType>,
+) -> Result<ArenaType, Errors> {
+    match statement {
+        Statement::Declaration(Declaration { var, defn }) => {
+            let t = infer_expression(a, defn, env, non_generic)?;
+            env.0.insert(var.clone(), t);
+            Ok(t) // TODO: Should this be unit?
+        }
+        Statement::Expression(expr) => {
+            let t = infer_expression(a, expr, env, non_generic)?;
+            Ok(t)
+        }
+    }
+}
+
 pub fn infer_program(a: &mut Vec<Type>, node: &Program, env: &mut Env) -> Result<(), Errors> {
     let non_generic = HashSet::new();
 
     for stmt in &node.statements {
-        match stmt {
-            Statement::Declaration(Declaration { var, defn }) => {
-                let t = infer_expression(a, defn, env, &non_generic)?;
-                env.0.insert(var.clone(), t);
-            }
-            Statement::Expression(expr) => {
-                infer_expression(a, expr, env, &non_generic)?;
-            }
-        }
+        infer_statement(a, stmt, env, &non_generic)?;
     }
 
     Ok(())

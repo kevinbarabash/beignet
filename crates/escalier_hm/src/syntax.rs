@@ -5,7 +5,7 @@ use crate::literal::Literal;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Lambda {
     pub params: Vec<String>,
-    pub body: Box<Expression>,
+    pub body: Vec<Statement>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -68,7 +68,8 @@ impl fmt::Display for Expression {
                     .iter()
                     .map(|param| param.to_string())
                     .collect::<Vec<_>>();
-                write!(f, "(fn ({}) => {body})", params.join(", "))
+                let body = body.iter().map(|stmt| stmt.to_string()).collect::<Vec<_>>();
+                write!(f, "(fn ({}) => {})", params.join(", "), body.join(" "))
             }
             Expression::Identifier(Identifier { name }) => {
                 write!(f, "{}", name)
@@ -113,6 +114,17 @@ pub struct Declaration {
 pub enum Statement {
     Declaration(Declaration),
     Expression(Expression),
+}
+
+impl fmt::Display for Statement {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Statement::Declaration(Declaration { var, defn }) => {
+                write!(f, "let {var} = {defn}")
+            }
+            Statement::Expression(expr) => write!(f, "{expr}"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
