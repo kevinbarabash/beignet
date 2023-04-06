@@ -111,9 +111,15 @@ pub struct Declaration {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Return {
+    pub expr: Box<Expression>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Statement {
     Declaration(Declaration),
     Expression(Expression),
+    Return(Return),
 }
 
 impl fmt::Display for Statement {
@@ -123,6 +129,7 @@ impl fmt::Display for Statement {
                 write!(f, "let {var} = {defn}")
             }
             Statement::Expression(expr) => write!(f, "{expr}"),
+            Statement::Return(Return { expr }) => write!(f, "return {expr}"),
         }
     }
 }

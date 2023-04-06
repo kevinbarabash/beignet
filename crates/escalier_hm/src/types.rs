@@ -153,9 +153,10 @@ impl Type {
 
                 let ret = a[func.ret].as_string(a, namer);
 
-                format!("({} -> {ret})", params.join(", "))
+                format!("({}) => {ret}", params.join(", "))
             }
             TypeKind::Call(call) => {
+                eprintln!("call: {:?}", call);
                 let args = call
                     .args
                     .iter()
@@ -165,7 +166,7 @@ impl Type {
                 let ret = a[call.ret].as_string(a, namer);
 
                 // Should this be formatted more like a function call
-                format!("({} -> {ret})", args.join(", "))
+                format!("({}) => {ret}", args.join(", "))
             }
             TypeKind::Union(union) => {
                 let types = union

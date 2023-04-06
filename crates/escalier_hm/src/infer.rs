@@ -54,14 +54,27 @@ pub fn infer_expression(
             let mut param_types = vec![];
             let mut new_env = env.clone();
             let mut new_non_generic = non_generic.clone();
+
             for param in params {
                 let arg_type = new_var_type(a);
                 new_env.0.insert(param.clone(), arg_type);
                 new_non_generic.insert(arg_type);
                 param_types.push(arg_type);
             }
-            let result_type = infer_statement(a, &body[0], &mut new_env, &new_non_generic)?;
-            let t = new_func_type(a, &param_types, result_type);
+
+            for stmt in body {
+                let t = infer_statement(a, stmt, &mut new_env, &new_non_generic)?;
+                if let Statement::Return(_) = stmt {
+                    let ret_t = t;
+                    let func_t = new_func_type(a, &param_types, ret_t);
+                    // TODO: warn if there are any statements after the return
+                    return Ok(func_t);
+                }
+            }
+
+            // TODO: create a new type for undefined and use that as the return type
+            let ret_t = infer_statement(a, &body[0], &mut new_env, &new_non_generic)?;
+            let t = new_func_type(a, &param_types, ret_t);
             Ok(t)
         }
         Expression::Let(Let { defn, var, body }) => {
@@ -124,6 +137,10 @@ pub fn infer_statement(
             Ok(t) // TODO: Should this be unit?
         }
         Statement::Expression(expr) => {
+            let t = infer_expression(a, expr, env, non_generic)?;
+            Ok(t)
+        }
+        Statement::Return(Return { expr }) => {
             let t = infer_expression(a, expr, env, non_generic)?;
             Ok(t)
         }

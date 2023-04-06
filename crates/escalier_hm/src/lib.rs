@@ -182,7 +182,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"(number -> number)"#
+            r#"(number) => number"#
         );
         Ok(())
     }
@@ -236,7 +236,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"(number -> number)"#
+            r#"(number) => number"#
         );
 
         Ok(())
@@ -384,7 +384,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"(a -> (a * a))"#
+            r#"(a) => (a * a)"#
         );
         Ok(())
     }
@@ -406,7 +406,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"(a -> a)"#
+            r#"(a) => a"#
         );
         let t = &a[t];
         eprintln!("t = {t:#?}");
@@ -442,7 +442,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"((a -> b) -> ((b -> c) -> (a -> c)))"#
+            r#"((a) => b) => ((b) => c) => (a) => c"#
         );
         Ok(())
     }
@@ -470,7 +470,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"((a -> b), (b -> c), a -> c)"#
+            r#"((a) => b, (b) => c, a) => c"#
         );
         Ok(())
     }
@@ -654,6 +654,46 @@ mod tests {
                 }
             ),
             r#""hello""#
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lambda_with_multiple_statements() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let lambda = new_lambda(
+            &[],
+            &[
+                Statement::Declaration(Declaration {
+                    var: "x".to_string(),
+                    defn: Box::new(new_number("5")),
+                }),
+                Statement::Declaration(Declaration {
+                    var: "y".to_string(),
+                    defn: Box::new(new_number("10")),
+                }),
+                Statement::Return(Return {
+                    expr: Box::new(new_apply(
+                        new_identifier("times"),
+                        &[new_identifier("x"), new_identifier("y")],
+                    )),
+                }),
+            ],
+        );
+
+        let t = infer_expression(&mut a, &lambda, &mut my_env, &HashSet::default())?;
+
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"() => number"#
         );
 
         Ok(())
