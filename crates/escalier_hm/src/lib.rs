@@ -8,7 +8,7 @@ mod types;
 mod unify;
 mod util;
 
-pub use crate::infer::infer;
+pub use crate::infer::{infer_expression, infer_program};
 
 #[cfg(test)]
 mod tests {
@@ -21,30 +21,30 @@ mod tests {
     use crate::syntax::*;
     use crate::types::*;
 
-    pub fn new_lambda(params: &[&str], body: Syntax) -> Syntax {
-        Syntax::Lambda(Lambda {
+    pub fn new_lambda(params: &[&str], body: &[Statement]) -> Expression {
+        Expression::Lambda(Lambda {
             params: params.iter().map(|x| x.to_string()).collect(),
-            body: Box::new(body),
+            body: body.to_owned(),
         })
     }
 
-    pub fn new_apply(func: Syntax, args: &[Syntax]) -> Syntax {
-        Syntax::Apply(Apply {
+    pub fn new_apply(func: Expression, args: &[Expression]) -> Expression {
+        Expression::Apply(Apply {
             func: Box::new(func),
             args: args.to_owned(),
         })
     }
 
-    pub fn new_let(var: &str, defn: Syntax, body: Syntax) -> Syntax {
-        Syntax::Let(Let {
+    pub fn new_let(var: &str, defn: Expression, body: Expression) -> Expression {
+        Expression::Let(Let {
             var: var.to_string(),
             defn: Box::new(defn),
             body: Box::new(body),
         })
     }
 
-    pub fn new_letrec(decls: &[(String, Syntax)], body: Syntax) -> Syntax {
-        Syntax::Letrec(Letrec {
+    pub fn new_letrec(decls: &[(String, Expression)], body: Expression) -> Expression {
+        Expression::Letrec(Letrec {
             decls: decls
                 .iter()
                 .map(|(var, defn)| (var.to_owned(), Box::new(defn.to_owned())))
@@ -53,31 +53,39 @@ mod tests {
         })
     }
 
-    pub fn new_identifier(name: &str) -> Syntax {
+    pub fn new_identifier(name: &str) -> Expression {
         // TODO: Check that `name` is a valid identifier
-        Syntax::Identifier(Identifier {
+        Expression::Identifier(Identifier {
             name: name.to_string(),
         })
     }
 
-    pub fn new_number(value: &str) -> Syntax {
-        Syntax::Literal(Literal::Number(value.to_owned()))
+    pub fn new_number(value: &str) -> Expression {
+        Expression::Literal(Literal::Number(value.to_owned()))
     }
 
-    pub fn new_string(value: &str) -> Syntax {
-        Syntax::Literal(Literal::String(value.to_owned()))
+    pub fn new_string(value: &str) -> Expression {
+        Expression::Literal(Literal::String(value.to_owned()))
     }
 
-    pub fn new_boolean(value: bool) -> Syntax {
-        Syntax::Literal(Literal::Boolean(value))
+    pub fn new_boolean(value: bool) -> Expression {
+        Expression::Literal(Literal::Boolean(value))
     }
 
-    pub fn new_if_else(cond: Syntax, consequent: Syntax, alternate: Syntax) -> Syntax {
-        Syntax::IfElse(IfElse {
+    pub fn new_if_else(
+        cond: Expression,
+        consequent: Expression,
+        alternate: Expression,
+    ) -> Expression {
+        Expression::IfElse(IfElse {
             cond: Box::new(cond),
             consequent: Box::new(consequent),
             alternate: Box::new(alternate),
         })
+    }
+
+    pub fn new_expr_stmt(expr: Expression) -> Statement {
+        Statement::Expression(expr)
     }
 
     fn test_env() -> (Vec<Type>, Env) {
@@ -145,7 +153,7 @@ mod tests {
                 "factorial".to_string(),
                 new_lambda(
                     &["n"], // fn n =>
-                    new_if_else(
+                    &[new_expr_stmt(new_if_else(
                         new_apply(new_identifier("zero"), &[new_identifier("n")]),
                         new_number("1"),
                         new_apply(
@@ -159,13 +167,13 @@ mod tests {
                                 ),
                             ],
                         ),
-                    ),
+                    ))],
                 ),
             )],
             new_identifier("factorial"),
         );
 
-        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -174,7 +182,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"(number -> number)"#
+            r#"(number) => number"#
         );
         Ok(())
     }
@@ -191,57 +199,44 @@ mod tests {
                     "even".to_string(),
                     new_lambda(
                         &["x"], // (x) =>
-                        new_apply(
+                        &[new_expr_stmt(new_apply(
                             // times(1, odd(x - 1)) - this casts it to a number
                             new_identifier("times"),
                             &[new_apply(
                                 new_identifier("odd"),
                                 &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
                             )],
-                        ),
+                        ))],
                     ),
                 ),
                 (
                     "odd".to_string(),
                     new_lambda(
                         &["x"], // (x) =>
-                        new_apply(
+                        &[new_expr_stmt(new_apply(
                             // times(1, even(x - 1)) - this casts it to a number
                             new_identifier("times"),
                             &[new_apply(
                                 new_identifier("even"),
                                 &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
                             )],
-                        ),
+                        ))],
                     ),
                 ),
             ],
             new_identifier("odd"),
         );
 
-        infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-
-        let t = my_env.0.get("even").unwrap();
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
-            a[*t].as_string(
+            a[t].as_string(
                 &a,
                 &mut Namer {
                     value: 'a',
                     set: HashMap::default(),
                 }
             ),
-            r#"(number -> number)"#
-        );
-        let t = my_env.0.get("odd").unwrap();
-        assert_eq!(
-            a[*t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"(number -> number)"#
+            r#"(number) => number"#
         );
 
         Ok(())
@@ -255,16 +250,16 @@ mod tests {
         // fn x => (pair(x(3) (x(true)))
         let syntax = new_lambda(
             &["x"],
-            new_apply(
+            &[new_expr_stmt(new_apply(
                 new_identifier("pair"),
                 &[
                     new_apply(new_identifier("x"), &[new_number("3")]),
                     new_apply(new_identifier("x"), &[new_boolean(true)]),
                 ],
-            ),
+            ))],
         );
 
-        infer(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
     }
 
     #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"Undefined symbol \\\"f\\\"\")"]
@@ -281,7 +276,7 @@ mod tests {
             ],
         );
 
-        infer(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
     }
 
     #[test]
@@ -297,9 +292,13 @@ mod tests {
         );
 
         // let f = (fn x => x) in ((pair (f 4)) (f true))
-        let syntax = new_let("f", new_lambda(&["x"], new_identifier("x")), pair);
+        let syntax = new_let(
+            "f",
+            new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))]),
+            pair,
+        );
 
-        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -321,10 +320,13 @@ mod tests {
         // fn f => f f (fail)
         let syntax = new_lambda(
             &["f"],
-            new_apply(new_identifier("f"), &[new_identifier("f")]),
+            &[new_expr_stmt(new_apply(
+                new_identifier("f"),
+                &[new_identifier("f")],
+            ))],
         );
 
-        infer(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
     }
 
     #[test]
@@ -334,11 +336,11 @@ mod tests {
         // let g = fn f => 5 in g g
         let syntax = new_let(
             "g",
-            new_lambda(&["f"], new_number("5")),
+            new_lambda(&["f"], &[new_expr_stmt(new_number("5"))]),
             new_apply(new_identifier("g"), &[new_identifier("g")]),
         );
 
-        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -360,9 +362,9 @@ mod tests {
         // fn g => let f = fn x => g in pair (f 3, f true)
         let syntax = new_lambda(
             &["g"],
-            new_let(
+            &[new_expr_stmt(new_let(
                 "f",
-                new_lambda(&["x"], new_identifier("g")),
+                new_lambda(&["x"], &[new_expr_stmt(new_identifier("g"))]),
                 new_apply(
                     new_identifier("pair"),
                     &[
@@ -370,10 +372,10 @@ mod tests {
                         new_apply(new_identifier("f"), &[new_boolean(true)]),
                     ],
                 ),
-            ),
+            ))],
         );
 
-        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -382,8 +384,32 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"(a -> (a * a))"#
+            r#"(a) => (a * a)"#
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_basic_generics() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        // example that demonstrates generic and non-generic variables:
+        // fn x => x
+        let syntax = new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))]);
+
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"(a) => a"#
+        );
+        let t = &a[t];
+        eprintln!("t = {t:#?}");
         Ok(())
     }
 
@@ -395,19 +421,19 @@ mod tests {
         // fn f (fn g (fn arg (f g arg)))
         let syntax = new_lambda(
             &["f"],
-            new_lambda(
+            &[new_expr_stmt(new_lambda(
                 &["g"],
-                new_lambda(
+                &[new_expr_stmt(new_lambda(
                     &["arg"],
-                    new_apply(
+                    &[new_expr_stmt(new_apply(
                         new_identifier("g"),
                         &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
-                    ),
-                ),
-            ),
+                    ))],
+                ))],
+            ))],
         );
 
-        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -416,7 +442,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"((a -> b) -> ((b -> c) -> (a -> c)))"#
+            r#"((a) => b) => ((b) => c) => (a) => c"#
         );
         Ok(())
     }
@@ -429,13 +455,13 @@ mod tests {
         // (fn (f, g, arg) -> (f g arg))
         let syntax = new_lambda(
             &["f", "g", "arg"],
-            new_apply(
+            &[new_expr_stmt(new_apply(
                 new_identifier("g"),
                 &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
-            ),
+            ))],
         );
 
-        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -444,7 +470,7 @@ mod tests {
                     set: HashMap::default(),
                 }
             ),
-            r#"((a -> b), (b -> c), a -> c)"#
+            r#"((a) => b, (b) => c, a) => c"#
         );
         Ok(())
     }
@@ -458,7 +484,7 @@ mod tests {
             &[new_number("5"), new_number("10")],
         );
 
-        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -487,7 +513,7 @@ mod tests {
             &[new_identifier("foo"), new_number("2")],
         );
 
-        let t = infer(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(
                 &a,
@@ -511,7 +537,7 @@ mod tests {
             &[new_number("5"), new_string("hello")],
         );
 
-        infer(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
     }
 
     #[test]
@@ -530,6 +556,146 @@ mod tests {
             &[new_identifier("foo"), new_number("2")],
         );
 
-        infer(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+    }
+
+    #[test]
+    fn test_program() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let program = Program {
+            statements: vec![
+                Statement::Declaration(Declaration {
+                    var: "num".to_string(),
+                    defn: Box::new(new_number("5")),
+                }),
+                Statement::Declaration(Declaration {
+                    var: "str".to_string(),
+                    defn: Box::new(new_string("hello")),
+                }),
+                Statement::Expression(new_apply(
+                    new_identifier("times"),
+                    &[new_identifier("num"), new_identifier("num")],
+                )),
+            ],
+        };
+
+        infer_program(&mut a, &program, &mut my_env)?;
+
+        let t = my_env.0.get("num").unwrap();
+        assert_eq!(
+            a[*t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"5"#
+        );
+
+        let t = my_env.0.get("str").unwrap();
+        assert_eq!(
+            a[*t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#""hello""#
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_program_with_generic_func() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let program = Program {
+            statements: vec![
+                Statement::Declaration(Declaration {
+                    var: "id".to_string(),
+                    defn: Box::new(new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))])),
+                }),
+                Statement::Declaration(Declaration {
+                    var: "a".to_string(),
+                    defn: Box::new(new_apply(new_identifier("id"), &[new_number("5")])),
+                }),
+                Statement::Declaration(Declaration {
+                    var: "b".to_string(),
+                    defn: Box::new(new_apply(new_identifier("id"), &[new_string("hello")])),
+                }),
+            ],
+        };
+
+        infer_program(&mut a, &program, &mut my_env)?;
+
+        let t = my_env.0.get("a").unwrap();
+        assert_eq!(
+            a[*t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"5"#
+        );
+
+        let t = my_env.0.get("b").unwrap();
+        assert_eq!(
+            a[*t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#""hello""#
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lambda_with_multiple_statements() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let lambda = new_lambda(
+            &[],
+            &[
+                Statement::Declaration(Declaration {
+                    var: "x".to_string(),
+                    defn: Box::new(new_number("5")),
+                }),
+                Statement::Declaration(Declaration {
+                    var: "y".to_string(),
+                    defn: Box::new(new_number("10")),
+                }),
+                Statement::Return(Return {
+                    expr: Box::new(new_apply(
+                        new_identifier("times"),
+                        &[new_identifier("x"), new_identifier("y")],
+                    )),
+                }),
+            ],
+        );
+
+        let t = infer_expression(&mut a, &lambda, &mut my_env, &HashSet::default())?;
+
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"() => number"#
+        );
+
+        Ok(())
     }
 }
