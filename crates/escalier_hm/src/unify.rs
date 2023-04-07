@@ -78,39 +78,42 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
     }
 }
 
-pub fn unify_call(alloc: &mut Vec<Type>, t1: Type, t2: ArenaType) -> Result<(), Errors> {
-    if let TypeKind::Function(call) = t1.kind {
-        let b = prune(alloc, t2);
-        // Why do we clone here?
-        let b_t = alloc.get(b).unwrap().clone();
-        match b_t.kind {
-            TypeKind::Variable(_) => bind(alloc, b, t1.id),
-            TypeKind::Constructor(_) => {
-                // lookup definition of type constructor, and see if its instances
-                // have any callable signatures
-                todo!("constructor")
-            }
-            TypeKind::Literal(_) => {
-                // literals are not callable so we can fail here
-                todo!("literal")
-            }
-            TypeKind::Function(func) => {
-                for (p, q) in call.params.iter().zip(func.params.iter()) {
-                    unify(alloc, *p, *q)?;
-                }
-                unify(alloc, call.ret, func.ret)?;
-                Ok(())
-            }
-            TypeKind::Union(_) => {
-                // can unions be callable?
-                todo!("union")
-            }
+// This function unifies and infers the return type of a function call.
+pub fn unify_call(
+    alloc: &mut Vec<Type>,
+    arg_types: &[ArenaType],
+    t2: ArenaType,
+) -> Result<ArenaType, Errors> {
+    let ret_type = new_var_type(alloc);
+    let call_type = new_func_type(alloc, arg_types, ret_type);
+
+    let b = prune(alloc, t2);
+    let b_t = alloc.get(b).unwrap().clone();
+
+    match b_t.kind {
+        TypeKind::Variable(_) => bind(alloc, b, call_type)?,
+        TypeKind::Constructor(_) => {
+            // lookup definition of type constructor, and see if its instances
+            // have any callable signatures
+            todo!("constructor");
         }
-    } else {
-        Err(Errors::InferenceError(format!(
-            "expected a function type, got {t1:?}"
-        )))
+        TypeKind::Literal(_) => {
+            // literals are not callable so we can fail here
+            todo!("literal");
+        }
+        TypeKind::Function(func) => {
+            for (p, q) in arg_types.iter().zip(func.params.iter()) {
+                unify(alloc, *p, *q)?;
+            }
+            unify(alloc, ret_type, func.ret)?;
+        }
+        TypeKind::Union(_) => {
+            // can unions be callable?
+            todo!("union");
+        }
     }
+
+    Ok(ret_type)
 }
 
 fn bind(alloc: &mut Vec<Type>, a: usize, b: usize) -> Result<(), Errors> {

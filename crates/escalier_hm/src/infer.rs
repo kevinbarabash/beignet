@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use crate::env::*;
 use crate::errors::*;
@@ -46,12 +46,8 @@ pub fn infer_expression(
                 .iter()
                 .map(|arg| infer_expression(a, arg, env, non_generic))
                 .collect::<Result<Vec<_>, _>>()?;
-            let ret_type = new_var_type(a);
 
-            let call_type = Type::new_function(a.len(), &arg_types, ret_type);
-            a.push(call_type.clone());
-
-            unify_call(a, call_type, func_type)?;
+            let ret_type = unify_call(a, &arg_types, func_type)?;
             Ok(ret_type)
         }
         Expression::Lambda(Lambda { params, body }) => {
