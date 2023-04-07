@@ -42,20 +42,6 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
             unify(alloc, func_a.ret, func_b.ret)?;
             Ok(())
         }
-        (TypeKind::Call(call), TypeKind::Function(func)) => {
-            for (p, q) in call.args.iter().zip(func.params.iter()) {
-                unify(alloc, *p, *q)?;
-            }
-            unify(alloc, call.ret, func.ret)?;
-            Ok(())
-        }
-        (TypeKind::Call(call_a), TypeKind::Call(call_b)) => {
-            for (p, q) in call_a.args.iter().zip(call_b.args.iter()) {
-                unify(alloc, *p, *q)?;
-            }
-            unify(alloc, call_a.ret, call_b.ret)?;
-            Ok(())
-        }
         (
             TypeKind::Literal(Literal::Number(_)),
             TypeKind::Constructor(Constructor { name, .. }),
@@ -93,7 +79,7 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
 }
 
 pub fn unify_call(alloc: &mut Vec<Type>, t1: Type, t2: ArenaType) -> Result<(), Errors> {
-    if let TypeKind::Call(call) = t1.kind {
+    if let TypeKind::Function(call) = t1.kind {
         let b = prune(alloc, t2);
         // Why do we clone here?
         let b_t = alloc.get(b).unwrap().clone();
@@ -109,16 +95,7 @@ pub fn unify_call(alloc: &mut Vec<Type>, t1: Type, t2: ArenaType) -> Result<(), 
                 todo!("literal")
             }
             TypeKind::Function(func) => {
-                for (p, q) in call.args.iter().zip(func.params.iter()) {
-                    unify(alloc, *p, *q)?;
-                }
-                unify(alloc, call.ret, func.ret)?;
-                Ok(())
-            }
-            TypeKind::Call(func) => {
-                // drop the call type since it's redundant now that we have
-                // unify_call
-                for (p, q) in call.args.iter().zip(func.args.iter()) {
+                for (p, q) in call.params.iter().zip(func.params.iter()) {
                     unify(alloc, *p, *q)?;
                 }
                 unify(alloc, call.ret, func.ret)?;

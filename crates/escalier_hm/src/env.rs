@@ -84,15 +84,6 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> Aren
                 let ret = freshrec(a, func.ret, mappings, non_generic);
                 new_func_type(a, &params, ret)
             }
-            TypeKind::Call(call) => {
-                let args = call
-                    .args
-                    .iter()
-                    .map(|x| freshrec(a, *x, mappings, non_generic))
-                    .collect::<Vec<_>>();
-                let ret = freshrec(a, call.ret, mappings, non_generic);
-                new_call_type(a, &args, ret)
-            }
             TypeKind::Union(union) => {
                 let args = union
                     .types

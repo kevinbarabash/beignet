@@ -39,7 +39,6 @@ pub enum TypeKind {
     Constructor(Constructor),
     Literal(Literal),
     Function(Function),
-    Call(Call),
     Union(Union),
 }
 
@@ -84,16 +83,6 @@ impl Type {
             id: idx,
             kind: TypeKind::Function(Function {
                 params: param_types.to_vec(),
-                ret: ret_type,
-            }),
-        }
-    }
-
-    pub fn new_call(idx: ArenaType, arg_types: &[ArenaType], ret_type: ArenaType) -> Type {
-        Type {
-            id: idx,
-            kind: TypeKind::Call(Call {
-                args: arg_types.to_vec(),
                 ret: ret_type,
             }),
         }
@@ -155,19 +144,6 @@ impl Type {
 
                 format!("({}) => {ret}", params.join(", "))
             }
-            TypeKind::Call(call) => {
-                eprintln!("call: {:?}", call);
-                let args = call
-                    .args
-                    .iter()
-                    .map(|arg| a[*arg].as_string(a, namer))
-                    .collect::<Vec<_>>();
-
-                let ret = a[call.ret].as_string(a, namer);
-
-                // Should this be formatted more like a function call
-                format!("({}) => {ret}", args.join(", "))
-            }
             TypeKind::Union(union) => {
                 let types = union
                     .types
@@ -184,12 +160,6 @@ impl Type {
 /// A binary type constructor which builds function types
 pub fn new_func_type(a: &mut Vec<Type>, params: &[ArenaType], ret: ArenaType) -> ArenaType {
     let t = Type::new_function(a.len(), params, ret);
-    a.push(t);
-    a.len() - 1
-}
-
-pub fn new_call_type(a: &mut Vec<Type>, args: &[ArenaType], ret: ArenaType) -> ArenaType {
-    let t = Type::new_call(a.len(), args, ret);
     a.push(t);
     a.len() - 1
 }

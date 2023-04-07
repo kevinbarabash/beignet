@@ -48,7 +48,7 @@ pub fn infer_expression(
                 .collect::<Result<Vec<_>, _>>()?;
             let ret_type = new_var_type(a);
 
-            let call_type = Type::new_call(a.len(), &arg_types, ret_type);
+            let call_type = Type::new_function(a.len(), &arg_types, ret_type);
             a.push(call_type.clone());
 
             unify_call(a, call_type, func_type)?;
