@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::env::*;
 use crate::errors::*;
@@ -41,14 +41,18 @@ pub fn infer_expression(
         }
         Expression::Apply(Apply { func, args }) => {
             let func_type = infer_expression(a, func, env, non_generic)?;
+
             let arg_types = args
                 .iter()
                 .map(|arg| infer_expression(a, arg, env, non_generic))
                 .collect::<Result<Vec<_>, _>>()?;
-            let result_type = new_var_type(a);
-            let call_type = new_call_type(a, &arg_types, result_type);
-            unify(a, call_type, func_type)?;
-            Ok(result_type)
+            let ret_type = new_var_type(a);
+
+            let call_type = Type::new_call(a.len(), &arg_types, ret_type);
+            a.push(call_type.clone());
+
+            unify_call(a, call_type, func_type)?;
+            Ok(ret_type)
         }
         Expression::Lambda(Lambda { params, body }) => {
             let mut param_types = vec![];
@@ -75,6 +79,7 @@ pub fn infer_expression(
             // TODO: create a new type for undefined and use that as the return type
             let ret_t = infer_statement(a, &body[0], &mut new_env, &new_non_generic)?;
             let t = new_func_type(a, &param_types, ret_t);
+            eprintln!("t = {:#?}", a[t]);
             Ok(t)
         }
         Expression::Let(Let { defn, var, body }) => {

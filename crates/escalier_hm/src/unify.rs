@@ -92,6 +92,50 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
     }
 }
 
+pub fn unify_call(alloc: &mut Vec<Type>, t1: Type, t2: ArenaType) -> Result<(), Errors> {
+    if let TypeKind::Call(call) = t1.kind {
+        let b = prune(alloc, t2);
+        // Why do we clone here?
+        let b_t = alloc.get(b).unwrap().clone();
+        match b_t.kind {
+            TypeKind::Variable(_) => bind(alloc, b, t1.id),
+            TypeKind::Constructor(_) => {
+                // lookup definition of type constructor, and see if its instances
+                // have any callable signatures
+                todo!("constructor")
+            }
+            TypeKind::Literal(_) => {
+                // literals are not callable so we can fail here
+                todo!("literal")
+            }
+            TypeKind::Function(func) => {
+                for (p, q) in call.args.iter().zip(func.params.iter()) {
+                    unify(alloc, *p, *q)?;
+                }
+                unify(alloc, call.ret, func.ret)?;
+                Ok(())
+            }
+            TypeKind::Call(func) => {
+                // drop the call type since it's redundant now that we have
+                // unify_call
+                for (p, q) in call.args.iter().zip(func.args.iter()) {
+                    unify(alloc, *p, *q)?;
+                }
+                unify(alloc, call.ret, func.ret)?;
+                Ok(())
+            }
+            TypeKind::Union(_) => {
+                // can unions be callable?
+                todo!("union")
+            }
+        }
+    } else {
+        Err(Errors::InferenceError(format!(
+            "expected a function type, got {t1:?}"
+        )))
+    }
+}
+
 fn bind(alloc: &mut Vec<Type>, a: usize, b: usize) -> Result<(), Errors> {
     if a != b {
         if occurs_in_type(alloc, a, b) {
