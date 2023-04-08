@@ -18,7 +18,7 @@ mod tests {
     use crate::errors::*;
     use crate::infer::*;
     use crate::literal::*;
-    use crate::syntax::*;
+    use crate::syntax::{self, *};
     use crate::types::*;
 
     pub fn new_lambda(params: &[&str], body: &[Statement]) -> Expression {
@@ -70,6 +70,25 @@ mod tests {
 
     pub fn new_boolean(value: bool) -> Expression {
         Expression::Literal(Literal::Boolean(value))
+    }
+
+    pub fn new_tuple(elems: &[Expression]) -> Expression {
+        Expression::Tuple(syntax::Tuple {
+            elems: elems.to_owned(),
+        })
+    }
+
+    pub fn new_object(props: &[(String, Expression)]) -> Expression {
+        Expression::Object(syntax::Object {
+            props: props.to_owned(),
+        })
+    }
+
+    pub fn new_member(obj: &Expression, prop: &Expression) -> Expression {
+        Expression::Member(Member {
+            obj: Box::from(obj.to_owned()),
+            prop: Box::new(prop.to_owned()),
+        })
     }
 
     pub fn new_if_else(
@@ -595,6 +614,102 @@ mod tests {
             Err(Errors::InferenceError(
                 "literal 5 is not callable".to_string()
             ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn infer_basic_tuple() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let syntax = new_tuple(&[new_number("5"), new_string("hello")]);
+
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            "[5, \"hello\"]".to_string(),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn tuple_member() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let tuple = new_tuple(&[new_number("5"), new_string("hello")]);
+        let syntax = new_member(&tuple, &new_number("1"));
+
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            "\"hello\"".to_string(),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn infer_basic_object() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let syntax = new_object(&[
+            ("a".to_string(), new_number("5")),
+            ("b".to_string(), new_string("hello")),
+        ]);
+
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            "{a: 5, b: \"hello\"}".to_string(),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn object_member() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let object = new_object(&[
+            ("a".to_string(), new_number("5")),
+            ("b".to_string(), new_string("hello")),
+        ]);
+        let syntax = new_member(&object, &new_string("a"));
+
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            "5".to_string(),
         );
 
         Ok(())

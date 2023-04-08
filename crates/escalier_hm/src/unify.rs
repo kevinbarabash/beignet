@@ -10,8 +10,8 @@ use crate::util::*;
 /// Makes the types t1 and t2 the same.
 ///
 /// Args:
-///     t1: The first type to be made equivalent
-///     t2: The second type to be be equivalent
+///     t1: The first type to be made equivalent (subtype)
+///     t2: The second type to be be equivalent (supertype)
 ///
 /// Returns:
 ///     None
@@ -73,6 +73,8 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
             Ok(())
         }
         (_, TypeKind::Union(Union { types })) => {
+            // If t1 is a subtype of any of the types in the union, then it is a
+            // subtype of the union.
             for t2 in types.iter() {
                 if unify(alloc, a, *t2).is_ok() {
                     return Ok(());
@@ -112,6 +114,12 @@ pub fn unify_call(
             return Err(Errors::InferenceError(format!(
                 "literal {lit} is not callable"
             )));
+        }
+        TypeKind::Tuple(_) => {
+            return Err(Errors::InferenceError("tuple is not callable".to_string()));
+        }
+        TypeKind::Object(_) => {
+            return Err(Errors::InferenceError("object is not callable".to_string()));
         }
         TypeKind::Function(func) => {
             if arg_types.len() < func.params.len() {

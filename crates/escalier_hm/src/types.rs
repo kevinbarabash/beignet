@@ -34,12 +34,24 @@ pub struct Union {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Tuple {
+    pub types: Vec<ArenaType>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Object {
+    pub props: Vec<(String, ArenaType)>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeKind {
     Variable(Variable),
     Constructor(Constructor),
     Literal(Literal),
     Function(Function),
     Union(Union),
+    Tuple(Tuple),
+    Object(Object),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -97,6 +109,24 @@ impl Type {
         }
     }
 
+    pub fn new_tuple(idx: ArenaType, types: &[ArenaType]) -> Type {
+        Type {
+            id: idx,
+            kind: TypeKind::Tuple(Tuple {
+                types: types.to_vec(),
+            }),
+        }
+    }
+
+    pub fn new_object(idx: ArenaType, props: &[(String, ArenaType)]) -> Type {
+        Type {
+            id: idx,
+            kind: TypeKind::Object(Object {
+                props: props.to_vec(),
+            }),
+        }
+    }
+
     pub fn set_instance(&mut self, instance: ArenaType) {
         match &mut self.kind {
             TypeKind::Variable(Variable {
@@ -133,28 +163,34 @@ impl Type {
                 }
             },
             TypeKind::Literal(lit) => lit.to_string(),
+            TypeKind::Tuple(tuple) => {
+                format!("[{}]", types_to_strings(a, namer, &tuple.types).join(", "))
+            }
+            TypeKind::Object(object) => {
+                let mut fields = vec![];
+                for (k, v) in &object.props {
+                    fields.push(format!("{}: {}", k, a[*v].as_string(a, namer)));
+                }
+                format!("{{{}}}", fields.join(", "))
+            }
             TypeKind::Function(func) => {
-                let params = func
-                    .params
-                    .iter()
-                    .map(|param| a[*param].as_string(a, namer))
-                    .collect::<Vec<_>>();
-
-                let ret = a[func.ret].as_string(a, namer);
-
-                format!("({}) => {ret}", params.join(", "))
+                format!(
+                    "({}) => {}",
+                    types_to_strings(a, namer, &func.params).join(", "),
+                    a[func.ret].as_string(a, namer),
+                )
             }
-            TypeKind::Union(union) => {
-                let types = union
-                    .types
-                    .iter()
-                    .map(|t| a[*t].as_string(a, namer))
-                    .collect::<Vec<_>>();
-
-                types.join(" | ")
-            }
+            TypeKind::Union(union) => types_to_strings(a, namer, &union.types).join(" | "),
         }
     }
+}
+
+fn types_to_strings(a: &Vec<Type>, namer: &mut Namer, types: &[ArenaType]) -> Vec<String> {
+    let mut strings = vec![];
+    for v in types {
+        strings.push(a[*v].as_string(a, namer));
+    }
+    strings
 }
 
 /// A binary type constructor which builds function types
@@ -166,6 +202,18 @@ pub fn new_func_type(a: &mut Vec<Type>, params: &[ArenaType], ret: ArenaType) ->
 
 pub fn new_union_type(a: &mut Vec<Type>, types: &[ArenaType]) -> ArenaType {
     let t = Type::new_union(a.len(), types);
+    a.push(t);
+    a.len() - 1
+}
+
+pub fn new_tuple_type(a: &mut Vec<Type>, types: &[ArenaType]) -> ArenaType {
+    let t = Type::new_tuple(a.len(), types);
+    a.push(t);
+    a.len() - 1
+}
+
+pub fn new_object_type(a: &mut Vec<Type>, props: &[(String, ArenaType)]) -> ArenaType {
+    let t = Type::new_object(a.len(), props);
     a.push(t);
     a.len() - 1
 }

@@ -2,7 +2,8 @@ use std::collections::HashSet;
 
 use crate::env::*;
 use crate::errors::*;
-use crate::syntax::*;
+use crate::literal::*;
+use crate::syntax::{self, *};
 use crate::types::*;
 use crate::unify::*;
 
@@ -37,6 +38,24 @@ pub fn infer_expression(
         Expression::Identifier(Identifier { name }) => get_type(a, name, env, non_generic),
         Expression::Literal(literal) => {
             let t = new_lit_type(a, literal);
+            Ok(t)
+        }
+        Expression::Tuple(syntax::Tuple { elems }) => {
+            let mut element_types = vec![];
+            for element in elems {
+                let t = infer_expression(a, element, env, non_generic)?;
+                element_types.push(t);
+            }
+            let t = new_tuple_type(a, &element_types);
+            Ok(t)
+        }
+        Expression::Object(syntax::Object { props }) => {
+            let mut prop_types = vec![];
+            for (name, value) in props {
+                let t = infer_expression(a, value, env, non_generic)?;
+                prop_types.push((name.to_owned(), t));
+            }
+            let t = new_object_type(a, &prop_types);
             Ok(t)
         }
         Expression::Apply(Apply { func, args }) => {
@@ -120,6 +139,38 @@ pub fn infer_expression(
             let alternate_type = infer_expression(a, alternate, env, non_generic)?;
             let t = new_union_type(a, &[consequent_type, alternate_type]);
             Ok(t)
+        }
+        Expression::Member(Member { obj, prop }) => {
+            let obj_type = infer_expression(a, obj, env, non_generic)?;
+            let prop_type = infer_expression(a, prop, env, non_generic)?;
+
+            let obj_type = a[obj_type].clone();
+            let prop_type = a[prop_type].clone();
+
+            match (&obj_type.kind, &prop_type.kind) {
+                (TypeKind::Object(object), TypeKind::Literal(Literal::String(name))) => {
+                    for (key, t) in &object.props {
+                        if key == name {
+                            return Ok(*t);
+                        }
+                    }
+                    Err(Errors::InferenceError(format!(
+                        "Couldn't find property {name} on object",
+                    )))
+                }
+                (TypeKind::Tuple(tuple), TypeKind::Literal(Literal::Number(value))) => {
+                    let index: usize = value.parse().unwrap();
+                    if index < tuple.types.len() {
+                        return Ok(tuple.types[index]);
+                    }
+                    Err(Errors::InferenceError(format!(
+                        "Couldn't find index {index} on tuple",
+                    )))
+                }
+                _ => Err(Errors::InferenceError(
+                    "Can only access properties on objects/tuples".to_string(),
+                )),
+            }
         }
     }
 }

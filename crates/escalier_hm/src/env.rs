@@ -67,32 +67,44 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> Aren
                 }
             }
             TypeKind::Constructor(con) => {
-                let b = con
-                    .types
-                    .iter()
-                    .map(|x| freshrec(a, *x, mappings, non_generic))
-                    .collect::<Vec<_>>();
-                new_constructor(a, &con.name, &b)
+                let types = freshrec_many(a, &con.types, mappings, non_generic);
+                new_constructor(a, &con.name, &types)
             }
             TypeKind::Literal(lit) => new_lit_type(a, lit),
-            TypeKind::Function(func) => {
-                let params = func
-                    .params
+            TypeKind::Tuple(tuple) => {
+                let types = freshrec_many(a, &tuple.types, mappings, non_generic);
+                new_tuple_type(a, &types)
+            }
+            TypeKind::Object(object) => {
+                let fields: Vec<_> = object
+                    .props
                     .iter()
-                    .map(|x| freshrec(a, *x, mappings, non_generic))
-                    .collect::<Vec<_>>();
+                    .map(|(name, tp)| (name.clone(), freshrec(a, *tp, mappings, non_generic)))
+                    .collect();
+                new_object_type(a, &fields)
+            }
+            TypeKind::Function(func) => {
+                let params = freshrec_many(a, &func.params, mappings, non_generic);
                 let ret = freshrec(a, func.ret, mappings, non_generic);
                 new_func_type(a, &params, ret)
             }
             TypeKind::Union(union) => {
-                let args = union
-                    .types
-                    .iter()
-                    .map(|x| freshrec(a, *x, mappings, non_generic))
-                    .collect::<Vec<_>>();
-                new_union_type(a, &args)
+                let types = freshrec_many(a, &union.types, mappings, non_generic);
+                new_union_type(a, &types)
             }
         }
+    }
+
+    pub fn freshrec_many(
+        a: &mut Vec<Type>,
+        types: &[ArenaType],
+        mappings: &mut HashMap<ArenaType, ArenaType>,
+        non_generic: &[ArenaType],
+    ) -> Vec<ArenaType> {
+        types
+            .iter()
+            .map(|x| freshrec(a, *x, mappings, non_generic))
+            .collect()
     }
 
     freshrec(a, t, &mut mappings, non_generic)
