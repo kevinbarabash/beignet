@@ -75,7 +75,6 @@ pub fn infer_expression(
             // TODO: create a new type for undefined and use that as the return type
             let ret_t = infer_statement(a, &body[0], &mut new_env, &new_non_generic)?;
             let t = new_func_type(a, &param_types, ret_t);
-            eprintln!("t = {:#?}", a[t]);
             Ok(t)
         }
         Expression::Let(Let { defn, var, body }) => {

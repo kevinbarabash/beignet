@@ -202,10 +202,13 @@ mod tests {
                         &[new_expr_stmt(new_apply(
                             // times(1, odd(x - 1)) - this casts it to a number
                             new_identifier("times"),
-                            &[new_apply(
-                                new_identifier("odd"),
-                                &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
-                            )],
+                            &[
+                                new_number("1"),
+                                new_apply(
+                                    new_identifier("odd"),
+                                    &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
+                                ),
+                            ],
                         ))],
                     ),
                 ),
@@ -216,10 +219,13 @@ mod tests {
                         &[new_expr_stmt(new_apply(
                             // times(1, even(x - 1)) - this casts it to a number
                             new_identifier("times"),
-                            &[new_apply(
-                                new_identifier("even"),
-                                &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
-                            )],
+                            &[
+                                new_number("1"),
+                                new_apply(
+                                    new_identifier("even"),
+                                    &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
+                                ),
+                            ],
                         ))],
                     ),
                 ),
@@ -524,6 +530,73 @@ mod tests {
             ),
             r#"number"#
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_calling_a_union() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let bool = new_constructor(&mut a, "boolean", &[]);
+        let str = new_constructor(&mut a, "string", &[]);
+        let fn1 = new_func_type(&mut a, &[], bool);
+        let fn2 = new_func_type(&mut a, &[], str);
+        my_env
+            .0
+            .insert("foo".to_string(), new_union_type(&mut a, &[fn1, fn2]));
+
+        let syntax = new_apply(new_identifier("foo"), &[]);
+
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"boolean | string"#
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn call_with_too_few_args() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let syntax = new_apply(new_identifier("times"), &[]);
+
+        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "too few arguments to function: expected 2, got 0".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn literal_isnt_callable() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let lit = new_num_lit_type(&mut a, "5");
+        my_env.0.insert("foo".to_string(), lit);
+
+        let syntax = new_apply(new_identifier("foo"), &[]);
+
+        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "literal 5 is not callable".to_string()
+            ))
+        );
+
         Ok(())
     }
 

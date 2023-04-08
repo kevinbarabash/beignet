@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::errors::*;
 use crate::literal::*;
 use crate::types::*;
@@ -36,8 +38,17 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
             Ok(())
         }
         (TypeKind::Function(func_a), TypeKind::Function(func_b)) => {
+            if func_a.params.len() > func_b.params.len() {
+                return Err(Errors::InferenceError(format!(
+                    "{a_t:?} is not a subtype of {b_t:?} since it requires more params",
+                )));
+            }
+
             for (p, q) in func_a.params.iter().zip(func_b.params.iter()) {
-                unify(alloc, *p, *q)?;
+                // NOTE: We reverse the order of the params here because func_a
+                // should be able to accept any params that func_b can accept,
+                // its params may be more lenient.  Thus q is a subtype of p.
+                unify(alloc, *q, *p)?;
             }
             unify(alloc, func_a.ret, func_b.ret)?;
             Ok(())
@@ -97,19 +108,36 @@ pub fn unify_call(
             // have any callable signatures
             todo!("constructor");
         }
-        TypeKind::Literal(_) => {
-            // literals are not callable so we can fail here
-            todo!("literal");
+        TypeKind::Literal(lit) => {
+            return Err(Errors::InferenceError(format!(
+                "literal {lit} is not callable"
+            )));
         }
         TypeKind::Function(func) => {
+            if arg_types.len() < func.params.len() {
+                return Err(Errors::InferenceError(format!(
+                    "too few arguments to function: expected {}, got {}",
+                    func.params.len(),
+                    arg_types.len()
+                )));
+            }
+
             for (p, q) in arg_types.iter().zip(func.params.iter()) {
                 unify(alloc, *p, *q)?;
             }
             unify(alloc, ret_type, func.ret)?;
         }
-        TypeKind::Union(_) => {
-            // can unions be callable?
-            todo!("union");
+        TypeKind::Union(union) => {
+            let mut ret_types = vec![];
+            for t in union.types.iter() {
+                let ret_type = unify_call(alloc, arg_types, *t)?;
+                ret_types.push(ret_type);
+            }
+
+            return Ok(new_union_type(
+                alloc,
+                &ret_types.into_iter().unique().collect_vec(),
+            ));
         }
     }
 
