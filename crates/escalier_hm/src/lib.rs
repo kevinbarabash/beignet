@@ -665,6 +665,69 @@ mod tests {
     }
 
     #[test]
+    fn tuple_subtyping() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let num = new_constructor(&mut a, "number", &[]);
+        let str = new_constructor(&mut a, "string", &[]);
+        let param_type = new_tuple_type(&mut a, &[num, str]);
+        let bool = new_constructor(&mut a, "boolean", &[]);
+        let func = new_func_type(&mut a, &[param_type], bool);
+        my_env.0.insert("foo".to_string(), func);
+
+        let syntax = new_apply(
+            new_identifier("foo"),
+            &[new_tuple(&[
+                // Each element must be a subtype of the expected element type
+                new_number("5"),
+                new_string("hello"),
+                // It's okay to pass a tuple with extra elements
+                new_boolean(true),
+            ])],
+        );
+
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            "boolean".to_string(),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let num = new_constructor(&mut a, "number", &[]);
+        let str = new_constructor(&mut a, "string", &[]);
+        let param_type = new_tuple_type(&mut a, &[num, str]);
+        let bool = new_constructor(&mut a, "boolean", &[]);
+        let func = new_func_type(&mut a, &[param_type], bool);
+        my_env.0.insert("foo".to_string(), func);
+
+        let syntax = new_apply(new_identifier("foo"), &[new_tuple(&[new_number("5")])]);
+
+        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Expected tuple of length 2, got tuple of length 1".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn infer_basic_object() -> Result<(), Errors> {
         let (mut a, mut my_env) = test_env();
 
@@ -710,6 +773,73 @@ mod tests {
                 }
             ),
             "5".to_string(),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn object_subtyping() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let num = new_constructor(&mut a, "number", &[]);
+        let str = new_constructor(&mut a, "string", &[]);
+        let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
+        let bool = new_constructor(&mut a, "boolean", &[]);
+        let func = new_func_type(&mut a, &[param_type], bool);
+        my_env.0.insert("foo".to_string(), func);
+
+        let syntax = new_apply(
+            new_identifier("foo"),
+            &[new_object(&[
+                // Each prop must be a subtype of the expected element type
+                ("a".to_string(), new_number("5")),
+                ("b".to_string(), new_string("hello")),
+                // It's okay to pass an object with extra props
+                ("c".to_string(), new_boolean(true)),
+            ])],
+        );
+
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            "boolean".to_string(),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn object_subtyping_missing_prop() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let num = new_constructor(&mut a, "number", &[]);
+        let str = new_constructor(&mut a, "string", &[]);
+        let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
+        let bool = new_constructor(&mut a, "boolean", &[]);
+        let func = new_func_type(&mut a, &[param_type], bool);
+        my_env.0.insert("foo".to_string(), func);
+
+        let syntax = new_apply(
+            new_identifier("foo"),
+            &[new_object(&[("b".to_string(), new_string("hello"))])],
+        );
+
+        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "'a' is missing in Type { id: 28, kind: Object(Object { props: [(\"b\", 27)] }) }"
+                    .to_string()
+            ))
         );
 
         Ok(())

@@ -85,6 +85,33 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
                 "type mismatch: unify({a_t:?}, {b_t:?}) failed"
             )))
         }
+        (TypeKind::Tuple(tuple1), TypeKind::Tuple(tuple2)) => {
+            if tuple1.types.len() < tuple2.types.len() {
+                return Err(Errors::InferenceError(format!(
+                    "Expected tuple of length {}, got tuple of length {}",
+                    tuple2.types.len(),
+                    tuple1.types.len()
+                )));
+            }
+
+            for (p, q) in tuple1.types.iter().zip(tuple2.types.iter()) {
+                unify(alloc, *p, *q)?;
+            }
+            Ok(())
+        }
+        (TypeKind::Object(object1), TypeKind::Object(object2)) => {
+            // object1 must have atleast as the same properties as object2
+            for (name, t) in &object2.props {
+                if let Some(prop) = object1.props.iter().find(|props| &props.0 == name) {
+                    unify(alloc, prop.1, *t)?;
+                } else {
+                    return Err(Errors::InferenceError(format!(
+                        "'{name}' is missing in {a_t:?}"
+                    )));
+                }
+            }
+            Ok(())
+        }
         _ => Err(Errors::InferenceError(format!(
             "type mismatch: unify({a_t:?}, {b_t:?}) failed"
         ))),
