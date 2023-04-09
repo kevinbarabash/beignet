@@ -18,6 +18,7 @@ pub struct Constructor {
 pub struct Function {
     pub params: Vec<ArenaType>,
     pub ret: ArenaType,
+    pub type_params: Option<Vec<ArenaType>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -88,12 +89,18 @@ impl Type {
         }
     }
 
-    pub fn new_function(idx: ArenaType, param_types: &[ArenaType], ret_type: ArenaType) -> Type {
+    pub fn new_function(
+        idx: ArenaType,
+        param_types: &[ArenaType],
+        ret_type: ArenaType,
+        type_params: Option<&[ArenaType]>,
+    ) -> Type {
         Type {
             id: idx,
             kind: TypeKind::Function(Function {
                 params: param_types.to_vec(),
                 ret: ret_type,
+                type_params: type_params.map(|x| x.to_vec()),
             }),
         }
     }
@@ -192,8 +199,13 @@ fn types_to_strings(a: &Vec<Type>, types: &[ArenaType]) -> Vec<String> {
 }
 
 /// A binary type constructor which builds function types
-pub fn new_func_type(a: &mut Vec<Type>, params: &[ArenaType], ret: ArenaType) -> ArenaType {
-    let t = Type::new_function(a.len(), params, ret);
+pub fn new_func_type(
+    a: &mut Vec<Type>,
+    params: &[ArenaType],
+    ret: ArenaType,
+    type_params: Option<&[ArenaType]>,
+) -> ArenaType {
+    let t = Type::new_function(a.len(), params, ret, type_params);
     a.push(t);
     a.len() - 1
 }

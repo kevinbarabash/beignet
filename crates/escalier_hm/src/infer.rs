@@ -85,7 +85,8 @@ pub fn infer_expression(
                 let t = infer_statement(a, stmt, &mut new_env, &new_non_generic)?;
                 if let Statement::Return(_) = stmt {
                     let ret_t = t;
-                    let func_t = new_func_type(a, &param_types, ret_t);
+                    // TODO: generalize the type
+                    let func_t = new_func_type(a, &param_types, ret_t, None);
                     // TODO: warn if there are any statements after the return
                     return Ok(func_t);
                 }
@@ -93,7 +94,8 @@ pub fn infer_expression(
 
             // TODO: create a new type for undefined and use that as the return type
             let ret_t = infer_statement(a, &body[0], &mut new_env, &new_non_generic)?;
-            let t = new_func_type(a, &param_types, ret_t);
+            // TODO: generalize the type
+            let t = new_func_type(a, &param_types, ret_t, None);
             Ok(t)
         }
         Expression::Let(Let { defn, var, body }) => {

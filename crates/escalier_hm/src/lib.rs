@@ -116,20 +116,22 @@ mod tests {
         let pair_type = new_constructor(&mut a, "*", &[var1, var2]);
         my_env.0.insert(
             "pair".to_string(),
-            new_func_type(&mut a, &[var1, var2], pair_type),
+            new_func_type(&mut a, &[var1, var2], pair_type, None),
         );
 
         let int_t = new_constructor(&mut a, "number", &[]);
         let bool_t = new_constructor(&mut a, "boolean", &[]);
-        my_env
-            .0
-            .insert("zero".to_string(), new_func_type(&mut a, &[int_t], bool_t));
+        my_env.0.insert(
+            "zero".to_string(),
+            new_func_type(&mut a, &[int_t], bool_t, None),
+        );
 
         let num1_t = new_constructor(&mut a, "number", &[]);
         let num2_t = new_constructor(&mut a, "number", &[]);
-        my_env
-            .0
-            .insert("pred".to_string(), new_func_type(&mut a, &[num1_t], num2_t));
+        my_env.0.insert(
+            "pred".to_string(),
+            new_func_type(&mut a, &[num1_t], num2_t, None),
+        );
 
         // It isn't necessary to create separate instances of `number` for each of
         // these.  When interferring types from code we'll want separate instances
@@ -140,11 +142,11 @@ mod tests {
         let num3_t = new_constructor(&mut a, "number", &[]);
         my_env.0.insert(
             "times".to_string(),
-            new_func_type(&mut a, &[num1_t, num2_t], num3_t),
+            new_func_type(&mut a, &[num1_t, num2_t], num3_t, None),
         );
         my_env.0.insert(
             "add".to_string(),
-            new_func_type(&mut a, &[num1_t, num2_t], num3_t),
+            new_func_type(&mut a, &[num1_t, num2_t], num3_t, None),
         );
 
         my_env
@@ -457,10 +459,10 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
 
         // foo: ((number, string) => boolean) => boolean
-        let cb = new_func_type(&mut a, &[num, str], bool);
+        let cb = new_func_type(&mut a, &[num, str], bool, None);
         my_env
             .0
-            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool));
+            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool, None));
 
         // bar: (number | string) => true
         // It's okay for the callback arg to take fewer params since extra params
@@ -472,7 +474,7 @@ mod tests {
         let true_type = new_bool_lit_type(&mut a, true);
         my_env.0.insert(
             "bar".to_string(),
-            new_func_type(&mut a, &[num_or_str], true_type),
+            new_func_type(&mut a, &[num_or_str], true_type, None),
         );
 
         // foo(bar)
@@ -492,15 +494,16 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
 
         // foo: ((number) => boolean) => boolean
-        let cb = new_func_type(&mut a, &[num], bool);
+        let cb = new_func_type(&mut a, &[num], bool, None);
         my_env
             .0
-            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool));
+            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool, None));
 
         // bar: (number, string) => true
-        my_env
-            .0
-            .insert("bar".to_string(), new_func_type(&mut a, &[num, str], bool));
+        my_env.0.insert(
+            "bar".to_string(),
+            new_func_type(&mut a, &[num, str], bool, None),
+        );
 
         // foo(bar)
         let syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
@@ -508,7 +511,7 @@ mod tests {
         let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
         assert_eq!(
             result,
-            Err(Errors::InferenceError("Type { id: 31, kind: Function(Function { params: [28, 29], ret: 30 }) } is not a subtype of Type { id: 25, kind: Function(Function { params: [23], ret: 24 }) } since it requires more params".to_string())),
+            Err(Errors::InferenceError("(number, string) => boolean is not a subtype of (number) => boolean since it requires more params".to_string())),
         );
         Ok(())
     }
@@ -539,8 +542,8 @@ mod tests {
 
         let bool = new_constructor(&mut a, "boolean", &[]);
         let str = new_constructor(&mut a, "string", &[]);
-        let fn1 = new_func_type(&mut a, &[], bool);
-        let fn2 = new_func_type(&mut a, &[], str);
+        let fn1 = new_func_type(&mut a, &[], bool, None);
+        let fn2 = new_func_type(&mut a, &[], str, None);
         my_env
             .0
             .insert("foo".to_string(), new_union_type(&mut a, &[fn1, fn2]));
@@ -645,7 +648,7 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_tuple_type(&mut a, &[num, str]);
         let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool);
+        let func = new_func_type(&mut a, &[param_type], bool, None);
         my_env.0.insert("foo".to_string(), func);
 
         let syntax = new_apply(
@@ -674,7 +677,7 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_tuple_type(&mut a, &[num, str]);
         let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool);
+        let func = new_func_type(&mut a, &[param_type], bool, None);
         my_env.0.insert("foo".to_string(), func);
 
         let syntax = new_apply(new_identifier("foo"), &[new_tuple(&[new_number("5")])]);
@@ -754,7 +757,7 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
         let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool);
+        let func = new_func_type(&mut a, &[param_type], bool, None);
         my_env.0.insert("foo".to_string(), func);
 
         let syntax = new_apply(
@@ -783,7 +786,7 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
         let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool);
+        let func = new_func_type(&mut a, &[param_type], bool, None);
         my_env.0.insert("foo".to_string(), func);
 
         let syntax = new_apply(
@@ -796,8 +799,7 @@ mod tests {
         assert_eq!(
             result,
             Err(Errors::InferenceError(
-                "'a' is missing in Type { id: 28, kind: Object(Object { props: [(\"b\", 27)] }) }"
-                    .to_string()
+                "'a' is missing in {b: \"hello\"}".to_string()
             ))
         );
 
@@ -805,8 +807,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 22, kind: Literal(String(\\\"hello\\\")) }, Type { id: 18, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
-    fn test_subtype_error() {
+    fn test_subtype_error() -> Result<(), Errors> {
         let (mut a, mut my_env) = test_env();
 
         let syntax = new_apply(
@@ -814,12 +815,20 @@ mod tests {
             &[new_number("5"), new_string("hello")],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(\"hello\", number) failed".to_string()
+            ))
+        );
+
+        Ok(())
     }
 
     #[test]
-    #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 25, kind: Literal(String(\\\"hello\\\")) }, Type { id: 20, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
-    fn test_union_subtype_error() {
+    fn test_union_subtype_error() -> Result<(), Errors> {
         let (mut a, mut my_env) = test_env();
 
         let lit1 = new_lit_type(&mut a, &Literal::Number("5".to_string()));
@@ -833,7 +842,16 @@ mod tests {
             &[new_identifier("foo"), new_number("2")],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(\"hello\", number) failed".to_string()
+            ))
+        );
+
+        Ok(())
     }
 
     #[test]

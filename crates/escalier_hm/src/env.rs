@@ -86,7 +86,7 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> Aren
             TypeKind::Function(func) => {
                 let params = freshrec_many(a, &func.params, mappings, non_generic);
                 let ret = freshrec(a, func.ret, mappings, non_generic);
-                new_func_type(a, &params, ret)
+                new_func_type(a, &params, ret, None)
             }
             TypeKind::Union(union) => {
                 let types = freshrec_many(a, &union.types, mappings, non_generic);

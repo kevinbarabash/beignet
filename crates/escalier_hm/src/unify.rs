@@ -40,7 +40,9 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
         (TypeKind::Function(func_a), TypeKind::Function(func_b)) => {
             if func_a.params.len() > func_b.params.len() {
                 return Err(Errors::InferenceError(format!(
-                    "{a_t:?} is not a subtype of {b_t:?} since it requires more params",
+                    "{} is not a subtype of {} since it requires more params",
+                    alloc[t1].as_string(alloc),
+                    alloc[t2].as_string(alloc),
                 )));
             }
 
@@ -82,7 +84,9 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
             }
 
             Err(Errors::InferenceError(format!(
-                "type mismatch: unify({a_t:?}, {b_t:?}) failed"
+                "type mismatch: unify({}, {}) failed",
+                alloc[t1].as_string(alloc),
+                alloc[t2].as_string(alloc)
             )))
         }
         (TypeKind::Tuple(tuple1), TypeKind::Tuple(tuple2)) => {
@@ -106,14 +110,17 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
                     unify(alloc, prop.1, *t)?;
                 } else {
                     return Err(Errors::InferenceError(format!(
-                        "'{name}' is missing in {a_t:?}"
+                        "'{name}' is missing in {}",
+                        alloc[t1].as_string(alloc),
                     )));
                 }
             }
             Ok(())
         }
         _ => Err(Errors::InferenceError(format!(
-            "type mismatch: unify({a_t:?}, {b_t:?}) failed"
+            "type mismatch: unify({}, {}) failed",
+            alloc[t1].as_string(alloc),
+            alloc[t2].as_string(alloc),
         ))),
     }
 }
@@ -125,7 +132,7 @@ pub fn unify_call(
     t2: ArenaType,
 ) -> Result<ArenaType, Errors> {
     let ret_type = new_var_type(alloc);
-    let call_type = new_func_type(alloc, arg_types, ret_type);
+    let call_type = new_func_type(alloc, arg_types, ret_type, None);
 
     let b = prune(alloc, t2);
     let b_t = alloc.get(b).unwrap().clone();

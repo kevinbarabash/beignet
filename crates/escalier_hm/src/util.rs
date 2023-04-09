@@ -26,7 +26,7 @@ pub fn occurs_in_type(a: &mut Vec<Type>, v: ArenaType, type2: ArenaType) -> bool
             occurs_in(a, v, &types)
         }
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(a, v, &types),
-        TypeKind::Function(Function { params, ret }) => {
+        TypeKind::Function(Function { params, ret, .. }) => {
             occurs_in(a, v, &params) || occurs_in_type(a, v, ret)
         }
         TypeKind::Union(Union { types }) => occurs_in(a, v, &types),
