@@ -12,7 +12,7 @@ pub use crate::infer::{infer_expression, infer_program};
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashSet;
 
     use crate::env::*;
     use crate::errors::*;
@@ -193,16 +193,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"(number) => number"#
-        );
+        assert_eq!(a[t].as_string(&a), r#"(number) => number"#);
         Ok(())
     }
 
@@ -253,16 +244,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"(number) => number"#
-        );
+        assert_eq!(a[t].as_string(&a), r#"(number) => number"#);
 
         Ok(())
     }
@@ -324,16 +306,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"(4 * true)"#
-        );
+        assert_eq!(a[t].as_string(&a), r#"(4 * true)"#);
         Ok(())
     }
 
@@ -366,16 +339,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"5"#
-        );
+        assert_eq!(a[t].as_string(&a), r#"5"#);
         Ok(())
     }
 
@@ -401,16 +365,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"(a) => (a * a)"#
-        );
+        assert_eq!(a[t].as_string(&a), r#"(t39) => (t39 * t39)"#);
         Ok(())
     }
 
@@ -423,16 +378,7 @@ mod tests {
         let syntax = new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))]);
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"(a) => a"#
-        );
+        assert_eq!(a[t].as_string(&a), r#"(t17) => t17"#);
         let t = &a[t];
         eprintln!("t = {t:#?}");
         Ok(())
@@ -460,14 +406,8 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"((a) => b) => ((b) => c) => (a) => c"#
+            a[t].as_string(&a),
+            r#"((t19) => t20) => ((t20) => t51) => (t19) => t51"#
         );
         Ok(())
     }
@@ -488,14 +428,8 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"((a) => b, (b) => c, a) => c"#
+            a[t].as_string(&a),
+            r#"((t19) => t20, (t20) => t22, t19) => t22"#
         );
         Ok(())
     }
@@ -510,16 +444,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"number"#
-        );
+        assert_eq!(a[t].as_string(&a), r#"number"#);
         Ok(())
     }
 
@@ -554,16 +479,7 @@ mod tests {
         let syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"boolean"#
-        );
+        assert_eq!(a[t].as_string(&a), r#"boolean"#);
         Ok(())
     }
 
@@ -613,16 +529,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"number"#
-        );
+        assert_eq!(a[t].as_string(&a), r#"number"#);
         Ok(())
     }
 
@@ -641,16 +548,7 @@ mod tests {
         let syntax = new_apply(new_identifier("foo"), &[]);
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"boolean | string"#
-        );
+        assert_eq!(a[t].as_string(&a), r#"boolean | string"#);
         Ok(())
     }
 
@@ -701,16 +599,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
 
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            "[5, \"hello\"]".to_string(),
-        );
+        assert_eq!(a[t].as_string(&a), "[5, \"hello\"]".to_string(),);
 
         Ok(())
     }
@@ -724,16 +613,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
 
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            "\"hello\"".to_string(),
-        );
+        assert_eq!(a[t].as_string(&a), "\"hello\"".to_string(),);
 
         Ok(())
     }
@@ -781,16 +661,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
 
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            "boolean".to_string(),
-        );
+        assert_eq!(a[t].as_string(&a), "boolean".to_string(),);
 
         Ok(())
     }
@@ -831,16 +702,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
 
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            "{a: 5, b: \"hello\"}".to_string(),
-        );
+        assert_eq!(a[t].as_string(&a), "{a: 5, b: \"hello\"}".to_string(),);
 
         Ok(())
     }
@@ -857,16 +719,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
 
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            "5".to_string(),
-        );
+        assert_eq!(a[t].as_string(&a), "5".to_string(),);
 
         Ok(())
     }
@@ -917,16 +770,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
 
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            "boolean".to_string(),
-        );
+        assert_eq!(a[t].as_string(&a), "boolean".to_string(),);
 
         Ok(())
     }
@@ -1016,28 +860,10 @@ mod tests {
         infer_program(&mut a, &program, &mut my_env)?;
 
         let t = my_env.0.get("num").unwrap();
-        assert_eq!(
-            a[*t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"5"#
-        );
+        assert_eq!(a[*t].as_string(&a), r#"5"#);
 
         let t = my_env.0.get("str").unwrap();
-        assert_eq!(
-            a[*t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#""hello""#
-        );
+        assert_eq!(a[*t].as_string(&a), r#""hello""#);
 
         Ok(())
     }
@@ -1066,28 +892,10 @@ mod tests {
         infer_program(&mut a, &program, &mut my_env)?;
 
         let t = my_env.0.get("a").unwrap();
-        assert_eq!(
-            a[*t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"5"#
-        );
+        assert_eq!(a[*t].as_string(&a), r#"5"#);
 
         let t = my_env.0.get("b").unwrap();
-        assert_eq!(
-            a[*t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#""hello""#
-        );
+        assert_eq!(a[*t].as_string(&a), r#""hello""#);
 
         Ok(())
     }
@@ -1118,16 +926,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &lambda, &mut my_env, &HashSet::default())?;
 
-        assert_eq!(
-            a[t].as_string(
-                &a,
-                &mut Namer {
-                    value: 'a',
-                    set: HashMap::default(),
-                }
-            ),
-            r#"() => number"#
-        );
+        assert_eq!(a[t].as_string(&a), r#"() => number"#);
 
         Ok(())
     }

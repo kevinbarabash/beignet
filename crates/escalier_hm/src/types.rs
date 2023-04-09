@@ -1,6 +1,4 @@
 // Types and type constructors
-use std::collections::HashMap;
-
 use crate::literal::Literal;
 
 pub type ArenaType = usize;
@@ -141,54 +139,54 @@ impl Type {
         }
     }
 
-    pub fn as_string(&self, a: &Vec<Type>, namer: &mut Namer) -> String {
+    pub fn as_string(&self, a: &Vec<Type>) -> String {
         match &self.kind {
             TypeKind::Variable(Variable {
                 instance: Some(inst),
-            }) => a[*inst].as_string(a, namer),
-            TypeKind::Variable(_) => namer.name(self.id),
+            }) => a[*inst].as_string(a),
+            TypeKind::Variable(_) => format!("t{}", self.id),
             TypeKind::Constructor(con) => match con.types.len() {
                 0 => con.name.clone(),
                 2 => {
-                    let l = a[con.types[0]].as_string(a, namer);
-                    let r = a[con.types[1]].as_string(a, namer);
+                    let l = a[con.types[0]].as_string(a);
+                    let r = a[con.types[1]].as_string(a);
                     format!("({} {} {})", l, con.name, r)
                 }
                 _ => {
                     let mut coll = vec![];
                     for v in &con.types {
-                        coll.push(a[*v].as_string(a, namer));
+                        coll.push(a[*v].as_string(a));
                     }
                     format!("{} {}", con.name, coll.join(" "))
                 }
             },
             TypeKind::Literal(lit) => lit.to_string(),
             TypeKind::Tuple(tuple) => {
-                format!("[{}]", types_to_strings(a, namer, &tuple.types).join(", "))
+                format!("[{}]", types_to_strings(a, &tuple.types).join(", "))
             }
             TypeKind::Object(object) => {
                 let mut fields = vec![];
                 for (k, v) in &object.props {
-                    fields.push(format!("{}: {}", k, a[*v].as_string(a, namer)));
+                    fields.push(format!("{}: {}", k, a[*v].as_string(a)));
                 }
                 format!("{{{}}}", fields.join(", "))
             }
             TypeKind::Function(func) => {
                 format!(
                     "({}) => {}",
-                    types_to_strings(a, namer, &func.params).join(", "),
-                    a[func.ret].as_string(a, namer),
+                    types_to_strings(a, &func.params).join(", "),
+                    a[func.ret].as_string(a),
                 )
             }
-            TypeKind::Union(union) => types_to_strings(a, namer, &union.types).join(" | "),
+            TypeKind::Union(union) => types_to_strings(a, &union.types).join(" | "),
         }
     }
 }
 
-fn types_to_strings(a: &Vec<Type>, namer: &mut Namer, types: &[ArenaType]) -> Vec<String> {
+fn types_to_strings(a: &Vec<Type>, types: &[ArenaType]) -> Vec<String> {
     let mut strings = vec![];
     for v in types {
-        strings.push(a[*v].as_string(a, namer));
+        strings.push(a[*v].as_string(a));
     }
     strings
 }
@@ -264,27 +262,3 @@ pub fn new_bool_lit_type(a: &mut Vec<Type>, value: bool) -> ArenaType {
 //        }
 //    }
 //}
-
-pub struct Namer {
-    pub value: char,
-    pub set: HashMap<ArenaType, String>,
-}
-
-impl Namer {
-    fn next(&mut self) -> String {
-        let v = self.value;
-        self.value = ((self.value as u8) + 1) as char;
-        format!("{}", v)
-    }
-
-    fn name(&mut self, t: ArenaType) -> String {
-        let k = self.set.get(&t).cloned();
-        if let Some(val) = k {
-            val
-        } else {
-            let v = self.next();
-            self.set.insert(t, v.clone());
-            v
-        }
-    }
-}
