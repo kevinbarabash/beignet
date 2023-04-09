@@ -524,6 +524,80 @@ mod tests {
     }
 
     #[test]
+    fn test_callback_subtyping() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let num = new_constructor(&mut a, "number", &[]);
+        let bool = new_constructor(&mut a, "boolean", &[]);
+        let str = new_constructor(&mut a, "string", &[]);
+
+        // foo: ((number, string) => boolean) => boolean
+        let cb = new_func_type(&mut a, &[num, str], bool);
+        my_env
+            .0
+            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool));
+
+        // bar: (number | string) => true
+        // It's okay for the callback arg to take fewer params since extra params
+        // are ignored.  It's also okay for its params to be supertypes of the
+        // expected params since the callback will only be called with the expected
+        // types.  Lastly, it's okay for the return type to be a subtype of the
+        // expected return type since it still conforms to the expected type.
+        let num_or_str = new_union_type(&mut a, &[num, str]);
+        let true_type = new_bool_lit_type(&mut a, true);
+        my_env.0.insert(
+            "bar".to_string(),
+            new_func_type(&mut a, &[num_or_str], true_type),
+        );
+
+        // foo(bar)
+        let syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
+
+        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        assert_eq!(
+            a[t].as_string(
+                &a,
+                &mut Namer {
+                    value: 'a',
+                    set: HashMap::default(),
+                }
+            ),
+            r#"boolean"#
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_callback_error_too_many_params() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let num = new_constructor(&mut a, "number", &[]);
+        let bool = new_constructor(&mut a, "boolean", &[]);
+        let str = new_constructor(&mut a, "string", &[]);
+
+        // foo: ((number) => boolean) => boolean
+        let cb = new_func_type(&mut a, &[num], bool);
+        my_env
+            .0
+            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool));
+
+        // bar: (number, string) => true
+        my_env
+            .0
+            .insert("bar".to_string(), new_func_type(&mut a, &[num, str], bool));
+
+        // foo(bar)
+        let syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
+
+        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError("Type { id: 31, kind: Function(Function { params: [28, 29], ret: 30 }) } is not a subtype of Type { id: 25, kind: Function(Function { params: [23], ret: 24 }) } since it requires more params".to_string())),
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_union_subtype() -> Result<(), Errors> {
         let (mut a, mut my_env) = test_env();
 
