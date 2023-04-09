@@ -739,6 +739,25 @@ mod tests {
     }
 
     #[test]
+    fn tuple_member_error_out_of_bounds() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let tuple = new_tuple(&[new_number("5"), new_string("hello")]);
+        let syntax = new_member(&tuple, &new_number("2"));
+
+        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "2 was outside the bounds 0..2 of the tuple".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn tuple_subtyping() -> Result<(), Errors> {
         let (mut a, mut my_env) = test_env();
 
@@ -847,6 +866,28 @@ mod tests {
                 }
             ),
             "5".to_string(),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn object_member_missing_prop() -> Result<(), Errors> {
+        let (mut a, mut my_env) = test_env();
+
+        let object = new_object(&[
+            ("a".to_string(), new_number("5")),
+            ("b".to_string(), new_string("hello")),
+        ]);
+        let syntax = new_member(&object, &new_string("c"));
+
+        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Couldn't find property 'c' on object".to_string()
+            ))
         );
 
         Ok(())

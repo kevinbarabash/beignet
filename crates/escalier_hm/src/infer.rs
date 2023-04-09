@@ -155,7 +155,7 @@ pub fn infer_expression(
                         }
                     }
                     Err(Errors::InferenceError(format!(
-                        "Couldn't find property {name} on object",
+                        "Couldn't find property '{name}' on object",
                     )))
                 }
                 (TypeKind::Tuple(tuple), TypeKind::Literal(Literal::Number(value))) => {
@@ -164,7 +164,8 @@ pub fn infer_expression(
                         return Ok(tuple.types[index]);
                     }
                     Err(Errors::InferenceError(format!(
-                        "Couldn't find index {index} on tuple",
+                        "{index} was outside the bounds 0..{} of the tuple",
+                        tuple.types.len()
                     )))
                 }
                 _ => Err(Errors::InferenceError(
