@@ -14,13 +14,13 @@ pub struct Identifier {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Number {
-    pub value: String,
+pub struct Tuple {
+    pub elems: Vec<Expression>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Str {
-    pub value: String,
+pub struct Object {
+    pub props: Vec<(String, Expression)>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -50,14 +50,23 @@ pub struct IfElse {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Member {
+    pub obj: Box<Expression>,
+    pub prop: Box<Expression>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expression {
     Lambda(Lambda),
     Identifier(Identifier),
     Literal(Literal),
+    Tuple(Tuple),
+    Object(Object),
     Apply(Apply),
     Let(Let),
     Letrec(Letrec),
     IfElse(IfElse),
+    Member(Member),
 }
 
 impl fmt::Display for Expression {
@@ -99,6 +108,23 @@ impl fmt::Display for Expression {
                 alternate,
             }) => {
                 write!(f, "(if {cond} then {consequent} else {alternate})",)
+            }
+            Expression::Member(Member { obj, prop }) => {
+                write!(f, "{obj}.{prop}")
+            }
+            Expression::Tuple(Tuple { elems }) => {
+                let elems = elems
+                    .iter()
+                    .map(|elem| elem.to_string())
+                    .collect::<Vec<_>>();
+                write!(f, "[{}]", elems.join(", "))
+            }
+            Expression::Object(Object { props }) => {
+                let props = props
+                    .iter()
+                    .map(|(key, value)| format!("{}: {}", key, value))
+                    .collect::<Vec<_>>();
+                write!(f, "{{{}}}", props.join(", "))
             }
         }
     }
