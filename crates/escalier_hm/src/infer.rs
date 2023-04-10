@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 
 use crate::env::*;
 use crate::errors::*;
@@ -6,6 +6,7 @@ use crate::literal::*;
 use crate::syntax::{self, *};
 use crate::types::*;
 use crate::unify::*;
+use crate::util::*;
 
 /// Computes the type of the expression given by node.
 ///
@@ -95,7 +96,13 @@ pub fn infer_expression(
             // TODO: create a new type for undefined and use that as the return type
             let ret_t = infer_statement(a, &body[0], &mut new_env, &new_non_generic)?;
             // TODO: generalize the type
-            let t = new_func_type(a, &param_types, ret_t, None);
+            let func = Function {
+                params: param_types.to_vec(),
+                ret: ret_t,
+                type_params: None,
+            };
+            let t = generalize_func(a, func);
+            eprintln!("generalized func: {:?}", a[t].as_string(a));
             Ok(t)
         }
         Expression::Let(Let { defn, var, body }) => {
@@ -209,4 +216,91 @@ pub fn infer_program(a: &mut Vec<Type>, node: &Program, env: &mut Env) -> Result
     }
 
     Ok(())
+}
+
+// TODO:
+// - find all type variables in the type
+// - create type params for them
+// - replace the type variables with the corresponding type params
+// - return the new function type with the newly created type params
+
+pub fn generalize_func(a: &mut Vec<Type>, func: Function) -> ArenaType {
+    // A mapping of TypeVariables to TypeVariables
+    let mut mappings = BTreeMap::default();
+
+    fn generalize_rec(
+        a: &mut Vec<Type>,
+        tp: ArenaType,
+        mappings: &mut BTreeMap<ArenaType, Ref>,
+    ) -> ArenaType {
+        let p = prune(a, tp);
+        // We clone here because we can't move out of a shared reference.
+        // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
+        let a_t = a.get(p).unwrap().clone();
+        match &a_t.kind {
+            TypeKind::Variable(_) => {
+                // Replace with a type reference/constructor
+                let name = match mappings.get(&p) {
+                    Some(tref) => tref.name.clone(),
+                    None => {
+                        let name = ((mappings.len() as u8) + 65) as char;
+                        let name = format!("{}", name);
+                        // let name = format!("'{}", mappings.len());
+                        mappings.insert(p, Ref { name: name.clone() });
+                        name
+                    }
+                };
+                new_type_ref(a, &name)
+            }
+            TypeKind::Constructor(con) => {
+                let types = generalize_rec_many(a, &con.types, mappings);
+                new_constructor(a, &con.name, &types)
+            }
+            TypeKind::Ref(Ref { name }) => new_type_ref(a, &name),
+            TypeKind::Literal(lit) => new_lit_type(a, lit),
+            TypeKind::Tuple(tuple) => {
+                let types = generalize_rec_many(a, &tuple.types, mappings);
+                new_tuple_type(a, &types)
+            }
+            TypeKind::Object(object) => {
+                let fields: Vec<_> = object
+                    .props
+                    .iter()
+                    .map(|(name, tp)| (name.clone(), generalize_rec(a, *tp, mappings)))
+                    .collect();
+                new_object_type(a, &fields)
+            }
+            TypeKind::Function(func) => {
+                let params = generalize_rec_many(a, &func.params, mappings);
+                let ret = generalize_rec(a, func.ret, mappings);
+                new_func_type(a, &params, ret, None)
+            }
+            TypeKind::Union(union) => {
+                let types = generalize_rec_many(a, &union.types, mappings);
+                new_union_type(a, &types)
+            }
+        }
+    }
+
+    pub fn generalize_rec_many(
+        a: &mut Vec<Type>,
+        types: &[ArenaType],
+        mappings: &mut BTreeMap<ArenaType, Ref>,
+    ) -> Vec<ArenaType> {
+        types
+            .iter()
+            .map(|x| generalize_rec(a, *x, mappings))
+            .collect()
+    }
+
+    let params = generalize_rec_many(a, &func.params, &mut mappings);
+    let ret = generalize_rec(a, func.ret, &mut mappings);
+    let type_params: Vec<TypeParam> = mappings
+        .iter()
+        .map(|(_, v)| TypeParam {
+            name: v.name.clone(),
+        })
+        .collect();
+
+    new_func_type(a, &params, ret, Some(&type_params))
 }

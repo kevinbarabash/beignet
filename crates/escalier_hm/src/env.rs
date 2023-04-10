@@ -49,7 +49,7 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> Aren
     fn freshrec(
         a: &mut Vec<Type>,
         tp: ArenaType,
-        mappings: &mut HashMap<ArenaType, ArenaType>,
+        mappings: &mut HashMap<String, ArenaType>,
         non_generic: &[ArenaType],
     ) -> ArenaType {
         let p = prune(a, tp);
@@ -57,19 +57,24 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> Aren
         // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
         match &a.get(p).unwrap().clone().kind {
             TypeKind::Variable(_) => {
-                if is_generic(a, p, non_generic) {
-                    mappings
-                        .entry(p)
-                        .or_insert_with(|| new_var_type(a))
-                        .to_owned()
-                } else {
-                    p
-                }
+                // if is_generic(a, p, non_generic) {
+                //     mappings
+                //         .entry(p)
+                //         .or_insert_with(|| new_var_type(a))
+                //         .to_owned()
+                // } else {
+                //     p
+                // }
+                p
             }
             TypeKind::Constructor(con) => {
                 let types = freshrec_many(a, &con.types, mappings, non_generic);
                 new_constructor(a, &con.name, &types)
             }
+            TypeKind::Ref(tref) => match mappings.get(&tref.name) {
+                Some(t) => t.to_owned(),
+                None => new_type_ref(a, &tref.name),
+            },
             TypeKind::Literal(lit) => new_lit_type(a, lit),
             TypeKind::Tuple(tuple) => {
                 let types = freshrec_many(a, &tuple.types, mappings, non_generic);
@@ -84,8 +89,20 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> Aren
                 new_object_type(a, &fields)
             }
             TypeKind::Function(func) => {
+                // TODO: instantiate the function if it's generic
+                eprintln!("func.type_params = {:?}", func.type_params);
+
+                if let Some(type_params) = &func.type_params {
+                    for tp in type_params {
+                        mappings
+                            .entry(tp.name.to_owned())
+                            .or_insert_with(|| new_var_type(a));
+                    }
+                }
+
                 let params = freshrec_many(a, &func.params, mappings, non_generic);
                 let ret = freshrec(a, func.ret, mappings, non_generic);
+
                 new_func_type(a, &params, ret, None)
             }
             TypeKind::Union(union) => {
@@ -98,7 +115,7 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, non_generic: &[ArenaType]) -> Aren
     pub fn freshrec_many(
         a: &mut Vec<Type>,
         types: &[ArenaType],
-        mappings: &mut HashMap<ArenaType, ArenaType>,
+        mappings: &mut HashMap<String, ArenaType>,
         non_generic: &[ArenaType],
     ) -> Vec<ArenaType> {
         types

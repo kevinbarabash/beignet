@@ -380,9 +380,7 @@ mod tests {
         let syntax = new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))]);
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(a[t].as_string(&a), r#"(t17) => t17"#);
-        let t = &a[t];
-        eprintln!("t = {t:#?}");
+        assert_eq!(a[t].as_string(&a), r#"<A>(A) => A"#);
         Ok(())
     }
 
@@ -431,7 +429,7 @@ mod tests {
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
         assert_eq!(
             a[t].as_string(&a),
-            r#"((t19) => t20, (t20) => t22, t19) => t22"#
+            r#"<A, B, C>((A) => B, (B) => C, A) => C"#
         );
         Ok(())
     }

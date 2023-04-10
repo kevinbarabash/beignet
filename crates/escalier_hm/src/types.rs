@@ -15,10 +15,21 @@ pub struct Constructor {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Ref {
+    pub name: String,
+    // TODO: Add support for type args
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Function {
     pub params: Vec<ArenaType>,
     pub ret: ArenaType,
-    pub type_params: Option<Vec<ArenaType>>,
+    pub type_params: Option<Vec<TypeParam>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TypeParam {
+    pub name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -46,6 +57,7 @@ pub struct Object {
 pub enum TypeKind {
     Variable(Variable),
     Constructor(Constructor),
+    Ref(Ref),
     Literal(Literal),
     Function(Function),
     Union(Union),
@@ -82,6 +94,16 @@ impl Type {
         }
     }
 
+    // TODO: add support for type args
+    pub fn new_type_ref(idx: ArenaType, name: &str) -> Type {
+        Type {
+            id: idx,
+            kind: TypeKind::Ref(Ref {
+                name: name.to_string(),
+            }),
+        }
+    }
+
     pub fn new_literal(idx: ArenaType, lit: &Literal) -> Type {
         Type {
             id: idx,
@@ -93,7 +115,7 @@ impl Type {
         idx: ArenaType,
         param_types: &[ArenaType],
         ret_type: ArenaType,
-        type_params: Option<&[ArenaType]>,
+        type_params: Option<&[TypeParam]>,
     ) -> Type {
         Type {
             id: idx,
@@ -167,6 +189,7 @@ impl Type {
                     format!("{} {}", con.name, coll.join(" "))
                 }
             },
+            TypeKind::Ref(Ref { name }) => name.clone(),
             TypeKind::Literal(lit) => lit.to_string(),
             TypeKind::Tuple(tuple) => {
                 format!("[{}]", types_to_strings(a, &tuple.types).join(", "))
@@ -179,8 +202,17 @@ impl Type {
                 format!("{{{}}}", fields.join(", "))
             }
             TypeKind::Function(func) => {
+                let type_params = if let Some(type_params) = &func.type_params {
+                    let type_params = type_params
+                        .iter()
+                        .map(|tp| tp.name.clone())
+                        .collect::<Vec<_>>();
+                    format!("<{}>", type_params.join(", "))
+                } else {
+                    "".to_string()
+                };
                 format!(
-                    "({}) => {}",
+                    "{type_params}({}) => {}",
                     types_to_strings(a, &func.params).join(", "),
                     a[func.ret].as_string(a),
                 )
@@ -203,7 +235,7 @@ pub fn new_func_type(
     a: &mut Vec<Type>,
     params: &[ArenaType],
     ret: ArenaType,
-    type_params: Option<&[ArenaType]>,
+    type_params: Option<&[TypeParam]>,
 ) -> ArenaType {
     let t = Type::new_function(a.len(), params, ret, type_params);
     a.push(t);
@@ -238,6 +270,13 @@ pub fn new_var_type(a: &mut Vec<Type>) -> ArenaType {
 /// A binary type constructor which builds function types
 pub fn new_constructor(a: &mut Vec<Type>, name: &str, types: &[ArenaType]) -> ArenaType {
     let t = Type::new_constructor(a.len(), name, types);
+    a.push(t);
+    a.len() - 1
+}
+
+// TODO: add support for type args
+pub fn new_type_ref(a: &mut Vec<Type>, name: &str) -> ArenaType {
+    let t = Type::new_type_ref(a.len(), name);
     a.push(t);
     a.len() - 1
 }

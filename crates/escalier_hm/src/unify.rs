@@ -144,6 +144,11 @@ pub fn unify_call(
             // have any callable signatures
             todo!("constructor");
         }
+        TypeKind::Ref(_) => {
+            // lookup definition of type constructor, and see if its instances
+            // have any callable signatures
+            todo!("ref");
+        }
         TypeKind::Literal(lit) => {
             return Err(Errors::InferenceError(format!(
                 "literal {lit} is not callable"
