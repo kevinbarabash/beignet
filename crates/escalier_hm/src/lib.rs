@@ -35,14 +35,6 @@ mod tests {
         })
     }
 
-    pub fn new_let(var: &str, defn: Expression, body: Expression) -> Expression {
-        Expression::Let(Let {
-            var: var.to_string(),
-            defn: Box::new(defn),
-            body: Box::new(body),
-        })
-    }
-
     pub fn new_letrec(decls: &[(String, Expression)], body: Expression) -> Expression {
         Expression::Letrec(Letrec {
             decls: decls
@@ -298,15 +290,25 @@ mod tests {
             ],
         );
 
-        // let f = (fn x => x) in ((pair (f 4)) (f true))
-        let syntax = new_let(
-            "f",
-            new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))]),
-            pair,
-        );
+        let program = Program {
+            statements: vec![
+                // let f = (fn x => x)
+                Statement::Declaration(Declaration {
+                    var: "f".to_string(),
+                    defn: Box::from(new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))])),
+                }),
+                // let result = ((pair (f 4)) (f true))
+                Statement::Declaration(Declaration {
+                    var: "result".to_string(),
+                    defn: Box::new(pair),
+                }),
+            ],
+        };
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(a[t].as_string(&a), r#"(4 * true)"#);
+        infer_program(&mut a, &program, &mut my_env)?;
+
+        let t = my_env.0.get("result").unwrap();
+        assert_eq!(a[*t].as_string(&a), r#"(4 * true)"#);
         Ok(())
     }
 
@@ -331,15 +333,25 @@ mod tests {
     fn test_number_literal() -> Result<(), Errors> {
         let (mut a, mut my_env) = test_env();
 
-        // let g = fn f => 5 in g g
-        let syntax = new_let(
-            "g",
-            new_lambda(&["f"], &[new_expr_stmt(new_number("5"))]),
-            new_apply(new_identifier("g"), &[new_identifier("g")]),
-        );
+        let program = Program {
+            statements: vec![
+                // let g = fn f => 5
+                Statement::Declaration(Declaration {
+                    var: "g".to_string(),
+                    defn: Box::from(new_lambda(&["f"], &[new_expr_stmt(new_number("5"))])),
+                }),
+                // let result = g(g)
+                Statement::Declaration(Declaration {
+                    var: "result".to_string(),
+                    defn: Box::new(new_apply(new_identifier("g"), &[new_identifier("g")])),
+                }),
+            ],
+        };
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(a[t].as_string(&a), r#"5"#);
+        infer_program(&mut a, &program, &mut my_env)?;
+
+        let t = my_env.0.get("result").unwrap();
+        assert_eq!(a[*t].as_string(&a), r#"5"#);
         Ok(())
     }
 
@@ -347,25 +359,29 @@ mod tests {
     fn test_generic_nongeneric() -> Result<(), Errors> {
         let (mut a, mut my_env) = test_env();
 
-        // example that demonstrates generic and non-generic variables:
-        // fn g => let f = fn x => g in pair (f 3, f true)
         let syntax = new_lambda(
             &["g"],
-            &[new_expr_stmt(new_let(
-                "f",
-                new_lambda(&["x"], &[new_expr_stmt(new_identifier("g"))]),
-                new_apply(
-                    new_identifier("pair"),
-                    &[
-                        new_apply(new_identifier("f"), &[new_number("3")]),
-                        new_apply(new_identifier("f"), &[new_boolean(true)]),
-                    ],
-                ),
-            ))],
+            &[
+                // let f = fn x => g
+                Statement::Declaration(Declaration {
+                    var: "f".to_string(),
+                    defn: Box::from(new_lambda(&["x"], &[new_expr_stmt(new_identifier("g"))])),
+                }),
+                // pair (f 3, f true)
+                Statement::Return(Return {
+                    expr: Box::from(new_apply(
+                        new_identifier("pair"),
+                        &[
+                            new_apply(new_identifier("f"), &[new_number("3")]),
+                            new_apply(new_identifier("f"), &[new_boolean(true)]),
+                        ],
+                    )),
+                }),
+            ],
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(a[t].as_string(&a), r#"(t39) => (t39 * t39)"#);
+        assert_eq!(a[t].as_string(&a), r#"(t21) => (t21 * t21)"#);
         Ok(())
     }
 

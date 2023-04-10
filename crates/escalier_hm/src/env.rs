@@ -1,4 +1,5 @@
-use std::collections::{HashMap, HashSet};
+use im::hashmap::HashMap;
+use std::collections::HashSet;
 
 use crate::errors::*;
 use crate::types::*;

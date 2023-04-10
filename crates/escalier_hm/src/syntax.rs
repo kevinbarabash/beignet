@@ -63,7 +63,6 @@ pub enum Expression {
     Tuple(Tuple),
     Object(Object),
     Apply(Apply),
-    Let(Let),
     Letrec(Letrec),
     IfElse(IfElse),
     Member(Member),
@@ -89,9 +88,6 @@ impl fmt::Display for Expression {
             Expression::Apply(Apply { func, args }) => {
                 let args = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
                 write!(f, "{func}({})", args.join(", "))
-            }
-            Expression::Let(Let { var, defn, body }) => {
-                write!(f, "(let {var} = {defn} in {body})")
             }
             Expression::Letrec(Letrec { decls, body }) => {
                 write!(f, "(letrec ")?;
