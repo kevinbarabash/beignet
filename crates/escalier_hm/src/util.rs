@@ -42,31 +42,16 @@ pub fn occurs_in_type(a: &mut Vec<Type>, v: ArenaType, type2: ArenaType) -> bool
 /// Returns:
 ///     True if t occurs in any of types, otherwise False
 ///
-pub fn occurs_in(a: &mut Vec<Type>, t: ArenaType, types: &[ArenaType]) -> bool {
-    for t2 in types.iter() {
+pub fn occurs_in<'a, I>(a: &mut Vec<Type>, t: ArenaType, types: I) -> bool
+where
+    I: IntoIterator<Item = &'a ArenaType>,
+{
+    for t2 in types.into_iter() {
         if occurs_in_type(a, t, *t2) {
             return true;
         }
     }
     false
-}
-
-/// Checks whether a given variable occurs in a list of non-generic variables
-///
-/// Note that a variables in such a list may be instantiated to a type term,
-/// in which case the variables contained in the type term are considered
-/// non-generic.
-///
-/// Note: Must be called with v pre-pruned
-///
-/// Args:
-///     v: The TypeVariable to be tested for genericity
-///     non_generic: A set of non-generic TypeVariables
-///
-/// Returns:
-///     True if v is a generic variable, otherwise False
-pub fn is_generic(a: &mut Vec<Type>, v: ArenaType, non_generic: &[ArenaType]) -> bool {
-    !occurs_in(a, v, non_generic)
 }
 
 /// Returns the currently defining instance of t.

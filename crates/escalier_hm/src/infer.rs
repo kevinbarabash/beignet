@@ -1,6 +1,4 @@
-use std::collections::HashSet;
-
-use crate::env::*;
+use crate::context::*;
 use crate::errors::*;
 use crate::literal::*;
 use crate::syntax::{self, *};
@@ -31,11 +29,10 @@ use crate::unify::*;
 pub fn infer_expression(
     a: &mut Vec<Type>,
     node: &Expression,
-    env: &mut Env,
-    non_generic: &HashSet<ArenaType>,
+    ctx: &mut Context,
 ) -> Result<ArenaType, Errors> {
     match node {
-        Expression::Identifier(Identifier { name }) => get_type(a, name, env, non_generic),
+        Expression::Identifier(Identifier { name }) => get_type(a, name, ctx),
         Expression::Literal(literal) => {
             let t = new_lit_type(a, literal);
             Ok(t)
@@ -43,7 +40,7 @@ pub fn infer_expression(
         Expression::Tuple(syntax::Tuple { elems }) => {
             let mut element_types = vec![];
             for element in elems {
-                let t = infer_expression(a, element, env, non_generic)?;
+                let t = infer_expression(a, element, ctx)?;
                 element_types.push(t);
             }
             let t = new_tuple_type(a, &element_types);
@@ -52,18 +49,18 @@ pub fn infer_expression(
         Expression::Object(syntax::Object { props }) => {
             let mut prop_types = vec![];
             for (name, value) in props {
-                let t = infer_expression(a, value, env, non_generic)?;
+                let t = infer_expression(a, value, ctx)?;
                 prop_types.push((name.to_owned(), t));
             }
             let t = new_object_type(a, &prop_types);
             Ok(t)
         }
         Expression::Apply(Apply { func, args }) => {
-            let func_type = infer_expression(a, func, env, non_generic)?;
+            let func_type = infer_expression(a, func, ctx)?;
 
             let arg_types = args
                 .iter()
-                .map(|arg| infer_expression(a, arg, env, non_generic))
+                .map(|arg| infer_expression(a, arg, ctx))
                 .collect::<Result<Vec<_>, _>>()?;
 
             let ret_type = unify_call(a, &arg_types, func_type)?;
@@ -71,18 +68,18 @@ pub fn infer_expression(
         }
         Expression::Lambda(Lambda { params, body }) => {
             let mut param_types = vec![];
-            let mut new_env = env.clone();
-            let mut new_non_generic = non_generic.clone();
+            let mut new_ctx = ctx.clone();
 
             for param in params {
                 let arg_type = new_var_type(a);
-                new_env.0.insert(param.clone(), arg_type);
-                new_non_generic.insert(arg_type);
+                new_ctx.env.insert(param.clone(), arg_type);
+                new_ctx.non_generic.insert(arg_type);
                 param_types.push(arg_type);
             }
 
             for stmt in body {
-                let t = infer_statement(a, stmt, &mut new_env, &new_non_generic)?;
+                new_ctx = new_ctx.clone();
+                let t = infer_statement(a, stmt, &mut new_ctx)?;
                 if let Statement::Return(_) = stmt {
                     let ret_t = t;
                     let func_t = new_func_type(a, &param_types, ret_t);
@@ -92,19 +89,12 @@ pub fn infer_expression(
             }
 
             // TODO: create a new type for undefined and use that as the return type
-            let ret_t = infer_statement(a, &body[0], &mut new_env, &new_non_generic)?;
+            let ret_t = infer_statement(a, &body[0], &mut new_ctx)?;
             let t = new_func_type(a, &param_types, ret_t);
             Ok(t)
         }
-        Expression::Let(Let { defn, var, body }) => {
-            let defn_type = infer_expression(a, defn, env, non_generic)?;
-            let mut new_env = env.clone();
-            new_env.0.insert(var.clone(), defn_type);
-            infer_expression(a, body, &mut new_env, non_generic)
-        }
         Expression::Letrec(letrec) => {
-            let mut new_env = env.clone();
-            let mut new_non_generic = non_generic.clone();
+            let mut new_ctx = ctx.clone();
 
             // Create all of the types new types first
 
@@ -112,8 +102,8 @@ pub fn infer_expression(
 
             for (var, ..) in &letrec.decls {
                 let new_type = new_var_type(a);
-                new_env.0.insert(var.clone(), new_type);
-                new_non_generic.insert(new_type);
+                new_ctx.env.insert(var.clone(), new_type);
+                new_ctx.non_generic.insert(new_type);
 
                 new_types.push(new_type);
             }
@@ -121,28 +111,28 @@ pub fn infer_expression(
             // Then infer the defintions and unify them with the new types
 
             for ((.., defn), new_type) in letrec.decls.iter().zip(new_types.iter()) {
-                let defn_type = infer_expression(a, defn, &mut new_env, &new_non_generic)?;
+                let defn_type = infer_expression(a, defn, &mut new_ctx)?;
                 unify(a, *new_type, defn_type)?;
             }
 
-            infer_expression(a, &letrec.body, &mut new_env, non_generic)
+            infer_expression(a, &letrec.body, &mut new_ctx)
         }
         Expression::IfElse(IfElse {
             cond,
             consequent,
             alternate,
         }) => {
-            let cond_type = infer_expression(a, cond, env, non_generic)?;
+            let cond_type = infer_expression(a, cond, ctx)?;
             let bool_type = new_constructor(a, "boolean", &[]);
             unify(a, cond_type, bool_type)?;
-            let consequent_type = infer_expression(a, consequent, env, non_generic)?;
-            let alternate_type = infer_expression(a, alternate, env, non_generic)?;
+            let consequent_type = infer_expression(a, consequent, ctx)?;
+            let alternate_type = infer_expression(a, alternate, ctx)?;
             let t = new_union_type(a, &[consequent_type, alternate_type]);
             Ok(t)
         }
         Expression::Member(Member { obj, prop }) => {
-            let obj_type = infer_expression(a, obj, env, non_generic)?;
-            let prop_type = infer_expression(a, prop, env, non_generic)?;
+            let obj_type = infer_expression(a, obj, ctx)?;
+            let prop_type = infer_expression(a, prop, ctx)?;
 
             let obj_type = a[obj_type].clone();
             let prop_type = a[prop_type].clone();
@@ -179,31 +169,28 @@ pub fn infer_expression(
 pub fn infer_statement(
     a: &mut Vec<Type>,
     statement: &Statement,
-    env: &mut Env,
-    non_generic: &HashSet<ArenaType>,
+    ctx: &mut Context,
 ) -> Result<ArenaType, Errors> {
     match statement {
         Statement::Declaration(Declaration { var, defn }) => {
-            let t = infer_expression(a, defn, env, non_generic)?;
-            env.0.insert(var.clone(), t);
+            let t = infer_expression(a, defn, ctx)?;
+            ctx.env.insert(var.clone(), t);
             Ok(t) // TODO: Should this be unit?
         }
         Statement::Expression(expr) => {
-            let t = infer_expression(a, expr, env, non_generic)?;
+            let t = infer_expression(a, expr, ctx)?;
             Ok(t)
         }
         Statement::Return(Return { expr }) => {
-            let t = infer_expression(a, expr, env, non_generic)?;
+            let t = infer_expression(a, expr, ctx)?;
             Ok(t)
         }
     }
 }
 
-pub fn infer_program(a: &mut Vec<Type>, node: &Program, env: &mut Env) -> Result<(), Errors> {
-    let non_generic = HashSet::new();
-
+pub fn infer_program(a: &mut Vec<Type>, node: &Program, ctx: &mut Context) -> Result<(), Errors> {
     for stmt in &node.statements {
-        infer_statement(a, stmt, env, &non_generic)?;
+        infer_statement(a, stmt, ctx)?;
     }
 
     Ok(())

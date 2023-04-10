@@ -1,5 +1,5 @@
 // Based on https://github.com/tcr/rust-hindley-milner/blob/master/src/lib.rs
-mod env;
+mod context;
 mod errors;
 mod infer;
 mod literal;
@@ -12,9 +12,7 @@ pub use crate::infer::{infer_expression, infer_program};
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
-    use crate::env::*;
+    use crate::context::*;
     use crate::errors::*;
     use crate::infer::*;
     use crate::literal::*;
@@ -32,14 +30,6 @@ mod tests {
         Expression::Apply(Apply {
             func: Box::new(func),
             args: args.to_owned(),
-        })
-    }
-
-    pub fn new_let(var: &str, defn: Expression, body: Expression) -> Expression {
-        Expression::Let(Let {
-            var: var.to_string(),
-            defn: Box::new(defn),
-            body: Box::new(body),
         })
     }
 
@@ -107,28 +97,28 @@ mod tests {
         Statement::Expression(expr)
     }
 
-    fn test_env() -> (Vec<Type>, Env) {
+    fn test_env() -> (Vec<Type>, Context) {
         let mut a = vec![];
-        let mut my_env = Env::default();
+        let mut my_ctx = Context::default();
 
         let var1 = new_var_type(&mut a);
         let var2 = new_var_type(&mut a);
         let pair_type = new_constructor(&mut a, "*", &[var1, var2]);
-        my_env.0.insert(
+        my_ctx.env.insert(
             "pair".to_string(),
             new_func_type(&mut a, &[var1, var2], pair_type),
         );
 
         let int_t = new_constructor(&mut a, "number", &[]);
         let bool_t = new_constructor(&mut a, "boolean", &[]);
-        my_env
-            .0
+        my_ctx
+            .env
             .insert("zero".to_string(), new_func_type(&mut a, &[int_t], bool_t));
 
         let num1_t = new_constructor(&mut a, "number", &[]);
         let num2_t = new_constructor(&mut a, "number", &[]);
-        my_env
-            .0
+        my_ctx
+            .env
             .insert("pred".to_string(), new_func_type(&mut a, &[num1_t], num2_t));
 
         // It isn't necessary to create separate instances of `number` for each of
@@ -138,23 +128,23 @@ mod tests {
         let num1_t = new_constructor(&mut a, "number", &[]);
         let num2_t = new_constructor(&mut a, "number", &[]);
         let num3_t = new_constructor(&mut a, "number", &[]);
-        my_env.0.insert(
+        my_ctx.env.insert(
             "times".to_string(),
             new_func_type(&mut a, &[num1_t, num2_t], num3_t),
         );
-        my_env.0.insert(
+        my_ctx.env.insert(
             "add".to_string(),
             new_func_type(&mut a, &[num1_t, num2_t], num3_t),
         );
 
-        my_env
-            .0
+        my_ctx
+            .env
             .insert("true".to_string(), new_bool_lit_type(&mut a, true));
-        my_env
-            .0
+        my_ctx
+            .env
             .insert("false".to_string(), new_bool_lit_type(&mut a, false));
 
-        (a, my_env)
+        (a, my_ctx)
     }
 
     /// Sets up some predefined types using the type constructors TypeVariable,
@@ -164,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_factorial() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         // factorial
         let syntax = new_letrec(
@@ -192,14 +182,14 @@ mod tests {
             new_identifier("factorial"),
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"(number) => number"#);
         Ok(())
     }
 
     #[test]
     fn test_mutual_recursion() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         // NOTE: The definitions of "even" and "odd" are correct from a types
         // perspective, but incorrect semantically.
@@ -243,7 +233,7 @@ mod tests {
             new_identifier("odd"),
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"(number) => number"#);
 
         Ok(())
@@ -252,7 +242,7 @@ mod tests {
     #[should_panic]
     #[test]
     fn test_mismatch() {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         // fn x => (pair(x(3) (x(true)))
         let syntax = new_lambda(
@@ -266,13 +256,13 @@ mod tests {
             ))],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
     }
 
     #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"Undefined symbol \\\"f\\\"\")"]
     #[test]
     fn test_pair() {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         // pair(f(3), f(true))
         let syntax = new_apply(
@@ -283,12 +273,12 @@ mod tests {
             ],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
     }
 
     #[test]
     fn test_mul() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let pair = new_apply(
             new_identifier("pair"),
@@ -298,22 +288,32 @@ mod tests {
             ],
         );
 
-        // let f = (fn x => x) in ((pair (f 4)) (f true))
-        let syntax = new_let(
-            "f",
-            new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))]),
-            pair,
-        );
+        let program = Program {
+            statements: vec![
+                // let f = (fn x => x)
+                Statement::Declaration(Declaration {
+                    var: "f".to_string(),
+                    defn: Box::from(new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))])),
+                }),
+                // let result = ((pair (f 4)) (f true))
+                Statement::Declaration(Declaration {
+                    var: "result".to_string(),
+                    defn: Box::new(pair),
+                }),
+            ],
+        };
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(a[t].as_string(&a), r#"(4 * true)"#);
+        infer_program(&mut a, &program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("result").unwrap();
+        assert_eq!(a[*t].as_string(&a), r#"(4 * true)"#);
         Ok(())
     }
 
     #[should_panic = "recursive unification"]
     #[test]
     fn test_recursive() {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         // fn f => f f (fail)
         let syntax = new_lambda(
@@ -324,60 +324,74 @@ mod tests {
             ))],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
     }
 
     #[test]
     fn test_number_literal() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
-        // let g = fn f => 5 in g g
-        let syntax = new_let(
-            "g",
-            new_lambda(&["f"], &[new_expr_stmt(new_number("5"))]),
-            new_apply(new_identifier("g"), &[new_identifier("g")]),
-        );
+        let program = Program {
+            statements: vec![
+                // let g = fn f => 5
+                Statement::Declaration(Declaration {
+                    var: "g".to_string(),
+                    defn: Box::from(new_lambda(&["f"], &[new_expr_stmt(new_number("5"))])),
+                }),
+                // let result = g(g)
+                Statement::Declaration(Declaration {
+                    var: "result".to_string(),
+                    defn: Box::new(new_apply(new_identifier("g"), &[new_identifier("g")])),
+                }),
+            ],
+        };
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(a[t].as_string(&a), r#"5"#);
+        infer_program(&mut a, &program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("result").unwrap();
+        assert_eq!(a[*t].as_string(&a), r#"5"#);
         Ok(())
     }
 
     #[test]
     fn test_generic_nongeneric() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
-        // example that demonstrates generic and non-generic variables:
-        // fn g => let f = fn x => g in pair (f 3, f true)
         let syntax = new_lambda(
             &["g"],
-            &[new_expr_stmt(new_let(
-                "f",
-                new_lambda(&["x"], &[new_expr_stmt(new_identifier("g"))]),
-                new_apply(
-                    new_identifier("pair"),
-                    &[
-                        new_apply(new_identifier("f"), &[new_number("3")]),
-                        new_apply(new_identifier("f"), &[new_boolean(true)]),
-                    ],
-                ),
-            ))],
+            &[
+                // let f = fn x => g
+                Statement::Declaration(Declaration {
+                    var: "f".to_string(),
+                    defn: Box::from(new_lambda(&["x"], &[new_expr_stmt(new_identifier("g"))])),
+                }),
+                // pair (f 3, f true)
+                Statement::Return(Return {
+                    expr: Box::from(new_apply(
+                        new_identifier("pair"),
+                        &[
+                            new_apply(new_identifier("f"), &[new_number("3")]),
+                            new_apply(new_identifier("f"), &[new_boolean(true)]),
+                        ],
+                    )),
+                }),
+            ],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
-        assert_eq!(a[t].as_string(&a), r#"(t39) => (t39 * t39)"#);
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        assert_eq!(a[t].as_string(&a), r#"(t21) => (t21 * t21)"#);
         Ok(())
     }
 
     #[test]
     fn test_basic_generics() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         // example that demonstrates generic and non-generic variables:
         // fn x => x
         let syntax = new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))]);
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"(t17) => t17"#);
         let t = &a[t];
         eprintln!("t = {t:#?}");
@@ -386,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_composition() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         // Function composition
         // fn f (fn g (fn arg (f g arg)))
@@ -404,7 +418,7 @@ mod tests {
             ))],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(
             a[t].as_string(&a),
             r#"((t19) => t20) => ((t20) => t51) => (t19) => t51"#
@@ -414,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_fun() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         // Function composition
         // (fn (f, g, arg) -> (f g arg))
@@ -426,7 +440,7 @@ mod tests {
             ))],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(
             a[t].as_string(&a),
             r#"((t19) => t20, (t20) => t22, t19) => t22"#
@@ -436,21 +450,21 @@ mod tests {
 
     #[test]
     fn test_subtype() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let syntax = new_apply(
             new_identifier("times"),
             &[new_number("5"), new_number("10")],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"number"#);
         Ok(())
     }
 
     #[test]
     fn test_callback_subtyping() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let num = new_constructor(&mut a, "number", &[]);
         let bool = new_constructor(&mut a, "boolean", &[]);
@@ -458,8 +472,8 @@ mod tests {
 
         // foo: ((number, string) => boolean) => boolean
         let cb = new_func_type(&mut a, &[num, str], bool);
-        my_env
-            .0
+        my_ctx
+            .env
             .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool));
 
         // bar: (number | string) => true
@@ -470,7 +484,7 @@ mod tests {
         // expected return type since it still conforms to the expected type.
         let num_or_str = new_union_type(&mut a, &[num, str]);
         let true_type = new_bool_lit_type(&mut a, true);
-        my_env.0.insert(
+        my_ctx.env.insert(
             "bar".to_string(),
             new_func_type(&mut a, &[num_or_str], true_type),
         );
@@ -478,14 +492,14 @@ mod tests {
         // foo(bar)
         let syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"boolean"#);
         Ok(())
     }
 
     #[test]
     fn test_callback_error_too_many_params() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let num = new_constructor(&mut a, "number", &[]);
         let bool = new_constructor(&mut a, "boolean", &[]);
@@ -493,19 +507,19 @@ mod tests {
 
         // foo: ((number) => boolean) => boolean
         let cb = new_func_type(&mut a, &[num], bool);
-        my_env
-            .0
+        my_ctx
+            .env
             .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool));
 
         // bar: (number, string) => true
-        my_env
-            .0
+        my_ctx
+            .env
             .insert("bar".to_string(), new_func_type(&mut a, &[num, str], bool));
 
         // foo(bar)
         let syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
 
-        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
         assert_eq!(
             result,
             Err(Errors::InferenceError("Type { id: 31, kind: Function(Function { params: [28, 29], ret: 30 }) } is not a subtype of Type { id: 25, kind: Function(Function { params: [23], ret: 24 }) } since it requires more params".to_string())),
@@ -515,12 +529,12 @@ mod tests {
 
     #[test]
     fn test_union_subtype() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let lit1 = new_num_lit_type(&mut a, "5");
         let lit2 = new_num_lit_type(&mut a, "10");
-        my_env
-            .0
+        my_ctx
+            .env
             .insert("foo".to_string(), new_union_type(&mut a, &[lit1, lit2]));
 
         let syntax = new_apply(
@@ -528,37 +542,37 @@ mod tests {
             &[new_identifier("foo"), new_number("2")],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"number"#);
         Ok(())
     }
 
     #[test]
     fn test_calling_a_union() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let bool = new_constructor(&mut a, "boolean", &[]);
         let str = new_constructor(&mut a, "string", &[]);
         let fn1 = new_func_type(&mut a, &[], bool);
         let fn2 = new_func_type(&mut a, &[], str);
-        my_env
-            .0
+        my_ctx
+            .env
             .insert("foo".to_string(), new_union_type(&mut a, &[fn1, fn2]));
 
         let syntax = new_apply(new_identifier("foo"), &[]);
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"boolean | string"#);
         Ok(())
     }
 
     #[test]
     fn call_with_too_few_args() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let syntax = new_apply(new_identifier("times"), &[]);
 
-        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -572,14 +586,14 @@ mod tests {
 
     #[test]
     fn literal_isnt_callable() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let lit = new_num_lit_type(&mut a, "5");
-        my_env.0.insert("foo".to_string(), lit);
+        my_ctx.env.insert("foo".to_string(), lit);
 
         let syntax = new_apply(new_identifier("foo"), &[]);
 
-        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -593,11 +607,11 @@ mod tests {
 
     #[test]
     fn infer_basic_tuple() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let syntax = new_tuple(&[new_number("5"), new_string("hello")]);
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "[5, \"hello\"]".to_string(),);
 
@@ -606,12 +620,12 @@ mod tests {
 
     #[test]
     fn tuple_member() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let tuple = new_tuple(&[new_number("5"), new_string("hello")]);
         let syntax = new_member(&tuple, &new_number("1"));
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "\"hello\"".to_string(),);
 
@@ -620,12 +634,12 @@ mod tests {
 
     #[test]
     fn tuple_member_error_out_of_bounds() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let tuple = new_tuple(&[new_number("5"), new_string("hello")]);
         let syntax = new_member(&tuple, &new_number("2"));
 
-        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -639,14 +653,14 @@ mod tests {
 
     #[test]
     fn tuple_subtyping() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let num = new_constructor(&mut a, "number", &[]);
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_tuple_type(&mut a, &[num, str]);
         let bool = new_constructor(&mut a, "boolean", &[]);
         let func = new_func_type(&mut a, &[param_type], bool);
-        my_env.0.insert("foo".to_string(), func);
+        my_ctx.env.insert("foo".to_string(), func);
 
         let syntax = new_apply(
             new_identifier("foo"),
@@ -659,7 +673,7 @@ mod tests {
             ])],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "boolean".to_string(),);
 
@@ -668,18 +682,18 @@ mod tests {
 
     #[test]
     fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let num = new_constructor(&mut a, "number", &[]);
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_tuple_type(&mut a, &[num, str]);
         let bool = new_constructor(&mut a, "boolean", &[]);
         let func = new_func_type(&mut a, &[param_type], bool);
-        my_env.0.insert("foo".to_string(), func);
+        my_ctx.env.insert("foo".to_string(), func);
 
         let syntax = new_apply(new_identifier("foo"), &[new_tuple(&[new_number("5")])]);
 
-        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -693,14 +707,14 @@ mod tests {
 
     #[test]
     fn infer_basic_object() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let syntax = new_object(&[
             ("a".to_string(), new_number("5")),
             ("b".to_string(), new_string("hello")),
         ]);
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "{a: 5, b: \"hello\"}".to_string(),);
 
@@ -709,7 +723,7 @@ mod tests {
 
     #[test]
     fn object_member() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let object = new_object(&[
             ("a".to_string(), new_number("5")),
@@ -717,7 +731,7 @@ mod tests {
         ]);
         let syntax = new_member(&object, &new_string("a"));
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "5".to_string(),);
 
@@ -726,7 +740,7 @@ mod tests {
 
     #[test]
     fn object_member_missing_prop() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let object = new_object(&[
             ("a".to_string(), new_number("5")),
@@ -734,7 +748,7 @@ mod tests {
         ]);
         let syntax = new_member(&object, &new_string("c"));
 
-        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -748,14 +762,14 @@ mod tests {
 
     #[test]
     fn object_subtyping() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let num = new_constructor(&mut a, "number", &[]);
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
         let bool = new_constructor(&mut a, "boolean", &[]);
         let func = new_func_type(&mut a, &[param_type], bool);
-        my_env.0.insert("foo".to_string(), func);
+        my_ctx.env.insert("foo".to_string(), func);
 
         let syntax = new_apply(
             new_identifier("foo"),
@@ -768,7 +782,7 @@ mod tests {
             ])],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "boolean".to_string(),);
 
@@ -777,21 +791,21 @@ mod tests {
 
     #[test]
     fn object_subtyping_missing_prop() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let num = new_constructor(&mut a, "number", &[]);
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
         let bool = new_constructor(&mut a, "boolean", &[]);
         let func = new_func_type(&mut a, &[param_type], bool);
-        my_env.0.insert("foo".to_string(), func);
+        my_ctx.env.insert("foo".to_string(), func);
 
         let syntax = new_apply(
             new_identifier("foo"),
             &[new_object(&[("b".to_string(), new_string("hello"))])],
         );
 
-        let result = infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default());
+        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -807,25 +821,25 @@ mod tests {
     #[test]
     #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 22, kind: Literal(String(\\\"hello\\\")) }, Type { id: 18, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
     fn test_subtype_error() {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let syntax = new_apply(
             new_identifier("times"),
             &[new_number("5"), new_string("hello")],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
     }
 
     #[test]
     #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 25, kind: Literal(String(\\\"hello\\\")) }, Type { id: 20, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
     fn test_union_subtype_error() {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let lit1 = new_lit_type(&mut a, &Literal::Number("5".to_string()));
         let lit2 = new_lit_type(&mut a, &Literal::String("hello".to_string()));
-        my_env
-            .0
+        my_ctx
+            .env
             .insert("foo".to_string(), new_union_type(&mut a, &[lit1, lit2]));
 
         let syntax = new_apply(
@@ -833,12 +847,12 @@ mod tests {
             &[new_identifier("foo"), new_number("2")],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_env, &HashSet::default()).unwrap();
+        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
     }
 
     #[test]
     fn test_program() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let program = Program {
             statements: vec![
@@ -857,12 +871,12 @@ mod tests {
             ],
         };
 
-        infer_program(&mut a, &program, &mut my_env)?;
+        infer_program(&mut a, &program, &mut my_ctx)?;
 
-        let t = my_env.0.get("num").unwrap();
+        let t = my_ctx.env.get("num").unwrap();
         assert_eq!(a[*t].as_string(&a), r#"5"#);
 
-        let t = my_env.0.get("str").unwrap();
+        let t = my_ctx.env.get("str").unwrap();
         assert_eq!(a[*t].as_string(&a), r#""hello""#);
 
         Ok(())
@@ -870,7 +884,7 @@ mod tests {
 
     #[test]
     fn test_program_with_generic_func() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let program = Program {
             statements: vec![
@@ -889,12 +903,12 @@ mod tests {
             ],
         };
 
-        infer_program(&mut a, &program, &mut my_env)?;
+        infer_program(&mut a, &program, &mut my_ctx)?;
 
-        let t = my_env.0.get("a").unwrap();
+        let t = my_ctx.env.get("a").unwrap();
         assert_eq!(a[*t].as_string(&a), r#"5"#);
 
-        let t = my_env.0.get("b").unwrap();
+        let t = my_ctx.env.get("b").unwrap();
         assert_eq!(a[*t].as_string(&a), r#""hello""#);
 
         Ok(())
@@ -902,7 +916,7 @@ mod tests {
 
     #[test]
     fn test_lambda_with_multiple_statements() -> Result<(), Errors> {
-        let (mut a, mut my_env) = test_env();
+        let (mut a, mut my_ctx) = test_env();
 
         let lambda = new_lambda(
             &[],
@@ -924,7 +938,7 @@ mod tests {
             ],
         );
 
-        let t = infer_expression(&mut a, &lambda, &mut my_env, &HashSet::default())?;
+        let t = infer_expression(&mut a, &lambda, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), r#"() => number"#);
 
