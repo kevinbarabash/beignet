@@ -1,12 +1,15 @@
 use im::hashmap::HashMap;
-use std::collections::HashSet;
+use im::hashset::HashSet;
 
 use crate::errors::*;
 use crate::types::*;
 use crate::util::*;
 
 #[derive(Clone, Debug, Default)]
-pub struct Env(pub HashMap<String, ArenaType>);
+pub struct Context {
+    pub env: HashMap<String, ArenaType>,
+    pub non_generic: HashSet<ArenaType>,
+}
 
 /// Get the type of identifier name from the type environment env.
 ///
@@ -18,14 +21,9 @@ pub struct Env(pub HashMap<String, ArenaType>);
 /// Raises:
 ///     ParseError: Raised if name is an undefined symbol in the type
 ///         environment.
-pub fn get_type(
-    a: &mut Vec<Type>,
-    name: &str,
-    env: &Env,
-    non_generic: &HashSet<ArenaType>,
-) -> Result<ArenaType, Errors> {
-    if let Some(value) = env.0.get(name) {
-        let mat = non_generic.iter().cloned().collect::<Vec<_>>();
+pub fn get_type(a: &mut Vec<Type>, name: &str, ctx: &Context) -> Result<ArenaType, Errors> {
+    if let Some(value) = ctx.env.get(name) {
+        let mat = ctx.non_generic.iter().cloned().collect::<Vec<_>>();
         Ok(fresh(a, *value, &mat))
     } else {
         Err(Errors::InferenceError(format!(
